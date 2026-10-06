@@ -1,0 +1,16 @@
+# Sensitivity classification for the synthetic dataset.
+#
+# This is the "classify BEFORE exposure" discipline (the Microsoft Purview
+# pattern, applied locally): the seeder applies these labels to the system of
+# record (e.g. column comments) and emits them into the catalog entry, so
+# confidential records are governed differently from routine ones from the
+# first gateway call.
+#
+# Labels: Routine | Sensitive | Confidential
+# (All data here is SYNTHETIC — these labels demonstrate the workflow.)
+
+dataset: synthetic_demo
+default_label: Routine
+
+# Fill in per-table / per-column labels to match data/synthetic_data.py.
+tables: {}

@@ -1,0 +1,52 @@
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.log
+
+# --- Generated data / artifacts (runtime) ---
+# NOTE: data/sample/ IS committed (the reference synthetic dataset); only the
+# seeder's runtime output dir is ignored.
+data/out/
+output/
+generated-media/
+docs/architecture.png
+
+# --- Docker / runtime ---
+*.pid
+.docker/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Claude Code (keep settings.json + CLAUDE.md; ignore local/runtime) ---
+.claude/settings.local.json
+.claude/projects/
+.claude/todos/
+.claude/shell-snapshots/

@@ -1,0 +1,30 @@
+name: CI
+on:
+  push: { branches: [ main ] }
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install tooling
+        run: pip install ruff pytest httpx
+      - name: Ruff format check
+        run: ruff format --check . || true   # remove '|| true' once sources land
+      - name: Ruff lint
+        run: ruff check . || true            # remove '|| true' once sources land
+      - name: Tests
+        run: pytest -q || true               # remove '|| true' once tests land
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose up (core) + demo smoke
+        run: |
+          echo "TODO (build): docker compose --profile core up -d"
+          echo "TODO (build): ./scripts/wait-for-healthy.sh && python client/query.py"
+          echo "TODO (build): assert the known headline rows are returned; docker compose down"
