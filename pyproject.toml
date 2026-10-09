@@ -17,11 +17,21 @@ dev = [
   "pyright>=1.1.400,<2",
   "pytest>=9.1,<10",
   "pip-audit>=2.10,<3",
+  "neurosphere-core",
+  "neurosphere-contracts",
+  "neurosphere-api",
+  "neurosphere-workers",
 ]
 
-# PRP-00 uncomments these once the member pyproject files exist.
-# [tool.uv.workspace]
-# members = ["packages/*", "services/*", "connectors/sdk-python"]
+[tool.uv.sources]
+neurosphere-core = { workspace = true }
+neurosphere-contracts = { workspace = true }
+neurosphere-api = { workspace = true }
+neurosphere-workers = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*", "packages/contracts/python", "services/*", "connectors/sdk-python"]
+exclude = ["packages/contracts"]
 
 [tool.ruff]
 line-length = 100
@@ -42,13 +52,13 @@ quote-style = "double"
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
-include = ["scripts", "tests"]
+include = ["scripts", "tests", "packages", "services"]
 exclude = ["**/node_modules", "**/__pycache__", ".venv"]
 venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "packages", "services"]
 addopts = "-ra --strict-markers"
 markers = [
   "live: requires an operator-approved Azure environment (NS_LIVE_APPROVED=1)",
