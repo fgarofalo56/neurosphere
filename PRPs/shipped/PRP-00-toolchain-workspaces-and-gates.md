@@ -1,6 +1,6 @@
 ---
 name: prp-00-toolchain-workspaces-and-gates
-status: active
+status: shipped
 review: required
 created: 2026-10-08
 model: sonnet
@@ -242,9 +242,18 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
+- Date: 2026-10-09
+- Merged commits: e7a88fc..16d510a on local main (items 1-5 plus fix 1e1673a, evidence da9bb9c). Not pushed; no PR yet.
 - Deviations from blueprint and why:
-- Descoped items:
-- Evidence paths (failing-gate proofs, CI run links):
+  - Item 1 scope widened (user-approved 2026-10-09): root pytest `testpaths` gains packages and services, and members join the root dev group, because otherwise member tests were never collected by the gate. `packages/contracts` is excluded from the workspace glob (no pyproject of its own); test files renamed test_import_{core,api,workers}.py to avoid module clashes.
+  - Item 2 added `frontend/src/index.ts` and `frontend/tsconfig.build.json` so the build gate compiles something real without owning vite.config.ts or index.html (PRP-04).
+  - Item 3 did not add a CI diff of committed SVGs (cross-OS layout drift risk). pyright fix in render_mermaid.py applied by orchestrator.
+  - Item 4 added setup-uv, pnpm and node steps to the planning job (more than one step) so the licence check has installed metadata; job timeout 5 to 10 min. Licence carry-forward from the committed register applies only to same name and version of packages not installable on the current OS.
+- Descoped items: none.
+- Evidence paths: docs/evidence/PRP-00/item1-negative-proofs.txt, item2-build-gate-proof.txt (includes orchestrator empty-BuildCmd proof), item3-mermaid-negative-proof.txt. verify-gates -Mode full: 4 gates ran, exit 0.
 - Open gates and follow-ups:
+  - G10 CI-failure proof is local-only until the mermaid job runs on a pushed branch.
+  - `git grep "|| true" -- .github/workflows` still prints two annotated `no-match-ok` lines in secret-scan.yml (off-limits here); validate_planning passes them.
+  - `docker compose up -d --wait` fails (Azurite healthcheck, Event Hubs never starts); belongs to PRP-03, noted in README.
+  - Review APPROVED. Non-blocking follow-ups: fail CI if any licence row was carried forward; confirm uv tolerates absent connectors/sdk-python member in a fresh clone; validate tokens after WITH in expression_ok; widen mermaid render beyond ARCHITECTURE.md.
+  - G08 stays NARROWED.
