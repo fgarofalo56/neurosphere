@@ -243,7 +243,9 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 ## Completion note (filled at ship)
 
 - Date: 2026-10-09
-- Merged commits: e7a88fc..16d510a on local main (items 1-5 plus fix 1e1673a, evidence da9bb9c). Not pushed; no PR yet.
+- Merged commits: e7a88fc..16d510a (items 1-5 plus fix 1e1673a, evidence da9bb9c), then CI fixes up to the codeql permission commit. PR: https://github.com/fgarofalo56/neurosphere/pull/1 (branch prp-00-toolchain-workspaces-and-gates). CI on the PR: all 11 checks green after the repo was made public.
+- Post-PR CI fixes (user-approved where outside ownership): pip-audit now audits exported third-party pins only (workspace members are not on PyPI); mermaid job uses the runner's Chrome via PUPPETEER_EXECUTABLE_PATH (a pinned puppeteer download broke when mermaid-cli floated puppeteer 25.12 to 25.13); render_mermaid.py rounds SVG coordinates to 2 decimals because 13-digit floats tripped the repo PII card-number scan; codeql.yml gained `actions: read` (an edit to a file the PRP listed as off-limits, user-approved).
+- Repo settings changed (user-approved 2026-10-09): visibility private to public (CodeQL needs GHAS on private repos, which is not purchased); `main` protected (PR required, 1 code-owner approval, 10 required checks, no force-push or deletion, enforce_admins off so the owner can bypass); GitHub secret scanning and push protection enabled.
 - Deviations from blueprint and why:
   - Item 1 scope widened (user-approved 2026-10-09): root pytest `testpaths` gains packages and services, and members join the root dev group, because otherwise member tests were never collected by the gate. `packages/contracts` is excluded from the workspace glob (no pyproject of its own); test files renamed test_import_{core,api,workers}.py to avoid module clashes.
   - Item 2 added `frontend/src/index.ts` and `frontend/tsconfig.build.json` so the build gate compiles something real without owning vite.config.ts or index.html (PRP-04).
@@ -252,7 +254,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: none.
 - Evidence paths: docs/evidence/PRP-00/item1-negative-proofs.txt, item2-build-gate-proof.txt (includes orchestrator empty-BuildCmd proof), item3-mermaid-negative-proof.txt. verify-gates -Mode full: 4 gates ran, exit 0.
 - Open gates and follow-ups:
-  - G10 CI-failure proof is local-only until the mermaid job runs on a pushed branch.
+  - G10: the mermaid job now runs and passes in CI; the CI-failure-on-syntax-error proof is still local-only (never injected an error on a pushed branch).
   - `git grep "|| true" -- .github/workflows` still prints two annotated `no-match-ok` lines in secret-scan.yml (off-limits here); validate_planning passes them.
   - `docker compose up -d --wait` fails (Azurite healthcheck, Event Hubs never starts); belongs to PRP-03, noted in README.
   - Review APPROVED. Non-blocking follow-ups: fail CI if any licence row was carried forward; confirm uv tolerates absent connectors/sdk-python member in a fresh clone; validate tokens after WITH in expression_ok; widen mermaid render beyond ARCHITECTURE.md.
