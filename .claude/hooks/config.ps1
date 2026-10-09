@@ -157,7 +157,7 @@ $TestCmd = "uv run pytest -q"
 # $TestCmd = "dotnet test"
 
 # Build
-$BuildCmd = ""
+$BuildCmd = "pnpm build"
 # $BuildCmd = "npm run build"
 # $BuildCmd = "dotnet build -warnaserror"
 
@@ -209,6 +209,6 @@ $StopGateCmd = ""
 #  Declaring every gate optional does not produce a pass - if zero gates
 #  actually execute, the run fails, because nothing was verified.
 # ------------------------------------------------------------
-$OptionalGates = @('build')   # no build artefact until the frontend lands in PRP-04
+$OptionalGates = @()
 # $OptionalGates = @('typecheck')            # e.g. a plain-JS repo
 # $OptionalGates = @('typecheck','build')    # e.g. a script/library repo

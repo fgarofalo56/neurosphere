@@ -1,0 +1,29 @@
+{
+  "name": "@neurosphere/frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json",
+    "format": "prettier --check ."
+  },
+  "dependencies": {
+    "@fluentui/react-components": "^9.74.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^10.0.0",
+    "prettier": "^3.6.0",
+    "typescript": "~6.0.0",
+    "typescript-eslint": "^8.46.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.0"
+  }
+}
