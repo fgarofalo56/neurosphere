@@ -1,0 +1,96 @@
+Context: PRPs/PRP-MASTER status table regenerated TEMPORARILY (uncommitted) to clear a pre-existing STALE planning test; reverted before commit. Root testpaths now [tests, packages, services]; members installed via root dev group.
+### A. baseline (green)
+verify-gates: mode=fast dir=E:\Repos\GitHub\MyDemoRepos\neurosphere-wt\item1
+transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010625-45320.log
+== lint: uv run ruff check .
+All checks passed!
+== PASS lint
+== tests: uv run pytest -q
+....                                                                     [100%]
+4 passed in 0.44s
+== PASS tests
+
+gates run: 2   skipped as optional: 0
+
+PASSED: 2 gate(s) ran and passed in fast mode.
+  exit code : 0
+  transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010625-45320.log
+EXIT=0
+
+### B. failing test in packages/core/tests (ruff-clean; pytest must catch it)
+verify-gates: mode=fast dir=E:\Repos\GitHub\MyDemoRepos\neurosphere-wt\item1
+transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010631-80948.log
+== lint: uv run ruff check .
+All checks passed!
+== PASS lint
+== tests: uv run pytest -q
+..F..                                                                    [100%]
+================================== FAILURES ===================================
+____________________________ test_deliberate_fail _____________________________
+
+    def test_deliberate_fail() -> None:
+>       raise RuntimeError("deliberate")
+E       RuntimeError: deliberate
+
+packages\core\tests\test_zz_fail.py:2: RuntimeError
+=========================== short test summary info ===========================
+FAILED packages/core/tests/test_zz_fail.py::test_deliberate_fail - RuntimeErr...
+1 failed, 4 passed in 0.73s
+== FAIL tests (exit code 1)
+   log: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010631-80948.tests.log
+
+gates run: 2   skipped as optional: 0
+
+GATES FAILED - this work is NOT done.
+  exit code : 1
+  transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010631-80948.log
+EXIT=1
+
+### C. deliberate ruff error F401 (tests still green)
+verify-gates: mode=fast dir=E:\Repos\GitHub\MyDemoRepos\neurosphere-wt\item1
+transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010635-91572.log
+== lint: uv run ruff check .
+F401 [*] `os` imported but unused
+ --> packages\core\neurosphere_core\zz_lint.py:1:8
+  |
+1 | import os
+  |        ^^
+help: Remove unused import: `os`
+  |
+  - import os
+  |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.
+== FAIL lint (exit code 1)
+   log: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010635-91572.lint.log
+== tests: uv run pytest -q
+....                                                                     [100%]
+4 passed in 0.22s
+== PASS tests
+
+gates run: 2   skipped as optional: 0
+
+GATES FAILED - this work is NOT done.
+  exit code : 1
+  transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010635-91572.log
+EXIT=1
+
+### D. both removed (green)
+verify-gates: mode=fast dir=E:\Repos\GitHub\MyDemoRepos\neurosphere-wt\item1
+transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010638-94548.log
+== lint: uv run ruff check .
+All checks passed!
+== PASS lint
+== tests: uv run pytest -q
+....                                                                     [100%]
+4 passed in 0.22s
+== PASS tests
+
+gates run: 2   skipped as optional: 0
+
+PASSED: 2 gate(s) ran and passed in fast mode.
+  exit code : 0
+  transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\item1-fast-20261009-010638-94548.log
+EXIT=0
+
