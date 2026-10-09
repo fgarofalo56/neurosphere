@@ -3,31 +3,45 @@
 ## Setup (once per clone)
 
 ```bash
-uv sync                          # Python 3.12 toolchain from .python-version; creates .venv
-pnpm install                     # Node 24 from .node-version (workspace members arrive with PRP-04)
-bash scripts/install-git-hooks.sh   # secret/PII guards; required
+uv sync --frozen                 # Python 3.12 toolchain from .python-version; uv workspace members, creates .venv
+pnpm install --frozen-lockfile   # Node 24 from .node-version; pnpm workspace (frontend, packages/contracts/ts)
+bash scripts/install-git-hooks.sh   # secret/PII guards via core.hooksPath; required
 cp .env.example .env             # placeholders only; never commit .env
-docker compose up -d --wait      # Cosmos, Event Hubs, Azurite emulators; no paid calls
+docker compose up -d --wait      # Cosmos, Event Hubs, Azurite emulators only; no paid calls
 ```
 
-`python` not `python3` on Windows. Run PowerShell via a `.ps1` file, not inline.
+`python` not `python3` on the operator's Windows setup. Run PowerShell via a
+`.ps1` file, not inline. Lockfiles (`uv.lock`, `pnpm-lock.yaml`) are committed;
+change dependencies deliberately and commit the lockfile with them.
 
 ## Definition of done
 
 Nothing is done unless this passed **in the session that claims it**, with raw
-output shown:
+output shown. `-Mode fast` is the per-item check; `-Mode full` is the PRP exit:
 
 ```
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 ```
 
-The gate commands live in `.claude/hooks/config.ps1` (ruff, pyright, pytest;
-build is optional until the frontend exists). CI runs the same gates plus
-secret scanning, CodeQL and dependency audits. CI may never contain `|| true`;
+The gate commands live in `.claude/hooks/config.ps1` and run lint (ruff,
+`pnpm lint`), typecheck (pyright, `pnpm typecheck`), tests (pytest, `pnpm test`)
+and build (`pnpm build`). Equivalent direct commands:
+
+```
+uv run ruff check . && uv run pyright && uv run pytest -q
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+python scripts/validate_planning.py     # planning alignment; also runs under pytest
+python scripts/render_mermaid.py        # renders the five ARCHITECTURE.md diagrams
+```
+
+`scripts/licenses_report.py --check` arrives with PRP-00 item 4; until it lands
+it is not a gate. CI runs the same gates plus secret scanning, CodeQL and
+dependency audits. CI may never contain `|| true`;
 `scripts/validate_planning.py` fails if it does.
 
 Live Azure or paid-model gates run only with explicit operator approval and
-`NS_LIVE_APPROVED=1`. A live gate that has not run is reported as **open** in
+`NS_LIVE_APPROVED=1` (set it for that run only; never commit it). A live gate that has not run is reported as **open** in
 `docs/RESEARCH-AND-GATES.md`, never as a skipped green test.
 
 ## Workflow
