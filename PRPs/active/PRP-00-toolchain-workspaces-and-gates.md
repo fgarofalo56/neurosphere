@@ -1,6 +1,6 @@
 ---
 name: prp-00-toolchain-workspaces-and-gates
-status: backlog
+status: active
 review: required
 created: 2026-10-08
 model: sonnet
@@ -45,7 +45,7 @@ PRP.md section 2 requires: "Versions are pinned in docs/adr/0002-stack-pins.md a
 | 3 | Stack pins (D5) | accept; adjust | ADR-0002 binds: Python 3.12 target (3.13 allowed by `requires-python`), uv 0.12, Node 24 LTS, pnpm 11.x, TypeScript 6.0.x not 7, ESLint 10 flat config only. |
 | 4 | Model policy (D6) | Sonnet default; Opus everywhere | Sonnet implements; review is required (one pass, approve unless blocking). |
 | 5 | Shared library (D11) | shared lib; duplicate | `packages/core` is a uv workspace member from day one; `services/workers` must never import `services/api`. |
-| 6 | Does the root `pyproject.toml` get edited? | free edit; minimal | Item 1 edits only two spots: uncomment the `[tool.uv.workspace]` block (currently commented, members `packages/*`, `services/*`, `connectors/sdk-python`) and extend the pyright `include`. Nothing else in root. |
+| 6 | Does the root `pyproject.toml` get edited? | free edit; minimal | Item 1 edits only two spots: uncomment the `[tool.uv.workspace]` block (currently commented, members `packages/*`, `services/*`, `connectors/sdk-python`) and extend the pyright `include`. Nothing else in root. **Amended 2026-10-09 (user-approved):** Item 1 may also set pytest `testpaths` to include `packages` and `services` and add the workspace members to the root dev group, because otherwise member tests are never collected by the gate. |
 | 7 | Workspace members glob versus the stub list | glob as written; explicit | `packages/contracts/python` is nested two levels so it is added to `members` explicitly. `connectors/sdk-python` has no `pyproject.toml` yet; if uv rejects the missing path, remove it from `members` and let PRP-09 re-add it. |
 | 8 | Stub tests | none; one trivial test per member | One trivial import test per Python member and one Vitest smoke test, so a gate cannot pass by collecting nothing. Pytest exit code 5 (nothing collected) counts as a gate failure. |
 | 9 | Mermaid renderer | mermaid-cli; custom | `@mermaid-js/mermaid-cli`, driven by `scripts/render_mermaid.py`. Chromium download in CI is acceptable; no outbound calls beyond package install. |
