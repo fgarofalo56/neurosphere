@@ -33,6 +33,9 @@ gates: ## The kit's full gate run (what "done" means)
 validate: ## Planning-document alignment check (not a product test)
 	uv run python scripts/validate_planning.py
 
+prp-status: ## Regenerate the PRP status table in the master index from PRPs/ directories
+	uv run python scripts/prp_status.py --write
+
 dev-up: ## Start local Azure emulators (no paid calls)
 	docker compose up -d --wait
 

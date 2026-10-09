@@ -190,6 +190,20 @@ def check_prps(texts: dict[str, str]) -> None:
         tag = f"{index:02d}"
         if backlog and tag not in ns_covered:
             fail(f"NS-{tag} is not covered by any PRP frontmatter 'ns' field")
+    check_status_table()
+
+
+def check_status_table() -> None:
+    """The master index status table must match the PRPs/ directory layout."""
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "prp_status.py"), "--check"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        fail(result.stdout.strip() or result.stderr.strip() or "prp_status.py --check failed")
 
 
 def main() -> int:

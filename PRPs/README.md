@@ -26,3 +26,8 @@ Rules that apply to every PRP here:
   `docs/RESEARCH-AND-GATES.md` is updated.
 - `scripts/validate_planning.py` fails if a PRP in the master index is missing,
   if a backlog file is not in the index, or if an NS requirement has no PRP.
+- **Status is the directory.** Moving a file between `backlog/`, `active/` and
+  `shipped/` is the status change. The pre-commit hook regenerates the status
+  table in the master index whenever a `PRPs/` file is staged, and the validator
+  (run by CI) fails if the table is stale. Manual refresh: `make prp-status`.
+  Update the file's `status:` frontmatter too; the table flags a mismatch.

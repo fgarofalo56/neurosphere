@@ -10,8 +10,11 @@ set -uo pipefail
 fail=0
 note() { printf '\033[31mBLOCKED\033[0m %s\n' "$1" >&2; fail=1; }
 
+# Every staged change, including renames and deletions (a PRP move is a rename).
+all_staged=$(git diff --cached --name-only --diff-filter=ACMRD)
+[ -z "$all_staged" ] && exit 0
+# Content checks only look at added/copied/modified files.
 staged=$(git diff --cached --name-only --diff-filter=ACM)
-[ -z "$staged" ] && exit 0
 
 # The scanners contain the patterns they hunt for. Keep this list narrow and
 # path-based; never allowlist a file that could plausibly hold a real credential.
@@ -59,7 +62,20 @@ $hits"
   scan '\b(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})\b' "payment card number"
 fi
 
-# 4) Ruff on staged Python, when the toolchain is present. Lint-only, no fix.
+# 4) PRP status table: when any PRPs/ file is staged, regenerate the table in
+#    the master index from the directory layout and stage the result, so a
+#    moved PRP never leaves the index stale.
+#    A move is a rename (R) or delete+add, which the ACM filter above hides,
+#    so this step looks at every staged change.
+if printf '%s\n' "$all_staged" | grep -qE '^PRPs/'; then
+  if python scripts/prp_status.py --write >/dev/null 2>&1; then
+    git add PRPs/PRP-MASTER-neurosphere.md
+  else
+    note "scripts/prp_status.py --write failed; run it by hand to see why"
+  fi
+fi
+
+# 5) Ruff on staged Python, when the toolchain is present. Lint-only, no fix.
 py_staged=$(printf '%s\n' "$staged" | grep -E '\.pyi?$' || true)
 if [ -n "$py_staged" ] && command -v uv >/dev/null 2>&1 && [ -f pyproject.toml ]; then
   if ! uv run --quiet ruff check --no-fix $py_staged; then
