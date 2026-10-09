@@ -70,7 +70,7 @@ def render_block(index: int, body: str, out_dir: Path, workdir: Path, no_sandbox
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     ap.add_argument("--source", type=Path, default=SOURCE)
     ap.add_argument("--out", type=Path, default=OUT_DIR)
     ap.add_argument("--no-sandbox", action="store_true")
