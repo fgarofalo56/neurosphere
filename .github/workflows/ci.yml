@@ -81,7 +81,7 @@ jobs:
   planning:
     name: planning docs aligned
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -89,6 +89,18 @@ jobs:
           python-version-file: .python-version
       - name: Validate planning artefacts
         run: python scripts/validate_planning.py
+      # The licence register reads licences from installed metadata (no network lookups), so
+      # the toolchains and both dependency trees must be present first.
+      - uses: astral-sh/setup-uv@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - name: Licence register is current, no UNKNOWN or unapproved non-permissive licence
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
+          python scripts/licenses_report.py --check
       - name: Workflows contain no suppressed failures
         run: |
           if grep -rnE '\|\|[[:space:]]*true' .github/workflows | grep -v 'no-match-ok'; then

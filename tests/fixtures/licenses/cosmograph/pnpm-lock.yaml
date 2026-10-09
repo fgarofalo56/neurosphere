@@ -1,0 +1,20 @@
+lockfileVersion: '9.0'
+
+importers:
+
+  .: {}
+
+  app:
+    dependencies:
+      '@cosmograph/cosmograph':
+        specifier: ^2.0.0
+        version: 2.1.0
+
+packages:
+
+  '@cosmograph/cosmograph@2.1.0':
+    resolution: {integrity: sha512-fixture}
+
+snapshots:
+
+  '@cosmograph/cosmograph@2.1.0': {}
