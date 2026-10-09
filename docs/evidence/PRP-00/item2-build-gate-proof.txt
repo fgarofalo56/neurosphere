@@ -21,3 +21,18 @@ Build chosen: frontend `tsc -p tsconfig.build.json` (emits frontend/dist/index.j
    $OptionalGates = @(), expect a build FAIL not SKIP; restore afterwards).
    By the runner's documented contract (config.ps1 header) an empty gate that
    is not in $OptionalGates fails the run.
+
+## Orchestrator proof (verify-gates -Mode full, $BuildCmd emptied, 2026-10-09)
+.........                                                                [100%]
+9 passed in 0.20s
+== PASS tests
+== FAIL build (no command configured in .claude/hooks/config.ps1)
+   This gate did not run. Configure it, or declare it optional:
+   $OptionalGates = @('build')
+
+gates run: 3   skipped as optional: 0
+
+GATES FAILED - this work is NOT done.
+  exit code : 1
+  transcript: C:\Users\fgaro\AppData\Local\Temp\claude-verify-gates\neurosphere-full-20261009-010808-63236.log
+exit=1 (restored afterwards; full run with build set: 4 gates PASSED, exit 0)
