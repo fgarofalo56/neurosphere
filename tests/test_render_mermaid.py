@@ -38,3 +38,7 @@ def test_wrong_block_count_exits_nonzero(tmp_path: Path, capsys) -> None:
     rc = NS["main"](["--source", str(src), "--out", str(tmp_path / "out")])
     assert rc == 1
     assert "found 1 mermaid blocks, expected 5" in capsys.readouterr().out
+
+
+def test_round_coordinates_trims_long_floats() -> None:
+    assert NS["round_coordinates"]("M705.4289321,543L7.5") == "M705.42,543L7.5"

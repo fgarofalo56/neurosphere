@@ -51,6 +51,15 @@ def svg_name(index: int) -> str:
     return f"{index:02d}-{NAMES[index - 1]}.svg"
 
 
+def round_coordinates(svg: str) -> str:
+    """Trim path coordinates to 2 decimals.
+
+    mermaid-cli emits 13+ digit floats; the repo PII scan reads a run starting with 4 as a
+    card number and rejects the file. Two decimals is sub-pixel and keeps the SVG stable.
+    """
+    return re.sub(r"(\d+\.\d{2})\d+", r"\1", svg)
+
+
 def render_block(index: int, body: str, out_dir: Path, workdir: Path, no_sandbox: bool) -> bool:
     src = workdir / f"block{index}.mmd"
     src.write_text(body, encoding="utf-8")
@@ -65,6 +74,8 @@ def render_block(index: int, body: str, out_dir: Path, workdir: Path, no_sandbox
         print(f"FAIL block {index} ({NAMES[index - 1]}): mermaid-cli exit {proc.returncode}")
         print((proc.stderr or proc.stdout).strip())
         return False
+    svg = target.read_text(encoding="utf-8")
+    target.write_text(round_coordinates(svg), encoding="utf-8")
     print(f"rendered block {index} -> {target.name}")
     return True
 
