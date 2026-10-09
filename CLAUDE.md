@@ -1,71 +1,36 @@
-# CLAUDE.md — neurosphere
+# Claude Code — NeuroSphere
+## Read order and authority
+Read PRPs/PRP-MASTER-neurosphere.md first, then docs/PRD.md, PRP.md (binding preamble), docs/ARCHITECTURE.md and docs/RESEARCH-AND-GATES.md before implementation. These v1.2 documents are the build authority. Never treat git-history demo material, prior whitepapers or a previous chat claim as current build authority.
+## Mission
+Customer-hosted Azure Commercial/Government AI governance: telemetry/cost, versioned catalog/curated relationships, recommendations/evaluation, HITL, live map/session replay, governed copilot/report creation, MCP, deployment reuse and ATO evidence accelerator.
+## Hard constraints
+- Fabric, Synapse and Azure Databricks are deployment choices behind adapters; unsupported cloud/region/feature combinations are disabled, not globally banned. Never bridge Government data to Commercial to fill gaps.
+- Synthetic sandbox is isolated; real ingestion is permitted only with authorized connectors/credentials and privacy policy. Never use production data in demos/tests by default.
+- Authorization is enforced at every query/tool/export/push/action path. Privileged users have scoped permissions, never an unrestricted bypass.
+- Buttons/chat/MCP use the same durable action executor. Confirm exact target/version/diff, recheck permission, honor approvals, audit and verify actual changes. No pretend model swaps that only edit catalog metadata.
+- Do not claim FedRAMP authorization, ATO, compliance parity or zero future refactoring. Availability, feature maturity and authorization are separate gates.
+- No arbitrary LLM-generated SQL/Cypher/JavaScript execution. Use bounded structured tools and sandboxed declarative charts.
+- No secrets in files/prompts/logs; vault/managed identity in production. Do not read .env or credentials. No paid calls/cloud deployments without operator approval; live gates need `NS_LIVE_APPROVED=1` and are reported OPEN when they did not run.
+- Preserve user changes; no force push, git reset --hard, unattended destructive commands or unauthorized modifications of shared enterprise resources.
+## Work loop
+One PRP per session. Read Git status and the master index status table, take the next PRP whose dependencies are shipped, and run it with `/prp:prp-execute PRPs/backlog/<file>.md`. Each work item edits only its owned files; shared files are sequenced, never parallel-edited. Use targeted tests, schema/adapter/authorization tests and lint; CI may not suppress failures (`|| true` fails the planning validator). Commit scoped changes only when gates pass; ask before push/deployment.
+Model policy: Sonnet by default; Opus for PRP-01 contracts, PRP-06 identity/audit, PRP-12 threat model, PRP-17 action executor, PRP-22 MCP; Haiku for verify passes. Items marked `review: required` get one independent review pass.
+## Completion rules
+Document planning is not product implementation. A passing planner/reviewer or 'no changes to ship' is not completion. Every task needs changed files, executable tests and evidence. Provider-specific live tests/region authorization/DR require actual approved environments; report untested gates as open. Render Mermaid and produce media before claiming those assets exist.
 
-You are the coding agent building this proof-of-concept. **Read `PRP.md`
-in full first** — it is the complete, self-contained build spec
-(mission, success criteria, architecture, tech stack, repo structure,
-phased plan, per-file contracts, hard constraints, Definition of Done).
-Build exactly what it specifies.
+## Project notes
 
-## Mission (one line)
+<!-- Per-repo facts: stack, how to run it, deployment gotchas.
+     Gate commands live in .claude/hooks/config.ps1, NOT here.
+     The orchestration constitution (operating mode, verification, asking vs
+     proceeding, WIP limit) is global, in ~/.claude/CLAUDE.md. Do not copy it
+     here - duplicating it is how constitutions drift. -->
 
-Enterprise AI agent governance, catalog, telemetry, and recommendation platform — Azure-first (Commercial + Government), Purview/Unity Catalog lineage integration, pluggable analytics backend (Fabric/Synapse/Databricks), real-time visual ecosystem map, permission-gated AI Copilot, MCP integration, FedRAMP-aligned with ATO accelerator.
-
-## How to work
-
-- **Follow the phases in `PRP.md`** (Scaffold -> Data/SoR -> Auto-API ->
-  Identity/Gateway -> Catalog/Discovery -> Consumers -> Observability ->
-  Docs/Azure -> optional UI). Keep each phase green (lint + tests +
-  compose smoke) before starting the next.
-- **Use TodoWrite** to track the phase tasks. Commit per phase with
-  conventional messages (`feat:`, `fix:`, `docs:`, `chore:`).
-- **If `data/synthetic_data.py` is present**, the synthetic dataset is
-  already provided — the seeder calls its generator; don't rewrite it.
-- **If `docs/whitepapers/` is present**, that is the program narrative —
-  the running code is the proof of that narrative; keep them consistent.
-- Finish only when every box in the Definition of Done is checked, then
-  write `docs/DEMO-SCRIPT.md` a presenter can follow live in ~10 minutes.
-
-## Hard constraints (non-negotiable — CI checks where possible)
-
-1. **No Microsoft Fabric / OneLake** as a component or recommendation
-   (not in Azure Gov / GCC). A single "explicitly excluded, and why"
-   sentence in docs is fine. `tests/test_no_fabric.py` greps the repo.
-2. **Zero-move is real, not just claimed.** The system of record and the
-   auto-API attach only to an `internal` network; the ONLY path to data
-   for clients is **through the gateway**. `tests/test_zero_move.py`
-   proves the SoR is unreachable from the client network.
-3. **Any external pricing is live + dated, never invented.** Pricing
-   helpers hit the public source API and every figure carries a dated
-   source note. **No staffing / services dollar figures anywhere.**
-4. **Synthetic data only.** The `data/README.md` "SYNTHETIC" banner
-   stays; no real-data ingestion paths. ITAR / CUI-safe.
-5. **Gateway framed vendor-neutral** in docs — the built path is the OSS
-   gateway; the managed cloud equivalent is documented; competitors are
-   not named in comparisons.
-6. **Open standards** — OData-style REST, OpenAPI, OAuth2 / JWT, MCP. No
-   proprietary client required to consume the API.
-7. **Data-platform posture** (for the Azure-deployment doc): the managed
-   platform runs in **commercial Azure at FedRAMP High** by default; any
-   managed-service gap is the **Azure-Government (ITAR / strict-CUI)
-   exception only**, not the default. Don't present the OSS fallback as
-   the primary.
-
-## Coding conventions
-
-- Python: `ruff format` + `ruff check` clean; type hints; small,
-  testable modules; fail-safe (services degrade gracefully, never crash
-  on a missing optional dep).
-- Config via `.env` (copy from `.env.example`); never commit secrets.
-- Every service has a Dockerfile + a healthcheck; `docker-compose.yml`
-  uses `depends_on: condition: service_healthy`.
-- Keep `README.md` quickstart working from a clean clone on a machine
-  with only Docker.
-
-## Definition of done
-
-See `PRP.md`. In short: `cp .env.example .env && make demo` brings the
-stack up healthy and prints the headline answer sourced **through the
-gateway** (with a correlation id); no-token -> 401, valid token -> 200,
-over-limit -> 429; zero-move proven by test; catalog + MCP work; Grafana
-shows per-consumer traffic; live dated pricing prints; `test_no_fabric.py`
-passes; all docs present; CI green.
+- Stack: Python 3.12 + uv + FastAPI + Pydantic v2; Node 24 + pnpm + React 19 + Vite + TS 6.0 + Fluent UI v9; Cosmos NoSQL, Event Hubs, Azure AI Search, Bicep + Helm 4. Pins: docs/adr/0002-stack-pins.md.
+- Run locally: `uv sync && pnpm install && bash scripts/install-git-hooks.sh && docker compose up -d --wait` (emulators only, no paid calls). `python`, never `python3`.
+- Gates: `powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full`
+  (The `~/` spelling is deliberate: agents run this through **bash**, where
+  `$env:USERPROFILE\...` expands `$env` to empty and exits 127 before any
+  gate runs. Do not "correct" it back.)
+- Planning alignment: `python scripts/validate_planning.py` (also runs under pytest).
+- Secret guards: `.githooks/` via core.hooksPath locally; `.github/workflows/secret-scan.yml` in CI is the backstop.

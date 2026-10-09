@@ -1,135 +1,23 @@
-# NeuroSphere — Product Requirements Prompt (PRP) / Implementation Plan
+# NeuroSphere — Product Requirements Prompt (binding preamble)
+Version 1.2 | Source of truth: docs/PRD.md; topology: docs/ARCHITECTURE.md; execution: PRPs/PRP-MASTER-neurosphere.md
 
-## 1. Architecture Overview
+Sections 1–3 are inherited by reference by every split PRP under `PRPs/backlog/` and are binding. Phases, epics, acceptance criteria, traceability and the definition of done moved to the master index and the per-epic PRPs on 2026-10-08 (ADR-0003).
 
-### 1.1 Graph Backend: Neo4j vs. Cosmos DB (Gremlin API)
-
-| Dimension | Neo4j (AuraDB / self-managed) | Azure Cosmos DB (Gremlin API) |
-|---|---|---|
-| Native graph model | Native property graph engine, purpose-built for traversal | Multi-model store with a Gremlin API layered on top; not a native graph engine [source: Medium, "Neo4j vs CosmosDB, when used as a graph database", ondrej-kvasnovsky.medium.com] |
-| Query language | Cypher (expressive, widely adopted for graph-native querying) | Gremlin (TinkerPop traversal API) |
-| Multi-hop traversal performance | Strong for deep/variable-length traversals | Performs well for short, predictable 1-2 hop traversals aligned to a good partition key; degrades on deep/unbounded traversals [source: PuppyGraph, "Cosmos DB vs Neo4j: How to Choose for Graph Workloads", puppygraph.com/blog/cosmosdb-vs-neo4j] |
-| Operability / ease of setup | Reviewers rate Neo4j easier to set up and administer than Cosmos DB for graph workloads [source: G2, "Azure Cosmos DB vs Neo4j Graph Database Comparison", g2.com/compare/azure-cosmos-db-vs-neo4j-graph-database] |
-| Global distribution / multi-region writes | Requires Neo4j Fabric/clustering configuration | Native turnkey multi-region read/write replication (Cosmos DB platform feature) |
-| Managed-service fit on Azure | AuraDB is a separate managed service (not native Azure) | Native first-party Azure PaaS service, fits directly into existing Azure landing zones |
-| Recommendation for NeuroSphere | **Primary recommendation for v1**: Neo4j (AuraDB or self-hosted) for the core relationship graph, given deep multi-hop traversal needs (agent → data asset → downstream consumer chains) and Cypher's better fit for ad-hoc copilot-generated queries. | Offer Cosmos DB Gremlin as the **Azure-native alternative** in the multi-cloud deployment profile for customers who want a single-vendor Azure stack and whose traversals are shallow. |
-
-**Decision:** Abstract the graph layer behind a internal Graph Service interface (nodes/edges/traversal operations) so either backend can be swapped per deployment profile; ship Neo4j as default, Cosmos DB Gremlin as an Azure-native option.
-
-### 1.2 Analytics / Lakehouse Layer
-
-| Option | Strengths | Trade-offs | Best fit |
-|---|---|---|---|
-| **ClickHouse** | Purpose-built for real-time, sub-second analytical queries on event data; 50-70% cost savings vs. Snowflake/BigQuery for single-table aggregations [source: Improvado, "7 Best Snowflake Alternatives", improvado.io/blog/snowflake-competitors-and-alternatives] | Less suited to complex ML/feature-engineering workflows; no native lakehouse table format story out of the box | Hot-path telemetry aggregation, dashboards, near-real-time metrics feeding the visual map |
-| **Databricks** | Lakehouse model (Delta Lake) designed for code-first ML workflows and open architecture [source: Fivetran, "Data Warehouse Comparison Guide", fivetran.com/learn/snowflake-competitors] | Higher operational complexity/cost for simple real-time aggregation use cases | Training/retraining the recommendation engine, historical trend analytics, data science workbench |
-| **Microsoft Fabric** | Unified SaaS suite within the Azure ecosystem; integrates OneLake, Power BI, Data Factory natively [source: Improvado, same article] | Newer platform, less open (more Azure-centric lock-in) | Customers standardized on Microsoft 365/Power BI who want a single-vendor Azure analytics surface |
-| **Azure Synapse** | Serverless SQL pools, integrates with Azure Data Factory and Azure ML [source: Microsoft Q&A, "choosing the right azure data platform", learn.microsoft.com] | Being gradually superseded in Microsoft's roadmap by Fabric | Existing Synapse-invested customers; not recommended as default for new builds |
-
-**Decision:** Use **ClickHouse** as the default real-time analytics layer for telemetry aggregation (cost + latency optimal for the event volume NeuroSphere expects), with **Databricks** (or Fabric, on the Azure-native deployment profile) as the batch/ML layer for recommendation-engine model training and long-horizon analytics. Azure Synapse supported only for brownfield Azure customers already invested in it.
-
-### 1.3 Event-Driven Telemetry Pipeline: Kafka / Event Hubs / Pub/Sub
-
-| Option | Strengths | Trade-offs |
-|---|---|---|
-| **Apache Kafka** (self-managed or Confluent) | Open, portable across any cloud/on-prem; largest ecosystem of connectors/stream processors (Kafka Streams, Flink) | Requires cluster provisioning/ops, or a managed Confluent bill |
-| **Azure Event Hubs** | Fully managed, Kafka-protocol-compatible endpoint, scales via throughput units/processing units, native Capture feature writes straight to storage for replay [source: Branch Boston, "AWS Kinesis vs Azure Event Hub vs Google Pub/Sub for Stream Processing", branchboston.com] | Azure-specific; event size capped at 1 MB [source: ProjectPro, "azure event hubs vs google cloud pub sub", projectpro.io/compare/azure-event-hubs-vs-google-cloud-pub-sub] |
-| **Google Cloud Pub/Sub** | Fully managed, scales automatically with no capacity provisioning required [source: ProjectPro, same article] | GCP-specific; different delivery/ordering semantics than Kafka |
-
-**Decision:** Define telemetry events in **CloudEvents** schema and use a pluggable broker adapter: **Kafka** as the cloud-agnostic default (also the on-prem option), **Azure Event Hubs** (Kafka-protocol-compatible) for the Azure-native profile, **Pub/Sub** for the GCP profile, and Kinesis for AWS if needed later. Because Event Hubs exposes a Kafka-compatible endpoint, the same Kafka client/consumer code can target either broker with configuration only — minimizing code fork across deployment profiles.
-
-### 1.4 AI Copilot Integration: RAG over Graph + Vector Store, Tool-Calling
-
-**Vector store options considered:**
-
-| Option | Strengths | Trade-offs |
-|---|---|---|
-| **Azure AI Search** | Native hybrid search (BM25 + vector + semantic ranker) in a single query; integrates directly with Azure OpenAI/Foundry [source: Technspire, "Vector Search 2026: Azure AI Search vs pgvector vs Pinecone", technspire.com] | Azure-specific; less portable to multi-cloud profiles |
-| **Pinecone** | Managed, zero-ops, strong for high-dimensional vectors at enterprise scale [source: dasroot.net, "Vector Stores Comparison"; iternal.ai, "Best Vector Databases 2026"] | Separate vendor/billing relationship; portability of exported vectors is good but still adds an integration | 
-| **Qdrant** | Performance-critical workloads, open-source, portable across clouds and on-prem [source: Gennoor Tech, "Vector Databases for Enterprise", gennoor.com/resources/blog/vector-databases-enterprise-comparison] | Requires self-hosting/ops unless using Qdrant Cloud |
-
-**Decision:** Default to **Azure AI Search** for the Azure-native deployment profile (tight integration, built-in hybrid ranking), **Qdrant** as the portable/open-source default for the cloud-agnostic and on-prem profiles. Both are behind a common VectorStore interface.
-
-**RAG + tool-calling design:**
-1. User question → copilot orchestrator (e.g., built on Azure AI Foundry Agent Service, Semantic Kernel, or LangGraph — ⚠ needs verification on final framework choice pending a dedicated framework bake-off) classifies intent.
-2. Retrieval step: hybrid vector + keyword search over indexed documentation/telemetry summaries AND a templated graph query (Cypher/Gremlin) scoped to the entities mentioned.
-3. Tool-calling: the LLM can invoke `graph_query`, `catalog_lookup`, `telemetry_metric`, and `recommendation_lookup` tools; each tool call result is attached as a citation.
-4. Response assembled with inline citations back to graph node IDs / telemetry record IDs; if retrieval returns nothing, the copilot must say so rather than answer from parametric memory.
-
-## 2. Data Model Sketch (Graph)
-
-**Node types:**
-- `Agent` (id, name, version, owner, status, capability_tags[], deployment_env)
-- `Service` (id, name, type, owner, deployment_env)
-- `DataAsset` (id, name, classification [public/internal/PII/PHI/CUI], residency_region)
-- `Tool` (id, name, provider, version)
-- `Team` (id, name, owner_contact)
-- `TelemetryEvent` (id, type, timestamp, latency_ms, status) — windowed/rolled up, not retained indefinitely as graph nodes (raw events live in the analytics layer; the graph holds summarized edges/recent-state)
-- `ComplianceControl` (id, framework [SOC2/ISO27001/GDPR/FedRAMP], control_id)
-
-**Edge types:**
-- `(Agent)-[:INVOKES]->(Agent|Tool|Service)`
-- `(Agent)-[:OWNED_BY]->(Team)`
-- `(Agent)-[:ACCESSES {mode: read|write}]->(DataAsset)`
-- `(Agent)-[:DEPENDS_ON]->(Service|Tool)`
-- `(Agent)-[:HAS_VERSION]->(Agent)` (version chain)
-- `(Agent)-[:EMITTED]->(TelemetryEvent)` (recent window only)
-- `(DataAsset)-[:GOVERNED_BY]->(ComplianceControl)`
-- `(Agent)-[:RECOMMENDED_FOR {task_embedding_ref, score}]->(Task)`
-
-## 3. Dependencies and Third-Party Services
-
-- Graph: Neo4j AuraDB/self-hosted, or Azure Cosmos DB (Gremlin API)
-- Streaming: Kafka / Azure Event Hubs / GCP Pub/Sub
-- Analytics: ClickHouse, Databricks (or Microsoft Fabric on Azure profile)
-- Vector store: Azure AI Search or Qdrant
-- LLM/agent orchestration: Azure OpenAI / Azure AI Foundry Agent Service, or portable equivalent (⚠ needs verification — final framework TBD)
-- IaC: Terraform (cloud-agnostic) + Bicep (Azure-native templates)
-- Secrets: Azure Key Vault / AWS Secrets Manager / GCP Secret Manager / HashiCorp Vault (on-prem)
-- Identity: Entra ID / IAM / federated OIDC
-- Observability: OpenTelemetry collectors feeding both the analytics layer and NeuroSphere's own self-telemetry
-
-## 4. Assumptions and Risks
-
-| Assumption/Risk | Mitigation |
-|---|---|
-| Assumes agent owners will consistently instrument telemetry via SDK/webhook | Provide a lightweight SDK + auto-instrumentation wrapper; reconciliation job flags undeclared "shadow agents" from telemetry source IP/identity even without full metadata |
-| Risk: graph write contention at high event volume (hot nodes) | Batch/aggregate high-frequency telemetry into rolled-up edges rather than one edge per event; use write-behind queue |
-| Risk: copilot hallucination despite RAG grounding | Enforce citation-required response format; automated eval harness testing groundedness before each release |
-| Risk: multi-cloud abstraction adds engineering overhead vs. single-cloud focus | Phase cloud support — Azure-native first (Phase 1-2), AWS/GCP/on-prem adapters added once core abstractions are proven (Phase 3+) |
-| Risk: FedRAMP/compliance claims overstated | Explicitly scope v1 messaging to "FedRAMP-aligned architecture," not authorization; legal/compliance review gate before any customer-facing compliance claim |
-| Assumes recommendation engine has enough historical usage data to be useful | Cold-start fallback: rank by capability-tag match + graph proximity only until sufficient feedback signal accumulates |
-
-## 5. Phased Development Plan
-
-### Phase 0 — Foundations (6-8 weeks)
-- **Scope:** Core graph schema design, Graph Service abstraction (Neo4j default), basic CloudEvents schema, single-broker ingestion (Kafka), minimal catalog CRUD API.
-- **Exit criteria:** Can register an agent, emit a telemetry event, see it land as a graph edge within 5s, in a dev environment.
-- **Rough effort:** 2 backend engineers, 1 platform engineer — ~1.5 person-months.
-
-### Phase 1 — Telemetry Pipeline + Catalog GA (8-10 weeks)
-- **Scope:** Production-grade ingestion with DLQ/backpressure, full agent catalog with versioning, reconciliation job for shadow-agent detection, ClickHouse analytics sink.
-- **Exit criteria:** Meets NFR targets (p95 ingestion <5s at 10k events/sec in staging load test); catalog metadata completeness >95% in pilot environment.
-- **Rough effort:** 3 backend engineers, 1 data engineer — ~3 person-months.
-
-### Phase 2 — Visual Map + Recommendation Engine v1 (8-10 weeks)
-- **Scope:** Real-time topology visualization (WebSocket push), initial recommendation engine (capability-tag + graph-proximity ranking, no ML yet).
-- **Exit criteria:** Map renders 50k-node graphs with <200ms interaction latency; recommendation API live with feedback capture.
-- **Rough effort:** 2 frontend engineers, 2 backend engineers — ~3.5 person-months.
-
-### Phase 3 — AI Copilot + Vector/RAG Layer (8-12 weeks)
-- **Scope:** Vector store integration (Azure AI Search + Qdrant adapters), RAG pipeline, tool-calling orchestration, citation-enforced responses, groundedness eval harness.
-- **Exit criteria:** Copilot answers a benchmark set of 100 operator questions with >90% groundedness pass rate; no hallucinated answers in eval set.
-- **Rough effort:** 2 ML/AI engineers, 1 backend engineer — ~4 person-months.
-
-### Phase 4 — Multi-Cloud + Compliance Hardening (10-12 weeks)
-- **Scope:** AWS/GCP/on-prem IaC adapters, Cosmos DB Gremlin alternative graph backend, full audit logging, SOC 2 control mapping, data residency controls, encryption hardening.
-- **Exit criteria:** Reference deployment succeeds on all 4 target environments; SOC 2 Type II readiness assessment passed (pre-audit); GDPR data-subject-request workflow functional.
-- **Rough effort:** 2 platform/infra engineers, 1 security engineer, 1 compliance SME — ~5 person-months.
-
-### Phase 5 — GA Hardening & Launch (4-6 weeks)
-- **Scope:** Load/chaos testing at target scale (1M nodes/10M edges), documentation, customer onboarding playbooks, pricing/metering integration.
-- **Exit criteria:** All PRD success metrics met in a production-representative environment; GA sign-off.
-- **Rough effort:** Full team, ~2 person-months focused effort.
-
----
-*Sources: PuppyGraph (puppygraph.com/blog/cosmosdb-vs-neo4j), Medium/ondrej-kvasnovsky (ondrej-kvasnovsky.medium.com/neo4j-vs-cosmosdb-when-used-as-a-graph-database-dde8c1dd577e), G2 (g2.com/compare/azure-cosmos-db-vs-neo4j-graph-database), Improvado (improvado.io/blog/snowflake-competitors-and-alternatives), Fivetran (fivetran.com/learn/snowflake-competitors), Microsoft Q&A (learn.microsoft.com/en-us/answers/questions/2258999), Branch Boston (branchboston.com/aws-kinesis-vs-azure-event-hub-vs-google-pub-sub-for-stream-processing), ProjectPro (projectpro.io/compare/azure-event-hubs-vs-google-cloud-pub-sub), Technspire (technspire.com/en/blog/vector-search-2026-azure-pgvector-managed), Gennoor Tech (gennoor.com/resources/blog/vector-databases-enterprise-comparison), dasroot.net, iternal.ai. [source: web_search]*
+## 1. Delivery contract
+Implement customer-hosted Azure Commercial/Government governance, not the prior generic zero-move demo. No real deployment, paid model calls or production changes without explicit operator approval. No commitment to platform hosting on AWS/GCP/on-prem.
+Build small tested vertical slices. Start with Phase 0; do not claim all phases complete from a green placeholder pipeline. Every requirement NS-01..NS-10 has a PRP owner, executable acceptance test and documented release evidence. Discovery/authorization/customer-specific gates in docs/RESEARCH-AND-GATES.md must remain visibly open until evidence exists.
+## 2. Stack and boundaries
+Frontend: React 19, TypeScript, Fluent UI v9 tokens; bounded WebGL graph view (sigma.js/graphology) plus accessible table view. API/worker: Python 3.12, FastAPI/Pydantic v2 and OpenTelemetry. Versions are pinned in docs/adr/0002-stack-pins.md and the lockfiles; no floating latest packages in production.
+Primary Azure IaC: Bicep with separate application config, Helm 4 for AKS; App Service smaller profile runs the same stateless APIs/workers where supported. Fabric workspace/capacity management requires a separate supported provisioning adapter. Terraform is not a second mandatory implementation.
+Operational catalog: Cosmos DB NoSQL documents/adjacency through CatalogRepository/GraphQuery interfaces, with bounded traversals and domain/shard partitioning. It is not a native arbitrary graph query engine. Neo4j remains an optional deep-graph adapter subject to license, private deployment, residency, availability and benchmarks; not an automatic Government fallback. Do not assume Apache AGE is supported on managed Cosmos PostgreSQL.
+Telemetry: Event Hubs production, local emulator transport for tests, normalization worker, explicit quarantine, redacted durable storage, idempotent projections through an outbox. Analytics: Fabric, Synapse and Azure Databricks via TelemetryAnalytics/RecommendationCompute capability contracts; customer chooses from validated available profiles. No ClickHouse or standalone Kafka production default.
+Search: Azure AI Search behind AuthorizedSearch contract; local deterministic fixture index for offline tests. Qdrant/Pinecone are historical alternatives, not required GA dependencies. Copilot: application-owned governed tool orchestrator with optional Foundry Agent Service adapter; direct approved model endpoint fallback must preserve identical action/security contracts. Do not lock business logic to a cloud-specific agent runtime.
+Security: Entra ID/JWT validation, resource policy middleware, managed identities/vault references, action executor and append-only audit. A development identity issuer may support synthetic testing only when `NS_ENV=local`; no local signing keys or demo issuer in production. APIM reuse/create is supported; third-party connector credentials are vault references.
+Layout: `packages/contracts` (schemas and generated types), `packages/core` (shared Python library used by api and workers), `services/api` (modular FastAPI app, one router package per module), `services/workers`, `frontend`, `connectors`, `infra`, `sandbox`, `tests`. Begin as a modular API plus workers; split deployments only for security/scale reasons.
+## 3. Contracts before implementations
+Define versioned JSON schemas for telemetry, entities/relations, costs, recommendations, approvals/action intents, chart/query plans and deployment manifests. Error taxonomy includes unauthorized/forbidden, unavailable capability, stale version, rate limit, invalid schema and transient dependency failure. All APIs include correlation ID, pagination and bounded budgets.
+IdentityScope is derived server-side from validated identity and current policy. Never accept a caller-provided domain_id as authorization. Graph, analytics, search, cache, exports and WebSocket paths receive the same scope object. Query builders accept structured allowlisted filters, not model-generated executable query text. Chart plans are a validated Vega-Lite subset with no expressions, signals or external data, rendered with a CSP-safe interpreter in a sandboxed frame.
+Action states: drafted -> validated -> awaiting_confirmation -> awaiting_approval -> executing -> succeeded/failed/rolled_back/expired. Intent contains actor, target/version, proposed diff, prerequisite results, evidence, confirmation hash/expiry and idempotency key. Execution rechecks permission/current target and delegates to a supported connector. Durable audit and safe recovery are part of the contract.
+Canonical IDs are cloud/customer/source qualified. Inferred and curated relationships coexist; curated locks affect presented lineage, not retained observations. Outbox/change-feed projection and per-sink checkpoints replace cross-store pseudo-transactions. Migrations are versioned, backwards compatible and tested on representative snapshots.
+## 4. Phases, epics, harness, traceability and definition of done
+See `PRPs/PRP-MASTER-neurosphere.md`. The release definition of done recorded there is unchanged from v1.1: every in-scope epic has real acceptance evidence; no open critical/high security defect; profile availability/compliance reviewed; migrations/rollback tested; known limitations documented; production credentials/approvals present only through approved channels; actual docs/media artifacts verified. Estimates/schedules require team/workload sizing; no invented person-months or dated Gantt promises.
