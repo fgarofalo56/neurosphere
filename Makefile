@@ -1,45 +1,52 @@
-# neurosphere — developer targets
-# Most targets are scaffolding: the Claude Code build session (see CLAUDE.md /
-# PRP.md) implements the services these call. Targets are defined up front so the
-# demo flow and CI are stable as the implementation lands.
-
-COMPOSE ?= docker compose
-PY ?= python
+# NeuroSphere developer targets. Gate commands of record live in
+# .claude/hooks/config.ps1; these are convenience wrappers for humans.
 
 .DEFAULT_GOAL := help
-.PHONY: help up down seed demo test lint diagram pricing logs clean
+.PHONY: help setup hooks lint typecheck test gates validate dev-up dev-down dev-logs docs clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-up: ## Start the core stack (postgres, dab, identity, gateway, catalog, mcp)
-	$(COMPOSE) --profile core up -d
-	./scripts/wait-for-healthy.sh
+setup: hooks ## Install toolchains and git hooks
+	uv sync
+	pnpm install
 
-down: ## Stop and remove the stack
-	$(COMPOSE) down -v
+hooks: ## Point git at the version-controlled secret guards
+	bash scripts/install-git-hooks.sh
 
-seed: ## Generate + load the synthetic data into the system of record
-	$(COMPOSE) run --rm seeder
+lint: ## Ruff lint + format check, pnpm lint
+	uv run ruff check .
+	uv run ruff format --check .
+	pnpm lint
 
-demo: up seed ## Full end-to-end demo: up -> seed -> query through the gateway -> print the answer
-	./scripts/demo.sh
+typecheck: ## Pyright + tsc
+	uv run pyright
+	pnpm typecheck
 
-test: ## Run the test suite (zero-move / auth / discovery / behavior / no-fabric)
-	$(PY) -m pytest -q
+test: ## Unit tests (python + node)
+	uv run pytest -q
+	pnpm test
 
-lint: ## Ruff format-check + lint
-	ruff format --check .
-	ruff check .
+gates: ## The kit's full gate run (what "done" means)
+	powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 
-diagram: ## Render docs/architecture.png
-	$(PY) scripts/gen-architecture-diagram.py
+validate: ## Planning-document alignment check (not a product test)
+	uv run python scripts/validate_planning.py
 
-pricing: ## Print live, dated cloud infrastructure prices
-	$(PY) tools/azure_pricing.py
+prp-status: ## Regenerate the PRP status table in the master index from PRPs/ directories
+	uv run python scripts/prp_status.py --write
 
-logs: ## Tail all service logs
-	$(COMPOSE) logs -f
+dev-up: ## Start local Azure emulators (no paid calls)
+	docker compose up -d --wait
 
-clean: ## Remove generated runtime artifacts
-	rm -rf data/out output
+dev-down: ## Stop emulators and drop volumes
+	docker compose down -v
+
+dev-logs: ## Tail emulator logs
+	docker compose logs -f
+
+docs: ## Build the docs site (available after PRP-25)
+	uv run mkdocs build --strict
+
+clean: ## Remove local build artefacts
+	rm -rf .pytest_cache .ruff_cache .venv node_modules frontend/dist temp/*

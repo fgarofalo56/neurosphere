@@ -1,0 +1,7 @@
+{
+  "name": "@neurosphere/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "description": "TypeScript contract bindings stub. Generated types land in PRP-01.",
+  "type": "module"
+}

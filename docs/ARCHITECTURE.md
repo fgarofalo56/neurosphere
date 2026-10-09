@@ -1,227 +1,105 @@
-# NeuroSphere — Architecture Diagrams
-
-All diagrams below are valid Mermaid syntax (verified for balanced brackets/quotes and correct directive keywords).
-
-## 1. C4-Style System Context Diagram
-
+# NeuroSphere — Architecture baseline v1.1
+## Decisions and retained trade-offs
+Azure Commercial/Government are deployment boundaries; third-party providers are approved connector targets. Start modular API plus ingestion/action/evaluation workers. API and domain contracts are independent of analytics vendor or optional managed agent orchestration.
+| Layer | Baseline | Retained alternative / gate |
+|---|---|---|
+| Catalog/relationships | Cosmos DB NoSQL versioned documents and adjacency, bounded query service | Neo4j for justified deep graph workloads; residency/license/operations benchmark required. Gremlin considered but not baseline due traversal/partition limits. No unverified Cosmos PostgreSQL/Apache AGE dependency. |
+| Analytics | Deployment-selected Fabric, Synapse or Azure Databricks | Capability manifests and equivalent query results; availability/security approval per cloud/region/feature. ClickHouse is historical, not a default. |
+| Events | Azure Event Hubs plus durable quarantine and redacted archive | Local fixture transport; standalone Kafka/PubSub/Kinesis are historical comparisons, not supported hosting promises. |
+| Search | Azure AI Search with server-side scope filters | Offline fixture index; Pinecone/Qdrant are historical options, not required deployment dependencies. |
+| Copilot | Application-owned authorized query/action tools; approved model endpoint | Foundry Agent Service adapter only for validated features/regions; same action contract on fallback. |
+| Compute | AKS enterprise, App Service smaller supported profile | No assumption App Service runs Helm; same container/domain code, different IaC modules. |
+Operational graph stores entities/edge evidence references and rollups; raw events/traces/cost ledger live outside it. Indexes and projections are rebuildable. Domain/shard partitioning, precomputed cross-domain summaries and bounded fan-out avoid whole-enterprise traversal on each request.
+## 1. Component and trust-boundary flow
 ```mermaid
 flowchart TB
-    User["Operator / SRE / Compliance Officer"]
-    Copilot["NeuroSphere Platform\n(Agent Observability & Copilot)"]
-    Agents["Customer AI Agent Fleet\n(LangChain / Semantic Kernel / Foundry agents)"]
-    DataSystems["Enterprise Data Systems\n(DBs, SaaS APIs, Data Lakes)"]
-    CloudProviders["Cloud Providers\n(Azure / AWS / GCP / On-Prem)"]
-    IdP["Identity Provider\n(Entra ID / Okta / IAM)"]
-
-    User -->|"Asks questions, views map, manages catalog"| Copilot
-    Agents -->|"Emits telemetry events"| Copilot
-    Copilot -->|"Queries / observes"| DataSystems
-    Copilot -->|"Deploys onto"| CloudProviders
-    Copilot -->|"Authenticates via"| IdP
-    Copilot -->|"Recommends agent/tool for task"| User
+  U[User] --> I[Entra authentication]
+  I --> UI[Fluent-inspired UI and copilot chat]
+  UI --> G[APIM reused or provisioned]
+  G --> P[API authorization and policy]
+  P --> C[Catalog and scoped graph queries]
+  P --> Q[Bounded analytics query service]
+  P --> O[Copilot orchestrator]
+  C --> DB[Cosmos NoSQL entities and adjacency]
+  Q --> A[Fabric or Synapse or Azure Databricks]
+  O --> T[Authorized tools and safe chart plans]
+  T --> C
+  T --> Q
+  O --> M[Approved model endpoint or Foundry adapter]
+  T --> X[Durable action and HITL service]
+  X --> Z[Supported target write connectors]
+  X --> AU[Append-only audit evidence]
 ```
-
-## 2. Component Diagram
-
+## 2. Telemetry projections and live view
 ```mermaid
 flowchart LR
-    subgraph Ingestion["Telemetry Ingestion Layer"]
-        SDK["Agent SDK / Webhook"]
-        Broker["Event Broker\n(Kafka / Event Hubs / Pub-Sub)"]
-        Normalizer["Schema Normalizer\n(CloudEvents)"]
-    end
-
-    subgraph Core["Core Platform"]
-        GraphSvc["Graph Service\n(Neo4j / Cosmos DB Gremlin)"]
-        Catalog["Agent Catalog Service"]
-        RecEngine["Recommendation Engine"]
-        Analytics["Analytics Layer\n(ClickHouse + Databricks/Fabric)"]
-    end
-
-    subgraph AI["AI Copilot Layer"]
-        VectorStore["Vector Store\n(Azure AI Search / Qdrant)"]
-        Orchestrator["Copilot Orchestrator\n(RAG + Tool-Calling)"]
-        LLM["LLM\n(Azure OpenAI / Foundry)"]
-    end
-
-    subgraph UX["Experience Layer"]
-        Map["Real-Time Visual Map UI"]
-        ChatUI["Copilot Chat UI"]
-        CatalogUI["Catalog / Admin UI"]
-    end
-
-    SDK --> Broker --> Normalizer --> GraphSvc
-    Normalizer --> Analytics
-    GraphSvc --> Catalog
-    GraphSvc --> RecEngine
-    Analytics --> RecEngine
-    GraphSvc --> VectorStore
-    Analytics --> VectorStore
-    Orchestrator --> VectorStore
-    Orchestrator --> GraphSvc
-    Orchestrator --> RecEngine
-    Orchestrator --> LLM
-    GraphSvc --> Map
-    Orchestrator --> ChatUI
-    Catalog --> CatalogUI
+  S[OTel SDK and authorized provider connectors] --> R[Redact and authenticate]
+  R --> H[Event Hubs]
+  H --> N[Validate normalize deduplicate]
+  N --> B[Redacted archive and replay]
+  N --> K[Explicit quarantine]
+  N --> A[Analytics adapter and cost ledger]
+  N --> C[Catalog evidence projection]
+  N --> V[Bounded hot aggregates]
+  V --> W[Scoped WebSocket gateway]
+  W --> UI[Clustered map viewport]
+  B --> E[Sampled evaluation workers]
+  E --> REC[Evidence-backed recommendations]
+  A --> REC
+  C --> REC
 ```
-
-## 3. Event-Driven Telemetry Pipeline Sequence Diagram
-
+Offset/checkpoint advancement follows durable acceptance or quarantine. Separate sink checkpoints/idempotent projection reconcile partial writes; no fictional cross-store transaction. Source billing freshness differs from instrumented trace freshness. Hot aggregates remain operational if batch analytics is delayed; UI shows lag and coverage.
+## 3. Governed action from chat, button or MCP
 ```mermaid
 sequenceDiagram
-    participant Agent as Customer Agent
-    participant SDK as NeuroSphere SDK
-    participant Broker as Event Broker
-    participant Consumer as Ingestion Consumer
-    participant Graph as Graph Service
-    participant Analytics as Analytics Layer (ClickHouse)
-
-    Agent->>SDK: emit invocation/error/latency event
-    SDK->>Broker: publish CloudEvent
-    Broker-->>Consumer: deliver event (at-least-once)
-    Consumer->>Consumer: validate schema
-    alt schema valid
-        Consumer->>Graph: upsert node/edge (rolled-up)
-        Consumer->>Analytics: write raw event row
-        Graph-->>Consumer: ack
-    else schema invalid
-        Consumer->>Broker: route to Dead Letter Queue
-    end
-    Consumer-->>Broker: commit offset
+  participant U as User or external client
+  participant API as Shared action API
+  participant P as Current policy
+  participant W as Approval workflow
+  participant X as Target connector
+  participant A as Audit
+  U->>API: Request model swap with target version
+  API->>P: Check actor scope and prerequisites
+  API->>U: Show exact diff and expiring confirmation
+  U->>API: Confirm bound intent
+  API->>W: Request reviewer approval if required
+  W->>API: Approve or reject
+  API->>P: Recheck current permission and target version
+  API->>A: Persist intent and execution state
+  API->>X: Idempotent canary change
+  X-->>API: Verify actual outcome
+  API->>A: Record result and rollback evidence
+  API-->>U: Verified result or explicit failure
 ```
-
-## 4. Recommendation Engine Data Flow
-
+## 4. Deployment intelligence and sovereign profiles
 ```mermaid
 flowchart TD
-    TaskInput["Task Description / Workflow Context"]
-    Embed["Embed Task Text"]
-    TagMatch["Capability Tag Matching\n(Catalog Service)"]
-    GraphProximity["Graph Proximity Scoring\n(Graph Service)"]
-    HistPerf["Historical Performance Signals\n(Analytics Layer)"]
-    Ranker["Ranking Model\n(weighted scoring, ML-assisted in later phases)"]
-    Results["Ranked Agent/Tool Recommendations\n+ Explanation"]
-    Feedback["Operator Accept/Reject Feedback"]
-
-    TaskInput --> Embed
-    Embed --> TagMatch
-    Embed --> GraphProximity
-    TagMatch --> Ranker
-    GraphProximity --> Ranker
-    HistPerf --> Ranker
-    Ranker --> Results
-    Results --> Feedback
-    Feedback -->|"retrain / reweight"| Ranker
+  D[Choose cloud and approved region] --> S[Consented read-only resource scan]
+  S --> V[Validate access network SKU quota residency and owner]
+  V --> R[Reuse create skip deployment plan]
+  R --> C[Operator approval]
+  C --> CAP[Service feature authorization capability matrix]
+  CAP --> OK[Supported profile]
+  CAP --> NO[Disable unavailable option with reason]
+  OK --> I[IaC and workspace provisioning adapters]
+  I --> SM[Connectivity policy and smoke tests]
+  SM --> E[Evidence manifest and ownership register]
 ```
-
-## 5. AI Copilot Request/Response Sequence (Retrieval + Tool Calls)
-
+Commercial and Government deploy separate identity endpoints, model/search/storage/event services and analytics resources; no automatic cross-cloud data flow. Fabric/Synapse/Databricks choices are evaluated individually. Resource discovery is visibility-limited, not an unrestricted tenant inventory.
+## 5. Federation and disaster recovery
 ```mermaid
-sequenceDiagram
-    participant User as Operator
-    participant UI as Copilot Chat UI
-    participant Orch as Copilot Orchestrator
-    participant Vec as Vector Store
-    participant Graph as Graph Service
-    participant Rec as Recommendation Engine
-    participant LLM as LLM
-
-    User->>UI: "Which agents touch EU customer data?"
-    UI->>Orch: forward question + session context
-    Orch->>LLM: classify intent / plan retrieval
-    LLM-->>Orch: plan: graph_query + vector_search
-    Orch->>Vec: hybrid search (docs/telemetry summaries)
-    Vec-->>Orch: relevant passages + citations
-    Orch->>Graph: query DataAsset nodes WHERE residency_region = EU
-    Graph-->>Orch: matching Agent/DataAsset edges
-    Orch->>LLM: generate grounded answer (context + citations)
-    alt sufficient grounding
-        LLM-->>Orch: answer with inline citations
-    else insufficient grounding
-        LLM-->>Orch: "insufficient information" response
-    end
-    Orch->>UI: deliver answer + citation links
-    UI->>User: render answer
-    opt follow-up action
-        User->>UI: "recommend a replacement agent"
-        UI->>Orch: forward follow-up
-        Orch->>Rec: recommendation_lookup(context)
-        Rec-->>Orch: ranked candidates
-        Orch->>UI: present recommendations
-    end
+flowchart LR
+  subgraph Boundary[Approved cloud and geographic boundary]
+    D1[Domain cell A] --> S[Authorized aggregate summaries]
+    D2[Domain cell B] --> S
+    S --> E[Enterprise view]
+    P[Primary regional services] --> R[Approved secondary and durable replay]
+    R --> T[Restore failover and failback tests]
+  end
+  Public[Public docs-only assistant] --> Docs[Published documentation corpus]
 ```
-
-## 6. Multi-Cloud Deployment Topology
-
-```mermaid
-flowchart TB
-    subgraph Azure["Azure Deployment Profile"]
-        AzEventHubs["Azure Event Hubs"]
-        AzCosmos["Cosmos DB (Gremlin) or Neo4j AuraDB"]
-        AzFabric["Microsoft Fabric / Synapse"]
-        AzSearch["Azure AI Search"]
-        AzAKS["AKS"]
-    end
-
-    subgraph AWS["AWS Deployment Profile"]
-        AwsKinesis["MSK (Kafka) / Kinesis"]
-        AwsNeo4j["Neo4j (self-managed on EKS)"]
-        AwsAnalytics["ClickHouse on EC2 + Databricks on AWS"]
-        AwsVector["Qdrant (self-hosted)"]
-        AwsEKS["EKS"]
-    end
-
-    subgraph GCP["GCP Deployment Profile"]
-        GcpPubSub["Pub/Sub"]
-        GcpNeo4j["Neo4j (self-managed on GKE)"]
-        GcpAnalytics["ClickHouse on GCE + Databricks on GCP"]
-        GcpVector["Qdrant (self-hosted)"]
-        GcpGKE["GKE"]
-    end
-
-    subgraph OnPrem["On-Prem / Air-Gapped Profile"]
-        OpKafka["Self-managed Kafka"]
-        OpNeo4j["Neo4j (self-managed)"]
-        OpClickHouse["ClickHouse (self-managed)"]
-        OpQdrant["Qdrant (self-hosted)"]
-        OpK8s["Kubernetes (bare-metal / VMware)"]
-    end
-
-    CommonCore["NeuroSphere Core Services\n(Graph Service abstraction, Catalog, Recommendation Engine, Copilot Orchestrator)"]
-
-    Azure --> CommonCore
-    AWS --> CommonCore
-    GCP --> CommonCore
-    OnPrem --> CommonCore
-```
-
-## 7. Phased Roadmap (Gantt Chart)
-
-```mermaid
-gantt
-    title NeuroSphere Phased Roadmap
-    dateFormat  YYYY-MM-DD
-    axisFormat  %b %Y
-
-    section Phase 0 - Foundations
-    Graph schema + ingestion skeleton      :p0, 2026-01-05, 42d
-
-    section Phase 1 - Telemetry + Catalog GA
-    Production ingestion + catalog         :p1, after p0, 63d
-
-    section Phase 2 - Visual Map + Rec Engine v1
-    Live topology map + recommendations    :p2, after p1, 63d
-
-    section Phase 3 - AI Copilot
-    RAG + tool-calling + eval harness       :p3, after p2, 70d
-
-    section Phase 4 - Multi-Cloud + Compliance
-    AWS/GCP/on-prem + SOC2/ISO27001 prep    :p4, after p3, 77d
-
-    section Phase 5 - GA Hardening
-    Load/chaos testing + launch             :p5, after p4, 35d
-```
-
----
-*All architecture/technology choices reflected here (Neo4j, Cosmos DB Gremlin, ClickHouse, Databricks, Fabric, Azure AI Search, Qdrant, Kafka, Event Hubs, Pub/Sub) are grounded in the cited sources in NeuroSphere-PRP.md. Framework choice for the Copilot Orchestrator (Azure AI Foundry Agent Service vs. Semantic Kernel vs. LangGraph) is marked ⚠ needs verification pending a dedicated bake-off.*
+Domain cells publish permitted aggregates, not unrestricted identities/prompts. Replication locations require approval and actual service support; paired-region assumptions are insufficient. Event Hubs metadata geo-DR does not replicate event data or RBAC. Data geo-replication availability/tier must be checked; otherwise implement approved archive/replay strategy and publish measured RPO limitations. Foundry does not supply automatic application failover.
+## 6. Data model and query safety
+Entities carry canonical ID, customer/domain/cloud, version, lifecycle, owner, classification and residency. Models include deployment/version/modality/context/tool capability and price-reference metadata. Relations carry asserted/inferred/curated status, confidence/provenance, validity, evidence references and override lock. Runs/spans are referenced rather than indefinitely replicated into graph nodes.
+GraphQuery supports scoped get/search/neighbors/bounded impact paths; RecommendationCompute handles analytical graph/similarity jobs away from the interactive path. Copilot uses structured tools rather than unrestricted Cypher/SQL. Search and push paths enforce the same policy as REST.
+The five Mermaid sources above are the diagram of record. They were rendered and parser-validated on 2026-10-08 to docs/diagrams/01..05-*.svg (gate G10 closed). Re-render after any source change; PRP-00 adds the script and CI check that keeps the SVGs in sync.

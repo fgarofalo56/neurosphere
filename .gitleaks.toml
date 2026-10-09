@@ -1,0 +1,18 @@
+# gitleaks configuration. Default ruleset plus a narrow, path-based allowlist for
+# the files whose job is to contain secret-shaped patterns.
+title = "neurosphere"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Scanners and placeholder templates"
+paths = [
+  '''^\.githooks/''',
+  '''^\.github/workflows/secret-scan\.yml$''',
+  '''^\.gitleaks\.toml$''',
+  '''^\.env\.example$''',
+]
+regexes = [
+  '''(?i)(example|placeholder|change-me|your-|xxx+|<[a-z-]+>|dummy|fake|redacted)''',
+]

@@ -1,29 +1,7 @@
-# AGENTS.md
-
-Guidance for AI coding agents working in this repository. Claude Code reads
-`CLAUDE.md`; other agents (Codex, Cursor, Gemini CLI, Aider) read this file.
-See `CLAUDE.md` for the full operator notes — this is the short version.
-
-## What this project is
-
-NeuroSphere — enterprise AI agent governance, catalog, telemetry, and recommendation platform (Azure-first, FedRAMP-aligned, Purview-integrated)
-
-**Stack:** unknown
-
-## Conventions
-
-- Match the existing code style in this repo.
-- Run the project's existing lint + tests before committing.
-
-## Always-pass gates (do not bypass)
-
-- Lint / format must pass before any commit. Never bypass hooks (`--no-verify`).
-- Tests must be green for the touched surface before shipping.
-- Fix root causes — do not paper over a failing check.
-- Never read or commit secrets (`.env`, `secrets/`, keys). Use env vars.
-
-## Common tasks
-
-See `README.md` → "Develop" for the exact lint / test / run commands.
-
-_Scaffolded by ATLAS Coding Manager (Forge) on 2026._
+# NeuroSphere — coding agent instructions
+Read CLAUDE.md, PRPs/PRP-MASTER-neurosphere.md, docs/PRD.md, PRP.md, docs/ARCHITECTURE.md and docs/RESEARCH-AND-GATES.md. They supersede any demo material in git history.
+Azure Commercial/Government customer-hosted AI governance; Fabric/Synapse/Azure Databricks are capability-gated choices, not prohibited components. Real ingestion requires consent; synthetic sandbox remains isolated.
+Work comes from one PRP per session (`PRPs/backlog/`), in the order the master index fixes. Each work item edits only its owned files. Record acceptance evidence under docs/evidence/ and blockers in the PRP completion note. Check Git status and preserve user work. Never infer implementation from successful planning or an empty ship diff.
+Scope authorization across APIs, copilot/tools, graph/search/analytics, exports, caches, actions and push. Shared durable action API with confirmation/approval/rollback; no unrestricted privileged bypass.
+No secrets in source/logs/prompts; no production mutation, paid call, push or cloud deployment without permission (`NS_LIVE_APPROVED=1` for live gates). Never bypass hooks or suppress failed tests. Use the pinned versions in docs/adr/0002-stack-pins.md and contract tests.
+Gates: `powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full`. Run `python scripts/validate_planning.py` for planning changes; it is not a product test. Report untested cloud/ATO/DR/Mermaid/media gates explicitly.

@@ -1,146 +1,58 @@
-# NeuroSphere — Product Requirements Document (PRD)
-
-## 1. Problem Statement
-
-Enterprises running large fleets of AI agents, microservices, and automation bots lack a unified, real-time view of what agents exist, how they relate to one another and to the data/systems they touch, and how to get recommendations on which agent/tool to use for a given task. Telemetry is siloed per-service, agent registries (if they exist) are spreadsheets, and there is no conversational way to ask "what agents touch customer PII?" or "which agent should handle this workflow?" This creates operational blind spots, compliance risk, and duplicated agent-building effort.
-
-## 2. Vision
-
-NeuroSphere is a unified, graph-native observability and discovery platform for AI-agent and service ecosystems. It ingests telemetry in real time, models agents/services/data assets as a knowledge graph, visualizes the live topology, recommends the right agent/tool for a task, and lets operators converse with the whole system through an AI copilot — deployable across Azure, AWS, GCP, or on-prem, and built to meet enterprise compliance bars (SOC 2, ISO 27001, FedRAMP considerations, GDPR).
-
-## 3. Objectives & Measurable Success Metrics
-
-| Objective | Metric | Target (GA) |
-|---|---|---|
-| Real-time situational awareness | Telemetry event-to-graph-update latency (p95) | < 5s |
-| Agent discoverability | % of registered agents with complete metadata (owner, version, capability tags) | > 95% |
-| Recommendation usefulness | Recommendation acceptance rate (operator picks suggested agent/tool) | > 60% |
-| Copilot adoption | Weekly active copilot users / total platform users | > 40% |
-| Platform reliability | Platform availability (core API + graph query path) | 99.9% monthly |
-| Compliance readiness | SOC 2 Type II report issued; ISO 27001 cert in progress | SOC2 Type II within 12 months of GA |
-| Time-to-answer | Median time for an operator to answer "which agent/service does X" via copilot vs. manual search | 80% reduction |
-
-## 4. Target Users / Personas
-
-1. **Platform/Site Reliability Engineer ("Priya")** — owns uptime of the agent fleet; needs the live topology map and alerting to find the blast radius of an incident fast.
-2. **AI/ML Platform Engineer ("Marcus")** — builds and registers new agents; needs the agent catalog for versioning, dependency tracking, and avoiding duplicate builds.
-3. **Compliance/Security Officer ("Dana")** — needs to prove data lineage, access boundaries, and audit trails across agents touching regulated data (PII, PHI, CUI).
-4. **Product/Operations Lead ("Sam")** — wants a conversational interface (copilot) to ask business questions ("what's our agent coverage for order fulfillment?") without writing graph queries.
-5. **Enterprise Architect ("Elena")** — plans multi-cloud rollout, cares about deployment topology options and portability across Azure/AWS/GCP/on-prem.
-
-## 5. Key Features
-
-### 5a. Telemetry Pipeline (event-driven ingestion)
-**Description:** Durable, event-driven ingestion of agent/service telemetry (invocations, errors, latencies, tool calls, data access events) from heterogeneous sources into a streaming backbone, normalized and published to both the graph store and the analytics layer.
-
-**User stories:**
-- As an SRE, I want every agent invocation emitted as an event within seconds so the topology map reflects reality.
-- As a platform engineer, I want to plug in a new agent with a standard SDK/webhook and have its telemetry flow automatically.
-
-**Acceptance criteria:**
-- Supports at least one managed event broker (Azure Event Hubs, Kafka, or GCP Pub/Sub) with schema-validated events (CloudEvents format).
-- End-to-end ingestion latency p95 < 5s under 10k events/sec load.
-- At-least-once delivery with idempotent consumers; dead-letter queue for malformed events.
-- Back-pressure handling and autoscaling consumers.
-
-### 5b. Agent Catalog (registry/metadata/versioning)
-**Description:** Central registry of every agent/service: owner, version history, capability tags, dependencies, data-access scope, deployment environment, and health status.
-
-**User stories:**
-- As a platform engineer, I want to register a new agent version and see its diff against the prior version's declared capabilities.
-- As a compliance officer, I want to query "which agents have write access to the customer database."
-
-**Acceptance criteria:**
-- CRUD API + UI for agent registration with required metadata schema (owner, semver, tags, data scopes).
-- Full version history retained and queryable.
-- Catalog entries auto-link to graph nodes.
-- Stale/undeclared agents detected via telemetry-vs-catalog reconciliation job (flags "shadow agents").
-
-### 5c. Recommendation Engine
-**Description:** Given a task description or workflow context, recommends the best-fit agent(s)/tool(s) based on capability tags, historical performance, graph proximity, and usage patterns.
-
-**User stories:**
-- As an operations lead, I want the system to suggest which agent to invoke for "summarize this support ticket."
-- As a platform engineer, I want recommendations ranked with an explanation (why this agent was suggested).
-
-**Acceptance criteria:**
-- Returns ranked list of candidate agents with confidence score and explanation referencing graph relationships/telemetry signals.
-- Supports feedback loop (accept/reject) that retrains/adjusts ranking.
-- p95 recommendation latency < 1s for catalogs up to 10k agents.
-
-### 5d. Real-Time Visual Map (live topology/relationship view)
-**Description:** Interactive, auto-updating graph visualization of agents, services, data assets, and their relationships, reflecting telemetry in near real time (node health, traffic volume, recent errors).
-
-**User stories:**
-- As an SRE, I want to see, during an incident, every downstream agent affected by a failing service, highlighted live.
-- As an architect, I want to filter the map by environment (prod/staging) or cloud provider.
-
-**Acceptance criteria:**
-- Map updates within 5s of a graph-affecting telemetry event (push via WebSocket/SignalR).
-- Supports filtering/search by node type, tag, environment, health status.
-- Handles graphs of at least 50k nodes / 250k edges with acceptable pan/zoom performance (<200ms interaction latency).
-
-### 5e. AI Copilot (conversational assist over the graph + telemetry)
-**Description:** Conversational interface using retrieval-augmented generation (RAG) over the graph and a vector store of documentation/telemetry summaries, with tool-calling to execute graph queries, pull live metrics, or trigger catalog lookups.
-
-**User stories:**
-- As an operations lead, I want to ask "which agents touch EU customer data?" and get a grounded answer with citations to graph nodes.
-- As an SRE, I want to ask "what changed in the last hour that could explain the error spike?" and get a timeline.
-
-**Acceptance criteria:**
-- Every factual claim in a copilot answer is grounded in a graph query result or telemetry record, shown as an inline citation/reference.
-- Tool-calling supports at minimum: graph query, catalog lookup, telemetry metric pull, recommendation engine call.
-- Falls back to "I don't have enough information" rather than hallucinating when retrieval is empty.
-- Supports multi-turn conversation with session context.
-
-### 5f. Multi-Cloud Deployment Options (Azure / AWS / GCP / on-prem)
-**Description:** Platform deployable via containerized/IaC templates to Azure, AWS, GCP, or on-prem Kubernetes, with provider-specific managed-service substitutions (e.g., Event Hubs vs. MSK vs. Pub/Sub) behind a common abstraction layer.
-
-**User stories:**
-- As an architect, I want to deploy NeuroSphere into our existing Azure landing zone using Bicep/Terraform.
-- As an enterprise customer with data-residency requirements, I want an on-prem/air-gapped deployment option.
-
-**Acceptance criteria:**
-- Reference IaC (Terraform/Bicep) provided for each of the four target environments.
-- Core platform logic (ingestion normalization, graph API, recommendation engine, copilot) is cloud-agnostic; only infra adapters differ.
-- Documented RPO/RTO per deployment target.
-
-### 5g. Compliance Alignment (SOC 2, ISO 27001, FedRAMP considerations, GDPR)
-**Description:** Platform architecture and operating procedures designed to support SOC 2 Type II attestation, ISO 27001 certification, FedRAMP-aligned controls for government customers, and GDPR data-subject rights.
-
-**User stories:**
-- As a compliance officer, I want an audit trail of every data access and agent-to-data-asset relationship.
-- As a customer in a regulated industry, I want assurance the hosting platform (Azure/AWS/GCP) carries the relevant attestations.
-
-**Acceptance criteria:**
-- Encryption at rest and in transit (FIPS 140-validated modules where required) for all stores.
-- Full audit logging of graph writes, catalog changes, and copilot tool-calls, retained per policy.
-- Data residency controls configurable per tenant/region (GDPR Art. 44-49 support).
-- Documented mapping of platform controls to SOC 2 Trust Services Criteria and ISO 27001 Annex A controls.
-- ⚠ needs verification: formal FedRAMP authorization requires a sponsoring agency and a 3PAO assessment; NeuroSphere itself cannot claim FedRAMP authorization without going through that process — initial scope is "FedRAMP-aligned architecture using FedRAMP-authorized underlying cloud services." [source: web_search "Azure FedRAMP SOC 2 ISO 27001 compliance offerings"]
-
-## 6. Non-Functional Requirements
-
-- **Scale:** Support graphs up to 1M nodes / 10M edges; ingest 50k events/sec sustained, bursting to 150k/sec.
-- **Latency:** Telemetry-to-graph p95 < 5s; recommendation API p95 < 1s; copilot first-token latency < 2s.
-- **Availability:** 99.9% monthly for core read path; 99.5% for ingestion-to-visualization pipeline during provider-level incidents (degraded-mode read-only cache).
-- **Security:** Zero-trust network model, per-tenant isolation, RBAC/ABAC on graph queries, secrets in managed vault (Key Vault/Secrets Manager/Secret Manager), signed/verified telemetry sources.
-- **Observability of NeuroSphere itself:** the platform must emit its own telemetry ("dogfooding") into the same pipeline for self-monitoring.
-
-## 7. Out of Scope (v1)
-
-- Building/training the underlying AI agents themselves (NeuroSphere observes and recommends; it does not author agent logic).
-- Full FedRAMP ATO (Authority to Operate) — v1 targets FedRAMP-aligned controls only, not formal authorization.
-- Native mobile apps (web-responsive UI only in v1).
-- Automated remediation/self-healing of unhealthy agents (visibility + recommendation only; action-taking is a future phase).
-
-## 8. Open Questions
-
-1. Will NeuroSphere be offered multi-tenant SaaS, single-tenant managed, or customer-hosted (or all three)?
-2. What is the authoritative source of "ground truth" when telemetry contradicts the declared catalog metadata (e.g., an agent accessing data it isn't declared to touch)?
-3. Target initial industry vertical for GA — general enterprise vs. regulated (finance/health/public sector) — affects compliance prioritization order.
-4. Pricing/metering model: per-event, per-node, per-seat, or hybrid?
-5. Degree of agent-framework-specific integration required at launch (e.g., LangChain, Semantic Kernel, AutoGen, Azure AI Foundry Agent Service) vs. generic webhook/SDK only.
-
----
-*Sources used for compliance claims: Microsoft Learn "Azure compliance documentation" (learn.microsoft.com/en-us/azure/compliance/), Microsoft Learn SOC 2 Type 2 offering page (learn.microsoft.com/en-us/azure/compliance/offerings/offering-soc-2), Azure Trusted Cloud Compliance page (azure.microsoft.com/en-us/explore/trusted-cloud/compliance). [source: web_search, web_fetch]*
+# NeuroSphere — Product Requirements Document
+Version: 1.1 aligned | Status: implementation baseline draft; production gates remain open
+## 1. Vision and scope
+Govern, catalog, observe, and optimize the enterprise AI ecosystem from a customer-hosted Azure platform. Target Azure Commercial and Azure Government from one codebase; third-party AI providers are connector targets, not a commitment to deploy the platform on AWS/GCP/on-prem. Serve agency-scale federated organizations without exporting restricted data across cloud boundaries.
+Personas: platform/AI CoE owner, domain owner/steward, analyst/FinOps, executive, security auditor, developer, and privileged administrator. Default delivery is single-customer deployment with domain-scoped access; multi-customer SaaS is deferred.
+Objectives: discover registered and observed agents; explain ownership, models, grounding and cost; surface evidence-backed recommendations; enable governed actions through chat or buttons; give operators an accessible live ecosystem view. No authorization, savings, uniqueness, or completeness claims without evidence.
+## 2. Product requirements
+### NS-01 Telemetry and cost ledger
+Ingest OpenTelemetry traces/metrics and versioned CloudEvents through authenticated push and bounded polling connectors. Azure Monitor/Application Insights/Log Analytics supply observed signals where exposed; provider usage/billing APIs provide aggregates with explicitly reported granularity. Capture trace/span/parent IDs for multi-agent delegation, tool calls, retries, errors and cancellation.
+Event envelope: event_id, schema_version, event_time, ingestion_time, cloud, customer_id, domain_id, source_id, external_agent_id, canonical_agent_id when resolved, request_id, trace_id, span_id, parent_span_id, provider, model/version, environment, outcome, duration, token breakdown, data-source references, classification and sampling metadata. Missing fields remain null/unknown, never zero by default.
+Cost records distinguish estimated vs invoiced spend, currency, price version/effective date, cached tokens, retries, compute/PTU/reservation allocation and license/seat costs. Avoid double counting gateway, application and billing observations. Expose reconciliation coverage and variance; do not promise all spend is observable or attributable per user.
+At-least-once delivery with idempotency by source/event ID, schema compatibility, event-time watermarks, retry budgets, quarantine storage, replay and backpressure. Event Hubs has no built-in service-bus-style DLQ: implement quarantine explicitly. Redact before persistence and external transmission; prompt/response bodies disabled by default.
+### NS-02 Catalog and relationship governance
+Versioned entities: Person/pseudonymous principal, Agent, AgentVersion, ModelDeployment, GroundingSource/DataAsset, Tool, Service, Domain, Owner, Policy, Recommendation and RunReference. Stable cloud/customer/source-qualified IDs resolve collisions and agent aliases.
+Relations include INVOKES, DELEGATES_TO, USES_MODEL, READS, WRITES, GROUNDED_BY, OWNED_BY, DEPENDS_ON and SUPERSEDES. Every edge has provenance, evidence IDs, confidence, first/last observation, validity interval and asserted/inferred/curated status. Store raw telemetry outside the graph.
+Infer relationships using traces, observed access and optional embeddings. Domain-authorized stewards can accept, reject, override and lock edges with reason and expiry. Preserve observed facts separately from declared and curated relationships; an override cannot erase security evidence. Re-inference must respect locks; conflicts route to review.
+Search/CRUD/import/export, optimistic concurrency, lifecycle deprecation, ownership recertification, stale-agent reconciliation and scope-filtered lineage. Purview and Unity Catalog are optional connector integrations; do not assume universal write-back, labeling or OpenLineage support.
+### NS-03 Recommendations and quality evaluation
+Rules plus statistical/ML analysis identify cost spikes, latency/error degradation, unused agents, candidate duplicates and possible model right-sizing. Each suggestion includes evidence window, coverage, uncertainty, prerequisites, projected estimate and owner; cold-start uses bounded rules rather than fabricated scores.
+Add offline benchmark and sampled online evaluation for task success, groundedness, safety, tool correctness, feedback and drift. Version datasets/rubrics/judge models; calibrate LLM-as-judge against human labels and report uncertainty, bias and sampling coverage. Quality is not inferred solely from thumbs-up or absence of errors. Evaluate approved/redacted data inside the selected boundary; enforce evaluator token/cost budgets.
+Model swaps require capability/context/tool compatibility, quality regression tests and cost comparison, then staged rollout/canary and rollback. Duplicate detection recommends consolidation review; it never automatically merges operational agents. Agent/tool selection is an optional secondary recommendation capability, not the product's primary purpose.
+### NS-04 Human-in-the-loop workflow
+Route low-confidence relationships, disputed evaluations, recommendation reviews and policy exceptions to scoped reviewers. Persistent states: pending, assigned, approved, rejected, expired, escalated, executed and failed; SLA timers, reassignment, notifications and immutable decisions. Separate insight review from maker-checker approval of executable changes; prohibit self-approval where configured.
+### NS-05 Real-time map and session replay
+Distinct node shapes/icons for people, agents, sub-agents, models and sources; configurable size/color legends for tokens, context size, frequency, latency and health. Animate observed edges only and label partial/delayed coverage. Aggregate into domain clusters; never download the full enterprise graph to a browser. Drill down to lineage, metrics, costs, evidence and recommendations.
+WebGL viewport with bounded node/edge budgets, aggregation and paginated expansion; text/table alternative, reduced motion, keyboard navigation and non-color status indicators. Restrict identity display; pseudonymize people by default. Live updates via scoped WebSocket gateway; permission revocation closes sessions and invalidates caches.
+Replay stored/redacted run traces with parent-child calls, timings, errors and tool interactions; label gaps, sampling and late spans. Replay is visual inspection, not re-execution of side-effectful tools. Payload access, retention, export and legal hold follow policy.
+### NS-06 Integrated AI copilot and action plane
+Copilot knows the current page, filters, time range and selected entities subject to user permissions. Query catalog, metrics and evidence through authorized server tools, explain metrics in audience-appropriate terms, recommend actions and render chart/table/dashboard specifications inline. Users preview, save, share and add approved dashboards to the UI; saved reports re-evaluate authorization on every run.
+Use a declarative chart/query schema and sandboxed renderer, not generated JavaScript or unrestricted SQL/Cypher/KQL. Enforce query cost/time/cardinality limits and citations with data freshness. Abstain when evidence is unavailable. Persist user-scoped conversations under configurable redaction/retention policies.
+The same action API serves copilot, recommendation buttons, REST and MCP. Recheck current resource permission and policy at execution; bind confirmation to target/version/diff and expiry. Idempotent execution, approvals, dry-run, audit before/after, canary, rollback and emergency disable are mandatory. External systems need a supported write connector and delegated credentials; unsupported actions are advisory, not catalog-only pretend changes.
+### NS-07 Deployment intelligence and analytics options
+At deployment choose Commercial or Government, approved region(s), AKS enterprise or App Service smaller profile, and Fabric/Synapse/Azure Databricks analytics backend where validated. Show unavailable options disabled with reasons; never route Government telemetry to Commercial to fill a gap. Implement all three adapters to a shared capability/query contract, not identical vendor internals.
+Read-only, consented Azure Resource Graph scan across authorized subscriptions and Graph/Foundry discovery where needed identifies APIM, model endpoints, Key Vault, monitoring, Event Hubs, storage and analytics workspaces. Tenant scope alone does not grant subscription visibility. Validate SKU, network reachability, quotas, capacity, permissions, residency, lifecycle and enterprise owner consent before reuse.
+Show reuse/create/skip and plan/cost implications; seek confirmation for shared services rather than always creating them. Provision missing approved services with idempotent IaC after plan approval. Never modify/delete shared resources on uninstall; record ownership and dependencies. Fabric capacity/workspace lifecycle uses its supported APIs, not assumed ARM-only provisioning.
+### NS-08 Identity, security and compliance alignment
+Entra ID with cloud-specific authorities/audiences, managed identities where supported and vault references elsewhere. Roles: Viewer, Analyst/Pro, Domain Steward/Owner, Admin, Security Auditor; custom resource-scoped permissions. Pro status does not imply administration. Privileged access remains scoped, time-bound and auditable; no unrestricted 'God' bypass.
+Server-side ABAC/RBAC for APIs, queries, exports, search indexes, copilot, tools and push channels. Fail closed on authorization errors; secure cache keys and federation summaries. Private networking/default-deny egress, approved endpoints, threat modeling, prompt-injection isolation, supply-chain scanning, secret rotation and incident response are foundational, not final-phase additions.
+ATO accelerator includes boundary/data-flow diagrams, SSP/control narratives, inheritance/responsibility matrix, POA&M, evidence inventory, scan outputs, configuration baselines, continuous monitoring and change/incident/contingency plans. Map to applicable NIST 800-53 Rev 5 and agency requirements; track FedRAMP/DoD scope separately. Service availability, feature GA and authorization are distinct verification items.
+NeuroSphere is not FedRAMP authorized and cannot grant an agency ATO. Azure Government, GCC/GCC High and DoD impact levels are not interchangeable. Agency authorizing officials determine ATO; inherited controls do not automatically authorize this application. No certification deadline promise.
+### NS-09 APIs, MCP and enterprise integration
+OpenAPI REST first; GraphQL is optional after bounded-query/security review. Scoped MCP server tools/resources for catalog, metrics, recommendations and approved actions; MCP client supports approved external servers with explicit registration. MCP connectivity does not discover every local agent or expose complete telemetry automatically.
+Validate OAuth audience/scope, prevent token passthrough/confused-deputy attacks, SSRF and untrusted tool manifests; allowlist endpoints and require approval for new tools. Connector SDK (Python/TypeScript), capability manifests, schema contracts, health/rate-limit reporting and contract tests.
+Planned connector targets: Azure/Foundry and generic OpenTelemetry first; Microsoft Graph/M365/GitHub Copilot reports, Anthropic, Google, xAI, Palantir, Cursor and Claude Code where documented/admin-authorized signals exist. Publish coverage/latency/license/API limitations; no invented APIs or endpoint agents without consent. Export to enterprise analytics/SIEM and integrate CI/CD registration/policy checks with GitHub Actions, Azure DevOps and Jenkins.
+### NS-10 Design system, documentation and enablement
+React/TypeScript with Fluent-inspired default, agency theme tokens/logos, light/dark/high-contrast and role workspaces. WCAG 2.2 AA plus Section 508 testing; no implied Microsoft product affiliation or unapproved brand/badge usage. Theme is presentation, never permission enforcement.
+Branded static documentation/Pages site, API/SDK references, ADRs, setup/migration/security/operations/DR runbooks, walkthroughs and synthetic sandbox. Public docs assistant uses a separate rate-limited read-only backend and published docs only; never production credentials/data. GitHub Pages cannot host its own dynamic secret-bearing backend.
+Deliver sales walking deck source and PPTX, persona demo scripts, marketing storyboard/scripts and captioned explainer videos with reviewed factual claims. Treat media production as explicit deliverables, not pretend generated files.
+## 3. Nonfunctional requirements and scale
+Planning targets, to be measured rather than guaranteed: regional core API availability 99.9%; dashboard p95 <=2s on bounded 90-day aggregates; catalog p95 <=500ms on indexed scoped queries; map freshness p95 <=10s after normalized ingestion. Provider billing/report freshness is connector-dependent, not sub-10s. Copilot first token <=3s target excludes provider outages and complex tool work.
+Scale profiles: pilot 1k agents/1k events per second; enterprise 100k agents/10k sustained events per second; stress 1M entities/10M relationships and 50k sustained/150k burst events per second subject to partition/cost validation. Browser target <=2k visible nodes at >=30fps on documented hardware, not 1M nodes rendered at once. Load tests include skew/hot keys, permissions, replay, evaluator overhead and multi-domain users.
+Federate domain/region cells with scope-filtered summaries; data remains in approved boundaries. Partition by customer/domain plus shard to avoid single-tenant hot partitions. Separate durable ingestion, operational catalog and analytical serving; materialized hot aggregates prevent batch analytics from blocking the map. Per-domain quotas/admission control protect noisy neighbors.
+Configurable retention, pseudonymization, deletion/export, legal holds and immutable audit retention with documented conflict rules. Set backup/restore per store and encryption-key retention; exercise restores, not merely backups. RTO <=4h/RPO <=15min are provisional profile targets requiring measured end-to-end evidence. Metadata-only Event Hubs geo-DR is insufficient for event-data RPO.
+## 4. Assumptions, decisions and release gates
+Customer-hosted single-customer deployment; federated domains; English initial UI with localization-ready tokens. Real connectors require credentials, consent and applicable licensing; synthetic mode is isolated and available without external credentials. Purview/Unity integrations degrade visibly when absent.
+Production deployment requires approved service/feature/region/SKU matrix, agency boundary and data classification, actual workload profile, action connector compatibility, retention/legal-hold policy and evaluated restore targets. Record these customer-specific inputs; do not silently select them. Commercial/Government capability parity is a design goal with explicitly documented exceptions.
+AWS/GCP hosting, classified/air-gapped deployment, agent authoring, automatic consolidation, formal certifications and pricing model are outside the initial baseline. Preserve useful prior graph schema, broker/vector comparisons and trace concepts through ARCHITECTURE.md; historical alternatives remain in archive, not instructions.
+No design can guarantee zero future refactoring. Stabilize domain contracts, migration/version policy and adapter tests first; stop dependent work when feasibility gates fail. Evidence references and unresolved technical gates are maintained in RESEARCH-AND-GATES.md; requirements-to-phase/test mapping is in PRP.md.

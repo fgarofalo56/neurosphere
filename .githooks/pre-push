@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# NeuroSphere pre-push guard: last chance before content leaves the machine.
+# Scans the full range being pushed, not just the tip.
+set -uo pipefail
+
+remote="${1:-origin}"
+z40=0000000000000000000000000000000000000000
+fail=0
+
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ "$local_sha" = "$z40" ] && continue                      # branch deletion
+  if [ "$remote_sha" = "$z40" ]; then
+    range=$(git rev-list "$local_sha" --not --remotes="$remote" | tail -1)
+    [ -z "$range" ] && continue
+    range="${range}^..${local_sha}"
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+
+  qc="\"'"
+  hits=$(git grep -nIE \
+    -e 'AKIA[0-9A-Z]{16}' \
+    -e 'aws_secret_access_key[[:space:]]*=' \
+    -e 'gh[pousr]_[A-Za-z0-9]{30,}' \
+    -e 'sk-(ant-)?[A-Za-z0-9_-]{24,}' \
+    -e 'xox[baprs]-[A-Za-z0-9-]{10,}' \
+    -e 'BEGIN [A-Z ]*PRIVATE KEY' \
+    -e 'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}' \
+    -e 'DefaultEndpointsProtocol=.*AccountKey=' \
+    -e 'SharedAccessKey=[A-Za-z0-9+/=]{20,}' \
+    -e "(password|passwd|pwd|secret|api[_-]?key|bearer)[$qc]?[[:space:]]*[:=][[:space:]]*[$qc][^$qc]{8,}" \
+    -e '\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b' \
+    -e '\b(4[0-9]{12}([0-9]{3})?|5[1-5][0-9]{14})\b' \
+    $(git rev-list "$range" 2>/dev/null) \
+    -- ':(exclude).githooks/*' \
+       ':(exclude).github/workflows/secret-scan.yml' \
+       ':(exclude).gitleaks.toml' \
+       ':(exclude)scripts/validate_planning.py' 2>/dev/null \
+    | grep -viE '(example|placeholder|change-me|your-|xxx+|<[a-z-]+>|not-the-key|dummy|fake|redacted|s3cret-test)' | head -5)
+
+  paths=$(git diff --name-only --diff-filter=ACM "$range" 2>/dev/null \
+    | grep -iE '(^|/)\.env($|\.)|\.pem$|\.key$|\.pfx$|\.p12$|\.jks$|\.keystore$|_rsa$|_ed25519$|(^|/)\.netrc$|(^|/)\.pgpass$|(^|/)credentials\.json$|service-account.*\.json$|(^|/)azure\.json$|\.publishsettings$|(^|/)secrets/' \
+    | grep -vE '(^|/)\.env\.example$' | head -5)
+  if [ -n "$paths" ]; then
+    printf '\033[31mPUSH BLOCKED\033[0m - credential-shaped FILENAMES in %s:\n%s\n' "$range" "$paths" >&2
+    fail=1
+  fi
+  if [ -n "$hits" ]; then
+    printf '\033[31mPUSH BLOCKED\033[0m - secret-shaped content in %s:\n%s\n' "$range" "$hits" >&2
+    fail=1
+  fi
+done
+
+if [ "$fail" -ne 0 ]; then
+  cat >&2 <<'MSG'
+
+Push blocked by .githooks/pre-push.
+A secret that reaches the remote must be treated as compromised even if you
+force-push it away: rotate the credential first, then clean history.
+MSG
+  exit 1
+fi
+exit 0

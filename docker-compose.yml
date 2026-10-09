@@ -1,0 +1,56 @@
+# Local development stack: Azure emulators only. No paid or external calls.
+# Application services (api, workers, frontend) are added by PRP-03 and PRP-05.
+#
+# Emulator limits that matter (see docs/RESEARCH-AND-GATES.md G12):
+#   cosmos    - vNext Linux emulator: no auth enforcement, no sprocs/triggers/UDF,
+#               no range/composite/spatial indexes, no RU accounting.
+#   eventhubs - SAS auth only (no Entra), 1 namespace / 10 hubs, no persistence
+#               across restarts, requires Azurite for checkpoints/metadata.
+#   azurite   - Blob + Queue GA; Table preview; no ADLS Gen2.
+name: neurosphere
+
+services:
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
+    ports:
+      - "8081:8081"
+    environment:
+      PROTOCOL: http
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 10000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  eventhubs:
+    image: mcr.microsoft.com/azure-messaging/eventhubs-emulator:latest
+    depends_on:
+      azurite:
+        condition: service_healthy
+    volumes:
+      - ./infra/compose/eventhubs.config.json:/Eventhubs_Emulator/ConfigFiles/Config.json:ro
+    ports:
+      - "5672:5672"
+      - "9092:9092"
+    environment:
+      BLOB_SERVER: azurite
+      METADATA_SERVER: azurite
+      ACCEPT_EULA: "Y"   # Microsoft emulator EULA; required by the image
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 5672 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30

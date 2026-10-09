@@ -1,0 +1,66 @@
+[project]
+name = "neurosphere-workspace"
+version = "0.0.0"
+description = "NeuroSphere workspace root: shared tooling, planning validation and cross-package tests."
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { file = "LICENSE" }
+
+# Not a distributable package. Product packages live under packages/* and
+# services/* and are added as uv workspace members by PRP-00.
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+  "ruff>=0.16,<0.17",
+  "pyright>=1.1.400,<2",
+  "pytest>=9.1,<10",
+  "pip-audit>=2.10,<3",
+  "neurosphere-core",
+  "neurosphere-contracts",
+  "neurosphere-api",
+  "neurosphere-workers",
+]
+
+[tool.uv.sources]
+neurosphere-core = { workspace = true }
+neurosphere-contracts = { workspace = true }
+neurosphere-api = { workspace = true }
+neurosphere-workers = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*", "packages/contracts/python", "services/*", "connectors/sdk-python"]
+exclude = ["packages/contracts"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["docs", "PRPs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "N", "ASYNC", "RUF"]
+ignore = ["S101"]  # assert is the test idiom
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B011"]
+"scripts/**" = ["S603", "S607"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["scripts", "tests", "packages", "services"]
+exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "packages", "services"]
+addopts = "-ra --strict-markers"
+markers = [
+  "live: requires an operator-approved Azure environment (NS_LIVE_APPROVED=1)",
+  "integration: requires the docker compose emulators",
+]

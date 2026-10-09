@@ -1,0 +1,19 @@
+name: Bug
+description: Something behaves differently from its PRP acceptance criteria
+labels: [bug]
+body:
+  - type: input
+    id: prp
+    attributes: { label: PRP / work item, placeholder: PRP-07 item 3 }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected (quote the acceptance criterion) }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: Actual, description: Raw output, redacted. No secrets or PII. }
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes: { label: Reproduction (synthetic mode unless stated) }

@@ -50,3 +50,7 @@ Thumbs.db
 .claude/projects/
 .claude/todos/
 .claude/shell-snapshots/
+
+# --- Scratch (never committed) ---
+temp/
+requirements-audit.txt
