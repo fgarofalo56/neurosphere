@@ -148,8 +148,10 @@ jobs:
       # --no-sandbox is passed deliberately: GitHub-hosted runners disable the unprivileged
       # user namespaces Chromium's sandbox needs. The job renders only our own committed
       # Markdown on a throwaway runner. Any parser error makes the script exit non-zero.
-      # mermaid-cli 12.0.0 resolves puppeteer 25.12.0, which needs this browser build.
-      - name: Install headless Chromium for mermaid-cli
-        run: pnpm dlx puppeteer@25.12.0 browsers install chrome-headless-shell
+      # mermaid-cli 12.0.0 floats its puppeteer dependency, and each puppeteer release wants a
+      # different downloaded browser build. Use the runner's preinstalled Chrome instead, so
+      # the job does not depend on which puppeteer version resolves today.
       - name: Render docs/ARCHITECTURE.md diagrams (fails on parser error)
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: python scripts/render_mermaid.py --no-sandbox
