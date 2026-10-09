@@ -116,3 +116,22 @@ jobs:
             az bicep build --file "$f" --stdout > /dev/null || rc=1
           done
           exit $rc
+
+  mermaid:
+    name: mermaid diagrams render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      # --no-sandbox is passed deliberately: GitHub-hosted runners disable the unprivileged
+      # user namespaces Chromium's sandbox needs. The job renders only our own committed
+      # Markdown on a throwaway runner. Any parser error makes the script exit non-zero.
+      - name: Render docs/ARCHITECTURE.md diagrams (fails on parser error)
+        run: python scripts/render_mermaid.py --no-sandbox
