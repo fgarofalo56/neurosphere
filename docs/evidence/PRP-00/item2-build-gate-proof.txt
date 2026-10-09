@@ -1,0 +1,23 @@
+PRP-00 item 2 - build gate proof
+Date: 2026-10-08
+Config: .claude/hooks/config.ps1  $BuildCmd = "pnpm build"; $OptionalGates = @()
+Build chosen: frontend `tsc -p tsconfig.build.json` (emits frontend/dist/index.js, index.d.ts, source map)
+              invoked through root `pnpm build` -> `pnpm -r --if-present build`.
+
+1. Real exit code (pnpm propagates tsc's status):
+   Injected frontend/src/broken.ts: export const broken: number = "not a number";
+   $ pnpm build
+   frontend build: src/broken.ts(1,14): error TS2322: Type 'string' is not assignable to type 'number'.
+   frontend build: Failed
+   [ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @neurosphere/frontend@0.0.0 build: `tsc -p tsconfig.build.json`
+   Exit status 2   -> broken-build exit=2
+   File removed; `pnpm build` -> restored build exit=0.
+
+2. verify-gates.ps1 -Mode full against this config:
+   GATE NOT RUN by the implementer: powershell/pwsh is refused inside a
+   worktree-isolated agent. The orchestrator must run
+     powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
+   and the empty-$BuildCmd negative check (set $BuildCmd = "" with
+   $OptionalGates = @(), expect a build FAIL not SKIP; restore afterwards).
+   By the runner's documented contract (config.ps1 header) an empty gate that
+   is not in $OptionalGates fails the run.
