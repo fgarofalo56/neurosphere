@@ -1,0 +1,29 @@
+# PRP-00 item 3 negative proof, 2026-10-08. LOCAL run only; the CI-job failure is NOT proven on a pushed branch (no push).
+# Method: sed inserted the line '  A[unclosed label --> ((' as the first line of block 1 in a COPY (temp/broken-architecture.md). docs/ARCHITECTURE.md was never modified.
+# $ python scripts/render_mermaid.py --source temp/broken-architecture.md --out temp/neg-out
+FAIL block 1 (component-trust-boundaries): mermaid-cli exit 1
+UnknownDiagramError: No diagram type detected matching given configuration for text: A[unclosed label --> ((
+flowchart TB
+  U[User] --> I[Entra authentication]
+  I --> UI[Fluent-inspired UI and copilot chat]
+  UI --> G[APIM reused or provisioned]
+  G --> P[API authorization and policy]
+  P --> C[Catalog and scoped graph queries]
+  P --> Q[Bounded analytics query service]
+  P --> O[Copilot orchestrator]
+  C --> DB[Cosmos NoSQL entities and adjacency]
+  Q --> A[Fabric or Synapse or Azure Databricks]
+  O --> T[Authorized tools and safe chart plans]
+  T --> C
+  T --> Q
+  O --> M[Approved model endpoint or Foundry adapter]
+  T --> X[Durable action and HITL service]
+  X --> Z[Supported target write connectors]
+  X --> AU[Append-only audit evidence]
+
+rendered block 2 -> 02-telemetry-projections-live-view.svg
+rendered block 3 -> 03-governed-action-sequence.svg
+rendered block 4 -> 04-deployment-intelligence.svg
+rendered block 5 -> 05-federation-and-dr.svg
+FAIL: 1 block(s) did not render: [1]
+EXIT CODE: 1
