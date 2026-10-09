@@ -1,30 +1,118 @@
 name: CI
+
+# Every gate here fails loudly. No step may suppress a failing exit code; the
+# planning validator and the step below check for that in this directory. The
+# only allowed form is a no-match grep inside a command substitution, marked
+# with a `no-match-ok` comment on the same line.
 on:
-  push: { branches: [ main ] }
+  push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-test:
+  python:
+    name: python (ruff, pyright, pytest, pip-audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
-      - name: Install tooling
-        run: pip install ruff pytest httpx
-      - name: Ruff format check
-        run: ruff format --check . || true   # remove '|| true' once sources land
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
       - name: Ruff lint
-        run: ruff check . || true            # remove '|| true' once sources land
-      - name: Tests
-        run: pytest -q || true               # remove '|| true' once tests land
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Pyright
+        run: uv run pyright
+      - name: Pytest
+        run: uv run pytest -q
+      - name: Dependency audit
+        run: uv run pip-audit --strict --progress-spinner off
 
-  compose-smoke:
+  frontend:
+    name: frontend (lint, typecheck, vitest, audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - name: Compose up (core) + demo smoke
+      - uses: actions/checkout@v7
+      - name: Detect frontend workspace
+        id: detect
         run: |
-          echo "TODO (build): docker compose --profile core up -d"
-          echo "TODO (build): ./scripts/wait-for-healthy.sh && python client/query.py"
-          echo "TODO (build): assert the known headline rows are returned; docker compose down"
+          if [ -f frontend/package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "frontend/ not scaffolded yet (PRP-04); nothing to run"
+          fi
+      - uses: pnpm/action-setup@v6
+        if: steps.detect.outputs.present == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.detect.outputs.present == 'true'
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm lint
+      - name: Typecheck
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm typecheck
+      - name: Test
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm test
+      - name: Audit
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm audit --audit-level high
+
+  planning:
+    name: planning docs aligned
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - name: Validate planning artefacts
+        run: python scripts/validate_planning.py
+      - name: Workflows contain no suppressed failures
+        run: |
+          if grep -rnE '\|\|[[:space:]]*true' .github/workflows | grep -v 'no-match-ok'; then
+            echo "::error::a workflow suppresses a failing exit code"
+            exit 1
+          fi
+          echo "OK"
+
+  bicep:
+    name: bicep build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build every Bicep file (none until PRP-08)
+        run: |
+          files=$(find infra -name '*.bicep' 2>/dev/null)
+          if [ -z "$files" ]; then
+            echo "no .bicep files yet"
+            exit 0
+          fi
+          az bicep install
+          rc=0
+          for f in $files; do
+            az bicep build --file "$f" --stdout > /dev/null || rc=1
+          done
+          exit $rc

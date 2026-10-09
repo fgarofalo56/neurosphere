@@ -1,0 +1,26 @@
+{
+  "UserConfig": {
+    "NamespaceConfig": [
+      {
+        "Type": "EventHub",
+        "Name": "neurosphere-local",
+        "Entities": [
+          {
+            "Name": "telemetry",
+            "PartitionCount": "4",
+            "ConsumerGroups": [
+              { "Name": "normalizer" },
+              { "Name": "aggregates" }
+            ]
+          },
+          {
+            "Name": "quarantine",
+            "PartitionCount": "1",
+            "ConsumerGroups": [{ "Name": "replay" }]
+          }
+        ]
+      }
+    ],
+    "LoggingConfig": { "Type": "File" }
+  }
+}

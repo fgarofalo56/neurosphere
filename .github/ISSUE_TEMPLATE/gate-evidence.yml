@@ -1,0 +1,27 @@
+name: Gate evidence
+description: File evidence to close or narrow a gate in docs/RESEARCH-AND-GATES.md
+labels: [gate-evidence]
+body:
+  - type: input
+    id: gate
+    attributes: { label: Gate id, placeholder: G03 }
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: First-party source URL with observed date, or path under docs/evidence/. State cloud, region, SKU and feature explicitly.
+    validations: { required: true }
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Proposed outcome
+      options: [close gate, narrow gate (scope stays partly open), reopen gate]
+    validations: { required: true }
+  - type: checkboxes
+    id: claims
+    attributes:
+      label: Claims check
+      options:
+        - label: This evidence does not assert FedRAMP authorization, ATO, or Commercial/Government parity
+          required: true

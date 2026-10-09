@@ -1,0 +1,18 @@
+# Hook scripts must keep LF endings. On Windows checkouts, CRLF turns the
+# shebang into "bash\r" (a binary that doesn't exist) and every hook fails
+# with a cryptic "bad interpreter" error. Do not remove this rule.
+*.sh text eol=lf
+
+# Normalise text; keep PowerShell CRLF for PS 5.1; mark binaries.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.pptx binary
+*.woff binary
+*.woff2 binary

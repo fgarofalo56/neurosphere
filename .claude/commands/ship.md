@@ -1,13 +1,10 @@
----
-description: Lint, test, commit, and push the current work
----
+Prepare the current work for shipping. Do not push.
 
-Prepare the current work to ship:
-
-1. Run lint / format and fix any issues (never bypass with `--no-verify`).
-2. Run the test suite; ensure it is green for the touched surface.
-3. Stage and commit with a clear conventional-commit message.
-4. Push to the current branch.
-
-If the work is on `main`/`master` or branch protection / review is expected,
-stop and confirm before pushing.
+1. Run the full gates and show the raw output:
+   `powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full`
+2. If anything fails, fix it and re-run. Never weaken a test or add `|| true`.
+3. Review `git diff` for secrets, PII, `.env*`, and claims of FedRAMP/ATO/parity.
+4. Stage only the files that belong to this work item and commit with a
+   conventional-commit message. Reference the PRP id and work item.
+5. STOP. Report the commit hash and the gate output. Pushing, opening a PR and
+   any deployment require explicit operator approval (CLAUDE.md hard constraints).

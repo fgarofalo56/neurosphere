@@ -1,0 +1,14 @@
+name: Task
+description: Follow-up work that is not a bug
+labels: [task]
+body:
+  - type: input
+    id: prp
+    attributes: { label: Related PRP, placeholder: PRP-12 }
+  - type: textarea
+    id: scope
+    attributes: { label: Scope and acceptance criteria }
+    validations: { required: true }
+  - type: textarea
+    id: files
+    attributes: { label: Owned files / paths }
