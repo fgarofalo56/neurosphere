@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/cost/v1/cost-record.schema.json",
+  "title": "CostRecord",
+  "description": "One cost observation in the ledger (NS-01). Estimated and invoiced spend are always distinct records (kind). Money is a decimal string plus an ISO 4217 currency code; never a float. Missing values are null, never 0. The same spend seen by gateway, application and billing shares a dedupe_key so PRP-07 can avoid double counting. Rules JSON Schema cannot express are enforced by Python validators in tests/contracts: validate_billing_period_order (billing_period.start_date <= end_date), validate_usage_window_order (usage_start <= usage_end when both set), validate_allocation_within_amount (sum of non-null allocation components <= abs(amount)) and validate_retry_amount_within_amount (retry_amount <= abs(amount)).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "cost_id",
+    "kind",
+    "amount",
+    "currency",
+    "cloud",
+    "customer_id",
+    "source_id",
+    "dedupe_key",
+    "observation_source",
+    "recorded_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document, major 1 with additive minor revisions.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "cost_id": {
+      "description": "Unique identifier of this cost record.",
+      "$ref": "#/$defs/identifier"
+    },
+    "kind": {
+      "description": "estimated: computed from usage and a price sheet (must cite price_version). invoiced: taken from a provider bill (must carry billing_period).",
+      "type": "string",
+      "enum": ["estimated", "invoiced"]
+    },
+    "amount": {
+      "description": "Total cost as a decimal string in currency. Negative values represent credits or refunds.",
+      "$ref": "#/$defs/decimal_amount"
+    },
+    "currency": {
+      "description": "ISO 4217 alphabetic currency code.",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "price_version": {
+      "description": "Identifier of the price sheet used to estimate. Required (non-null) when kind is estimated.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 128,
+      "default": null
+    },
+    "price_effective_date": {
+      "description": "Date the cited price sheet took effect (YYYY-MM-DD). Required (non-null) when kind is estimated.",
+      "anyOf": [{ "$ref": "#/$defs/date" }, { "type": "null" }],
+      "default": null
+    },
+    "billing_period": {
+      "description": "Provider billing period. Required (non-null) when kind is invoiced.",
+      "anyOf": [{ "$ref": "#/$defs/billing_period" }, { "type": "null" }],
+      "default": null
+    },
+    "invoice_id": {
+      "description": "Provider invoice identifier for invoiced records. Null when unknown or estimated.",
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+      "default": null
+    },
+    "usage_start": {
+      "description": "Start of the usage window this cost covers (RFC 3339 UTC). Null when the source reports only a billing period.",
+      "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+      "default": null
+    },
+    "usage_end": {
+      "description": "End of the usage window this cost covers (RFC 3339 UTC). Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+      "default": null
+    },
+    "cloud": {
+      "description": "Azure cloud boundary the cost belongs to. Government data is never bridged to Commercial.",
+      "type": "string",
+      "enum": ["commercial", "government"]
+    },
+    "customer_id": {
+      "description": "Customer (tenant deployment) identifier.",
+      "$ref": "#/$defs/identifier"
+    },
+    "domain_id": {
+      "description": "Domain the cost is attributed to. Null when unattributed.",
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+      "default": null
+    },
+    "source_id": {
+      "description": "Connector or producer that reported the cost.",
+      "$ref": "#/$defs/identifier"
+    },
+    "canonical_agent_id": {
+      "description": "Canonical agent the cost is attributed to (cloud:customer:source:type:id). Null when not attributable; per-user attribution is never promised.",
+      "anyOf": [
+        { "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/canonical_id" },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "provider": {
+      "description": "Model or service provider. Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "model": {
+      "description": "Model name. Null when unknown or not model-specific.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "model_version": {
+      "description": "Model version. Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "token_breakdown": {
+      "description": "Token counts behind this cost, including cached tokens. Null when not reported.",
+      "anyOf": [
+        { "$ref": "../../telemetry/v1/telemetry-event.schema.json#/$defs/token_breakdown" },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "retry_count": {
+      "description": "Number of retries included in this cost. Null when unknown; 0 only when measured.",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "default": null
+    },
+    "retry_amount": {
+      "description": "Portion of amount attributable to retries, decimal string in currency. Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/non_negative_amount" }, { "type": "null" }],
+      "default": null
+    },
+    "allocation": {
+      "description": "Breakdown of amount by cost basis. Null when no breakdown is available.",
+      "anyOf": [{ "$ref": "#/$defs/allocation" }, { "type": "null" }],
+      "default": null
+    },
+    "event_ids": {
+      "description": "TelemetryEvent event_ids this cost was derived from. Null when not derived from events.",
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/identifier" },
+      "maxItems": 1000,
+      "default": null
+    },
+    "dedupe_key": {
+      "description": "Stable key identifying the underlying spend independent of observation source. Records sharing a dedupe_key describe the same spend; PRP-07 defines key composition and source precedence.",
+      "$ref": "#/$defs/identifier"
+    },
+    "observation_source": {
+      "description": "Where this cost was observed. Invoiced records always come from billing.",
+      "type": "string",
+      "enum": ["gateway", "application", "billing"]
+    },
+    "reconciliation": {
+      "description": "Reconciliation status against other observations of the same spend. Null when not yet reconciled.",
+      "anyOf": [{ "$ref": "#/$defs/reconciliation" }, { "type": "null" }],
+      "default": null
+    },
+    "recorded_at": {
+      "description": "When the ledger recorded this cost (RFC 3339 UTC).",
+      "$ref": "#/$defs/timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "const": "estimated" } }
+      },
+      "then": {
+        "required": ["price_version", "price_effective_date"],
+        "properties": {
+          "price_version": { "type": "string" },
+          "price_effective_date": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["kind"],
+        "properties": { "kind": { "const": "invoiced" } }
+      },
+      "then": {
+        "required": ["billing_period"],
+        "properties": {
+          "billing_period": { "type": "object" },
+          "observation_source": { "const": "billing" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "decimal_amount": {
+      "description": "Signed decimal string, up to 18 integer and 12 fractional digits; no exponent, no float.",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]{0,17})(\\.[0-9]{1,12})?$"
+    },
+    "non_negative_amount": {
+      "description": "Non-negative decimal string, up to 18 integer and 12 fractional digits.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,17})(\\.[0-9]{1,12})?$"
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$"
+    },
+    "date": {
+      "description": "Calendar date YYYY-MM-DD.",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "billing_period": {
+      "title": "BillingPeriod",
+      "description": "Inclusive provider billing period. start_date <= end_date is checked by validate_billing_period_order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_date", "end_date"],
+      "properties": {
+        "start_date": { "$ref": "#/$defs/date" },
+        "end_date": { "$ref": "#/$defs/date" }
+      }
+    },
+    "allocation": {
+      "title": "CostAllocation",
+      "description": "Portion of amount per cost basis, each a non-negative decimal string in the record currency or null when not allocated/unknown.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "compute": {
+          "description": "Pay-as-you-go compute or token-metered spend.",
+          "anyOf": [{ "$ref": "#/$defs/non_negative_amount" }, { "type": "null" }],
+          "default": null
+        },
+        "ptu": {
+          "description": "Provisioned throughput unit allocation.",
+          "anyOf": [{ "$ref": "#/$defs/non_negative_amount" }, { "type": "null" }],
+          "default": null
+        },
+        "reservation": {
+          "description": "Reserved-capacity amortization.",
+          "anyOf": [{ "$ref": "#/$defs/non_negative_amount" }, { "type": "null" }],
+          "default": null
+        },
+        "license_seat": {
+          "description": "License or per-seat subscription cost.",
+          "anyOf": [{ "$ref": "#/$defs/non_negative_amount" }, { "type": "null" }],
+          "default": null
+        }
+      }
+    },
+    "reconciliation": {
+      "title": "CostReconciliation",
+      "description": "Reconciliation of this record against other observations of the same dedupe_key. Coverage is not a promise that all spend is observable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["unreconciled", "partial", "reconciled", "unknown"]
+        },
+        "coverage": {
+          "description": "Fraction of the reference spend matched by observations, in [0, 1]. Null when unknown.",
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "default": null
+        },
+        "variance": {
+          "description": "This amount minus the reference amount, decimal string in the record currency. Null when unknown.",
+          "anyOf": [{ "$ref": "#/$defs/decimal_amount" }, { "type": "null" }],
+          "default": null
+        },
+        "reference_cost_ids": {
+          "description": "cost_ids this record was reconciled against. Null when none.",
+          "type": ["array", "null"],
+          "items": { "$ref": "#/$defs/identifier" },
+          "maxItems": 1000,
+          "default": null
+        },
+        "reconciled_at": {
+          "description": "When reconciliation last ran (RFC 3339 UTC). Null when never.",
+          "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+          "default": null
+        }
+      }
+    }
+  }
+}

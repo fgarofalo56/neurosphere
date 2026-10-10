@@ -1,0 +1,112 @@
+{
+  "valid": {
+    "telemetry-event.minimal-all-unknown.json": {
+      "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.full-model-call.json": {
+      "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.delegation.json": {
+      "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.retry.json": {
+      "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.cancellation.json": {
+      "schema": "telemetry-event.schema.json"
+    }
+  },
+  "invalid": {
+    "telemetry-event.missing-schema-version.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "schema_version"
+    },
+    "telemetry-event.bad-schema-version.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/schema_version"
+    },
+    "telemetry-event.extra-property-prompt-body.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "message_contains": "prompt"
+    },
+    "telemetry-event.non-utc-time.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/event_time"
+    },
+    "telemetry-event.unknown-cloud.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "enum",
+      "instance_path": "/cloud"
+    },
+    "telemetry-event.duration-unknown-string.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "type",
+      "instance_path": "/duration_ms"
+    },
+    "telemetry-event.duration-float.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "type",
+      "instance_path": "/duration_ms"
+    },
+    "telemetry-event.counts-extra-field.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "additionalProperties",
+      "instance_path": "/token_breakdown",
+      "message_contains": "total"
+    },
+    "telemetry-event.counts-negative.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "minimum",
+      "instance_path": "/token_breakdown/input"
+    },
+    "telemetry-event.bad-trace-id.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/trace_id"
+    },
+    "telemetry-event.delegation-missing-parent.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "parent_span_id"
+    },
+    "telemetry-event.tool-call-null-parent.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "type",
+      "instance_path": "/parent_span_id"
+    },
+    "telemetry-event.retry-missing-attempt.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "retry_attempt"
+    },
+    "telemetry-event.bad-canonical-id-uppercase.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/canonical_agent_id"
+    },
+    "telemetry-event.sampling-rate-above-one.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "maximum",
+      "instance_path": "/sampling/rate"
+    },
+    "telemetry-event.payload-ref-missing-redaction.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "required",
+      "instance_path": "/payload_ref",
+      "message_contains": "redaction_state"
+    },
+    "telemetry-event.unknown-span-kind.json": {
+      "schema": "telemetry-event.schema.json",
+      "keyword": "enum",
+      "instance_path": "/span_kind"
+    }
+  }
+}

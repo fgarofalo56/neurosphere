@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "event_id": "evt-0003",
+  "event_time": "2026-10-10T12:00:00Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "source_id": "otel-gateway-01",
+  "span_kind": "delegation",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "1111111111111111",
+  "outcome": "success"
+}

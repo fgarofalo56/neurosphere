@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "cost_id": "cost-0001",
+  "kind": "estimated",
+  "amount": "0.0123",
+  "currency": "USD",
+  "price_effective_date": "2026-10-01",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "source_id": "otel-gateway-01",
+  "dedupe_key": "contoso:gw:req-42",
+  "observation_source": "gateway",
+  "recorded_at": "2026-10-10T12:00:05Z"
+}
