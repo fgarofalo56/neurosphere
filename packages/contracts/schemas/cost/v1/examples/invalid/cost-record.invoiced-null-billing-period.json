@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.0.0",
   "cost_id": "cost-0100",
   "kind": "invoiced",
   "amount": "1520.75",
