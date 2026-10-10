@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/audit/v1/audit-record.schema.json",
+  "title": "AuditRecord",
+  "description": "Append-only, hash-chained audit evidence (PRP.md section 3, PRD NS-06 'audit before/after'). Kinds: `before` (target state captured before a change), `after` (outcome and target state after), `denied` (a query, tool, export, push or action that authorization or policy refused). There is no update-capable field: no updated_at, modified_by, etag, version, status or deleted flag; corrections are new records. previous_hash is required for every record except the chain head (sequence 0), where it is null. Rules JSON Schema cannot express are checked by `validate_audit_chain` in tests/contracts/test_schemas.py: record_hash equals sha256 over the RFC 8785 (JCS) canonical form of the record without record_hash; within a chain_id, sequence is contiguous from 0 and each previous_hash equals the preceding record's record_hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "audit_id",
+    "chain_id",
+    "sequence",
+    "previous_hash",
+    "record_hash",
+    "kind",
+    "recorded_at",
+    "actor",
+    "scope_hash",
+    "correlation_id",
+    "operation",
+    "channel",
+    "intent_id",
+    "subject",
+    "outcome",
+    "denial"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "audit_id": {
+      "description": "Server-assigned identifier of this record (lowercase UUID).",
+      "$ref": "#/$defs/uuid"
+    },
+    "chain_id": {
+      "description": "Identifier of the hash chain this record belongs to (for example one chain per domain cell).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "sequence": {
+      "description": "Zero-based position in the chain. 0 is the chain head.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "previous_hash": {
+      "description": "record_hash of the preceding record in the chain. Null only for the chain head (sequence 0); required otherwise.",
+      "anyOf": [{ "$ref": "#/$defs/sha256_hash" }, { "type": "null" }]
+    },
+    "record_hash": {
+      "description": "sha256 over the JCS-canonical record excluding this field.",
+      "$ref": "#/$defs/sha256_hash"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["before", "after", "denied"]
+    },
+    "recorded_at": {
+      "description": "Server-assigned, immutable instant the record was appended.",
+      "readOnly": true,
+      "$ref": "#/$defs/utc_timestamp"
+    },
+    "actor": {
+      "description": "Principal whose request produced this record.",
+      "$ref": "../../actions/v1/actor.schema.json"
+    },
+    "scope_hash": {
+      "description": "scope_hash of the server-derived IdentityScope the request was evaluated under.",
+      "$ref": "#/$defs/sha256_hash"
+    },
+    "correlation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "operation": {
+      "description": "Dotted lowercase operation name (for example `action.execute`, `graph.query`, `report.export`, `mcp.tool_call`).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){0,7}$",
+      "maxLength": 128
+    },
+    "channel": {
+      "description": "Channel the request arrived through; null for internal workers.",
+      "type": ["string", "null"],
+      "enum": ["button", "chat", "rest", "mcp", "websocket", "worker", null]
+    },
+    "intent_id": {
+      "description": "ActionIntent this record belongs to; null for non-action operations.",
+      "anyOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }]
+    },
+    "subject": {
+      "description": "Target and captured state. Required for before and after; null allowed for denied when no target was resolved.",
+      "anyOf": [{ "$ref": "#/$defs/subject" }, { "type": "null" }]
+    },
+    "outcome": {
+      "description": "Result of the change. Required for after; null for before and denied.",
+      "anyOf": [{ "$ref": "#/$defs/outcome" }, { "type": "null" }]
+    },
+    "denial": {
+      "description": "Why the request was refused. Required for denied; null otherwise.",
+      "anyOf": [{ "$ref": "#/$defs/denial" }, { "type": "null" }]
+    }
+  },
+  "allOf": [
+    {
+      "description": "Chain head has no predecessor; every other record names one.",
+      "if": {
+        "properties": { "sequence": { "const": 0 } },
+        "required": ["sequence"]
+      },
+      "then": { "properties": { "previous_hash": { "type": "null" } } },
+      "else": { "properties": { "previous_hash": { "$ref": "#/$defs/sha256_hash" } } }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "before" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "subject": { "$ref": "#/$defs/subject" },
+          "outcome": { "type": "null" },
+          "denial": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "after" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "subject": { "$ref": "#/$defs/subject" },
+          "outcome": { "$ref": "#/$defs/outcome" },
+          "denial": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "denied" } }, "required": ["kind"] },
+      "then": {
+        "properties": {
+          "outcome": { "type": "null" },
+          "denial": { "$ref": "#/$defs/denial" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "utc_timestamp": {
+      "description": "RFC 3339 timestamp in UTC (`Z` suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    },
+    "sha256_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "target_version", "state_digest", "snapshot_ref"],
+      "properties": {
+        "target": { "$ref": "../../actions/v1/target-ref.schema.json" },
+        "target_version": {
+          "description": "Version or ETag observed; null when unknown.",
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "state_digest": {
+          "description": "sha256 of the captured target state; null when the state could not be read.",
+          "anyOf": [{ "$ref": "#/$defs/sha256_hash" }, { "type": "null" }]
+        },
+        "snapshot_ref": {
+          "description": "Pointer to the stored, redacted snapshot used for rollback evidence; never an inline body. Null when none was stored.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "verified", "detail"],
+      "properties": {
+        "result": {
+          "description": "Final ActionState the intent reached; mirrors the terminal states of ../../actions/v1/action-state.schema.json.",
+          "type": "string",
+          "enum": ["succeeded", "failed", "rolled_back"]
+        },
+        "verified": {
+          "description": "True only when the actual change on the target was read back and matched (no catalog-only pretend changes).",
+          "type": "boolean"
+        },
+        "detail": {
+          "type": ["string", "null"],
+          "maxLength": 1024
+        }
+      }
+    },
+    "denial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "reason"],
+      "properties": {
+        "code": {
+          "description": "Error taxonomy code. Mirrors errors/v1 (authoritative); `validate_denial_codes_match_error_taxonomy` in tests/contracts/test_error_taxonomy.py keeps the two lists equal.",
+          "type": "string",
+          "enum": [
+            "unauthorized",
+            "forbidden",
+            "capability_unavailable",
+            "stale_version",
+            "rate_limited",
+            "invalid_schema",
+            "dependency_transient"
+          ]
+        },
+        "reason": {
+          "description": "Machine-readable reason, lowercase snake_case (for example `domain_out_of_scope`, `self_approval_prohibited`).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        }
+      }
+    }
+  }
+}

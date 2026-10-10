@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "state_machine": "action_intent",
+  "initial_state": "drafted",
+  "terminal_states": [
+    "failed"
+  ],
+  "transitions": [
+    {
+      "from": "drafted",
+      "to": "cancelled",
+      "guard": "Prerequisite failed."
+    }
+  ]
+}

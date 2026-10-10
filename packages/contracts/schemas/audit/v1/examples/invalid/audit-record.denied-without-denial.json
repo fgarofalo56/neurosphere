@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "chain_id": "contoso.domain-retail",
+  "actor": {
+    "principal_pseudonym": "mcp-client-09",
+    "principal_kind": "service_principal",
+    "on_behalf_of": "p-55aa01ce"
+  },
+  "scope_hash": "sha256:59ce0ef5938188b08ea3fe2befc72c6f4317e3e155ba646aa4b1e67af6851ed3",
+  "correlation_id": "corr-7c41e2",
+  "audit_id": "33333333-4444-4555-8666-777777777777",
+  "sequence": 2,
+  "previous_hash": "sha256:3e70d73bc1f4c307c2695b7bee24c5a49b01f99b93cc5da812740dd86443dfcd",
+  "record_hash": "sha256:3d9305860917aeae2edbbe4225938c971d88c52cbc40b5cfef3b780c474f3e8d",
+  "kind": "denied",
+  "recorded_at": "2026-10-10T17:07:44Z",
+  "operation": "mcp.tool_call",
+  "channel": "mcp",
+  "intent_id": null,
+  "subject": null,
+  "outcome": null,
+  "denial": null
+}

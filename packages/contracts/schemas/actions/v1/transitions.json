@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0.0",
+  "state_machine": "action_intent",
+  "initial_state": "drafted",
+  "terminal_states": ["succeeded", "failed", "rolled_back", "expired"],
+  "transitions": [
+    {
+      "from": "drafted",
+      "to": "validated",
+      "guard": "All prerequisite checks evaluated; none failed."
+    },
+    {
+      "from": "drafted",
+      "to": "failed",
+      "guard": "A prerequisite check failed (permission, policy, unsupported write connector, invalid diff)."
+    },
+    {
+      "from": "drafted",
+      "to": "expired",
+      "guard": "Draft abandoned past its retention window."
+    },
+    {
+      "from": "validated",
+      "to": "awaiting_confirmation",
+      "guard": "Exact target, target_version, diff and expiry presented; confirmation_hash and confirmation_expires_at set."
+    },
+    {
+      "from": "validated",
+      "to": "failed",
+      "guard": "Target version changed or permission revoked before confirmation was presented."
+    },
+    {
+      "from": "validated",
+      "to": "expired",
+      "guard": "Validation result went stale before confirmation was presented."
+    },
+    {
+      "from": "awaiting_confirmation",
+      "to": "awaiting_approval",
+      "guard": "Actor confirmed a matching confirmation_hash before expiry and policy requires reviewer approval."
+    },
+    {
+      "from": "awaiting_confirmation",
+      "to": "executing",
+      "guard": "Actor confirmed a matching confirmation_hash before expiry, policy requires no approval, and permission and target_version were rechecked."
+    },
+    {
+      "from": "awaiting_confirmation",
+      "to": "failed",
+      "guard": "Actor declined, or the confirmation hash did not match the bound intent."
+    },
+    {
+      "from": "awaiting_confirmation",
+      "to": "expired",
+      "guard": "confirmation_expires_at passed without confirmation."
+    },
+    {
+      "from": "awaiting_approval",
+      "to": "executing",
+      "guard": "Approved by an eligible reviewer (maker-checker honoured), confirmation not expired, and permission and target_version rechecked."
+    },
+    {
+      "from": "awaiting_approval",
+      "to": "failed",
+      "guard": "Reviewer rejected, or the recheck at approval found stale_version or forbidden."
+    },
+    {
+      "from": "awaiting_approval",
+      "to": "expired",
+      "guard": "confirmation_expires_at or the approval SLA passed without a decision."
+    },
+    {
+      "from": "executing",
+      "to": "succeeded",
+      "guard": "Connector applied the change and the actual outcome was verified."
+    },
+    {
+      "from": "executing",
+      "to": "failed",
+      "guard": "Connector or verification failed and no change remains applied, or rollback itself failed."
+    },
+    {
+      "from": "executing",
+      "to": "rolled_back",
+      "guard": "Canary or verification failed and the change was rolled back with rollback evidence recorded."
+    }
+  ]
+}
