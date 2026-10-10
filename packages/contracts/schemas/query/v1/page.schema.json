@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/query/v1/page.schema.json",
+  "title": "Page",
+  "description": "Shared cursor-based pagination block returned with every list response (PRP-01 clarification 15). The root schema is the response-side page; $defs/cursor is the opaque cursor a client echoes back on the next request. Cursors are server-issued and server-signed; a cursor that fails signature or scope binding is rejected as invalid_schema (behaviour in PRP-05, not expressible here). Not a standalone document, so it carries no schema_version. has_more=false with next_cursor non-null is rejected by the schema; returned <= limit is checked by tests/contracts/validators.py::check_page_counts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["limit", "returned", "has_more", "next_cursor", "truncated"],
+  "properties": {
+    "limit": {
+      "description": "Effective limit applied by the server after clamping the requested Budget.limit.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "returned": {
+      "description": "Items returned in this page.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "has_more": { "type": "boolean" },
+    "next_cursor": {
+      "description": "Cursor for the next page, or null when has_more is false.",
+      "oneOf": [{ "$ref": "#/$defs/cursor" }, { "type": "null" }]
+    },
+    "truncated": {
+      "description": "True when a budget other than limit stopped the result early (partial result, must be labelled in the UI).",
+      "type": "boolean"
+    },
+    "truncation_reason": {
+      "description": "Which budget stopped the result. Required when truncated is true.",
+      "enum": ["max_nodes", "max_edges", "max_depth", "timeout_ms"]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "has_more": { "const": false } }, "required": ["has_more"] },
+      "then": { "properties": { "next_cursor": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "has_more": { "const": true } }, "required": ["has_more"] },
+      "then": { "properties": { "next_cursor": { "$ref": "#/$defs/cursor" } } }
+    },
+    {
+      "if": { "properties": { "truncated": { "const": true } }, "required": ["truncated"] },
+      "then": { "required": ["truncation_reason"] },
+      "else": { "not": { "required": ["truncation_reason"] } }
+    }
+  ],
+  "$defs": {
+    "cursor": {
+      "description": "Opaque, server-signed, base64url cursor. It encodes position only, never query text or filters, and is bound server-side to the caller's IdentityScope.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,512}$"
+    }
+  }
+}

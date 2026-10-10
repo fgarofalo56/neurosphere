@@ -1,0 +1,7 @@
+{
+  "timeout_ms": 2000,
+  "limit": 200,
+  "max_depth": 50,
+  "max_nodes": 1000,
+  "max_edges": 4000
+}
