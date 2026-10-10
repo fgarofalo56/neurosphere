@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:domain:finance",
+  "entity_type": "domain",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "classification": "internal",
+  "display_name": "Finance",
+  "parent_domain_id": null
+}

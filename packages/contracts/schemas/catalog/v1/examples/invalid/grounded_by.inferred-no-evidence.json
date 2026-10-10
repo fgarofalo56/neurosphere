@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:grounded_by:e-0001",
+  "relation_type": "grounded_by",
+  "version": 2,
+  "etag": "\"edge-etag-2\"",
+  "source_id": "commercial:contoso:foundry:agent:support-bot",
+  "target_id": "commercial:contoso:foundry:grounding_source:index/hr-policies",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "provenance": {
+    "method": "trace_observation",
+    "source_id": "appinsights",
+    "inference_version": "rules-1.4",
+    "recorded_at": "2026-10-09T17:30:00.125Z"
+  },
+  "evidence_ids": [],
+  "security_evidence_ids": [
+    "audit:sec-0042"
+  ],
+  "confidence": 0.82,
+  "first_observed": "2026-10-01T08:00:00Z",
+  "last_observed": "2026-10-09T17:30:00.125Z",
+  "validity": {
+    "valid_from": "2026-10-01T08:00:00Z",
+    "valid_to": null
+  },
+  "status": "inferred",
+  "lock": {
+    "locked": false
+  },
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z"
+}

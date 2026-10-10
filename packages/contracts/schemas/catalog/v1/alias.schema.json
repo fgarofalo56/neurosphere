@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/alias.schema.json",
+  "title": "Alias",
+  "x-ns-name": "Alias",
+  "description": "Alias document mapping an alias (external agent ID, label, previous ID) to one canonical ID; resolves collisions and agent aliases. Python validators: validate_canonical_id_fullmatch, validate_customer_segment_matches, validate_alias_type_matches (entity_type equals the type segment of canonical_id), validate_alias_unique (one active alias per (alias_source_id, alias_kind, alias_value)).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:alias:[a-z0-9._/=-]+$",
+      "description": "Canonical ID of this alias document. Canonical ID (canonical_id.schema.json) whose type segment is 'alias'."
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "alias_value": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+      "description": "Source-native identifier or label that resolves to canonical_id."
+    },
+    "alias_kind": {
+      "type": "string",
+      "enum": [
+        "external_id",
+        "display_name",
+        "previous_canonical_id",
+        "source_native_id"
+      ]
+    },
+    "alias_source_id": {
+      "$ref": "common.schema.json#/$defs/token",
+      "description": "Source in which alias_value is valid."
+    },
+    "canonical_id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+      "not": {
+        "pattern": "^[^:]+:[^:]+:[^:]+:person:"
+      },
+      "description": "Target canonical ID. Person aliases are forbidden: mapping a real identifier to a pseudonym is re-identification data and lives in the policy store."
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "agent_version",
+        "model_deployment",
+        "grounding_source",
+        "tool",
+        "service",
+        "domain",
+        "owner",
+        "policy",
+        "recommendation",
+        "run_reference"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "retired"
+      ]
+    },
+    "validity": {
+      "$ref": "common.schema.json#/$defs/validity"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "etag",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "alias_value",
+    "alias_kind",
+    "alias_source_id",
+    "canonical_id",
+    "entity_type",
+    "status",
+    "validity",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canonical_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canonical_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

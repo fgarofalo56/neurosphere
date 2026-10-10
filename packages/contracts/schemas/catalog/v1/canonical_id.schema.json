@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/canonical_id.schema.json",
+  "title": "CanonicalId",
+  "description": "Canonical ID grammar cloud:customer:source:type:id. cloud is commercial or government; customer, source and type are lowercase [a-z0-9._-]; id is lowercase [a-z0-9._-] plus '/' and '='; no segment may contain ':'. Corpus: id-corpus.json. Python validator validate_canonical_id_fullmatch re-checks with re.fullmatch because Python re.search lets '$' match before a trailing newline.",
+  "type": "string",
+  "minLength": 9,
+  "maxLength": 512,
+  "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+  "$defs": {
+    "cloud_segment": {
+      "type": "string",
+      "pattern": "^(commercial|government)$"
+    },
+    "segment": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "id_segment": {
+      "type": "string",
+      "pattern": "^[a-z0-9._/=-]+$"
+    }
+  }
+}
