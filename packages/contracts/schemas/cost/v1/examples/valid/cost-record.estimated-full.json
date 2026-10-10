@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "cost_id": "cost-0002",
+  "kind": "estimated",
+  "amount": "0.0123",
+  "currency": "USD",
+  "price_version": "azure-openai-2026-10",
+  "price_effective_date": "2026-10-01",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "source_id": "otel-gateway-01",
+  "dedupe_key": "contoso:gw:req-42",
+  "observation_source": "gateway",
+  "recorded_at": "2026-10-10T12:00:05Z",
+  "domain_id": "finance",
+  "canonical_agent_id": "commercial:contoso:otel-gateway-01:agent:invoice-bot",
+  "provider": "azure_openai",
+  "model": "gpt-4o",
+  "model_version": "2024-11-20",
+  "usage_start": "2026-10-10T12:00:00Z",
+  "usage_end": "2026-10-10T12:00:01Z",
+  "token_breakdown": {
+    "input": 1200,
+    "output": 300,
+    "cached": 800,
+    "reasoning": null
+  },
+  "retry_count": 1,
+  "retry_amount": "0.0040",
+  "allocation": {
+    "compute": "0.0123",
+    "ptu": null,
+    "reservation": null,
+    "license_seat": null
+  },
+  "event_ids": [
+    "evt-0002"
+  ]
+}

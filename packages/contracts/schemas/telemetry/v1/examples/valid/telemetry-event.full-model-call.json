@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "event_id": "evt-0002",
+  "event_time": "2026-10-10T12:00:01.250Z",
+  "ingestion_time": "2026-10-10T12:00:02Z",
+  "cloud": "government",
+  "customer_id": "agency-a",
+  "domain_id": "finance",
+  "source_id": "appinsights-01",
+  "external_agent_id": "invoice-bot",
+  "canonical_agent_id": "government:agency-a:appinsights-01:agent:invoice-bot",
+  "request_id": "req-42",
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "span_id": "00f067aa0ba902b7",
+  "parent_span_id": null,
+  "span_kind": "model_call",
+  "retry_attempt": null,
+  "provider": "azure_openai",
+  "model": "gpt-4o",
+  "model_version": "2024-11-20",
+  "environment": "production",
+  "outcome": "success",
+  "duration_ms": 0,
+  "token_breakdown": {
+    "input": 1200,
+    "output": 300,
+    "cached": 0,
+    "reasoning": null
+  },
+  "data_source_refs": [
+    {
+      "ref": "government:agency-a:search-01:data_asset:invoices",
+      "access": "read"
+    }
+  ],
+  "classification": "cui",
+  "sampling": {
+    "rate": 0.25,
+    "method": "probabilistic",
+    "reason": null
+  },
+  "payload_ref": {
+    "pointer": "archive/2026/10/10/evt-0002.json",
+    "classification": "cui",
+    "redaction_state": "redacted"
+  }
+}

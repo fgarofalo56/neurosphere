@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "cost_id": "cost-0101",
+  "kind": "invoiced",
+  "amount": "-25.00",
+  "currency": "USD",
+  "billing_period": {
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-30"
+  },
+  "invoice_id": "INV-2026-09-001",
+  "cloud": "government",
+  "customer_id": "agency-a",
+  "source_id": "cost-mgmt-01",
+  "allocation": null,
+  "dedupe_key": "agency-a:billing:2026-09:credit",
+  "observation_source": "billing",
+  "reconciliation": null,
+  "recorded_at": "2026-10-03T09:00:00Z"
+}

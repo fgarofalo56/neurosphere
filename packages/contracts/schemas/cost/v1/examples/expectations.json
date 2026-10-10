@@ -1,0 +1,119 @@
+{
+  "valid": {
+    "cost-record.estimated-minimal.json": {
+      "schema": "cost-record.schema.json"
+    },
+    "cost-record.estimated-full.json": {
+      "schema": "cost-record.schema.json"
+    },
+    "cost-record.invoiced-reconciled.json": {
+      "schema": "cost-record.schema.json"
+    },
+    "cost-record.invoiced-credit.json": {
+      "schema": "cost-record.schema.json"
+    }
+  },
+  "invalid": {
+    "cost-record.missing-schema-version.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "schema_version"
+    },
+    "cost-record.estimated-missing-price-version.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "price_version"
+    },
+    "cost-record.estimated-null-price-version.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "type",
+      "instance_path": "/price_version"
+    },
+    "cost-record.estimated-missing-effective-date.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "price_effective_date"
+    },
+    "cost-record.invoiced-missing-billing-period.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "billing_period"
+    },
+    "cost-record.invoiced-null-billing-period.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "type",
+      "instance_path": "/billing_period"
+    },
+    "cost-record.invoiced-from-gateway.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "const",
+      "instance_path": "/observation_source"
+    },
+    "cost-record.amount-float.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "type",
+      "instance_path": "/amount"
+    },
+    "cost-record.amount-exponent.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/amount"
+    },
+    "cost-record.currency-lowercase.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/currency"
+    },
+    "cost-record.unknown-kind.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "enum",
+      "instance_path": "/kind"
+    },
+    "cost-record.unknown-observation-source.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "enum",
+      "instance_path": "/observation_source"
+    },
+    "cost-record.missing-dedupe-key.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "required",
+      "instance_path": "",
+      "message_contains": "dedupe_key"
+    },
+    "cost-record.allocation-extra-basis.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "additionalProperties",
+      "instance_path": "/allocation",
+      "message_contains": "storage"
+    },
+    "cost-record.allocation-negative.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/allocation/ptu"
+    },
+    "cost-record.retry-count-unknown-string.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "type",
+      "instance_path": "/retry_count"
+    },
+    "cost-record.reconciliation-coverage-above-one.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "maximum",
+      "instance_path": "/reconciliation/coverage"
+    },
+    "cost-record.billing-period-datetime.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "pattern",
+      "instance_path": "/billing_period/start_date"
+    },
+    "cost-record.counts-cached-string.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "type",
+      "instance_path": "/token_breakdown/cached"
+    }
+  }
+}
