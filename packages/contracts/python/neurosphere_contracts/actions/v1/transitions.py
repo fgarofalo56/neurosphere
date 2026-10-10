@@ -33,7 +33,7 @@ class ActionTransitionAllowlist(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    schema_version: Annotated[StrictStr, Field(pattern="^1\\.[0-9]+\\.[0-9]+$")]
+    schema_version: Annotated[StrictStr, Field(pattern="^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")]
     state_machine: Literal["action_intent"]
     """
     Which state machine this allowlist governs.

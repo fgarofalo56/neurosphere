@@ -31,7 +31,7 @@ class CatalogCommon(RootModel[Any]):
 
 
 class SchemaVersion(RootModel[StrictStr]):
-    root: Annotated[StrictStr, Field(pattern="^1\\.[0-9]+\\.[0-9]+$")]
+    root: Annotated[StrictStr, Field(pattern="^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")]
     """
     Contract version of the document; major 1 for every catalog v1 schema.
     """

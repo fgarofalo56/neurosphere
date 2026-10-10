@@ -139,7 +139,7 @@ class DeploymentManifest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    schema_version: Annotated[StrictStr, Field(pattern="^1\\.[0-9]+\\.[0-9]+$")]
+    schema_version: Annotated[StrictStr, Field(pattern="^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")]
     """
     Contract version of this document (semver within major 1).
     """

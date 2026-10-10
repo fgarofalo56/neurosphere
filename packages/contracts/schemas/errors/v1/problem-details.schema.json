@@ -10,7 +10,7 @@
     "schema_version": {
       "description": "Contract version of this document (semver within major 1).",
       "type": "string",
-      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "type": {
       "description": "RFC 9457 problem type, a URI reference. Use 'about:blank' or 'https://neurosphere.invalid/problems/<code>'. Never dereferenced by clients or tests.",

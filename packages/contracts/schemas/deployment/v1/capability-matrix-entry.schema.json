@@ -23,7 +23,7 @@
     "schema_version": {
       "description": "Contract version of this document (semver within major 1).",
       "type": "string",
-      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "service": {
       "description": "Azure service key, snake_case (for example azure_openai, cosmos_db, fabric, synapse, databricks, ai_search, event_hubs).",

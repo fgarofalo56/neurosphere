@@ -6,7 +6,7 @@
   "$defs": {
     "schema_version": {
       "type": "string",
-      "pattern": "^1\\.[0-9]+\\.[0-9]+$",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
       "description": "Contract version of the document; major 1 for every catalog v1 schema."
     },
     "canonical_id": {

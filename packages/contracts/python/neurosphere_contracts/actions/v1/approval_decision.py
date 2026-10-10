@@ -42,7 +42,7 @@ class ApprovalDecision(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    schema_version: Annotated[StrictStr, Field(pattern="^1\\.[0-9]+\\.[0-9]+$")]
+    schema_version: Annotated[StrictStr, Field(pattern="^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")]
     decision_id: Uuid
     """
     Server-assigned identifier of this decision (lowercase UUID).
