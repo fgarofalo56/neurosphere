@@ -1,6 +1,6 @@
 ---
 name: prp-01-contracts-and-schemas
-status: backlog
+status: active
 review: required
 created: 2026-10-08
 model: opus
