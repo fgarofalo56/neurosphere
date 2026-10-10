@@ -39,14 +39,7 @@ from validators import run_single_document_validators
 # Valid examples that a named cross-field validator rejects. These are defects in the
 # examples (not in the validator); each entry is a strict xfail so the suite turns red as
 # soon as the example is fixed and the entry can be removed.
-KNOWN_EXAMPLE_DEFECTS: dict[str, str] = {
-    "scope/v1/examples/valid/identity-scope.viewer.json": (
-        "scope_hash is the placeholder 'sha256:abab...'; check_identity_scope_hash recomputes it"
-    ),
-    "scope/v1/examples/valid/identity-scope.scoped-admin.json": (
-        "scope_hash is the placeholder 'sha256:abab...'; check_identity_scope_hash recomputes it"
-    ),
-}
+KNOWN_EXAMPLE_DEFECTS: dict[str, str] = {}
 
 # Keywords the codegen shape projection removes (ADR-0004): Pydantic cannot enforce them.
 PROJECTED_AWAY = frozenset({"if", "then", "else", "not", "contains"})

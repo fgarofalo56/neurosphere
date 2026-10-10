@@ -133,11 +133,11 @@ union of numbered multiple-inheritance classes while still dropping the rule. Mi
   validator of record. Ingress paths validate against the JSON Schema (jsonschema 4.26) as
   well as the model; PRP-01 item 7 runs the same golden fixtures through JSON Schema,
   Pydantic and TypeScript.
-- Measured on the in-repo examples on 2026-10-10: the Pydantic models accept 83 of 83
-  valid examples and reject 112 of 163 invalid ones. All 51 they accept are cross-field
+- Measured on the in-repo examples on 2026-10-10: the Pydantic models accept 98 of 98
+  valid examples and reject 144 of 226 invalid ones. All 82 they accept are cross-field
   conditional rules (for example estimated cost without `price_version`, inferred edge
   without evidence, audit chain head with `previous_hash`). The unprojected generator output
-  rejected the same 112. Code that needs those rules must validate against the schema.
+  rejected the same set. `tests/contracts` asserts that JSON Schema rejects all 82. Code that needs those rules must validate against the schema.
 - Generated Python carries `# pyright: reportAssignmentType=false, reportInvalidTypeForm=false`:
   datamodel-code-generator emits `constr(...)` dict keys for `patternProperties` and literal
   defaults on `RootModel`-typed fields, which pyright rejects although Pydantic accepts them.

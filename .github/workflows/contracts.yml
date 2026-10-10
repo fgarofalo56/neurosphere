@@ -50,3 +50,10 @@ jobs:
         run: uv run --frozen pytest packages/contracts/scripts -q
       - name: Typecheck generated TypeScript (TS 6.0.x strict)
         run: pnpm --filter ./packages/contracts/ts typecheck
+      - name: Contract tests (offline; drift and TS round-trip must run, not skip)
+        env:
+          NO_NETWORK: "1"
+          NS_CODEGEN_REQUIRED: "1"
+        run: uv run --frozen pytest tests/contracts -q
+      - name: TypeScript round trip
+        run: pnpm --filter ./packages/contracts/ts test
