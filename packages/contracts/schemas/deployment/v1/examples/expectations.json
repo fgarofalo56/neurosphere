@@ -1,0 +1,320 @@
+{
+  "$comment": "PRP-01 item 5 example manifest consumed by tests/contracts (item 7). Paths are relative to this file. For invalid cases, at least one leaf validation error must have the given keyword at the given JSON Pointer instance path.",
+  "cases": [
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/valid/commercial-aks-fabric-approved.json",
+      "valid": true
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/valid/government-appservice-synapse-draft.json",
+      "valid": true
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/cloud-as-list-routing-attempt.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/cloud"
+      },
+      "why": "cloud is one scalar; a multi-cloud manifest is inexpressible"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/secondary-cloud-field.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": ""
+      },
+      "why": "no fallback or secondary cloud member exists"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/per-service-cloud-override.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": "/services/1"
+      },
+      "why": "services cannot name a cloud"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/government-with-commercial-region.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/regions/1"
+      },
+      "why": "Government manifests may list only usgov*/usdod* regions"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/commercial-with-government-region.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "not",
+        "instance_path": "/regions/1"
+      },
+      "why": "Commercial manifests may not list Government regions"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/approved-reuse-without-consent.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/services/0/owner_consent/granted"
+      },
+      "why": "approved manifests need granted consent for every reuse"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/reuse-consent-not-required.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/services/0/owner_consent/required"
+      },
+      "why": "reuse always requires owner consent"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/reuse-without-resource-id.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/0/existing_resource_id"
+      },
+      "why": "reuse names the existing resource"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/create-with-resource-id.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/1/existing_resource_id"
+      },
+      "why": "create/skip carry no existing resource"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/skip-without-reason.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/2/skip_reason"
+      },
+      "why": "skip requires a reason"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/granted-consent-without-principal.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/0/owner_consent/owner_principal"
+      },
+      "why": "granted consent names who granted it"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/consent-principal-is-email.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/services/0/owner_consent/owner_principal"
+      },
+      "why": "pseudonymous principals only"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/estimate-without-price-version.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/1/cost_implication/price_version"
+      },
+      "why": "estimates cite a price version"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/unknown-cost-as-zero.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/2/cost_implication/monthly_amount"
+      },
+      "why": "unknown is null, never 0"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/amount-as-float.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/services/1/cost_implication/monthly_amount"
+      },
+      "why": "money is a decimal string"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/hosting-profile-not-allowed.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/hosting_profile"
+      },
+      "why": "hosting profile is aks or appservice"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/analytics-backend-not-allowed.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/analytics_backend"
+      },
+      "why": "analytics backend is fabric, synapse or databricks"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/created-at-not-utc.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/created_at"
+      },
+      "why": "timestamps are RFC 3339 UTC"
+    },
+    {
+      "schema": "../deployment-manifest.schema.json",
+      "file": "deployment-manifest/invalid/missing-schema-version.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "schema_version is required"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/valid/government-available-ga-il5.json",
+      "valid": true
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/valid/commercial-limited-preview-unknown-scope.json",
+      "valid": true
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/valid/government-global-unavailable.json",
+      "valid": true
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/merged-status-field.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": ""
+      },
+      "why": "the three fields cannot be merged into one status"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/ga-value-in-availability.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/availability"
+      },
+      "why": "availability and ga_status vocabularies are disjoint"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/authorization-in-ga-status.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/ga_status"
+      },
+      "why": "ga_status cannot carry an authorization scope"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/authorization-scope-as-string.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/authorization_scope"
+      },
+      "why": "authorization_scope is its own list field"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/missing-authorization-scope.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "all three fields are required"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/unknown-mixed-with-scope.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "maxItems",
+        "instance_path": "/authorization_scope"
+      },
+      "why": "unknown/not_in_scope stand alone"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/government-row-commercial-region.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/region"
+      },
+      "why": "Government rows use Government regions"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/commercial-row-government-region.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "not",
+        "instance_path": "/region"
+      },
+      "why": "Commercial rows cannot use Government regions"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/source-url-not-https.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/source_url"
+      },
+      "why": "sources are https URLs"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/observed-on-datetime.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/observed_on"
+      },
+      "why": "observed_on is a date"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "deployment_id": "contoso-commercial-prod",
+  "cloud": "commercial",
+  "regions": [
+    "eastus2",
+    "centralus"
+  ],
+  "hosting_profile": "aks",
+  "analytics_backend": "fabric",
+  "status": "approved",
+  "services": [
+    {
+      "service": "key_vault",
+      "decision": "reuse",
+      "existing_resource_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-shared/providers/Microsoft.KeyVault/vaults/kv-shared-example",
+      "skip_reason": null,
+      "owner_consent": {
+        "required": true,
+        "granted": true,
+        "owner_principal": "commercial:contoso:entra:principal:p-7f3a9c",
+        "recorded_at": "2026-10-01T14:05:00Z"
+      },
+      "cost_implication": {
+        "basis": "no_incremental_cost",
+        "monthly_amount": null,
+        "currency": null,
+        "price_version": null,
+        "summary": "Shared vault; no new spend."
+      }
+    },
+    {
+      "service": "event_hubs",
+      "decision": "create",
+      "existing_resource_id": null,
+      "skip_reason": null,
+      "owner_consent": {
+        "required": false,
+        "granted": false,
+        "owner_principal": null,
+        "recorded_at": null
+      },
+      "cost_implication": {
+        "basis": "estimated",
+        "monthly_amount": "1240.50",
+        "currency": "USD",
+        "price_version": "azure-retail-2026-09",
+        "summary": "Standard tier, 4 throughput units."
+      }
+    },
+    {
+      "service": "api_management",
+      "decision": "skip",
+      "existing_resource_id": null,
+      "skip_reason": "Customer gateway already fronts model endpoints.",
+      "owner_consent": {
+        "required": false,
+        "granted": false,
+        "owner_principal": null,
+        "recorded_at": null
+      },
+      "cost_implication": {
+        "basis": "unknown",
+        "monthly_amount": null,
+        "currency": null,
+        "price_version": null
+      }
+    }
+  ],
+  "created_at": "2026-10-01T13:00:00+02:00"
+}
