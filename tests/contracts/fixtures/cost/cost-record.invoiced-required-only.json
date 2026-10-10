@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "cost_id": "cost-fixture-invoiced-required-only",
+  "kind": "invoiced",
+  "amount": "12.50",
+  "currency": "USD",
+  "billing_period": {
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-30"
+  },
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "source_id": "billing-export",
+  "dedupe_key": "contoso/2026-09/fixture",
+  "observation_source": "billing",
+  "recorded_at": "2026-10-02T00:00:00Z"
+}
