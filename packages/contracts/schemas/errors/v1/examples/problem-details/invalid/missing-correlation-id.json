@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "code": "forbidden",
+  "retryable": false
+}

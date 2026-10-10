@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "name": "foundry_deployments",
+  "version": "0.3.1-beta.1",
+  "supported_clouds": [
+    "government"
+  ],
+  "capabilities": [
+    "catalog_discovery",
+    "action_execution"
+  ],
+  "scopes": [
+    "https://management.usgovcloudapi.net/.default"
+  ],
+  "granularity": {
+    "time_grain": "event",
+    "subject_level": "deployment"
+  },
+  "freshness": {
+    "typical_delay_ms": null,
+    "max_delay_ms": null
+  },
+  "rate_limits": null,
+  "auth_mode": "vault_reference",
+  "credential_refs": [
+    {
+      "name": "client_assertion_cert",
+      "vault_ref": "https://example.com/secrets/foundry"
+    }
+  ],
+  "advisory": false,
+  "write_support": {
+    "supported": true,
+    "actions": [
+      "model_deployment_swap",
+      "model_deployment_scale"
+    ]
+  }
+}

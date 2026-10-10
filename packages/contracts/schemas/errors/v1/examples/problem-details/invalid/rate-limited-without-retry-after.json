@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/rate_limited",
+  "title": "Rate limited",
+  "status": 429,
+  "code": "rate_limited",
+  "retryable": true,
+  "correlation_id": "01J9ZQ4M8V2R5K7T3X6W0YB1CD"
+}

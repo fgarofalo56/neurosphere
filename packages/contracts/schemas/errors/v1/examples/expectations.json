@@ -1,0 +1,225 @@
+{
+  "$comment": "PRP-01 item 5 example manifest consumed by tests/contracts (item 7). Paths are relative to this file. For invalid cases, at least one leaf validation error must have the given keyword at the given JSON Pointer instance path.",
+  "cases": [
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/unauthorized.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/forbidden.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/capability-unavailable.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/stale-version.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/rate-limited.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/invalid-schema.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/dependency-transient-503.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/dependency-transient-502.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/unauthorized-wrong-status.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/status"
+      },
+      "why": "unauthorized is 401"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/forbidden-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/retryable"
+      },
+      "why": "forbidden is not retryable"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/capability-unavailable-without-reason.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "capability_unavailable requires reason"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/capability-unavailable-422.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/status"
+      },
+      "why": "capability_unavailable is fixed at 409"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/capability-unavailable-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/retryable"
+      },
+      "why": "not retryable"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/reason-free-text.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/reason"
+      },
+      "why": "reason is a machine-readable token"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/stale-version-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/retryable"
+      },
+      "why": "stale_version is never blindly retried"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/rate-limited-without-retry-after.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "rate_limited needs retry_after_seconds"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/rate-limited-not-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/retryable"
+      },
+      "why": "rate_limited is retryable"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/rate-limited-wrong-status.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/status"
+      },
+      "why": "rate_limited is 429"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/invalid-schema-wrong-status.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/status"
+      },
+      "why": "invalid_schema is 422"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/dependency-transient-500.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/status"
+      },
+      "why": "503 or 502 only"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/dependency-transient-not-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/retryable"
+      },
+      "why": "dependency_transient is retryable"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/retry-after-on-non-retryable.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "not",
+        "instance_path": ""
+      },
+      "why": "retry_after_seconds forbidden when not retryable"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/errors-on-non-invalid-schema.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "not",
+        "instance_path": ""
+      },
+      "why": "errors array is invalid_schema only"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/unknown-code.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/code"
+      },
+      "why": "only the seven taxonomy codes"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/missing-correlation-id.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "correlation_id is required"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/stack-trace-member.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": ""
+      },
+      "why": "no unprofiled members"
+    }
+  ]
+}

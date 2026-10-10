@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "service": "fabric",
+  "feature": "base",
+  "cloud": "commercial",
+  "region": "usgovtexas",
+  "sku": null,
+  "availability": "limited",
+  "ga_status": "public_preview",
+  "authorization_scope": [
+    "unknown"
+  ],
+  "source_url": "https://learn.microsoft.com/fabric/admin/region-availability",
+  "observed_on": "2026-10-06",
+  "notes": null
+}

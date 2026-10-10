@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/deployment/v1/deployment-manifest.schema.json",
+  "title": "DeploymentManifest",
+  "description": "One customer-hosted NeuroSphere deployment plan (NS-07): a single cloud, approved regions, hosting profile, analytics backend and a reuse/create/skip decision per service with owner consent and cost implication. cloud is one scalar per manifest and no service, region or endpoint field can name another cloud, so routing Government data to Commercial is not expressible; Government manifests may list only usgov*/usdod* regions and Commercial manifests may not list them. Whether a backend, SKU or service is actually offered in the chosen cloud/region is decided by the capability matrix (CapabilityMatrixEntry, data in PRP-02), not by this schema. Rules JSON Schema cannot express are checked by the Python validator check_deployment_manifest in tests/contracts/test_deployment_manifest.py (PRP-01 item 7): each service appears at most once in services; existing_resource_id is not repeated across services.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "deployment_id",
+    "cloud",
+    "regions",
+    "hosting_profile",
+    "analytics_backend",
+    "status",
+    "services",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document (semver within major 1).",
+      "type": "string",
+      "pattern": "^1\\.[0-9]+\\.[0-9]+$"
+    },
+    "deployment_id": {
+      "description": "Stable identifier of this deployment.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+    },
+    "cloud": {
+      "description": "The single Azure cloud for every service and every byte of data in this deployment. A scalar by design: there is no secondary or fallback cloud.",
+      "type": "string",
+      "enum": ["commercial", "government"]
+    },
+    "regions": {
+      "description": "Approved Azure region names (lowercase ARM names, for example eastus2 or usgovvirginia). The first entry is the primary region. Must belong to cloud.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/region" }
+    },
+    "hosting_profile": {
+      "description": "aks = enterprise profile on AKS; appservice = smaller App Service profile.",
+      "type": "string",
+      "enum": ["aks", "appservice"]
+    },
+    "analytics_backend": {
+      "description": "Analytics adapter chosen at deployment, behind the shared capability/query contract. Availability per cloud/region comes from the capability matrix.",
+      "type": "string",
+      "enum": ["fabric", "synapse", "databricks"]
+    },
+    "status": {
+      "description": "Plan lifecycle. Once approved or applied, every reused service must carry granted owner consent.",
+      "type": "string",
+      "enum": ["draft", "planned", "approved", "applied"]
+    },
+    "services": {
+      "description": "Per-service decision. Uniqueness of service is checked by check_deployment_manifest.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/service_plan" }
+    },
+    "created_at": {
+      "description": "RFC 3339 UTC timestamp.",
+      "$ref": "#/$defs/utc_timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "cloud": { "const": "government" } }, "required": ["cloud"] },
+      "then": {
+        "properties": {
+          "regions": { "items": { "pattern": "^us(gov|dod)[a-z0-9]+$" } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "cloud": { "const": "commercial" } }, "required": ["cloud"] },
+      "then": {
+        "properties": {
+          "regions": { "items": { "not": { "pattern": "^us(gov|dod)" } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["approved", "applied"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "services": {
+            "items": {
+              "if": {
+                "properties": { "decision": { "const": "reuse" } },
+                "required": ["decision"]
+              },
+              "then": {
+                "properties": {
+                  "owner_consent": { "properties": { "granted": { "const": true } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "utc_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$"
+    },
+    "region": {
+      "description": "Concrete lowercase ARM region name; global is not a deployment region.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{2,39}$",
+      "not": { "const": "global" }
+    },
+    "service_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service", "decision", "owner_consent", "cost_implication"],
+      "properties": {
+        "service": {
+          "description": "Platform service this decision covers.",
+          "type": "string",
+          "enum": [
+            "api_management",
+            "model_endpoint",
+            "key_vault",
+            "monitoring",
+            "event_hubs",
+            "storage",
+            "analytics_workspace",
+            "cosmos_db",
+            "ai_search",
+            "container_registry",
+            "kubernetes",
+            "app_service"
+          ]
+        },
+        "decision": {
+          "description": "reuse an existing (possibly shared) resource, create a new one with IaC, or skip.",
+          "type": "string",
+          "enum": ["reuse", "create", "skip"]
+        },
+        "existing_resource_id": {
+          "description": "ARM resource ID of the resource to reuse. Required for reuse, null otherwise. Shared resources are never modified or deleted on uninstall.",
+          "type": ["string", "null"],
+          "maxLength": 1024,
+          "pattern": "^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[^/]+/providers/[^/]+/.+$"
+        },
+        "skip_reason": {
+          "description": "Why the service is skipped. Required for skip.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "owner_consent": { "$ref": "#/$defs/owner_consent" },
+        "cost_implication": { "$ref": "#/$defs/cost_implication" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "reuse" } }, "required": ["decision"] },
+          "then": {
+            "required": ["existing_resource_id"],
+            "properties": {
+              "existing_resource_id": { "type": "string" },
+              "owner_consent": { "properties": { "required": { "const": true } } }
+            }
+          },
+          "else": {
+            "properties": { "existing_resource_id": { "type": "null" } }
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "skip" } }, "required": ["decision"] },
+          "then": {
+            "required": ["skip_reason"],
+            "properties": { "skip_reason": { "type": "string" } }
+          }
+        }
+      ]
+    },
+    "owner_consent": {
+      "description": "Enterprise owner consent for using a (shared) resource. Always required for reuse.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "granted", "owner_principal", "recorded_at"],
+      "properties": {
+        "required": { "description": "Whether owner consent is needed for this decision.", "type": "boolean" },
+        "granted": { "description": "Whether consent has been recorded.", "type": "boolean" },
+        "owner_principal": {
+          "description": "Who granted consent: pseudonymous principal reference (principal pseudonym or canonical ID), no email or display name. Null until granted.",
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$"
+        },
+        "recorded_at": {
+          "description": "When consent was recorded (RFC 3339 UTC); null until granted.",
+          "type": ["string", "null"],
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$"
+        }
+      },
+      "if": { "properties": { "granted": { "const": true } }, "required": ["granted"] },
+      "then": {
+        "properties": {
+          "owner_principal": { "type": "string" },
+          "recorded_at": { "type": "string" }
+        }
+      }
+    },
+    "cost_implication": {
+      "description": "Plan/cost implication of the decision. Unknown is null, never 0; an estimate cites its price version.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis", "monthly_amount", "currency", "price_version"],
+      "properties": {
+        "basis": {
+          "description": "estimated = priced estimate; no_incremental_cost = reuse/skip adds no new spend; unknown = not yet priced.",
+          "type": "string",
+          "enum": ["estimated", "no_incremental_cost", "unknown"]
+        },
+        "monthly_amount": {
+          "description": "Estimated monthly amount as a decimal string; null unless basis is estimated.",
+          "type": ["string", "null"],
+          "pattern": "^[0-9]{1,15}(\\.[0-9]{1,6})?$"
+        },
+        "currency": {
+          "description": "ISO 4217 code; null unless basis is estimated.",
+          "type": ["string", "null"],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "price_version": {
+          "description": "Price sheet version the estimate cites; null unless basis is estimated.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "summary": {
+          "description": "Short human-readable explanation shown in the plan.",
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "if": { "properties": { "basis": { "const": "estimated" } }, "required": ["basis"] },
+      "then": {
+        "properties": {
+          "monthly_amount": { "type": "string" },
+          "currency": { "type": "string" },
+          "price_version": { "type": "string" }
+        }
+      },
+      "else": {
+        "properties": {
+          "monthly_amount": { "type": "null" },
+          "currency": { "type": "null" },
+          "price_version": { "type": "null" }
+        }
+      }
+    }
+  }
+}

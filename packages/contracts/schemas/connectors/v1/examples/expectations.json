@@ -1,0 +1,175 @@
+{
+  "$comment": "PRP-01 item 5 example manifest consumed by tests/contracts (item 7). Paths are relative to this file. For invalid cases, at least one leaf validation error must have the given keyword at the given JSON Pointer instance path.",
+  "cases": [
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/valid/read-only-advisory-managed-identity.json",
+      "valid": true
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/valid/write-capable-vault-reference.json",
+      "valid": true
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/credential-with-value-field.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": "/credential_refs/0"
+      },
+      "why": "no member can hold a credential value"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/top-level-key-field.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": ""
+      },
+      "why": "no member can hold a credential value"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/vault-ref-is-plain-value.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/credential_refs/0/vault_ref"
+      },
+      "why": "vault_ref must be a Key Vault secret identifier"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/vault-ref-with-query-string.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/credential_refs/0/vault_ref"
+      },
+      "why": "no query strings on vault refs"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/vault-ref-non-keyvault-host.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/credential_refs/0/vault_ref"
+      },
+      "why": "only Key Vault hosts"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/documentation-url-with-query.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/documentation_url"
+      },
+      "why": "URLs cannot carry query strings (SAS)"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/documentation-url-with-userinfo.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/documentation_url"
+      },
+      "why": "URLs cannot carry userinfo"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/read-only-not-advisory.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/advisory"
+      },
+      "why": "read-only connectors are advisory"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/write-capable-marked-advisory.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/advisory"
+      },
+      "why": "advisory iff no write support"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/action-capability-without-write.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "const",
+        "instance_path": "/write_support/supported"
+      },
+      "why": "action_execution requires write support"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/write-supported-without-actions.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "minItems",
+        "instance_path": "/write_support/actions"
+      },
+      "why": "write support lists its actions"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/vault-mode-without-refs.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "minItems",
+        "instance_path": "/credential_refs"
+      },
+      "why": "vault_reference needs at least one ref"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/managed-identity-with-refs.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "maxItems",
+        "instance_path": "/credential_refs"
+      },
+      "why": "managed identity carries no credential refs"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/rate-limit-zero-window.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "minimum",
+        "instance_path": "/rate_limits/0/window_ms"
+      },
+      "why": "windows are positive milliseconds"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/freshness-unknown-as-zero-string.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/freshness/max_delay_ms"
+      },
+      "why": "unknown freshness is null"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/free-text-description.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "additionalProperties",
+        "instance_path": ""
+      },
+      "why": "no free-text member"
+    }
+  ]
+}

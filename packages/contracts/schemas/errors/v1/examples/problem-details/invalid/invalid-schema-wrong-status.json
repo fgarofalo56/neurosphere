@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/invalid_schema",
+  "title": "Invalid schema",
+  "status": 400,
+  "code": "invalid_schema",
+  "retryable": false,
+  "correlation_id": "01J9ZQ4M8V2R5K7T3X6W0YB1CD",
+  "errors": [
+    {
+      "pointer": "/filters/0/op",
+      "detail": "operator is not in the allowlist"
+    }
+  ]
+}

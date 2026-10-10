@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/capability_unavailable",
+  "title": "Capability unavailable",
+  "status": 409,
+  "code": "capability_unavailable",
+  "retryable": false,
+  "correlation_id": "01J9ZQ4M8V2R5K7T3X6W0YB1CD",
+  "reason": "not_available_in_region",
+  "detail": "Fabric is not offered for this cloud and region.",
+  "instance": "/v1/deployments/x/plan"
+}
