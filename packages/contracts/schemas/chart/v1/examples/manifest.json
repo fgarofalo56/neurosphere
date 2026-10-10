@@ -1,0 +1,158 @@
+{
+  "description": "Examples for this area. Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error (instance_path as a JSON Pointer, validator keyword) that must appear in the validation error tree. Consumed by tests/contracts (PRP-01 item 7).",
+  "examples": [
+    {
+      "file": "valid/chart-plan.bar-cost-by-agent.json",
+      "schema": "chart-plan.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/chart-plan.line-latency-transforms.json",
+      "schema": "chart-plan.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/chart-plan.expr-in-mark-property.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/mark/color",
+        "keyword": "type"
+      },
+      "reason": "no expr (ExprRef) anywhere"
+    },
+    {
+      "file": "invalid/chart-plan.expr-filter-string.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.line-latency-transforms.json",
+      "expected_error": {
+        "instance_path": "/spec/transform/0",
+        "keyword": "oneOf"
+      },
+      "reason": "filter takes field predicates only, not expressions"
+    },
+    {
+      "file": "invalid/chart-plan.signals.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no signals"
+    },
+    {
+      "file": "invalid/chart-plan.params.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no params"
+    },
+    {
+      "file": "invalid/chart-plan.url-data.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/data",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no url data"
+    },
+    {
+      "file": "invalid/chart-plan.named-dataset.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no top-level datasets"
+    },
+    {
+      "file": "invalid/chart-plan.remote-ref.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no remote $ref"
+    },
+    {
+      "file": "invalid/chart-plan.bad-mark-arc.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/mark",
+        "keyword": "oneOf"
+      },
+      "reason": "mark allowlist"
+    },
+    {
+      "file": "invalid/chart-plan.bad-mark-def-geoshape.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/mark/type",
+        "keyword": "enum"
+      },
+      "reason": "mark allowlist (object form)"
+    },
+    {
+      "file": "invalid/chart-plan.bad-transform-calculate.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.line-latency-transforms.json",
+      "expected_error": {
+        "instance_path": "/spec/transform/1",
+        "keyword": "oneOf"
+      },
+      "reason": "transform allowlist"
+    },
+    {
+      "file": "invalid/chart-plan.condition-in-encoding.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.line-latency-transforms.json",
+      "expected_error": {
+        "instance_path": "/spec/encoding/color",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no conditions (test expressions)"
+    },
+    {
+      "file": "invalid/chart-plan.field-name-injection.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/encoding/x/field",
+        "keyword": "pattern"
+      },
+      "reason": "field names cannot carry expression syntax"
+    },
+    {
+      "file": "invalid/chart-plan.row-cap-exceeded.json",
+      "schema": "chart-plan.schema.json",
+      "valid": false,
+      "derived_from": "valid/chart-plan.bar-cost-by-agent.json",
+      "expected_error": {
+        "instance_path": "/spec/data/values",
+        "keyword": "maxItems"
+      },
+      "reason": "inline row cap 5000"
+    }
+  ]
+}

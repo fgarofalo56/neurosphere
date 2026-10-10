@@ -1,0 +1,103 @@
+{
+  "description": "Examples for this area. Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error (instance_path as a JSON Pointer, validator keyword) that must appear in the validation error tree. Consumed by tests/contracts (PRP-01 item 7).",
+  "examples": [
+    {
+      "file": "valid/evaluation-result.offline-llm-judge.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/evaluation-result.online-programmatic-government.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/evaluation-result.llm-judge-without-calibration.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.offline-llm-judge.json",
+      "expected_error": {
+        "instance_path": "/calibration",
+        "keyword": "type"
+      },
+      "reason": "LLM judge requires a calibration reference"
+    },
+    {
+      "file": "invalid/evaluation-result.llm-judge-missing-model-version.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.offline-llm-judge.json",
+      "expected_error": {
+        "instance_path": "/judge",
+        "keyword": "required"
+      },
+      "reason": "judge is versioned"
+    },
+    {
+      "file": "invalid/evaluation-result.missing-dataset-version.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.offline-llm-judge.json",
+      "expected_error": {
+        "instance_path": "/dataset",
+        "keyword": "required"
+      },
+      "reason": "dataset is versioned"
+    },
+    {
+      "file": "invalid/evaluation-result.score-without-uncertainty.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.offline-llm-judge.json",
+      "expected_error": {
+        "instance_path": "/scores/0",
+        "keyword": "required"
+      },
+      "reason": "every score reports uncertainty"
+    },
+    {
+      "file": "invalid/evaluation-result.null-score-with-interval.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.offline-llm-judge.json",
+      "expected_error": {
+        "instance_path": "/scores/1/uncertainty/method",
+        "keyword": "const"
+      },
+      "reason": "an unscored dimension has no interval"
+    },
+    {
+      "file": "invalid/evaluation-result.feedback-only.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.online-programmatic-government.json",
+      "expected_error": {
+        "instance_path": "/scores",
+        "keyword": "not"
+      },
+      "reason": "quality is not inferred from feedback alone"
+    },
+    {
+      "file": "invalid/evaluation-result.cross-boundary.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.online-programmatic-government.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "anyOf"
+      },
+      "reason": "never evaluate government data in commercial"
+    },
+    {
+      "file": "invalid/evaluation-result.missing-sampling-coverage.json",
+      "schema": "evaluation-result.schema.json",
+      "valid": false,
+      "derived_from": "valid/evaluation-result.online-programmatic-government.json",
+      "expected_error": {
+        "instance_path": "/sampling",
+        "keyword": "required"
+      },
+      "reason": "sampling coverage is explicit (null when unknown)"
+    }
+  ]
+}

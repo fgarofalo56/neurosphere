@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "operation": "neighbors",
+  "entity": "agent",
+  "traversal": {
+    "start_ids": [
+      "commercial:contoso:foundry:agent:support-bot"
+    ],
+    "relations": [
+      "invokes",
+      "uses_model",
+      "grounded_by"
+    ],
+    "direction": "outgoing"
+  },
+  "filters": [
+    {
+      "field": "confidence",
+      "op": "gte",
+      "value": 0.5
+    }
+  ],
+  "budget": {
+    "timeout_ms": 3000,
+    "limit": 100,
+    "max_depth": 2,
+    "max_nodes": 500,
+    "max_edges": 2000
+  }
+}

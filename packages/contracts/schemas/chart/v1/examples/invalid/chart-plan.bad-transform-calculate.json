@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "citations": [
+    {
+      "evidence_id": "ev:telemetry:latency",
+      "as_of": "2026-10-10T11:59:30Z"
+    }
+  ],
+  "spec": {
+    "data": {
+      "values": [
+        {
+          "ts": "2026-10-09T00:00:00Z",
+          "p95_ms": 820,
+          "env": "prod"
+        },
+        {
+          "ts": "2026-10-09T01:00:00Z",
+          "p95_ms": 910,
+          "env": "prod"
+        },
+        {
+          "ts": "2026-10-09T01:00:00Z",
+          "p95_ms": 300,
+          "env": "dev"
+        }
+      ]
+    },
+    "transform": [
+      {
+        "filter": {
+          "field": "env",
+          "oneOf": [
+            "prod",
+            "staging"
+          ]
+        }
+      },
+      {
+        "calculate": "datum.p95_ms * 2",
+        "as": "x"
+      },
+      {
+        "aggregate": [
+          {
+            "op": "max",
+            "field": "p95_ms",
+            "as": "p95_max"
+          }
+        ],
+        "groupby": [
+          "hour",
+          "env"
+        ]
+      }
+    ],
+    "mark": {
+      "type": "line",
+      "point": true,
+      "interpolate": "monotone"
+    },
+    "encoding": {
+      "x": {
+        "field": "hour",
+        "type": "temporal",
+        "timeUnit": "yearmonthdatehours"
+      },
+      "y": {
+        "field": "p95_max",
+        "type": "quantitative",
+        "scale": {
+          "zero": false
+        }
+      },
+      "color": {
+        "field": "env",
+        "type": "nominal",
+        "scale": {
+          "scheme": "tableau10"
+        }
+      }
+    }
+  }
+}

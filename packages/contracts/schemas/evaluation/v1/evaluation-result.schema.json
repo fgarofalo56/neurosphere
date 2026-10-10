@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/evaluation/v1/evaluation-result.schema.json",
+  "title": "EvaluationResult",
+  "description": "Result of an offline benchmark or a sampled online evaluation of one subject (NS-03). Datasets, rubrics and judges are versioned; every score reports uncertainty and sample size; sampling coverage is explicit; an LLM judge requires a calibration reference against human labels. Quality is not inferred from feedback alone: a run whose only dimension is user_feedback is rejected. Unknown values are null, never 0. Evaluation runs on approved, redacted or synthetic data inside the selected cloud boundary (data_handling). Rules JSON Schema cannot express: started_at <= completed_at and sampling.window.start < sampling.window.end (tests/contracts/validators.py::check_evaluation_times); score.value and uncertainty bounds within score.scale (tests/contracts/validators.py::check_evaluation_score_scale); sampling.sample_size <= sampling.population_size when known (tests/contracts/validators.py::check_evaluation_sampling_counts).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evaluation_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "subject_id",
+    "mode",
+    "status",
+    "dataset",
+    "rubric",
+    "judge",
+    "scores",
+    "sampling",
+    "calibration",
+    "data_handling",
+    "started_at",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/schema_version" },
+    "evaluation_id": { "$ref": "#/$defs/opaque_id" },
+    "cloud": { "enum": ["commercial", "government"] },
+    "customer_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]{1,128}$"
+    },
+    "domain_id": {
+      "description": "Canonical Domain ID used for scope filtering against the server-derived IdentityScope.",
+      "$ref": "#/$defs/canonical_id"
+    },
+    "subject_id": {
+      "description": "Canonical ID of the evaluated AgentVersion or ModelDeployment.",
+      "$ref": "#/$defs/canonical_id"
+    },
+    "mode": { "enum": ["offline_benchmark", "online_sampled"] },
+    "status": {
+      "description": "partial means some items were not scored (budget exhausted, abstentions); coverage shows how many.",
+      "enum": ["completed", "partial", "failed"]
+    },
+    "dataset": {
+      "description": "Versioned dataset; for online_sampled this is the versioned sampling frame definition.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset_id", "dataset_version"],
+      "properties": {
+        "dataset_id": { "$ref": "#/$defs/opaque_id" },
+        "dataset_version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rubric_id", "rubric_version"],
+      "properties": {
+        "rubric_id": { "$ref": "#/$defs/opaque_id" },
+        "rubric_version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "judge": { "$ref": "#/$defs/judge" },
+    "scores": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/score" },
+      "not": {
+        "description": "Quality is not inferred solely from thumbs-up (NS-03).",
+        "items": {
+          "properties": { "dimension": { "const": "user_feedback" } },
+          "required": ["dimension"]
+        }
+      }
+    },
+    "sampling": { "$ref": "#/$defs/sampling" },
+    "calibration": {
+      "description": "Calibration of the judge against human labels. Required (non-null) when judge.judge_kind is llm_judge or hybrid; null otherwise allowed.",
+      "oneOf": [{ "$ref": "#/$defs/calibration" }, { "type": "null" }]
+    },
+    "data_handling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_state", "boundary_cloud"],
+      "properties": {
+        "data_state": { "enum": ["redacted", "approved", "synthetic"] },
+        "boundary_cloud": {
+          "description": "Cloud boundary the evaluation (including any judge model) ran in; must equal cloud.",
+          "enum": ["commercial", "government"]
+        }
+      }
+    },
+    "evaluator_usage": { "$ref": "#/$defs/evaluator_usage" },
+    "evidence_ids": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/opaque_id" }
+    },
+    "started_at": { "$ref": "#/$defs/timestamp" },
+    "completed_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "allOf": [
+    {
+      "description": "An LLM or hybrid judge must be calibrated against human labels.",
+      "if": {
+        "properties": {
+          "judge": {
+            "properties": { "judge_kind": { "enum": ["llm_judge", "hybrid"] } },
+            "required": ["judge_kind"]
+          }
+        },
+        "required": ["judge"]
+      },
+      "then": { "properties": { "calibration": { "$ref": "#/$defs/calibration" } } }
+    },
+    {
+      "description": "Evaluation never leaves the selected cloud boundary.",
+      "anyOf": [
+        {
+          "properties": {
+            "cloud": { "const": "commercial" },
+            "data_handling": { "properties": { "boundary_cloud": { "const": "commercial" } } }
+          }
+        },
+        {
+          "properties": {
+            "cloud": { "const": "government" },
+            "data_handling": { "properties": { "boundary_cloud": { "const": "government" } } }
+          }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "schema_version": {
+      "description": "Semantic version of this document within major 1. Within v1 only additive, optional changes are allowed (ADR-0004).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
+    "canonical_id": {
+      "description": "Canonical ID cloud:customer:source:type:id (PRP-01 clarification 7). Grammar owned by schemas/catalog/v1; duplicated here as a pattern.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "opaque_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._+-]{1,64}$"
+    },
+    "decimal": {
+      "description": "Money amount as a decimal string (no floats).",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$"
+    },
+    "nullable_count": {
+      "description": "Non-negative count; null means unknown, never 0.",
+      "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }]
+    },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["judge_kind"],
+      "properties": {
+        "judge_kind": { "enum": ["llm_judge", "human", "programmatic", "hybrid"] },
+        "judge_model_id": {
+          "description": "Model deployment canonical ID of the LLM judge.",
+          "$ref": "#/$defs/canonical_id"
+        },
+        "judge_model_version": { "$ref": "#/$defs/version" },
+        "judge_prompt_version": { "$ref": "#/$defs/version" },
+        "program_version": {
+          "description": "Version of the programmatic scorer.",
+          "$ref": "#/$defs/version"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "judge_kind": { "enum": ["llm_judge", "hybrid"] } },
+            "required": ["judge_kind"]
+          },
+          "then": { "required": ["judge_model_id", "judge_model_version", "judge_prompt_version"] }
+        },
+        {
+          "if": {
+            "properties": { "judge_kind": { "const": "programmatic" } },
+            "required": ["judge_kind"]
+          },
+          "then": { "required": ["program_version"] }
+        }
+      ]
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dimension", "value", "scale", "uncertainty", "sample_size"],
+      "properties": {
+        "dimension": {
+          "enum": [
+            "task_success",
+            "groundedness",
+            "safety",
+            "tool_correctness",
+            "user_feedback",
+            "drift"
+          ]
+        },
+        "value": {
+          "description": "Null when the dimension could not be scored; never 0 by default.",
+          "oneOf": [{ "type": "number" }, { "type": "null" }]
+        },
+        "scale": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        "uncertainty": { "$ref": "#/$defs/uncertainty" },
+        "sample_size": {
+          "description": "Items scored for this dimension.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "abstained_count": { "$ref": "#/$defs/nullable_count" }
+      },
+      "if": {
+        "properties": { "value": { "type": "null" } },
+        "required": ["value"]
+      },
+      "then": { "properties": { "uncertainty": { "properties": { "method": { "const": "not_estimable" } } } } }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "enum": ["confidence_interval", "credible_interval", "bootstrap", "not_estimable"]
+        },
+        "lower": { "type": "number" },
+        "upper": { "type": "number" },
+        "level": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+        "standard_error": { "type": "number", "minimum": 0 }
+      },
+      "if": {
+        "properties": { "method": { "const": "not_estimable" } },
+        "required": ["method"]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["lower"] },
+            { "required": ["upper"] },
+            { "required": ["level"] },
+            { "required": ["standard_error"] }
+          ]
+        }
+      },
+      "else": { "required": ["lower", "upper", "level"] }
+    },
+    "sampling": {
+      "description": "Sampling coverage. coverage_fraction null means unknown.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "sample_size", "population_size", "coverage_fraction", "window"],
+      "properties": {
+        "method": { "enum": ["full", "uniform_random", "stratified", "targeted"] },
+        "rate": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "sample_size": { "type": "integer", "minimum": 0 },
+        "population_size": { "$ref": "#/$defs/nullable_count" },
+        "coverage_fraction": {
+          "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }]
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "$ref": "#/$defs/timestamp" },
+            "end": { "$ref": "#/$defs/timestamp" }
+          }
+        }
+      },
+      "if": {
+        "properties": { "method": { "enum": ["uniform_random", "stratified"] } },
+        "required": ["method"]
+      },
+      "then": { "required": ["rate"] }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calibration_ref", "human_label_set_version", "agreement", "calibrated_at"],
+      "properties": {
+        "calibration_ref": {
+          "description": "ID of the calibration run against human labels.",
+          "$ref": "#/$defs/opaque_id"
+        },
+        "human_label_set_version": { "$ref": "#/$defs/version" },
+        "agreement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metric", "value", "sample_size"],
+          "properties": {
+            "metric": {
+              "enum": ["cohen_kappa", "krippendorff_alpha", "spearman", "accuracy"]
+            },
+            "value": { "type": "number", "minimum": -1, "maximum": 1 },
+            "sample_size": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "bias_checks": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["check", "result"],
+            "properties": {
+              "check": {
+                "enum": ["position_bias", "verbosity_bias", "self_preference_bias", "length_bias"]
+              },
+              "result": { "enum": ["passed", "failed", "not_run"] },
+              "value": { "oneOf": [{ "type": "number" }, { "type": "null" }] }
+            }
+          }
+        },
+        "calibrated_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "evaluator_usage": {
+      "description": "Evaluator token and cost consumption against its budget. Estimated cost always cites price_version.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["judge_input_tokens", "judge_output_tokens"],
+      "properties": {
+        "judge_input_tokens": { "$ref": "#/$defs/nullable_count" },
+        "judge_output_tokens": { "$ref": "#/$defs/nullable_count" },
+        "estimated_cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "currency", "price_version"],
+          "properties": {
+            "amount": { "$ref": "#/$defs/decimal" },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "price_version": { "$ref": "#/$defs/version" }
+          }
+        }
+      }
+    }
+  }
+}

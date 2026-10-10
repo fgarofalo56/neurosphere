@@ -1,0 +1,8 @@
+{
+  "limit": 100,
+  "returned": 100,
+  "has_more": true,
+  "next_cursor": "eyJvIjoxMDB9",
+  "truncated": true,
+  "truncation_reason": "max_nodes"
+}

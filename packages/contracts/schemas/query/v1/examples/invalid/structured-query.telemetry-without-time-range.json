@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "operation": "aggregate",
+  "entity": "cost_record",
+  "filters": [
+    {
+      "field": "kind",
+      "op": "eq",
+      "value": "invoiced"
+    },
+    {
+      "field": "amount",
+      "op": "gt",
+      "value": "0.00"
+    }
+  ],
+  "group_by": [
+    "agent_id"
+  ],
+  "time_bucket": "day",
+  "aggregations": [
+    {
+      "op": "sum",
+      "field": "amount",
+      "as": "total_amount"
+    }
+  ],
+  "sort": [
+    {
+      "field": "total_amount",
+      "direction": "desc"
+    }
+  ],
+  "budget": {
+    "timeout_ms": 10000,
+    "limit": 500,
+    "max_depth": 0
+  }
+}
