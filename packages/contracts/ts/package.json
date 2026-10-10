@@ -2,6 +2,22 @@
   "name": "@neurosphere/contracts",
   "private": true,
   "version": "0.0.0",
-  "description": "TypeScript contract bindings stub. Generated types land in PRP-01.",
-  "type": "module"
+  "description": "Generated TypeScript types for the NeuroSphere JSON Schema contracts (PRP-01). Do not edit src/; run packages/contracts/scripts/generate.py.",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "16.0.0",
+    "typescript": "~6.0.0",
+    "vitest": "^4.0.0"
+  }
 }
