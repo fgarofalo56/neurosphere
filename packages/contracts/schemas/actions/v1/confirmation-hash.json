@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0.0",
+  "applies_to": "https://neurosphere.invalid/schemas/actions/v1/action-intent.schema.json#/properties/confirmation_hash",
+  "description": "Definition of ActionIntent.confirmation_hash. Button, chat, REST and MCP must all compute it exactly this way so one confirmed intent has one hash regardless of channel. Enforcement (recompute and compare at confirmation, approval and execution) belongs to PRP-17; `validate_confirmation_hash` in tests/contracts/test_action_transitions.py checks test_vector and the action-intent examples.",
+  "hashed_fields": [
+    "target",
+    "target_version",
+    "proposed_diff",
+    "confirmation_expires_at",
+    "actor"
+  ],
+  "excluded_fields_note": "Every other ActionIntent field is excluded, in particular channel, idempotency_key, state, status_reason, evidence, prerequisite_results, dry_run, correlation_id, intent_id, created_at and state_changed_at.",
+  "construction": [
+    "Build a JSON object whose members are exactly hashed_fields, each copied unchanged from the ActionIntent (nested objects included in full, null members kept as null).",
+    "Serialize it with RFC 8785 JSON Canonicalization Scheme (JCS): members sorted by UTF-16 code units, no insignificant whitespace, ECMAScript number formatting.",
+    "Encode the canonical text as UTF-8 and hash it with SHA-256.",
+    "Render as the string 'sha256:' followed by the 64-character lowercase hex digest."
+  ],
+  "canonicalization": "rfc8785_jcs",
+  "algorithm": "sha256",
+  "encoding": "lowercase_hex",
+  "prefix": "sha256:",
+  "test_vector": {
+    "input": {
+      "actor": {
+        "principal_pseudonym": "p-7f3a9c21",
+        "principal_kind": "user",
+        "on_behalf_of": null
+      },
+      "target": {
+        "canonical_id": "commercial:contoso:foundry:model_deployment:eastus2/chat-prod",
+        "entity_type": "model_deployment"
+      },
+      "target_version": "etag-0x8dce1f2a3b4c5d6",
+      "proposed_diff": {
+        "format": "json_patch",
+        "operations": [
+          { "op": "test", "path": "/model/version", "value": "2025-08-01" },
+          { "op": "replace", "path": "/model/version", "value": "2026-06-15" }
+        ]
+      },
+      "confirmation_expires_at": "2026-10-10T17:15:00Z"
+    },
+    "canonical_json": "{\"actor\":{\"on_behalf_of\":null,\"principal_kind\":\"user\",\"principal_pseudonym\":\"p-7f3a9c21\"},\"confirmation_expires_at\":\"2026-10-10T17:15:00Z\",\"proposed_diff\":{\"format\":\"json_patch\",\"operations\":[{\"op\":\"test\",\"path\":\"/model/version\",\"value\":\"2025-08-01\"},{\"op\":\"replace\",\"path\":\"/model/version\",\"value\":\"2026-06-15\"}]},\"target\":{\"canonical_id\":\"commercial:contoso:foundry:model_deployment:eastus2/chat-prod\",\"entity_type\":\"model_deployment\"},\"target_version\":\"etag-0x8dce1f2a3b4c5d6\"}",
+    "expected_hash": "sha256:b66462da3c6ecc7b6cd7d6986b6b00be39ef7fa41699b04eb3f43c8f2fd41635"
+  }
+}

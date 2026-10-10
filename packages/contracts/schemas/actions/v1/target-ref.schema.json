@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/actions/v1/target-ref.schema.json",
+  "title": "TargetRef",
+  "description": "Reference to the resource an action changes or an audit record concerns. `canonical_id` uses the catalog grammar `cloud:customer:source:type:id` (Clarification 7); the pattern here mirrors it and the catalog/v1 grammar is authoritative. Python validator `validate_target_ref_matches_catalog_grammar` in tests/contracts/test_canonical_ids.py checks this pattern against the catalog ID corpus so the two cannot drift. The version being acted on is carried beside this object (ActionIntent.target_version), not inside it, so it is hashed as its own field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["canonical_id", "entity_type"],
+  "properties": {
+    "canonical_id": {
+      "description": "Cloud/customer/source qualified canonical ID of the target.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "entity_type": {
+      "description": "Catalog entity type of the target, lowercase snake_case (for example `model_deployment`, `agent_version`).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    }
+  }
+}

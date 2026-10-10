@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "decision_id": "9a0b7c6d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+  "review_item_id": "b1c2d3e4-f5a6-4b7c-9d8e-0f1a2b3c4d5e",
+  "review_kind": "maker_checker",
+  "intent_id": "3f1c2a9e-5b7d-4e21-9c0a-8d6f4b2e1a07",
+  "approved_confirmation_hash": "sha256:b66462da3c6ecc7b6cd7d6986b6b00be39ef7fa41699b04eb3f43c8f2fd41635",
+  "reviewer": {
+    "principal_pseudonym": "p-2b8e44d0",
+    "principal_kind": "user",
+    "on_behalf_of": null
+  },
+  "maker": {
+    "principal_pseudonym": "p-7f3a9c21",
+    "principal_kind": "user",
+    "on_behalf_of": null
+  },
+  "self_approval_allowed": false,
+  "decision": "approved",
+  "reason": "Canary plan and rollback evidence reviewed; version is GA in eastus2.",
+  "policy_version": "approval-policy-2026.10.1",
+  "decided_at": "2026-10-10T17:05:12Z",
+  "correlation_id": "corr-7c41e2"
+}
