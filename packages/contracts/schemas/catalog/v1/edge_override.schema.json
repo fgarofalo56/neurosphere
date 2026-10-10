@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/edge_override.schema.json",
+  "title": "EdgeOverride",
+  "x-ns-name": "EdgeOverride",
+  "description": "Steward decision on one edge (accept, reject, override, lock, unlock), applied with optimistic concurrency. The schema has no field that removes or replaces evidence_ids or security_evidence_ids, so an override cannot erase security evidence; observed facts are retained and the lock changes presented lineage only. lock and override decisions require a lock with locked=true, reason, expiry and actor. Python validators: validate_override_preserves_security_evidence, validate_customer_segment_matches, validate_override_relation_matches_edge (relation_type equals the type segment of edge_id), validate_lock_expiry_after_decision.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+      "description": "Canonical ID of this immutable override decision. Canonical ID (canonical_id.schema.json) whose type segment is 'edge_override'."
+    },
+    "edge_id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(invokes|delegates_to|uses_model|reads|writes|grounded_by|owned_by|depends_on|supersedes):[a-z0-9._/=-]+$",
+      "description": "Edge being curated. Canonical ID (canonical_id.schema.json) whose type segment is 'invokes' or 'delegates_to' or 'uses_model' or 'reads' or 'writes' or 'grounded_by' or 'owned_by' or 'depends_on' or 'supersedes'."
+    },
+    "relation_type": {
+      "$ref": "common.schema.json#/$defs/relation_type"
+    },
+    "expected_edge_version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "expected_edge_etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "common.schema.json#/$defs/domain_id"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "accept",
+        "reject",
+        "override",
+        "lock",
+        "unlock"
+      ]
+    },
+    "actor": {
+      "$ref": "common.schema.json#/$defs/person_id"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "decided_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "lock": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/lock"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "set_confidence": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "set_validity": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/validity"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "add_evidence_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 1000,
+      "items": {
+        "$ref": "common.schema.json#/$defs/evidence_id"
+      },
+      "default": [],
+      "description": "Evidence appended by the steward. Evidence can be added, never removed."
+    },
+    "review_item_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/evidence_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "edge_id",
+    "relation_type",
+    "expected_edge_version",
+    "expected_edge_etag",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "decision",
+    "actor",
+    "reason",
+    "decided_at"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edge_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edge_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "lock",
+              "override"
+            ]
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "required": [
+          "lock"
+        ],
+        "properties": {
+          "lock": {
+            "not": {
+              "type": "null"
+            },
+            "properties": {
+              "locked": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

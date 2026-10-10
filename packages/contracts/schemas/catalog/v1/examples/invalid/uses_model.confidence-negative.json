@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:uses_model:e-0001",
+  "relation_type": "uses_model",
+  "version": 2,
+  "etag": "\"edge-etag-2\"",
+  "source_id": "commercial:contoso:foundry:agent_version:support-bot/v3",
+  "target_id": "commercial:contoso:foundry:model_deployment:gpt-4o-prod",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "provenance": {
+    "method": "declared",
+    "source_id": "foundry-eastus",
+    "recorded_at": "2026-10-01T08:00:00Z"
+  },
+  "evidence_ids": [],
+  "security_evidence_ids": [],
+  "confidence": -0.1,
+  "first_observed": "2026-10-01T08:00:00Z",
+  "last_observed": "2026-10-09T17:30:00.125Z",
+  "validity": {
+    "valid_from": "2026-10-01T08:00:00Z",
+    "valid_to": null
+  },
+  "status": "asserted",
+  "lock": {
+    "locked": false
+  },
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z"
+}

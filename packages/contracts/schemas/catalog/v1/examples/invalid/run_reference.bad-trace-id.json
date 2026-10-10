@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:foundry:run_reference:4bf92f3577b34da6a3ce929d0e0e4736",
+  "entity_type": "run_reference",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "classification": "internal",
+  "agent_id": "commercial:contoso:foundry:agent:support-bot",
+  "agent_version_id": "commercial:contoso:foundry:agent_version:support-bot/v3",
+  "source_run_id": "run_Xyz789",
+  "trace_id": "XYZ",
+  "request_id": null,
+  "started_at": "2026-10-01T08:00:00Z",
+  "ended_at": "2026-10-09T17:30:00.125Z",
+  "outcome": "success",
+  "span_count": null
+}

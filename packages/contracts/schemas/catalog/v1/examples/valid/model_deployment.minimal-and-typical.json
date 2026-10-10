@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:foundry:model_deployment:gpt-4o-prod",
+  "entity_type": "model_deployment",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "classification": "internal",
+  "provider": "azure_openai",
+  "model_name": "gpt-4o",
+  "model_version": "2024-08-06",
+  "deployment_name": "gpt-4o-prod",
+  "modalities": [
+    "text",
+    "image"
+  ],
+  "context_window_tokens": 128000,
+  "max_output_tokens": null,
+  "supports_tool_calling": true,
+  "region": "eastus2",
+  "sku": "GlobalStandard",
+  "price_reference": {
+    "price_version": "azure-retail-2026-10",
+    "price_effective_date": "2026-10-01"
+  }
+}

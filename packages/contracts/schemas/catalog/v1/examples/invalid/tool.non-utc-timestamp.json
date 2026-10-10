@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:foundry:tool:server=crm/tool=lookup",
+  "entity_type": "tool",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-10T12:00:00+02:00",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "classification": "internal",
+  "display_name": "CRM lookup",
+  "tool_kind": "mcp_tool",
+  "side_effects": "read_only",
+  "source_id": "mcp-crm",
+  "mcp_server_ref": "crm"
+}

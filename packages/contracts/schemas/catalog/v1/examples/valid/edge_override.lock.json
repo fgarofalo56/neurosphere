@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:edge_override:ovr-1",
+  "edge_id": "commercial:contoso:neurosphere:reads:e-0001",
+  "relation_type": "reads",
+  "expected_edge_version": 2,
+  "expected_edge_etag": "\"edge-etag-2\"",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "decision": "lock",
+  "actor": "commercial:contoso:entra:person:psn_0123456789abcdef",
+  "reason": "Edge confirmed; lock against re-inference until next review.",
+  "decided_at": "2026-10-09T17:30:00.125Z",
+  "lock": {
+    "locked": true,
+    "reason": "Confirmed by steward.",
+    "expiry": "2027-01-01T00:00:00Z",
+    "actor": "commercial:contoso:entra:person:psn_0123456789abcdef"
+  },
+  "set_confidence": 1,
+  "set_validity": null,
+  "add_evidence_ids": [
+    "review:77"
+  ],
+  "review_item_id": "review-77"
+}
