@@ -68,14 +68,20 @@ def test_real_government_app_service_hosting_is_supported_with_citation_only() -
     assert "not an agency authorization" in host.authorization_scope
 
 
-def test_real_commercial_hosting_stays_unverified_and_disabled() -> None:
+def test_real_commercial_hosting_supported_in_listed_region_unverified_elsewhere() -> None:
     cases: tuple[tuple[Literal["aks", "appservice"], str], ...] = (
         ("aks", "aks"),
         ("appservice", "app_service"),
     )
     for hosting, service in cases:
-        profile = DeploymentProfile(
+        listed = DeploymentProfile(
             cloud="commercial", regions=("eastus",), hosting=hosting, analytics="fabric"
+        )
+        host = by_cap(validate_profile(listed, today=TODAY), f"hosting:{service}.base")
+        assert host.status == "supported"
+        assert host.row_id == f"{service}.base.commercial.eastus.any"
+        profile = DeploymentProfile(
+            cloud="commercial", regions=("madeupregion",), hosting=hosting, analytics="fabric"
         )
         host = by_cap(validate_profile(profile, today=TODAY), f"hosting:{service}.base")
         assert host.status == "disabled"
@@ -128,7 +134,7 @@ def test_no_row_is_unverified_and_disabled_never_supported() -> None:
 
 def test_unverified_row_is_distinct_from_unavailable() -> None:
     profile = DeploymentProfile(
-        cloud="commercial", regions=("eastus",), hosting="aks", analytics="fabric"
+        cloud="commercial", regions=("madeupregion",), hosting="aks", analytics="fabric"
     )
     fabric = by_cap(validate_profile(profile, today=TODAY), "analytics:fabric.base")
     assert fabric.status == "disabled"

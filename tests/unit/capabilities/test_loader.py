@@ -20,7 +20,7 @@ def write(tmp_path: Path, name: str, rows: list[dict[str, Any]]) -> None:
 
 def test_shipped_matrix_loads() -> None:
     matrix = load_matrix(today=TODAY)
-    assert len(matrix) == 85
+    assert len(matrix) == 532
     assert len(matrix.services()) == 11
 
 
