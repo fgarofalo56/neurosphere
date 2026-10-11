@@ -1,6 +1,6 @@
 ---
 name: prp-02-capability-matrix-and-feasibility-benchmark
-status: active
+status: shipped
 review: required
 created: 2026-10-08
 model: sonnet
@@ -260,7 +260,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date: 2026-10-11 (local `main`; PR and CI pending at the time of writing)
+- Date: 2026-10-11 (PR 6)
 - Merged commits: item 0 `804b1cb`, item 1 `b0e693d`, item 2 `191f999`, item 3 `2a49661`, item 4 `515a690`, item 5 `4f35541`, deps/test-config `1365e0e` `cd13f37` `c34399e`, review rework `8397709`; one `--no-ff` merge commit per item.
 - Deviations from blueprint and why:
   - Added "item 0": amended the shipped PRP-01 `CapabilityMatrixEntry` in place (added `id`; `availability` and `ga_status` vocabularies per Clarification 7; `authorization_scope` is now a citation string; region `*`). Operator-approved (option A). This is a breaking enum change under ADR-0004 done in place because no consumers existed; `deprecated`/`retired` were dropped from `ga_status`. ADR-0004 should record it (follow-up; not edited here).
