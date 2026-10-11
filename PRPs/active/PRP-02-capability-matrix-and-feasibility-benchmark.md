@@ -1,6 +1,6 @@
 ---
 name: prp-02-capability-matrix-and-feasibility-benchmark
-status: backlog
+status: active
 review: required
 created: 2026-10-08
 model: sonnet
