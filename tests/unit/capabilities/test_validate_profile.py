@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 import pytest
 from neurosphere_core.capabilities import (
@@ -68,7 +69,11 @@ def test_real_government_app_service_hosting_is_supported_with_citation_only() -
 
 
 def test_real_commercial_hosting_stays_unverified_and_disabled() -> None:
-    for hosting, service in (("aks", "aks"), ("appservice", "app_service")):
+    cases: tuple[tuple[Literal["aks", "appservice"], str], ...] = (
+        ("aks", "aks"),
+        ("appservice", "app_service"),
+    )
+    for hosting, service in cases:
         profile = DeploymentProfile(
             cloud="commercial", regions=("eastus",), hosting=hosting, analytics="fabric"
         )
