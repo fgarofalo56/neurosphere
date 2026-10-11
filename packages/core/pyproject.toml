@@ -4,8 +4,13 @@ version = "0.0.0"
 description = "Shared NeuroSphere domain library (IdentityScope, config, telemetry helpers). Stub until PRP-01/05."
 requires-python = ">=3.12"
 dependencies = [
+  "neurosphere-contracts",
   "pydantic>=2.14,<3",
+  "pyyaml>=6,<7",
 ]
+
+[tool.uv.sources]
+neurosphere-contracts = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

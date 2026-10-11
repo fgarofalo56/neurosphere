@@ -1,0 +1,364 @@
+{
+  "all_bounded_results_correct": true,
+  "cells": [
+    {
+      "container": "skewed-flat-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 769.915,
+        "mean_ms": 716.773,
+        "min_ms": 652.149,
+        "n": 30,
+        "p50_ms": 722.164,
+        "p95_ms": 763.49
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "flat",
+      "workload": "skewed"
+    },
+    {
+      "container": "skewed-hier2-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 776.602,
+        "mean_ms": 728.37,
+        "min_ms": 647.239,
+        "n": 30,
+        "p50_ms": 736.984,
+        "p95_ms": 773.471
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier2",
+      "workload": "skewed"
+    },
+    {
+      "container": "skewed-hier3-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 727.281,
+        "mean_ms": 668.347,
+        "min_ms": 599.422,
+        "n": 30,
+        "p50_ms": 675.456,
+        "p95_ms": 704.232
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier3",
+      "workload": "skewed"
+    },
+    {
+      "container": "high-degree-flat-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 136.8,
+        "mean_nodes_returned": 99.17,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2057.531,
+        "mean_ms": 2023.314,
+        "min_ms": 2000.074,
+        "n": 30,
+        "p50_ms": 2023.295,
+        "p95_ms": 2056.248
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 38.27,
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "flat",
+      "workload": "high_degree"
+    },
+    {
+      "container": "high-degree-hier2-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 142.7,
+        "mean_nodes_returned": 99.13,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2047.509,
+        "mean_ms": 2024.53,
+        "min_ms": 2000.376,
+        "n": 30,
+        "p50_ms": 2022.571,
+        "p95_ms": 2043.992
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 40.57,
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "hier2",
+      "workload": "high_degree"
+    },
+    {
+      "container": "high-degree-hier3-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 142.9,
+        "mean_nodes_returned": 100.73,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2044.349,
+        "mean_ms": 2024.016,
+        "min_ms": 2003.533,
+        "n": 30,
+        "p50_ms": 2028.317,
+        "p95_ms": 2044.251
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 40.3,
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "hier3",
+      "workload": "high_degree"
+    },
+    {
+      "container": "cross-domain-flat-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 648.598,
+        "mean_ms": 621.507,
+        "min_ms": 539.878,
+        "n": 30,
+        "p50_ms": 631.959,
+        "p95_ms": 647.563
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "flat",
+      "workload": "cross_domain"
+    },
+    {
+      "container": "cross-domain-hier2-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 663.59,
+        "mean_ms": 625.345,
+        "min_ms": 575.597,
+        "n": 30,
+        "p50_ms": 634.37,
+        "p95_ms": 662.11
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier2",
+      "workload": "cross_domain"
+    },
+    {
+      "container": "cross-domain-hier3-20261011162236-1f4afb",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 671.435,
+        "mean_ms": 627.284,
+        "min_ms": 580.036,
+        "n": 30,
+        "p50_ms": 631.663,
+        "p95_ms": 668.44
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier3",
+      "workload": "cross_domain"
+    }
+  ],
+  "disclaimer": "Latency here is local emulator latency. No cost, SLA, throughput or performance guarantee is made or implied. The live run against a real account (gate G03) is still required.",
+  "environment": {
+    "azure_cosmos_sdk_version": "4.17.1",
+    "credential_mode": "emulator_key",
+    "database": "g03-bench-20261011162236-1f4afb",
+    "emulator": {
+      "digest": "[\"mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator@sha256:4535ddbd27bba762f3e068f7585feb0022a2559ceccc9394b23aa38d91d77c38\"]",
+      "image": "mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest",
+      "image_id": "sha256:4535ddbd27bba762f3e068f7585feb0022a2559ceccc9394b23aa38d91d77c38"
+    },
+    "endpoint": "http://localhost:8081",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "run_id": "20261011162236-1f4afb",
+    "started_utc": "2026-10-11T16:22:36+00:00"
+  },
+  "gate": "G03",
+  "generated_utc": "2026-10-11T16:28:28+00:00",
+  "label": "emulator, bounded feasibility",
+  "mode": "emulator",
+  "p95_ms_by_workload": {
+    "cross_domain": 647.563,
+    "high_degree": 2056.248,
+    "skewed": 763.49
+  },
+  "parameters": {
+    "budget": {
+      "limit": 25,
+      "max_depth": 3,
+      "max_edges": 2000,
+      "max_nodes": 500,
+      "timeout_ms": 2000
+    },
+    "charge_capture": false,
+    "domains": 8,
+    "edges_per_node": 3,
+    "hub_degree": 200,
+    "iterations": 30,
+    "nodes": 200,
+    "seed": 42,
+    "skew_factor": 0.8,
+    "variants": {
+      "flat": [
+        "/domain"
+      ],
+      "hier2": [
+        "/tenant",
+        "/domain"
+      ],
+      "hier3": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ]
+    },
+    "warmup": 2,
+    "workloads": [
+      "skewed",
+      "high_degree",
+      "cross_domain"
+    ]
+  },
+  "unmeasured": [
+    "Request units (RU): UNMEASURED (the emulator has no RU accounting)",
+    "Index policy: UNMEASURED (the emulator does not reproduce range or composite indexes)",
+    "Throttling (HTTP 429): UNMEASURED (the emulator does not throttle)",
+    "Cross-partition fan-out cost: UNMEASURED (no per-partition cost model)"
+  ]
+}

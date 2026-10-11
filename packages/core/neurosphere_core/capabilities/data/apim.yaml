@@ -1,0 +1,56 @@
+# Capability matrix rows for apim. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: apim.base.government.any.any
+  service: apim
+  feature: base
+  cloud: government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  observed_on: '2026-10-11'
+  notes: 'Government endpoints: management.usgovcloudapi.net, gateway azure-api.us, management azure-api.us,
+    portal azure-api.us (compare page ms.date 2025-08-21). Per-region and per-tier availability is in
+    ''Products available by region'', not captured.'
+- schema_version: 1.1.0
+  id: apim.azure_ad_b2c_integration.government.any.any
+  service: apim
+  feature: azure_ad_b2c_integration
+  cloud: government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  observed_on: '2026-10-11'
+  notes: The only API Management feature listed as unavailable in Azure Government on the compare page.
+- schema_version: 1.1.0
+  id: apim.regional_tier_availability.government.any.any
+  service: apim
+  feature: regional_tier_availability
+  cloud: government
+  region: '*'
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  observed_on: '2026-10-11'
+  notes: Per-region and per-tier availability lives in 'Products available by region', which was not fetched.
+- schema_version: 1.1.0
+  id: apim.base.commercial.global.any
+  service: apim
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  observed_on: '2026-10-11'
+  notes: The compare page is Government-centric; Commercial availability is not stated.

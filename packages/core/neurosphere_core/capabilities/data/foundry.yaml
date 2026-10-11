@@ -1,0 +1,461 @@
+# Capability matrix rows for foundry. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: foundry.base.government.usgovvirginia.any
+  service: foundry
+  feature: base
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry in Azure Government; regional/feature statements are in feature-specific rows. Platform
+    page updated 2026-10-06.
+- schema_version: 1.1.0
+  id: foundry.base.government.usgovarizona.any
+  service: foundry
+  feature: base
+  cloud: government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry in Azure Government; regional/feature statements are in feature-specific rows. Platform
+    page updated 2026-10-06.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_family.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_gpt_5_family
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.x family; individual versions not itemised here on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_1.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_gpt_5_1
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.1 on Data Zone Standard per the Government models page (2026-09-01); quota and version
+    are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4.1 (Context window capped at 128K in Government.) on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4.1-mini (Context window capped at 128K in Government.) on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_o3_mini.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_o3_mini
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: o3-mini on Data Zone Standard per the Government models page (2026-09-01); quota and version
+    are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4o.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_gpt_4o
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4o on Data Zone Standard per the Government models page (2026-09-01); quota and version are
+    not captured.
+- schema_version: 1.1.0
+  id: foundry.model_text_embedding_3.government.usgovvirginia.data-zone-standard
+  service: foundry
+  feature: model_text_embedding_3
+  cloud: government
+  region: usgovvirginia
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: text-embedding-3 (variants not itemised here) on Data Zone Standard per the Government models
+    page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_1.government.usgovvirginia.regional-standard
+  service: foundry
+  feature: model_gpt_5_1
+  cloud: government
+  region: usgovvirginia
+  sku: Regional Standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.1 is not offered on Regional Standard per the Government models page (2026-09-01). Other
+    models on Regional Standard are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_o3_mini.government.usgovvirginia.regional-standard
+  service: foundry
+  feature: model_o3_mini
+  cloud: government
+  region: usgovvirginia
+  sku: Regional Standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: o3-mini is not offered on Regional Standard per the Government models page (2026-09-01). Other
+    models on Regional Standard are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_family.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_gpt_5_family
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.x family; individual versions not itemised here on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_1.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_gpt_5_1
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.1 on Data Zone Standard per the Government models page (2026-09-01); quota and version
+    are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4.1 (Context window capped at 128K in Government.) on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4.1-mini (Context window capped at 128K in Government.) on Data Zone Standard per the Government
+    models page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_o3_mini.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_o3_mini
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: o3-mini on Data Zone Standard per the Government models page (2026-09-01); quota and version
+    are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4o.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_gpt_4o
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-4o on Data Zone Standard per the Government models page (2026-09-01); quota and version are
+    not captured.
+- schema_version: 1.1.0
+  id: foundry.model_text_embedding_3.government.usgovarizona.data-zone-standard
+  service: foundry
+  feature: model_text_embedding_3
+  cloud: government
+  region: usgovarizona
+  sku: Data Zone Standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: text-embedding-3 (variants not itemised here) on Data Zone Standard per the Government models
+    page (2026-09-01); quota and version are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_5_1.government.usgovarizona.regional-standard
+  service: foundry
+  feature: model_gpt_5_1
+  cloud: government
+  region: usgovarizona
+  sku: Regional Standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: gpt-5.1 is not offered on Regional Standard per the Government models page (2026-09-01). Other
+    models on Regional Standard are not captured.
+- schema_version: 1.1.0
+  id: foundry.model_o3_mini.government.usgovarizona.regional-standard
+  service: foundry
+  feature: model_o3_mini
+  cloud: government
+  region: usgovarizona
+  sku: Regional Standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov
+  observed_on: '2026-10-08'
+  notes: o3-mini is not offered on Regional Standard per the Government models page (2026-09-01). Other
+    models on Regional Standard are not captured.
+- schema_version: 1.1.0
+  id: foundry.agent_prompt_agents.government.global.any
+  service: foundry
+  feature: agent_prompt_agents
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
+- schema_version: 1.1.0
+  id: foundry.agent_ai_search_tool.government.global.any
+  service: foundry
+  feature: agent_ai_search_tool
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
+- schema_version: 1.1.0
+  id: foundry.agent_mcp_servers.government.global.any
+  service: foundry
+  feature: agent_mcp_servers
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
+- schema_version: 1.1.0
+  id: foundry.agent_function_calling.government.global.any
+  service: foundry
+  feature: agent_function_calling
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
+- schema_version: 1.1.0
+  id: foundry.agent_workflows.government.global.any
+  service: foundry
+  feature: agent_workflows
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: preview
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says preview; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
+- schema_version: 1.1.0
+  id: foundry.agent_hosted_agents.government.global.any
+  service: foundry
+  feature: agent_hosted_agents
+  cloud: government
+  region: global
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
+    means none stated.
+- schema_version: 1.1.0
+  id: foundry.agent_web_search.government.global.any
+  service: foundry
+  feature: agent_web_search
+  cloud: government
+  region: global
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
+    means none stated.
+- schema_version: 1.1.0
+  id: foundry.agent_bing_grounding.government.global.any
+  service: foundry
+  feature: agent_bing_grounding
+  cloud: government
+  region: global
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
+    means none stated.
+- schema_version: 1.1.0
+  id: foundry.agent_fabric_tool.government.global.any
+  service: foundry
+  feature: agent_fabric_tool
+  cloud: government
+  region: global
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
+    means none stated.
+- schema_version: 1.1.0
+  id: foundry.agent_to_agent.government.global.any
+  service: foundry
+  feature: agent_to_agent
+  cloud: government
+  region: global
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  observed_on: '2026-10-08'
+  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
+    means none stated.
+- schema_version: 1.1.0
+  id: foundry.availability_region_support_page.government.global.any
+  service: foundry
+  feature: availability_region_support_page
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/reference/region-support
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT: this source disagrees with the feature-specific Government pages (models and Agent
+    Service); both are kept as separate rows and this one is unverified until resolved. The conflicting
+    content is not transcribed here.'
+- schema_version: 1.1.0
+  id: foundry.availability_government_roadmap.government.global.any
+  service: foundry
+  feature: availability_government_roadmap
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap
+  observed_on: '2026-10-08'
+  notes: 'CONFLICT: this source disagrees with the feature-specific Government pages (models and Agent
+    Service); both are kept as separate rows and this one is unverified until resolved. The conflicting
+    content is not transcribed here.'
+- schema_version: 1.1.0
+  id: foundry.base.commercial.global.any
+  service: foundry
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/reference/region-support
+  observed_on: '2026-10-08'
+  notes: Commercial regional support is on the cited page but not transcribed; the same page conflicts
+    with the Government feature pages (see availability_region_support_page).

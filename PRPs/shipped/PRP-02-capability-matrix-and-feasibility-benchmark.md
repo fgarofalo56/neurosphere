@@ -1,6 +1,6 @@
 ---
 name: prp-02-capability-matrix-and-feasibility-benchmark
-status: backlog
+status: shipped
 review: required
 created: 2026-10-08
 model: sonnet
@@ -260,10 +260,19 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
+- Date: 2026-10-11 (PR 6)
+- Merged commits: item 0 `804b1cb`, item 1 `b0e693d`, item 2 `191f999`, item 3 `2a49661`, item 4 `515a690`, item 5 `4f35541`, deps/test-config `1365e0e` `cd13f37` `c34399e`, review rework `8397709`; one `--no-ff` merge commit per item.
 - Deviations from blueprint and why:
-- Descoped items:
-- Matrix row count by service and cloud:
-- Evidence paths (emulator run; live run if any):
-- Open gates and follow-ups (G01, G03 live, G12):
+  - Added "item 0": amended the shipped PRP-01 `CapabilityMatrixEntry` in place (added `id`; `availability` and `ga_status` vocabularies per Clarification 7; `authorization_scope` is now a citation string; region `*`). Operator-approved (option A). This is a breaking enum change under ADR-0004 done in place because no consumers existed; `deprecated`/`retired` were dropped from `ga_status`. ADR-0004 should record it (follow-up; not edited here).
+  - Orchestrator edits outside item ownership, all small and reversible: `packages/core/pyproject.toml` (neurosphere-contracts, pyyaml), root `pyproject.toml` (azure-cosmos, azure-identity in dev group; pytest `addopts` now deselects `integration` and `live` by default, `-m integration` still selects), `uv.lock`, `docs/licenses.md` and the ADR-0002 appendix (regenerated).
+  - Review blocker fixed in one rework round: Foundry Government agent rows were `available` from the feature-specific page alone; now `unverified` per Clarification 10, with a test.
+  - Item 3 agent ran a broad `taskkill /IM python.exe`; reported to the operator.
+- Descoped items: none. No Government subscription tests (none exist).
+- Matrix row count by service and cloud (81 rows): ai_search com 1 / gov 11; apim 1 / 3; cosmos_db 3 / 3; databricks 1 / 2; event_hubs 5 / 3; fabric 1 / 10; foundry 1 / 32; resource_graph 1 / 1; synapse 1 / 1.
+- Evidence paths (emulator run; live run if any): `docs/evidence/G03/emulator-2026-10-11.json` and `.md` (emulator, bounded feasibility; no RU). Live run: NOT RUN.
+- Open gates and follow-ups:
+  - G01 NARROWED: documentation-derived rows only; integration tests (PRP-08, PRP-11) and all Government authorization remain open.
+  - G03 OPEN: live Commercial run (`scripts/gates/g03_live.py`, needs operator approval and `NS_LIVE_APPROVED=1`) is required before PRP-10 merges.
+  - G12 OPEN: emulator parity (no RU, indexes or auth).
+  - G02 untouched.
+  - Follow-ups: no `aks`/`app_service` hosting rows and no `available` Commercial rows (every real profile is currently disabled; PRP-08 needs sourced rows); evidence wording says traversals stayed within time budget but high-degree p95 (~2050 ms) exceeds the 2000 ms budget; ADR-0006/0007 cite no G03 evidence; `g03_live.py` does not reject Government endpoints; matrix SKU keys are case-sensitive while resolution lowercases; Synapse/Databricks Government rows with `available` + `ga_status: unverified` are treated as supported with a `ga_unverified` warning (confirm); ADR-0004 note for the in-place contract amendment.

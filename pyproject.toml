@@ -17,6 +17,8 @@ dev = [
   "pyright>=1.1.400,<2",
   "pytest>=9.1,<10",
   "pip-audit>=2.10,<3",
+  "azure-cosmos>=4.6,<5",
+  "azure-identity>=1.26,<2",
   "neurosphere-core",
   "neurosphere-contracts",
   "neurosphere-api",
@@ -59,7 +61,7 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packages", "services"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m \"not integration and not live\""
 markers = [
   "live: requires an operator-approved Azure environment (NS_LIVE_APPROVED=1)",
   "integration: requires the docker compose emulators",
