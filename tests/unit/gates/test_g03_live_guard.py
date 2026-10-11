@@ -78,6 +78,31 @@ def test_approved_but_bad_endpoint_fails_without_network(
     assert net_calls == []
 
 
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://acct.documents.azure.us:443/",
+        "https://acct.documents.azure.us/",
+        "https://acct.gremlin.cosmos.usgovcloudapi.net:443/",
+        "https://example.azure.us/",
+    ],
+)
+def test_approved_government_endpoint_is_rejected_without_network(
+    endpoint: str,
+    net_calls: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("NS_LIVE_APPROVED", "1")
+    monkeypatch.setenv("NS_G03_COSMOS_ENDPOINT", endpoint)
+    before = {m for m in sys.modules if m.startswith("azure")}
+    rc = _load().main([])
+    assert rc != 0
+    assert "Government" in capsys.readouterr().err
+    assert net_calls == []
+    assert {m for m in sys.modules if m.startswith("azure")} == before
+
+
 def test_no_secret_bearing_cli_option() -> None:
     parser = _load().build_parser()
     flags = [f for a in parser._actions for f in a.option_strings]  # pyright: ignore[reportPrivateUsage]
