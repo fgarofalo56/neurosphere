@@ -61,7 +61,7 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packages", "services"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m \"not integration and not live\""
 markers = [
   "live: requires an operator-approved Azure environment (NS_LIVE_APPROVED=1)",
   "integration: requires the docker compose emulators",
