@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "recommendation_id": "commercial:contoso:neurosphere:recommendation:rec-0003",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:catalog:domain:finance",
+  "kind": "model_right_sizing",
+  "subject_ids": [
+    "commercial:contoso:foundry:agent_version:support-bot/v=3",
+    "commercial:contoso:foundry:model_deployment:gpt-large-eastus"
+  ],
+  "method": "statistical",
+  "evidence_status": "sufficient",
+  "score": 0.64,
+  "evidence_window": {
+    "start": "2026-09-10T00:00:00Z",
+    "end": "2026-10-10T00:00:00Z"
+  },
+  "evidence_ids": [
+    "ev:eval:offline-42"
+  ],
+  "coverage": {
+    "method": "sampled",
+    "observed_fraction": 0.2,
+    "sampling_rate": 0.2
+  },
+  "uncertainty": {
+    "method": "confidence_interval",
+    "lower": 0.51,
+    "upper": 0.74,
+    "level": 0.9
+  },
+  "prerequisites": [
+    {
+      "kind": "quality_regression_test",
+      "status": "unmet"
+    },
+    {
+      "kind": "tool_compatibility",
+      "status": "met",
+      "evidence_ids": [
+        "ev:compat:7"
+      ]
+    },
+    {
+      "kind": "staged_rollout_plan",
+      "status": "unmet"
+    }
+  ],
+  "projected_estimate": {
+    "estimate_kind": "estimated",
+    "period": "monthly",
+    "baseline_amount": 1840.0,
+    "projected_amount": "1210.50",
+    "lower_amount": "1105.00",
+    "upper_amount": "1390.00",
+    "currency": "USD",
+    "price_version": "azure-retail-2026-10-01",
+    "price_effective_date": "2026-10-01"
+  },
+  "owner": {
+    "resolution": "inferred",
+    "owner_id": "commercial:contoso:entra:owner:team-support"
+  },
+  "advisory": false,
+  "created_at": "2026-10-10T06:00:00Z",
+  "expires_at": "2026-11-10T06:00:00Z"
+}

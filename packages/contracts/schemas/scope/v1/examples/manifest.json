@@ -1,0 +1,70 @@
+{
+  "description": "Examples for this area. Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error (instance_path as a JSON Pointer, validator keyword) that must appear in the validation error tree. Consumed by tests/contracts (PRP-01 item 7).",
+  "examples": [
+    {
+      "file": "valid/identity-scope.viewer.json",
+      "schema": "identity-scope.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/identity-scope.scoped-admin.json",
+      "schema": "identity-scope.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/identity-scope.admin-without-expiry.json",
+      "schema": "identity-scope.schema.json",
+      "valid": false,
+      "derived_from": "valid/identity-scope.scoped-admin.json",
+      "expected_error": {
+        "instance_path": "/roles/1",
+        "keyword": "required"
+      },
+      "reason": "privileged role must be time-bound"
+    },
+    {
+      "file": "invalid/identity-scope.wildcard-domain.json",
+      "schema": "identity-scope.schema.json",
+      "valid": false,
+      "derived_from": "valid/identity-scope.viewer.json",
+      "expected_error": {
+        "instance_path": "/allowed_domains/0",
+        "keyword": "pattern"
+      },
+      "reason": "no wildcard or all-domains grant exists"
+    },
+    {
+      "file": "invalid/identity-scope.role-without-domains.json",
+      "schema": "identity-scope.schema.json",
+      "valid": false,
+      "derived_from": "valid/identity-scope.viewer.json",
+      "expected_error": {
+        "instance_path": "/roles/0/domain_ids",
+        "keyword": "minItems"
+      },
+      "reason": "roles are always domain-scoped; no tenant-wide bypass"
+    },
+    {
+      "file": "invalid/identity-scope.principal-email.json",
+      "schema": "identity-scope.schema.json",
+      "valid": false,
+      "derived_from": "valid/identity-scope.viewer.json",
+      "expected_error": {
+        "instance_path": "/principal",
+        "keyword": "additionalProperties"
+      },
+      "reason": "pseudonymous principal has no email field"
+    },
+    {
+      "file": "invalid/identity-scope.missing-scope-hash.json",
+      "schema": "identity-scope.schema.json",
+      "valid": false,
+      "derived_from": "valid/identity-scope.viewer.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "scope_hash is mandatory"
+    }
+  ]
+}

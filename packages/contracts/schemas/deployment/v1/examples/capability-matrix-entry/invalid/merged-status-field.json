@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "service": "azure_openai",
+  "feature": "model_gpt_4o",
+  "cloud": "government",
+  "region": "usgovvirginia",
+  "sku": "Standard",
+  "source_url": "https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government",
+  "observed_on": "2026-10-06",
+  "notes": "Example row for contract tests; not matrix data.",
+  "status": "ga_available_fedramp_high"
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "intent_id": "3f1c2a9e-5b7d-4e21-9c0a-8d6f4b2e1a07",
+  "action_kind": "model_swap",
+  "actor": {
+    "principal_pseudonym": "p-7f3a9c21",
+    "principal_kind": "user",
+    "on_behalf_of": null
+  },
+  "target": {
+    "canonical_id": "commercial:contoso:foundry:model_deployment:eastus2/chat-prod",
+    "entity_type": "model_deployment"
+  },
+  "target_version": "etag-0x8dce1f2a3b4c5d6",
+  "proposed_diff": {
+    "format": "json_patch",
+    "operations": [
+      {
+        "op": "test",
+        "path": "/model/version",
+        "value": "2025-08-01"
+      },
+      {
+        "op": "replace",
+        "path": "/model/version",
+        "value": "2026-06-15"
+      }
+    ]
+  },
+  "prerequisite_results": [
+    {
+      "check_id": "actor_permission",
+      "status": "passed",
+      "detail": null,
+      "evaluated_at": "2026-10-10T17:00:01Z",
+      "evidence_ids": []
+    },
+    {
+      "check_id": "write_connector_supported",
+      "status": "passed",
+      "detail": "foundry deployment connector supports model version update",
+      "evaluated_at": "2026-10-10T17:00:01Z",
+      "evidence_ids": [
+        "capability:foundry:model_version_update"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "rec-0042",
+      "kind": "recommendation",
+      "ref": "commercial:contoso:neurosphere:recommendation:rec-0042",
+      "observed_at": "2026-10-10T16:55:00Z"
+    }
+  ],
+  "confirmation_hash": "sha256:b66462da3c6ecc7b6cd7d6986b6b00be39ef7fa41699b04eb3f43c8f2fd41635",
+  "confirmation_expires_at": "2026-10-10T17:15:00Z",
+  "idempotency_key": "idem-2026-10-10-chat-prod-0001",
+  "channel": "chat",
+  "state": "failed",
+  "status_reason": null,
+  "dry_run": false,
+  "correlation_id": "corr-7c41e2",
+  "created_at": "2026-10-10T17:00:00Z",
+  "state_changed_at": "2026-10-10T17:02:30Z"
+}

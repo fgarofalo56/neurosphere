@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "cost_id": "cost-0100",
+  "kind": "invoiced",
+  "amount": "1520.75",
+  "currency": "USD",
+  "billing_period": {
+    "start_date": "2026-09-01",
+    "end_date": "2026-09-30"
+  },
+  "invoice_id": "INV-2026-09-001",
+  "cloud": "government",
+  "customer_id": "agency-a",
+  "source_id": "cost-mgmt-01",
+  "allocation": {
+    "compute": "320.75",
+    "ptu": "1000.00",
+    "reservation": "0",
+    "license_seat": "200.00"
+  },
+  "dedupe_key": "agency-a:billing:2026-09:aoai",
+  "observation_source": "billing",
+  "reconciliation": {
+    "status": "reconciled",
+    "coverage": 1.2
+  },
+  "recorded_at": "2026-10-03T09:00:00Z"
+}

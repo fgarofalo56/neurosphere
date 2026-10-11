@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/actions/v1/action-intent.schema.json",
+  "title": "ActionIntent",
+  "description": "Durable intent executed by the single action executor shared by button, chat, REST and MCP (PRP.md section 3, PRD NS-06). The intent binds actor, target, target_version, proposed_diff and confirmation expiry into confirmation_hash, defined field-by-field in ./confirmation-hash.json, so every channel computes the same value. Legal state changes are the allowlist in ./transitions.json; enforcement belongs to PRP-17. Rules JSON Schema cannot express are checked by Python validators in tests/contracts/test_action_transitions.py: `validate_confirmation_hash` (confirmation_hash equals the recomputed hash), `validate_state_transition` (every state change is an allowlisted (from, to) pair) and `validate_intent_timestamps` (created_at <= state_changed_at, and confirmation_expires_at > created_at).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "intent_id",
+    "action_kind",
+    "actor",
+    "target",
+    "target_version",
+    "proposed_diff",
+    "prerequisite_results",
+    "evidence",
+    "confirmation_hash",
+    "confirmation_expires_at",
+    "idempotency_key",
+    "channel",
+    "state",
+    "status_reason",
+    "dry_run",
+    "correlation_id",
+    "created_at",
+    "state_changed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document; major must match the v1 directory.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "intent_id": {
+      "description": "Server-assigned identifier of this intent (lowercase UUID).",
+      "$ref": "#/$defs/uuid"
+    },
+    "action_kind": {
+      "description": "Kind of governed action, lowercase snake_case (for example `model_swap`, `budget_cap_change`). Kinds the target has no supported write connector for are advisory and never reach `executing`.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "actor": {
+      "description": "Principal that requested the action. Hashed into confirmation_hash.",
+      "$ref": "./actor.schema.json"
+    },
+    "target": {
+      "description": "Resource the action changes. Hashed into confirmation_hash.",
+      "$ref": "./target-ref.schema.json"
+    },
+    "target_version": {
+      "description": "Exact version or ETag of the target the diff was computed against. Rechecked at execution; a mismatch fails with error code `stale_version`. Hashed into confirmation_hash.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "proposed_diff": {
+      "description": "Exact change shown to the user for confirmation. Hashed into confirmation_hash.",
+      "$ref": "#/$defs/proposed_diff"
+    },
+    "prerequisite_results": {
+      "description": "Results of prerequisite checks evaluated during validation (permission, policy, connector support, target health, budget).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/prerequisite_result" }
+    },
+    "evidence": {
+      "description": "Evidence the action is based on (recommendation, evaluation, telemetry or cost references). Not hashed.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidence_ref" }
+    },
+    "confirmation_hash": {
+      "description": "SHA-256 over exactly these fields: target, target_version, proposed_diff, confirmation_expires_at, actor; canonicalized with RFC 8785 (JCS) as specified in ./confirmation-hash.json. Excludes channel, idempotency_key, state and evidence so button, chat, REST and MCP produce the same value. Null until the intent reaches awaiting_confirmation. Python validator: `validate_confirmation_hash`.",
+      "anyOf": [{ "$ref": "#/$defs/sha256_hash" }, { "type": "null" }]
+    },
+    "confirmation_expires_at": {
+      "description": "Expiry of the confirmation; hashed. After this instant the intent may only move to `expired`. Null until the intent reaches awaiting_confirmation.",
+      "anyOf": [{ "$ref": "#/$defs/utc_timestamp" }, { "type": "null" }]
+    },
+    "idempotency_key": {
+      "description": "Required on every intent. Replays with the same key return the original intent and result instead of executing twice.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{16,128}$"
+    },
+    "channel": {
+      "description": "Channel the intent arrived through. Not hashed: the same intent from any channel has the same confirmation_hash.",
+      "type": "string",
+      "enum": ["button", "chat", "rest", "mcp"]
+    },
+    "state": {
+      "description": "Current lifecycle state.",
+      "$ref": "./action-state.schema.json"
+    },
+    "status_reason": {
+      "description": "Machine-readable reason for the current state, lowercase snake_case (for example `approval_rejected`, `stale_version`, `confirmation_expired`). Required non-null for failed, rolled_back and expired; null otherwise allowed.",
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "dry_run": {
+      "description": "True when the executor must plan and verify prerequisites without applying the change.",
+      "type": "boolean"
+    },
+    "correlation_id": {
+      "description": "Correlation ID propagated to audit records and error responses.",
+      "$ref": "#/$defs/correlation_id"
+    },
+    "created_at": {
+      "description": "When the intent was drafted.",
+      "$ref": "#/$defs/utc_timestamp"
+    },
+    "state_changed_at": {
+      "description": "When `state` last changed. History lives in the append-only audit chain, not here.",
+      "$ref": "#/$defs/utc_timestamp"
+    }
+  },
+  "allOf": [
+    {
+      "description": "From awaiting_confirmation onward (except failed and expired, which can be reached earlier) the confirmation binding must exist.",
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "awaiting_confirmation",
+              "awaiting_approval",
+              "executing",
+              "succeeded",
+              "rolled_back"
+            ]
+          }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": {
+          "confirmation_hash": { "$ref": "#/$defs/sha256_hash" },
+          "confirmation_expires_at": { "$ref": "#/$defs/utc_timestamp" }
+        }
+      }
+    },
+    {
+      "description": "A validated (or later, non-failed) intent cannot carry a failed prerequisite.",
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "validated",
+              "awaiting_confirmation",
+              "awaiting_approval",
+              "executing",
+              "succeeded",
+              "rolled_back"
+            ]
+          }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": {
+          "prerequisite_results": {
+            "not": {
+              "contains": {
+                "properties": { "status": { "const": "failed" } },
+                "required": ["status"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Terminal non-success states state why.",
+      "if": {
+        "properties": { "state": { "enum": ["failed", "rolled_back", "expired"] } },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": { "status_reason": { "type": "string" } }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "utc_timestamp": {
+      "description": "RFC 3339 timestamp in UTC (`Z` suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    },
+    "sha256_hash": {
+      "description": "Lowercase hex SHA-256 digest with algorithm prefix.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "correlation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,128}$"
+    },
+    "proposed_diff": {
+      "description": "RFC 6902 JSON Patch against the target document at target_version. `value` members are opaque target data validated by the write connector and must never hold secret material (use vault references).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "operations"],
+      "properties": {
+        "format": {
+          "description": "Diff encoding. Only RFC 6902 JSON Patch in v1.",
+          "type": "string",
+          "enum": ["json_patch"]
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/patch_operation" }
+        }
+      }
+    },
+    "patch_operation": {
+      "description": "One RFC 6902 operation. add/replace/test require `value`; move/copy require `from`; remove takes neither.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "path"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["add", "remove", "replace", "move", "copy", "test"]
+        },
+        "path": {
+          "description": "RFC 6901 JSON Pointer.",
+          "type": "string",
+          "pattern": "^(/([^~/]|~[01])*)*$",
+          "maxLength": 1024
+        },
+        "from": {
+          "description": "RFC 6901 JSON Pointer source for move/copy.",
+          "type": "string",
+          "pattern": "^(/([^~/]|~[01])*)*$",
+          "maxLength": 1024
+        },
+        "value": {
+          "description": "New value (any JSON) for add/replace/test."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "op": { "enum": ["add", "replace", "test"] } },
+            "required": ["op"]
+          },
+          "then": { "required": ["value"], "not": { "required": ["from"] } }
+        },
+        {
+          "if": {
+            "properties": { "op": { "enum": ["move", "copy"] } },
+            "required": ["op"]
+          },
+          "then": { "required": ["from"], "not": { "required": ["value"] } }
+        },
+        {
+          "if": {
+            "properties": { "op": { "const": "remove" } },
+            "required": ["op"]
+          },
+          "then": { "not": { "anyOf": [{ "required": ["value"] }, { "required": ["from"] }] } }
+        }
+      ]
+    },
+    "prerequisite_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "status", "detail", "evaluated_at", "evidence_ids"],
+      "properties": {
+        "check_id": {
+          "description": "Prerequisite check name, lowercase snake_case (for example `actor_permission`, `write_connector_supported`).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "status": {
+          "description": "`unknown` when the check could not be evaluated; never coerced to passed.",
+          "type": "string",
+          "enum": ["passed", "failed", "warning", "not_applicable", "unknown"]
+        },
+        "detail": {
+          "description": "Short human-readable explanation; null when none.",
+          "type": ["string", "null"],
+          "maxLength": 1024
+        },
+        "evaluated_at": { "$ref": "#/$defs/utc_timestamp" },
+        "evidence_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+        }
+      }
+    },
+    "evidence_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_id", "kind", "ref", "observed_at"],
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "recommendation",
+            "evaluation_result",
+            "telemetry_query",
+            "cost_record",
+            "catalog_entity",
+            "policy",
+            "document"
+          ]
+        },
+        "ref": {
+          "description": "Pointer to the evidence (canonical ID or stored-document ID). Never an inline body.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "observed_at": {
+          "description": "When the evidence was observed; null when unknown.",
+          "anyOf": [{ "$ref": "#/$defs/utc_timestamp" }, { "type": "null" }]
+        }
+      }
+    }
+  }
+}

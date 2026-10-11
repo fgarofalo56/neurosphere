@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/telemetry/v1/telemetry-event.schema.json",
+  "title": "TelemetryEvent",
+  "description": "Normalized telemetry envelope for one observed span or event (NS-01). Raw telemetry lives outside the catalog graph. Missing values are null or the enumerated 'unknown', never 0 by default; numeric 0 is only ever a measured zero. Prompt and response bodies are never carried here; see payload_ref. Rules JSON Schema cannot express are enforced by Python validators in tests/contracts: validate_span_not_self_parent (span_id must differ from parent_span_id) and validate_canonical_id_grammar (canonical_agent_id must also pass the catalog canonical-ID grammar owned by schemas/catalog/v1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "event_time", "cloud", "customer_id", "source_id"],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document, major 1 with additive minor revisions.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "event_id": {
+      "description": "Source-assigned event identifier. Idempotency is by (source_id, event_id).",
+      "$ref": "#/$defs/identifier"
+    },
+    "event_time": {
+      "description": "When the event happened at the source (RFC 3339 UTC).",
+      "$ref": "#/$defs/timestamp"
+    },
+    "ingestion_time": {
+      "description": "When the ingest edge accepted the event (RFC 3339 UTC). Stamped server-side; null on the producer wire before acceptance.",
+      "anyOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }],
+      "default": null
+    },
+    "cloud": {
+      "description": "Azure cloud boundary the event belongs to. Government data is never bridged to Commercial.",
+      "type": "string",
+      "enum": ["commercial", "government"]
+    },
+    "customer_id": {
+      "description": "Customer (tenant deployment) identifier.",
+      "$ref": "#/$defs/identifier"
+    },
+    "domain_id": {
+      "description": "Owning domain identifier. Null when not yet attributed.",
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+      "default": null
+    },
+    "source_id": {
+      "description": "Connector or producer that emitted the event.",
+      "$ref": "#/$defs/identifier"
+    },
+    "external_agent_id": {
+      "description": "Agent identifier as reported by the source system. Null when the source does not report one.",
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+      "default": null
+    },
+    "canonical_agent_id": {
+      "description": "Resolved canonical agent ID (cloud:customer:source:type:id). Null until resolution succeeds. Pattern mirrors the catalog grammar; cross-checked by validate_canonical_id_grammar.",
+      "anyOf": [{ "$ref": "#/$defs/canonical_id" }, { "type": "null" }],
+      "default": null
+    },
+    "request_id": {
+      "description": "Request or correlation identifier from the source. Null when absent.",
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+      "default": null
+    },
+    "trace_id": {
+      "description": "W3C/OpenTelemetry trace ID, 32 lowercase hex characters. Null when the source is not traced.",
+      "anyOf": [{ "$ref": "#/$defs/trace_id" }, { "type": "null" }],
+      "default": null
+    },
+    "span_id": {
+      "description": "W3C/OpenTelemetry span ID, 16 lowercase hex characters. Null when the source is not traced.",
+      "anyOf": [{ "$ref": "#/$defs/span_id" }, { "type": "null" }],
+      "default": null
+    },
+    "parent_span_id": {
+      "description": "Parent span ID; null for a root span or when unknown. Must differ from span_id (validate_span_not_self_parent).",
+      "anyOf": [{ "$ref": "#/$defs/span_id" }, { "type": "null" }],
+      "default": null
+    },
+    "span_kind": {
+      "description": "What this span represents. delegation, tool_call, retry, error and cancellation are first-class so multi-agent call trees can be reconstructed.",
+      "type": "string",
+      "enum": [
+        "request",
+        "agent_run",
+        "model_call",
+        "tool_call",
+        "delegation",
+        "retrieval",
+        "retry",
+        "error",
+        "cancellation",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "retry_attempt": {
+      "description": "1-based attempt number for retry spans. Null when not a retry or not reported.",
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "default": null
+    },
+    "provider": {
+      "description": "Model or service provider (for example azure_openai). Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "model": {
+      "description": "Model name as reported. Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "model_version": {
+      "description": "Model version as reported. Null when unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "environment": {
+      "description": "Deployment environment of the observed workload. 'sandbox' marks the isolated synthetic sandbox.",
+      "type": "string",
+      "enum": ["production", "staging", "development", "test", "sandbox", "unknown"],
+      "default": "unknown"
+    },
+    "outcome": {
+      "description": "Result of the span.",
+      "type": "string",
+      "enum": ["success", "error", "cancelled", "timeout", "unknown"],
+      "default": "unknown"
+    },
+    "duration_ms": {
+      "description": "Span duration in integer milliseconds. Null when not measured; 0 only when measured as zero.",
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "default": null
+    },
+    "token_breakdown": {
+      "description": "Token counts. Null when the source reports no token usage at all.",
+      "anyOf": [{ "$ref": "#/$defs/token_breakdown" }, { "type": "null" }],
+      "default": null
+    },
+    "data_source_refs": {
+      "description": "Data sources touched by this span. Null when unknown; an empty array means observed to touch none.",
+      "type": ["array", "null"],
+      "items": { "$ref": "#/$defs/data_source_ref" },
+      "maxItems": 256,
+      "default": null
+    },
+    "classification": {
+      "description": "Data classification label applied to the event (for example cui). Null when unclassified or unknown.",
+      "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+      "default": null
+    },
+    "sampling": {
+      "description": "Sampling metadata. Null when the source does not report sampling.",
+      "anyOf": [{ "$ref": "#/$defs/sampling" }, { "type": "null" }],
+      "default": null
+    },
+    "payload_ref": {
+      "description": "Optional pointer to a separately stored, redacted prompt/response payload. Bodies are off by default (NS-01).",
+      "anyOf": [{ "$ref": "#/$defs/payload_ref" }, { "type": "null" }],
+      "default": null
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["span_kind"],
+        "properties": { "span_kind": { "enum": ["delegation", "tool_call"] } }
+      },
+      "then": {
+        "required": ["trace_id", "span_id", "parent_span_id"],
+        "properties": {
+          "trace_id": { "type": "string" },
+          "span_id": { "type": "string" },
+          "parent_span_id": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["span_kind"],
+        "properties": { "span_kind": { "const": "retry" } }
+      },
+      "then": {
+        "required": ["retry_attempt"],
+        "properties": { "retry_attempt": { "type": "integer" } }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$"
+    },
+    "canonical_id": {
+      "description": "cloud:customer:source:type:id; lowercase [a-z0-9._-] segments, id may also contain / and =.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "trace_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "span_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "token_breakdown": {
+      "title": "TokenBreakdown",
+      "description": "Token counts for one model interaction. Each count is nullable and defaults to null: null means not reported, 0 means a measured zero. Also referenced by cost/v1/cost-record.schema.json.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "input": { "type": ["integer", "null"], "minimum": 0, "default": null },
+        "output": { "type": ["integer", "null"], "minimum": 0, "default": null },
+        "cached": {
+          "description": "Input tokens served from a provider prompt cache.",
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "default": null
+        },
+        "reasoning": {
+          "description": "Reasoning tokens reported separately by the provider.",
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "default": null
+        }
+      }
+    },
+    "data_source_ref": {
+      "title": "DataSourceRef",
+      "description": "Reference to a grounding source or data asset touched by the span.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref"],
+      "properties": {
+        "ref": {
+          "description": "Canonical ID when resolved, otherwise the source-reported identifier.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "access": {
+          "description": "Observed access mode.",
+          "type": "string",
+          "enum": ["read", "write", "unknown"],
+          "default": "unknown"
+        }
+      }
+    },
+    "sampling": {
+      "title": "SamplingMetadata",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rate": {
+          "description": "Fraction of events retained, in [0, 1]; 1 means unsampled. Null when unknown.",
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "default": null
+        },
+        "method": {
+          "description": "Sampling method.",
+          "type": "string",
+          "enum": ["none", "head", "tail", "probabilistic", "rate_limited", "unknown"],
+          "default": "unknown"
+        },
+        "reason": {
+          "description": "Why this event was sampled or kept (for example error_kept). Null when not reported.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 256,
+          "default": null
+        }
+      }
+    },
+    "payload_ref": {
+      "title": "PayloadRef",
+      "description": "Pointer to a stored payload; never the payload itself. The pointer is opaque and is never fetched by schema validation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer", "redaction_state"],
+      "properties": {
+        "pointer": {
+          "description": "Opaque storage pointer (blob path or archive key).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "classification": {
+          "description": "Classification label of the stored payload. Null when unknown.",
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128,
+          "default": null
+        },
+        "redaction_state": {
+          "description": "Redaction status of the stored payload.",
+          "type": "string",
+          "enum": ["redacted", "pending", "redaction_failed", "not_required", "unknown"]
+        }
+      }
+    }
+  }
+}

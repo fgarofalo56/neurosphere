@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/connectors/v1/connector-manifest.schema.json",
+  "title": "ConnectorManifest",
+  "description": "Registration manifest for one connector (NS-09): capabilities, permission scopes, data granularity, freshness, rate limits, credential references, advisory flag and write support. No member can hold a secret value: there is no free-text field, credentials are Key Vault secret identifiers (vault_ref) validated by pattern, and URLs cannot carry query strings, fragments or userinfo (so no SAS or signed URLs). Read-only connectors are advisory; only connectors with write support can back the action executor (PRP-17). Rules JSON Schema cannot express are checked by the Python validator check_connector_manifest in tests/contracts/test_connector_manifest.py (PRP-01 item 7): credential_refs names are unique; no pattern-constrained string (scopes, names) contains high-entropy or known secret-prefix material; a vault_ref host matches a cloud listed in supported_clouds (vault.azure.net for commercial, vault.usgovcloudapi.net for government).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "version",
+    "supported_clouds",
+    "capabilities",
+    "scopes",
+    "granularity",
+    "freshness",
+    "rate_limits",
+    "auth_mode",
+    "credential_refs",
+    "advisory",
+    "write_support"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document (semver within major 1).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "name": {
+      "description": "Connector identifier, lowercase.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+    },
+    "version": {
+      "description": "Connector semantic version.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]{1,64})?$"
+    },
+    "documentation_url": {
+      "description": "HTTPS documentation URL. No query string, fragment or userinfo.",
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$"
+    },
+    "supported_clouds": {
+      "description": "Azure clouds this connector registration may run in. A registration never moves data between clouds.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["commercial", "government"] }
+    },
+    "capabilities": {
+      "description": "What the connector can provide or do.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "telemetry_ingest",
+          "cost_ingest",
+          "catalog_discovery",
+          "usage_reports",
+          "evaluation_results",
+          "audit_events",
+          "health_reporting",
+          "action_execution"
+        ]
+      }
+    },
+    "scopes": {
+      "description": "Permission scopes or roles the connector requests (for example Reports.Read.All or https://management.azure.com/.default). Names only, never values.",
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 64,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,255}$"
+      }
+    },
+    "granularity": {
+      "description": "Finest grain of data the connector delivers.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time_grain", "subject_level"],
+      "properties": {
+        "time_grain": {
+          "type": "string",
+          "enum": ["event", "minute", "hour", "day", "month", "unknown"]
+        },
+        "subject_level": {
+          "type": "string",
+          "enum": ["request", "principal", "agent", "deployment", "tenant", "unknown"]
+        }
+      }
+    },
+    "freshness": {
+      "description": "Expected delay between source event and availability, in integer milliseconds. null = unknown, never 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typical_delay_ms", "max_delay_ms"],
+      "properties": {
+        "typical_delay_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "max_delay_ms": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "rate_limits": {
+      "description": "Published source rate limits; null = unknown, empty array = source publishes none.",
+      "type": ["array", "null"],
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/rate_limit" }
+    },
+    "auth_mode": {
+      "description": "managed_identity and workload_identity_federation carry no credential_refs; vault_reference requires at least one.",
+      "type": "string",
+      "enum": ["managed_identity", "workload_identity_federation", "vault_reference"]
+    },
+    "credential_refs": {
+      "description": "Credentials by reference only. There is deliberately no field for a credential value.",
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/credential_ref" }
+    },
+    "advisory": {
+      "description": "true = recommendations from this connector are advisory only (no executable actions). Must be true exactly when write_support.supported is false.",
+      "type": "boolean"
+    },
+    "write_support": { "$ref": "#/$defs/write_support" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "auth_mode": { "const": "vault_reference" } }, "required": ["auth_mode"] },
+      "then": { "properties": { "credential_refs": { "minItems": 1 } } },
+      "else": { "properties": { "credential_refs": { "maxItems": 0 } } }
+    },
+    {
+      "if": {
+        "properties": { "write_support": { "properties": { "supported": { "const": false } } } },
+        "required": ["write_support"]
+      },
+      "then": { "properties": { "advisory": { "const": true } } },
+      "else": { "properties": { "advisory": { "const": false } } }
+    },
+    {
+      "if": {
+        "properties": { "capabilities": { "contains": { "const": "action_execution" } } },
+        "required": ["capabilities"]
+      },
+      "then": {
+        "properties": { "write_support": { "properties": { "supported": { "const": true } } } }
+      },
+      "else": {
+        "properties": { "write_support": { "properties": { "supported": { "const": false } } } }
+      }
+    }
+  ],
+  "$defs": {
+    "rate_limit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit_scope", "max_requests", "window_ms"],
+      "properties": {
+        "limit_scope": {
+          "type": "string",
+          "enum": ["per_connector", "per_tenant", "per_credential", "per_principal"]
+        },
+        "max_requests": { "type": "integer", "minimum": 1 },
+        "window_ms": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "credential_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "vault_ref"],
+      "properties": {
+        "name": {
+          "description": "Logical credential name used by the connector code.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "vault_ref": {
+          "description": "Azure Key Vault secret identifier: https://<vault>.vault.azure.net/secrets/<name>[/<version>] or the vault.usgovcloudapi.net equivalent. Resolved at runtime by managed identity; the value never appears in a manifest, prompt or log.",
+          "type": "string",
+          "pattern": "^https://[a-z][a-z0-9-]{1,22}[a-z0-9]\\.vault\\.(azure\\.net|usgovcloudapi\\.net)/secrets/[A-Za-z0-9-]{1,127}(/[0-9a-f]{32})?$"
+        }
+      }
+    },
+    "write_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported", "actions"],
+      "properties": {
+        "supported": { "type": "boolean" },
+        "actions": {
+          "description": "Action kinds the connector can execute through the shared action executor. Empty when supported is false.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "model_deployment_swap",
+              "model_deployment_scale",
+              "policy_update",
+              "routing_update",
+              "agent_disable",
+              "agent_enable"
+            ]
+          }
+        }
+      },
+      "if": { "properties": { "supported": { "const": true } }, "required": ["supported"] },
+      "then": { "properties": { "actions": { "minItems": 1 } } },
+      "else": { "properties": { "actions": { "maxItems": 0 } } }
+    }
+  }
+}

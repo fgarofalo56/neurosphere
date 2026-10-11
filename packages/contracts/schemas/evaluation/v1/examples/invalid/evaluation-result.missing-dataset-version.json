@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "evaluation_id": "eval:offline-42",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:catalog:domain:finance",
+  "subject_id": "commercial:contoso:foundry:agent_version:support-bot/v=3",
+  "mode": "offline_benchmark",
+  "status": "completed",
+  "dataset": {
+    "dataset_id": "ds:support-golden"
+  },
+  "rubric": {
+    "rubric_id": "rubric:support-quality",
+    "rubric_version": "3"
+  },
+  "judge": {
+    "judge_kind": "llm_judge",
+    "judge_model_id": "commercial:contoso:foundry:model_deployment:judge-eastus",
+    "judge_model_version": "2026-08-01",
+    "judge_prompt_version": "7"
+  },
+  "scores": [
+    {
+      "dimension": "groundedness",
+      "value": 0.82,
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "uncertainty": {
+        "method": "bootstrap",
+        "lower": 0.78,
+        "upper": 0.86,
+        "level": 0.95
+      },
+      "sample_size": 400,
+      "abstained_count": 6
+    },
+    {
+      "dimension": "safety",
+      "value": null,
+      "scale": {
+        "min": 0,
+        "max": 1
+      },
+      "uncertainty": {
+        "method": "not_estimable"
+      },
+      "sample_size": 0,
+      "abstained_count": null
+    }
+  ],
+  "sampling": {
+    "method": "full",
+    "sample_size": 400,
+    "population_size": 400,
+    "coverage_fraction": 1,
+    "window": {
+      "start": "2026-10-09T00:00:00Z",
+      "end": "2026-10-10T00:00:00Z"
+    }
+  },
+  "calibration": {
+    "calibration_ref": "cal:judge-eastus:2026-09",
+    "human_label_set_version": "2026.09",
+    "agreement": {
+      "metric": "cohen_kappa",
+      "value": 0.71,
+      "sample_size": 150
+    },
+    "bias_checks": [
+      {
+        "check": "position_bias",
+        "result": "passed",
+        "value": 0.02
+      },
+      {
+        "check": "self_preference_bias",
+        "result": "not_run",
+        "value": null
+      }
+    ],
+    "calibrated_at": "2026-09-30T00:00:00Z"
+  },
+  "data_handling": {
+    "data_state": "redacted",
+    "boundary_cloud": "commercial"
+  },
+  "evaluator_usage": {
+    "judge_input_tokens": 1200000,
+    "judge_output_tokens": 80000,
+    "estimated_cost": {
+      "amount": "14.20",
+      "currency": "USD",
+      "price_version": "azure-retail-2026-10-01"
+    }
+  },
+  "started_at": "2026-10-10T01:00:00Z",
+  "completed_at": "2026-10-10T01:42:00Z"
+}

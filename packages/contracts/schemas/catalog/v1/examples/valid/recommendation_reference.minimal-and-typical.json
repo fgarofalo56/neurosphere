@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:foundry:recommendation:rec-000123",
+  "entity_type": "recommendation",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "classification": "internal",
+  "recommendation_kind": "model_right_sizing",
+  "recommendation_document_id": "rec-000123",
+  "subject_ids": [
+    "commercial:contoso:foundry:agent:support-bot"
+  ]
+}

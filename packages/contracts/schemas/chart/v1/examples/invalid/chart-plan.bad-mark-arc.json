@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "citations": [
+    {
+      "evidence_id": "ev:cost:2026-09",
+      "as_of": "2026-10-10T11:58:00Z",
+      "label": "Invoiced cost, September"
+    }
+  ],
+  "spec": {
+    "title": "Cost by agent",
+    "width": "container",
+    "height": 300,
+    "data": {
+      "values": [
+        {
+          "agent": "support-bot",
+          "amount": 412.5
+        },
+        {
+          "agent": "triage-bot",
+          "amount": 128.0
+        },
+        {
+          "agent": "summarizer",
+          "amount": null
+        }
+      ]
+    },
+    "mark": "arc",
+    "encoding": {
+      "x": {
+        "field": "agent",
+        "type": "nominal",
+        "sort": "descending",
+        "axis": {
+          "labelAngle": -45
+        }
+      },
+      "y": {
+        "field": "amount",
+        "type": "quantitative",
+        "title": "USD",
+        "axis": {
+          "format": "$,.2f"
+        }
+      },
+      "tooltip": [
+        {
+          "field": "agent",
+          "type": "nominal"
+        },
+        {
+          "field": "amount",
+          "type": "quantitative",
+          "format": ",.2f"
+        }
+      ]
+    }
+  }
+}

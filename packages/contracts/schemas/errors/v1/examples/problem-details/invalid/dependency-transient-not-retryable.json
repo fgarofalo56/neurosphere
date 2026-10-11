@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/dependency_transient",
+  "title": "Dependency transient",
+  "status": 503,
+  "code": "dependency_transient",
+  "retryable": false,
+  "correlation_id": "01J9ZQ4M8V2R5K7T3X6W0YB1CD"
+}

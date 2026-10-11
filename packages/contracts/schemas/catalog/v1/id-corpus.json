@@ -1,0 +1,180 @@
+{
+  "description": "Canonical ID grammar corpus for canonical_id.schema.json. Each valid entry must fullmatch the pattern; each invalid entry must not. Consumed by tests/contracts/test_canonical_ids.py.",
+  "schema": "canonical_id.schema.json",
+  "valid": [
+    "commercial:contoso:foundry:agent:support-bot",
+    "government:dod-army:foundry:agent:triage.v2",
+    "commercial:contoso:entra:person:psn_0123456789abcdef",
+    "commercial:contoso:aoai:model_deployment:gpt-4o-2024-08-06",
+    "commercial:fabrikam:copilot-studio:agent:sales_helper",
+    "government:usda:search:grounding_source:index/hr-policies",
+    "commercial:contoso:foundry:agent_version:support-bot/v3",
+    "commercial:contoso:arm:service:subscriptions/0000/resourcegroups/rg1",
+    "commercial:contoso:mcp:tool:server=crm/tool=lookup",
+    "commercial:contoso:neurosphere:domain:finance",
+    "commercial:contoso:neurosphere:owner:team-payments",
+    "commercial:contoso:neurosphere:policy:pii-handling",
+    "commercial:contoso:neurosphere:recommendation:rec-000123",
+    "commercial:contoso:appinsights:run_reference:4bf92f3577b34da6a3ce929d0e0e4736",
+    "commercial:c:s:t:i",
+    "commercial:0:0:0:0",
+    "commercial:contoso:foundry:invokes:a/b",
+    "commercial:a.b:c.d:e.f:g.h",
+    "commercial:a_b:c_d:e_f:g_h",
+    "commercial:a-b:c-d:e-f:g-h",
+    "government:contoso:foundry:agent:===",
+    "commercial:contoso:foundry:agent:a//b",
+    "commercial:contoso:foundry:agent:base64=abc=",
+    "commercial:contoso:foundry:agent:...",
+    "commercial:contoso:foundry:agent:-leading-dash",
+    "commercial:contoso:foundry:alias:external/agent=123",
+    "government:contoso:databricks:grounding_source:catalog.schema.table",
+    "commercial:tenant-00000000-0000-0000-0000-000000000000:entra:person:psn_aaaaaaaaaaaaaaaa",
+    "commercial:contoso:synapse:grounding_source:workspace/pool/table",
+    "government:contoso:fabric:grounding_source:lakehouse/sales=2026",
+    "commercial:contoso:foundry:edge_override:ovr-1",
+    "commercial:contoso:foundry:agent:x/y/z=1/2"
+  ],
+  "invalid": [
+    {
+      "value": "",
+      "reason": "empty string"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent",
+      "reason": "four segments, id missing"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc:def",
+      "reason": "colon injection in id segment"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc:commercial:evil:x:y:z",
+      "reason": "colon injection chaining a second ID"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc:",
+      "reason": "trailing colon"
+    },
+    {
+      "value": ":commercial:contoso:foundry:agent:abc",
+      "reason": "leading colon"
+    },
+    {
+      "value": "commercial::foundry:agent:abc",
+      "reason": "empty customer segment"
+    },
+    {
+      "value": "commercial:contoso::agent:abc",
+      "reason": "empty source segment"
+    },
+    {
+      "value": "commercial:contoso:foundry::abc",
+      "reason": "empty type segment"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:",
+      "reason": "empty id segment"
+    },
+    {
+      "value": "Commercial:contoso:foundry:agent:abc",
+      "reason": "uppercase cloud"
+    },
+    {
+      "value": "COMMERCIAL:CONTOSO:FOUNDRY:AGENT:ABC",
+      "reason": "all uppercase"
+    },
+    {
+      "value": "commercial:Contoso:foundry:agent:abc",
+      "reason": "uppercase customer"
+    },
+    {
+      "value": "commercial:contoso:Foundry:agent:abc",
+      "reason": "uppercase source"
+    },
+    {
+      "value": "commercial:contoso:foundry:Agent:abc",
+      "reason": "uppercase type"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:ABC",
+      "reason": "uppercase id"
+    },
+    {
+      "value": "azure:contoso:foundry:agent:abc",
+      "reason": "cloud not in commercial|government"
+    },
+    {
+      "value": "gov:contoso:foundry:agent:abc",
+      "reason": "abbreviated cloud"
+    },
+    {
+      "value": "governmentcloud:contoso:foundry:agent:abc",
+      "reason": "cloud with suffix"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:a b",
+      "reason": "space in id"
+    },
+    {
+      "value": "commercial:con toso:foundry:agent:abc",
+      "reason": "space in customer"
+    },
+    {
+      "value": "commercial:contoso/eu:foundry:agent:abc",
+      "reason": "slash outside id segment"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent=x:abc",
+      "reason": "equals sign in type segment"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc ",
+      "reason": "trailing space"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:ab@c",
+      "reason": "at sign (email-like) in id"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc#frag",
+      "reason": "fragment character"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc?x=1",
+      "reason": "query character"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc%3a",
+      "reason": "percent-encoding"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:caf\u00e9",
+      "reason": "non-ASCII letter"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc\\def",
+      "reason": "backslash"
+    },
+    {
+      "value": "commercial;contoso;foundry;agent;abc",
+      "reason": "wrong delimiter"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc\u0000",
+      "reason": "NUL control character"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:{abc}",
+      "reason": "braces"
+    },
+    {
+      "value": "commercial:*:foundry:agent:abc",
+      "reason": "wildcard customer"
+    },
+    {
+      "value": "commercial:contoso:foundry:agent:abc\n",
+      "reason": "trailing newline (Python re.search '$' accepts it; must be rejected via fullmatch)"
+    }
+  ]
+}

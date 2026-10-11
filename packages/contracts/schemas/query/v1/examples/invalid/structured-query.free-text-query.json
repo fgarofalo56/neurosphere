@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "operation": "list",
+  "entity": "agent",
+  "filters": [
+    {
+      "field": "domain_id",
+      "op": "eq",
+      "value": "commercial:contoso:catalog:domain:finance"
+    },
+    {
+      "field": "lifecycle_status",
+      "op": "in",
+      "values": [
+        "active",
+        "deprecated"
+      ]
+    },
+    {
+      "field": "has_owner",
+      "op": "eq",
+      "value": false
+    }
+  ],
+  "fields": [
+    "id",
+    "owner_id",
+    "lifecycle_status",
+    "last_observed"
+  ],
+  "sort": [
+    {
+      "field": "last_observed",
+      "direction": "desc"
+    }
+  ],
+  "budget": {
+    "timeout_ms": 5000,
+    "limit": 50,
+    "max_depth": 0
+  },
+  "cursor": "eyJvIjo1MH0",
+  "query": "MATCH (n) RETURN n"
+}

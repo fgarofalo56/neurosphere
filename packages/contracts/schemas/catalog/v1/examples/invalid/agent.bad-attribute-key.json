@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:foundry:agent:support-bot",
+  "entity_type": "agent",
+  "version": 3,
+  "etag": "\"0000a1b2-0000-0800-0000-6705a1b20000\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "classification": "internal",
+  "display_name": "Support bot",
+  "agent_kind": "assistant",
+  "platform": "foundry",
+  "source_id": "foundry-eastus",
+  "external_agent_id": "asst_Abc123",
+  "current_version_id": "commercial:contoso:foundry:agent_version:support-bot/v3",
+  "residency_region": "eastus",
+  "attributes": {
+    "Cost-Center": "x"
+  }
+}

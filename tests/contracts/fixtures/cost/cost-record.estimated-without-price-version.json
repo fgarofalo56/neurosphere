@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "cost_id": "cost-fixture-estimated-no-price",
+  "kind": "estimated",
+  "amount": "0.0123",
+  "currency": "USD",
+  "price_effective_date": "2026-10-01",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "source_id": "gateway-eastus",
+  "dedupe_key": "contoso/req-fixture",
+  "observation_source": "gateway",
+  "recorded_at": "2026-10-10T12:00:02Z"
+}

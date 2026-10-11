@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "decision_id": "0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+  "review_item_id": "c2d3e4f5-a6b7-4c8d-9e0f-1a2b3c4d5e6f",
+  "review_kind": "insight_review",
+  "intent_id": null,
+  "approved_confirmation_hash": null,
+  "reviewer": {
+    "principal_pseudonym": "p-2b8e44d0",
+    "principal_kind": "user",
+    "on_behalf_of": null
+  },
+  "maker": null,
+  "self_approval_allowed": false,
+  "decision": "rejected",
+  "reason": "Inferred READS edge contradicts curated lineage; evidence is a single sampled span.",
+  "policy_version": "approval-policy-2026.10.1",
+  "decided_at": "2026-10-10T17:05:12Z",
+  "correlation_id": "corr-7c41e2"
+}

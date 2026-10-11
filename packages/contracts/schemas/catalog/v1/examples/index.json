@@ -1,0 +1,694 @@
+{
+  "description": "Example manifest for catalog v1. Invalid entries name the JSON Schema keyword and instance path of the single expected validation error.",
+  "library_schemas": [
+    "common.schema.json"
+  ],
+  "examples": [
+    {
+      "file": "valid/canonical_id.agent.json",
+      "schema": "canonical_id.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/canonical_id.government.json",
+      "schema": "canonical_id.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/canonical_id.uppercase.json",
+      "schema": "canonical_id.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "",
+      "reason": "uppercase customer segment"
+    },
+    {
+      "file": "invalid/canonical_id.colon-injection.json",
+      "schema": "canonical_id.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "",
+      "reason": "colon inside id segment"
+    },
+    {
+      "file": "valid/person.minimal-and-typical.json",
+      "schema": "person.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/agent.minimal-and-typical.json",
+      "schema": "agent.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/agent_version.minimal-and-typical.json",
+      "schema": "agent_version.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/model_deployment.minimal-and-typical.json",
+      "schema": "model_deployment.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grounding_source.minimal-and-typical.json",
+      "schema": "grounding_source.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/tool.minimal-and-typical.json",
+      "schema": "tool.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/service.minimal-and-typical.json",
+      "schema": "service.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/domain.minimal-and-typical.json",
+      "schema": "domain.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/owner.minimal-and-typical.json",
+      "schema": "owner.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/policy.minimal-and-typical.json",
+      "schema": "policy.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/recommendation_reference.minimal-and-typical.json",
+      "schema": "recommendation_reference.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/run_reference.minimal-and-typical.json",
+      "schema": "run_reference.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/agent.government.json",
+      "schema": "agent.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/owner.person-kind.json",
+      "schema": "owner.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/person.has-email.json",
+      "schema": "person.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "Person has no email field"
+    },
+    {
+      "file": "invalid/person.has-display-name.json",
+      "schema": "person.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "Person has no name field"
+    },
+    {
+      "file": "invalid/person.identifying-id.json",
+      "schema": "person.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/id",
+      "reason": "Person id segment must be a pseudonym"
+    },
+    {
+      "file": "invalid/person.has-attributes.json",
+      "schema": "person.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "Person has no free-text attributes map"
+    },
+    {
+      "file": "invalid/agent.missing-etag.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "etag is required"
+    },
+    {
+      "file": "invalid/agent.wrong-type-segment.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/id",
+      "reason": "agent id must have type segment agent"
+    },
+    {
+      "file": "invalid/agent.cloud-mismatch.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/id",
+      "reason": "government entity with commercial id"
+    },
+    {
+      "file": "invalid/agent.nested-attribute.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "type",
+      "instance_path": "/attributes/tags",
+      "reason": "attributes are scalar-only"
+    },
+    {
+      "file": "invalid/agent.bad-attribute-key.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "/attributes",
+      "reason": "attribute keys are snake_case"
+    },
+    {
+      "file": "invalid/agent_version.version-zero.json",
+      "schema": "agent_version.schema.json",
+      "expect": "invalid",
+      "keyword": "minimum",
+      "instance_path": "/version",
+      "reason": "version starts at 1"
+    },
+    {
+      "file": "invalid/model_deployment.negative-context.json",
+      "schema": "model_deployment.schema.json",
+      "expect": "invalid",
+      "keyword": "minimum",
+      "instance_path": "/context_window_tokens",
+      "reason": "token counts are non-negative or null"
+    },
+    {
+      "file": "invalid/model_deployment.price-without-version.json",
+      "schema": "model_deployment.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "/price_reference",
+      "reason": "price reference needs price_version"
+    },
+    {
+      "file": "invalid/grounding_source.bad-lifecycle.json",
+      "schema": "grounding_source.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/lifecycle_status",
+      "reason": "lifecycle status is an enum"
+    },
+    {
+      "file": "invalid/tool.non-utc-timestamp.json",
+      "schema": "tool.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/updated_at",
+      "reason": "timestamps must be UTC Z"
+    },
+    {
+      "file": "invalid/service.missing-schema-version.json",
+      "schema": "service.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "schema_version is required"
+    },
+    {
+      "file": "invalid/domain.extra-field.json",
+      "schema": "domain.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "unknown properties are forbidden"
+    },
+    {
+      "file": "invalid/owner.person-with-name.json",
+      "schema": "owner.schema.json",
+      "expect": "invalid",
+      "keyword": "type",
+      "instance_path": "/display_name",
+      "reason": "person-kind owner carries no display name"
+    },
+    {
+      "file": "invalid/policy.bad-enforcement.json",
+      "schema": "policy.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/enforcement",
+      "reason": "enforcement is an enum"
+    },
+    {
+      "file": "invalid/recommendation_reference.no-subjects.json",
+      "schema": "recommendation_reference.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/subject_ids",
+      "reason": "a recommendation references at least one subject"
+    },
+    {
+      "file": "invalid/run_reference.bad-trace-id.json",
+      "schema": "run_reference.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/trace_id",
+      "reason": "trace_id is 32 lowercase hex"
+    },
+    {
+      "file": "valid/invokes.asserted.json",
+      "schema": "invokes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/invokes.inferred.json",
+      "schema": "invokes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/invokes.curated-locked.json",
+      "schema": "invokes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/invokes.inferred-no-evidence.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/delegates_to.asserted.json",
+      "schema": "delegates_to.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/delegates_to.inferred.json",
+      "schema": "delegates_to.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/delegates_to.curated-locked.json",
+      "schema": "delegates_to.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/delegates_to.inferred-no-evidence.json",
+      "schema": "delegates_to.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/uses_model.asserted.json",
+      "schema": "uses_model.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/uses_model.inferred.json",
+      "schema": "uses_model.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/uses_model.curated-locked.json",
+      "schema": "uses_model.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/uses_model.inferred-no-evidence.json",
+      "schema": "uses_model.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/reads.asserted.json",
+      "schema": "reads.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/reads.inferred.json",
+      "schema": "reads.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/reads.curated-locked.json",
+      "schema": "reads.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/reads.inferred-no-evidence.json",
+      "schema": "reads.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/writes.asserted.json",
+      "schema": "writes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/writes.inferred.json",
+      "schema": "writes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/writes.curated-locked.json",
+      "schema": "writes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/writes.inferred-no-evidence.json",
+      "schema": "writes.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/grounded_by.asserted.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grounded_by.inferred.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grounded_by.curated-locked.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/grounded_by.inferred-no-evidence.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/owned_by.asserted.json",
+      "schema": "owned_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/owned_by.inferred.json",
+      "schema": "owned_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/owned_by.curated-locked.json",
+      "schema": "owned_by.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/owned_by.inferred-no-evidence.json",
+      "schema": "owned_by.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/depends_on.asserted.json",
+      "schema": "depends_on.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/depends_on.inferred.json",
+      "schema": "depends_on.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/depends_on.curated-locked.json",
+      "schema": "depends_on.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/depends_on.inferred-no-evidence.json",
+      "schema": "depends_on.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "valid/supersedes.asserted.json",
+      "schema": "supersedes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/supersedes.inferred.json",
+      "schema": "supersedes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/supersedes.curated-locked.json",
+      "schema": "supersedes.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/supersedes.inferred-no-evidence.json",
+      "schema": "supersedes.schema.json",
+      "expect": "invalid",
+      "keyword": "minItems",
+      "instance_path": "/evidence_ids",
+      "reason": "inferred edge needs evidence"
+    },
+    {
+      "file": "invalid/invokes.missing-provenance.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "provenance is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-evidence-ids.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "evidence_ids is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-confidence.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "confidence is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-first-observed.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "first_observed is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-last-observed.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "last_observed is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-validity.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "validity is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-status.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "status is required on every edge"
+    },
+    {
+      "file": "invalid/invokes.missing-lock.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "lock is required on every edge"
+    },
+    {
+      "file": "invalid/delegates_to.confidence-above-one.json",
+      "schema": "delegates_to.schema.json",
+      "expect": "invalid",
+      "keyword": "maximum",
+      "instance_path": "/confidence",
+      "reason": "confidence in [0,1]"
+    },
+    {
+      "file": "invalid/uses_model.confidence-negative.json",
+      "schema": "uses_model.schema.json",
+      "expect": "invalid",
+      "keyword": "minimum",
+      "instance_path": "/confidence",
+      "reason": "confidence in [0,1]"
+    },
+    {
+      "file": "invalid/reads.bad-status.json",
+      "schema": "reads.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/status",
+      "reason": "status is asserted|inferred|curated"
+    },
+    {
+      "file": "invalid/writes.locked-without-expiry.json",
+      "schema": "writes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "/lock",
+      "reason": "a lock requires reason and expiry"
+    },
+    {
+      "file": "invalid/writes.locked-without-reason.json",
+      "schema": "writes.schema.json",
+      "expect": "invalid",
+      "keyword": "type",
+      "instance_path": "/lock/reason",
+      "reason": "a lock requires a reason"
+    },
+    {
+      "file": "invalid/grounded_by.asserted-locked.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "invalid",
+      "keyword": "const",
+      "instance_path": "/lock/locked",
+      "reason": "only curated edges may be locked"
+    },
+    {
+      "file": "invalid/grounded_by.curated-without-curation.json",
+      "schema": "grounded_by.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "curated edge carries its curation decision"
+    },
+    {
+      "file": "invalid/owned_by.wrong-target-type.json",
+      "schema": "owned_by.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/target_id",
+      "reason": "OWNED_BY targets an Owner"
+    },
+    {
+      "file": "invalid/depends_on.cross-cloud-target.json",
+      "schema": "depends_on.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/target_id",
+      "reason": "edge endpoints stay inside the edge cloud"
+    },
+    {
+      "file": "invalid/supersedes.wrong-relation-type.json",
+      "schema": "supersedes.schema.json",
+      "expect": "invalid",
+      "keyword": "const",
+      "instance_path": "/relation_type",
+      "reason": "relation_type is fixed per schema"
+    },
+    {
+      "file": "invalid/invokes.missing-provenance-method.json",
+      "schema": "invokes.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "/provenance",
+      "reason": "provenance method is required"
+    },
+    {
+      "file": "valid/alias.external-id.json",
+      "schema": "alias.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/alias.person-target.json",
+      "schema": "alias.schema.json",
+      "expect": "invalid",
+      "keyword": "not",
+      "instance_path": "/canonical_id",
+      "reason": "person aliases are re-identification data"
+    },
+    {
+      "file": "invalid/alias.missing-provenance.json",
+      "schema": "alias.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "alias needs provenance"
+    },
+    {
+      "file": "valid/edge_override.lock.json",
+      "schema": "edge_override.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/edge_override.reject.json",
+      "schema": "edge_override.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/edge_override.remove-security-evidence.json",
+      "schema": "edge_override.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "an override cannot remove evidence"
+    },
+    {
+      "file": "invalid/edge_override.replace-security-evidence.json",
+      "schema": "edge_override.schema.json",
+      "expect": "invalid",
+      "keyword": "additionalProperties",
+      "instance_path": "",
+      "reason": "an override cannot replace security evidence"
+    },
+    {
+      "file": "invalid/edge_override.lock-without-lock.json",
+      "schema": "edge_override.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "lock decision requires a lock object"
+    },
+    {
+      "file": "invalid/edge_override.lock-not-locked.json",
+      "schema": "edge_override.schema.json",
+      "expect": "invalid",
+      "keyword": "const",
+      "instance_path": "/lock/locked",
+      "reason": "lock decision requires locked=true"
+    },
+    {
+      "file": "invalid/edge_override.empty-reason.json",
+      "schema": "edge_override.schema.json",
+      "expect": "invalid",
+      "keyword": "minLength",
+      "instance_path": "/reason",
+      "reason": "steward decisions need a reason"
+    }
+  ]
+}

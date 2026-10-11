@@ -1,0 +1,59 @@
+name: contracts
+
+# Drift check for the generated contract bindings (PRP-01 item 6, ADR-0004). It regenerates
+# the Pydantic and TypeScript bindings from packages/contracts/schemas into a temporary
+# directory and fails when they differ from the committed files, so a schema edit without
+# regeneration (or a hand edit of generated code) cannot merge. Every step fails loudly; no
+# step suppresses a failing exit code. Kept separate from ci.yml because its python job
+# installs neither Node nor the generator dev dependency group.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: contracts (codegen drift, generator tests, TS typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install locked toolchains (generators are exact-pinned dev dependencies)
+        run: |
+          uv sync --frozen --group dev
+          uv sync --frozen --inexact --package neurosphere-contracts --group dev
+          pnpm install --frozen-lockfile
+      - name: Drift check (regenerate and diff against the committed bindings)
+        run: python packages/contracts/scripts/generate.py --check
+      - name: Generator tests (pins, idempotence; a missing toolchain fails instead of skipping)
+        env:
+          NS_CODEGEN_REQUIRED: "1"
+        run: uv run --frozen pytest packages/contracts/scripts -q
+      - name: Typecheck generated TypeScript (TS 6.0.x strict)
+        run: pnpm --filter ./packages/contracts/ts typecheck
+      - name: Contract tests (offline; drift and TS round-trip must run, not skip)
+        env:
+          NO_NETWORK: "1"
+          NS_CODEGEN_REQUIRED: "1"
+        run: uv run --frozen pytest tests/contracts -q
+      - name: TypeScript round trip
+        run: pnpm --filter ./packages/contracts/ts test

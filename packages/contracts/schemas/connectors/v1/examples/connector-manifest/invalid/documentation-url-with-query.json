@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "name": "azure_monitor",
+  "version": "1.2.0",
+  "documentation_url": "https://example.com/docs?sv=2024&sig=placeholder",
+  "supported_clouds": [
+    "commercial",
+    "government"
+  ],
+  "capabilities": [
+    "telemetry_ingest",
+    "health_reporting"
+  ],
+  "scopes": [
+    "https://management.azure.com/.default"
+  ],
+  "granularity": {
+    "time_grain": "minute",
+    "subject_level": "deployment"
+  },
+  "freshness": {
+    "typical_delay_ms": 180000,
+    "max_delay_ms": null
+  },
+  "rate_limits": [
+    {
+      "limit_scope": "per_tenant",
+      "max_requests": 12000,
+      "window_ms": 3600000
+    }
+  ],
+  "auth_mode": "managed_identity",
+  "credential_refs": [],
+  "advisory": true,
+  "write_support": {
+    "supported": false,
+    "actions": []
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:depends_on:e-0001",
+  "relation_type": "depends_on",
+  "version": 2,
+  "etag": "\"edge-etag-2\"",
+  "source_id": "commercial:contoso:foundry:service:cosmos-orders",
+  "target_id": "commercial:contoso:foundry:service:event-hubs",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "provenance": {
+    "method": "trace_observation",
+    "source_id": "appinsights",
+    "inference_version": "rules-1.4",
+    "recorded_at": "2026-10-09T17:30:00.125Z"
+  },
+  "evidence_ids": [
+    "trace:4bf92f3577b34da6a3ce929d0e0e4736",
+    "audit:sec-0042"
+  ],
+  "security_evidence_ids": [
+    "audit:sec-0042"
+  ],
+  "confidence": 0.82,
+  "first_observed": "2026-10-01T08:00:00Z",
+  "last_observed": "2026-10-09T17:30:00.125Z",
+  "validity": {
+    "valid_from": "2026-10-01T08:00:00Z",
+    "valid_to": null
+  },
+  "status": "curated",
+  "lock": {
+    "locked": true,
+    "reason": "Confirmed by domain steward during quarterly review.",
+    "expiry": "2027-01-01T00:00:00Z",
+    "actor": "commercial:contoso:entra:person:psn_0123456789abcdef"
+  },
+  "created_at": "2026-10-01T08:00:00Z",
+  "updated_at": "2026-10-09T17:30:00.125Z",
+  "curation": {
+    "decision": "accepted",
+    "decided_by": "commercial:contoso:entra:person:psn_0123456789abcdef",
+    "decided_at": "2026-10-09T17:30:00.125Z",
+    "reason": "Matches the declared integration inventory.",
+    "override_id": null,
+    "review_item_id": "review-77"
+  }
+}

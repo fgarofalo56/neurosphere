@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/errors/v1/problem-details.schema.json",
+  "title": "ProblemDetails",
+  "description": "Error response body for every NeuroSphere API, tool and MCP surface: an RFC 9457 problem details object profiled with the PRP.md section 3 taxonomy (code, retryable, correlation_id, optional reason, optional retry_after_seconds). Media type application/problem+json. The code -> status/retryable table is data in error-codes.json and is enforced here by allOf if/then. Rules JSON Schema cannot express are checked by Python validators in tests/contracts/test_error_taxonomy.py (PRP-01 item 7): test_error_table_matches_schema (error-codes.json and this allOf agree row for row) and, at runtime in PRP-05, the body status must equal the HTTP response status. detail and errors[].detail are human-readable and must never carry secrets, stack traces, query text or other tenants' data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "type", "title", "status", "code", "retryable", "correlation_id"],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document (semver within major 1).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "type": {
+      "description": "RFC 9457 problem type, a URI reference. Use 'about:blank' or 'https://neurosphere.invalid/problems/<code>'. Never dereferenced by clients or tests.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "default": "about:blank"
+    },
+    "title": {
+      "description": "RFC 9457 short, human-readable summary of the problem type; does not vary between occurrences.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "status": {
+      "description": "RFC 9457 HTTP status code. Fixed per code by the allOf below; must equal the HTTP response status.",
+      "type": "integer",
+      "enum": [401, 403, 409, 422, 429, 502, 503]
+    },
+    "detail": {
+      "description": "RFC 9457 occurrence-specific human-readable explanation. No secrets, stack traces or query text.",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "instance": {
+      "description": "RFC 9457 URI reference identifying this occurrence. Never dereferenced.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "code": {
+      "description": "NeuroSphere error taxonomy code (PRP.md section 3).",
+      "type": "string",
+      "enum": [
+        "unauthorized",
+        "forbidden",
+        "capability_unavailable",
+        "stale_version",
+        "rate_limited",
+        "invalid_schema",
+        "dependency_transient"
+      ]
+    },
+    "retryable": {
+      "description": "Whether a client may retry the identical request automatically. Fixed per code.",
+      "type": "boolean"
+    },
+    "correlation_id": {
+      "description": "Correlation ID shared with logs, traces and audit records for this request.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "reason": {
+      "description": "Machine-readable snake_case reason. Required for capability_unavailable (for example not_available_in_cloud, not_available_in_region, sku_unsupported, preview_only, outside_authorization_scope, disabled_by_policy); optional otherwise. Not free text.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "retry_after_seconds": {
+      "description": "Seconds to wait before retrying; mirrors the Retry-After header. Required for rate_limited, optional for dependency_transient, forbidden when retryable is false.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    "errors": {
+      "description": "invalid_schema only: per-member validation failures (RFC 9457 section 3 'errors' extension shape).",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/validation_error" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "code": { "const": "unauthorized" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 401 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "forbidden" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 403 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "capability_unavailable" } }, "required": ["code"] },
+      "then": {
+        "required": ["reason"],
+        "properties": { "status": { "const": 409 }, "retryable": { "const": false } }
+      }
+    },
+    {
+      "if": { "properties": { "code": { "const": "stale_version" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 409 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "rate_limited" } }, "required": ["code"] },
+      "then": {
+        "required": ["retry_after_seconds"],
+        "properties": { "status": { "const": 429 }, "retryable": { "const": true } }
+      }
+    },
+    {
+      "if": { "properties": { "code": { "const": "invalid_schema" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 422 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "dependency_transient" } }, "required": ["code"] },
+      "then": {
+        "properties": { "status": { "enum": [503, 502] }, "retryable": { "const": true } }
+      }
+    },
+    {
+      "if": { "properties": { "retryable": { "const": false } }, "required": ["retryable"] },
+      "then": { "not": { "required": ["retry_after_seconds"] } }
+    },
+    {
+      "if": {
+        "properties": { "code": { "not": { "const": "invalid_schema" } } },
+        "required": ["code"]
+      },
+      "then": { "not": { "required": ["errors"] } }
+    }
+  ],
+  "$defs": {
+    "validation_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pointer", "detail"],
+      "properties": {
+        "pointer": {
+          "description": "RFC 6901 JSON Pointer into the request body.",
+          "type": "string",
+          "maxLength": 1024,
+          "pattern": "^(/([^~/]|~[01])*)*$"
+        },
+        "detail": {
+          "description": "Human-readable failure; must not echo submitted values.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}

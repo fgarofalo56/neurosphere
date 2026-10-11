@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "chain_id": "contoso.domain-retail",
+  "actor": {
+    "principal_pseudonym": "p-7f3a9c21",
+    "principal_kind": "user",
+    "on_behalf_of": null
+  },
+  "scope_hash": "sha256:59ce0ef5938188b08ea3fe2befc72c6f4317e3e155ba646aa4b1e67af6851ed3",
+  "correlation_id": "corr-7c41e2",
+  "audit_id": "22222222-3333-4444-8555-666666666666",
+  "sequence": 1,
+  "previous_hash": "sha256:70c6877a0bb38670515493b97877fc4aa53e8cfc4955edd2a59f6c1d49e8400b",
+  "record_hash": "sha256:3e70d73bc1f4c307c2695b7bee24c5a49b01f99b93cc5da812740dd86443dfcd",
+  "kind": "after",
+  "recorded_at": "2026-10-10T17:06:02Z",
+  "operation": "action.execute",
+  "channel": "chat",
+  "intent_id": "3f1c2a9e-5b7d-4e21-9c0a-8d6f4b2e1a07",
+  "subject": {
+    "target": {
+      "canonical_id": "commercial:contoso:foundry:model_deployment:eastus2/chat-prod",
+      "entity_type": "model_deployment"
+    },
+    "target_version": "etag-0x8dce1f2a3b4c5d7",
+    "state_digest": "sha256:60aac389324d1376cb1f69d31c78e37f9091f80f3d51e4b10dfb3ee179799518",
+    "snapshot_ref": "snapshots/contoso/3f1c2a9e/after.json"
+  },
+  "outcome": null,
+  "denial": null
+}

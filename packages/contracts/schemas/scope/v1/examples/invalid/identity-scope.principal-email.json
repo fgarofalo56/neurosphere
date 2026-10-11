@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "principal": {
+    "principal_id": "commercial:contoso:entra:person:p-7f3a",
+    "principal_pseudonym": "p-7f3a",
+    "principal_kind": "user",
+    "email": "someone@example.invalid"
+  },
+  "roles": [
+    {
+      "role": "viewer",
+      "domain_ids": [
+        "commercial:contoso:catalog:domain:finance"
+      ]
+    }
+  ],
+  "allowed_domains": [
+    "commercial:contoso:catalog:domain:finance"
+  ],
+  "allowed_resources": [],
+  "policy_version": "2026.10.01-4",
+  "derived_at": "2026-10-10T12:00:00Z",
+  "expires_at": "2026-10-10T12:15:00Z",
+  "scope_hash": "sha256:ff8b1f0285b6f84793cb92d9baaeb463d3f73a1344fd01580cb75c9584e5827e"
+}

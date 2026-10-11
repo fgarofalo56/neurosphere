@@ -1,0 +1,77 @@
+{
+  "$comment": "Error taxonomy table (data). PRP.md section 3 and PRP-01 Clarification 14. problem-details.schema.json enforces the same code -> http_status / retryable / reason / retry_after_seconds rules through allOf if/then; tests/contracts/test_error_taxonomy.py (PRP-01 item 7) asserts this table and the schema agree. PRP-05 implements neurosphere_core.errors from this file. Within v1 rows may be added, never changed or removed.",
+  "schema_version": "1.0.0",
+  "problem_schema": "problem-details.schema.json",
+  "codes": [
+    {
+      "code": "unauthorized",
+      "http_status": 401,
+      "allowed_http_statuses": [401],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Unauthorized",
+      "description": "No valid authenticated identity (missing, expired or wrong-audience credential). Re-authenticate; never retried automatically."
+    },
+    {
+      "code": "forbidden",
+      "http_status": 403,
+      "allowed_http_statuses": [403],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Forbidden",
+      "description": "Authenticated, but the server-derived IdentityScope does not permit the query, tool, export, push or action. Fail closed; no privileged bypass."
+    },
+    {
+      "code": "capability_unavailable",
+      "http_status": 409,
+      "allowed_http_statuses": [409],
+      "retryable": false,
+      "reason": "required",
+      "retry_after_seconds": "forbidden",
+      "title": "Capability unavailable",
+      "description": "The request is schema-valid but conflicts with the deployment's current capability state (cloud, region, SKU, GA or authorization scope per the capability matrix). 409 rather than 422 so that 422 always means 'fix the payload'. A machine-readable reason is mandatory so the UI can show the option disabled with its reason. Never satisfied by routing Government data to Commercial."
+    },
+    {
+      "code": "stale_version",
+      "http_status": 409,
+      "allowed_http_statuses": [409],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Stale version",
+      "description": "Target version or ETag no longer matches (optimistic concurrency). The caller must re-read and re-confirm; an action is never blindly retried against a changed target."
+    },
+    {
+      "code": "rate_limited",
+      "http_status": 429,
+      "allowed_http_statuses": [429],
+      "retryable": true,
+      "reason": "optional",
+      "retry_after_seconds": "required",
+      "title": "Rate limited",
+      "description": "A rate limit or bounded budget was exceeded. Retry after retry_after_seconds."
+    },
+    {
+      "code": "invalid_schema",
+      "http_status": 422,
+      "allowed_http_statuses": [422],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Invalid schema",
+      "description": "The request body failed contract validation. The optional errors array carries JSON Pointers to the offending members."
+    },
+    {
+      "code": "dependency_transient",
+      "http_status": 503,
+      "allowed_http_statuses": [503, 502],
+      "retryable": true,
+      "reason": "optional",
+      "retry_after_seconds": "optional",
+      "title": "Dependency temporarily unavailable",
+      "description": "A downstream dependency failed transiently. 503 by default (including fail-closed policy-store outage); 502 when an upstream returned an invalid response. Retry with backoff."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "type": "https://neurosphere.invalid/problems/forbidden",
+  "title": "Forbidden",
+  "status": 403,
+  "code": "forbidden",
+  "retryable": false,
+  "correlation_id": "01J9ZQ4M8V2R5K7T3X6W0YB1CD",
+  "retry_after_seconds": 10
+}

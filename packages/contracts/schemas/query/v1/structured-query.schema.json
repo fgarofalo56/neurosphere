@@ -1,0 +1,478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/query/v1/structured-query.schema.json",
+  "title": "StructuredQuery",
+  "description": "Request-side structured query used by REST, copilot tools and MCP (PRP.md section 3, NS-06). It carries structured allowlisted filters only, never executable query text: there is no free-text field, every field name is an allowlisted enum, every operator is typed per field kind, and string values are charset-restricted keywords or canonical IDs that the server binds as parameters (never concatenated into SQL/Cypher/KQL). Budgets (timeout_ms, limit, max_depth) are mandatory. Authorization comes only from the server-derived IdentityScope, which this schema never references: a domain_id or customer filter can only narrow results inside that scope. Rules JSON Schema cannot express: field applicability per entity is checked by tests/contracts/validators.py::check_structured_query_field_applicability; time_range.start < time_range.end by tests/contracts/validators.py::check_time_range_order; between bounds lo <= hi by tests/contracts/validators.py::check_between_order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "operation", "entity", "budget"],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/schema_version" },
+    "operation": {
+      "description": "list and aggregate return rows; neighbors and impact_paths are bounded graph traversals from traversal.start_ids.",
+      "enum": ["list", "aggregate", "neighbors", "impact_paths"]
+    },
+    "entity": {
+      "description": "Entity type returned (list, aggregate) or of the start nodes (neighbors, impact_paths).",
+      "$ref": "#/$defs/entity"
+    },
+    "filters": {
+      "description": "Conjunction (AND) of typed filters.",
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/filter" }
+    },
+    "fields": {
+      "description": "Optional projection; allowlisted field names only.",
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/any_field" }
+    },
+    "sort": {
+      "type": "array",
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/sort_key" }
+    },
+    "time_range": { "$ref": "#/$defs/time_range" },
+    "group_by": {
+      "type": "array",
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/group_field" }
+    },
+    "time_bucket": {
+      "enum": ["minute", "five_minutes", "hour", "day", "week"]
+    },
+    "aggregations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/aggregation" }
+    },
+    "traversal": { "$ref": "#/$defs/traversal" },
+    "budget": { "$ref": "budget.schema.json" },
+    "cursor": { "$ref": "page.schema.json#/$defs/cursor" }
+  },
+  "allOf": [
+    {
+      "description": "Graph operations need a traversal, a catalog start entity and max_depth >= 1; row operations must not carry a traversal and use max_depth 0.",
+      "if": {
+        "properties": { "operation": { "enum": ["neighbors", "impact_paths"] } },
+        "required": ["operation"]
+      },
+      "then": {
+        "required": ["traversal"],
+        "properties": {
+          "entity": { "$ref": "#/$defs/catalog_entity" },
+          "budget": { "properties": { "max_depth": { "minimum": 1 } } }
+        }
+      },
+      "else": {
+        "not": { "required": ["traversal"] },
+        "properties": {
+          "budget": { "properties": { "max_depth": { "const": 0 } } }
+        }
+      }
+    },
+    {
+      "description": "aggregate requires aggregations; group_by, time_bucket and aggregations are only valid on aggregate.",
+      "if": {
+        "properties": { "operation": { "const": "aggregate" } },
+        "required": ["operation"]
+      },
+      "then": { "required": ["aggregations"] },
+      "else": {
+        "not": {
+          "anyOf": [
+            { "required": ["aggregations"] },
+            { "required": ["group_by"] },
+            { "required": ["time_bucket"] }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Time-series entities and time-bucketed aggregates require an explicit time range.",
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "entity": { "enum": ["telemetry_event", "cost_record", "evaluation_result"] }
+            },
+            "required": ["entity"]
+          },
+          { "required": ["time_bucket"] }
+        ]
+      },
+      "then": { "required": ["time_range"] }
+    }
+  ],
+  "$defs": {
+    "schema_version": {
+      "description": "Semantic version of this document within major 1. Within v1 only additive, optional changes are allowed (ADR-0004).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
+    "canonical_id": {
+      "description": "Canonical ID cloud:customer:source:type:id (PRP-01 clarification 7). Grammar owned by schemas/catalog/v1; duplicated here as a pattern.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "keyword": {
+      "description": "Enumerated-style value: no whitespace, quotes, brackets, operators or control characters, so it cannot carry query text.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "decimal": {
+      "description": "Money amount as a decimal string (no floats).",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$"
+    },
+    "catalog_entity": {
+      "enum": [
+        "person",
+        "agent",
+        "agent_version",
+        "model_deployment",
+        "grounding_source",
+        "tool",
+        "service",
+        "domain",
+        "owner",
+        "policy",
+        "recommendation",
+        "run_reference"
+      ]
+    },
+    "entity": {
+      "anyOf": [
+        { "$ref": "#/$defs/catalog_entity" },
+        { "enum": ["telemetry_event", "cost_record", "evaluation_result"] }
+      ]
+    },
+    "id_field": {
+      "enum": [
+        "id",
+        "agent_id",
+        "agent_version_id",
+        "model_deployment_id",
+        "owner_id",
+        "domain_id",
+        "source_id",
+        "tool_id",
+        "service_id",
+        "policy_id",
+        "subject_id",
+        "principal_id"
+      ]
+    },
+    "keyword_field": {
+      "enum": [
+        "cloud",
+        "environment",
+        "provider",
+        "model_name",
+        "model_version",
+        "lifecycle_status",
+        "outcome",
+        "status",
+        "kind",
+        "classification",
+        "span_kind",
+        "relation_status",
+        "observation_source",
+        "currency"
+      ]
+    },
+    "number_field": {
+      "enum": [
+        "confidence",
+        "duration_ms",
+        "input_tokens",
+        "output_tokens",
+        "cached_tokens",
+        "reasoning_tokens",
+        "total_tokens",
+        "retries",
+        "error_rate",
+        "latency_p50_ms",
+        "latency_p95_ms",
+        "request_count",
+        "score"
+      ]
+    },
+    "money_field": {
+      "enum": ["amount", "baseline_amount", "projected_amount"]
+    },
+    "time_field": {
+      "enum": [
+        "event_time",
+        "ingestion_time",
+        "first_observed",
+        "last_observed",
+        "created_at",
+        "updated_at",
+        "completed_at"
+      ]
+    },
+    "boolean_field": {
+      "enum": ["advisory", "locked", "has_owner"]
+    },
+    "any_field": {
+      "anyOf": [
+        { "$ref": "#/$defs/id_field" },
+        { "$ref": "#/$defs/keyword_field" },
+        { "$ref": "#/$defs/number_field" },
+        { "$ref": "#/$defs/money_field" },
+        { "$ref": "#/$defs/time_field" },
+        { "$ref": "#/$defs/boolean_field" }
+      ]
+    },
+    "group_field": {
+      "anyOf": [{ "$ref": "#/$defs/id_field" }, { "$ref": "#/$defs/keyword_field" }]
+    },
+    "sort_key": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "direction"],
+      "properties": {
+        "field": {
+          "anyOf": [
+            { "$ref": "#/$defs/id_field" },
+            { "$ref": "#/$defs/keyword_field" },
+            { "$ref": "#/$defs/number_field" },
+            { "$ref": "#/$defs/money_field" },
+            { "$ref": "#/$defs/time_field" },
+            {
+              "description": "Alias of an aggregation in the same query.",
+              "$ref": "#/$defs/alias"
+            }
+          ]
+        },
+        "direction": { "enum": ["asc", "desc"] }
+      }
+    },
+    "alias": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "time_range": {
+      "description": "Half-open interval [start, end). start < end is checked by tests/contracts/validators.py::check_time_range_order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/timestamp" },
+        "end": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "filter": {
+      "oneOf": [
+        { "$ref": "#/$defs/id_filter" },
+        { "$ref": "#/$defs/keyword_filter" },
+        { "$ref": "#/$defs/number_filter" },
+        { "$ref": "#/$defs/money_filter" },
+        { "$ref": "#/$defs/time_filter" },
+        { "$ref": "#/$defs/boolean_filter" }
+      ]
+    },
+    "id_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op"],
+      "properties": {
+        "field": { "$ref": "#/$defs/id_field" },
+        "op": { "enum": ["eq", "ne", "in", "not_in"] },
+        "value": { "$ref": "#/$defs/canonical_id" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/canonical_id" }
+        }
+      },
+      "allOf": [{ "$ref": "#/$defs/scalar_or_set_value" }]
+    },
+    "keyword_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op"],
+      "properties": {
+        "field": { "$ref": "#/$defs/keyword_field" },
+        "op": { "enum": ["eq", "ne", "in", "not_in", "prefix"] },
+        "value": { "$ref": "#/$defs/keyword" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/keyword" }
+        }
+      },
+      "allOf": [{ "$ref": "#/$defs/scalar_or_set_value" }]
+    },
+    "number_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op"],
+      "properties": {
+        "field": { "$ref": "#/$defs/number_field" },
+        "op": { "enum": ["eq", "ne", "gt", "gte", "lt", "lte", "between"] },
+        "value": { "type": "number" },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "number" }
+        }
+      },
+      "allOf": [{ "$ref": "#/$defs/scalar_or_range_value" }]
+    },
+    "money_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op"],
+      "properties": {
+        "field": { "$ref": "#/$defs/money_field" },
+        "op": { "enum": ["gt", "gte", "lt", "lte", "between"] },
+        "value": { "$ref": "#/$defs/decimal" },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/decimal" }
+        }
+      },
+      "allOf": [{ "$ref": "#/$defs/scalar_or_range_value" }]
+    },
+    "time_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op"],
+      "properties": {
+        "field": { "$ref": "#/$defs/time_field" },
+        "op": { "enum": ["gt", "gte", "lt", "lte", "between"] },
+        "value": { "$ref": "#/$defs/timestamp" },
+        "values": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/timestamp" }
+        }
+      },
+      "allOf": [{ "$ref": "#/$defs/scalar_or_range_value" }]
+    },
+    "boolean_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "op", "value"],
+      "properties": {
+        "field": { "$ref": "#/$defs/boolean_field" },
+        "op": { "const": "eq" },
+        "value": { "type": "boolean" }
+      }
+    },
+    "scalar_or_set_value": {
+      "description": "eq/ne/prefix take exactly value; in/not_in take exactly values.",
+      "if": {
+        "properties": { "op": { "enum": ["in", "not_in"] } },
+        "required": ["op"]
+      },
+      "then": { "required": ["values"], "not": { "required": ["value"] } },
+      "else": { "required": ["value"], "not": { "required": ["values"] } }
+    },
+    "scalar_or_range_value": {
+      "description": "between takes exactly values [lo, hi] (lo <= hi checked by tests/contracts/validators.py::check_between_order); other operators take exactly value.",
+      "if": {
+        "properties": { "op": { "const": "between" } },
+        "required": ["op"]
+      },
+      "then": { "required": ["values"], "not": { "required": ["value"] } },
+      "else": { "required": ["value"], "not": { "required": ["values"] } }
+    },
+    "aggregation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "as"],
+      "properties": {
+        "op": {
+          "enum": ["count", "count_distinct", "sum", "avg", "min", "max", "p50", "p95", "p99"]
+        },
+        "field": { "$ref": "#/$defs/any_field" },
+        "as": { "$ref": "#/$defs/alias" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "op": { "const": "count" } }, "required": ["op"] },
+          "then": { "not": { "required": ["field"] } }
+        },
+        {
+          "if": { "properties": { "op": { "const": "count_distinct" } }, "required": ["op"] },
+          "then": {
+            "required": ["field"],
+            "properties": { "field": { "$ref": "#/$defs/group_field" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "op": { "enum": ["sum", "avg", "min", "max", "p50", "p95", "p99"] } },
+            "required": ["op"]
+          },
+          "then": {
+            "required": ["field"],
+            "properties": {
+              "field": {
+                "anyOf": [{ "$ref": "#/$defs/number_field" }, { "$ref": "#/$defs/money_field" }]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "traversal": {
+      "description": "Bounded traversal; depth and node/edge caps come from budget.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ids", "relations", "direction"],
+      "properties": {
+        "start_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/canonical_id" }
+        },
+        "relations": {
+          "description": "NS-02 relation names in lowercase snake_case.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "invokes",
+              "delegates_to",
+              "uses_model",
+              "reads",
+              "writes",
+              "grounded_by",
+              "owned_by",
+              "depends_on",
+              "supersedes"
+            ]
+          }
+        },
+        "direction": { "enum": ["outgoing", "incoming", "both"] }
+      }
+    }
+  }
+}

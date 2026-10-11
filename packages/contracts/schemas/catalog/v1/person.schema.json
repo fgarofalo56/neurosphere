@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/person.schema.json",
+  "title": "Person",
+  "x-ns-name": "Person",
+  "description": "Person as a pseudonymous principal only. There is deliberately no email, name, UPN, display_name, free-text or attributes field; re-identification is a policy-store concern, not a contract field. The id segment of the canonical ID is the pseudonym. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_person_id_is_pseudonym (id segment equals principal_pseudonym).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:person:psn_[a-z0-9]{16,64}$",
+      "description": "Canonical ID whose id segment is the principal pseudonym (psn_...)."
+    },
+    "entity_type": {
+      "type": "string",
+      "const": "person"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "lifecycle_status": {
+      "$ref": "common.schema.json#/$defs/lifecycle_status"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "principal_pseudonym": {
+      "type": "string",
+      "pattern": "^psn_[a-z0-9]{16,64}$",
+      "description": "Stable pseudonym produced by the pseudonymization service."
+    },
+    "pseudonym_scheme": {
+      "$ref": "common.schema.json#/$defs/token",
+      "description": "Pseudonymization scheme and key version, for rotation."
+    },
+    "principal_kind": {
+      "type": "string",
+      "enum": [
+        "human",
+        "workload",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "domain_id": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/domain_id"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Home domain when known; people may act across domains."
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "entity_type",
+    "version",
+    "etag",
+    "lifecycle_status",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "principal_pseudonym",
+    "pseudonym_scheme"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
