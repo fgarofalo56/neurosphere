@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.1.0",
+  "id": "azure_openai.model_gpt_4o.government.any.any",
+  "service": "azure_openai",
+  "feature": "model_gpt_4o",
+  "cloud": "government",
+  "region": "*",
+  "sku": null,
+  "availability": "preview",
+  "ga_status": "preview",
+  "authorization_scope": "FedRAMP High assessment in progress; not authorized",
+  "source_url": "https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government",
+  "observed_on": "2026-10-06",
+  "notes": "Example row for contract tests; not matrix data. Wildcard only because the source states it."
+}
