@@ -1,6 +1,6 @@
 ---
 name: prp-03-local-dev-environment-and-sandbox-generator
-status: backlog
+status: active
 review: none
 created: 2026-10-08
 model: sonnet
