@@ -2,7 +2,7 @@
 # .claude/hooks/config.ps1; these are convenience wrappers for humans.
 
 .DEFAULT_GOAL := help
-.PHONY: help setup hooks lint typecheck test gates validate dev-up dev-down dev-logs docs clean
+.PHONY: help setup hooks lint typecheck test gates validate dev-up dev-down dev-reset dev-logs dev-ps docs clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -40,10 +40,19 @@ dev-up: ## Start local Azure emulators (no paid calls)
 	docker compose up -d --wait
 
 dev-down: ## Stop emulators and drop volumes
-	docker compose down -v
+	docker compose --profile test down -v --remove-orphans
+
+dev-reset: ## Tear down and bring the emulators back up empty and healthy
+	docker compose --profile test down -v --remove-orphans
+	docker compose up -d --wait
 
 dev-logs: ## Tail emulator logs
 	docker compose logs -f
+
+dev-ps: ## Show emulator status and health
+	docker compose --profile test ps
+
+-include scripts/sandbox/sandbox.mk
 
 docs: ## Build the docs site (available after PRP-25)
 	uv run mkdocs build --strict
