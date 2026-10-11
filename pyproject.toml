@@ -17,6 +17,7 @@ dev = [
   "pyright>=1.1.400,<2",
   "pytest>=9.1,<10",
   "pip-audit>=2.10,<3",
+  "azure-cosmos>=4.6,<5",
   "neurosphere-core",
   "neurosphere-contracts",
   "neurosphere-api",
