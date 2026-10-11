@@ -1,0 +1,166 @@
+# Capability matrix rows for ai_search. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: ai_search.base.government.global.any
+  service: ai_search
+  feature: base
+  cloud: government
+  region: global
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: Azure AI Search listed in Government audit scope (see audit-scope document, updated
+    2026-09-21); audit-scope listing only, not an agency authorization
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-08'
+  notes: Audit-scope listing; per-region support is in the semantic_ranker/agentic_retrieval/query_rewrite
+    rows.
+- schema_version: 1.1.0
+  id: ai_search.semantic_ranker.government.usgovvirginia.any
+  service: ai_search
+  feature: semantic_ranker
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.semantic_ranker.government.usgovarizona.any
+  service: ai_search
+  feature: semantic_ranker
+  cloud: government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.semantic_ranker.government.usgovtexas.any
+  service: ai_search
+  feature: semantic_ranker
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Not available in US Gov Texas per the region-support page (2026-10-01).
+- schema_version: 1.1.0
+  id: ai_search.agentic_retrieval.government.usgovvirginia.any
+  service: ai_search
+  feature: agentic_retrieval
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.agentic_retrieval.government.usgovarizona.any
+  service: ai_search
+  feature: agentic_retrieval
+  cloud: government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.agentic_retrieval.government.usgovtexas.any
+  service: ai_search
+  feature: agentic_retrieval
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Not available in US Gov Texas per the region-support page (2026-10-01).
+- schema_version: 1.1.0
+  id: ai_search.query_rewrite.government.usgovvirginia.any
+  service: ai_search
+  feature: query_rewrite
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.query_rewrite.government.usgovarizona.any
+  service: ai_search
+  feature: query_rewrite
+  cloud: government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Present in US Gov Virginia and US Gov Arizona per the region-support page (2026-10-01); maturity
+    not captured.
+- schema_version: 1.1.0
+  id: ai_search.query_rewrite.government.usgovtexas.any
+  service: ai_search
+  feature: query_rewrite
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Not available in US Gov Texas per the region-support page (2026-10-01).
+- schema_version: 1.1.0
+  id: ai_search.vector_search.government.global.any
+  service: ai_search
+  feature: vector_search
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Government vector search availability is not stated on the regional table.
+- schema_version: 1.1.0
+  id: ai_search.base.commercial.global.any
+  service: ai_search
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  observed_on: '2026-10-08'
+  notes: Commercial regional support is on the cited page but not transcribed here.

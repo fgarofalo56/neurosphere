@@ -1,0 +1,45 @@
+# Capability matrix rows for databricks. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: databricks.base.government.usgovvirginia.any
+  service: databricks
+  feature: base
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: Listed in the Azure Government FedRAMP audit-scope document (updated 2026-09-21);
+    audit-scope listing only, not an agency authorization of NeuroSphere or this service
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-08'
+  notes: Azure Databricks in Government regions usgovvirginia and usgovarizona per the audit-scope document.
+    Feature availability is not inferred beyond the listing.
+- schema_version: 1.1.0
+  id: databricks.base.government.usgovarizona.any
+  service: databricks
+  feature: base
+  cloud: government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: Listed in the Azure Government FedRAMP audit-scope document (updated 2026-09-21);
+    audit-scope listing only, not an agency authorization of NeuroSphere or this service
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-08'
+  notes: Azure Databricks in Government regions usgovvirginia and usgovarizona per the audit-scope document.
+    Feature availability is not inferred beyond the listing.
+- schema_version: 1.1.0
+  id: databricks.base.commercial.global.any
+  service: databricks
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-08'
+  notes: Cited page is the Government audit-scope document; Commercial availability is not stated.

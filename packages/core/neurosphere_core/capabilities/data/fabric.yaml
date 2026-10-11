@@ -1,0 +1,154 @@
+# Capability matrix rows for fabric. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: fabric.base.government.usgovvirginia.any
+  service: fabric
+  feature: base
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: ga
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Fabric in GCC High, GA 2026-10-01 in US Gov Virginia and US Gov Texas only. GA is not authorization.
+    Row is GCC High; GCC and DoD are separate unverified rows (base_gcc, base_dod).
+- schema_version: 1.1.0
+  id: fabric.customer_managed_keys.government.usgovvirginia.any
+  service: fabric
+  feature: customer_managed_keys
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.workspace_identity.government.usgovvirginia.any
+  service: fabric
+  feature: workspace_identity
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.fabric_iq_items.government.usgovvirginia.any
+  service: fabric
+  feature: fabric_iq_items
+  cloud: government
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.base.government.usgovtexas.any
+  service: fabric
+  feature: base
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: available
+  ga_status: ga
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Fabric in GCC High, GA 2026-10-01 in US Gov Virginia and US Gov Texas only. GA is not authorization.
+    Row is GCC High; GCC and DoD are separate unverified rows (base_gcc, base_dod).
+- schema_version: 1.1.0
+  id: fabric.customer_managed_keys.government.usgovtexas.any
+  service: fabric
+  feature: customer_managed_keys
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.workspace_identity.government.usgovtexas.any
+  service: fabric
+  feature: workspace_identity
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.fabric_iq_items.government.usgovtexas.any
+  service: fabric
+  feature: fabric_iq_items
+  cloud: government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: FedRAMP High assessment in progress; not authorized (per cited source)
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: Listed as unsupported in Fabric GCC High. Disabled with a reason; never routed to Commercial.
+- schema_version: 1.1.0
+  id: fabric.base_gcc.government.any.any
+  service: fabric
+  feature: base_gcc
+  cloud: government
+  region: '*'
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: 'Fabric in GCC (not GCC High) is not described by the cited GCC High source. Representation:
+    GCC, GCC High and DoD are distinct environments. The contract has only cloud=government with usgov*/usdod*
+    regions, so this unverified row uses region ''*'' as a placeholder and does not claim the source states
+    every region.'
+- schema_version: 1.1.0
+  id: fabric.base_dod.government.any.any
+  service: fabric
+  feature: base_dod
+  cloud: government
+  region: '*'
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  observed_on: '2026-10-08'
+  notes: 'Fabric in DoD is not described by the cited GCC High source. Representation: GCC, GCC High and
+    DoD are distinct environments. The contract has only cloud=government with usgov*/usdod* regions,
+    so this unverified row uses region ''*'' as a placeholder and does not claim the source states every
+    region.'
+- schema_version: 1.1.0
+  id: fabric.base.commercial.global.any
+  service: fabric
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://www.microsoft.com/en-us/microsoft-cloud/blog/us-government/2026/09/02/microsoft-fabric-in-gcc-high-building-the-data-foundation-for-ai/
+  observed_on: '2026-10-08'
+  notes: Cited sources describe GCC High; Commercial availability and regions are not captured in this
+    row.
