@@ -18,6 +18,7 @@ dev = [
   "pytest>=9.1,<10",
   "pip-audit>=2.10,<3",
   "azure-cosmos>=4.6,<5",
+  "azure-identity>=1.26,<2",
   "neurosphere-core",
   "neurosphere-contracts",
   "neurosphere-api",
