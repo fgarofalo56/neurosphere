@@ -186,3 +186,10 @@ idempotence test in `test_generate.py` skips with a reason; the other tests run.
   (released 2026-08-28, observed 2026-10-10).
 - Python `re` `$` semantics: https://docs.python.org/3/library/re.html (observed 2026-10-10).
 - PRP-01: `PRPs/active/PRP-01-contracts-and-schemas.md`.
+
+## Amendment note (2026-10-11)
+
+PRP-02 item 0 amended `CapabilityMatrixEntry` in place: added `id`; changed the `availability`
+and `ga_status` vocabularies (`deprecated` and `retired` dropped); made `authorization_scope`
+a citation string; and allowed region `*`. This is a deliberate v2-class change made in place
+because no consumer of the entry existed yet.
