@@ -1,15 +1,14 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
+  "id": "fabric.base.commercial.eastus2.any",
   "service": "fabric",
   "feature": "base",
   "cloud": "commercial",
   "region": "eastus2",
   "sku": null,
-  "availability": "limited",
-  "ga_status": "public_preview",
-  "authorization_scope": [
-    "unknown"
-  ],
+  "availability": "preview",
+  "ga_status": "preview",
+  "authorization_scope": "none_claimed",
   "source_url": "https://learn.microsoft.com/fabric/admin/region-availability",
   "observed_on": "2026-10-06",
   "notes": null

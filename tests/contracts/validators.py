@@ -949,16 +949,57 @@ def check_deployment_manifest(manifest: Doc) -> Problems:
     return problems
 
 
+def capability_row_id(entry: Doc) -> str | None:
+    """Derived row id: <service>.<feature>.<cloud>.<region>.<sku-or-any>, lowercased; any
+    stands for a null sku and for the * region. None when a component is not a string."""
+    service, feature = entry.get("service"), entry.get("feature")
+    cloud, region, sku = entry.get("cloud"), entry.get("region"), entry.get("sku")
+    if not (
+        isinstance(service, str)
+        and isinstance(feature, str)
+        and isinstance(cloud, str)
+        and isinstance(region, str)
+    ):
+        return None
+    if sku is None:
+        sku_part = "any"
+    elif isinstance(sku, str):
+        sku_part = re.sub(r"[^a-z0-9_-]+", "-", sku.lower()).strip("-") or "any"
+    else:
+        return None
+    region_part = "any" if region == "*" else region
+    return ".".join([service, feature, cloud, region_part, sku_part]).lower()
+
+
+def capability_region_covers(entry_cloud: str, entry_region: str, cloud: str, region: str) -> bool:
+    """Does a matrix row for (entry_cloud, entry_region) speak for (cloud, region)? The *
+    wildcard covers regions of its own cloud only: a government * never matches a
+    commercial region, and a commercial * never matches a government one."""
+    if entry_cloud != cloud:
+        return False
+    if entry_region != "*":
+        return entry_region == region
+    if region in ("global", "*"):
+        return False  # global is its own row; * covers named regions only
+    is_gov_region = region.startswith(("usgov", "usdod"))
+    return is_gov_region if cloud == "government" else not is_gov_region
+
+
 def check_capability_matrix(entries: Sequence[Doc], today: date | None = None) -> Problems:
-    """(service, feature, cloud, region, sku) is unique across a matrix; observed_on is not
-    in the future (UTC)."""
+    """(service, feature, cloud, region, sku) is unique across a matrix; id is unique and
+    equals the derived convention; observed_on is not in the future (UTC)."""
     today = today or datetime.now(UTC).date()
     keys = Counter(
         (e.get("service"), e.get("feature"), e.get("cloud"), e.get("region"), e.get("sku"))
         for e in entries
     )
     problems = [f"duplicate capability row {key}" for key, count in keys.items() if count > 1]
+    ids = Counter(e.get("id") for e in entries if isinstance(e.get("id"), str))
+    problems += [f"duplicate capability row id {i!r}" for i, count in ids.items() if count > 1]
     for e in entries:
+        derived = capability_row_id(e)
+        if isinstance(e.get("id"), str) and derived is not None and e["id"] != derived:
+            problems.append(f"capability row id {e['id']!r} must equal derived id {derived!r}")
         observed = _date(e.get("observed_on"))
         if observed is not None and observed > today:
             problems.append(f"observed_on {observed} is in the future (today {today})")

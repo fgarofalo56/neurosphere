@@ -234,7 +234,7 @@
         "keyword": "enum",
         "instance_path": "/availability"
       },
-      "why": "availability and ga_status vocabularies are disjoint"
+      "why": "ga is not an availability value"
     },
     {
       "schema": "../capability-matrix-entry.schema.json",
@@ -248,16 +248,6 @@
     },
     {
       "schema": "../capability-matrix-entry.schema.json",
-      "file": "capability-matrix-entry/invalid/authorization-scope-as-string.json",
-      "valid": false,
-      "expected_error": {
-        "keyword": "type",
-        "instance_path": "/authorization_scope"
-      },
-      "why": "authorization_scope is its own list field"
-    },
-    {
-      "schema": "../capability-matrix-entry.schema.json",
       "file": "capability-matrix-entry/invalid/missing-authorization-scope.json",
       "valid": false,
       "expected_error": {
@@ -265,16 +255,6 @@
         "instance_path": ""
       },
       "why": "all three fields are required"
-    },
-    {
-      "schema": "../capability-matrix-entry.schema.json",
-      "file": "capability-matrix-entry/invalid/unknown-mixed-with-scope.json",
-      "valid": false,
-      "expected_error": {
-        "keyword": "maxItems",
-        "instance_path": "/authorization_scope"
-      },
-      "why": "unknown/not_in_scope stand alone"
     },
     {
       "schema": "../capability-matrix-entry.schema.json",
@@ -315,6 +295,81 @@
         "instance_path": "/observed_on"
       },
       "why": "observed_on is a date"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/valid/government-wildcard-region-in-progress.json",
+      "valid": true
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/authorization-scope-as-list.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "type",
+        "instance_path": "/authorization_scope"
+      },
+      "why": "authorization_scope is one citation string, not a list of scopes"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/authorization-scope-empty.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "minLength",
+        "instance_path": "/authorization_scope"
+      },
+      "why": "a citation or the literal none_claimed is required"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/availability-old-limited.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/availability"
+      },
+      "why": "limited was replaced by preview/unverified"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/ga-status-old-public-preview.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/ga_status"
+      },
+      "why": "public_preview was replaced by preview"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/missing-id.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "required",
+        "instance_path": ""
+      },
+      "why": "the row id is required"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/id-with-uppercase.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/id"
+      },
+      "why": "ids are lowercase"
+    },
+    {
+      "schema": "../capability-matrix-entry.schema.json",
+      "file": "capability-matrix-entry/invalid/sku-wildcard.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/sku"
+      },
+      "why": "sku has no wildcard; use null"
     }
   ]
 }

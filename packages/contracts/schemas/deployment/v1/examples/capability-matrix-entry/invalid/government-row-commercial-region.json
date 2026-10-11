@@ -1,5 +1,6 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
+  "id": "azure_openai.model_gpt_4o.government.eastus.standard",
   "service": "azure_openai",
   "feature": "model_gpt_4o",
   "cloud": "government",
@@ -7,11 +8,7 @@
   "sku": "Standard",
   "availability": "available",
   "ga_status": "ga",
-  "authorization_scope": [
-    "fedramp_high",
-    "dod_il4",
-    "dod_il5"
-  ],
+  "authorization_scope": "FedRAMP High audit scope per Azure Government compliance scope document, 2026-09-21",
   "source_url": "https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government",
   "observed_on": "2026-10-06",
   "notes": "Example row for contract tests; not matrix data."
