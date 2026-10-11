@@ -543,11 +543,17 @@ name = "neurosphere-core"
 version = "0.0.0"
 source = { editable = "packages/core" }
 dependencies = [
+    { name = "neurosphere-contracts" },
     { name = "pydantic" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.14,<3" }]
+requires-dist = [
+    { name = "neurosphere-contracts", editable = "packages/contracts/python" },
+    { name = "pydantic", specifier = ">=2.14,<3" },
+    { name = "pyyaml", specifier = ">=6,<7" },
+]
 
 [[package]]
 name = "neurosphere-workers"
