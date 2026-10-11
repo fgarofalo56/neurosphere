@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 REPO = Path(__file__).resolve().parents[2]
 LIVE_LABEL = "live, Commercial Cosmos DB account (operator-approved)"
@@ -41,6 +42,15 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if not endpoint.startswith("https://"):
         print(f"ERROR: {ENDPOINT_ENV} must be an https:// endpoint.", file=sys.stderr)
+        return 2
+
+    host = (urlparse(endpoint).hostname or "").lower()
+    if host.endswith(".azure.us") or "usgovcloudapi" in host or "documents.azure.us" in host:
+        print(
+            f"ERROR: {ENDPOINT_ENV} is a Government endpoint; this script's evidence is labelled "
+            "Commercial and must not be run against Azure Government. No connection was attempted.",
+            file=sys.stderr,
+        )
         return 2
 
     sys.path.insert(0, str(REPO / "tests" / "load"))

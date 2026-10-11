@@ -48,7 +48,9 @@ def derive_row_id(entry: CapabilityMatrixEntry) -> str:
 
 
 def row_key(entry: CapabilityMatrixEntry) -> RowKey:
-    return (entry.service, entry.feature, entry.cloud, entry.region, entry.sku)
+    # SKUs compare case-insensitively, consistent with resolution which lowercases them.
+    sku = entry.sku.lower() if entry.sku is not None else None
+    return (entry.service, entry.feature, entry.cloud, entry.region, sku)
 
 
 def observed_date(entry: CapabilityMatrixEntry) -> date:

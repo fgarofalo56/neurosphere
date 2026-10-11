@@ -18,6 +18,8 @@ NINE = {
     "ai_search",
     "event_hubs",
     "resource_graph",
+    "aks",
+    "app_service",
 }
 CLAIMS = re.compile(
     r"neurosphere\s+(is|has|holds|received|obtained)|ato\s+(granted|issued)|"
@@ -43,7 +45,7 @@ def test_ids_unique(matrix: CapabilityMatrix) -> None:
     assert len(ids) == len(set(ids))
 
 
-def test_all_nine_services_have_rows(matrix: CapabilityMatrix) -> None:
+def test_all_eleven_services_have_rows(matrix: CapabilityMatrix) -> None:
     assert NINE <= matrix.services()
 
 
