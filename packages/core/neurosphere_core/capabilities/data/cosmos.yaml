@@ -1,0 +1,82 @@
+# Capability matrix rows for cosmos_db. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: cosmos_db.hierarchical_partition_keys.commercial.global.any
+  service: cosmos_db
+  feature: hierarchical_partition_keys
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys
+  observed_on: '2026-10-08'
+  notes: Up to 3 levels, new containers only, needs azure-cosmos >= 4.6 (page updated 2026-04-27). Regional
+    coverage not captured.
+- schema_version: 1.1.0
+  id: cosmos_db.hierarchical_partition_keys.government.global.any
+  service: cosmos_db
+  feature: hierarchical_partition_keys
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys
+  observed_on: '2026-10-08'
+  notes: Government support not stated.
+- schema_version: 1.1.0
+  id: cosmos_db.change_feed_all_versions_and_deletes.commercial.global.any
+  service: cosmos_db
+  feature: change_feed_all_versions_and_deletes
+  cloud: commercial
+  region: global
+  sku: null
+  availability: preview
+  ga_status: preview
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/cosmos-db/change-feed-modes
+  observed_on: '2026-10-08'
+  notes: All-versions-and-deletes mode is preview (page updated 2026-06-17). Regional coverage not captured.
+- schema_version: 1.1.0
+  id: cosmos_db.change_feed_all_versions_and_deletes.government.global.any
+  service: cosmos_db
+  feature: change_feed_all_versions_and_deletes
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/cosmos-db/change-feed-modes
+  observed_on: '2026-10-08'
+  notes: Government support not stated.
+- schema_version: 1.1.0
+  id: cosmos_db.base.government.any.any
+  service: cosmos_db
+  feature: base
+  cloud: government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  observed_on: '2026-10-11'
+  notes: Government endpoint is documents.azure.us per the Azure Government compare page; audit scope
+    and per-region availability not captured.
+- schema_version: 1.1.0
+  id: cosmos_db.base.commercial.global.any
+  service: cosmos_db
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys
+  observed_on: '2026-10-08'
+  notes: Commercial base availability not captured by the cited page.

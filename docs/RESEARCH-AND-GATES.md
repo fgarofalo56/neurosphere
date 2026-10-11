@@ -23,7 +23,7 @@ This is a targeted evidence register, not a completed exhaustive research audit.
 ## Gate register (OPEN until verified)
 | Gate | Owner | Status | Required evidence / blocked dependent work |
 |---|---|---|---|
-| G01 service/feature/region/SKU matrix | Platform + compliance | OPEN | Fabric/Synapse/Databricks, Cosmos, APIM, Search, model/runtime, Event Hubs profiles; dated first-party evidence and authorized integration tests before production profile selection. PRP-02 builds the matrix; PRP-08/PRP-11 live items supply integration evidence |
+| G01 service/feature/region/SKU matrix | Platform + compliance | OPEN | Fabric/Synapse/Databricks, Cosmos, APIM, Search, model/runtime, Event Hubs profiles; dated first-party evidence and authorized integration tests before production profile selection. NARROWED: dated documentation-derived rows exist in packages/core/neurosphere_core/capabilities/data/ (PRP-02). Still open: authorized integration tests (PRP-08, PRP-11) and all Government authorization questions |
 | G02 FedRAMP/DoD boundary and agency ATO | Customer security/authorizing official | OPEN | Actual feature-level scope/inheritance/responsibility and SSP review; blocks authorization/ATO marketing claims. PRP-20/PRP-23 |
 | G03 Graph partition/traversal benchmark | Backend owner | OPEN | Emulator evidence (PRP-02) exits Phase 0 as bounded feasibility; the live Commercial run is required before PRP-10 merges (decision D9) |
 | G04 Provider/API/license coverage | Connector owner | OPEN | Official APIs, scopes, granularity/freshness, consent and live contract results; blocks 'complete spend/agent discovery' claims. PRP-09 |

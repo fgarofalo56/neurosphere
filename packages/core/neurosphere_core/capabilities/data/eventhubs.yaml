@@ -1,0 +1,109 @@
+# Capability matrix rows for event_hubs. Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.commercial.global.premium
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: commercial
+  region: global
+  sku: Premium
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Data geo-replication GA on Premium and Dedicated only (page updated 2026-07-11). Page region
+    coverage not captured.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.government.global.premium
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: government
+  region: global
+  sku: Premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Government support not stated.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.commercial.global.dedicated
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: commercial
+  region: global
+  sku: Dedicated
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Data geo-replication GA on Premium and Dedicated only (page updated 2026-07-11). Page region
+    coverage not captured.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.government.global.dedicated
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: government
+  region: global
+  sku: Dedicated
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Government support not stated.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.commercial.global.basic
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: commercial
+  region: global
+  sku: Basic
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Data geo-replication is limited to Premium and Dedicated.
+- schema_version: 1.1.0
+  id: event_hubs.data_geo_replication.commercial.global.standard
+  service: event_hubs
+  feature: data_geo_replication
+  cloud: commercial
+  region: global
+  sku: Standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  observed_on: '2026-10-08'
+  notes: Data geo-replication is limited to Premium and Dedicated.
+- schema_version: 1.1.0
+  id: event_hubs.metadata_geo_dr.commercial.global.any
+  service: event_hubs
+  feature: metadata_geo_dr
+  cloud: commercial
+  region: global
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/event-hubs-geo-dr
+  observed_on: '2026-10-08'
+  notes: 'Separate from data geo-replication: copies metadata only, neither event payloads nor RBAC assignments
+    (page updated 2026-10-06). Tier coverage not captured.'
+- schema_version: 1.1.0
+  id: event_hubs.metadata_geo_dr.government.global.any
+  service: event_hubs
+  feature: metadata_geo_dr
+  cloud: government
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/event-hubs/event-hubs-geo-dr
+  observed_on: '2026-10-08'
+  notes: Government support not stated. Metadata only; neither payloads nor RBAC are copied.
