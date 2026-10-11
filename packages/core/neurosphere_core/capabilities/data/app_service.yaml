@@ -1,0 +1,31 @@
+# Capability matrix rows for app_service (hosting). Documentation-derived; each row cites its own source and observed date.
+# availability, ga_status and authorization_scope are independent. No row claims NeuroSphere or a dependency is authorized for an agency.
+- schema_version: 1.1.0
+  id: app_service.base.government.any.any
+  service: app_service
+  feature: base
+  cloud: government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: unverified
+  authorization_scope: 'Listed in Azure Government audit scope (FedRAMP High, DoD IL2/IL4/IL5WI/IL6) per https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope, 2026-09-21; audit-scope listing only, not an agency authorization'
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-11'
+  notes: 'Per-region and per-SKU availability comes from ''Products available by region'', which was not fetched.
+    Government regions are usgovarizona, usgovtexas and usgovvirginia (the page states the Government
+    authorizations pertain to those regions). Audit-scope tables last updated February 2026.'
+- schema_version: 1.1.0
+  id: app_service.base.commercial.global.any
+  service: app_service
+  feature: base
+  cloud: commercial
+  region: global
+  sku: null
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: 'Listed in Azure public audit scope (FedRAMP High, DoD IL2 for Azure public regions in the United States) per https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope, 2026-09-21; audit-scope listing only, not an agency authorization'
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  observed_on: '2026-10-11'
+  notes: 'Commercial regional availability is not verified; the audit-scope page lists the service but
+    not per-region availability, which was not fetched.'

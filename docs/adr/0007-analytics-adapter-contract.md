@@ -56,3 +56,4 @@ No `docs/evidence/G03/` file is relied on by this ADR. Gates G01 and G02 stay OP
 
 - `PRP.md` section 2, `docs/ARCHITECTURE.md`, `docs/adr/0004-contract-versioning.md`
 - `packages/core/neurosphere_core/capabilities/validate.py`
+- G03 evidence: not relied on (Cosmos-specific); see docs/evidence/G03/emulator-2026-10-11.md for the Cosmos benchmark relied on by ADR-0005.

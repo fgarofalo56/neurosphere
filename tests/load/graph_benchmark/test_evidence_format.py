@@ -155,3 +155,22 @@ def test_live_mode_may_carry_request_charge(tmp_path):
     j, m = write_evidence(result, tmp_path, "live, Commercial", when=date(2026, 10, 11))
     assert j.name.startswith("live-") and "request_charge" in j.read_text(encoding="utf-8")
     assert "Measured request charge" in m.read_text(encoding="utf-8")
+
+
+def test_time_budget_wording_states_deadline_semantics_and_reports_overrun(tmp_path):
+    result, _ = _run()
+    for cell in result.cells:
+        cell.latency["p95_ms"] = 10.0
+    _j, m = write_evidence(result, tmp_path, EMULATOR_LABEL, when=date(2026, 10, 11))
+    md = m.read_text(encoding="utf-8")
+    assert "time budgets" not in md
+    assert "checked between queries" in md
+    assert "overrun it by up to one query's latency" in md
+    assert "Time-budget overrun reported" not in md
+
+    timeout_ms = result.parameters["budget"]["timeout_ms"]
+    result.cells[0].latency["p95_ms"] = float(timeout_ms) + 44.0
+    _j, m = write_evidence(result, tmp_path, EMULATOR_LABEL, when=date(2026, 10, 11))
+    md = m.read_text(encoding="utf-8")
+    assert "Time-budget overrun reported" in md
+    assert f"{result.cells[0].workload} / {result.cells[0].variant}" in md

@@ -117,11 +117,29 @@ def render_markdown(payload: dict[str, Any]) -> str:
     ]
     lines += ["", "## Bounded-result correctness", ""]
     lines.append(
-        "All traversals stayed within the depth, fan-out, node, edge and time budgets and matched "
+        "All traversals stayed within the depth, fan-out, node and edge budgets and matched "
         "the reference traversal."
         if not violations
         else "Violations: " + json.dumps(violations)
     )
+    timeout_ms = par["budget"]["timeout_ms"]
+    lines += [
+        "",
+        f"The time budget (timeout_ms {timeout_ms}) is a deadline checked between queries, so a "
+        "traversal can overrun it by up to one query's latency.",
+    ]
+    overruns = [
+        f"{c['workload']} / {c['variant']}: p95 {c['latency']['p95_ms']} ms"
+        for c in payload["cells"]
+        if c["latency"]["p95_ms"] > timeout_ms
+    ]
+    if overruns:
+        lines += [
+            "",
+            f"Time-budget overrun reported (p95 above timeout_ms {timeout_ms}): "
+            + "; ".join(overruns)
+            + ".",
+        ]
     if payload["mode"] == "emulator":
         lines += ["", "## Not measured", ""]
         lines += [f"- {item}" for item in payload["unmeasured"]]

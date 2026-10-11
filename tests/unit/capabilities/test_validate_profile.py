@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 import pytest
 from neurosphere_core.capabilities import (
@@ -45,16 +46,41 @@ def test_government_supported_combination_passes_with_synthetic_hosting_rows() -
     assert all(r.error is None and r.cause is None for r in result.results)
 
 
-def test_real_government_fabric_is_supported_but_hosting_is_unverified() -> None:
+def test_real_government_fabric_and_aks_hosting_are_supported() -> None:
     result = validate_profile(gov_profile(), today=TODAY)
     fabric = by_cap(result, "analytics:fabric.base")
     assert fabric.status == "supported"
     assert fabric.row_id == "fabric.base.government.usgovvirginia.any"
     assert fabric.authorization_scope is not None
     hosting = by_cap(result, "hosting:aks.base")
-    assert hosting.status == "disabled"
-    assert hosting.cause == "unverified"
-    assert not result.supported
+    assert hosting.status == "supported"
+    assert any(w.startswith("ga_unverified:") for w in hosting.warnings)
+    assert result.supported
+
+
+def test_real_government_app_service_hosting_is_supported_with_citation_only() -> None:
+    result = validate_profile(gov_profile(hosting="appservice"), today=TODAY)
+    host = by_cap(result, "hosting:app_service.base")
+    assert host.status == "supported"
+    assert host.row_id == "app_service.base.government.any.any"
+    assert any(w.startswith("ga_unverified:") for w in host.warnings)
+    assert host.authorization_scope is not None
+    assert "not an agency authorization" in host.authorization_scope
+
+
+def test_real_commercial_hosting_stays_unverified_and_disabled() -> None:
+    cases: tuple[tuple[Literal["aks", "appservice"], str], ...] = (
+        ("aks", "aks"),
+        ("appservice", "app_service"),
+    )
+    for hosting, service in cases:
+        profile = DeploymentProfile(
+            cloud="commercial", regions=("eastus",), hosting=hosting, analytics="fabric"
+        )
+        host = by_cap(validate_profile(profile, today=TODAY), f"hosting:{service}.base")
+        assert host.status == "disabled"
+        assert host.cause == "unverified"
+        assert host.row_id == f"{service}.base.commercial.global.any"
 
 
 def test_real_government_foundry_agent_mcp_is_unverified_due_to_source_conflict() -> None:

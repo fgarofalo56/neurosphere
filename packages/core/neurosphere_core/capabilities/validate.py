@@ -21,8 +21,10 @@ Mapping of profile choices to matrix (service, feature) keys:
 * analytics ``fabric`` | ``synapse`` | ``databricks`` -> (<backend>, ``base``).
 * optional features are explicit (service, feature[, sku]) requests.
 
-The shipped matrix has no ``aks`` or ``app_service`` rows, so hosting choices resolve
-``unverified`` (disabled) until rows with sources are added; no rows are invented here.
+The shipped matrix has Government ``aks``/``app_service`` rows (``available``, ``ga_status``
+``unverified``, audit-scope citation only) and Commercial rows that are ``unverified``, so
+Government hosting resolves ``supported`` with a ``ga_unverified`` warning and Commercial
+hosting resolves ``unverified`` (disabled); no rows are invented here.
 
 Resolution rules:
 

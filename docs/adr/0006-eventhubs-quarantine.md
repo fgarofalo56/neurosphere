@@ -49,3 +49,4 @@ Matrix rows (`packages/core/neurosphere_core/capabilities/data/eventhubs.yaml`):
 - `infra/compose/eventhubs.config.json`
 - `PRP.md` section 2, `docs/ARCHITECTURE.md`
 - https://learn.microsoft.com/azure/event-hubs/overview-emulator
+- G03 evidence: not relied on (Cosmos-specific); see docs/evidence/G03/emulator-2026-10-11.md for the Cosmos benchmark relied on by ADR-0005.

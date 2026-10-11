@@ -20,8 +20,8 @@ def write(tmp_path: Path, name: str, rows: list[dict[str, Any]]) -> None:
 
 def test_shipped_matrix_loads() -> None:
     matrix = load_matrix(today=TODAY)
-    assert len(matrix) == 81
-    assert len(matrix.services()) == 9
+    assert len(matrix) == 85
+    assert len(matrix.services()) == 11
 
 
 @pytest.mark.parametrize("missing", ["source_url", "observed_on"])
@@ -85,4 +85,17 @@ def test_empty_directory_and_non_list_fail(tmp_path: Path) -> None:
         load_matrix(tmp_path, today=TODAY)
     (tmp_path / "a.yaml").write_text("key: value\n", encoding="utf-8")
     with pytest.raises(MatrixLoadError, match="list of rows"):
+        load_matrix(tmp_path, today=TODAY)
+
+
+def test_duplicate_key_differing_only_in_sku_case_fails(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "a.yaml",
+        [
+            raw_row(sku="Standard_D4s_v5"),
+            raw_row(sku="standard_d4s_v5"),
+        ],
+    )
+    with pytest.raises(MatrixLoadError, match="duplicate"):
         load_matrix(tmp_path, today=TODAY)
