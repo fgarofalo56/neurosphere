@@ -57,6 +57,16 @@ def test_real_government_fabric_is_supported_but_hosting_is_unverified() -> None
     assert not result.supported
 
 
+def test_real_government_foundry_agent_mcp_is_unverified_due_to_source_conflict() -> None:
+    request = FeatureRequest(service="foundry", feature="agent_mcp_servers")
+    profile = gov_profile(features=(request,))
+    result = validate_profile(profile, today=TODAY)
+    mcp = by_cap(result, "feature:foundry.agent_mcp_servers")
+    assert mcp.status == "disabled"
+    assert mcp.cause == "unverified"
+    assert mcp.row_id == "foundry.agent_mcp_servers.government.global.any"
+
+
 def test_unavailable_feature_returns_capability_unavailable_naming_row_and_source() -> None:
     profile = gov_profile(
         features=(FeatureRequest(service="fabric", feature="workspace_identity"),)

@@ -287,13 +287,12 @@
   cloud: government
   region: global
   sku: null
-  availability: available
+  availability: unverified
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
   observed_on: '2026-10-08'
-  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
-    means none stated.
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
 - schema_version: 1.1.0
   id: foundry.agent_ai_search_tool.government.global.any
   service: foundry
@@ -301,13 +300,12 @@
   cloud: government
   region: global
   sku: null
-  availability: available
+  availability: unverified
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
   observed_on: '2026-10-08'
-  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
-    means none stated.
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
 - schema_version: 1.1.0
   id: foundry.agent_mcp_servers.government.global.any
   service: foundry
@@ -315,13 +313,12 @@
   cloud: government
   region: global
   sku: null
-  availability: available
+  availability: unverified
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
   observed_on: '2026-10-08'
-  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
-    means none stated.
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
 - schema_version: 1.1.0
   id: foundry.agent_function_calling.government.global.any
   service: foundry
@@ -329,13 +326,12 @@
   cloud: government
   region: global
   sku: null
-  availability: available
+  availability: unverified
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
   observed_on: '2026-10-08'
-  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
-    means none stated.
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says available; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
 - schema_version: 1.1.0
   id: foundry.agent_workflows.government.global.any
   service: foundry
@@ -343,13 +339,12 @@
   cloud: government
   region: global
   sku: null
-  availability: preview
+  availability: unverified
   ga_status: preview
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
   observed_on: '2026-10-08'
-  notes: Foundry Agent Service in Government; page does not give a per-region table, so region 'global'
-    means none stated.
+  notes: 'CONFLICT, kept unverified. Sources: (1) feature-specific page https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government says preview; (2) Foundry region support https://learn.microsoft.com/azure/foundry/reference/region-support and (3) Government roadmap https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap conflict with it. No per-region table; region global means none stated. See conflict side-car rows.'
 - schema_version: 1.1.0
   id: foundry.agent_hosted_agents.government.global.any
   service: foundry
