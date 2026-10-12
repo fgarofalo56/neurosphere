@@ -1,6 +1,6 @@
 ---
 name: prp-05-api-worker-runtime-and-self-observability
-status: backlog
+status: active
 review: none
 created: 2026-10-08
 model: sonnet
