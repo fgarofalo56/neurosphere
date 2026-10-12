@@ -1,0 +1,24 @@
+# Dev image for the API. Build context is the REPO ROOT (uv workspace):
+#   docker build -f services/api/Dockerfile.dev .
+# No secrets are baked in; configuration arrives via environment at runtime.
+# Production images are PRP-13.
+FROM python:3.12-slim
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY packages ./packages
+COPY services ./services
+RUN uv sync --frozen --no-dev --package neurosphere-api
+
+RUN useradd --system --create-home --uid 10001 ns
+USER ns
+
+EXPOSE 8000
+CMD ["uvicorn", "--factory", "neurosphere_api.main:create", "--host", "0.0.0.0", "--port", "8000"]

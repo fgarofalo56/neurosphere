@@ -1,0 +1,15 @@
+# Keep the Docker build context small and free of local secrets.
+.git
+.venv
+.claude
+.env
+.env.*
+!.env.example
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+frontend
+temp
+docs
+PRPs

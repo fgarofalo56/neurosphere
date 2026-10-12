@@ -1,0 +1,73 @@
+{
+  "version": "Notebook/1.0",
+  "isLocked": false,
+  "items": [
+    {
+      "type": 1,
+      "name": "intro",
+      "content": { "json": "## NeuroSphere SLO planning targets\nAll targets are planning targets, to be measured. See docs/ops/slo.md." }
+    },
+    {
+      "type": 3,
+      "name": "api-duration-p95",
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "API request duration p95 (target to be measured)",
+        "query": "customMetrics | where name == 'ns.api.request.duration' | summarize p95 = percentile(value, 95) by bin(timestamp, 5m)",
+        "size": 0,
+        "queryType": 0,
+        "visualization": "timechart"
+      }
+    },
+    {
+      "type": 3,
+      "name": "api-errors",
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "API errors (availability target 99.9%, to be measured)",
+        "query": "customMetrics | where name == 'ns.api.request.errors' | summarize errors = sum(value) by bin(timestamp, 5m)",
+        "size": 0,
+        "queryType": 0,
+        "visualization": "timechart"
+      }
+    },
+    {
+      "type": 3,
+      "name": "dashboard-query-p95",
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Dashboard query duration p95 (<= 2 s target, to be measured)",
+        "query": "customMetrics | where name == 'ns.dashboard.query.duration' | summarize p95 = percentile(value, 95) by bin(timestamp, 5m)",
+        "size": 0,
+        "queryType": 0,
+        "visualization": "timechart"
+      }
+    },
+    {
+      "type": 3,
+      "name": "catalog-query-p95",
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Catalog query duration p95 (<= 500 ms target, to be measured)",
+        "query": "customMetrics | where name == 'ns.catalog.query.duration' | summarize p95 = percentile(value, 95) by bin(timestamp, 5m)",
+        "size": 0,
+        "queryType": 0,
+        "visualization": "timechart"
+      }
+    },
+    {
+      "type": 3,
+      "name": "map-freshness-p95",
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Map freshness lag p95 (<= 10 s target, to be measured)",
+        "query": "customMetrics | where name == 'ns.map.freshness.lag' | summarize p95 = percentile(value, 95) by bin(timestamp, 5m)",
+        "size": 0,
+        "queryType": 0,
+        "visualization": "timechart"
+      }
+    }
+  ],
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

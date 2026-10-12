@@ -7,6 +7,15 @@ dependencies = [
   "neurosphere-contracts",
   "pydantic>=2.14,<3",
   "pyyaml>=6,<7",
+  "pydantic-settings>=2.15,<3",
+  "azure-cosmos>=4.6,<5",
+  "azure-eventhub>=5.12,<6",
+  "azure-eventhub-checkpointstoreblob-aio>=1.2,<2",
+  "azure-storage-blob>=12,<13",
+  "azure-identity>=1.26,<2",
+  "azure-monitor-opentelemetry>=1.8,<2",
+  "opentelemetry-sdk>=1.30,<2",
+  "aiohttp>=3.9,<4",
 ]
 
 [tool.uv.sources]

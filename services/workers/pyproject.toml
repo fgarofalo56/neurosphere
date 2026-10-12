@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "neurosphere-core",
   "pydantic>=2.14,<3",
+  "aiohttp>=3.9,<4",
 ]
 
 [tool.uv.sources]
