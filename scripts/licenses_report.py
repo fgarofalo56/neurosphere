@@ -63,7 +63,12 @@ PERMISSIVE = {
 DEV_ONLY_OK = {"MPL-2.0"}
 
 # name -> reason. Only for non-permissive licences; never applies to UNKNOWN.
-ALLOWLIST: dict[str, str] = {}
+ALLOWLIST: dict[str, str] = {
+    "certifi": (
+        "MPL-2.0 is file-level copyleft; certifi is used unmodified as the CA bundle for "
+        "requests/azure-core/aiohttp TLS and is unavoidable in the Azure SDK path (PRP-05)"
+    ),
+}
 # glob patterns that always fail, whatever licence metadata says.
 DENYLIST: dict[str, str] = {
     "@cosmograph/*": "CC-BY-NC (non-commercial); forbidden by ADR-0002",
