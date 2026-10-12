@@ -1,0 +1,55 @@
+{
+  "title": "NeuroSphere SLO planning targets",
+  "uid": "ns-slo-planning",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["neurosphere", "slo"],
+  "time": { "from": "now-30d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "API request duration p95 (target to be measured)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate({\"ns.api.request.duration\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "API error ratio (availability target 99.9%, to be measured)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "refId": "A", "expr": "sum(rate({\"ns.api.request.errors\"}[5m])) / sum(rate({\"ns.api.request.duration\"}[5m]))" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Dashboard query duration p95 (<= 2 s target, to be measured)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate({\"ns.dashboard.query.duration\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Catalog query duration p95 (<= 500 ms target, to be measured)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate({\"ns.catalog.query.duration\"}[5m])))" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Map freshness lag p95 (<= 10 s target, to be measured)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate({\"ns.map.freshness.lag\"}[5m])))" }
+      ]
+    }
+  ]
+}

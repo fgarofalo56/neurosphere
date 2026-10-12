@@ -43,8 +43,15 @@ class RouterRegistry:
 
 RegisterHook = Callable[[RouterRegistry], None]
 
+
 # Module hooks, each ``def register(registry: RouterRegistry) -> None``. Immutable on purpose.
-REGISTERED: tuple[RegisterHook, ...] = ()
+def _register_health(registry: RouterRegistry) -> None:
+    from neurosphere_api.health import register  # local import avoids a circular import
+
+    register(registry)
+
+
+REGISTERED: tuple[RegisterHook, ...] = (_register_health,)
 
 
 def register_default_routers(registry: RouterRegistry) -> None:
