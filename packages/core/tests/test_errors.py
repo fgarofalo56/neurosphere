@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 from neurosphere_contracts.errors.v1.problem_details import ProblemDetails
@@ -91,7 +91,6 @@ def test_contract_rules_enforced_at_render() -> None:
 
 
 def test_rate_limited_requires_retry_after() -> None:
-    factory: Any = RateLimitedError  # deliberately called without its required argument
-    with pytest.raises(TypeError):
-        _ = factory()
+    with pytest.raises(TypeError):  # binding no arguments must fail: one is required
+        inspect.signature(RateLimitedError).bind()
     assert RateLimitedError(7).to_problem_details("c").retry_after_seconds == 7
