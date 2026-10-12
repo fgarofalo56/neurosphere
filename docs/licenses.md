@@ -14,7 +14,7 @@ None. No dependency needs an exception.
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 81 packages
+## Python (uv.lock) - 82 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -25,6 +25,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | attrs | 26.1.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-core | 1.41.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | azure-cosmos | 4.17.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| azure-eventhub | 5.15.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | azure-identity | 1.26.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |

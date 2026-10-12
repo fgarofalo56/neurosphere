@@ -3,7 +3,7 @@
     "NamespaceConfig": [
       {
         "Type": "EventHub",
-        "Name": "neurosphere-local",
+        "Name": "emulatorns1",
         "Entities": [
           {
             "Name": "telemetry",

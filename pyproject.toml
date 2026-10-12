@@ -18,6 +18,7 @@ dev = [
   "pytest>=9.1,<10",
   "pip-audit>=2.10,<3",
   "azure-cosmos>=4.6,<5",
+  "azure-eventhub>=5.12,<6",
   "azure-identity>=1.26,<2",
   "neurosphere-core",
   "neurosphere-contracts",
@@ -54,7 +55,7 @@ quote-style = "double"
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
-include = ["scripts", "tests", "packages", "services"]
+include = ["scripts", "tests", "packages", "services", "sandbox"]
 exclude = ["**/node_modules", "**/__pycache__", ".venv"]
 venvPath = "."
 venv = ".venv"
