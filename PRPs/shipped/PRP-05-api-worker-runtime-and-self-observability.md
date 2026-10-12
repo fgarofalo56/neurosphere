@@ -1,6 +1,6 @@
 ---
 name: prp-05-api-worker-runtime-and-self-observability
-status: active
+status: shipped
 review: none
 created: 2026-10-08
 model: sonnet
@@ -271,9 +271,19 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
+- Date: 2026-10-12
+- Merged commits: integrator a333c54; item merges d9c23aa (1), 08ba316 (2), 3df5211 (3), 5faba3c (4), b9d5d4d (6), 80e42cd (5), bbc51ac (7); licence follow-up 8c897cf. Branch `prp-05-api-worker-runtime`.
+- Evidence: `verify-gates.ps1 -Mode full` PASS 4/4 (1994 passed, 20 integration deselected). Integration against compose: clients + health 3 passed, compose 12 passed (api and workers healthy under `--profile app`, no orphans). `validate_planning.py` PASS. ruff and pyright clean.
 - Deviations from blueprint and why:
-- Descoped items:
-- Open gates / untested live items:
-- Follow-ups:
+  - 404/405/500 return a minimal RFC 9457 body with no `code`, and oversize requests return 422 `invalid_schema`: the PRP-01 `ProblemDetails.status` enum has no 404/405/413/500 and C13 forbids new names. A contract change in PRP-01 is needed to do better.
+  - `/healthz` on workers returns 200 with `status: draining` during shutdown (not 503) so a liveness probe does not restart a draining process.
+  - Health probes are plain httpx/TCP checks behind a `DependencyProbe` protocol, not the item 6 clients (item 5 ran before item 6 merged); swap in later.
+  - Blob host suffix table lives in `clients/factories.py` because `CloudProfile` has no blob suffix; move into the profile later.
+  - `IdentityScope` is a slotted immutable class wrapping the contract model, not a Pydantic model, so `model_validate`/`model_construct` cannot build it.
+  - Compose api service is on `[default, isolated]`: Docker cannot publish host ports from an `internal: true` network. Workers stay `isolated` only.
+  - Integrator commit also added `asyncio_mode = "auto"` to the root pytest config and test deps (pytest-asyncio, respx, httpx).
+  - certifi (MPL-2.0, runtime via Azure SDKs) added to the licence ALLOWLIST in `scripts/licenses_report.py` with a recorded reason, with owner sign-off; `docs/licenses.md` and the ADR-0002 appendix regenerated.
+  - Added `.dockerignore` (none existed).
+- Descoped items: none.
+- Open gates / untested live items: managed-identity access against real Cosmos and Event Hubs (Commercial and Government) has not run (fake credential only; identity-path unit test covers the Cosmos factory only); Government endpoints are unit-tested as strings only; Azure Monitor exporter path is not exercised; G12 emulator-vs-live deltas recorded here (no RU accounting, no auth enforcement, no range/composite/spatial indexes, Event Hubs SAS only) not closed; G07 SLO targets are stated as targets, measurement is PRP-21; Linux not run for the real-SIGTERM worker test (Windows only); CI not yet run (no push).
+- Follow-ups: PRP-01 contract change for 404/405/413/500 statuses; move blob suffixes into `CloudProfile`; swap health probes to clients; adjust Grafana queries to actual exported metric suffixes once an exporter exists; Pyright ignore comments in `redaction.py` are broad.
