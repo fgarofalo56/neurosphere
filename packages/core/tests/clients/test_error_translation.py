@@ -64,8 +64,12 @@ def test_auth_mapping() -> None:
 
 def test_translating_chains_original() -> None:
     original = CosmosHttpResponseError(status_code=412, message="etag")
-    with pytest.raises(StaleVersionError) as ei, translating():
+
+    def _fail() -> None:
         raise original
+
+    with pytest.raises(StaleVersionError) as ei, translating():
+        _fail()
     assert ei.value.__cause__ is original
 
 

@@ -8,7 +8,9 @@ from typing import Protocol, Self, TypeVar
 
 
 class _AsyncCloseable(Protocol):
-    async def close(self) -> None: ...
+    async def close(self) -> None:
+        """Release the underlying client."""
+        raise NotImplementedError
 
 
 T = TypeVar("T", bound=_AsyncCloseable)

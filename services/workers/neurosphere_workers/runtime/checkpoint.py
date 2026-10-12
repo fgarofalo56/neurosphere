@@ -16,11 +16,11 @@ class CheckpointStore(Protocol):
 
     async def get(self, partition_key: str) -> str | None:
         """Return the last committed checkpoint, or ``None`` if none exists."""
-        ...
+        raise NotImplementedError
 
     async def commit(self, partition_key: str, checkpoint: str) -> None:
         """Durably record ``checkpoint``; must not return before it is durable."""
-        ...
+        raise NotImplementedError
 
 
 class InMemoryCheckpointStore:

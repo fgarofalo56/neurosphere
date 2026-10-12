@@ -36,7 +36,9 @@ class DependencyProbe(Protocol):
 
     name: str
 
-    async def check(self) -> ReasonCode: ...
+    async def check(self) -> ReasonCode:
+        """Probe the dependency once and return its reason code."""
+        raise NotImplementedError
 
 
 def classify(exc: BaseException) -> ReasonCode:

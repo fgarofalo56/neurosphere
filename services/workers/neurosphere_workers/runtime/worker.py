@@ -10,6 +10,7 @@ prior value and the batch is redelivered.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import random
 from abc import ABC, abstractmethod
@@ -125,10 +126,8 @@ class WorkerRunner:
             )
 
     async def _idle(self) -> None:
-        try:
+        with contextlib.suppress(TimeoutError):  # idle timeout elapsing is the normal case
             await asyncio.wait_for(self._shutdown.wait(), timeout=self._idle_seconds)
-        except TimeoutError:
-            pass
 
 
 class IdleWorker(Worker):

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from neurosphere_contracts.errors.v1.problem_details import ProblemDetails
@@ -83,13 +84,14 @@ def test_contract_rules_enforced_at_render() -> None:
         CapabilityUnavailableError("Not Snake Case").to_problem_details("c")
     # retry_after_seconds forbidden on non-retryable codes
     with pytest.raises(ValueError, match="retry_after_seconds"):
-        ForbiddenError(retry_after_seconds=3)
+        _ = ForbiddenError(retry_after_seconds=3)
     # bad correlation id
     with pytest.raises(ValidationError):
         UnauthorizedError().to_problem_details("bad id with spaces")
 
 
 def test_rate_limited_requires_retry_after() -> None:
+    factory: Any = RateLimitedError  # deliberately called without its required argument
     with pytest.raises(TypeError):
-        RateLimitedError()  # type: ignore[call-arg]
+        _ = factory()
     assert RateLimitedError(7).to_problem_details("c").retry_after_seconds == 7
