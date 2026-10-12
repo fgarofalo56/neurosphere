@@ -1,6 +1,6 @@
 ---
 name: prp-04-frontend-shell-design-system-auth
-status: active
+status: shipped
 review: none
 created: 2026-10-08
 model: sonnet
@@ -250,9 +250,16 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
+- Date: 2026-10-12
+- Merged commits: PR #11 (branch `prp-04-frontend-shell`): dependency/script integrator commit, items 1-6, provider and `main.tsx` wiring, licence register regeneration, CI Playwright step.
 - Deviations from blueprint and why:
-- Descoped items:
-- Open gates / untested live items:
-- Follow-ups:
+  - Integrator (not a lane) wired `Providers`, `main.tsx`, a `useNavItems` hook seam and an `authInstance` e2e seam, since those cross lane boundaries.
+  - e2e sign-in uses a stub MSAL instance (`frontend/tests/e2e-support/stubMsal.ts`) loaded only when `MODE === "e2e"`; verified absent from the production bundle.
+  - Node-type icons are inline SVG: `@fluentui/react-icons` is not a direct dependency.
+  - Nav mapping: each role shows only its own workspace (Admin does not reveal the others).
+  - Axe found a WCAG 2.2 target-size failure on nav links; fixed with a minimum 24px target.
+  - `pnpm-workspace.yaml` gained `allowBuilds: msw: false`; `.github/workflows/ci.yml` gained Playwright steps (a file outside the declared ownership, added with user approval).
+  - Package filter name is `@neurosphere/frontend`, not `frontend`.
+- Descoped items: none.
+- Open gates / untested live items: real Entra sign-in on Commercial and Government tenants has not run (Government authority is unit-tested only); G09 theme/brand review completes in PRP-24; `tests/` is type-checked only via the `main.tsx` import (shared tsconfig includes `src` only).
+- Follow-ups: confirm `PagedResponse<T>` shape against PRP-05 list responses; replace the placeholder workspace probe path `/api/v1/workspaces/<persona>` when PRP-06 defines real endpoints; consider code-splitting (bundle 741 kB raw / 211 kB gzip); delete leftover `.claude/worktrees/agent-*` folders (Windows long paths).
