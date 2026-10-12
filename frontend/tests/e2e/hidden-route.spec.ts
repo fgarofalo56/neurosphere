@@ -11,5 +11,5 @@ test("hidden workspace URL still hits the API, gets 403 and shows the forbidden 
   const body = (await api.json()) as { code: string };
   expect(body.code).toBe("forbidden");
 
-  await expect(page.getByText(/forbidden|not permitted|do not have access/i).first()).toBeVisible();
+  await expect(page.getByTestId("forbidden-state")).toBeVisible();
 });

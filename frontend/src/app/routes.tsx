@@ -52,7 +52,16 @@ function makeLayout(
           <ul>
             {navItems.map((item) => (
               <li key={item.to}>
-                <NavLink to={item.to} end={item.to === "/"}>
+                <NavLink
+                  to={item.to}
+                  end={item.to === "/"}
+                  style={{
+                    display: "inline-block",
+                    minHeight: 24,
+                    minWidth: 24,
+                    padding: "4px 8px",
+                  }}
+                >
                   {item.label}
                 </NavLink>
               </li>
