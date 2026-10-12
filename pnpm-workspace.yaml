@@ -2,3 +2,5 @@ packages:
   - "frontend"
   - "packages/contracts/ts"
   - "connectors/sdk-ts"
+allowBuilds:
+  msw: false

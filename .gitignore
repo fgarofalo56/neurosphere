@@ -54,3 +54,5 @@ Thumbs.db
 # --- Scratch (never committed) ---
 temp/
 requirements-audit.txt
+frontend/test-results/
+frontend/playwright-report/

@@ -77,6 +77,12 @@ jobs:
       - name: Test
         if: steps.detect.outputs.present == 'true'
         run: pnpm test
+      - name: Install Playwright browser
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm --filter @neurosphere/frontend exec playwright install --with-deps chromium
+      - name: E2E (mock API, stubbed sign-in)
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm --filter @neurosphere/frontend test:e2e
       - name: Audit
         if: steps.detect.outputs.present == 'true'
         run: pnpm audit --audit-level high
