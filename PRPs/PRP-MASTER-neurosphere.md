@@ -35,7 +35,7 @@ Shipped 5 · Active 1 · Backlog 22 of 28. **Next ready: PRP-06 identity-authz-a
 | [PRP-01](shipped/PRP-01-contracts-and-schemas.md) contracts-and-schemas | shipped | W1 | PRP-00 | done | opus | required |  |
 | [PRP-02](shipped/PRP-02-capability-matrix-and-feasibility-benchmark.md) capability-matrix-and-feasibility-benchmark | shipped | W2 | PRP-01 | done | sonnet | required |  |
 | [PRP-03](shipped/PRP-03-local-dev-environment-and-sandbox-generator.md) local-dev-environment-and-sandbox-generator | shipped | W2 | PRP-01 | done | sonnet | none |  |
-| [PRP-04](active/PRP-04-frontend-shell-design-system-auth.md) frontend-shell-design-system-auth | active | W2 | PRP-01 | in progress | sonnet | none | frontmatter says `backlog`, fix it |
+| [PRP-04](active/PRP-04-frontend-shell-design-system-auth.md) frontend-shell-design-system-auth | active | W2 | PRP-01 | in progress | sonnet | none |  |
 | [PRP-05](shipped/PRP-05-api-worker-runtime-and-self-observability.md) api-worker-runtime-and-self-observability | shipped | W3 | PRP-01, PRP-03 | done | sonnet | none |  |
 | [PRP-06](backlog/PRP-06-identity-authz-and-audit.md) identity-authz-and-audit | backlog | W4 | PRP-05 | **yes** | opus | required | START HERE |
 | [PRP-07](backlog/PRP-07-telemetry-ingestion-and-cost-ledger.md) telemetry-ingestion-and-cost-ledger | backlog | W4 | PRP-01, PRP-05 | **yes** | sonnet | required |  |

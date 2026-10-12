@@ -1,6 +1,6 @@
 ---
 name: prp-04-frontend-shell-design-system-auth
-status: backlog
+status: active
 review: none
 created: 2026-10-08
 model: sonnet
