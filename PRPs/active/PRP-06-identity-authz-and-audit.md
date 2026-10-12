@@ -1,6 +1,6 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: backlog
+status: active
 review: required
 created: 2026-10-08
 model: opus
