@@ -238,14 +238,30 @@ only when the package is dev-only (hypothesis, for example).
 | wrapt | 2.5.0 | BSD-2-Clause | https://pypi.org/project/wrapt/ | runtime; no EOL published locally; Dependabot tracks releases |
 | yarl | 1.25.1 | Apache-2.0 | https://pypi.org/project/yarl/ | runtime; no EOL published locally; Dependabot tracks releases |
 
-#### npm (pnpm-lock.yaml): 273 packages
+#### npm (pnpm-lock.yaml): 399 packages
 
 | Component | Pin | Licence | Source | Note |
 |---|---|---|---|---|
+| @adobe/css-tools | 4.5.0 | MIT | https://www.npmjs.com/package/@adobe/css-tools | dev-only; no EOL published locally; Dependabot tracks releases |
 | @apidevtools/json-schema-ref-parser | 11.9.3 | MIT | https://www.npmjs.com/package/@apidevtools/json-schema-ref-parser | dev-only; no EOL published locally; Dependabot tracks releases |
+| @asamuzakjp/css-color | 7.1.5 | MIT | https://www.npmjs.com/package/@asamuzakjp/css-color | dev-only; no EOL published locally; Dependabot tracks releases |
+| @asamuzakjp/dom-selector | 9.2.4 | MIT | https://www.npmjs.com/package/@asamuzakjp/dom-selector | dev-only; no EOL published locally; Dependabot tracks releases |
+| @axe-core/playwright | 4.13.0 | MPL-2.0 | https://www.npmjs.com/package/@axe-core/playwright | dev-only; no EOL published locally; Dependabot tracks releases |
+| @azure/msal-browser | 5.25.0 | MIT | https://www.npmjs.com/package/@azure/msal-browser | runtime; no EOL published locally; Dependabot tracks releases |
+| @azure/msal-common | 16.14.2 | MIT | https://www.npmjs.com/package/@azure/msal-common | runtime; no EOL published locally; Dependabot tracks releases |
+| @azure/msal-react | 5.7.2 | MIT | https://www.npmjs.com/package/@azure/msal-react | runtime; no EOL published locally; Dependabot tracks releases |
+| @babel/code-frame | 7.29.7 | MIT | https://www.npmjs.com/package/@babel/code-frame | dev-only; no EOL published locally; Dependabot tracks releases |
+| @babel/helper-validator-identifier | 7.29.7 | MIT | https://www.npmjs.com/package/@babel/helper-validator-identifier | dev-only; no EOL published locally; Dependabot tracks releases |
 | @babel/runtime | 7.29.10 | MIT | https://www.npmjs.com/package/@babel/runtime | runtime; no EOL published locally; Dependabot tracks releases |
+| @bramus/specificity | 2.4.3 | MIT | https://www.npmjs.com/package/@bramus/specificity | dev-only; no EOL published locally; Dependabot tracks releases |
 | @cacheable/memory | 2.2.0 | MIT | https://www.npmjs.com/package/@cacheable/memory | dev-only; no EOL published locally; Dependabot tracks releases |
 | @cacheable/utils | 2.5.0 | MIT | https://www.npmjs.com/package/@cacheable/utils | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/color-helpers | 6.1.2 | MIT-0 | https://www.npmjs.com/package/@csstools/color-helpers | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/css-calc | 3.4.3 | MIT | https://www.npmjs.com/package/@csstools/css-calc | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/css-color-parser | 4.2.6 | MIT | https://www.npmjs.com/package/@csstools/css-color-parser | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/css-parser-algorithms | 4.0.2 | MIT | https://www.npmjs.com/package/@csstools/css-parser-algorithms | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/css-syntax-patches-for-csstree | 1.1.15 | MIT-0 | https://www.npmjs.com/package/@csstools/css-syntax-patches-for-csstree | dev-only; no EOL published locally; Dependabot tracks releases |
+| @csstools/css-tokenizer | 4.0.2 | MIT | https://www.npmjs.com/package/@csstools/css-tokenizer | dev-only; no EOL published locally; Dependabot tracks releases |
 | @emotion/hash | 0.9.2 | MIT | https://www.npmjs.com/package/@emotion/hash | runtime; 0.x: minor releases may break; no support window recorded |
 | @eslint-community/eslint-utils | 4.10.1 | MIT | https://www.npmjs.com/package/@eslint-community/eslint-utils | dev-only; no EOL published locally; Dependabot tracks releases |
 | @eslint-community/regexpp | 4.12.2 | MIT | https://www.npmjs.com/package/@eslint-community/regexpp | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -255,6 +271,7 @@ only when the package is dev-only (hypothesis, for example).
 | @eslint/js | 10.0.1 | MIT | https://www.npmjs.com/package/@eslint/js | dev-only; no EOL published locally; Dependabot tracks releases |
 | @eslint/object-schema | 3.0.5 | Apache-2.0 | https://www.npmjs.com/package/@eslint/object-schema | dev-only; no EOL published locally; Dependabot tracks releases |
 | @eslint/plugin-kit | 0.7.3 | Apache-2.0 | https://www.npmjs.com/package/@eslint/plugin-kit | dev-only; 0.x: minor releases may break; no support window recorded |
+| @exodus/bytes | 1.16.0 | MIT | https://www.npmjs.com/package/@exodus/bytes | dev-only; no EOL published locally; Dependabot tracks releases |
 | @floating-ui/core | 1.8.0 | MIT | https://www.npmjs.com/package/@floating-ui/core | runtime; no EOL published locally; Dependabot tracks releases |
 | @floating-ui/devtools | 0.2.3 | MIT | https://www.npmjs.com/package/@floating-ui/devtools | runtime; 0.x: minor releases may break; no support window recorded |
 | @floating-ui/dom | 1.8.0 | MIT | https://www.npmjs.com/package/@floating-ui/dom | runtime; no EOL published locally; Dependabot tracks releases |
@@ -335,13 +352,25 @@ only when the package is dev-only (hypothesis, for example).
 | @humanfs/types | 0.15.0 | Apache-2.0 | https://www.npmjs.com/package/@humanfs/types | dev-only; 0.x: minor releases may break; no support window recorded |
 | @humanwhocodes/module-importer | 1.0.1 | Apache-2.0 | https://www.npmjs.com/package/@humanwhocodes/module-importer | dev-only; no EOL published locally; Dependabot tracks releases |
 | @humanwhocodes/retry | 0.4.3 | Apache-2.0 | https://www.npmjs.com/package/@humanwhocodes/retry | dev-only; 0.x: minor releases may break; no support window recorded |
+| @inquirer/ansi | 2.0.9 | MIT | https://www.npmjs.com/package/@inquirer/ansi | dev-only; no EOL published locally; Dependabot tracks releases |
+| @inquirer/confirm | 6.3.3 | MIT | https://www.npmjs.com/package/@inquirer/confirm | dev-only; no EOL published locally; Dependabot tracks releases |
+| @inquirer/core | 12.0.4 | MIT | https://www.npmjs.com/package/@inquirer/core | dev-only; no EOL published locally; Dependabot tracks releases |
+| @inquirer/figures | 2.0.9 | MIT | https://www.npmjs.com/package/@inquirer/figures | dev-only; no EOL published locally; Dependabot tracks releases |
+| @inquirer/type | 4.2.0 | MIT | https://www.npmjs.com/package/@inquirer/type | dev-only; no EOL published locally; Dependabot tracks releases |
 | @jridgewell/resolve-uri | 3.1.2 | MIT | https://www.npmjs.com/package/@jridgewell/resolve-uri | dev-only; no EOL published locally; Dependabot tracks releases |
 | @jridgewell/sourcemap-codec | 1.6.0 | MIT | https://www.npmjs.com/package/@jridgewell/sourcemap-codec | dev-only; no EOL published locally; Dependabot tracks releases |
 | @jridgewell/trace-mapping | 0.3.31 | MIT | https://www.npmjs.com/package/@jridgewell/trace-mapping | dev-only; 0.x: minor releases may break; no support window recorded |
 | @jsdevtools/ono | 7.1.3 | MIT | https://www.npmjs.com/package/@jsdevtools/ono | dev-only; no EOL published locally; Dependabot tracks releases |
 | @keyv/bigmap | 1.3.1 | MIT | https://www.npmjs.com/package/@keyv/bigmap | dev-only; no EOL published locally; Dependabot tracks releases |
 | @keyv/serialize | 1.1.1 | MIT | https://www.npmjs.com/package/@keyv/serialize | dev-only; no EOL published locally; Dependabot tracks releases |
+| @mswjs/interceptors | 0.41.9 | MIT | https://www.npmjs.com/package/@mswjs/interceptors | dev-only; 0.x: minor releases may break; no support window recorded |
+| @open-draft/deferred-promise | 2.2.0 | MIT | https://www.npmjs.com/package/@open-draft/deferred-promise | dev-only; no EOL published locally; Dependabot tracks releases |
+| @open-draft/deferred-promise | 3.0.0 | MIT | https://www.npmjs.com/package/@open-draft/deferred-promise | dev-only; no EOL published locally; Dependabot tracks releases |
+| @open-draft/logger | 0.3.0 | MIT | https://www.npmjs.com/package/@open-draft/logger | dev-only; 0.x: minor releases may break; no support window recorded |
+| @open-draft/until | 2.1.0 | MIT | https://www.npmjs.com/package/@open-draft/until | dev-only; no EOL published locally; Dependabot tracks releases |
 | @oxc-project/types | 0.153.0 | MIT | https://www.npmjs.com/package/@oxc-project/types | dev-only; 0.x: minor releases may break; no support window recorded |
+| @playwright/test | 1.64.0 | Apache-2.0 | https://www.npmjs.com/package/@playwright/test | dev-only; no EOL published locally; Dependabot tracks releases |
+| @remix-run/route-pattern | 0.22.1 | MIT | https://www.npmjs.com/package/@remix-run/route-pattern | runtime; 0.x: minor releases may break; no support window recorded |
 | @rolldown/binding-android-arm-eabi | 1.2.13 | MIT | https://www.npmjs.com/package/@rolldown/binding-android-arm-eabi | dev-only; no EOL published locally; Dependabot tracks releases |
 | @rolldown/binding-android-arm64 | 1.2.13 | MIT | https://www.npmjs.com/package/@rolldown/binding-android-arm64 | dev-only; no EOL published locally; Dependabot tracks releases |
 | @rolldown/binding-darwin-arm64 | 1.2.13 | MIT | https://www.npmjs.com/package/@rolldown/binding-darwin-arm64 | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -360,14 +389,24 @@ only when the package is dev-only (hypothesis, for example).
 | @rolldown/pluginutils | 1.0.1 | MIT | https://www.npmjs.com/package/@rolldown/pluginutils | dev-only; no EOL published locally; Dependabot tracks releases |
 | @standard-schema/spec | 1.1.0 | MIT | https://www.npmjs.com/package/@standard-schema/spec | dev-only; no EOL published locally; Dependabot tracks releases |
 | @swc/helpers | 0.5.23 | Apache-2.0 | https://www.npmjs.com/package/@swc/helpers | runtime; 0.x: minor releases may break; no support window recorded |
+| @tanstack/query-core | 5.104.1 | MIT | https://www.npmjs.com/package/@tanstack/query-core | runtime; no EOL published locally; Dependabot tracks releases |
+| @tanstack/react-query | 5.104.1 | MIT | https://www.npmjs.com/package/@tanstack/react-query | runtime; no EOL published locally; Dependabot tracks releases |
+| @testing-library/dom | 10.4.2 | MIT | https://www.npmjs.com/package/@testing-library/dom | dev-only; no EOL published locally; Dependabot tracks releases |
+| @testing-library/jest-dom | 7.0.1 | MIT | https://www.npmjs.com/package/@testing-library/jest-dom | dev-only; no EOL published locally; Dependabot tracks releases |
+| @testing-library/react | 16.3.3 | MIT | https://www.npmjs.com/package/@testing-library/react | dev-only; no EOL published locally; Dependabot tracks releases |
+| @testing-library/user-event | 14.6.7 | MIT | https://www.npmjs.com/package/@testing-library/user-event | dev-only; no EOL published locally; Dependabot tracks releases |
+| @types/aria-query | 5.0.4 | MIT | https://www.npmjs.com/package/@types/aria-query | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/chai | 5.2.3 | MIT | https://www.npmjs.com/package/@types/chai | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/deep-eql | 4.0.2 | MIT | https://www.npmjs.com/package/@types/deep-eql | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/esrecurse | 4.3.1 | MIT | https://www.npmjs.com/package/@types/esrecurse | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/estree | 1.0.9 | MIT | https://www.npmjs.com/package/@types/estree | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/json-schema | 7.0.15 | MIT | https://www.npmjs.com/package/@types/json-schema | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/lodash | 4.17.26 | MIT | https://www.npmjs.com/package/@types/lodash | dev-only; no EOL published locally; Dependabot tracks releases |
+| @types/node | 26.6.5 | MIT | https://www.npmjs.com/package/@types/node | dev-only; no EOL published locally; Dependabot tracks releases |
 | @types/react | 19.3.0 | MIT | https://www.npmjs.com/package/@types/react | runtime; no EOL published locally; Dependabot tracks releases |
 | @types/react-dom | 19.3.0 | MIT | https://www.npmjs.com/package/@types/react-dom | dev-only; no EOL published locally; Dependabot tracks releases |
+| @types/set-cookie-parser | 2.4.10 | MIT | https://www.npmjs.com/package/@types/set-cookie-parser | dev-only; no EOL published locally; Dependabot tracks releases |
+| @types/statuses | 2.0.6 | MIT | https://www.npmjs.com/package/@types/statuses | dev-only; no EOL published locally; Dependabot tracks releases |
 | @typescript-eslint/eslint-plugin | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/eslint-plugin | dev-only; no EOL published locally; Dependabot tracks releases |
 | @typescript-eslint/parser | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/parser | dev-only; no EOL published locally; Dependabot tracks releases |
 | @typescript-eslint/project-service | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/project-service | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -378,6 +417,7 @@ only when the package is dev-only (hypothesis, for example).
 | @typescript-eslint/typescript-estree | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/typescript-estree | dev-only; no EOL published locally; Dependabot tracks releases |
 | @typescript-eslint/utils | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/utils | dev-only; no EOL published locally; Dependabot tracks releases |
 | @typescript-eslint/visitor-keys | 8.71.1 | MIT | https://www.npmjs.com/package/@typescript-eslint/visitor-keys | dev-only; no EOL published locally; Dependabot tracks releases |
+| @vitejs/plugin-react | 6.1.2 | MIT | https://www.npmjs.com/package/@vitejs/plugin-react | dev-only; no EOL published locally; Dependabot tracks releases |
 | @vitest/expect | 4.1.11 | MIT | https://www.npmjs.com/package/@vitest/expect | dev-only; no EOL published locally; Dependabot tracks releases |
 | @vitest/mocker | 4.1.11 | MIT | https://www.npmjs.com/package/@vitest/mocker | dev-only; no EOL published locally; Dependabot tracks releases |
 | @vitest/mocker | 5.0.2 | MIT | https://www.npmjs.com/package/@vitest/mocker | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -390,22 +430,47 @@ only when the package is dev-only (hypothesis, for example).
 | acorn | 8.19.0 | MIT | https://www.npmjs.com/package/acorn | dev-only; no EOL published locally; Dependabot tracks releases |
 | acorn-jsx | 5.3.2 | MIT | https://www.npmjs.com/package/acorn-jsx | dev-only; no EOL published locally; Dependabot tracks releases |
 | ajv | 6.15.0 | MIT | https://www.npmjs.com/package/ajv | dev-only; no EOL published locally; Dependabot tracks releases |
+| ansi-regex | 5.0.1 | MIT | https://www.npmjs.com/package/ansi-regex | dev-only; no EOL published locally; Dependabot tracks releases |
+| ansi-styles | 4.3.0 | MIT | https://www.npmjs.com/package/ansi-styles | dev-only; no EOL published locally; Dependabot tracks releases |
+| ansi-styles | 5.2.0 | MIT | https://www.npmjs.com/package/ansi-styles | dev-only; no EOL published locally; Dependabot tracks releases |
 | argparse | 2.0.1 | Python-2.0 | https://www.npmjs.com/package/argparse | dev-only; no EOL published locally; Dependabot tracks releases |
+| aria-query | 5.3.0 | Apache-2.0 | https://www.npmjs.com/package/aria-query | dev-only; no EOL published locally; Dependabot tracks releases |
+| aria-query | 5.3.2 | Apache-2.0 | https://www.npmjs.com/package/aria-query | dev-only; no EOL published locally; Dependabot tracks releases |
 | assertion-error | 2.0.1 | MIT | https://www.npmjs.com/package/assertion-error | dev-only; no EOL published locally; Dependabot tracks releases |
+| axe-core | 4.13.0 | MPL-2.0 | https://www.npmjs.com/package/axe-core | dev-only; no EOL published locally; Dependabot tracks releases |
+| axe-core | 4.14.0 | MPL-2.0 | https://www.npmjs.com/package/axe-core | dev-only; no EOL published locally; Dependabot tracks releases |
 | balanced-match | 4.0.4 | MIT | https://www.npmjs.com/package/balanced-match | dev-only; no EOL published locally; Dependabot tracks releases |
+| bidi-js | 1.1.0 | MIT | https://www.npmjs.com/package/bidi-js | dev-only; no EOL published locally; Dependabot tracks releases |
 | brace-expansion | 5.0.12 | MIT | https://www.npmjs.com/package/brace-expansion | dev-only; no EOL published locally; Dependabot tracks releases |
 | cacheable | 2.5.0 | MIT | https://www.npmjs.com/package/cacheable | dev-only; no EOL published locally; Dependabot tracks releases |
 | chai | 6.3.0 | MIT | https://www.npmjs.com/package/chai | dev-only; no EOL published locally; Dependabot tracks releases |
+| chalk | 5.6.2 | MIT | https://www.npmjs.com/package/chalk | dev-only; no EOL published locally; Dependabot tracks releases |
+| cli-width | 4.1.0 | ISC | https://www.npmjs.com/package/cli-width | dev-only; no EOL published locally; Dependabot tracks releases |
+| cliui | 8.0.1 | ISC | https://www.npmjs.com/package/cliui | dev-only; no EOL published locally; Dependabot tracks releases |
+| color-convert | 2.0.1 | MIT | https://www.npmjs.com/package/color-convert | dev-only; no EOL published locally; Dependabot tracks releases |
+| color-name | 1.1.4 | MIT | https://www.npmjs.com/package/color-name | dev-only; no EOL published locally; Dependabot tracks releases |
 | convert-source-map | 2.0.0 | MIT | https://www.npmjs.com/package/convert-source-map | dev-only; no EOL published locally; Dependabot tracks releases |
+| cookie | 1.1.1 | MIT | https://www.npmjs.com/package/cookie | dev-only; no EOL published locally; Dependabot tracks releases |
+| cookie-es | 3.1.1 | MIT | https://www.npmjs.com/package/cookie-es | runtime; no EOL published locally; Dependabot tracks releases |
 | cross-spawn | 7.0.6 | MIT | https://www.npmjs.com/package/cross-spawn | dev-only; no EOL published locally; Dependabot tracks releases |
+| css-tree | 3.2.1 | MIT | https://www.npmjs.com/package/css-tree | dev-only; no EOL published locally; Dependabot tracks releases |
+| css.escape | 1.5.1 | MIT | https://www.npmjs.com/package/css.escape | dev-only; no EOL published locally; Dependabot tracks releases |
 | csstype | 3.2.3 | MIT | https://www.npmjs.com/package/csstype | runtime; no EOL published locally; Dependabot tracks releases |
+| data-urls | 8.0.0 | MIT | https://www.npmjs.com/package/data-urls | dev-only; no EOL published locally; Dependabot tracks releases |
 | debug | 4.4.3 | MIT | https://www.npmjs.com/package/debug | dev-only; no EOL published locally; Dependabot tracks releases |
+| decimal.js | 10.6.0 | MIT | https://www.npmjs.com/package/decimal.js | dev-only; no EOL published locally; Dependabot tracks releases |
 | deep-is | 0.1.4 | MIT | https://www.npmjs.com/package/deep-is | dev-only; 0.x: minor releases may break; no support window recorded |
+| dequal | 2.0.3 | MIT | https://www.npmjs.com/package/dequal | dev-only; no EOL published locally; Dependabot tracks releases |
 | detect-libc | 2.1.2 | Apache-2.0 | https://www.npmjs.com/package/detect-libc | dev-only; no EOL published locally; Dependabot tracks releases |
+| dom-accessibility-api | 0.5.16 | MIT | https://www.npmjs.com/package/dom-accessibility-api | dev-only; 0.x: minor releases may break; no support window recorded |
+| dom-accessibility-api | 0.6.3 | MIT | https://www.npmjs.com/package/dom-accessibility-api | dev-only; 0.x: minor releases may break; no support window recorded |
 | embla-carousel | 8.6.0 | MIT | https://www.npmjs.com/package/embla-carousel | runtime; no EOL published locally; Dependabot tracks releases |
 | embla-carousel-autoplay | 8.6.0 | MIT | https://www.npmjs.com/package/embla-carousel-autoplay | runtime; no EOL published locally; Dependabot tracks releases |
 | embla-carousel-fade | 8.6.0 | MIT | https://www.npmjs.com/package/embla-carousel-fade | runtime; no EOL published locally; Dependabot tracks releases |
+| emoji-regex | 8.0.0 | MIT | https://www.npmjs.com/package/emoji-regex | dev-only; no EOL published locally; Dependabot tracks releases |
+| entities | 8.1.0 | BSD-2-Clause | https://www.npmjs.com/package/entities | dev-only; no EOL published locally; Dependabot tracks releases |
 | es-module-lexer | 2.3.2 | MIT | https://www.npmjs.com/package/es-module-lexer | dev-only; no EOL published locally; Dependabot tracks releases |
+| escalade | 3.2.0 | MIT | https://www.npmjs.com/package/escalade | dev-only; no EOL published locally; Dependabot tracks releases |
 | escape-string-regexp | 4.0.0 | MIT | https://www.npmjs.com/package/escape-string-regexp | dev-only; no EOL published locally; Dependabot tracks releases |
 | eslint | 10.12.0 | MIT | https://www.npmjs.com/package/eslint | dev-only; no EOL published locally; Dependabot tracks releases |
 | eslint-scope | 9.1.2 | BSD-2-Clause | https://www.npmjs.com/package/eslint-scope | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -421,24 +486,37 @@ only when the package is dev-only (hypothesis, for example).
 | fast-deep-equal | 3.1.3 | MIT | https://www.npmjs.com/package/fast-deep-equal | dev-only; no EOL published locally; Dependabot tracks releases |
 | fast-json-stable-stringify | 2.1.0 | MIT | https://www.npmjs.com/package/fast-json-stable-stringify | dev-only; no EOL published locally; Dependabot tracks releases |
 | fast-levenshtein | 2.0.6 | MIT | https://www.npmjs.com/package/fast-levenshtein | dev-only; no EOL published locally; Dependabot tracks releases |
+| fast-string-truncated-width | 3.0.3 | MIT | https://www.npmjs.com/package/fast-string-truncated-width | dev-only; no EOL published locally; Dependabot tracks releases |
+| fast-string-width | 3.0.2 | MIT | https://www.npmjs.com/package/fast-string-width | dev-only; no EOL published locally; Dependabot tracks releases |
+| fast-wrap-ansi | 0.2.2 | MIT | https://www.npmjs.com/package/fast-wrap-ansi | dev-only; 0.x: minor releases may break; no support window recorded |
 | fdir | 6.5.0 | MIT | https://www.npmjs.com/package/fdir | dev-only; no EOL published locally; Dependabot tracks releases |
 | file-entry-cache | 11.1.5 | MIT | https://www.npmjs.com/package/file-entry-cache | dev-only; no EOL published locally; Dependabot tracks releases |
 | find-up | 5.0.0 | MIT | https://www.npmjs.com/package/find-up | dev-only; no EOL published locally; Dependabot tracks releases |
 | flat-cache | 6.1.23 | MIT | https://www.npmjs.com/package/flat-cache | dev-only; no EOL published locally; Dependabot tracks releases |
 | flatted | 3.4.4 | ISC | https://www.npmjs.com/package/flatted | dev-only; no EOL published locally; Dependabot tracks releases |
 | fsevents | 2.3.3 | MIT | https://www.npmjs.com/package/fsevents | dev-only; no EOL published locally; Dependabot tracks releases |
+| get-caller-file | 2.0.5 | ISC | https://www.npmjs.com/package/get-caller-file | dev-only; no EOL published locally; Dependabot tracks releases |
 | glob-parent | 6.0.2 | ISC | https://www.npmjs.com/package/glob-parent | dev-only; no EOL published locally; Dependabot tracks releases |
+| graphql | 16.14.2 | MIT | https://www.npmjs.com/package/graphql | dev-only; no EOL published locally; Dependabot tracks releases |
 | hashery | 1.5.1 | MIT | https://www.npmjs.com/package/hashery | dev-only; no EOL published locally; Dependabot tracks releases |
+| headers-polyfill | 5.0.1 | MIT | https://www.npmjs.com/package/headers-polyfill | dev-only; no EOL published locally; Dependabot tracks releases |
 | hookified | 1.15.1 | MIT | https://www.npmjs.com/package/hookified | dev-only; no EOL published locally; Dependabot tracks releases |
 | hookified | 2.2.0 | MIT | https://www.npmjs.com/package/hookified | dev-only; no EOL published locally; Dependabot tracks releases |
+| html-encoding-sniffer | 7.0.0 | MIT | https://www.npmjs.com/package/html-encoding-sniffer | dev-only; no EOL published locally; Dependabot tracks releases |
 | ignore | 5.3.2 | MIT | https://www.npmjs.com/package/ignore | dev-only; no EOL published locally; Dependabot tracks releases |
 | ignore | 7.0.12 | MIT | https://www.npmjs.com/package/ignore | dev-only; no EOL published locally; Dependabot tracks releases |
 | imurmurhash | 0.1.4 | MIT | https://www.npmjs.com/package/imurmurhash | dev-only; 0.x: minor releases may break; no support window recorded |
+| indent-string | 4.0.0 | MIT | https://www.npmjs.com/package/indent-string | dev-only; no EOL published locally; Dependabot tracks releases |
 | is-extglob | 2.1.1 | MIT | https://www.npmjs.com/package/is-extglob | dev-only; no EOL published locally; Dependabot tracks releases |
+| is-fullwidth-code-point | 3.0.0 | MIT | https://www.npmjs.com/package/is-fullwidth-code-point | dev-only; no EOL published locally; Dependabot tracks releases |
 | is-glob | 4.0.3 | MIT | https://www.npmjs.com/package/is-glob | dev-only; no EOL published locally; Dependabot tracks releases |
+| is-node-process | 1.2.0 | MIT | https://www.npmjs.com/package/is-node-process | dev-only; no EOL published locally; Dependabot tracks releases |
+| is-potential-custom-element-name | 1.0.1 | MIT | https://www.npmjs.com/package/is-potential-custom-element-name | dev-only; no EOL published locally; Dependabot tracks releases |
 | isexe | 2.0.0 | ISC | https://www.npmjs.com/package/isexe | dev-only; no EOL published locally; Dependabot tracks releases |
+| js-tokens | 4.0.0 | MIT | https://www.npmjs.com/package/js-tokens | dev-only; no EOL published locally; Dependabot tracks releases |
 | js-yaml | 4.3.2 | MIT | https://www.npmjs.com/package/js-yaml | dev-only; no EOL published locally; Dependabot tracks releases |
 | js-yaml | 5.4.3 | MIT | https://www.npmjs.com/package/js-yaml | dev-only; no EOL published locally; Dependabot tracks releases |
+| jsdom | 30.1.2 | MIT | https://www.npmjs.com/package/jsdom | dev-only; no EOL published locally; Dependabot tracks releases |
 | json-schema-to-typescript | 16.0.0 | MIT | https://www.npmjs.com/package/json-schema-to-typescript | dev-only; no EOL published locally; Dependabot tracks releases |
 | json-schema-traverse | 0.4.1 | MIT | https://www.npmjs.com/package/json-schema-traverse | dev-only; 0.x: minor releases may break; no support window recorded |
 | json-stable-stringify-without-jsonify | 1.0.1 | MIT | https://www.npmjs.com/package/json-stable-stringify-without-jsonify | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -460,61 +538,109 @@ only when the package is dev-only (hypothesis, for example).
 | lightningcss-win32-x64-msvc | 1.33.0 | MPL-2.0 | https://www.npmjs.com/package/lightningcss-win32-x64-msvc | dev-only; no EOL published locally; Dependabot tracks releases |
 | locate-path | 6.0.0 | MIT | https://www.npmjs.com/package/locate-path | dev-only; no EOL published locally; Dependabot tracks releases |
 | lodash | 4.18.1 | MIT | https://www.npmjs.com/package/lodash | dev-only; no EOL published locally; Dependabot tracks releases |
+| lodash-es | 4.18.1 | MIT | https://www.npmjs.com/package/lodash-es | dev-only; no EOL published locally; Dependabot tracks releases |
+| lru-cache | 11.5.3 | BlueOak-1.0.0 | https://www.npmjs.com/package/lru-cache | dev-only; no EOL published locally; Dependabot tracks releases |
+| lz-string | 1.5.0 | MIT | https://www.npmjs.com/package/lz-string | dev-only; no EOL published locally; Dependabot tracks releases |
 | magic-string | 0.30.21 | MIT | https://www.npmjs.com/package/magic-string | dev-only; 0.x: minor releases may break; no support window recorded |
 | magic-string | 1.4.3 | MIT | https://www.npmjs.com/package/magic-string | dev-only; no EOL published locally; Dependabot tracks releases |
+| mdn-data | 2.27.1 | CC0-1.0 | https://www.npmjs.com/package/mdn-data | dev-only; no EOL published locally; Dependabot tracks releases |
+| min-indent | 1.0.1 | MIT | https://www.npmjs.com/package/min-indent | dev-only; no EOL published locally; Dependabot tracks releases |
 | minimatch | 10.2.6 | BlueOak-1.0.0 | https://www.npmjs.com/package/minimatch | dev-only; no EOL published locally; Dependabot tracks releases |
 | minimist | 1.2.8 | MIT | https://www.npmjs.com/package/minimist | dev-only; no EOL published locally; Dependabot tracks releases |
 | ms | 2.1.3 | MIT | https://www.npmjs.com/package/ms | dev-only; no EOL published locally; Dependabot tracks releases |
+| msw | 2.15.0 | MIT | https://www.npmjs.com/package/msw | dev-only; no EOL published locally; Dependabot tracks releases |
+| mute-stream | 3.0.0 | ISC | https://www.npmjs.com/package/mute-stream | dev-only; no EOL published locally; Dependabot tracks releases |
 | nanoid | 3.3.20 | MIT | https://www.npmjs.com/package/nanoid | dev-only; no EOL published locally; Dependabot tracks releases |
 | natural-compare | 1.4.0 | MIT | https://www.npmjs.com/package/natural-compare | dev-only; no EOL published locally; Dependabot tracks releases |
 | obug | 2.2.1 | MIT | https://www.npmjs.com/package/obug | dev-only; no EOL published locally; Dependabot tracks releases |
 | optionator | 0.9.4 | MIT | https://www.npmjs.com/package/optionator | dev-only; 0.x: minor releases may break; no support window recorded |
+| outvariant | 1.4.3 | MIT | https://www.npmjs.com/package/outvariant | dev-only; no EOL published locally; Dependabot tracks releases |
 | p-limit | 3.1.0 | MIT | https://www.npmjs.com/package/p-limit | dev-only; no EOL published locally; Dependabot tracks releases |
 | p-locate | 5.0.0 | MIT | https://www.npmjs.com/package/p-locate | dev-only; no EOL published locally; Dependabot tracks releases |
+| parse5 | 8.0.1 | MIT | https://www.npmjs.com/package/parse5 | dev-only; no EOL published locally; Dependabot tracks releases |
 | path-exists | 4.0.0 | MIT | https://www.npmjs.com/package/path-exists | dev-only; no EOL published locally; Dependabot tracks releases |
 | path-key | 3.1.1 | MIT | https://www.npmjs.com/package/path-key | dev-only; no EOL published locally; Dependabot tracks releases |
+| path-to-regexp | 6.3.0 | MIT | https://www.npmjs.com/package/path-to-regexp | dev-only; no EOL published locally; Dependabot tracks releases |
 | pathe | 2.0.3 | MIT | https://www.npmjs.com/package/pathe | dev-only; no EOL published locally; Dependabot tracks releases |
 | picocolors | 1.1.1 | ISC | https://www.npmjs.com/package/picocolors | dev-only; no EOL published locally; Dependabot tracks releases |
 | picomatch | 4.0.7 | MIT | https://www.npmjs.com/package/picomatch | dev-only; no EOL published locally; Dependabot tracks releases |
+| playwright | 1.64.0 | Apache-2.0 | https://www.npmjs.com/package/playwright | dev-only; no EOL published locally; Dependabot tracks releases |
+| playwright-core | 1.64.0 | Apache-2.0 | https://www.npmjs.com/package/playwright-core | dev-only; no EOL published locally; Dependabot tracks releases |
 | postcss | 8.5.29 | MIT | https://www.npmjs.com/package/postcss | dev-only; no EOL published locally; Dependabot tracks releases |
 | prelude-ls | 1.2.1 | MIT | https://www.npmjs.com/package/prelude-ls | dev-only; no EOL published locally; Dependabot tracks releases |
 | prettier | 3.9.9 | MIT | https://www.npmjs.com/package/prettier | dev-only; no EOL published locally; Dependabot tracks releases |
+| pretty-format | 27.5.1 | MIT | https://www.npmjs.com/package/pretty-format | dev-only; no EOL published locally; Dependabot tracks releases |
 | punycode | 2.3.1 | MIT | https://www.npmjs.com/package/punycode | dev-only; no EOL published locally; Dependabot tracks releases |
 | qified | 0.10.1 | MIT | https://www.npmjs.com/package/qified | dev-only; 0.x: minor releases may break; no support window recorded |
 | react | 19.3.0 | MIT | https://www.npmjs.com/package/react | runtime; no EOL published locally; Dependabot tracks releases |
 | react-dom | 19.3.0 | MIT | https://www.npmjs.com/package/react-dom | runtime; no EOL published locally; Dependabot tracks releases |
+| react-is | 17.0.2 | MIT | https://www.npmjs.com/package/react-is | dev-only; no EOL published locally; Dependabot tracks releases |
+| react-router | 8.4.0 | MIT | https://www.npmjs.com/package/react-router | runtime; no EOL published locally; Dependabot tracks releases |
+| redent | 3.0.0 | MIT | https://www.npmjs.com/package/redent | dev-only; no EOL published locally; Dependabot tracks releases |
+| require-directory | 2.1.1 | MIT | https://www.npmjs.com/package/require-directory | dev-only; no EOL published locally; Dependabot tracks releases |
+| require-from-string | 2.0.2 | MIT | https://www.npmjs.com/package/require-from-string | dev-only; no EOL published locally; Dependabot tracks releases |
+| rettime | 0.11.12 | MIT | https://www.npmjs.com/package/rettime | dev-only; 0.x: minor releases may break; no support window recorded |
 | rolldown | 1.2.13 | MIT | https://www.npmjs.com/package/rolldown | dev-only; no EOL published locally; Dependabot tracks releases |
 | rtl-css-js | 1.16.1 | MIT | https://www.npmjs.com/package/rtl-css-js | runtime; no EOL published locally; Dependabot tracks releases |
+| saxes | 6.0.0 | ISC | https://www.npmjs.com/package/saxes | dev-only; no EOL published locally; Dependabot tracks releases |
 | scheduler | 0.28.0 | MIT | https://www.npmjs.com/package/scheduler | runtime; 0.x: minor releases may break; no support window recorded |
 | semver | 7.8.5 | ISC | https://www.npmjs.com/package/semver | dev-only; no EOL published locally; Dependabot tracks releases |
+| set-cookie-parser | 3.1.3 | MIT | https://www.npmjs.com/package/set-cookie-parser | dev-only; no EOL published locally; Dependabot tracks releases |
 | shebang-command | 2.0.0 | MIT | https://www.npmjs.com/package/shebang-command | dev-only; no EOL published locally; Dependabot tracks releases |
 | shebang-regex | 3.0.0 | MIT | https://www.npmjs.com/package/shebang-regex | dev-only; no EOL published locally; Dependabot tracks releases |
 | siginfo | 2.0.0 | ISC | https://www.npmjs.com/package/siginfo | dev-only; no EOL published locally; Dependabot tracks releases |
+| signal-exit | 4.1.0 | ISC | https://www.npmjs.com/package/signal-exit | dev-only; no EOL published locally; Dependabot tracks releases |
 | source-map-js | 1.2.2 | BSD-3-Clause | https://www.npmjs.com/package/source-map-js | dev-only; no EOL published locally; Dependabot tracks releases |
 | stackback | 0.0.2 | MIT | https://www.npmjs.com/package/stackback | dev-only; 0.x: minor releases may break; no support window recorded |
+| statuses | 2.0.2 | MIT | https://www.npmjs.com/package/statuses | dev-only; no EOL published locally; Dependabot tracks releases |
 | std-env | 4.3.0 | MIT | https://www.npmjs.com/package/std-env | dev-only; no EOL published locally; Dependabot tracks releases |
+| strict-event-emitter | 0.5.1 | MIT | https://www.npmjs.com/package/strict-event-emitter | dev-only; 0.x: minor releases may break; no support window recorded |
+| string-width | 4.2.3 | MIT | https://www.npmjs.com/package/string-width | dev-only; no EOL published locally; Dependabot tracks releases |
+| strip-ansi | 6.0.1 | MIT | https://www.npmjs.com/package/strip-ansi | dev-only; no EOL published locally; Dependabot tracks releases |
+| strip-indent | 3.0.0 | MIT | https://www.npmjs.com/package/strip-indent | dev-only; no EOL published locally; Dependabot tracks releases |
 | stylis | 4.4.0 | MIT | https://www.npmjs.com/package/stylis | runtime; no EOL published locally; Dependabot tracks releases |
 | tabster | 8.8.1 | MIT | https://www.npmjs.com/package/tabster | runtime; no EOL published locally; Dependabot tracks releases |
+| tagged-tag | 1.0.0 | MIT | https://www.npmjs.com/package/tagged-tag | dev-only; no EOL published locally; Dependabot tracks releases |
 | tinybench | 2.9.0 | MIT | https://www.npmjs.com/package/tinybench | dev-only; no EOL published locally; Dependabot tracks releases |
 | tinybench | 6.2.1 | MIT | https://www.npmjs.com/package/tinybench | dev-only; no EOL published locally; Dependabot tracks releases |
 | tinyexec | 1.3.1 | MIT | https://www.npmjs.com/package/tinyexec | dev-only; no EOL published locally; Dependabot tracks releases |
 | tinyglobby | 0.2.17 | MIT | https://www.npmjs.com/package/tinyglobby | dev-only; 0.x: minor releases may break; no support window recorded |
 | tinyrainbow | 3.2.0 | MIT | https://www.npmjs.com/package/tinyrainbow | dev-only; no EOL published locally; Dependabot tracks releases |
+| tldts | 7.4.18 | MIT | https://www.npmjs.com/package/tldts | dev-only; no EOL published locally; Dependabot tracks releases |
+| tldts-core | 7.4.18 | MIT | https://www.npmjs.com/package/tldts-core | dev-only; no EOL published locally; Dependabot tracks releases |
+| tough-cookie | 6.0.2 | BSD-3-Clause | https://www.npmjs.com/package/tough-cookie | dev-only; no EOL published locally; Dependabot tracks releases |
+| tr46 | 7.0.0 | MIT | https://www.npmjs.com/package/tr46 | dev-only; no EOL published locally; Dependabot tracks releases |
 | ts-api-utils | 2.5.0 | MIT | https://www.npmjs.com/package/ts-api-utils | dev-only; no EOL published locally; Dependabot tracks releases |
 | tslib | 2.8.1 | 0BSD | https://www.npmjs.com/package/tslib | runtime; no EOL published locally; Dependabot tracks releases |
 | type-check | 0.4.0 | MIT | https://www.npmjs.com/package/type-check | dev-only; 0.x: minor releases may break; no support window recorded |
+| type-fest | 5.10.0 | (MIT OR CC0-1.0) | https://www.npmjs.com/package/type-fest | dev-only; no EOL published locally; Dependabot tracks releases |
 | typescript | 6.0.3 | Apache-2.0 | https://www.npmjs.com/package/typescript | dev-only; pinned 6.0.x; TS 7 incompatible with typescript-eslint (ADR-0002) |
 | typescript-eslint | 8.71.1 | MIT | https://www.npmjs.com/package/typescript-eslint | dev-only; no EOL published locally; Dependabot tracks releases |
+| undici | 8.11.2 | MIT | https://www.npmjs.com/package/undici | dev-only; no EOL published locally; Dependabot tracks releases |
+| undici-types | 8.9.0 | MIT | https://www.npmjs.com/package/undici-types | dev-only; no EOL published locally; Dependabot tracks releases |
+| until-async | 3.0.2 | MIT | https://www.npmjs.com/package/until-async | dev-only; no EOL published locally; Dependabot tracks releases |
 | uri-js | 4.4.1 | BSD-2-Clause | https://www.npmjs.com/package/uri-js | dev-only; no EOL published locally; Dependabot tracks releases |
 | use-sync-external-store | 1.7.0 | MIT | https://www.npmjs.com/package/use-sync-external-store | runtime; no EOL published locally; Dependabot tracks releases |
 | vite | 8.3.4 | MIT | https://www.npmjs.com/package/vite | dev-only; no EOL published locally; Dependabot tracks releases |
 | vitest | 4.1.11 | MIT | https://www.npmjs.com/package/vitest | dev-only; no EOL published locally; Dependabot tracks releases |
 | vitest | 5.0.2 | MIT | https://www.npmjs.com/package/vitest | dev-only; no EOL published locally; Dependabot tracks releases |
+| vitest-axe | 0.1.0 | MIT | https://www.npmjs.com/package/vitest-axe | dev-only; 0.x: minor releases may break; no support window recorded |
+| w3c-xmlserializer | 6.0.0 | MIT | https://www.npmjs.com/package/w3c-xmlserializer | dev-only; no EOL published locally; Dependabot tracks releases |
+| webidl-conversions | 8.0.1 | BSD-2-Clause | https://www.npmjs.com/package/webidl-conversions | dev-only; no EOL published locally; Dependabot tracks releases |
+| whatwg-mimetype | 5.0.0 | MIT | https://www.npmjs.com/package/whatwg-mimetype | dev-only; no EOL published locally; Dependabot tracks releases |
+| whatwg-url | 17.2.0 | MIT | https://www.npmjs.com/package/whatwg-url | dev-only; no EOL published locally; Dependabot tracks releases |
 | which | 2.0.2 | ISC | https://www.npmjs.com/package/which | dev-only; no EOL published locally; Dependabot tracks releases |
 | why-is-node-running | 2.3.0 | MIT | https://www.npmjs.com/package/why-is-node-running | dev-only; no EOL published locally; Dependabot tracks releases |
 | why-is-node-running | 3.2.3 | MIT | https://www.npmjs.com/package/why-is-node-running | dev-only; no EOL published locally; Dependabot tracks releases |
 | word-wrap | 1.2.5 | MIT | https://www.npmjs.com/package/word-wrap | dev-only; no EOL published locally; Dependabot tracks releases |
+| wrap-ansi | 7.0.0 | MIT | https://www.npmjs.com/package/wrap-ansi | dev-only; no EOL published locally; Dependabot tracks releases |
+| xml-name-validator | 5.0.0 | Apache-2.0 | https://www.npmjs.com/package/xml-name-validator | dev-only; no EOL published locally; Dependabot tracks releases |
+| xmlchars | 2.2.0 | MIT | https://www.npmjs.com/package/xmlchars | dev-only; no EOL published locally; Dependabot tracks releases |
+| y18n | 5.0.8 | ISC | https://www.npmjs.com/package/y18n | dev-only; no EOL published locally; Dependabot tracks releases |
+| yargs | 17.7.3 | MIT | https://www.npmjs.com/package/yargs | dev-only; no EOL published locally; Dependabot tracks releases |
+| yargs-parser | 21.1.1 | ISC | https://www.npmjs.com/package/yargs-parser | dev-only; no EOL published locally; Dependabot tracks releases |
 | yocto-queue | 0.1.0 | MIT | https://www.npmjs.com/package/yocto-queue | dev-only; 0.x: minor releases may break; no support window recorded |
+| zustand | 5.0.15 | MIT | https://www.npmjs.com/package/zustand | runtime; no EOL published locally; Dependabot tracks releases |
 
 <!-- END licences-register -->
 
