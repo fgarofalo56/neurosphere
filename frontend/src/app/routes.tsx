@@ -12,6 +12,8 @@ export interface AppRoutesOptions {
   readonly extraRoutes?: readonly RouteObject[];
   /** Entries shown in the navigation slot. */
   readonly navItems?: readonly NavItem[];
+  /** Dynamic nav (a hook, so it may read auth roles). Takes precedence over navItems. */
+  readonly useNavItems?: () => readonly NavItem[];
 }
 
 const DEFAULT_NAV: readonly NavItem[] = [{ to: "/", label: "Home" }];
@@ -34,8 +36,12 @@ function NotFoundPage(): ReactElement {
   );
 }
 
-function makeLayout(navItems: readonly NavItem[]): () => ReactElement {
+function makeLayout(
+  staticItems: readonly NavItem[],
+  useNavItems: (() => readonly NavItem[]) | undefined,
+): () => ReactElement {
   return function Layout(): ReactElement {
+    const navItems = useNavItems === undefined ? staticItems : useNavItems();
     return (
       <div>
         <header>
@@ -64,7 +70,7 @@ function makeLayout(navItems: readonly NavItem[]): () => ReactElement {
 }
 
 export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
-  const Layout = makeLayout(options.navItems ?? DEFAULT_NAV);
+  const Layout = makeLayout(options.navItems ?? DEFAULT_NAV, options.useNavItems);
   return [
     {
       path: "/",
