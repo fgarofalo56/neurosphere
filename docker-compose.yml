@@ -1,12 +1,14 @@
 # Local development stack: Azure emulators only. No paid or external calls.
-# Application services (api, workers, frontend) are added by PRP-05 (profile `app`).
+# Application services (api, workers) are defined by PRP-05 under profile `app`.
 #
 # Profiles:
 #   (default)  cosmos, azurite, eventhubs
 #   test       adds `egress-probe` on an `internal: true` network (no route out) that
 #              can still reach the emulators by service name. Run the probe with:
 #                docker compose --profile test up -d --wait
-#   app        reserved for PRP-05 (see commented block at the bottom)
+#   app        adds `api` (:8000) and `workers` (health :8090), built from
+#              services/*/Dockerfile.dev and wired to the emulators by service name:
+#                docker compose --profile app up -d --wait
 #
 # Emulator limits that matter (see docs/RESEARCH-AND-GATES.md G12):
 #   cosmos    - vNext Linux emulator: no auth enforcement, no sprocs/triggers/UDF,
@@ -92,20 +94,65 @@ services:
       eventhubs-health:
         condition: service_healthy
 
+  # --- profile `app`: PRP-05 application services (dev images, no secrets) ---------
+  api:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile.dev
+    ports:
+      - "8000:8000"
+    environment:
+      NS_ENV: local
+      NS_CLOUD: commercial
+      NS_PROBE_COSMOS_URL: http://cosmos:8081/
+      NS_PROBE_EVENTHUBS_HOSTPORT: eventhubs:5672
+      NS_PROBE_BLOB_HOSTPORT: azurite:10000
+      NS_PROBE_TIMEOUT_SECONDS: "2"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 5s
+    # `isolated` is internal: Docker cannot publish host ports from an internal-only network
+    # (verified: host connection refused). The api therefore also joins `default` so :8000 is
+    # reachable from the host. workers publish nothing and stay isolated-only.
+    networks: [default, isolated]
+    depends_on:
+      cosmos:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+      eventhubs-health:
+        condition: service_healthy
+
+  workers:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: services/workers/Dockerfile.dev
+    environment:
+      NS_ENV: local
+      NS_CLOUD: commercial
+      NS_WORKER_HEALTH_HOST: 0.0.0.0   # default bind is loopback, which the healthcheck probe could not reach otherwise
+      NS_WORKER_HEALTH_PORT: "8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 5s
+    networks: [isolated]
+    depends_on:
+      cosmos:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+      eventhubs-health:
+        condition: service_healthy
+
 networks:
   default: {}
   isolated:
     internal: true
-
-# --- profile `app`: placeholders for PRP-05 (api, workers, frontend) -------------
-#  api:
-#    profiles: [app]
-#    build: { context: ., dockerfile: services/api/Dockerfile }
-#    depends_on: { cosmos: { condition: service_healthy }, eventhubs: { condition: service_healthy } }
-#    environment:
-#      COSMOS_ENDPOINT: http://cosmos:8081
-#      EVENTHUBS_NAMESPACE: emulatorns1
-#      # connection strings come from the environment at runtime; never commit values
-#  workers:
-#    profiles: [app]
-#    # see PRP-05
