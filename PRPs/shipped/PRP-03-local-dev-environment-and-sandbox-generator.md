@@ -1,6 +1,6 @@
 ---
 name: prp-03-local-dev-environment-and-sandbox-generator
-status: active
+status: shipped
 review: none
 created: 2026-10-08
 model: sonnet
@@ -256,10 +256,17 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
+- Date: 2026-10-11
+- Merged commits: items merged via branch `prp-03-local-dev-sandbox` (item 1 compose stack, item 2 fixture search, item 3 generator, item 4 seed/replay CLI, item 5 devcontainer + runbook), plus dependency commit cd8175a.
 - Deviations from blueprint and why:
-- Descoped items:
-- Measured: stack healthy time, `pilot` generation time, seed run counts:
-- Walkthrough and devcontainer build result (or UNTESTED):
-- Open gates and follow-ups:
+  - Event Hubs emulator image has no shell: health is probed by a busybox sidecar `eventhubs-health`; `--wait` gates on it.
+  - Emulator accepts only namespace `emulatorns1`; config renamed from `neurosphere-local` (hubs and consumer groups unchanged). The shipped PRP-02 note still says `neurosphere-local`.
+  - Azurite healthcheck probes `127.0.0.1` (localhost never passed).
+  - Root `pyproject.toml`/`uv.lock` edited by the orchestrator with user sign-off: added `azure-eventhub>=5.12,<6` (dev group) and `sandbox` to pyright include; `docs/licenses.md` and the ADR-0002 appendix regenerated.
+  - `AuthorizedSearch` is async (so PRP-10 Azure impl fits); fixture does not check grant `expires_at`.
+  - Item 4 test files carry a pyright pragma for the `sbx_*` imports instead of a pyproject change; `seed-reset` empties the hub by restarting the emulator (no purge exists).
+  - Item 5 was split: docs drafted in wave A, results filled after item 4 merged.
+- Descoped items: cost records are not loaded into Cosmos by `seed` (entities and relations only); 100k-agent profile not run (PRP-21).
+- Measured: stack healthy 16.7s warm (32 logical CPUs, Docker 29.8.1; cold-pull time NOT measured, so the under-5-minute criterion is unconfirmed); `pilot` generation 12.4s wall (1000 agents, 7 days, ~102k telemetry lines, ~54k cost records); tiny seed 247 Cosmos documents (119 entities, 128 relations) and 1653 events on first run, 0 created / 0 sent on later runs; replay consumed 1653 events via `normalizer` group incl. 15 duplicates and 5 malformed.
+- Walkthrough and devcontainer build result: stack up, `make seed` x3 (zero created after the first), integration suites 12 passed, `verify-gates -Mode full` PASSED (1832 tests). Walkthrough was run by the orchestrator, not a fresh user. Devcontainer build UNTESTED (no devcontainer CLI available); the uv/pnpm install lines in post-create are unverified.
+- Open gates and follow-ups: G12 emulator parity stays OPEN; devcontainer build UNTESTED; cold-pull time unmeasured; add `docs/dev/local-setup.md` to the nav when PRP-25 creates mkdocs; image digests are recorded in the runbook as a drift reference.

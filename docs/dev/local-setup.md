@@ -43,7 +43,7 @@ Open the repository in a devcontainer (`.devcontainer/devcontainer.json`): Pytho
 ```bash
 make dev-up      # start cosmos, azurite, eventhubs and wait for health
 make dev-down    # stop and drop volumes
-make dev-reset   # TODO-VERIFY: down + up from scratch (target owned by the compose-stack item)
+make dev-reset   # down -v + up: empty, healthy stack
 make dev-logs    # tail emulator logs
 ```
 
@@ -60,9 +60,9 @@ The Event Hubs emulator has no persistence: every `docker compose down` (and `ma
 ## Seed and replay synthetic data
 
 ```bash
-make seed        # TODO-VERIFY: generate deterministic sandbox data and load it into the emulators
-make replay      # TODO-VERIFY: push synthetic events to the Event Hubs emulator
-make seed-reset  # TODO-VERIFY: remove sandbox-prefixed databases/containers and re-seed
+make seed        # generate deterministic sandbox data, load Cosmos and the telemetry hub (idempotent)
+make replay      # push synthetic events (incl. bad ones) to the telemetry hub
+make seed-reset  # drop sandbox-* Cosmos DBs, restart Event Hubs emulator (empty hub); run make seed again to re-seed
 ```
 
 These targets are the documented contract of the seed-and-replay CLI. Seeding creates fresh `sandbox-` prefixed databases and containers and never touches other names. Output is deterministic for a given `--seed`.
@@ -93,9 +93,9 @@ Tags follow ADR-0002 (`vnext-latest`, `latest`) because the emulators publish no
 
 | Image | Tag | Digest |
 |---|---|---|
-| Cosmos DB vNext emulator | `vnext-latest` | TODO: record after first successful pull |
-| Azurite | `latest` | TODO: record after first successful pull |
-| Event Hubs emulator | `latest` | TODO: record after first successful pull |
+| Cosmos DB vNext emulator | `vnext-latest` | `sha256:4535ddbd27bba762f3e068f7585feb0022a2559ceccc9394b23aa38d91d77c38` |
+| Azurite | `latest` | `sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5` |
+| Event Hubs emulator | `latest` | `sha256:be413f0d59541621879e6d197d73f64f3b3ac5fa45861641fdc1430252b8b44b` |
 
 Record digests with `docker image inspect --format '{{index .RepoDigests 0}}' <image>`.
 
