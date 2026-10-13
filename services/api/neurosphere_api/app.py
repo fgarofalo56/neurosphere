@@ -3,7 +3,7 @@
 ``create_app(settings)`` builds a fresh application; nothing is created at import time.
 Routers attach only through :class:`~neurosphere_api.routers.RouterRegistry` (see
 ``neurosphere_api/routers.py``); ``extra_routers`` lets callers and tests add more.
-Authentication and authorization are out of scope here (PRP-06).
+The audit router is mounted by default and fails closed (503) until ``configure_authz`` is called.
 """
 
 from __future__ import annotations
@@ -83,7 +83,8 @@ def create_app(
 
     registry = RouterRegistry()
     register_default_routers(registry)
+    registry.freeze_defaults()
     for prefix, router in (extra_routers or {}).items():
-        registry.register(prefix, router)
+        registry.register(prefix, router, replace_default=True)  # may replace a default once
     registry.attach(app)
     return app

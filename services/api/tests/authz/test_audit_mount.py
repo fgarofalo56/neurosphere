@@ -79,3 +79,15 @@ def test_register_hook_accepts_the_adapter() -> None:
 def test_unknown_audit_permission_fails_at_mount() -> None:
     with pytest.raises(InvalidSchemaError):
         audit_require_permission()("audit.write")
+
+
+@pytest.mark.parametrize("endpoint", ["records", "verify"])
+def test_default_app_mounts_audit_and_fails_closed_until_configured(endpoint: str) -> None:
+    from fastapi.testclient import TestClient
+    from neurosphere_api.app import create_app
+    from neurosphere_core.cloud import Settings
+
+    client = TestClient(create_app(Settings(env="local")), raise_server_exceptions=False)
+    for headers in ({}, {"Authorization": "Bearer not-a-token"}):
+        response = client.get(f"{ROUTE_PREFIX}/chains/contoso.hr/{endpoint}", headers=headers)
+        assert response.status_code == 503
