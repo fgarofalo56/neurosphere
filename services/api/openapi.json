@@ -1,6 +1,301 @@
 {
   "components": {
     "schemas": {
+      "Actor": {
+        "additionalProperties": false,
+        "description": "Pseudonymous reference to the principal that performed or requested an operation (Clarification 8: no email, display name or other free-text identity field). Used by ActionIntent, ApprovalDecision and AuditRecord. Derived server-side from validated identity; never taken from a request body or model output.",
+        "properties": {
+          "on_behalf_of": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Behalf Of"
+          },
+          "principal_kind": {
+            "enum": [
+              "user",
+              "service_principal",
+              "managed_identity",
+              "agent"
+            ],
+            "title": "Principal Kind",
+            "type": "string"
+          },
+          "principal_pseudonym": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+            "title": "Principal Pseudonym",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_pseudonym",
+          "principal_kind",
+          "on_behalf_of"
+        ],
+        "title": "Actor",
+        "type": "object"
+      },
+      "AuditRecord": {
+        "additionalProperties": false,
+        "description": "Append-only, hash-chained audit evidence (PRP.md section 3, PRD NS-06 'audit before/after'). Kinds: `before` (target state captured before a change), `after` (outcome and target state after), `denied` (a query, tool, export, push or action that authorization or policy refused). There is no update-capable field: no updated_at, modified_by, etag, version, status or deleted flag; corrections are new records. previous_hash is required for every record except the chain head (sequence 0), where it is null. Rules JSON Schema cannot express are checked by `validate_audit_chain` in tests/contracts/test_schemas.py: record_hash equals sha256 over the RFC 8785 (JCS) canonical form of the record without record_hash; within a chain_id, sequence is contiguous from 0 and each previous_hash equals the preceding record's record_hash.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "audit_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "chain_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+            "title": "Chain Id",
+            "type": "string"
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "button",
+                  "chat",
+                  "rest",
+                  "mcp",
+                  "websocket",
+                  "worker"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
+          "correlation_id": {
+            "pattern": "^[A-Za-z0-9._-]{1,128}$",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "denial": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Denial"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "before",
+              "after",
+              "denied"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "operation": {
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){0,7}$",
+            "title": "Operation",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previous_hash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sha256Hash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "record_hash": {
+            "$ref": "#/components/schemas/Sha256Hash"
+          },
+          "recorded_at": {
+            "$ref": "#/components/schemas/UtcTimestamp"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope_hash": {
+            "$ref": "#/components/schemas/Sha256Hash"
+          },
+          "sequence": {
+            "minimum": 0.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Subject"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "audit_id",
+          "chain_id",
+          "sequence",
+          "previous_hash",
+          "record_hash",
+          "kind",
+          "recorded_at",
+          "actor",
+          "scope_hash",
+          "correlation_id",
+          "operation",
+          "channel",
+          "intent_id",
+          "subject",
+          "outcome",
+          "denial"
+        ],
+        "title": "AuditRecord",
+        "type": "object"
+      },
+      "ChainVerification": {
+        "additionalProperties": false,
+        "description": "Result of verifying one chain. ``first_invalid_index`` is a position in the input.",
+        "properties": {
+          "chain_id": {
+            "title": "Chain Id",
+            "type": "string"
+          },
+          "first_invalid_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Invalid Index"
+          },
+          "first_invalid_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Invalid Sequence"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_record",
+                  "chain_id_mismatch",
+                  "sequence_mismatch",
+                  "record_hash_mismatch",
+                  "previous_hash_mismatch",
+                  "tail_mismatch"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "records_checked": {
+            "minimum": 0.0,
+            "title": "Records Checked",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chain_id",
+          "ok",
+          "records_checked"
+        ],
+        "title": "ChainVerification",
+        "type": "object"
+      },
+      "Denial": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "unauthorized",
+              "forbidden",
+              "capability_unavailable",
+              "stale_version",
+              "rate_limited",
+              "invalid_schema",
+              "dependency_transient"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "reason": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "reason"
+        ],
+        "title": "Denial",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthzResponse": {
         "additionalProperties": false,
         "properties": {
@@ -14,6 +309,75 @@
           "status"
         ],
         "title": "HealthzResponse",
+        "type": "object"
+      },
+      "Outcome": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "result": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "rolled_back"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "result",
+          "verified",
+          "detail"
+        ],
+        "title": "Outcome",
+        "type": "object"
+      },
+      "Page_AuditRecord_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            },
+            "maxItems": 500,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[AuditRecord]",
         "type": "object"
       },
       "ReadyzResponse": {
@@ -47,6 +411,135 @@
         ],
         "title": "ReadyzResponse",
         "type": "object"
+      },
+      "Sha256Hash": {
+        "pattern": "^sha256:[0-9a-f]{64}$",
+        "title": "Sha256Hash",
+        "type": "string"
+      },
+      "Subject": {
+        "additionalProperties": false,
+        "properties": {
+          "snapshot_ref": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Ref"
+          },
+          "state_digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sha256Hash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "$ref": "#/components/schemas/TargetRef"
+          },
+          "target_version": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Version"
+          }
+        },
+        "required": [
+          "target",
+          "target_version",
+          "state_digest",
+          "snapshot_ref"
+        ],
+        "title": "Subject",
+        "type": "object"
+      },
+      "TargetRef": {
+        "additionalProperties": false,
+        "description": "Reference to the resource an action changes or an audit record concerns. `canonical_id` uses the catalog grammar `cloud:customer:source:type:id` (Clarification 7); the pattern here mirrors it and the catalog/v1 grammar is authoritative. Python validator `validate_target_ref_matches_catalog_grammar` in tests/contracts/test_canonical_ids.py checks this pattern against the catalog ID corpus so the two cannot drift. The version being acted on is carried beside this object (ActionIntent.target_version), not inside it, so it is hashed as its own field.",
+        "properties": {
+          "canonical_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Canonical Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Entity Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonical_id",
+          "entity_type"
+        ],
+        "title": "TargetRef",
+        "type": "object"
+      },
+      "UtcTimestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
+      },
+      "Uuid": {
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        "title": "Uuid",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     }
   },
@@ -56,6 +549,123 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/audit/chains/{chain_id}/records": {
+      "get": {
+        "operationId": "list_audit_records_audit_chains__chain_id__records_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+              "title": "Chain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{1,18}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditRecord_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit Records",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/audit/chains/{chain_id}/verify": {
+      "get": {
+        "operationId": "verify_audit_chain_audit_chains__chain_id__verify_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+              "title": "Chain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChainVerification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Audit Chain",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "healthz_healthz_get",

@@ -18,6 +18,7 @@ class RouterRegistry:
 
     def __init__(self) -> None:
         self._routers: dict[str, APIRouter] = {}
+        self._defaults: set[str] = set()
 
     @staticmethod
     def _normalize(prefix: str) -> str:
@@ -26,10 +27,16 @@ class RouterRegistry:
             stripped = "/" + stripped
         return stripped
 
-    def register(self, prefix: str, router: APIRouter) -> None:
+    def freeze_defaults(self) -> None:
+        """Mark the current prefixes as defaults that a caller router may replace once."""
+        self._defaults = set(self._routers)
+
+    def register(self, prefix: str, router: APIRouter, *, replace_default: bool = False) -> None:
         key = self._normalize(prefix)
         if key in self._routers:
-            raise ValueError(f"router prefix already registered: {key or '/'}")
+            if not (replace_default and key in self._defaults):
+                raise ValueError(f"router prefix already registered: {key or '/'}")
+            self._defaults.discard(key)
         self._routers[key] = router
 
     @property
@@ -51,7 +58,14 @@ def _register_health(registry: RouterRegistry) -> None:
     register(registry)
 
 
-REGISTERED: tuple[RegisterHook, ...] = (_register_health,)
+def _register_audit(registry: RouterRegistry) -> None:
+    from neurosphere_api.audit import register
+    from neurosphere_api.authz import audit_require_permission
+
+    register(registry, require_permission=audit_require_permission())
+
+
+REGISTERED: tuple[RegisterHook, ...] = (_register_health, _register_audit)
 
 
 def register_default_routers(registry: RouterRegistry) -> None:
