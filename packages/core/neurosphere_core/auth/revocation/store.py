@@ -57,6 +57,11 @@ class InMemoryRevocationStore:
     def fail_with(self, error: Exception | None) -> None:
         self.error = error
 
+    def _raise_injected_error(self) -> None:
+        error = self.error
+        if isinstance(error, Exception):
+            raise error
+
     def _live(self, principal_id: str) -> RevocationEntry | None:
         found = self._entries.get(revocation_document_id(principal_id))
         if found is None:
@@ -66,14 +71,12 @@ class InMemoryRevocationStore:
 
     async def get(self, principal_id: str) -> RevocationEntry | None:
         self.get_calls += 1
-        if self.error is not None:
-            raise self.error
+        self._raise_injected_error()
         return self._live(principal_id)
 
     async def put(self, entry: RevocationEntry) -> RevocationEntry:
         self.put_calls += 1
-        if self.error is not None:
-            raise self.error
+        self._raise_injected_error()
         existing = self._live(entry.principal_id)
         if existing is not None and existing.revoked_at >= entry.revoked_at:
             return existing
