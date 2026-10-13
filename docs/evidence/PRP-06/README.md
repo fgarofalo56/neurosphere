@@ -12,9 +12,10 @@ operator-approved live runs (`NS_LIVE_APPROVED=1`) against throwaway Commercial 
 | Public OIDC v2 discovery, Commercial and Government | issuers match `entra_issuers` |
 | **Live Entra, Commercial** (`scripts/gates/prp06_entra_live.py`, app `neurosphere-api-dev` in the Limitlessdata tenant) | real v2 delegated token accepted by the production validator; wrong audience and tampered payload are 401; see `live-commercial-2026-10-13.md` |
 | **Live Cosmos, Commercial** (`scripts/gates/prp06_cosmos_live.py`, throwaway serverless account) | audit chain with 4 parallel writers verifies; replace, upsert, patch and delete on audit records are refused by the service (HTTP 403); policy and revocation stores work through their repositories; see `live-cosmos-2026-10-13.md` |
+| **Live Entra, Government** (`scripts/gates/prp06_entra_live.py`, app `neurosphere-api-dev` in the Government tenant) | real v2 delegated token from `login.microsoftonline.us` accepted by the production validator; same rejection results as Commercial; see `live-government-2026-10-13.md` |
 
-Live token facts (Commercial, app registered with `requestedAccessTokenVersion=2`): issuer
-`https://login.microsoftonline.com/<tenant>/v2.0`, `ver` 2.0, and **`aud` is the bare app-id GUID,
+Live token facts (Commercial and Government, app registered with `requestedAccessTokenVersion=2`): issuer
+`https://login.microsoftonline.com/<tenant>/v2.0` (Government: `login.microsoftonline.us`), `ver` 2.0, and **`aud` is the bare app-id GUID,
 not `api://<id>`**. Configure the GUID as the audience.
 
 ## Audit immutability: what is and is not shown
@@ -34,10 +35,13 @@ above is the evidence for that.
 
 ## OPEN (not verified, not claimed)
 
-- **Government**: live Entra validation and the Government v1 issuer host. `/common` v1 metadata for
-  both clouds advertises `https://sts.windows.net/{tenantid}/`, while the allowlist uses
-  `sts.usgovcloudapi.net` for Government. It fails closed (a real Government v1 token would get 401).
-  Register the API with `accessTokenAcceptedVersion=2` so v2 is the path in use.
+- **Government v1 issuer host.** `/common` v1 metadata for both clouds advertises
+  `https://sts.windows.net/{tenantid}/`, while the allowlist uses `sts.usgovcloudapi.net` for
+  Government. It fails closed (a real Government v1 token would get 401). An attempt to mint a live v1
+  token on 2026-10-13 was inconclusive: after switching the test app to token version 1 the next
+  token was still v2 (propagation delay or a cached token), so the host is unconfirmed. Register the
+  API with `requestedAccessTokenVersion=2` so v2 is the path in use. Do not change the allowlist
+  without a real Government v1 token.
 - **Expiry and app-only tokens** were not exercised live.
 - **Revocation per-item TTL expiry** on real Cosmos was not exercised (retention floor is 28 hours).
 - **No FedRAMP, ATO or compliance parity claim.** Availability, feature maturity and authorization
