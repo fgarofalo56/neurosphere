@@ -50,11 +50,11 @@ class InMemoryRevocationStore:
         self._retention = retention_seconds
         self._clock = clock
         self._entries: dict[str, tuple[RevocationEntry, float]] = {}
-        self.error: BaseException | None = None
+        self.error: Exception | None = None
         self.get_calls = 0
         self.put_calls = 0
 
-    def fail_with(self, error: BaseException | None) -> None:
+    def fail_with(self, error: Exception | None) -> None:
         self.error = error
 
     def _live(self, principal_id: str) -> RevocationEntry | None:

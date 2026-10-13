@@ -32,7 +32,7 @@ from .revocation_helpers import (
 
 TARGET = principal_id_for(OBJECT_ID)
 
-OUTAGES: list[BaseException] = [
+OUTAGES: list[Exception] = [
     RuntimeError("socket reset"),
     ConnectionError("refused"),
     TimeoutError(),
@@ -66,7 +66,7 @@ def _cosmos(container: _FakeContainer) -> CosmosRevocationStore:
 
 
 @pytest.mark.parametrize("error", OUTAGES, ids=lambda e: type(e).__name__)
-async def test_checker_outage_raises_dependency_transient(error: BaseException) -> None:
+async def test_checker_outage_raises_dependency_transient(error: Exception) -> None:
     store = InMemoryRevocationStore()
     store.fail_with(error)
     checker = CachedRevocationChecker(store, clock=FakeClock())
@@ -76,7 +76,7 @@ async def test_checker_outage_raises_dependency_transient(error: BaseException) 
 
 
 @pytest.mark.parametrize("error", OUTAGES, ids=lambda e: type(e).__name__)
-async def test_derivation_with_store_outage_is_503_not_allow(error: BaseException) -> None:
+async def test_derivation_with_store_outage_is_503_not_allow(error: Exception) -> None:
     clock = FakeClock()
     store = InMemoryRevocationStore(clock=clock)
     store.fail_with(error)
