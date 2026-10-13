@@ -355,3 +355,19 @@ async def test_cosmos_store_rejects_mismatched_slot() -> None:
     store, _ = _cosmos()
     with pytest.raises(ValueError):
         await store.create_record(CHAIN, 3, {"chain_id": CHAIN, "sequence": 4})
+
+
+async def test_separate_tail_container_keeps_records_container_create_read_query_only() -> None:
+    records, tail = _FakeContainer(), _FakeContainer()
+    store = CosmosAuditStore(cast(ContainerProxy, records), cast(ContainerProxy, tail))
+    repo = AuditRepository(store)
+    for draft in mixed_drafts(6):
+        await repo.append(CHAIN, draft)
+    assert (await repo.verify(CHAIN)).ok
+    # A role granting only items/create + items/read + executeQuery is enough for this container.
+    assert {op for op, _ in records.calls} <= {"create_item", "read_item"}
+    assert records.queries  # range reads use query_items
+    assert not any(doc_id == "tail" for _, doc_id in records.calls)
+    # All tail traffic, including every replace, lands on the tail container.
+    assert {i for op, i in tail.calls if op == "replace_item"} == {"tail"}
+    assert {i for _, i in tail.calls} == {"tail"}

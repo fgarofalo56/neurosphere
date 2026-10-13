@@ -9,8 +9,11 @@ SDK surface used, by design: ``create_item`` (records and the first tail), ``rea
 ETag condition for the TAIL ONLY. ``upsert_item``, ``patch_item`` and ``delete_item`` are never
 called (asserted by ``packages/core/tests/audit/test_immutability.py``).
 
-Immutability here is by API surface. The Cosmos emulator enforces no auth and cannot prove
-service-side immutability; that is an open emulator delta (PRP-06 C10, gate G12).
+Immutability is by API surface in code. With a separate ``tail_container`` it is also enforced by
+the service for a writer whose data-plane role omits replace/upsert/delete on the records
+container (live evidence: docs/evidence/PRP-06/live-cosmos-*.md). It is not WORM: an account owner
+can still change data, so the hash chain stays the tamper-detection control. The Cosmos emulator
+enforces no auth and cannot show any of this (PRP-06 C10, gate G12).
 
 The container is built from a client the caller injects (``neurosphere_core.clients``
 factories own client construction and lifetime).
@@ -54,19 +57,37 @@ def _strip(document: Mapping[str, Any]) -> dict[str, Any]:
 
 
 class CosmosAuditStore:
-    def __init__(self, container: ContainerProxy) -> None:
+    """Records container plus an optional separate tail container.
+
+    With ``tail_container`` set, the records container is only ever written with ``create_item``,
+    so a data-plane role that grants items/create and items/read but not replace, upsert or delete
+    makes the records append-only at the service (see ``docs/evidence/PRP-06``). Without it the
+    tail lives beside the records and the writer needs replace on the whole container.
+    """
+
+    def __init__(
+        self, container: ContainerProxy, tail_container: ContainerProxy | None = None
+    ) -> None:
         self._container = container
+        self._tail_container = tail_container if tail_container is not None else container
 
     @classmethod
     def from_client(
-        cls, client: CosmosClient, *, database: str, container: str
+        cls,
+        client: CosmosClient,
+        *,
+        database: str,
+        container: str,
+        tail_container: str | None = None,
     ) -> CosmosAuditStore:
-        return cls(client.get_database_client(database).get_container_client(container))
+        db = client.get_database_client(database)
+        tail = db.get_container_client(tail_container) if tail_container else None
+        return cls(db.get_container_client(container), tail)
 
     async def read_tail(self, chain_id: str) -> StoredTail | None:
         with translating():
             try:
-                doc = await self._container.read_item(item=TAIL_ID, partition_key=chain_id)
+                doc = await self._tail_container.read_item(item=TAIL_ID, partition_key=chain_id)
             except CosmosResourceNotFoundError:
                 return None
         tail = TailPointer(
@@ -101,9 +122,9 @@ class CosmosAuditStore:
         with translating():
             try:
                 if if_match is None:
-                    await self._container.create_item(body=body)
+                    await self._tail_container.create_item(body=body)
                 else:
-                    await self._container.replace_item(
+                    await self._tail_container.replace_item(
                         item=TAIL_ID,
                         body=body,
                         etag=if_match,
