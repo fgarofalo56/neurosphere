@@ -162,14 +162,19 @@ def resource_from_path(param: str, *, domain_param: str | None = None) -> Resour
 
 
 def require(
-    permission: Permission | str, resource: ResourceResolver | None = None
+    permission: Permission | str,
+    resource: ResourceResolver | None = None,
+    *,
+    guard: Callable[[Request, IdentityScope], None] | None = None,
 ) -> PermissionDependency:
     """Dependency factory: 403 unless the derived scope holds ``permission`` on the target.
 
     With ``resource`` the check is :func:`permits` on the resolved domain or resource. Without it
     the check is that the scope holds ``permission`` on at least one domain (unexpired role) or
     one resource (unexpired grant); the route must still filter its data by the returned scope.
-    Unknown permission names fail at declaration time (startup), not at request time.
+    ``guard`` is an extra scope check run after the permission check; a ``ForbiddenError`` it
+    raises is recorded as a denied attempt like any other denial. Unknown permission names fail
+    at declaration time (startup), not at request time.
     """
     try:
         perm = Permission(permission)
@@ -187,8 +192,20 @@ def require(
         if resource is None:
             if _holds_anywhere(scope, perm, now) is not True:
                 raise await _denial(state, request, scope, perm, None, "permission_missing")
+            if guard is not None:
+                try:
+                    guard(request, scope)
+                except ForbiddenError as exc:
+                    raise await _denial(
+                        state, request, scope, perm, None, exc.reason or "forbidden"
+                    ) from exc
             return scope
-        target = _resolve(resource, request, scope)
+        try:
+            target = _resolve(resource, request, scope)
+        except ForbiddenError as exc:
+            raise await _denial(
+                state, request, scope, perm, None, exc.reason or "forbidden"
+            ) from exc
         if target is None:
             raise await _denial(state, request, scope, perm, None, "target_unresolved")
         allowed = permits(

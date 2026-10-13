@@ -24,15 +24,14 @@ The route inventory sees these dependencies as permission declarations (same mar
 
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
-from typing import Annotated, Final
+from typing import Final
 
-from fastapi import Depends, Request
+from fastapi import Request
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz.dependencies import (
-    PERMISSION_MARKER,
     AuthzTarget,
     PermissionDependency,
     ResourceResolver,
@@ -87,15 +86,10 @@ def audit_require_permission(
             raise InvalidSchemaError("unknown audit permission", reason="config")
         if chain_domain is not None:
             return require(perm, resource=_chain_target(chain_domain))
-        base = require(perm)
 
-        async def require_audit_chain(
-            request: Request, scope: Annotated[IdentityScope, Depends(base)]
-        ) -> IdentityScope:
+        def guard(request: Request, scope: IdentityScope) -> None:
             _chain_id(request, scope)
-            return scope
 
-        setattr(require_audit_chain, PERMISSION_MARKER, perm)
-        return require_audit_chain
+        return require(perm, guard=guard)
 
     return factory
