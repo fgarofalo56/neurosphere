@@ -18,6 +18,7 @@ from neurosphere_api.authz import AuthzTarget, configure_authz, require
 from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import (
     InMemoryPolicyRepository,
+    NoRevocationCheck,
     Permission,
     PolicyHead,
     Role,
@@ -213,6 +214,7 @@ def test_configure_rejects_mismatched_cloud_binding() -> None:
         ScopeDerivationConfig(cloud=CloudName.GOVERNMENT, tenant_id=TENANT, customer_id=CUSTOMER),
         policy_repository=InMemoryPolicyRepository(),
         pseudonymizer=pseudonymizer(),
+        revocation_checker=NoRevocationCheck(),
         clock=clock,
     )
     with pytest.raises(InvalidSchemaError):

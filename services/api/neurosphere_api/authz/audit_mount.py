@@ -10,11 +10,13 @@ Item 4's ``neurosphere_api.audit.register(registry, require_permission=...)`` ex
   caller's ``customer_id`` as the first ``.``-separated segment and a non-empty rest (no
   customer-wide chain); anything else is 403 ``audit_chain_out_of_scope``. A customer id that
   itself contains ``.`` therefore matches no chain (fails closed, never wider).
-* Domain confinement is opt-in through ``chain_domain``: a function mapping ``(scope, chain_id)``
-  to the canonical domain id the chain belongs to (or ``None`` = deny). With it, the permission
-  is checked on that domain with :func:`permits`. Without it, the caller must hold the permission
-  on at least one domain of its customer. Audit chain ids have no fixed domain convention yet,
-  so the default is customer-level confinement; callers that know the convention pass a mapper.
+* Domain confinement is mandatory: ``chain_domain`` is a required function mapping
+  ``(scope, chain_id)`` to the canonical domain id the chain belongs to (or ``None`` = deny), and
+  the permission is checked on that domain with :func:`permits`. There is deliberately no
+  customer-level fallback: a caller holding ``audit.read`` in one domain must never read another
+  domain's chain. :func:`domain_from_chain_id` implements the repository convention
+  ``<customer_id>.<name>`` -> ``<cloud>:<customer_id>:catalog:domain:<name>``; chains that do not
+  follow it (for example a customer-wide chain) map to ``None`` and are denied.
 
 The route inventory sees these dependencies as permission declarations (same marker).
 """
@@ -22,6 +24,7 @@ The route inventory sees these dependencies as permission declarations (same mar
 # No ``from __future__ import annotations`` here: FastAPI resolves string annotations against
 # module globals, and the dependency below closes over a local (``base``) in its annotation.
 
+import re
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
 from typing import Final
@@ -42,6 +45,7 @@ __all__ = [
     "AUDIT_PERMISSIONS",
     "ChainDomainMapper",
     "audit_require_permission",
+    "domain_from_chain_id",
 ]
 
 #: Item 4 permission strings -> platform permissions.
@@ -75,8 +79,23 @@ def _chain_target(mapper: ChainDomainMapper) -> ResourceResolver:
     return resolve
 
 
+_DOMAIN_NAME: Final = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
+
+
+def domain_from_chain_id(scope: IdentityScope, chain_id: str) -> str | None:
+    """Repository convention: chain ``<customer>.<name>`` belongs to domain ``<name>``.
+
+    Returns ``None`` (deny) when the name is empty or not a plain domain name, so chains outside
+    the convention are unreadable rather than readable by everyone with some audit permission.
+    """
+    name = chain_id.partition(".")[2]
+    if not _DOMAIN_NAME.fullmatch(name):
+        return None
+    return f"{scope.cloud}:{scope.customer_id}:catalog:domain:{name}"
+
+
 def audit_require_permission(
-    *, chain_domain: ChainDomainMapper | None = None
+    *, chain_domain: ChainDomainMapper
 ) -> Callable[[str], PermissionDependency]:
     """Factory for ``neurosphere_api.audit.register(..., require_permission=<this result>)``."""
 
@@ -84,12 +103,6 @@ def audit_require_permission(
         perm = AUDIT_PERMISSIONS.get(permission)
         if perm is None:
             raise InvalidSchemaError("unknown audit permission", reason="config")
-        if chain_domain is not None:
-            return require(perm, resource=_chain_target(chain_domain))
-
-        def guard(request: Request, scope: IdentityScope) -> None:
-            _chain_id(request, scope)
-
-        return require(perm, guard=guard)
+        return require(perm, resource=_chain_target(chain_domain))
 
     return factory

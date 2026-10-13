@@ -51,7 +51,7 @@ from neurosphere_core.auth.scope.policy import (
     PrincipalPolicy,
 )
 from neurosphere_core.auth.scope.pseudonym import PrincipalKind, PrincipalPseudonymizer
-from neurosphere_core.auth.scope.revocation_hook import RevocationChecker
+from neurosphere_core.auth.scope.revocation_hook import NoRevocationCheck, RevocationChecker
 from neurosphere_core.cloud import CloudName
 from neurosphere_core.errors import (
     DependencyTransientError,
@@ -126,9 +126,15 @@ class ScopeDeriver:
         *,
         policy_repository: PolicyRepository,
         pseudonymizer: PrincipalPseudonymizer,
-        revocation_checker: RevocationChecker | None = None,
+        revocation_checker: RevocationChecker,
         clock: Clock = time.time,
     ) -> None:
+        # Required on purpose: ``None`` would silently skip revocation. Opting out is
+        # ``NoRevocationCheck()`` so it is visible where the deriver is built.
+        if not isinstance(revocation_checker, RevocationChecker):
+            raise TypeError(
+                "revocation_checker is required; pass a RevocationChecker or NoRevocationCheck()"
+            )
         self._config = config
         self._repo = policy_repository
         self._pseudonymizer = pseudonymizer
@@ -219,7 +225,7 @@ class ScopeDeriver:
             ) from exc
 
     async def _check_revocation(self, principal_id: str, issued_at: datetime) -> None:
-        if self._revocation is None:
+        if isinstance(self._revocation, NoRevocationCheck):
             return
         try:
             async with asyncio.timeout(self._config.store_timeout_seconds):

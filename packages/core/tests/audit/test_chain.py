@@ -339,3 +339,31 @@ async def test_record_that_does_not_link_blocks_further_appends() -> None:
     with pytest.raises(DependencyTransientError) as info:
         await repo.append(CHAIN, mixed_drafts(1)[0])
     assert info.value.reason == "audit_chain_broken"
+
+
+async def test_verify_refuses_to_walk_a_tail_that_claims_more_than_the_limit() -> None:
+    store = InMemoryAuditStore()
+    repo = make_repo(store)
+    for draft in mixed_drafts(3):
+        await repo.append(CHAIN, draft)
+    assert (await repo.verify(CHAIN)).ok
+
+    limited = await repo.verify(CHAIN, max_records=2)
+    assert not limited.ok
+    assert limited.reason == "verify_limit_exceeded"
+    assert limited.records_checked == 0
+
+
+async def test_verify_with_forged_huge_tail_returns_instead_of_paging_forever() -> None:
+    store = InMemoryAuditStore()
+    repo = make_repo(store)
+    for draft in mixed_drafts(3):
+        await repo.append(CHAIN, draft)
+    current = await store.read_tail(CHAIN)
+    assert current is not None
+    forged = current.tail.model_copy(update={"sequence": 10**12})
+    await store.write_tail(forged, if_match=current.etag)
+
+    result = await asyncio.wait_for(repo.verify(CHAIN), timeout=5)
+    assert not result.ok
+    assert result.reason == "verify_limit_exceeded"

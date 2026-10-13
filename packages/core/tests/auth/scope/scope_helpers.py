@@ -8,6 +8,7 @@ from typing import Any
 from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import (
     InMemoryPolicyRepository,
+    NoRevocationCheck,
     PolicyGrant,
     PolicyHead,
     PolicyRoleAssignment,
@@ -173,6 +174,6 @@ def make_deriver(
         cfg,
         policy_repository=repo,
         pseudonymizer=pseudonymizer(),
-        revocation_checker=revocation_checker,
+        revocation_checker=revocation_checker or NoRevocationCheck(),
         clock=clock or FakeClock(),
     )

@@ -34,6 +34,7 @@ FailureReason = Literal[
     "record_hash_mismatch",
     "previous_hash_mismatch",
     "tail_mismatch",
+    "verify_limit_exceeded",
 ]
 
 

@@ -15,6 +15,7 @@ from neurosphere_api.authz.audit_mount import (
     AUDIT_PERMISSIONS,
     ChainDomainMapper,
     audit_require_permission,
+    domain_from_chain_id,
 )
 from neurosphere_api.authz.cache_key import cache_key_prefix, scope_cache_key
 from neurosphere_api.authz.dependencies import (
@@ -67,6 +68,7 @@ __all__ = [
     "configure_authz",
     "current_derivation",
     "current_scope",
+    "domain_from_chain_id",
     "domain_from_path",
     "get_authz_state",
     "public_paths_for",
