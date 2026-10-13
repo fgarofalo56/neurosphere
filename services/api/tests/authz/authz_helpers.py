@@ -25,6 +25,7 @@ from neurosphere_api.authz import (
 from neurosphere_core.auth.jwt import DevIssuer, JwksCache, JwtConfig, JwtValidator, entra_jwks_uri
 from neurosphere_core.auth.scope import (
     InMemoryPolicyRepository,
+    NoRevocationCheck,
     Permission,
     PolicyGrant,
     PolicyHead,
@@ -260,7 +261,7 @@ def make_deriver(
         cfg,
         policy_repository=repo,
         pseudonymizer=pseudonymizer(),
-        revocation_checker=revocation_checker,
+        revocation_checker=revocation_checker or NoRevocationCheck(),
         clock=clock,
     )
 

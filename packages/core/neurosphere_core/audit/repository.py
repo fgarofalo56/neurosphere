@@ -39,6 +39,8 @@ from neurosphere_core.errors import (
 
 DEFAULT_MAX_APPEND_ATTEMPTS: Final = 64
 MAX_RANGE: Final = 500
+#: Upper bound on records one verify pass will read; a tail claiming more is reported, not walked.
+MAX_VERIFY_RECORDS: Final = 1_000_000
 CHAIN_ID_PATTERN: Final = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 
 Clock = Callable[[], datetime]
@@ -190,14 +192,29 @@ class AuditRepository:
         current = await self._store.read_tail(chain_id)
         return None if current is None else current.tail
 
-    async def verify(self, chain_id: str, *, page_size: int = MAX_RANGE) -> ChainVerification:
-        """Verify the whole chain from the head, anchored on the tail pointer."""
+    async def verify(
+        self,
+        chain_id: str,
+        *,
+        page_size: int = MAX_RANGE,
+        max_records: int = MAX_VERIFY_RECORDS,
+    ) -> ChainVerification:
+        """Verify the whole chain from the head, anchored on the tail pointer.
+
+        At most ``max_records`` are read. A tail claiming a longer chain (a corrupted or forged
+        tail pointer, or a chain beyond the cap) fails closed with ``verify_limit_exceeded``
+        instead of paging without bound.
+        """
         validate_chain_id(chain_id)
         current = await self._store.read_tail(chain_id)
         tail = None if current is None else current.tail
+        if tail is not None and tail.sequence >= max_records:
+            return ChainVerification(
+                chain_id=chain_id, ok=False, records_checked=0, reason="verify_limit_exceeded"
+            )
         documents: list[dict[str, Any]] = []
         start = 0
-        while True:
+        while start < max_records:
             page = await self._store.query_range(chain_id, start, start + page_size)
             documents.extend(page)
             start += page_size

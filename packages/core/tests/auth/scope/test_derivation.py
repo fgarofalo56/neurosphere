@@ -17,9 +17,11 @@ from neurosphere_contracts.scope.v1.identity_scope import IdentityScope as Contr
 from neurosphere_core.auth.scope import (
     NO_POLICY_VERSION,
     InMemoryPolicyRepository,
+    NoRevocationCheck,
     PolicyHead,
     PrincipalPolicy,
     Role,
+    ScopeDerivationConfig,
     ScopeDeriver,
     compute_scope_hash,
     principal_document_id,
@@ -36,6 +38,7 @@ from .scope_helpers import (
     OPERATIONS,
     OTHER_CUSTOMER_FINANCE,
     OTHER_TENANT,
+    TENANT,
     FakeClock,
     at,
     grant,
@@ -44,6 +47,7 @@ from .scope_helpers import (
     make_repo,
     principal_id_for,
     principal_policy,
+    pseudonymizer,
     role,
 )
 
@@ -430,3 +434,21 @@ async def test_object_id_never_appears_in_scope_or_errors() -> None:
     with pytest.raises(DependencyTransientError) as info:
         await make_deriver(repo).from_verified_claims(make_claims())
     assert OBJECT_ID not in str(info.value)
+
+
+def test_revocation_checker_is_required_none_is_refused() -> None:
+    for bogus in (None, object(), "checker"):
+        with pytest.raises(TypeError, match="revocation_checker is required"):
+            ScopeDeriver(
+                ScopeDerivationConfig(
+                    cloud=CloudName.COMMERCIAL, tenant_id=TENANT, customer_id=CUSTOMER
+                ),
+                policy_repository=make_repo(_analyst_policy()),
+                pseudonymizer=pseudonymizer(),
+                revocation_checker=bogus,  # type: ignore[arg-type]
+            )
+
+
+async def test_explicit_no_revocation_check_is_the_only_opt_out() -> None:
+    deriver = make_deriver(make_repo(_analyst_policy()), revocation_checker=NoRevocationCheck())
+    assert isinstance(await deriver.from_verified_claims(make_claims()), IdentityScope)

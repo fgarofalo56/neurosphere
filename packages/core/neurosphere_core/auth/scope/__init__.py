@@ -46,7 +46,7 @@ from neurosphere_core.auth.scope.pseudonym import (
     PrincipalPseudonymizer,
     PseudonymKey,
 )
-from neurosphere_core.auth.scope.revocation_hook import RevocationChecker
+from neurosphere_core.auth.scope.revocation_hook import NoRevocationCheck, RevocationChecker
 
 __all__ = [
     "DEFAULT_POLICY_CACHE_TTL_SECONDS",
@@ -61,6 +61,7 @@ __all__ = [
     "CosmosPolicyRepository",
     "GrantPermission",
     "InMemoryPolicyRepository",
+    "NoRevocationCheck",
     "Permission",
     "PolicyGrant",
     "PolicyHead",

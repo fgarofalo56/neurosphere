@@ -37,6 +37,8 @@ Clock = Callable[[], float]
 
 DEFAULT_CACHE_TTL_SECONDS: Final = 3600
 DEFAULT_MIN_REFRESH_INTERVAL_SECONDS: Final = 300
+#: Start renewing the key set this long before it expires (still serving the cache meanwhile).
+DEFAULT_REFRESH_AHEAD_SECONDS: Final = 300
 DEFAULT_MAX_KEYS: Final = 32
 DEFAULT_MAX_JWKS_BYTES: Final = 64 * 1024
 DEFAULT_FETCH_TIMEOUT_SECONDS: Final = 5.0
@@ -194,11 +196,17 @@ class JwksCache:
         ttl_seconds: float = DEFAULT_CACHE_TTL_SECONDS,
         min_refresh_interval_seconds: float = DEFAULT_MIN_REFRESH_INTERVAL_SECONDS,
         max_keys: int = DEFAULT_MAX_KEYS,
+        refresh_ahead_seconds: float = DEFAULT_REFRESH_AHEAD_SECONDS,
     ) -> None:
         if min_refresh_interval_seconds <= 0 or ttl_seconds < min_refresh_interval_seconds:
             raise InvalidSchemaError(
                 "JWKS ttl must be at least the minimum refresh interval (> 0)", reason="config"
             )
+        if not 0 <= refresh_ahead_seconds < ttl_seconds:
+            raise InvalidSchemaError(
+                "JWKS refresh-ahead window must be in [0, ttl)", reason="config"
+            )
+        self._refresh_ahead = refresh_ahead_seconds
         self._fetcher = fetcher
         self._clock = clock
         self._ttl = ttl_seconds
@@ -218,6 +226,8 @@ class JwksCache:
         if the key set cannot be established."""
         key = self._fresh_key(kid)
         if key is not None:
+            if self._clock() >= self._expires_at - self._refresh_ahead:
+                return await self._refresh_ahead_of_expiry(kid, key)
             return key
         async with self._lock:
             key = self._fresh_key(kid)  # another task may have refreshed while we waited
@@ -239,6 +249,28 @@ class JwksCache:
             if key is None:
                 raise UnauthorizedError("invalid bearer token", reason="unknown_kid")
             return key
+
+    async def _refresh_ahead_of_expiry(self, kid: str, key: SigningKey) -> SigningKey:
+        """Near expiry, try to renew the key set while the cached one is still valid.
+
+        A failed attempt keeps serving the unexpired cache (and consumes the refresh interval, so
+        a broken endpoint is not hammered); expiry is never extended. A successful refresh that no
+        longer lists ``kid`` means the key was withdrawn, so the token is untrusted.
+        """
+        if self._lock.locked():  # another task is already renewing; do not queue behind it
+            return key
+        async with self._lock:
+            now = self._clock()
+            if now >= self._expires_at or now - self._last_attempt < self._min_refresh:
+                return self._fresh_key(kid) or key
+            try:
+                await self._refresh(now)
+            except DependencyTransientError:
+                return key
+            fresh = self._keys.get(kid)
+            if fresh is None:
+                raise UnauthorizedError("invalid bearer token", reason="unknown_kid")
+            return fresh
 
     def _fresh_key(self, kid: str) -> SigningKey | None:
         if self._clock() < self._expires_at:

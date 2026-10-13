@@ -60,9 +60,11 @@ def _register_health(registry: RouterRegistry) -> None:
 
 def _register_audit(registry: RouterRegistry) -> None:
     from neurosphere_api.audit import register
-    from neurosphere_api.authz import audit_require_permission
+    from neurosphere_api.authz import audit_require_permission, domain_from_chain_id
 
-    register(registry, require_permission=audit_require_permission())
+    register(
+        registry, require_permission=audit_require_permission(chain_domain=domain_from_chain_id)
+    )
 
 
 REGISTERED: tuple[RegisterHook, ...] = (_register_health, _register_audit)

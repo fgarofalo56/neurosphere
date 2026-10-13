@@ -270,3 +270,64 @@ async def test_end_to_end_with_httpx_client() -> None:
             tenants = {(await validator.validate(_token())).tenant_id for _ in range(3)}
     assert tenants == {TENANT}
     assert route.call_count == 1
+
+
+def _token_at(clock: FakeClock, kid: str = ENTRA_KID) -> str:
+    return signer(kid).sign(entra_claims(now=clock.now))
+
+
+AHEAD_START = TTL - 300  # the default refresh-ahead window opens 300 s before expiry
+
+
+async def test_refresh_ahead_renews_before_expiry_so_there_is_no_gap() -> None:
+    validator, fetcher, clock = make_validator(ttl=TTL, interval=INTERVAL)
+    await validator.validate(_token_at(clock))
+    assert fetcher.calls == 1
+
+    clock.advance(AHEAD_START - 1)  # still outside the window
+    await validator.validate(_token_at(clock))
+    assert fetcher.calls == 1
+
+    clock.advance(1)  # window opens: this request renews the key set
+    await validator.validate(_token_at(clock))
+    assert fetcher.calls == 2
+
+    clock.advance(400)  # past the original expiry; the renewed set is still fresh
+    await validator.validate(_token_at(clock))
+    assert fetcher.calls == 2
+
+
+async def test_failed_refresh_ahead_keeps_serving_cache_and_never_extends_expiry() -> None:
+    validator, fetcher, clock = make_validator(ttl=TTL, interval=INTERVAL)
+    await validator.validate(_token_at(clock))
+    clock.advance(AHEAD_START)
+    fetcher.error = DependencyTransientError("jwks down", reason="jwks_unavailable")
+
+    await validator.validate(_token_at(clock))  # served from the unexpired cache
+    assert fetcher.calls == 2
+    clock.advance(INTERVAL - 1)
+    await validator.validate(_token_at(clock))  # interval consumed by the failed attempt
+    assert fetcher.calls == 2
+
+    clock.advance(1)  # at the original expiry the cache is dead: fail closed, not stale
+    with pytest.raises(DependencyTransientError):
+        await validator.validate(_token_at(clock))
+
+
+async def test_refresh_ahead_that_drops_a_key_makes_its_tokens_untrusted() -> None:
+    validator, fetcher, clock = make_validator(ttl=TTL, interval=INTERVAL)
+    await validator.validate(_token_at(clock))
+    clock.advance(AHEAD_START)
+    fetcher.document = _jwks("rotated-in")  # the old kid is gone from the issuer's set
+
+    with pytest.raises(UnauthorizedError) as info:
+        await validator.validate(_token_at(clock))
+    assert info.value.reason == "unknown_kid"
+
+
+def test_refresh_ahead_window_must_be_shorter_than_the_ttl() -> None:
+    fetcher = FakeFetcher(URL, _jwks(ENTRA_KID))
+    with pytest.raises(InvalidSchemaError):
+        JwksCache(
+            fetcher, ttl_seconds=600, min_refresh_interval_seconds=300, refresh_ahead_seconds=600
+        )
