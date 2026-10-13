@@ -1,6 +1,6 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: active
+status: shipped
 review: required
 created: 2026-10-08
 model: opus
@@ -261,10 +261,17 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
-- Reviewer verdict (one pass, max one rework round):
+- Date: 2026-10-12
+- Merged commits: setup 5ee1aa9 (pyjwt[crypto] declared, PRP activated); item merges in order 1 (ff, 486420c), 4 (a924d33), 2 (387f5fa), 5 (7b730e3), 3 (6467405), 6 (5a0f868); fix-forward commit for unaudited chain-scope denials. Branch `prp-06-identity-authz-audit`.
+- Reviewer verdict (one pass, max one rework round): APPROVE, no blockers, no rework round. Non-blocking follow-ups below.
 - Deviations from blueprint and why:
-- Descoped items:
-- Open gates / untested live items:
-- Follow-ups:
+  - `IdentityScope.from_verified_claims` lives on `ScopeDeriver` (auth/scope), not on the PRP-05 holder class, to avoid editing PRP-05 files; `derive()` also returns assignment and grant ids because the contract scope has no grant-ids field.
+  - Item 3 gained an optional `guard` argument on `require()` after the item 6 suite found chain-scope 403s that bypassed the DenialRecorder (fixed forward, suite now green).
+  - Audit "allow" is stored as an `after` record with result succeeded and detail decision=allow (the contract has no allow kind).
+  - Admin holds data.read in its own domains only; Auditor has no data read (C7).
+  - Revocation is by token issue time with a 60 s skew allowance; default TTL 60 s, stated as bounded, not instant.
+  - Added tests/security/__init__.py and tests/security/authz/__init__.py to avoid a pytest module clash.
+  - Government v1 issuer host (sts.usgovcloudapi.net) is unverified; it fails closed.
+- Descoped items: the audit router is NOT mounted in routers.py/app.py (PRP-05 files; deny-all until wired). `configure_authz` is not yet called from the app factory.
+- Open gates / untested live items: live Entra validation on Commercial and Government (OPEN, needs NS_LIVE_APPROVED=1); service-level audit immutability on real Cosmos (OPEN); the Cosmos emulator integration test for the audit store was never run; no Snyk scan ran (no tool available to agents).
+- Follow-ups: (1) make the audit chain_domain mapper mandatory before the routes are mounted; (2) consider a block-until-lifted revocation mode; (3) require a revocation checker in production wiring; (4) refresh JWKS ahead of expiry; (5) cap verify paging length in the audit repository; (6) allow-hooks and pre-scope failures (401/503/revoked) are not audited; (7) PRP-10 must re-run tests/security/authz against the Azure AI Search implementation.
