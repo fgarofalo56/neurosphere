@@ -114,8 +114,8 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | psutil | 7.2.2 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | py-serializable | 2.1.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | pycparser | 3.11 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic | 2.14.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic-core | 2.50.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic | 2.14.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic-core | 2.50.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pydantic-settings | 2.15.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pygments | 2.21.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | pyjwt | 2.15.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
