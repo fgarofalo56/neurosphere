@@ -1,21 +1,31 @@
 version: 2
 updates:
+# default-days covers patches: without it a patch is proposed hours after release and the
+# lockfile fails pnpm's minimumReleaseAge supply-chain check (24h) in CI.
+# Each bump also needs docs/licenses.md regenerated; dependabot-licences.yml does that.
   - package-ecosystem: uv
     directory: /
     schedule: { interval: weekly, day: monday }
-    cooldown: { semver-minor-days: 7, semver-major-days: 14 }
+    cooldown: { default-days: 3, semver-minor-days: 7, semver-major-days: 14 }
     groups:
       python-minor-patch: { update-types: [minor, patch] }
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly, day: monday }
-    cooldown: { semver-minor-days: 7, semver-major-days: 14 }
+    cooldown: { default-days: 3, semver-minor-days: 7, semver-major-days: 14 }
     groups:
       node-minor-patch: { update-types: [minor, patch] }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly, day: monday }
     cooldown: { default-days: 7 }
+  # The Dockerfiles live under services/; "/" holds only docker-compose.yml, which the
+  # docker ecosystem does not read, so the job failed with "No Dockerfiles ... found".
+  # Python stays on 3.12 (ADR-0002), so only patch-level image updates are proposed for it.
   - package-ecosystem: docker
-    directory: /
+    directories: [/services/api, /services/workers]
     schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    ignore:
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]

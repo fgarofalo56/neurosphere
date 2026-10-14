@@ -1,0 +1,121 @@
+name: dependabot-licences
+
+# Every dependency bump makes docs/licenses.md and the ADR-0002 appendix stale, which fails
+# "planning docs aligned" and tests/test_licenses_report.py until someone re-runs
+# scripts/licenses_report.py. This regenerates the register on Dependabot PRs and pushes it
+# back to the PR branch.
+#
+# Two jobs on purpose: `regenerate` installs the freshly bumped dependencies (untrusted code)
+# with a read-only token and no secrets; `commit` holds the write token and runs only git on
+# the two generated files. The push uses LICENCE_BOT_TOKEN (a Dependabot secret: a
+# fine-grained token or GitHub App token with contents:write on this repo) because a push made
+# with GITHUB_TOKEN does not trigger CI, and the required checks would never re-run. A licence
+# policy violation (UNKNOWN, denied or unapproved copyleft) fails here and needs a human.
+on:
+  pull_request:
+    paths: [uv.lock, pnpm-lock.yaml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-licences-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: regenerate licence register
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - uses: astral-sh/setup-uv@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - name: Regenerate (fails on a licence-policy violation)
+        run: |
+          uv sync --frozen
+          pnpm install --frozen-lockfile
+          python scripts/licenses_report.py
+      - name: Detect change
+        id: diff
+        run: |
+          if git diff --quiet -- docs/licenses.md docs/adr/0002-stack-pins.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "licence register already current"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- docs/licenses.md docs/adr/0002-stack-pins.md
+          fi
+      - if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: licence-register
+          path: |
+            docs/licenses.md
+            docs/adr/0002-stack-pins.md
+          retention-days: 1
+
+  commit:
+    name: push regenerated register
+    needs: regenerate
+    if: needs.regenerate.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require the push token
+        env:
+          LICENCE_BOT_TOKEN: ${{ secrets.LICENCE_BOT_TOKEN }}
+        run: |
+          if [ -z "$LICENCE_BOT_TOKEN" ]; then
+            echo "::error::Dependabot secret LICENCE_BOT_TOKEN is not set; run python scripts/licenses_report.py on this branch by hand"
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.LICENCE_BOT_TOKEN }}
+      - name: Refuse to push over a newer head
+        env:
+          EXPECTED: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$(git rev-parse HEAD)" != "$EXPECTED" ]; then
+            echo "::error::branch moved since this run started; the newer push gets its own run"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v8
+        with:
+          name: licence-register
+          path: ${{ runner.temp }}/register
+      - name: Commit and push only the two generated files
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          src="$RUNNER_TEMP/register"
+          extra=$(find "$src" -type f ! -path "$src/licenses.md" ! -path "$src/adr/0002-stack-pins.md")
+          if [ -n "$extra" ]; then
+            echo "::error::unexpected files in artifact: $extra"
+            exit 1
+          fi
+          cp "$src/licenses.md" docs/licenses.md
+          cp "$src/adr/0002-stack-pins.md" docs/adr/0002-stack-pins.md
+          other=$(git status --porcelain | grep -vE '^ M docs/(licenses\.md|adr/0002-stack-pins\.md)$' || true)  # no-match-ok: grep exits 1 when only the register changed
+          if [ -n "$other" ]; then
+            echo "::error::unexpected working-tree changes: $other"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(deps): regenerate licence register" -- docs/licenses.md docs/adr/0002-stack-pins.md
+          git push origin "HEAD:$HEAD_REF"
