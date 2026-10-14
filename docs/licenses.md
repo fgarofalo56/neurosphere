@@ -145,7 +145,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | wrapt | 2.5.0 | BSD-2-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | yarl | 1.25.1 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 
-## npm (pnpm-lock.yaml) - 399 packages
+## npm (pnpm-lock.yaml) - 417 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -270,11 +270,14 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | @jsdevtools/ono | 7.1.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @keyv/bigmap | 1.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @keyv/serialize | 1.1.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| @msw/url | 0.1.2 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | @mswjs/interceptors | 0.41.9 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| @mswjs/interceptors | 0.45.8 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | @open-draft/deferred-promise | 2.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @open-draft/deferred-promise | 3.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @open-draft/logger | 0.3.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | @open-draft/until | 2.1.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| @open-draft/until | 3.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @oxc-project/types | 0.153.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | @playwright/test | 1.64.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | @remix-run/route-pattern | 0.22.1 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
@@ -304,11 +307,13 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | @testing-library/user-event | 14.6.7 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/aria-query | 5.0.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/chai | 5.2.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| @types/debug | 4.1.13 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/deep-eql | 4.0.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/esrecurse | 4.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/estree | 1.0.9 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/json-schema | 7.0.15 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/lodash | 4.17.26 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| @types/ms | 2.1.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/node | 26.6.5 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | @types/react | 19.3.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | @types/react-dom | 19.3.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -338,8 +343,10 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | acorn-jsx | 5.3.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | ajv | 6.15.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | ansi-regex | 5.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| ansi-regex | 6.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | ansi-styles | 4.3.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | ansi-styles | 5.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| ansi-styles | 6.2.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | argparse | 2.0.1 | Python-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | aria-query | 5.3.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | aria-query | 5.3.2 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -354,10 +361,12 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | chalk | 5.6.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | cli-width | 4.1.0 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | cliui | 8.0.1 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
+| cliui | 9.0.1 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | color-convert | 2.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | color-name | 1.1.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | convert-source-map | 2.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | cookie | 1.1.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| cookie | 2.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | cookie-es | 3.1.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | cross-spawn | 7.0.6 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | css-tree | 3.2.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -374,6 +383,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | embla-carousel | 8.6.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | embla-carousel-autoplay | 8.6.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | embla-carousel-fade | 8.6.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| emoji-regex | 10.6.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | emoji-regex | 8.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | entities | 8.1.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | es-module-lexer | 2.3.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -403,6 +413,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | flatted | 3.4.4 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | fsevents | 2.3.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | get-caller-file | 2.0.5 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
+| get-east-asian-width | 1.7.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | glob-parent | 6.0.2 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | graphql | 16.14.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | hashery | 1.5.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -456,6 +467,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | minimist | 1.2.8 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | ms | 2.1.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | msw | 2.15.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| msw | 3.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | mute-stream | 3.0.0 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | nanoid | 3.3.20 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | natural-compare | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -503,7 +515,10 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | std-env | 4.3.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | strict-event-emitter | 0.5.1 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | string-width | 4.2.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| string-width | 7.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| string-width | 8.3.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | strip-ansi | 6.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| strip-ansi | 7.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | strip-indent | 3.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | stylis | 4.4.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | tabster | 8.8.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
@@ -541,10 +556,13 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | why-is-node-running | 3.2.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | word-wrap | 1.2.5 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | wrap-ansi | 7.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| wrap-ansi | 9.0.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | xml-name-validator | 5.0.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | xmlchars | 2.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | y18n | 5.0.8 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | yargs | 17.7.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| yargs | 18.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | yargs-parser | 21.1.1 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
+| yargs-parser | 22.0.0 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | yocto-queue | 0.1.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | zustand | 5.0.15 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
