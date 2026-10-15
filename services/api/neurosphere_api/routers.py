@@ -67,7 +67,13 @@ def _register_audit(registry: RouterRegistry) -> None:
     )
 
 
-REGISTERED: tuple[RegisterHook, ...] = (_register_health, _register_audit)
+def _register_ingest(registry: RouterRegistry) -> None:
+    from neurosphere_api.ingest import register
+
+    register(registry)
+
+
+REGISTERED: tuple[RegisterHook, ...] = (_register_health, _register_audit, _register_ingest)
 
 
 def register_default_routers(registry: RouterRegistry) -> None:
