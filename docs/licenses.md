@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 124 packages
+## Python (uv.lock) - 125 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -57,6 +57,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | h11 | 0.16.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | httpcore | 1.0.9 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | httpx | 0.28.1 | BSD-3-Clause | runtime | 0.x: minor releases may break; no support window recorded |
+| hypothesis | 6.170.0 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |

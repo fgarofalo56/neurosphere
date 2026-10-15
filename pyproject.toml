@@ -20,6 +20,7 @@ dev = [
   "respx>=0.23,<0.24",
   "httpx>=0.28,<0.29",
   "pip-audit>=2.10,<3",
+  "hypothesis>=6.168,<7",
   "azure-cosmos>=4.6,<5",
   "azure-eventhub>=5.12,<6",
   "azure-identity>=1.26,<2",

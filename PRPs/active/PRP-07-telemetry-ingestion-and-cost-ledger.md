@@ -1,6 +1,8 @@
 ---
 name: prp-07-telemetry-ingestion-and-cost-ledger
-status: backlog
+status: active
+started: 2026-10-15
+branch: prp-07-telemetry-ingestion
 review: required
 created: 2026-10-08
 model: sonnet
@@ -142,6 +144,13 @@ PRP-specific gotchas:
 
 Shared must-not-touch for every item (the "shared list"): root `pyproject.toml`, `docker-compose.yml`, `infra/compose/`, `docs/RESEARCH-AND-GATES.md`, `packages/contracts/**` (PRP-01), `packages/core/neurosphere_core/{errors,scope,paging,cloud,observability,clients,auth,audit}/`, `services/api/neurosphere_api/{main.py,app.py,middleware/,health/,authz/,audit/}`, `services/workers/neurosphere_workers/runtime/` (PRP-05, PRP-06; import only), `frontend/**`, `.github/workflows/**`. Dependencies are added in one serialized integrator commit.
 
+### Item 0 — shared-payload-guard  (added at plan approval, 2026-10-15)
+- Deliverable: one shared implementation of the payload body/redaction controls used by items 1-4: drop `prompt`/`response` fields at any depth returning only per-field counts, a recursive forbidden-field scan, and a JSON nesting-depth check. Added because items 1 (services/api) and 2-4 (services/workers) cannot import each other, and duplicating a security control across two copies is a consistency risk.
+- Owned files (may edit): `packages/core/neurosphere_core/payload/`, `packages/core/tests/payload/`.
+- Must NOT touch: everything owned by items 1-6; plus the shared list.
+- Depends on: none (runs before items 1 and 2).
+- Acceptance criteria: body fields dropped at any depth including inside lists; counts only, never values; scan finds forbidden keys at any depth; depth check rejects payloads past the limit without recursion overflow; pure functions, no I/O.
+
 ### Item 1 — ingest-edge-api  [P]
 - Deliverable: authenticated push endpoints for OTLP/JSON (`/v1/ingest/otlp/traces`, `/metrics`) and CloudEvents (`/v1/ingest/events`), producer registry check (identity -> allowed `source_id`, `customer_id`, `cloud`), body-size and nesting limits, redaction and body-dropping, schema validation against the PRP-01 envelope, publisher to Event Hubs with partition key, per-request result with accepted/rejected counts.
 - Owned files (may edit): `services/api/neurosphere_api/ingest/`, `services/api/tests/ingest/`.
@@ -265,6 +274,18 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | todo | | | | 2026-10-15 |
+| 1 | todo | | | | 2026-10-15 |
+| 2 | todo | | | | 2026-10-15 |
+| 3 | todo | | | | 2026-10-15 |
+| 4 | todo | | | | 2026-10-15 |
+| 5 | todo | | | | 2026-10-15 |
+| 6 | todo | | | | 2026-10-15 |
 
 ## Completion note (filled at ship)
 
