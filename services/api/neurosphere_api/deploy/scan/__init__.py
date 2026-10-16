@@ -1,5 +1,6 @@
 """Consented, read-only Azure Resource Graph discovery scan (PRP-08 item 3)."""
 
+from neurosphere_api.deploy.scan.bootstrap import configure_scan_from_settings
 from neurosphere_api.deploy.scan.graph import (
     SCAN_QUERY,
     HttpxResourceGraphReader,
@@ -29,5 +30,6 @@ __all__ = [
     "SubscriptionScan",
     "build_router",
     "configure_scan",
+    "configure_scan_from_settings",
     "register",
 ]
