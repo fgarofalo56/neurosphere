@@ -20,7 +20,8 @@ import asyncio
 import json
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Final
 
@@ -31,10 +32,12 @@ from neurosphere_core.deploy.register import (
     plan_removal,
     remove,
 )
+from neurosphere_core.deploy.register.guard import is_resource_group
 from neurosphere_core.errors import NeuroSphereError
 
 LIVE_APPROVAL_ENV: Final = "NS_LIVE_APPROVED"
 EXIT_REFUSED: Final = 3
+_RESOURCES_API_VERSION: Final = "2021-04-01"
 
 # ARM api-version per resource type; a type not listed is refused, never guessed.
 _API_VERSIONS: Final = {
@@ -82,6 +85,36 @@ class ArmDeleter:
             raise NeuroSphereError(f"ARM delete failed with HTTP {response.status_code}")
 
 
+class ArmInventory:
+    """Lists a resource group's live resources through ARM (``LiveInventory``), following nextLink.
+
+    Any failure raises ``NeuroSphereError`` so the caller fails closed.
+    """
+
+    def __init__(self, management_url: str, token_provider: Any, client: Any) -> None:
+        self._base = management_url.rstrip("/")
+        self._token = token_provider
+        self._client = client
+
+    async def list_resource_group(self, rg_id: str) -> list[str]:
+        token = await self._token()
+        headers = {"Authorization": f"Bearer {token}"}
+        url: str | None = f"{self._base}{rg_id}/resources"
+        params: dict[str, str] | None = {"api-version": _RESOURCES_API_VERSION}
+        ids: list[str] = []
+        while url:
+            response = await self._client.get(url, params=params, headers=headers)
+            if response.status_code != 200:
+                raise NeuroSphereError(
+                    f"ARM resource listing failed with HTTP {response.status_code}"
+                )
+            body = response.json()
+            ids.extend(str(item["id"]) for item in body.get("value", []))
+            url = body.get("nextLink")
+            params = None  # nextLink already carries its query string
+        return ids
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     src = p.add_argument_group("register source")
@@ -90,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
     src.add_argument("--cosmos-container")
     src.add_argument("--deployment-id", help="deployment to load from the Cosmos store")
     p.add_argument("--dry-run", action="store_true", help="report only; never deletes")
+    p.add_argument(
+        "--verify-live",
+        action="store_true",
+        help="with --dry-run: list each resource group's live contents via ARM (read-only)",
+    )
     p.add_argument("--report", type=Path, help="write the JSON report here (default: stdout)")
     p.add_argument("--confirm", help="deployment id; required for real removal")
     return p
@@ -149,7 +187,8 @@ def _refusal(args: argparse.Namespace, register: RegisterExport) -> str | None:
     return None
 
 
-async def _real_removal(rows: Sequence[ResourceRow], register: RegisterExport) -> list[str]:
+@asynccontextmanager
+async def _arm_session() -> AsyncIterator[tuple[ArmDeleter, ArmInventory]]:
     import httpx
     from azure.identity.aio import DefaultAzureCredential
     from neurosphere_core.cloud import CloudName, load_settings, profile_for
@@ -165,17 +204,38 @@ async def _real_removal(rows: Sequence[ResourceRow], register: RegisterExport) -
         async def token() -> str:
             return (await credential.get_token(scope)).token
 
-        return await remove(
-            register.deployment_id, rows, ArmDeleter(profile.management_url, token, http)
+        yield (
+            ArmDeleter(profile.management_url, token, http),
+            ArmInventory(profile.management_url, token, http),
         )
+
+
+async def _real_removal(rows: Sequence[ResourceRow], register: RegisterExport) -> list[str]:
+    async with _arm_session() as (deleter, inventory):
+        return await remove(register.deployment_id, rows, deleter, inventory)
+
+
+async def _live_contents(rows: Sequence[ResourceRow]) -> dict[str, list[str]]:
+    """Live contents of each created resource group in the register (read-only ARM GETs)."""
+    groups = [r.resource_id for r in rows if is_resource_group(r.resource_id)]
+    contents: dict[str, list[str]] = {}
+    async with _arm_session() as (_, inventory):
+        for rg_id in groups:
+            try:
+                contents[rg_id] = await inventory.list_resource_group(rg_id)
+            except NeuroSphereError:
+                contents[rg_id] = [f"{rg_id}/unlistable"]  # unknown contents: report untouched
+    return contents
 
 
 async def run(args: argparse.Namespace) -> int:
     register = await load_register(args)
-    plan = plan_removal(register.deployment_id, register.rows)
     if args.dry_run:
+        live = await _live_contents(register.rows) if args.verify_live else None
+        plan = plan_removal(register.deployment_id, register.rows, live_contents=live)
         _emit(report_for(plan, dry_run=True), args.report)
         return 0
+    plan = plan_removal(register.deployment_id, register.rows)
     reason = _refusal(args, register)
     if reason is not None:
         print(reason, file=sys.stderr)

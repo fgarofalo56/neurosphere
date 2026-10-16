@@ -9,7 +9,7 @@ plan. No network calls here: deletion is an injected ``ResourceDeleter``.
 from __future__ import annotations
 
 import re
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from enum import StrEnum
 from typing import Final, Protocol
 
@@ -28,6 +28,46 @@ _RESOURCE_GROUP: Final = re.compile(r"^/subscriptions/[^/]+/resourcegroups/[^/]+
 
 class ResourceDeleter(Protocol):
     async def delete(self, resource_id: str) -> None: ...
+
+
+class LiveInventory(Protocol):
+    """Lists the live resource ids inside a resource group (ARM ``/resources``), network-side."""
+
+    async def list_resource_group(self, rg_id: str) -> list[str]: ...
+
+
+DRY_RUN_UNVERIFIED: Final = "live contents not verified (dry-run)"
+
+
+def is_resource_group(resource_id: str) -> bool:
+    return _RESOURCE_GROUP.fullmatch(normalize_id(resource_id)) is not None
+
+
+def foreign_live_ids(live_ids: Iterable[str], register: Sequence[ResourceRow]) -> list[str]:
+    """Live ids that are not ``created`` rows in the register."""
+    created = _created_ids(register)
+    return sorted({i for i in live_ids if normalize_id(i) not in created})
+
+
+async def assert_resource_group_empty_of_foreign(
+    rg_id: str, register: Sequence[ResourceRow], inventory: LiveInventory
+) -> None:
+    """Fail closed: refuse unless the RG's live contents are all registered ``created`` rows.
+
+    A listing failure is a refusal, never a pass: deletion on an unknown is not allowed.
+    """
+    try:
+        live = await inventory.list_resource_group(rg_id)
+    except Exception as exc:
+        raise ForbiddenError(
+            f"cannot verify live contents of {rg_id}; refusing to delete the resource group"
+        ) from exc
+    foreign = foreign_live_ids(live, register)
+    if foreign:
+        raise ForbiddenError(
+            f"resource group {rg_id} contains live resources not created by NeuroSphere: "
+            + ", ".join(foreign)
+        )
 
 
 def _created_ids(register: Iterable[ResourceRow]) -> set[str]:
@@ -113,10 +153,14 @@ def plan_removal(
     rows: Sequence[ResourceRow],
     *,
     unregistered_ids: Collection[str] = (),
+    live_contents: Mapping[str, Collection[str]] | None = None,
 ) -> RemovalPlan:
     """Classify every row; removable rows are ordered dependents-first.
 
     ``unregistered_ids`` (e.g. discovered resources) are reported untouched, never removable.
+    ``live_contents`` maps a resource group id to its live resource ids; a group holding any live
+    resource that is not a ``created`` row is untouched. Without it, removable groups are labelled
+    as not live-verified.
     """
     by_id = {normalize_id(r.resource_id): r for r in rows}
     reasons: dict[str, str] = {}
@@ -128,6 +172,16 @@ def plan_removal(
             reasons[key] = exc.detail or exc.title
         else:
             candidates[key] = row
+    live = {normalize_id(k): v for k, v in (live_contents or {}).items()}
+    for key in list(candidates):
+        if not is_resource_group(key) or key not in live:
+            continue
+        foreign = foreign_live_ids(live[key], rows)
+        if foreign:
+            reasons[key] = "live resource group contains resources not created by NeuroSphere: " + (
+                ", ".join(foreign)
+            )
+            del candidates[key]
     # A created dependent that is itself blocked still exists, so what it needs stays too.
     changed = True
     while changed:
@@ -138,6 +192,10 @@ def plan_removal(
                 del candidates[key]
                 changed = True
     order = _removal_order(candidates, reasons)
+    # Resource groups always go last, after every child.
+    order = [k for k in order if not is_resource_group(k)] + [
+        k for k in order if is_resource_group(k)
+    ]
     position = {k: i for i, k in enumerate(order)}
     entries: list[PlanEntry] = []
     for key, row in by_id.items():
@@ -148,7 +206,11 @@ def plan_removal(
                 service=row.service,
                 ownership=row.ownership.value,
                 action=Action.REMOVABLE if removable else Action.UNTOUCHED,
-                reason=None if removable else reasons.get(key, "not removable"),
+                reason=(
+                    (DRY_RUN_UNVERIFIED if is_resource_group(key) and key not in live else None)
+                    if removable
+                    else reasons.get(key, "not removable")
+                ),
                 order=position.get(key),
             )
         )
@@ -168,18 +230,35 @@ def plan_removal(
 
 
 async def remove(
-    deployment_id: str, rows: Sequence[ResourceRow], deleter: ResourceDeleter
+    deployment_id: str,
+    rows: Sequence[ResourceRow],
+    deleter: ResourceDeleter,
+    inventory: LiveInventory | None = None,
 ) -> list[str]:
     """Delete removable rows in order, re-running the guard before every call.
 
-    Returns the resource ids deleted. This function is the only caller of ``deleter.delete``.
+    Resource groups are deleted last and only after their live contents are verified against the
+    register through ``inventory``; a plan containing a resource group is refused outright without
+    one. All groups are verified before the first delete, and each is re-verified immediately
+    before its own delete. Returns the resource ids deleted. This function is the only caller of
+    ``deleter.delete``.
     """
     plan = plan_removal(deployment_id, rows)
     by_id = {normalize_id(r.resource_id): r for r in rows}
+    groups = [e for e in plan.removable if is_resource_group(e.resource_id)]
+    if groups and inventory is None:
+        raise ForbiddenError("a live inventory is required to remove a resource group")
+    if inventory is not None:
+        for group in groups:
+            await assert_resource_group_empty_of_foreign(group.resource_id, rows, inventory)
     deleted: list[str] = []
     for entry in plan.removable:
         row = by_id[normalize_id(entry.resource_id)]
         assert_removable(row, rows)
+        if is_resource_group(row.resource_id):
+            if inventory is None:
+                raise ForbiddenError("a live inventory is required to remove a resource group")
+            await assert_resource_group_empty_of_foreign(row.resource_id, rows, inventory)
         await deleter.delete(row.resource_id)
         deleted.append(row.resource_id)
     return deleted
