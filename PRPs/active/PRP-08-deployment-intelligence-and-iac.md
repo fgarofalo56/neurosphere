@@ -255,11 +255,11 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 1 | merged | worktree-agent-a7fcda5b8f04d74cc | sonnet | az bicep build/build-params/lint clean (main + 7 modules, both param sets); ruff/pyright clean; tests/unit/infra 37 passed (re-run on branch); 5efd974, merge 3ad6ac0 | 2026-10-16 |
 | 2 | merged | worktree-agent-ad5ca9e705911a615 | sonnet | helm lint --strict 0 failed; ruff/pyright clean; test_helm_render 9 passed (re-run on branch and post-merge); 583b393, merge ce671f5 | 2026-10-16 |
 | 3 | merged | worktree-agent-ab5bdbd34bba532fb | sonnet | ruff/pyright clean; deploy tests 17 passed, api suite 282 passed (re-run on branch); 9575bab, merge 00c1259. Post-merge: test package `deploy` collided with packages/core/tests/deploy; renamed to services/api/tests/deployment (orchestrator fix-forward); full default suite 3811 passed. Audit event for scan not wired (no existing hook; follow-up) | 2026-10-16 |
-| 4 | todo | | sonnet | | 2026-10-16 |
-| 5 | todo | | sonnet | | 2026-10-16 |
+| 4 | merged | worktree-agent-a6fa15b0bbbb0ab9c | sonnet | ruff/pyright clean; deployment tests 39 passed (re-run on branch and post-merge); full suite 3829 passed on branch; e4f224f, merge f58a522. NS-created inferred from tag `neurosphere:created-by` for planning only (register is the uninstall authority); scan passed in request body; no audit hook | 2026-10-16 |
+| 5 | merged | worktree-agent-a9c807ad5f8a1e02e | sonnet | ruff/pyright clean; core deploy 51 passed; integration tests/integration/deploy 3 passed vs compose Cosmos emulator (re-run on branch and post-merge); full suite 3860 passed on branch; 409e5b4, merge d7c9d5f. Audit = ConsentAuditSink protocol stub; ArmDeleter real removal never run live (OPEN) | 2026-10-16 |
 | 6 | merged | worktree-agent-afe0a02f739901bc8 | sonnet | ruff/pyright clean; deploy tests 20 passed, core suite 653 passed (re-run on branch); 675e3a3, merge a9f7ee2. Gov Fabric token scope undocumented on Learn: required configured value, fails closed | 2026-10-16 |
 | 7 | todo | | sonnet | live run approved in principle at plan approval; operator go-ahead (subscription/RG, `NS_LIVE_APPROVED=1`) requested before running | 2026-10-16 |
-| 8 | todo | | sonnet | | 2026-10-16 |
+| 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
 
 ## Completion note (filled at ship)
 - Date:
