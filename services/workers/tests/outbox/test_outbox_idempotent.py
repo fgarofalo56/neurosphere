@@ -62,8 +62,10 @@ def _entry_state(amount: str) -> LedgerEntry:
 
 async def test_append_is_idempotent_by_id() -> None:
     store = InMemoryOutboxStore()
-    assert await store.append(_event(1)) is True
-    assert await store.append(_event(1)) is False
+    first = await store.append(_event(1))
+    second = await store.append(_event(1))
+    assert first is True
+    assert second is False
     assert len(store.entries(CUST)) == 1
 
 
@@ -160,8 +162,10 @@ async def test_cosmos_outbox_append_idempotent_and_ordered_by_ts_then_id() -> No
     container.clock = stamp
     # Ids inserted out of id order within one _ts: the client-side tie-break must sort them.
     for n in (3, 1, 2):
-        assert await store.append(_event(n)) is True
-    assert await store.append(_event(1)) is False
+        appended = await store.append(_event(n))
+        assert appended is True
+    duplicate = await store.append(_event(1))
+    assert duplicate is False
     container.clock = stamp + 1
     await store.append(_event(4))
 

@@ -22,14 +22,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from neurosphere_core.ledger.models import Currency, Money, TokenCounts, quantize
 
 _PER = Decimal(1_000_000)
-_ZERO: Final = Decimal(0)
 
 
 class _Frozen(BaseModel):
