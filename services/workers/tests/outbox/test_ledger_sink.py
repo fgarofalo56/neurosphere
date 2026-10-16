@@ -195,3 +195,40 @@ async def test_redelivery_of_an_earlier_event_after_later_ones_changes_nothing()
     after = (await _entry(rig, gw)).entry.model_dump_json()  # type: ignore[union-attr]
     assert before == after
     assert len(rig.outbox_store.entries(gw["customer_id"])) == outbox_before
+
+
+async def _retry_entry(rig: Rig, docs: list):  # type: ignore[no-untyped-def,type-arg]
+    harness = rig.harness()
+    batch = [
+        raw_message(d, i, kind="telemetry", observation_kind="gateway") for i, d in enumerate(docs)
+    ]
+    await process_batch(batch, harness.deps(), settings())
+    stored = await _entry(rig, docs[0])
+    assert stored is not None
+    return stored.entry
+
+
+async def test_unreported_retry_attempt_is_null_not_zero() -> None:
+    rig = Rig()
+    entry = await _retry_entry(rig, [model_call("evt-nr1")])
+
+    assert entry.observations[0].retry_count is None
+    assert entry.observations[0].retry_amount is None
+    assert entry.retry_count is None and entry.retry_amount is None
+
+
+async def test_reported_retry_attempt_is_counted() -> None:
+    rig = Rig()
+    entry = await _retry_entry(rig, [model_call("evt-r1", retry_attempt=1)])
+
+    assert entry.observations[0].retry_count == 1
+    assert entry.retry_count == 1
+    assert entry.retry_amount == entry.estimated_amount == Decimal("6.00")
+
+
+async def test_mixed_reported_and_unreported_retry_group_is_null() -> None:
+    rig = Rig()
+    entry = await _retry_entry(rig, [model_call("evt-m1", retry_attempt=1), model_call("evt-m2")])
+
+    assert len(entry.observations) == 2
+    assert entry.retry_count is None and entry.retry_amount is None
