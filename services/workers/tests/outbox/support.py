@@ -97,6 +97,8 @@ def model_call(
     **extra: Any,
 ) -> Doc:
     doc = telemetry_at(rich_telemetry(), event_id, T0)
+    doc.pop("model_version", None)
+    doc.pop("retry_attempt", None)  # unreported unless a test passes retry_attempt=...
     doc.update(
         span_kind=span_kind,
         provider=PROVIDER,
@@ -104,8 +106,6 @@ def model_call(
         token_breakdown=tokens if tokens is not None else {"input": 1_000_000, "output": 500_000},
         **extra,
     )
-    doc.pop("model_version", None)
-    doc.pop("retry_attempt", None)
     if request_id is None:
         doc.pop("request_id", None)
     else:

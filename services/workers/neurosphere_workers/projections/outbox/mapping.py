@@ -16,8 +16,9 @@ no stamp is treated as ``application`` (instrumented by the app), cost records f
 their ``observation_source``. Telemetry stamped ``billing`` is not a cost observation.
 
 Retries: a ``model_call`` with ``retry_attempt`` set is a retry (count 1, retry_amount = its
-amount); one without it is an original attempt (count 0, amount 0 when the span amount is known).
-Retry fields describe the amount; they are not added to it.
+amount, null when the amount is unknown); one without it is "not a retry or not reported", so
+retry_count and retry_amount are null (unknown, never 0). Retry fields describe the amount; they
+are not added to it.
 """
 
 from __future__ import annotations
@@ -74,10 +75,10 @@ def _map_telemetry(
     tokens = _tokens(contract)
     estimate = prices.estimate_cost(provider, model, version, tokens, event.event_time.date())
     amount = estimate.amount
-    is_retry = contract.retry_attempt is not None
-    retry_amount: Decimal | None = (
-        amount if is_retry else (Decimal(0) if amount is not None else None)
-    )
+    # retry_attempt None means "not a retry OR not reported": unknown, never 0.
+    reported = contract.retry_attempt is not None
+    retry_count = 1 if reported else None
+    retry_amount: Decimal | None = amount if reported else None
     obs = Observation(
         observation_kind=kind,
         doc_id=event.doc_id,
@@ -94,7 +95,7 @@ def _map_telemetry(
         model=model,
         model_version=version,
         token_breakdown=tokens,
-        retry_count=1 if is_retry else 0,
+        retry_count=retry_count,
         retry_amount=retry_amount,
     )
     return RequestObservation(event.message.customer_id, request_id, DEFAULT_COST_CATEGORY, obs)
