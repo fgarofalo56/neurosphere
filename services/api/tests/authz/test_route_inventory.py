@@ -10,6 +10,7 @@ import pytest
 from fastapi import APIRouter, Depends, FastAPI, WebSocket
 from neurosphere_api.app import create_app
 from neurosphere_api.authz import (
+    PRODUCER_AUTHENTICATED_PATHS,
     PUBLIC_PATHS,
     configure_authz,
     current_scope,
@@ -34,7 +35,68 @@ def test_factory_app_has_no_undeclared_routes() -> None:
     assert undeclared_routes(app) == ()
     public = {e.path for e in route_inventory(app) if e.public}
     assert public == set(PUBLIC_PATHS) | DOCS
+    producer = {e.path for e in route_inventory(app) if e.producer_authenticated}
+    assert producer == set(PRODUCER_AUTHENTICATED_PATHS)
+    assert not any(e.public for e in route_inventory(app) if e.producer_authenticated)
     verify_route_permissions(app)
+
+
+def test_producer_authenticated_paths_are_exact() -> None:
+    assert PRODUCER_AUTHENTICATED_PATHS == {
+        "/v1/ingest/otlp/traces",
+        "/v1/ingest/otlp/metrics",
+        "/v1/ingest/events",
+    }
+    assert not PRODUCER_AUTHENTICATED_PATHS & public_paths_for(FastAPI())
+
+
+def _ingest_router(*, extra_post: bool = False, get_on_listed: bool = False) -> APIRouter:
+    router = APIRouter()
+
+    @router.post("/otlp/traces")
+    async def traces() -> dict[str, str]:
+        return {}
+
+    if extra_post:
+
+        @router.post("/other")
+        async def other() -> dict[str, str]:
+            return {}
+
+    if get_on_listed:
+
+        @router.get("/events")
+        async def events() -> dict[str, str]:
+            return {}
+
+    return router
+
+
+def test_producer_authenticated_route_is_compliant_not_public() -> None:
+    app = make_app(routers={"/v1/ingest": _ingest_router()})
+    entry = next(e for e in route_inventory(app) if e.path == "/v1/ingest/otlp/traces")
+    assert entry.producer_authenticated
+    assert not entry.public
+    assert entry.permissions == ()
+    assert entry.compliant
+    assert undeclared_routes(app) == ()
+
+
+def test_unlisted_ingest_route_is_flagged() -> None:
+    app = make_app(routers={"/v1/ingest": _ingest_router(extra_post=True)})
+    assert {e.path for e in undeclared_routes(app)} == {"/v1/ingest/other"}
+
+
+def test_get_on_listed_ingest_path_is_flagged() -> None:
+    app = make_app(routers={"/v1/ingest": _ingest_router(get_on_listed=True)})
+    flagged = undeclared_routes(app)
+    assert [(e.path, e.methods) for e in flagged] == [("/v1/ingest/events", ("GET",))]
+
+
+def test_mounted_app_on_producer_path_is_flagged() -> None:
+    app = make_app()
+    app.mount("/v1/ingest/events", FastAPI())
+    assert "/v1/ingest/events" in {e.path for e in undeclared_routes(app)}
 
 
 def test_test_routes_all_declare_permissions() -> None:

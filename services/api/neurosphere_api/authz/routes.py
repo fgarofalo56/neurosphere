@@ -27,6 +27,7 @@ from neurosphere_api.authz.dependencies import PERMISSION_MARKER
 from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 
 __all__ = [
+    "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
     "RouteEntry",
     "public_paths_for",
@@ -38,6 +39,14 @@ __all__ = [
 #: Always-public probe paths (PRP-05 health router).
 PUBLIC_PATHS: Final = frozenset({"/healthz", "/readyz"})
 
+#: Ingest-edge paths whose *producers* authenticate by registered credential inside the ingest
+#: service (``Authorization: Bearer <producer_id>.<secret>``). Not public and not ``require``d:
+#: a separate category, exact-path and ``POST``-only. ``tests/ingest`` asserts this set equals
+#: the ingest router's POST paths and that each returns 401 without a credential.
+PRODUCER_AUTHENTICATED_PATHS: Final = frozenset(
+    {"/v1/ingest/otlp/traces", "/v1/ingest/otlp/metrics", "/v1/ingest/events"}
+)
+
 
 @dataclass(frozen=True, slots=True)
 class RouteEntry:
@@ -45,10 +54,11 @@ class RouteEntry:
     methods: tuple[str, ...]
     permissions: tuple[str, ...]
     public: bool
+    producer_authenticated: bool = False
 
     @property
     def compliant(self) -> bool:
-        return self.public or bool(self.permissions)
+        return self.public or bool(self.permissions) or self.producer_authenticated
 
 
 def public_paths_for(app: FastAPI, *, extra: Iterable[str] = ()) -> frozenset[str]:
@@ -105,7 +115,18 @@ def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
         methods = tuple(sorted(getattr(source, "methods", None) or ()))
     # A mounted sub-application is opaque to this check, so it is never public by default.
     public = not isinstance(original, Mount) and path in allow
-    return RouteEntry(path=path, methods=methods, permissions=perms, public=public)
+    producer = (
+        not isinstance(original, Mount)
+        and path in PRODUCER_AUTHENTICATED_PATHS
+        and methods == ("POST",)
+    )
+    return RouteEntry(
+        path=path,
+        methods=methods,
+        permissions=perms,
+        public=public,
+        producer_authenticated=producer,
+    )
 
 
 def route_inventory(

@@ -1,6 +1,10 @@
 ---
 name: prp-07-telemetry-ingestion-and-cost-ledger
-status: backlog
+status: shipped
+started: 2026-10-15
+shipped: 2026-10-16
+pr: 34
+branch: prp-07-telemetry-ingestion
 review: required
 created: 2026-10-08
 model: sonnet
@@ -142,6 +146,13 @@ PRP-specific gotchas:
 
 Shared must-not-touch for every item (the "shared list"): root `pyproject.toml`, `docker-compose.yml`, `infra/compose/`, `docs/RESEARCH-AND-GATES.md`, `packages/contracts/**` (PRP-01), `packages/core/neurosphere_core/{errors,scope,paging,cloud,observability,clients,auth,audit}/`, `services/api/neurosphere_api/{main.py,app.py,middleware/,health/,authz/,audit/}`, `services/workers/neurosphere_workers/runtime/` (PRP-05, PRP-06; import only), `frontend/**`, `.github/workflows/**`. Dependencies are added in one serialized integrator commit.
 
+### Item 0 — shared-payload-guard  (added at plan approval, 2026-10-15)
+- Deliverable: one shared implementation of the payload body/redaction controls used by items 1-4: drop `prompt`/`response` fields at any depth returning only per-field counts, a recursive forbidden-field scan, and a JSON nesting-depth check. Added because items 1 (services/api) and 2-4 (services/workers) cannot import each other, and duplicating a security control across two copies is a consistency risk.
+- Owned files (may edit): `packages/core/neurosphere_core/payload/`, `packages/core/tests/payload/`.
+- Must NOT touch: everything owned by items 1-6; plus the shared list.
+- Depends on: none (runs before items 1 and 2).
+- Acceptance criteria: body fields dropped at any depth including inside lists; counts only, never values; scan finds forbidden keys at any depth; depth check rejects payloads past the limit without recursion overflow; pure functions, no I/O.
+
 ### Item 1 — ingest-edge-api  [P]
 - Deliverable: authenticated push endpoints for OTLP/JSON (`/v1/ingest/otlp/traces`, `/metrics`) and CloudEvents (`/v1/ingest/events`), producer registry check (identity -> allowed `source_id`, `customer_id`, `cloud`), body-size and nesting limits, redaction and body-dropping, schema validation against the PRP-01 envelope, publisher to Event Hubs with partition key, per-request result with accepted/rejected counts.
 - Owned files (may edit): `services/api/neurosphere_api/ingest/`, `services/api/tests/ingest/`.
@@ -266,12 +277,31 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | merged | worktree-agent-a3230f7cae0b858b8 | sonnet | ruff/pyright clean, core tests 586 passed; 00b6840, merge 03e8ab8 | 2026-10-15 |
+| 1 | merged | worktree-agent-a3d345b4f1281170a + worktree-agent-a368e448571ebee59 | sonnet | round 1: full api suite 14 failed (authz inventory, openapi drift); round 2 (operator-approved PRODUCER_AUTHENTICATED_PATHS in authz/routes.py, openapi.json regenerated): ruff/pyright clean, api tests 261 passed; 9b63c39 + 9b86c23, merge 065c4be | 2026-10-15 |
+| 2 | merged | worktree-agent-a86394e961d092bd0 | sonnet | ruff/pyright clean, workers tests 72 passed; 61c044f, merge 59160de | 2026-10-15 |
+| 3 | merged | worktree-agent-a7c1d896e714f0656 | sonnet | ruff/pyright clean, workers tests 127 passed (with item 4); d8b2502, merge f5aa559 | 2026-10-15 |
+| 4 | merged | worktree-agent-a1a457d1abaa8f545 | sonnet | ruff/pyright clean, workers tests 106 passed; 0a001f5, merge 0fc911b | 2026-10-15 |
+| 5 | merged | worktree-agent-ac7e6423d9445430f | sonnet | ruff/pyright clean; combined core+api+workers 1042 passed; e46ef30, merge 6c3d666 | 2026-10-16 |
+| 6 | merged | worktree-agent-a3ff0a57803768b63 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker (retry_count/retry_amount fabricated 0 for unreported retry_attempt); rework 136f109 (merge b6c53e2) confirmed by Haiku pass; post-rework unit 1059 passed, integration 14 passed vs compose; 5 non-blocking findings -> follow-ups. Earlier: | scope expanded at operator decision 2026-10-16 (code wiring; compose service wiring is a follow-up). Orchestrator re-run on integration branch: unit 1056 passed; `pytest tests/integration/ingestion -m integration` 14 passed vs compose emulators; live 2 skipped OPEN; verify-gates full PASS 4/4; validate_planning PASS; Snyk 0 issues. c9694a4, merge 0f76227 | 2026-10-16 |
+
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
-- Reviewer verdict (one pass, max one rework round):
+- Date: 2026-10-16
+- Merged commits: PR #34 (branch prp-07-telemetry-ingestion). Integrator 50b0c13; item 0 merge 03e8ab8; item 2 59160de; item 1 065c4be; item 4 0fc911b; item 3 f5aa559; item 5 6c3d666; item 6 0f76227; review rework b6c53e2; CodeQL fix-forward d00ec41.
+- Reviewer verdict (one pass, max one rework round): CHANGES REQUIRED with one blocker (retry_count/retry_amount fabricated as 0 when retry_attempt unreported, violating C12). Fixed in 136f109, confirmed by a Haiku pass. XXX currency bucket for unresolved prices judged acceptable. Five non-blocking findings filed as issues.
 - Deviations from blueprint and why:
-- Descoped items:
-- Open gates / untested live items:
-- Follow-ups:
+  - Item 0 (shared payload guard + HubMessage wire format in `neurosphere_core.payload`) added at plan approval: edge (services/api) and workers cannot import each other, and one redaction control beats two copies.
+  - `cloudevents` SDK not added: its transitive deps (deprecation, python-dateutil) fail the licence gate; structured and batch CloudEvents are validated with Pydantic models.
+  - OTLP to TelemetryEvent mapping happens at the edge (item 1) instead of the normalizer, so the hub carries contract JSON only.
+  - Operator-approved shared-file edits: `authz/routes.py` gained `PRODUCER_AUTHENTICATED_PATHS` (exact path, POST only, never public) so the PRP-06 route inventory accepts producer-credential routes; `routers.py` registration hook; `openapi.json` regenerated; `main.py` one opt-in call (ingest stays 503 fail-closed unless `NS_INGEST_PRODUCERS_FILE` is set).
+  - Item 6 scope expanded (operator decision 2026-10-16) to wire real sinks (`ingestion/wiring.py`) and the edge bootstrap; integration tests run api and consumer in-process against the compose emulators.
+  - Item 6 made small fixes in other items' packages: consumer drain TimeoutError suppressed, `IngestSettings.eventhubs_namespace`, replay CLI default factory uses the wiring.
+  - Entra-token producer authentication not built (emulator lacks Entra, C2); registered producer credentials only, with a protocol seam.
+- Descoped items: none. Compose service wiring deferred to #26 by operator decision.
+- Open gates / untested live items: live Commercial run (real Event Hubs with Entra, real Cosmos partitioning and throughput) did not run, OPEN (`tests/integration/ingestion/test_live_commercial.py`, needs NS_LIVE_APPROVED=1). Government runtime behaviour untested beyond static endpoint assertions and emulator cloud isolation; Government Event Hubs data geo-replication unverified (G01). G12 narrowed with recorded emulator deltas in docs/RESEARCH-AND-GATES.md. No load or throughput claim (PRP-21).
+- Follow-ups: #26 compose wiring, #27 invoiced only from billing producers, #28 doc_id collision-safe join, #29 watermark/late-flag skew, #30 wiring cloud fallback fail-closed, #31 cost request_id source, #32 hypothesis for payload property test, #33 duplicate-event metric.
