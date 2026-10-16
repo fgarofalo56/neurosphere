@@ -1,7 +1,9 @@
 ---
 name: prp-07-telemetry-ingestion-and-cost-ledger
-status: active
+status: shipped
 started: 2026-10-15
+shipped: 2026-10-16
+pr: 34
 branch: prp-07-telemetry-ingestion
 review: required
 created: 2026-10-08
@@ -289,10 +291,17 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 ## Completion note (filled at ship)
 
-- Date:
-- Merged commits:
-- Reviewer verdict (one pass, max one rework round):
+- Date: 2026-10-16
+- Merged commits: PR #34 (branch prp-07-telemetry-ingestion). Integrator 50b0c13; item 0 merge 03e8ab8; item 2 59160de; item 1 065c4be; item 4 0fc911b; item 3 f5aa559; item 5 6c3d666; item 6 0f76227; review rework b6c53e2; CodeQL fix-forward d00ec41.
+- Reviewer verdict (one pass, max one rework round): CHANGES REQUIRED with one blocker (retry_count/retry_amount fabricated as 0 when retry_attempt unreported, violating C12). Fixed in 136f109, confirmed by a Haiku pass. XXX currency bucket for unresolved prices judged acceptable. Five non-blocking findings filed as issues.
 - Deviations from blueprint and why:
-- Descoped items:
-- Open gates / untested live items:
-- Follow-ups:
+  - Item 0 (shared payload guard + HubMessage wire format in `neurosphere_core.payload`) added at plan approval: edge (services/api) and workers cannot import each other, and one redaction control beats two copies.
+  - `cloudevents` SDK not added: its transitive deps (deprecation, python-dateutil) fail the licence gate; structured and batch CloudEvents are validated with Pydantic models.
+  - OTLP to TelemetryEvent mapping happens at the edge (item 1) instead of the normalizer, so the hub carries contract JSON only.
+  - Operator-approved shared-file edits: `authz/routes.py` gained `PRODUCER_AUTHENTICATED_PATHS` (exact path, POST only, never public) so the PRP-06 route inventory accepts producer-credential routes; `routers.py` registration hook; `openapi.json` regenerated; `main.py` one opt-in call (ingest stays 503 fail-closed unless `NS_INGEST_PRODUCERS_FILE` is set).
+  - Item 6 scope expanded (operator decision 2026-10-16) to wire real sinks (`ingestion/wiring.py`) and the edge bootstrap; integration tests run api and consumer in-process against the compose emulators.
+  - Item 6 made small fixes in other items' packages: consumer drain TimeoutError suppressed, `IngestSettings.eventhubs_namespace`, replay CLI default factory uses the wiring.
+  - Entra-token producer authentication not built (emulator lacks Entra, C2); registered producer credentials only, with a protocol seam.
+- Descoped items: none. Compose service wiring deferred to #26 by operator decision.
+- Open gates / untested live items: live Commercial run (real Event Hubs with Entra, real Cosmos partitioning and throughput) did not run, OPEN (`tests/integration/ingestion/test_live_commercial.py`, needs NS_LIVE_APPROVED=1). Government runtime behaviour untested beyond static endpoint assertions and emulator cloud isolation; Government Event Hubs data geo-replication unverified (G01). G12 narrowed with recorded emulator deltas in docs/RESEARCH-AND-GATES.md. No load or throughput claim (PRP-21).
+- Follow-ups: #26 compose wiring, #27 invoiced only from billing producers, #28 doc_id collision-safe join, #29 watermark/late-flag skew, #30 wiring cloud fallback fail-closed, #31 cost request_id source, #32 hypothesis for payload property test, #33 duplicate-event metric.

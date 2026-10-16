@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows
 - Local emulator stack (`docker-compose.yml`): Cosmos DB vNext, Event Hubs, Azurite.
 - Architecture decision records and decisions log.
 - Split PRPs `PRP-00` to `PRP-27` with master index.
+- Telemetry ingestion and cost ledger (PRP-07): authenticated OTLP/JSON and CloudEvents
+  push edge, normalizer worker with dedupe, watermarks and bounded retries, blob quarantine
+  with replay CLI, redacted archive, cost ledger with double-count resolution and outbox.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
