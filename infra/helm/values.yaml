@@ -1,0 +1,96 @@
+# NeuroSphere chart values. Helm 4 (ADR-0002).
+#
+# Extension points owned by later PRPs (do not add them here):
+#   - values-government.yaml (cloud-specific values)  -> PRP-20
+#   - templates/networkpolicy.yaml                    -> PRP-12
+#
+# SINGLE SOURCE FOR IMAGE REFERENCES: image.registry, image.tag and each
+# component's repository. infra/appservice/main.bicepparam MUST carry identical
+# values; tests/unit/infra/test_helm_render.py proves the resolved strings match.
+# Nothing cloud-specific is baked in: registry has no default and is `required`.
+
+image:
+  registry: "" # required, supplied by the deployment profile
+  tag: "" # required
+  pullPolicy: IfNotPresent
+  pullSecrets: [] # names of pre-existing image pull secrets (never inline credentials)
+
+serviceAccount:
+  create: true
+  # Azure workload identity. Client id is an identifier, not a secret.
+  workloadIdentity:
+    enabled: true
+    clientId: "" # required when enabled
+    tenantId: "" # optional; adds azure.workload.identity/tenant-id
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  capabilities:
+    drop: ["ALL"]
+
+# Non-secret environment only. Credentials come from vault references
+# (secretProviderClass below), never from values.
+env: {}
+
+# Secrets Store CSI driver + Key Vault + workload identity (optional, off by default).
+secretProviderClass:
+  enabled: false
+  keyVaultName: "" # required when enabled
+  tenantId: "" # required when enabled
+  usePodIdentity: "false"
+  # Vault objects to mount: list of {name, type} (type: secret|key|cert). References only.
+  objects: []
+
+ingress:
+  enabled: false
+  className: ""
+  host: "" # required when enabled
+  tls:
+    enabled: false
+    secretName: "" # pre-existing TLS secret name
+
+# PRP-12 owns the NetworkPolicy template; this flag is only the extension point.
+networkPolicy:
+  enabled: false
+
+api:
+  replicas: 2
+  repository: neurosphere/api
+  port: 8000
+  probes:
+    readiness: /readyz
+    liveness: /healthz
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+workers:
+  replicas: 1
+  repository: neurosphere/workers
+  port: 8090
+  probes:
+    readiness: /healthz
+    liveness: /healthz
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+frontend:
+  replicas: 2
+  repository: neurosphere/frontend
+  port: 8080 # unprivileged static server
+  probes:
+    readiness: /
+    liveness: /
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 250m, memory: 128Mi }
