@@ -73,7 +73,25 @@ def _register_ingest(registry: RouterRegistry) -> None:
     register(registry)
 
 
-REGISTERED: tuple[RegisterHook, ...] = (_register_health, _register_audit, _register_ingest)
+def _register_deploy_scan(registry: RouterRegistry) -> None:
+    from neurosphere_api.deploy.scan import register
+
+    register(registry)
+
+
+def _register_deploy_plan(registry: RouterRegistry) -> None:
+    from neurosphere_api.deploy.plan import register
+
+    register(registry)
+
+
+REGISTERED: tuple[RegisterHook, ...] = (
+    _register_health,
+    _register_audit,
+    _register_ingest,
+    _register_deploy_scan,
+    _register_deploy_plan,
+)
 
 
 def register_default_routers(registry: RouterRegistry) -> None:
