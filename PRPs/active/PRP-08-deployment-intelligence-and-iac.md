@@ -148,7 +148,7 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
   - Scan refuses to start without a recorded consent flag in the request context (403 via `forbidden`).
   - Read-only: no ARM write call exists in the module (static test greps for write verbs).
 - Pattern references: FastAPI router per module; async clients; `forbidden` error.
-- Tests to write: `services/api/tests/deploy/test_scan.py`.
+- Tests to write: `services/api/tests/deployment/test_scan.py`.
 
 ### Item 4 - reuse-planner
 - Deliverable: planner that validates SKU, network reachability, quota, permission, residency and lifecycle for each discovered service and emits a reuse/create/skip plan with estimated cost implications and a consent record.
@@ -160,7 +160,7 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
   - Plan JSON validates against the PRP-01 `DeploymentManifest` schema.
   - Options the capability matrix marks unavailable appear in the plan as disabled with reason; cost fields are `estimated` or `unknown`, never 0.
 - Pattern references: `capabilities.validate_profile()` from PRP-02; Pydantic forbid-extra.
-- Tests to write: `services/api/tests/deploy/test_plan.py`.
+- Tests to write: `services/api/tests/deployment/test_plan.py`.
 
 ### Item 5 - ownership-register-and-uninstall
 - Deliverable: ownership and dependency register (library) and an uninstall script that removes only NeuroSphere-created, dependent-free resources and supports `--dry-run`.
@@ -223,7 +223,7 @@ helm lint infra/helm
 helm template neurosphere infra/helm
 docker compose up -d --wait
 python -m pytest -m integration tests/integration/deploy
-python -m pytest services/api/tests/deploy packages/core/tests/deploy tests/unit/infra
+python -m pytest services/api/tests/deployment packages/core/tests/deploy tests/unit/infra
 NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approved, requires NS_LIVE_APPROVED=1
 ```
 
@@ -252,12 +252,12 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-16 |
-| 2 | todo | | sonnet | | 2026-10-16 |
-| 3 | todo | | sonnet | | 2026-10-16 |
+| 1 | merged | worktree-agent-a7fcda5b8f04d74cc | sonnet | az bicep build/build-params/lint clean (main + 7 modules, both param sets); ruff/pyright clean; tests/unit/infra 37 passed (re-run on branch); 5efd974, merge 3ad6ac0 | 2026-10-16 |
+| 2 | merged | worktree-agent-ad5ca9e705911a615 | sonnet | helm lint --strict 0 failed; ruff/pyright clean; test_helm_render 9 passed (re-run on branch and post-merge); 583b393, merge ce671f5 | 2026-10-16 |
+| 3 | merged | worktree-agent-ab5bdbd34bba532fb | sonnet | ruff/pyright clean; deploy tests 17 passed, api suite 282 passed (re-run on branch); 9575bab, merge 00c1259. Post-merge: test package `deploy` collided with packages/core/tests/deploy; renamed to services/api/tests/deployment (orchestrator fix-forward); full default suite 3811 passed. Audit event for scan not wired (no existing hook; follow-up) | 2026-10-16 |
 | 4 | todo | | sonnet | | 2026-10-16 |
 | 5 | todo | | sonnet | | 2026-10-16 |
-| 6 | todo | | sonnet | | 2026-10-16 |
+| 6 | merged | worktree-agent-afe0a02f739901bc8 | sonnet | ruff/pyright clean; deploy tests 20 passed, core suite 653 passed (re-run on branch); 675e3a3, merge a9f7ee2. Gov Fabric token scope undocumented on Learn: required configured value, fails closed | 2026-10-16 |
 | 7 | todo | | sonnet | live run approved in principle at plan approval; operator go-ahead (subscription/RG, `NS_LIVE_APPROVED=1`) requested before running | 2026-10-16 |
 | 8 | todo | | sonnet | | 2026-10-16 |
 
