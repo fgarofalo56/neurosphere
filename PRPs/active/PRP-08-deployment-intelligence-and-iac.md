@@ -1,6 +1,8 @@
 ---
 name: prp-08-deployment-intelligence-and-iac
-status: backlog
+status: active
+started: 2026-10-16
+branch: prp-08-deployment-intelligence
 review: required
 created: 2026-10-08
 model: sonnet
@@ -196,6 +198,18 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
 - Pattern references: `scripts/gates/` conventions from PRP-02.
 - Tests to write: `tests/unit/gates/test_g01_refuses_without_approval.py`.
 
+### Item 8 - api-and-ci-wiring (added at plan approval 2026-10-16)
+- Deliverable: register the scan and plan routers through the router registry, regenerate the OpenAPI snapshot, and add CI steps for Bicep lint plus both per-cloud param sets and Helm 4 lint/template. Items 1-4 own none of these shared files, so they are sequenced here.
+- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `.github/workflows/ci.yml`.
+- Must NOT touch: `services/api/neurosphere_api/deploy/`, `services/api/neurosphere_api/authz/`, `infra/`, `packages/`, root `pyproject.toml`.
+- Depends on: Items 1, 2, 3, 4.
+- Acceptance criteria:
+  - Scan and plan routes are reachable in `create_app()` and the authz route inventory (`undeclared_routes`) stays empty; routes require the existing `config.manage` permission.
+  - `services/api/openapi.json` matches the exported schema (drift test passes).
+  - CI runs `az bicep build`/lint for every module and `az bicep build-params` for both param sets, and `helm lint` + `helm template` on Helm 4, with no `|| true`.
+- Pattern references: `REGISTERED` hooks in `routers.py` (`_register_ingest`); existing `bicep` CI job.
+- Tests to write: none new; existing api route-inventory and openapi drift tests are the gate.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -233,6 +247,19 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-16 |
+| 2 | todo | | sonnet | | 2026-10-16 |
+| 3 | todo | | sonnet | | 2026-10-16 |
+| 4 | todo | | sonnet | | 2026-10-16 |
+| 5 | todo | | sonnet | | 2026-10-16 |
+| 6 | todo | | sonnet | | 2026-10-16 |
+| 7 | todo | | sonnet | live run approved in principle at plan approval; operator go-ahead (subscription/RG, `NS_LIVE_APPROVED=1`) requested before running | 2026-10-16 |
+| 8 | todo | | sonnet | | 2026-10-16 |
 
 ## Completion note (filled at ship)
 - Date:
