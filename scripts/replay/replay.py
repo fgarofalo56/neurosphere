@@ -58,36 +58,13 @@ async def default_container() -> AsyncIterator[BlobContainer]:
 
 @asynccontextmanager
 async def default_deps() -> AsyncIterator[PipelineDeps]:
-    """Real sinks via ``ingestion.__main__.build_sinks`` plus the Cosmos marker/watermark stores.
+    """The same sinks and stores the live consumer uses (``ingestion.wiring``)."""
+    from neurosphere_core.clients import ClientLifetime
+    from neurosphere_core.cloud import load_settings
+    from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 
-    ``build_sinks`` fails closed until the archive and ledger sinks are wired; the CLI then exits 1.
-    """
-    from neurosphere_core.clients import ClientLifetime, create_cosmos_client
-    from neurosphere_core.cloud import CloudName, load_settings
-    from neurosphere_workers.ingestion.__main__ import build_sinks
-    from neurosphere_workers.ingestion.cosmos_stores import (
-        CosmosAcceptedMarkerStore,
-        CosmosWatermarkStore,
-    )
-
-    settings = load_settings()
-    ingestion = IngestionSettings()
-    sinks = build_sinks()
     async with ClientLifetime() as lifetime:
-        cosmos = create_cosmos_client(settings, lifetime=lifetime, account=ingestion.cosmos_account)
-        database = cosmos.get_database_client(ingestion.cosmos_database)
-        yield PipelineDeps(
-            quarantine=sinks.quarantine,
-            archive=sinks.archive,
-            ledger=sinks.ledger,
-            markers=CosmosAcceptedMarkerStore(
-                database.get_container_client(ingestion.markers_container)
-            ),
-            watermarks=CosmosWatermarkStore(
-                database.get_container_client(ingestion.watermarks_container)
-            ),
-            cloud=(settings.cloud or CloudName.COMMERCIAL).value,
-        )
+        yield await build_pipeline_deps(load_settings(), lifetime=lifetime)
 
 
 def _dry_run_deps(record: QuarantineRecord) -> PipelineDeps:

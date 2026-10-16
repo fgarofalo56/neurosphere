@@ -173,7 +173,7 @@ def test_usage_errors_exit_2(container: FakeBlobContainer) -> None:
     assert run_cli(["bogus"], container).code == 2
 
 
-def test_unwired_sinks_fail_closed_with_exit_1(
+def test_unbuildable_sinks_fail_closed_with_exit_1(
     harness: Harness, container: FakeBlobContainer, template: Doc
 ) -> None:
     from contextlib import asynccontextmanager
@@ -185,9 +185,10 @@ def test_unwired_sinks_fail_closed_with_exit_1(
 
     @asynccontextmanager
     async def unwired():  # type: ignore[no-untyped-def]
-        from neurosphere_workers.ingestion.__main__ import build_sinks
+        # Wiring (ingestion.wiring) refuses to build when infrastructure is missing.
+        from neurosphere_core.errors import InvalidSchemaError
 
-        build_sinks()
+        raise InvalidSchemaError("sinks cannot be built", reason="config")
         yield None
 
     from io import StringIO
