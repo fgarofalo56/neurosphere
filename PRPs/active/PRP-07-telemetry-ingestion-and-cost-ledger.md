@@ -279,13 +279,13 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 0 | todo | | | | 2026-10-15 |
-| 1 | todo | | | | 2026-10-15 |
-| 2 | todo | | | | 2026-10-15 |
-| 3 | todo | | | | 2026-10-15 |
-| 4 | todo | | | | 2026-10-15 |
-| 5 | todo | | | | 2026-10-15 |
-| 6 | todo | | | | 2026-10-15 |
+| 0 | merged | worktree-agent-a3230f7cae0b858b8 | sonnet | ruff/pyright clean, core tests 586 passed; 00b6840, merge 03e8ab8 | 2026-10-15 |
+| 1 | merged | worktree-agent-a3d345b4f1281170a + worktree-agent-a368e448571ebee59 | sonnet | round 1: full api suite 14 failed (authz inventory, openapi drift); round 2 (operator-approved PRODUCER_AUTHENTICATED_PATHS in authz/routes.py, openapi.json regenerated): ruff/pyright clean, api tests 261 passed; 9b63c39 + 9b86c23, merge 065c4be | 2026-10-15 |
+| 2 | merged | worktree-agent-a86394e961d092bd0 | sonnet | ruff/pyright clean, workers tests 72 passed; 61c044f, merge 59160de | 2026-10-15 |
+| 3 | merged | worktree-agent-a7c1d896e714f0656 | sonnet | ruff/pyright clean, workers tests 127 passed (with item 4); d8b2502, merge f5aa559 | 2026-10-15 |
+| 4 | merged | worktree-agent-a1a457d1abaa8f545 | sonnet | ruff/pyright clean, workers tests 106 passed; 0a001f5, merge 0fc911b | 2026-10-15 |
+| 5 | merged | worktree-agent-ac7e6423d9445430f | sonnet | ruff/pyright clean; combined core+api+workers 1042 passed; e46ef30, merge 6c3d666 | 2026-10-16 |
+| 6 | in-progress | (worktree) | sonnet | scope expanded at operator decision 2026-10-16: code wiring (build_sinks, ingest bootstrap, opt-in main.py line); compose service wiring is a follow-up | 2026-10-16 |
 
 ## Completion note (filled at ship)
 
