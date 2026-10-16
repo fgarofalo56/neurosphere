@@ -31,6 +31,7 @@ from neurosphere_api.authz.dependencies import (
 )
 from neurosphere_api.authz.recorder import SAFE_METHODS, DenialRecorder, DeniedAttempt
 from neurosphere_api.authz.routes import (
+    PRODUCER_AUTHENTICATED_PATHS,
     PUBLIC_PATHS,
     RouteEntry,
     public_paths_for,
@@ -51,6 +52,7 @@ __all__ = [
     "AUDIT_PERMISSIONS",
     "DEFAULT_AUTHZ_TIMEOUT_SECONDS",
     "PERMISSION_MARKER",
+    "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
     "SAFE_METHODS",
     "AuthzState",
