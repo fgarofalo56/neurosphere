@@ -312,6 +312,60 @@
         "title": "HealthzResponse",
         "type": "object"
       },
+      "IgnoredItem": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReasonCode"
+          }
+        },
+        "required": [
+          "path",
+          "reason_code"
+        ],
+        "title": "IgnoredItem",
+        "type": "object"
+      },
+      "IngestResult": {
+        "additionalProperties": false,
+        "description": "202 body. Counts and reason codes only; never payload values.",
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "integer"
+          },
+          "dropped_fields": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Dropped Fields",
+            "type": "object"
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/IgnoredItem"
+            },
+            "title": "Ignored",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/components/schemas/RejectedItem"
+            },
+            "title": "Rejected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accepted"
+        ],
+        "title": "IngestResult",
+        "type": "object"
+      },
       "Outcome": {
         "additionalProperties": false,
         "properties": {
@@ -411,6 +465,47 @@
           "dependencies"
         ],
         "title": "ReadyzResponse",
+        "type": "object"
+      },
+      "ReasonCode": {
+        "enum": [
+          "body_too_large",
+          "depth_exceeded",
+          "malformed_json",
+          "unsupported_media_type",
+          "invalid_envelope",
+          "claim_mismatch",
+          "cloud_mismatch",
+          "rate_limited",
+          "invalid_event",
+          "missing_time",
+          "invalid_trace_id",
+          "invalid_metric_value",
+          "invalid_cloudevent",
+          "unsupported_event_type",
+          "unsupported_metric_type",
+          "unmapped_metric_name",
+          "unsupported_temporality"
+        ],
+        "title": "ReasonCode",
+        "type": "string"
+      },
+      "RejectedItem": {
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReasonCode"
+          }
+        },
+        "required": [
+          "index",
+          "reason_code"
+        ],
+        "title": "RejectedItem",
         "type": "object"
       },
       "Sha256Hash": {
@@ -716,6 +811,69 @@
         "summary": "Readyz",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/ingest/events": {
+      "post": {
+        "operationId": "events_v1_ingest_events_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Events",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/v1/ingest/otlp/metrics": {
+      "post": {
+        "operationId": "metrics_v1_ingest_otlp_metrics_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metrics",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/v1/ingest/otlp/traces": {
+      "post": {
+        "operationId": "traces_v1_ingest_otlp_traces_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Traces",
+        "tags": [
+          "ingest"
         ]
       }
     }
