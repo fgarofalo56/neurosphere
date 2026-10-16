@@ -33,3 +33,6 @@ class IngestSettings(BaseSettings):
     eventhub_name: str = DEFAULT_EVENTHUB_NAME
     # JSON file of producer registrations (hashes only); None means no producer can authenticate.
     producers_file: Path | None = None
+    # Non-local only (managed identity): the Event Hubs namespace. Local uses the emulator
+    # connection string from NS_EVENTHUBS_CONNECTION_STRING.
+    eventhubs_namespace: str | None = None

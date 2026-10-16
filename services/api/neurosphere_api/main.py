@@ -9,7 +9,11 @@ from fastapi import FastAPI
 from neurosphere_core.cloud import load_settings
 
 from neurosphere_api.app import create_app
+from neurosphere_api.ingest.bootstrap import configure_ingest_from_settings
 
 
 def create() -> FastAPI:
-    return create_app(load_settings())
+    settings = load_settings()
+    app = create_app(settings)
+    configure_ingest_from_settings(app, settings)  # opt-in: NS_INGEST_PRODUCERS_FILE
+    return app

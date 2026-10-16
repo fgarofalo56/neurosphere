@@ -139,7 +139,11 @@ class IngestionConsumer:
                 receiver.result()  # surfaces a receiver crash
                 return 1  # receive_batch only ends on its own when closed unexpectedly
             await self._client.close()  # lets receive_batch return after the in-flight batch
-            with contextlib.suppress(asyncio.CancelledError, DependencyTransientError):
+            # TimeoutError: ``receive_batch`` can sit in its load-balancing sleep (up to 30 s)
+            # after close(); a slow drain is still a clean stop (the ``finally`` cancels it).
+            with contextlib.suppress(
+                asyncio.CancelledError, DependencyTransientError, TimeoutError
+            ):
                 await asyncio.wait_for(receiver, timeout=_CLOSE_TIMEOUT_SECONDS)
             return 0
         finally:
