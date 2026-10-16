@@ -285,7 +285,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 | 3 | merged | worktree-agent-a7c1d896e714f0656 | sonnet | ruff/pyright clean, workers tests 127 passed (with item 4); d8b2502, merge f5aa559 | 2026-10-15 |
 | 4 | merged | worktree-agent-a1a457d1abaa8f545 | sonnet | ruff/pyright clean, workers tests 106 passed; 0a001f5, merge 0fc911b | 2026-10-15 |
 | 5 | merged | worktree-agent-ac7e6423d9445430f | sonnet | ruff/pyright clean; combined core+api+workers 1042 passed; e46ef30, merge 6c3d666 | 2026-10-16 |
-| 6 | in-progress | (worktree) | sonnet | scope expanded at operator decision 2026-10-16: code wiring (build_sinks, ingest bootstrap, opt-in main.py line); compose service wiring is a follow-up | 2026-10-16 |
+| 6 | merged | worktree-agent-a3ff0a57803768b63 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker (retry_count/retry_amount fabricated 0 for unreported retry_attempt); rework 136f109 (merge b6c53e2) confirmed by Haiku pass; post-rework unit 1059 passed, integration 14 passed vs compose; 5 non-blocking findings -> follow-ups. Earlier: | scope expanded at operator decision 2026-10-16 (code wiring; compose service wiring is a follow-up). Orchestrator re-run on integration branch: unit 1056 passed; `pytest tests/integration/ingestion -m integration` 14 passed vs compose emulators; live 2 skipped OPEN; verify-gates full PASS 4/4; validate_planning PASS; Snyk 0 issues. c9694a4, merge 0f76227 | 2026-10-16 |
 
 ## Completion note (filled at ship)
 
