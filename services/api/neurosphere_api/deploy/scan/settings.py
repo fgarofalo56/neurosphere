@@ -9,6 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class ScanSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NS_SCAN_", frozen=True, extra="forbid")
 
+    # Opt-in: false leaves POST /v1/deploy/scan failing closed with 503 (scan_not_configured).
+    enabled: bool = False
     request_timeout_seconds: float = Field(default=30.0, gt=0)
     # Rows per Resource Graph page (service maximum is 1000).
     page_size: int = Field(default=1000, gt=0, le=1000)
