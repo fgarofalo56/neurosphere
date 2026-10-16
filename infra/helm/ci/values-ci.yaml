@@ -1,0 +1,8 @@
+# Lint/render fixture. Placeholder values only; "invalid" is a reserved TLD (RFC 2606).
+# infra/appservice/main.bicepparam carries the same image values.
+image:
+  registry: registry.example.invalid
+  tag: 0.1.0
+serviceAccount:
+  workloadIdentity:
+    clientId: 00000000-0000-0000-0000-000000000000
