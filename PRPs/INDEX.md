@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-10-catalog-and-relationship-governance](active/PRP-10-catalog-and-relationship-governance.md) |  | 0/8 (0%) | todo 6, in-progress 2 | ? / ? | required |
+| [prp-10-catalog-and-relationship-governance](active/PRP-10-catalog-and-relationship-governance.md) |  | 1/8 (12%) | todo 6, in-progress 1, merged 1 | ? / ? | required |
 
 ## Backlog
 

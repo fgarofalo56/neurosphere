@@ -245,7 +245,7 @@ Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint
 | 3 | todo | | sonnet | | 2026-10-17 |
 | 4 | todo | | sonnet | | 2026-10-17 |
 | 5 | todo | | sonnet | | 2026-10-17 |
-| 6 | in-progress | (worktree) | sonnet | dispatched (independent of item 0) | 2026-10-17 |
+| 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
 | 7 | todo | | operator | deferred by operator; G03 OPEN | 2026-10-17 |
 
 ## Completion note (filled at ship)
