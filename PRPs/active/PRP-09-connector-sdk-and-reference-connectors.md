@@ -230,9 +230,9 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 |------|--------|--------|-------|----------|---------|
 | 0 | merged | prp-09-connector-sdk | opus | committed directly on integration branch; ruff/format/pyright clean; full default suite 3914 passed after licence register regen; sdk-ts typecheck ok; licences PASS (530); validate_planning PASS | 2026-10-17 |
 | 1 | merged | worktree-agent-a95e623057e6e32ed | sonnet | ruff/format/pyright clean; sdk-python 49 passed (re-run on branch); contracts 1683 passed; Snyk Code 0 issues; 35a5fdd. Deviation: credentials module named vault.py (security hook denies *credentials* paths); review APPROVE (6 non-blocking follow-ups); merge 8a311df, sdk-python 49 passed + pyright clean post-merge | 2026-10-17 |
-| 2 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
+| 2 | merged | worktree-agent-aa43819c280ffa6e6 | sonnet | sdk-ts typecheck clean, vitest 25 passed; sdk-python 60 passed, ruff/format/pyright clean (re-run on branch); Snyk: 1 low (hardcoded test secret) fixed c8e633e, rescan 0; d485850. Deps ajv, @types/node (relock at merge); review APPROVE (5 non-blocking); merged, pnpm relocked, licences PASS (533); sdk-ts 25 + sdk-python 60 passed post-merge | 2026-10-17 |
 | 3 | in-progress | (worktree agent) | sonnet | dispatched when item 6 lane freed | 2026-10-17 |
-| 4 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
+| 4 | review | worktree-agent-aa7e2a4c99970301d | sonnet | ruff/format/pyright clean; 23 passed, 1 live deselected (re-run on branch); Snyk: 1 low (URL substring check in test) fixed 4bbcbb8, rescan 0; a938df3. Gov gated behind allow_unverified_government; App Insights Gov disabled | 2026-10-17 |
 | 5 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
 | 6 | merged | worktree-agent-a4a17a14f0a492cd0 | sonnet | ruff/format/pyright clean; sdk-python 59 passed (re-run on branch); Snyk Code 0 issues; 84f3cdc; review APPROVE (6 non-blocking: verify type coercion True==1, move/copy post-state limits, SDK does not enforce target version — executor must); merge b3910e9, sdk-python 59 passed + pyright clean post-merge | 2026-10-17 |
 
