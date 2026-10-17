@@ -1,0 +1,24 @@
+{
+  "manifestVersion": "2024-04-01",
+  "byteCount": 1,
+  "blobCount": 2,
+  "dataRowCount": 7,
+  "exportConfig": {
+    "exportName": "synthetic",
+    "dataVersion": "2023-05-01",
+    "type": "SyntheticFixture",
+    "timeFrame": "MonthToDate",
+    "granularity": null
+  },
+  "deliveryConfig": {
+    "partitionData": true,
+    "dataOverwriteBehavior": "OverwritePreviousReport",
+    "fileFormat": "Csv",
+    "compressionMode": "None",
+    "rootFolderPath": "folder"
+  },
+  "blobs": [
+    {"blobName": "folder/synthetic/run/part0.csv", "byteCount": 1, "dataRowCount": 5},
+    {"blobName": "folder/synthetic/run/part1.csv", "byteCount": 1, "dataRowCount": 2}
+  ]
+}
