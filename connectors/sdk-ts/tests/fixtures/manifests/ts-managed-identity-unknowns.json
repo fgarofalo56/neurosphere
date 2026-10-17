@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "name": "ts-mi-demo",
+  "version": "0.1.0",
+  "supported_clouds": [
+    "commercial"
+  ],
+  "capabilities": [
+    "telemetry_ingest"
+  ],
+  "scopes": [],
+  "granularity": {
+    "time_grain": "unknown",
+    "subject_level": "unknown"
+  },
+  "freshness": {
+    "typical_delay_ms": null,
+    "max_delay_ms": null
+  },
+  "rate_limits": null,
+  "auth_mode": "managed_identity",
+  "credential_refs": [],
+  "advisory": true,
+  "write_support": {
+    "supported": false,
+    "actions": []
+  }
+}

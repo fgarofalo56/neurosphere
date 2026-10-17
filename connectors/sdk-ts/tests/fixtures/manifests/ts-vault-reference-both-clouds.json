@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "name": "ts-vault-demo",
+  "version": "1.2.3",
+  "supported_clouds": [
+    "commercial",
+    "government"
+  ],
+  "capabilities": [
+    "usage_reports",
+    "health_reporting"
+  ],
+  "scopes": [
+    "Reports.Read.All"
+  ],
+  "granularity": {
+    "time_grain": "hour",
+    "subject_level": "deployment"
+  },
+  "freshness": {
+    "typical_delay_ms": 300000,
+    "max_delay_ms": 3600000
+  },
+  "rate_limits": [
+    {
+      "limit_scope": "per_credential",
+      "max_requests": 100,
+      "window_ms": 60000
+    }
+  ],
+  "auth_mode": "vault_reference",
+  "credential_refs": [
+    {
+      "name": "api_key",
+      "vault_ref": "https://demo-vault.vault.azure.net/secrets/api-key"
+    },
+    {
+      "name": "gov_key",
+      "vault_ref": "https://demo-gov.vault.usgovcloudapi.net/secrets/gov-key/0123456789abcdef0123456789abcdef"
+    }
+  ],
+  "advisory": true,
+  "write_support": {
+    "supported": false,
+    "actions": []
+  },
+  "documentation_url": "https://docs.example.com/connectors/ts-vault-demo"
+}
