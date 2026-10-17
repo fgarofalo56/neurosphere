@@ -238,6 +238,87 @@ async def test_consent_is_stored_and_audited() -> None:
     assert events == ["consent-1"]
 
 
+class FakeInventory:
+    def __init__(self, live: list[str] | None = None, error: Exception | None = None) -> None:
+        self.live = live or []
+        self.error = error
+        self.listed: list[str] = []
+
+    async def list_resource_group(self, rg_id: str) -> list[str]:
+        self.listed.append(rg_id)
+        if self.error is not None:
+            raise self.error
+        return list(self.live)
+
+
+def rg_row() -> ResourceRow:
+    return row("rg", resource_id=RG, service="resource-group")
+
+
+async def test_remove_refuses_resource_group_without_inventory() -> None:
+    deleter = RecordingDeleter()
+    with pytest.raises(ForbiddenError):
+        await remove(DEP, [row("a"), rg_row()], deleter)
+    assert deleter.calls == []
+
+
+async def test_remove_refuses_foreign_live_resource_in_group_with_zero_deletes() -> None:
+    foreign = f"{RG}/providers/Microsoft.Storage/storageAccounts/foreign"
+    inventory = FakeInventory([rid("a"), foreign.upper()])
+    deleter = RecordingDeleter()
+    with pytest.raises(ForbiddenError, match="not created by NeuroSphere"):
+        await remove(DEP, [row("a"), rg_row()], deleter, inventory)
+    assert deleter.calls == []
+
+
+async def test_remove_refuses_when_listing_fails_with_zero_deletes() -> None:
+    deleter = RecordingDeleter()
+    with pytest.raises(ForbiddenError, match="cannot verify"):
+        await remove(DEP, [row("a"), rg_row()], deleter, FakeInventory(error=RuntimeError("503")))
+    assert deleter.calls == []
+
+
+async def test_remove_deletes_group_after_children_when_inventory_matches() -> None:
+    inventory = FakeInventory([rid("A"), rid("b")])  # case-insensitive match
+    deleter = RecordingDeleter()
+    deleted = await remove(DEP, [rg_row(), row("a"), row("b")], deleter, inventory)
+    assert deleted[-1] == RG
+    assert set(deleted[:-1]) == {rid("a"), rid("b")}
+    assert deleter.calls == deleted
+    assert len(inventory.listed) == 2  # verified up front and re-listed before the group delete
+
+
+async def test_remove_rechecks_group_immediately_before_delete() -> None:
+    class Drifting(FakeInventory):
+        async def list_resource_group(self, rg_id: str) -> list[str]:
+            await super().list_resource_group(rg_id)
+            if len(self.listed) > 1:
+                return [rid("a"), f"{RG}/providers/Microsoft.Test/things/late"]
+            return [rid("a")]
+
+    deleter = RecordingDeleter()
+    with pytest.raises(ForbiddenError):
+        await remove(DEP, [rg_row(), row("a")], deleter, Drifting())
+    assert RG not in deleter.calls
+
+
+def test_plan_reports_foreign_live_resource_as_reason_group_untouched() -> None:
+    foreign = f"{RG}/providers/Microsoft.Storage/storageAccounts/foreign"
+    plan = plan_removal(DEP, [rg_row(), row("a")], live_contents={RG: [rid("a"), foreign]})
+    by_id = {e.resource_id: e for e in plan.entries}
+    assert by_id[RG].action is Action.UNTOUCHED
+    assert foreign in (by_id[RG].reason or "")
+    assert by_id[rid("a")].action is Action.REMOVABLE
+
+
+def test_plan_without_inventory_labels_group_unverified() -> None:
+    plan = plan_removal(DEP, [rg_row(), row("a")])
+    by_id = {e.resource_id: e for e in plan.entries}
+    assert by_id[RG].action is Action.REMOVABLE
+    assert by_id[RG].reason == "live contents not verified (dry-run)"
+    assert [e.resource_id for e in plan.removable][-1] == RG
+
+
 def test_consent_requires_resources_and_pseudonymous_owner() -> None:
     with pytest.raises(ValidationError):
         ConsentRecord(

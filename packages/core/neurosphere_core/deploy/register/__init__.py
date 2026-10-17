@@ -11,10 +11,12 @@ from neurosphere_core.deploy.register.consent import (
 )
 from neurosphere_core.deploy.register.guard import (
     Action,
+    LiveInventory,
     PlanEntry,
     RemovalPlan,
     ResourceDeleter,
     assert_removable,
+    assert_resource_group_empty_of_foreign,
     plan_removal,
     remove,
 )
@@ -32,6 +34,7 @@ __all__ = [
     "ConsentAuditSink",
     "ConsentRecord",
     "InMemoryRegisterStore",
+    "LiveInventory",
     "NoOpConsentAuditSink",
     "Ownership",
     "PlanEntry",
@@ -41,6 +44,7 @@ __all__ = [
     "ResourceDeleter",
     "ResourceRow",
     "assert_removable",
+    "assert_resource_group_empty_of_foreign",
     "normalize_id",
     "plan_removal",
     "record_consent",
