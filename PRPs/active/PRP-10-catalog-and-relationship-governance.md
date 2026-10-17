@@ -1,6 +1,8 @@
 ---
 name: prp-10-catalog-and-relationship-governance
-status: backlog
+status: active
+started: 2026-10-17
+branch: prp-10-catalog
 review: required
 created: 2026-10-08
 model: sonnet
@@ -230,6 +232,21 @@ NS_LIVE_APPROVED=1 python scripts/gates/g03_live.py    # operator-approved, requ
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint gap: items 2, 3 and 4 share the catalog protocols, the lock/override rules and the review-queue interface, and router registration lives in a shared file no item owned. Waves: 0 → (1, 4, 6) → (2, 3) → 5. Item 7 deferred by the operator; the PR is held until its evidence lands (D9).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
+| 1 | todo | | sonnet | | 2026-10-17 |
+| 2 | todo | | sonnet | | 2026-10-17 |
+| 3 | todo | | sonnet | | 2026-10-17 |
+| 4 | todo | | sonnet | | 2026-10-17 |
+| 5 | todo | | sonnet | | 2026-10-17 |
+| 6 | in-progress | (worktree) | sonnet | dispatched (independent of item 0) | 2026-10-17 |
+| 7 | todo | | operator | deferred by operator; G03 OPEN | 2026-10-17 |
 
 ## Completion note (filled at ship)
 - Date:
