@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from typing import Any
 
 import httpx
@@ -46,7 +47,8 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 PRODUCER_ID = "otel-prod"
-SECRET = "s3cr3t-producer-value-0123456789"  # noqa: S105 - test fixture, not a real secret
+# Generated per run so no secret-shaped literal sits in the repo.
+SECRET = f"fixture-{uuid.uuid4().hex}"
 TRACE = "4bf92f3577b34da6a3ce929d0e0e4736"
 ROOT, CHILD = "00f067aa0ba902b7", "53995c3f42cd8ad8"
 START = 1_790_000_000_000_000_000
