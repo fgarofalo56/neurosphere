@@ -27,6 +27,13 @@ All notable changes to this project are documented here. The format follows
   executor; reference connectors for generic OpenTelemetry/CloudEvents push, bounded Azure
   Monitor polling, Foundry discovery and Azure Cost Management exports with a billing-vs-ledger
   variance report; `docs/connectors/coverage.md`.
+- Catalog and relationship governance (PRP-10): versioned `CatalogRepository` on Cosmos NoSQL
+  and in memory with ETag concurrency, canonical IDs and aliases, scope-filtered queries and a
+  single partition-key configuration point; bounded `GraphQuery` with depth, fan-out, node, edge
+  and time budgets and presented lineage; curation decisions and locks with a review queue;
+  outbox projection worker producing inferred INVOKES/USES_MODEL edges; catalog API (CRUD,
+  search, lineage, import/export, recertification, stale-agent reconcile); Azure AI Search
+  `AuthorizedSearch` with a server-side scope filter. Live G03 benchmark still open.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
