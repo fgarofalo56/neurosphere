@@ -124,19 +124,38 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Build every Bicep file (none until PRP-08)
+      - name: Build every Bicep file and param file, lint the root template
         run: |
-          files=$(find infra -name '*.bicep' 2>/dev/null)
-          if [ -z "$files" ]; then
-            echo "no .bicep files yet"
-            exit 0
-          fi
           az bicep install
           rc=0
-          for f in $files; do
+          while IFS= read -r f; do
+            echo "build $f"
             az bicep build --file "$f" --stdout > /dev/null || rc=1
-          done
+          done < <(find infra -name '*.bicep' | sort)
+          while IFS= read -r p; do
+            echo "build-params $p"
+            az bicep build-params --file "$p" --stdout > /dev/null || rc=1
+          done < <(find infra -name '*.bicepparam' | sort)
+          az bicep lint --file infra/bicep/modules/main.bicep || rc=1
           exit $rc
+
+  helm:
+    name: helm 4 lint and template
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - name: Helm major version is 4
+        run: |
+          helm version --short
+          helm version --short | grep -E '^v4[.]'
+      - name: Lint (strict)
+        run: helm lint --strict infra/helm -f infra/helm/ci/values-ci.yaml
+      - name: Template renders
+        run: helm template neurosphere infra/helm -f infra/helm/ci/values-ci.yaml > /dev/null
 
   mermaid:
     name: mermaid diagrams render

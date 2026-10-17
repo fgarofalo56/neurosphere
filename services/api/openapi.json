@@ -139,7 +139,7 @@
             "$ref": "#/components/schemas/Sha256Hash"
           },
           "recorded_at": {
-            "$ref": "#/components/schemas/UtcTimestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__audit__v1__audit_record__UtcTimestamp"
           },
           "schema_version": {
             "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
@@ -255,6 +255,111 @@
         "title": "ChainVerification",
         "type": "object"
       },
+      "ConsentRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "consent_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Consent Id",
+            "type": "string"
+          },
+          "consented_by": {
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Consented By",
+            "type": "string"
+          },
+          "consented_subscriptions": {
+            "items": {
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Consented Subscriptions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "consent_id",
+          "consented_by",
+          "consented_subscriptions"
+        ],
+        "title": "ConsentRecord",
+        "type": "object"
+      },
+      "CostImplication": {
+        "additionalProperties": false,
+        "description": "Plan/cost implication of the decision. Unknown is null, never 0; an estimate cites its price version.",
+        "properties": {
+          "basis": {
+            "enum": [
+              "estimated",
+              "no_incremental_cost",
+              "unknown"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "monthly_amount": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{1,15}(\\.[0-9]{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Amount"
+          },
+          "price_version": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Version"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "basis",
+          "monthly_amount",
+          "currency",
+          "price_version"
+        ],
+        "title": "CostImplication",
+        "type": "object"
+      },
       "Denial": {
         "additionalProperties": false,
         "properties": {
@@ -282,6 +387,309 @@
           "reason"
         ],
         "title": "Denial",
+        "type": "object"
+      },
+      "DeploymentManifest": {
+        "additionalProperties": false,
+        "description": "One customer-hosted NeuroSphere deployment plan (NS-07): a single cloud, approved regions, hosting profile, analytics backend and a reuse/create/skip decision per service with owner consent and cost implication. cloud is one scalar per manifest and no service, region or endpoint field can name another cloud, so routing Government data to Commercial is not expressible; Government manifests may list only usgov*/usdod* regions and Commercial manifests may not list them. Whether a backend, SKU or service is actually offered in the chosen cloud/region is decided by the capability matrix (CapabilityMatrixEntry, data in PRP-02), not by this schema. Rules JSON Schema cannot express are checked by the Python validator check_deployment_manifest in tests/contracts/test_deployment_manifest.py (PRP-01 item 7): each service appears at most once in services; existing_resource_id is not repeated across services.",
+        "properties": {
+          "analytics_backend": {
+            "enum": [
+              "fabric",
+              "synapse",
+              "databricks"
+            ],
+            "title": "Analytics Backend",
+            "type": "string"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__deployment__v1__deployment_manifest__UtcTimestamp"
+          },
+          "deployment_id": {
+            "pattern": "^[a-z0-9][a-z0-9-]{2,62}$",
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "hosting_profile": {
+            "enum": [
+              "aks",
+              "appservice"
+            ],
+            "title": "Hosting Profile",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Regions",
+            "type": "array"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServicePlan"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Services",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "planned",
+              "approved",
+              "applied"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "deployment_id",
+          "cloud",
+          "regions",
+          "hosting_profile",
+          "analytics_backend",
+          "status",
+          "services",
+          "created_at"
+        ],
+        "title": "DeploymentManifest",
+        "type": "object"
+      },
+      "DeploymentPlan": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capability Warnings",
+            "type": "array"
+          },
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerConsentRecord"
+            },
+            "title": "Consents",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deployment_id": {
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/DeploymentProfile"
+          }
+        },
+        "required": [
+          "plan_id",
+          "deployment_id",
+          "profile",
+          "items",
+          "created_at"
+        ],
+        "title": "DeploymentPlan",
+        "type": "object"
+      },
+      "DeploymentProfile": {
+        "additionalProperties": false,
+        "description": "What the operator asks for at deployment (PRD NS-07).",
+        "properties": {
+          "allow_preview": {
+            "default": false,
+            "title": "Allow Preview",
+            "type": "boolean"
+          },
+          "analytics": {
+            "enum": [
+              "fabric",
+              "synapse",
+              "databricks"
+            ],
+            "title": "Analytics",
+            "type": "string"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "features": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FeatureRequest"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "hosting": {
+            "enum": [
+              "aks",
+              "appservice"
+            ],
+            "title": "Hosting",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cloud",
+          "regions",
+          "hosting",
+          "analytics"
+        ],
+        "title": "DeploymentProfile",
+        "type": "object"
+      },
+      "DiscoveredResource": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "apim",
+              "model_endpoint",
+              "key_vault",
+              "monitoring",
+              "event_hubs",
+              "storage",
+              "analytics_workspace"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "subscription_id": {
+            "title": "Subscription Id",
+            "type": "string"
+          },
+          "tags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "object"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "type",
+          "id",
+          "name",
+          "subscription_id"
+        ],
+        "title": "DiscoveredResource",
+        "type": "object"
+      },
+      "FeatureRequest": {
+        "additionalProperties": false,
+        "description": "An optional feature the deployment wants (for example a Foundry model or CMK).",
+        "properties": {
+          "feature": {
+            "pattern": "^[a-z][a-z0-9_]{1,127}$",
+            "title": "Feature",
+            "type": "string"
+          },
+          "service": {
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Service",
+            "type": "string"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          }
+        },
+        "required": [
+          "service",
+          "feature"
+        ],
+        "title": "FeatureRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -403,6 +811,104 @@
         "title": "Outcome",
         "type": "object"
       },
+      "OwnerConsent": {
+        "additionalProperties": false,
+        "description": "Enterprise owner consent for using a (shared) resource. Always required for reuse.",
+        "properties": {
+          "granted": {
+            "title": "Granted",
+            "type": "boolean"
+          },
+          "owner_principal": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Principal"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "required",
+          "granted",
+          "owner_principal",
+          "recorded_at"
+        ],
+        "title": "OwnerConsent",
+        "type": "object"
+      },
+      "OwnerConsentRecord": {
+        "additionalProperties": false,
+        "description": "Enterprise-owner consent to reuse specific shared resources.\n\nA *granted* record must name a pseudonymous owner principal; it only ever covers the\nresource ids it lists (ARM ids compare case-insensitively).",
+        "properties": {
+          "consent_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Consent Id",
+            "type": "string"
+          },
+          "granted": {
+            "title": "Granted",
+            "type": "boolean"
+          },
+          "owner_principal": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Principal"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "resource_ids": {
+            "items": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Resource Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "consent_id",
+          "granted",
+          "resource_ids",
+          "recorded_at"
+        ],
+        "title": "OwnerConsentRecord",
+        "type": "object"
+      },
       "Page_AuditRecord_": {
         "additionalProperties": false,
         "properties": {
@@ -433,6 +939,394 @@
           "items"
         ],
         "title": "Page[AuditRecord]",
+        "type": "object"
+      },
+      "PlanCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "enum": [
+              "sku",
+              "network_reachability",
+              "quota",
+              "permission",
+              "residency",
+              "lifecycle"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "pass",
+              "fail",
+              "unknown"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "outcome",
+          "reason"
+        ],
+        "title": "PlanCheck",
+        "type": "object"
+      },
+      "PlanCost": {
+        "additionalProperties": false,
+        "description": "Mirrors the manifest ``cost_implication``; unknown is ``None``, never ``0``.",
+        "properties": {
+          "basis": {
+            "enum": [
+              "estimated",
+              "no_incremental_cost",
+              "unknown"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "monthly_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Amount"
+          },
+          "price_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Version"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "basis"
+        ],
+        "title": "PlanCost",
+        "type": "object"
+      },
+      "PlanItem": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/PlanCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "cost_implication": {
+            "$ref": "#/components/schemas/PlanCost"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "existing_resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Resource Id"
+          },
+          "kind": {
+            "default": "service",
+            "enum": [
+              "service",
+              "feature"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "neurosphere_created": {
+            "default": false,
+            "title": "Neurosphere Created",
+            "type": "boolean"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "owner_consent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerConsentRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "shared": {
+            "default": false,
+            "title": "Shared",
+            "type": "boolean"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "status": {
+            "enum": [
+              "reuse",
+              "create",
+              "skip",
+              "needs_consent",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "status",
+          "cost_implication"
+        ],
+        "title": "PlanItem",
+        "type": "object"
+      },
+      "PlanRequest": {
+        "additionalProperties": false,
+        "description": "Everything the planner needs; the planner itself makes no ARM or HTTP call.\n\n``scan`` is the :class:`ScanResponse` of a prior consented scan (passed in rather than\nre-fetched, so the plan is a pure function of its inputs). Services without a choice\ndefault to ``reuse`` when a discovered candidate exists, else ``create``.",
+        "properties": {
+          "choices": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ServiceChoice"
+            },
+            "propertyNames": {
+              "enum": [
+                "api_management",
+                "model_endpoint",
+                "key_vault",
+                "monitoring",
+                "event_hubs",
+                "storage",
+                "analytics_workspace",
+                "cosmos_db",
+                "ai_search",
+                "container_registry",
+                "kubernetes",
+                "app_service"
+              ]
+            },
+            "title": "Choices",
+            "type": "object"
+          },
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/OwnerConsentRecord"
+            },
+            "maxItems": 1000,
+            "title": "Consents",
+            "type": "array"
+          },
+          "deployment_id": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9-]{2,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment Id"
+          },
+          "price_table": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profile": {
+            "$ref": "#/components/schemas/DeploymentProfile"
+          },
+          "scan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScanResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "PlanRequest",
+        "type": "object"
+      },
+      "PlanResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/DeploymentManifest"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/DeploymentPlan"
+          }
+        },
+        "required": [
+          "plan",
+          "manifest"
+        ],
+        "title": "PlanResponse",
+        "type": "object"
+      },
+      "PriceEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "monthly_amount": {
+            "pattern": "^[0-9]{1,15}(\\.[0-9]{1,6})?$",
+            "title": "Monthly Amount",
+            "type": "string"
+          },
+          "service": {
+            "enum": [
+              "api_management",
+              "model_endpoint",
+              "key_vault",
+              "monitoring",
+              "event_hubs",
+              "storage",
+              "analytics_workspace",
+              "cosmos_db",
+              "ai_search",
+              "container_registry",
+              "kubernetes",
+              "app_service"
+            ],
+            "title": "Service",
+            "type": "string"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          }
+        },
+        "required": [
+          "service",
+          "monthly_amount"
+        ],
+        "title": "PriceEntry",
+        "type": "object"
+      },
+      "PriceTable": {
+        "additionalProperties": false,
+        "description": "Versioned static price input. No live pricing call is ever made.",
+        "properties": {
+          "currency": {
+            "default": "USD",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/PriceEntry"
+            },
+            "maxItems": 1000,
+            "title": "Entries",
+            "type": "array"
+          },
+          "price_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Price Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price_version"
+        ],
+        "title": "PriceTable",
         "type": "object"
       },
       "ReadyzResponse": {
@@ -490,6 +1384,11 @@
         "title": "ReasonCode",
         "type": "string"
       },
+      "Region": {
+        "pattern": "^[a-z][a-z0-9]{2,39}$",
+        "title": "Region",
+        "type": "string"
+      },
       "RejectedItem": {
         "additionalProperties": false,
         "properties": {
@@ -506,6 +1405,203 @@
           "reason_code"
         ],
         "title": "RejectedItem",
+        "type": "object"
+      },
+      "ScanRequest": {
+        "additionalProperties": false,
+        "description": "``consent`` is optional in the schema so a missing record is a 403, not a 422.",
+        "properties": {
+          "consent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConsentRecord"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subscription_ids": {
+            "items": {
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Subscription Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "subscription_ids"
+        ],
+        "title": "ScanRequest",
+        "type": "object"
+      },
+      "ScanResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "consent_id": {
+            "title": "Consent Id",
+            "type": "string"
+          },
+          "scanned_at": {
+            "format": "date-time",
+            "title": "Scanned At",
+            "type": "string"
+          },
+          "subscriptions": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionScan"
+            },
+            "title": "Subscriptions",
+            "type": "array"
+          },
+          "visibility_limited": {
+            "const": true,
+            "default": true,
+            "title": "Visibility Limited",
+            "type": "boolean"
+          },
+          "visibility_note": {
+            "default": "Results reflect only what the calling identity can read. A subscription reported not_visible may still contain resources; absence of results is not absence of resources.",
+            "title": "Visibility Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consent_id",
+          "scanned_at",
+          "subscriptions"
+        ],
+        "title": "ScanResponse",
+        "type": "object"
+      },
+      "ServiceChoice": {
+        "additionalProperties": false,
+        "description": "Operator choice for one service. ``fallback`` applies when reuse is not possible.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "reuse",
+              "create",
+              "skip"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "fallback": {
+            "default": "create",
+            "enum": [
+              "create",
+              "skip"
+            ],
+            "title": "Fallback",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ServiceChoice",
+        "type": "object"
+      },
+      "ServicePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_implication": {
+            "$ref": "#/components/schemas/CostImplication"
+          },
+          "decision": {
+            "enum": [
+              "reuse",
+              "create",
+              "skip"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "existing_resource_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "pattern": "^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[^/]+/providers/[^/]+/.+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Existing Resource Id"
+          },
+          "owner_consent": {
+            "$ref": "#/components/schemas/OwnerConsent"
+          },
+          "service": {
+            "enum": [
+              "api_management",
+              "model_endpoint",
+              "key_vault",
+              "monitoring",
+              "event_hubs",
+              "storage",
+              "analytics_workspace",
+              "cosmos_db",
+              "ai_search",
+              "container_registry",
+              "kubernetes",
+              "app_service"
+            ],
+            "title": "Service",
+            "type": "string"
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason"
+          }
+        },
+        "required": [
+          "service",
+          "decision",
+          "owner_consent",
+          "cost_implication"
+        ],
+        "title": "ServicePlan",
         "type": "object"
       },
       "Sha256Hash": {
@@ -564,6 +1660,47 @@
         "title": "Subject",
         "type": "object"
       },
+      "SubscriptionScan": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredResource"
+            },
+            "title": "Resources",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "visible",
+              "not_visible"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subscription_id": {
+            "title": "Subscription Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscription_id",
+          "status"
+        ],
+        "title": "SubscriptionScan",
+        "type": "object"
+      },
       "TargetRef": {
         "additionalProperties": false,
         "description": "Reference to the resource an action changes or an audit record concerns. `canonical_id` uses the catalog grammar `cloud:customer:source:type:id` (Clarification 7); the pattern here mirrors it and the catalog/v1 grammar is authoritative. Python validator `validate_target_ref_matches_catalog_grammar` in tests/contracts/test_canonical_ids.py checks this pattern against the catalog ID corpus so the two cannot drift. The version being acted on is carried beside this object (ActionIntent.target_version), not inside it, so it is hashed as its own field.",
@@ -586,11 +1723,6 @@
         ],
         "title": "TargetRef",
         "type": "object"
-      },
-      "UtcTimestamp": {
-        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
-        "title": "UtcTimestamp",
-        "type": "string"
       },
       "Uuid": {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -636,6 +1768,16 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
+      },
+      "neurosphere_contracts__deployment__v1__deployment_manifest__UtcTimestamp": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
       }
     }
   },
@@ -811,6 +1953,88 @@
         "summary": "Readyz",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/deploy/plan": {
+      "post": {
+        "operationId": "plan_v1_deploy_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plan",
+        "tags": [
+          "deploy"
+        ]
+      }
+    },
+    "/v1/deploy/scan": {
+      "post": {
+        "operationId": "scan_v1_deploy_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan",
+        "tags": [
+          "deploy"
         ]
       }
     },

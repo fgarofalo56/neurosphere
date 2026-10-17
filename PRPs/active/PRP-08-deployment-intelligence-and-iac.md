@@ -1,6 +1,8 @@
 ---
 name: prp-08-deployment-intelligence-and-iac
-status: backlog
+status: active
+started: 2026-10-16
+branch: prp-08-deployment-intelligence
 review: required
 created: 2026-10-08
 model: sonnet
@@ -146,7 +148,7 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
   - Scan refuses to start without a recorded consent flag in the request context (403 via `forbidden`).
   - Read-only: no ARM write call exists in the module (static test greps for write verbs).
 - Pattern references: FastAPI router per module; async clients; `forbidden` error.
-- Tests to write: `services/api/tests/deploy/test_scan.py`.
+- Tests to write: `services/api/tests/deployment/test_scan.py`.
 
 ### Item 4 - reuse-planner
 - Deliverable: planner that validates SKU, network reachability, quota, permission, residency and lifecycle for each discovered service and emits a reuse/create/skip plan with estimated cost implications and a consent record.
@@ -158,7 +160,7 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
   - Plan JSON validates against the PRP-01 `DeploymentManifest` schema.
   - Options the capability matrix marks unavailable appear in the plan as disabled with reason; cost fields are `estimated` or `unknown`, never 0.
 - Pattern references: `capabilities.validate_profile()` from PRP-02; Pydantic forbid-extra.
-- Tests to write: `services/api/tests/deploy/test_plan.py`.
+- Tests to write: `services/api/tests/deployment/test_plan.py`.
 
 ### Item 5 - ownership-register-and-uninstall
 - Deliverable: ownership and dependency register (library) and an uninstall script that removes only NeuroSphere-created, dependent-free resources and supports `--dry-run`.
@@ -196,6 +198,26 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
 - Pattern references: `scripts/gates/` conventions from PRP-02.
 - Tests to write: `tests/unit/gates/test_g01_refuses_without_approval.py`.
 
+### Item 8 - api-and-ci-wiring (added at plan approval 2026-10-16)
+- Deliverable: register the scan and plan routers through the router registry, regenerate the OpenAPI snapshot, and add CI steps for Bicep lint plus both per-cloud param sets and Helm 4 lint/template. Items 1-4 own none of these shared files, so they are sequenced here.
+- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `.github/workflows/ci.yml`.
+- Must NOT touch: `services/api/neurosphere_api/deploy/`, `services/api/neurosphere_api/authz/`, `infra/`, `packages/`, root `pyproject.toml`.
+- Depends on: Items 1, 2, 3, 4.
+- Acceptance criteria:
+  - Scan and plan routes are reachable in `create_app()` and the authz route inventory (`undeclared_routes`) stays empty; routes require the existing `config.manage` permission.
+  - `services/api/openapi.json` matches the exported schema (drift test passes).
+  - CI runs `az bicep build`/lint for every module and `az bicep build-params` for both param sets, and `helm lint` + `helm template` on Helm 4, with no `|| true`.
+- Pattern references: `REGISTERED` hooks in `routers.py` (`_register_ingest`); existing `bicep` CI job.
+- Tests to write: none new; existing api route-inventory and openapi drift tests are the gate.
+
+### Item 9 - scan-production-bootstrap (added at operator decision 2026-10-16)
+- Deliverable: settings-driven, opt-in production wiring for the scan service from `main.py`, mirroring `configure_ingest_from_settings`; unconfigured stays 503 (fail closed).
+- Owned files (may edit): `services/api/neurosphere_api/main.py`, `services/api/neurosphere_api/deploy/scan/bootstrap.py` (new), `services/api/neurosphere_api/deploy/scan/settings.py`, `services/api/neurosphere_api/deploy/scan/__init__.py` (exports only), `services/api/tests/deployment/test_scan_bootstrap.py`.
+- Must NOT touch: `app.py`, `routers.py`, `openapi.json`, `deploy/plan/`, `packages/`, `infra/`, any pyproject.
+- Depends on: Item 8.
+- Acceptance criteria: with the opt-in setting the app serves scan through `HttpxResourceGraphReader` using the cloud profile's management host and a managed-identity/default credential (no secrets); without it the route returns 503; credential/client closed on shutdown.
+- Tests to write: `services/api/tests/deployment/test_scan_bootstrap.py`.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -209,7 +231,7 @@ helm lint infra/helm
 helm template neurosphere infra/helm
 docker compose up -d --wait
 python -m pytest -m integration tests/integration/deploy
-python -m pytest services/api/tests/deploy packages/core/tests/deploy tests/unit/infra
+python -m pytest services/api/tests/deployment packages/core/tests/deploy tests/unit/infra
 NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approved, requires NS_LIVE_APPROVED=1
 ```
 
@@ -234,10 +256,36 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-a7fcda5b8f04d74cc | sonnet | az bicep build/build-params/lint clean (main + 7 modules, both param sets); ruff/pyright clean; tests/unit/infra 37 passed (re-run on branch); 5efd974, merge 3ad6ac0 | 2026-10-16 |
+| 2 | merged | worktree-agent-ad5ca9e705911a615 | sonnet | helm lint --strict 0 failed; ruff/pyright clean; test_helm_render 9 passed (re-run on branch and post-merge); 583b393, merge ce671f5 | 2026-10-16 |
+| 3 | merged | worktree-agent-ab5bdbd34bba532fb | sonnet | ruff/pyright clean; deploy tests 17 passed, api suite 282 passed (re-run on branch); 9575bab, merge 00c1259. Post-merge: test package `deploy` collided with packages/core/tests/deploy; renamed to services/api/tests/deployment (orchestrator fix-forward); full default suite 3811 passed. Audit event for scan not wired (no existing hook; follow-up) | 2026-10-16 |
+| 4 | merged | worktree-agent-a6fa15b0bbbb0ab9c | sonnet | ruff/pyright clean; deployment tests 39 passed (re-run on branch and post-merge); full suite 3829 passed on branch; e4f224f, merge f58a522. NS-created inferred from tag `neurosphere:created-by` for planning only (register is the uninstall authority); scan passed in request body; no audit hook | 2026-10-16 |
+| 5 | merged | worktree-agent-a9c807ad5f8a1e02e | sonnet | ruff/pyright clean; core deploy 51 passed; integration tests/integration/deploy 3 passed vs compose Cosmos emulator (re-run on branch and post-merge); full suite 3860 passed on branch; 409e5b4, merge d7c9d5f. Audit = ConsentAuditSink protocol stub; ArmDeleter real removal never run live (OPEN) | 2026-10-16 |
+| 6 | merged | worktree-agent-afe0a02f739901bc8 | sonnet | ruff/pyright clean; deploy tests 20 passed, core suite 653 passed (re-run on branch); 675e3a3, merge a9f7ee2. Gov Fabric token scope undocumented on Learn: required configured value, fails closed | 2026-10-16 |
+| 7 | merged | worktree-agent-a68259d38be07a565 | sonnet | script be119c4, merge 2f5d890; refusal without NS_LIVE_APPROVED verified (exit 2, no az call). Live (operator-approved, Limitlessdata DMLZ, reused Loom APIM): run 1 eastus2 2026-10-16 refused (MSYS path rewrite), run 2 eastus2 AI Search InsufficientResourcesAvailable then teardown crashed (plain python, no neurosphere_core; RG deleted by hand), fixed 68eb575; run 3 centralus deploy/health/teardown OK but FAIL from KV purge-protection misclassification; fixed + subscription redaction 974ad2c; run 4 centralus 2026-10-17 PASS (docs/evidence/G01/2026-10-17-060807-commercial-deploy-smoke.json). tests/unit/gates 46 passed | 2026-10-17 |
+| 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
+| 9 | merged | worktree-agent-a8afc23ef8c652947 | sonnet | ruff/pyright clean; api suite 312 passed (branch + post-merge); full suite 3896 passed on branch; opt-in NS_SCAN_ENABLED, DefaultAzureCredential excluding env secrets outside local; 08a246b, merge 0982ed0 | 2026-10-16 |
+| R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
+
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-17
+- Merged commits: items 2 ce671f5, 6 a9f7ee2, 1 3ad6ac0, 3 00c1259, 4 f58a522, 8 c5573b9, 5 d7c9d5f, 7 2f5d890, 9 0982ed0, review rework 9935cae; fix-forwards 9b940ab (test package rename), 68eb575 and 974ad2c (G01 script).
 - Deviations from blueprint and why:
-- Descoped items:
+  - Item 8 (API and CI wiring) added at plan approval: routers.py, openapi.json and ci.yml were owned by no item.
+  - Item 9 (scan production bootstrap, opt-in `NS_SCAN_ENABLED`) added at operator decision: without it the scan route was 503 in every real deployment.
+  - API deploy tests live in `services/api/tests/deployment/` (not `deploy/`): the name collided with `packages/core/tests/deploy` under rootdir import mode.
+  - Helm and App Service image references are duplicated values held equal by a test; Helm cannot read files outside the chart.
+  - Scan uses an httpx Resource Graph reader (no ARG SDK in the dependency set); the planner takes the scan result in the request body (#36).
+  - The review blocker (uninstall resource-group delete cascading to unregistered live resources) was fixed by a mandatory live-inventory check before any RG delete.
+  - G01 evidence tokenises subscription ids (`<subscription:sha256-8>`) because the repository is public.
+- Descoped items: none.
 - Live items run or OPEN (G01, G02, G12):
-- Follow-ups:
+  - G01 Commercial: evidenced 2026-10-17, operator-approved run in a Limitlessdata subscription, centralus, reused APIM, PASS (deploy, health on 6 resources, register-guarded teardown, Key Vault purge blocked by purge protection as designed). Earlier runs are recorded on the board; AI Search standard was out of capacity in eastus2 on 2026-10-16.
+  - G01 Government (Fabric, Synapse, Databricks, Search profiles) and G02: OPEN (PRP-20; no Government subscription). Government Fabric token scope unverified (#39).
+  - Uninstall real removal (ArmDeleter + live inventory) never run live: OPEN (#40).
+  - G12 emulator/mock limits: mocked Resource Graph cannot reproduce real subscription visibility, quota or capacity APIs (eastus2 Search capacity was only found live); the Cosmos emulator used by the register integration test has no Entra RBAC or RU accounting; Fabric adapter is stub-tested only.
+- Follow-ups: #35 tag-trusted consent skip, #36 scan in request body, #37 audit events for scan/plan/consent, #38 uninstall api-version table, #39 Government Fabric token scope, #40 live uninstall exercise, #41 record G01 findings in RESEARCH-AND-GATES, #42 frontend container shape (PRP-13).
