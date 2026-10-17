@@ -1,6 +1,8 @@
 ---
 name: prp-10-catalog-and-relationship-governance
-status: backlog
+status: active
+started: 2026-10-17
+branch: prp-10-catalog
 review: required
 created: 2026-10-08
 model: sonnet
@@ -49,6 +51,7 @@ Ship the operational catalog on Cosmos DB NoSQL: a versioned `CatalogRepository`
 | 10 | Optional integrations | build Purview/Unity now; defer | Deferred. Purview and Unity Catalog are optional connectors; no write-back assumed |
 | 11 | Emulator limits | rely on emulator for perf | Emulator has no RU accounting and no range/composite/spatial indexes; p95 numbers from it are bounded feasibility only (G12). Only the live run supports performance statements |
 | 12 | Dependency on PRP-06 | wait; protocol | Depends on PRP-06 for scope derivation and policy middleware; routes use `require(permission)` from `neurosphere_api.authz` |
+| 13 | G03 harness provisioning under Entra (delta, 2026-10-17) | fix via az CLI; fix via mgmt SDK; stop | The PRP-02 harness created databases/containers through the data-plane SDK, which Entra tokens cannot do (403 substatus 5300, learn.microsoft.com/azure/cosmos-db/troubleshoot-forbidden). Operator signed off on a delta: item 7 may edit `scripts/gates/g03_live.py` and `tests/load/graph_benchmark/` so the live path provisions the fresh database and containers through the control plane (`az cosmosdb sql ...`, no shell, no keys) and benchmarks over the data plane with Entra; the emulator path is unchanged. Target: throwaway serverless account in Limitlessdata - DMLZ, new RG deleted after the run |
 
 ## Context manifest
 
@@ -230,6 +233,21 @@ NS_LIVE_APPROVED=1 python scripts/gates/g03_live.py    # operator-approved, requ
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+PR #52 (CI green 2026-10-17); item 7 live G03 evidence filed 2026-10-17, so the D9 merge hold is lifted; follow-ups #53-#56. Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint gap: items 2, 3 and 4 share the catalog protocols, the lock/override rules and the review-queue interface, and router registration lives in a shared file no item owned. Waves: 0 → (1, 4, 6) → (2, 3) → 5. Item 7 deferred by the operator; the PR is held until its evidence lands (D9).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | merged | worktree-agent-afa6790ef3378ec5e | sonnet | 1357ad9; ruff/format/pyright clean; 46 passed (re-run on branch); Snyk Code 0; review APPROVE (5 non-blocking: post-lock-expiry stale confidence/validity, resolved ReviewItem id swallows later conflicts, expired lock set_confidence carries into new lock, observation id ignores confidence, no domain-level edge list); merge 0b38c7d, catalog+search 116 passed + pyright clean post-merge | 2026-10-17 |
+| 1 | merged | worktree-agent-a1f3031a9fb234dbc | sonnet | 249f381; ruff/format/pyright clean; unit 75 passed, integration (Cosmos emulator, bounded feasibility only) 23 passed (re-run on branch); Snyk Code 0; review APPROVE (non-blocking: cross-domain duplicate-ID existence signal (unify error type/message), put_override id uniqueness only in-scope, check-then-insert race, fixed RateLimited retry-after); merge d6fd3f9; post-merge collision core/api tests/catalog packages fixed by orchestrator; full default suite 4271 passed | 2026-10-17 |
+| 2 | merged | worktree-agent-a424258055dc3415c | sonnet | d6c3403; ruff/format/pyright clean; core 828 passed (re-run on branch); Snyk Code 0; review CHANGES REQUIRED (1 blocker: visited_nodes/visited_edges count out-of-scope nodes/edges, query.py:206-207,301); rework 4c30a74: counts over in-scope presented results + regression test; 829 passed (re-run); Haiku confirm CONFIRMED; non-blocking: fan-out overflow counts hidden edges before scope filter, raw-view root probe relies on engine unknown-edge fallback, time budget not checked before root/override fetch; merge 0aef02e, core+api 1184 passed post-merge | 2026-10-17 |
+| 3 | merged | worktree-agent-ac3ff2a3afce222c6 | sonnet | f4cf20e; ruff/format/pyright clean; workers 178 passed (re-run on branch); Snyk Code 0. Gaps reported: no trace-event readback by doc_id exists (TraceEventSource protocol + in-memory only), worker ClaimsSource (managed identity) not wired; review APPROVE (non-blocking: out-of-scope candidates dropped with no quarantine/alert, foreign-customer entry wedges sink (per-customer outbox assumption undocumented), replay arrival-order confidence regression); merge 066ff14, workers+core 1007 passed + pyright clean post-merge | 2026-10-17 |
+| 4 | merged | worktree-agent-ac756305fd619d259 | sonnet | 0e272ba; ruff/format/pyright clean; catalog+authz 193 passed (re-run on branch); Snyk Code 0 (run by orchestrator); review APPROVE (non-blocking: caller-supplied EdgeOverride.actor/lock.actor not stamped from scope principal, require() 403s unaudited (repo-wide), no-op inference unaudited by design); merge 16e3d3d; orchestrator wired /catalog/curation in routers.py + regenerated openapi.json; services/api 355 passed + pyright/ruff clean post-merge | 2026-10-17 |
+| 5 | merged | worktree-agent-a50db6271c68287de | sonnet | ca03b8e; ruff/format/pyright clean; services/api 390 passed, load 1 passed (re-run on branch); Snyk Code 0 (run by orchestrator); p95 in-memory sandbox (200 agents, 8 domains; bounded feasibility, not live): get 0.31 ms, list 0.93, search 2.07, neighbors d3 120.9, impact d3 16.0; review APPROVE (non-blocking: stale-agent _last_observed reads first edge page only, unkeyed plan digest, 422-before-403 ordering on create); merge d3c0b51; orchestrator wired /catalog in routers.py + regenerated openapi.json; full default suite 4338 passed | 2026-10-17 |
+| 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
+| 7 | merged | worktree-agent-a4dbe5c8fb2d6deca | sonnet | harness delta 457904d (control-plane provisioning via az; offline 80 passed, emulator smoke 1 passed, Snyk 0; review APPROVE, merge e47672a); evidence writer fix (live disclaimer + Live account section; 82 passed, Snyk 0, Haiku APPROVE); live run 2026-10-17 operator-approved (Frank Garofalo), serverless Entra-only account in Limitlessdata - DMLZ centralus via private endpoint + P2S VPN: all 9 cells correct, mean 39-58 RU/traversal, p95 1.58-2.13 s incl. WAN RTT; evidence docs/evidence/G03/live-2026-10-17.{md,json}; RG deleted, DNS records gone. First attempt blocked by landing-zone policy (public access forced off) | 2026-10-17 |
 
 ## Completion note (filled at ship)
 - Date:

@@ -157,6 +157,33 @@ def test_live_mode_may_carry_request_charge(tmp_path):
     assert "Measured request charge" in m.read_text(encoding="utf-8")
 
 
+def test_live_evidence_renders_account_and_live_disclaimer(tmp_path):
+    result, _ = _run()
+    result.mode = "live"
+    result.environment.pop("emulator", None)
+    result.environment["endpoint"] = "https://acct.documents.azure.com:443/"
+    result.environment["live_account"] = {
+        "operator": "Operator Name (approved 2026-10-17)",
+        "sku": "serverless",
+        "region": "centralus",
+        "source": "operator-supplied",
+    }
+    _j, m = write_evidence(result, tmp_path, "live, Commercial", when=date(2026, 10, 17))
+    md = m.read_text(encoding="utf-8")
+    assert "## Live account" in md
+    for needle in ("serverless", "centralus", "Operator Name (approved 2026-10-17)", "acct."):
+        assert needle in md
+    assert "emulator latency" not in md and "is still required" not in md
+    assert "guarantee" in md
+
+
+def test_emulator_evidence_keeps_emulator_disclaimer(tmp_path):
+    result, _ = _run()
+    _j, m = write_evidence(result, tmp_path, EMULATOR_LABEL, when=date(2026, 10, 11))
+    md = m.read_text(encoding="utf-8")
+    assert "Latency here is local emulator latency" in md and "## Live account" not in md
+
+
 def test_time_budget_wording_states_deadline_semantics_and_reports_overrun(tmp_path):
     result, _ = _run()
     for cell in result.cells:

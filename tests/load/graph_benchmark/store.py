@@ -8,6 +8,7 @@ import importlib.metadata
 from typing import Any, Protocol
 
 from .model import PartitionVariant
+from .provision import Provisioner
 
 CREDENTIAL_MODES = ("emulator_key", "default_azure_credential")
 # The vNext emulator accepts any key; this is a placeholder, not a credential.
@@ -75,11 +76,15 @@ class SdkGraphStore:
         *,
         key: str | None = None,
         measure_request_charge: bool = False,
+        provisioner: Provisioner | None = None,
     ) -> None:
         from azure.cosmos import CosmosClient
 
         if credential_mode not in CREDENTIAL_MODES:
             raise ValueError(f"credential_mode must be one of {CREDENTIAL_MODES}")
+        if provisioner is not None and credential_mode == "emulator_key":
+            raise ValueError("a provisioner is for the live Entra path only")
+        self._provisioner = provisioner
         if credential_mode == "emulator_key":
             self._client = CosmosClient(
                 endpoint, credential=key or _EMULATOR_PLACEHOLDER_KEY, connection_verify=False
@@ -91,11 +96,20 @@ class SdkGraphStore:
             self._client = CosmosClient(endpoint, credential=identity.DefaultAzureCredential())
             self._measure = measure_request_charge
         self.database = database
-        self._db = self._client.create_database(database)  # fails if it exists: always fresh
+        if provisioner is not None:
+            # Entra data-plane tokens cannot create databases/containers (403/5300): the
+            # control plane (az CLI) provisions; the SDK only gets item-level clients.
+            provisioner.create_database(database)
+            self._db = self._client.get_database_client(database)
+        else:
+            self._db = self._client.create_database(database)  # fails if it exists: always fresh
 
     def create_container(self, name: str, variant: PartitionVariant) -> ContainerHandle:
         from azure.cosmos import PartitionKey
 
+        if self._provisioner is not None:
+            self._provisioner.create_container(self.database, name, variant)
+            return _SdkContainer(self._db.get_container_client(name), name, variant, self._measure)
         if variant.hierarchical:
             pk = PartitionKey(path=list(variant.paths), kind="MultiHash")
         else:
@@ -106,7 +120,10 @@ class SdkGraphStore:
 
     def close(self, *, cleanup: bool = True) -> None:
         if cleanup:
-            self._client.delete_database(self.database)
+            if self._provisioner is not None:
+                self._provisioner.delete_database(self.database)  # failure propagates loudly
+            else:
+                self._client.delete_database(self.database)
 
 
 class _MemContainer:

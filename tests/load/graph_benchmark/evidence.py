@@ -22,6 +22,12 @@ DISCLAIMER = (
     "guarantee is made or implied. The live run against a real account (gate G03) is "
     "still required."
 )
+LIVE_DISCLAIMER = (
+    "Latency here is measured from the client recorded under Live account, so it includes "
+    "that client's network path to the account. Request charge is as reported by the "
+    "service for this run. No cost, SLA, throughput or performance guarantee is made or "
+    "implied, and nothing here covers Azure Government."
+)
 _FORBIDDEN_KEYS = ("ru", "request_charge", "request_units", "ru_consumed", "ru_per_sec")
 
 
@@ -52,7 +58,7 @@ def build_payload(result: BenchmarkResult, label: str) -> dict[str, Any]:
         "p95_ms_by_workload": result.p95_by_workload(),
         "all_bounded_results_correct": result.all_correct,
         "cells": cells,
-        "disclaimer": DISCLAIMER,
+        "disclaimer": LIVE_DISCLAIMER if result.mode == "live" else DISCLAIMER,
     }
     if result.mode == "emulator":
         payload["unmeasured"] = list(EMULATOR_UNMEASURED)
@@ -81,6 +87,22 @@ def render_markdown(payload: dict[str, Any]) -> str:
         lines.append(
             f"- Emulator image: {em['image']} (digest {em['digest']}, id {em['image_id']})"
         )
+    if "live_account" in env:
+        acct = env["live_account"]
+        lines += [
+            "",
+            "## Live account",
+            "",
+            f"- Endpoint: {env.get('endpoint', 'unspecified')}",
+            f"- Account SKU / capacity mode: {acct.get('sku', 'unspecified')}",
+            f"- Region: {acct.get('region', 'unspecified')}",
+            f"- Operator approval: {acct.get('operator', 'unspecified')}",
+            f"- Run started (UTC): {env.get('started_utc', 'unspecified')}",
+            f"- Source of these fields: {acct.get('source', 'unspecified')}",
+            "",
+            "## Workload parameters",
+            "",
+        ]
     lines += [
         f"- Seed {par['seed']}; nodes per workload {par['nodes']}; "
         f"edges per node {par['edges_per_node']}; "

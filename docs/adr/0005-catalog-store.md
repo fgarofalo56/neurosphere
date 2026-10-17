@@ -57,3 +57,7 @@ This exposes a tension: the provisional hierarchical key is currently disabled b
 - `PRP.md` section 2, `docs/ARCHITECTURE.md`
 - `docs/evidence/G03/emulator-2026-10-11.md`, `docs/evidence/G03/emulator-2026-10-11.json`
 - https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys
+
+## PRP-10 implementation note (2026-10-17)
+
+The partition key shape lives behind exactly one configuration point, `neurosphere_core.catalog.partitioning` (`PartitionKeyShape`, `partition_key_paths`, `partition_key_values`, `resolve_shape`). The requested default is the hierarchical `/tenant` + `/domain` + `/shard` shape (`tenant_domain_shard`), as the working preference in decision 4. `resolve_shape` returns it only when the capability-matrix row `cosmos_db.hierarchical_partition_keys.<cloud>.global.any` is `available`; while the row is `unverified` (as shipped today, both clouds) it falls back to flat `/domain` and returns the reason. Shard assignment uses SHA-256 of the canonical ID, stable across processes. The decision stays PROVISIONAL: G03 live evidence (`docs/evidence/G03/live-<date>.md`) closes it, either by verifying the matrix row and confirming the shard count or by keeping the flat key. Switching the shape for an existing container remains a migration (PRP-13 tooling), not a configuration flip.

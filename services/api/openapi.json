@@ -41,6 +41,310 @@
         "title": "Actor",
         "type": "object"
       },
+      "Agent": {
+        "additionalProperties": false,
+        "description": "AI agent as a logical, versioned catalog entity; concrete releases are AgentVersion. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "agent_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "assistant",
+                  "workflow",
+                  "sub_agent",
+                  "autonomous",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Agent Kind"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "current_version_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CurrentVersionId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Description"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "agent",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "external_agent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalAgentId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "platform",
+          "source_id"
+        ],
+        "title": "Agent",
+        "type": "object"
+      },
+      "AgentVersion": {
+        "additionalProperties": false,
+        "description": "Immutable release of an Agent (instructions, tools and model bindings at a point in time). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "agent_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent:[a-z0-9._/=-]+$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "config_hash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfigHash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "agent_version",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent_version:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          },
+          "version_label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Version Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "agent_id",
+          "version_label"
+        ],
+        "title": "AgentVersion",
+        "type": "object"
+      },
+      "AgentVersionId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent_version:[a-z0-9._/=-]+$",
+        "title": "AgentVersionId",
+        "type": "string"
+      },
+      "Attributes": {
+        "patternProperties": {
+          "^[a-z][a-z0-9_]{0,63}$": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Attributes",
+        "type": "object"
+      },
       "AuditRecord": {
         "additionalProperties": false,
         "description": "Append-only, hash-chained audit evidence (PRP.md section 3, PRD NS-06 'audit before/after'). Kinds: `before` (target state captured before a change), `after` (outcome and target state after), `denied` (a query, tool, export, push or action that authorization or policy refused). There is no update-capable field: no updated_at, modified_by, etag, version, status or deleted flag; corrections are new records. previous_hash is required for every record except the chain head (sequence 0), where it is null. Rules JSON Schema cannot express are checked by `validate_audit_chain` in tests/contracts/test_schemas.py: record_hash equals sha256 over the RFC 8785 (JCS) canonical form of the record without record_hash; within a chain_id, sequence is contiguous from 0 and each previous_hash equals the preceding record's record_hash.",
@@ -187,6 +491,69 @@
         "title": "AuditRecord",
         "type": "object"
       },
+      "AzureResourceType": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "AzureResourceType",
+        "type": "string"
+      },
+      "Budget": {
+        "additionalProperties": false,
+        "description": "Shared bounded-execution budget for every query, traversal, search, export and viewport expansion (PRP-01 clarification 15; NS-05, NS-06). timeout_ms, limit and max_depth are mandatory. The maxima here are contract ceilings; the server may clamp to lower policy values and reports the effective values and any truncation in Page. Not a standalone document, so it carries no schema_version.",
+        "properties": {
+          "limit": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "max_depth": {
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_edges": {
+            "anyOf": [
+              {
+                "maximum": 20000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Edges"
+          },
+          "max_nodes": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Nodes"
+          },
+          "timeout_ms": {
+            "maximum": 30000.0,
+            "minimum": 1.0,
+            "title": "Timeout Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "timeout_ms",
+          "limit",
+          "max_depth"
+        ],
+        "title": "Budget",
+        "type": "object"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "Result of verifying one chain. ``first_invalid_index`` is a position in the input.",
@@ -255,6 +622,36 @@
         "title": "ChainVerification",
         "type": "object"
       },
+      "Classification": {
+        "default": "unknown",
+        "enum": [
+          "public",
+          "internal",
+          "confidential",
+          "restricted",
+          "unknown"
+        ],
+        "title": "Classification",
+        "type": "string"
+      },
+      "Cloud": {
+        "enum": [
+          "commercial",
+          "government"
+        ],
+        "title": "Cloud",
+        "type": "string"
+      },
+      "ConfigHash": {
+        "pattern": "^sha256:[a-f0-9]{64}$",
+        "title": "ConfigHash",
+        "type": "string"
+      },
+      "ConnectorVersion": {
+        "maxLength": 64,
+        "title": "ConnectorVersion",
+        "type": "string"
+      },
       "ConsentRecord": {
         "additionalProperties": false,
         "properties": {
@@ -287,6 +684,11 @@
         ],
         "title": "ConsentRecord",
         "type": "object"
+      },
+      "ContextWindowTokens": {
+        "minimum": 0.0,
+        "title": "ContextWindowTokens",
+        "type": "integer"
       },
       "CostImplication": {
         "additionalProperties": false,
@@ -358,6 +760,96 @@
           "price_version"
         ],
         "title": "CostImplication",
+        "type": "object"
+      },
+      "Curation": {
+        "additionalProperties": false,
+        "description": "Latest steward decision on an edge (full history lives in the audit log).",
+        "properties": {
+          "decided_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decided_by": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected",
+              "overridden"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "override_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverrideId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "decision",
+          "decided_by",
+          "decided_at",
+          "reason"
+        ],
+        "title": "Curation",
+        "type": "object"
+      },
+      "CurrentVersionId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent_version:[a-z0-9._/=-]+$",
+        "title": "CurrentVersionId",
+        "type": "string"
+      },
+      "CustomerId": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9._-]+$",
+        "title": "CustomerId",
+        "type": "string"
+      },
+      "Date": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "title": "Date",
+        "type": "string"
+      },
+      "DecisionResult": {
+        "additionalProperties": false,
+        "description": "A stored steward decision and the presented edge after it.",
+        "properties": {
+          "override": {
+            "$ref": "#/components/schemas/EdgeOverride"
+          },
+          "presented": {
+            "$ref": "#/components/schemas/PresentedEdge"
+          }
+        },
+        "required": [
+          "override",
+          "presented"
+        ],
+        "title": "DecisionResult",
         "type": "object"
       },
       "Denial": {
@@ -585,6 +1077,12 @@
         "title": "DeploymentProfile",
         "type": "object"
       },
+      "Description": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
       "DiscoveredResource": {
         "additionalProperties": false,
         "properties": {
@@ -657,6 +1155,590 @@
         "title": "DiscoveredResource",
         "type": "object"
       },
+      "DisplayName": {
+        "maxLength": 256,
+        "minLength": 1,
+        "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+        "title": "DisplayName",
+        "type": "string"
+      },
+      "DocumentRef": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "title": "DocumentRef",
+        "type": "string"
+      },
+      "Domain": {
+        "additionalProperties": false,
+        "description": "Governance domain: the authorization and federation scope unit. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "entity_type": {
+            "const": "domain",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "parent_domain_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParentDomainId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "display_name"
+        ],
+        "title": "Domain",
+        "type": "object"
+      },
+      "DomainId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+        "title": "DomainId",
+        "type": "string"
+      },
+      "EdgeFilter": {
+        "additionalProperties": false,
+        "description": "Allowlisted edge filters, combined with AND.",
+        "properties": {
+          "relation_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "invokes",
+                    "delegates_to",
+                    "uses_model",
+                    "reads",
+                    "writes",
+                    "grounded_by",
+                    "owned_by",
+                    "depends_on",
+                    "supersedes"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 9,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Types"
+          },
+          "statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "asserted",
+                    "inferred",
+                    "curated"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statuses"
+          }
+        },
+        "title": "EdgeFilter",
+        "type": "object"
+      },
+      "EdgeObservation": {
+        "additionalProperties": false,
+        "description": "One raw observation of an edge, stored apart from the (curated) edge document.\n\n``id`` is deterministic for the same input so replays are idempotent. Observations are\nqueryable by Auditor scope only; the presented lineage never depends on them directly.",
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "customer_id": {
+            "pattern": "^[a-z0-9._-]{1,128}$",
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "relation_type": {
+            "enum": [
+              "invokes",
+              "delegates_to",
+              "uses_model",
+              "reads",
+              "writes",
+              "grounded_by",
+              "owned_by",
+              "depends_on",
+              "supersedes"
+            ],
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "security_evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Security Evidence Ids",
+            "type": "array"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity"
+          }
+        },
+        "required": [
+          "id",
+          "edge_id",
+          "relation_type",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "observed_at",
+          "confidence",
+          "validity",
+          "provenance",
+          "evidence_ids",
+          "security_evidence_ids"
+        ],
+        "title": "EdgeObservation",
+        "type": "object"
+      },
+      "EdgeOverride": {
+        "additionalProperties": false,
+        "description": "Steward decision on one edge (accept, reject, override, lock, unlock), applied with optimistic concurrency. The schema has no field that removes or replaces evidence_ids or security_evidence_ids, so an override cannot erase security evidence; observed facts are retained and the lock changes presented lineage only. lock and override decisions require a lock with locked=true, reason, expiry and actor. Python validators: validate_override_preserves_security_evidence, validate_customer_segment_matches, validate_override_relation_matches_edge (relation_type equals the type segment of edge_id), validate_lock_expiry_after_decision.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "add_evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceId"
+                },
+                "maxItems": 1000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Add Evidence Ids"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "decided_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decision": {
+            "enum": [
+              "accept",
+              "reject",
+              "override",
+              "lock",
+              "unlock"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(invokes|delegates_to|uses_model|reads|writes|grounded_by|owned_by|depends_on|supersedes):[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "expected_edge_etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "expected_edge_version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lock": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "relation_type": {
+            "$ref": "#/components/schemas/RelationType"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "set_confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SetConfidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "set_validity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Validity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "edge_id",
+          "relation_type",
+          "expected_edge_version",
+          "expected_edge_etag",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "decision",
+          "actor",
+          "reason",
+          "decided_at"
+        ],
+        "title": "EdgeOverride",
+        "type": "object"
+      },
+      "EntityFilter": {
+        "additionalProperties": false,
+        "description": "Allowlisted entity filters, combined with AND. They can only narrow the scope.",
+        "properties": {
+          "domain_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 512,
+                  "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Ids"
+          },
+          "entity_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "person",
+                    "agent",
+                    "agent_version",
+                    "model_deployment",
+                    "grounding_source",
+                    "tool",
+                    "service",
+                    "domain",
+                    "owner",
+                    "policy",
+                    "recommendation",
+                    "run_reference"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Types"
+          },
+          "lifecycle_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "draft",
+                    "active",
+                    "deprecated",
+                    "retired"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle Statuses"
+          }
+        },
+        "title": "EntityFilter",
+        "type": "object"
+      },
+      "EntityVersion": {
+        "minimum": 1.0,
+        "title": "EntityVersion",
+        "type": "integer"
+      },
+      "Etag": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Etag",
+        "type": "string"
+      },
+      "EvidenceId": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+        "title": "EvidenceId",
+        "type": "string"
+      },
+      "ExportPage": {
+        "additionalProperties": false,
+        "description": "One page of the scope-filtered export. Page through ``next_cursor``.",
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "exported_at": {
+            "title": "Exported At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Person"
+                },
+                {
+                  "$ref": "#/components/schemas/Agent"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentVersion"
+                },
+                {
+                  "$ref": "#/components/schemas/ModelDeployment"
+                },
+                {
+                  "$ref": "#/components/schemas/GroundingSource"
+                },
+                {
+                  "$ref": "#/components/schemas/Tool"
+                },
+                {
+                  "$ref": "#/components/schemas/Service"
+                },
+                {
+                  "$ref": "#/components/schemas/Domain"
+                },
+                {
+                  "$ref": "#/components/schemas/Owner"
+                },
+                {
+                  "$ref": "#/components/schemas/Policy"
+                },
+                {
+                  "$ref": "#/components/schemas/RecommendationReference"
+                },
+                {
+                  "$ref": "#/components/schemas/RunReference"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "exported_at",
+          "domains",
+          "items"
+        ],
+        "title": "ExportPage",
+        "type": "object"
+      },
+      "ExternalAgentId": {
+        "maxLength": 512,
+        "minLength": 1,
+        "title": "ExternalAgentId",
+        "type": "string"
+      },
       "FeatureRequest": {
         "additionalProperties": false,
         "description": "An optional feature the deployment wants (for example a Foundry model or CMK).",
@@ -690,6 +1772,308 @@
           "feature"
         ],
         "title": "FeatureRequest",
+        "type": "object"
+      },
+      "GraphPath": {
+        "additionalProperties": false,
+        "description": "One impact path: alternating node and edge IDs (``len(node_ids) == len(edge_ids)+1``).",
+        "properties": {
+          "edge_ids": {
+            "items": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Edge Ids",
+            "type": "array"
+          },
+          "node_ids": {
+            "items": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Node Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "node_ids",
+          "edge_ids"
+        ],
+        "title": "GraphPath",
+        "type": "object"
+      },
+      "GraphResult": {
+        "additionalProperties": false,
+        "description": "A bounded, scope-filtered subgraph.\n\n``truncated`` is True when a budget stopped the walk early; the result is then partial\nand must be labelled as such. Out-of-scope nodes never appear, not even as path\nintermediates.",
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/PresentedEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Person"
+                },
+                {
+                  "$ref": "#/components/schemas/Agent"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentVersion"
+                },
+                {
+                  "$ref": "#/components/schemas/ModelDeployment"
+                },
+                {
+                  "$ref": "#/components/schemas/GroundingSource"
+                },
+                {
+                  "$ref": "#/components/schemas/Tool"
+                },
+                {
+                  "$ref": "#/components/schemas/Service"
+                },
+                {
+                  "$ref": "#/components/schemas/Domain"
+                },
+                {
+                  "$ref": "#/components/schemas/Owner"
+                },
+                {
+                  "$ref": "#/components/schemas/Policy"
+                },
+                {
+                  "$ref": "#/components/schemas/RecommendationReference"
+                },
+                {
+                  "$ref": "#/components/schemas/RunReference"
+                }
+              ]
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/GraphPath"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncated_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "max_nodes",
+                  "max_edges",
+                  "max_depth",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncated Reason"
+          },
+          "visited_edges": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Visited Edges",
+            "type": "integer"
+          },
+          "visited_nodes": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Visited Nodes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "GraphResult",
+        "type": "object"
+      },
+      "GraphSearchRequest": {
+        "additionalProperties": false,
+        "description": "Term plus allowlisted entity filter plus mandatory budget.",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/EntityFilter"
+          },
+          "term": {
+            "maxLength": 256,
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "budget"
+        ],
+        "title": "GraphSearchRequest",
+        "type": "object"
+      },
+      "GroundingSource": {
+        "additionalProperties": false,
+        "description": "GroundingSource/DataAsset: a data asset read, written or used for grounding (index, store, table, file share, knowledge base). One schema covers both names. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "asset_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "search_index",
+                  "vector_store",
+                  "database",
+                  "table",
+                  "file_store",
+                  "knowledge_base",
+                  "api",
+                  "other",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Asset Kind"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "contains_personal_data": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains Personal Data"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "grounding_source",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:grounding_source:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resource_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "source_id"
+        ],
+        "title": "GroundingSource",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -738,6 +2122,113 @@
         "title": "IgnoredItem",
         "type": "object"
       },
+      "ImportItemResult": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "valid",
+              "created",
+              "rejected",
+              "failed",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "status"
+        ],
+        "title": "ImportItemResult",
+        "type": "object"
+      },
+      "ImportRequest": {
+        "additionalProperties": false,
+        "description": "A bounded batch of entity documents. ``dry_run`` validates and reports, writing nothing.",
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ImportRequest",
+        "type": "object"
+      },
+      "ImportResult": {
+        "additionalProperties": false,
+        "description": "Per-item outcome. ``committed`` is True only when every item was created.\n\nValidation is all-or-report: when any item is ``rejected`` nothing is written. A failure\nwhile writing (a race the validation could not see) marks that item ``failed`` and the rest\n``skipped``; items already ``created`` stay created and are listed.",
+        "properties": {
+          "committed": {
+            "title": "Committed",
+            "type": "boolean"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportItemResult"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "committed",
+          "dry_run",
+          "items"
+        ],
+        "title": "ImportResult",
+        "type": "object"
+      },
+      "InferenceVersion": {
+        "maxLength": 64,
+        "title": "InferenceVersion",
+        "type": "string"
+      },
       "IngestResult": {
         "additionalProperties": false,
         "description": "202 body. Counts and reason codes only; never payload values.",
@@ -774,6 +2265,347 @@
         "title": "IngestResult",
         "type": "object"
       },
+      "LifecycleStatus": {
+        "enum": [
+          "draft",
+          "active",
+          "deprecated",
+          "retired"
+        ],
+        "title": "LifecycleStatus",
+        "type": "string"
+      },
+      "LineageImpactRequest": {
+        "additionalProperties": false,
+        "description": "Bounded impact paths (downstream = edges out) in the presented lineage.",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          },
+          "direction": {
+            "default": "downstream",
+            "enum": [
+              "downstream",
+              "upstream"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/EdgeFilter"
+          },
+          "node_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "budget"
+        ],
+        "title": "LineageImpactRequest",
+        "type": "object"
+      },
+      "LineageNeighborsRequest": {
+        "additionalProperties": false,
+        "description": "Neighbors of one node in the presented lineage, bounded by ``budget``.",
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          },
+          "direction": {
+            "default": "both",
+            "enum": [
+              "out",
+              "in",
+              "both"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/EdgeFilter"
+          },
+          "node_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "budget"
+        ],
+        "title": "LineageNeighborsRequest",
+        "type": "object"
+      },
+      "Lock": {
+        "additionalProperties": false,
+        "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "locked"
+        ],
+        "title": "Lock",
+        "type": "object"
+      },
+      "MaxOutputTokens": {
+        "minimum": 0.0,
+        "title": "MaxOutputTokens",
+        "type": "integer"
+      },
+      "McpServerRef": {
+        "maxLength": 512,
+        "minLength": 1,
+        "title": "McpServerRef",
+        "type": "string"
+      },
+      "ModelDeployment": {
+        "additionalProperties": false,
+        "description": "Deployed model endpoint with version, modality, context, tool capability and price reference. Unknown capabilities are null, never 0. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "context_window_tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContextWindowTokens"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "deployment_name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Deployment Name",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "model_deployment",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:model_deployment:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "max_output_tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaxOutputTokens"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modalities": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "text",
+                    "image",
+                    "audio",
+                    "video",
+                    "embedding",
+                    "unknown"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Modalities"
+          },
+          "model_name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Model Name",
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModelVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price_reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sku"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "supports_tool_calling": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Tool Calling"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "provider",
+          "model_name",
+          "deployment_name"
+        ],
+        "title": "ModelDeployment",
+        "type": "object"
+      },
+      "ModelVersion": {
+        "maxLength": 128,
+        "minLength": 1,
+        "title": "ModelVersion",
+        "type": "string"
+      },
       "Outcome": {
         "additionalProperties": false,
         "properties": {
@@ -809,6 +2641,175 @@
           "detail"
         ],
         "title": "Outcome",
+        "type": "object"
+      },
+      "OverrideHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "edge_id": {
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeOverride"
+            },
+            "title": "Overrides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "edge_id",
+          "overrides"
+        ],
+        "title": "OverrideHistory",
+        "type": "object"
+      },
+      "OverrideId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+        "title": "OverrideId",
+        "type": "string"
+      },
+      "Owner": {
+        "additionalProperties": false,
+        "description": "Accountable owner (team, group, service principal or pseudonymous person) targeted by OWNED_BY. A person-kind owner carries no display_name; it points at a Person. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DisplayName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "owner",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:owner:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "owner_kind": {
+            "enum": [
+              "person",
+              "group",
+              "team",
+              "service_principal"
+            ],
+            "title": "Owner Kind",
+            "type": "string"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recertified_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recertify_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "owner_kind"
+        ],
+        "title": "Owner",
         "type": "object"
       },
       "OwnerConsent": {
@@ -940,6 +2941,211 @@
         ],
         "title": "Page[AuditRecord]",
         "type": "object"
+      },
+      "Page_EdgeObservation_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeObservation"
+            },
+            "maxItems": 500,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[EdgeObservation]",
+        "type": "object"
+      },
+      "Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Person"
+                },
+                {
+                  "$ref": "#/components/schemas/Agent"
+                },
+                {
+                  "$ref": "#/components/schemas/AgentVersion"
+                },
+                {
+                  "$ref": "#/components/schemas/ModelDeployment"
+                },
+                {
+                  "$ref": "#/components/schemas/GroundingSource"
+                },
+                {
+                  "$ref": "#/components/schemas/Tool"
+                },
+                {
+                  "$ref": "#/components/schemas/Service"
+                },
+                {
+                  "$ref": "#/components/schemas/Domain"
+                },
+                {
+                  "$ref": "#/components/schemas/Owner"
+                },
+                {
+                  "$ref": "#/components/schemas/Policy"
+                },
+                {
+                  "$ref": "#/components/schemas/RecommendationReference"
+                },
+                {
+                  "$ref": "#/components/schemas/RunReference"
+                }
+              ]
+            },
+            "maxItems": 500,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[Union[Person, Agent, AgentVersion, ModelDeployment, GroundingSource, Tool, Service, Domain, Owner, Policy, RecommendationReference, RunReference]]",
+        "type": "object"
+      },
+      "ParentDomainId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+        "title": "ParentDomainId",
+        "type": "string"
+      },
+      "Person": {
+        "additionalProperties": false,
+        "description": "Person as a pseudonymous principal only. There is deliberately no email, name, UPN, display_name, free-text or attributes field; re-identification is a policy-store concern, not a contract field. The id segment of the canonical ID is the pseudonym. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_person_id_is_pseudonym (id segment equals principal_pseudonym).",
+        "properties": {
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entity_type": {
+            "const": "person",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:person:psn_[a-z0-9]{16,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "principal_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "human",
+                  "workload",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Principal Kind"
+          },
+          "principal_pseudonym": {
+            "pattern": "^psn_[a-z0-9]{16,64}$",
+            "title": "Principal Pseudonym",
+            "type": "string"
+          },
+          "pseudonym_scheme": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "principal_pseudonym",
+          "pseudonym_scheme"
+        ],
+        "title": "Person",
+        "type": "object"
+      },
+      "PersonId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:person:[a-z0-9._/=-]+$",
+        "title": "PersonId",
+        "type": "string"
       },
       "PlanCheck": {
         "additionalProperties": false,
@@ -1159,6 +3365,27 @@
         "title": "PlanItem",
         "type": "object"
       },
+      "PlanRef": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "etag"
+        ],
+        "title": "PlanRef",
+        "type": "object"
+      },
       "PlanRequest": {
         "additionalProperties": false,
         "description": "Everything the planner needs; the planner itself makes no ARM or HTTP call.\n\n``scan`` is the :class:`ScanResponse` of a prior consented scan (passed in rather than\nre-fetched, so the plan is a pure function of its inputs). Services without a choice\ndefault to ``reuse`` when a discovered candidate exists, else ``create``.",
@@ -1253,6 +3480,289 @@
         "title": "PlanResponse",
         "type": "object"
       },
+      "Policy": {
+        "additionalProperties": false,
+        "description": "Governance policy applied to catalog entities (access, data handling, model usage, cost). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "document_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "effective_from": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enforcement": {
+            "enum": [
+              "enforced",
+              "advisory",
+              "disabled"
+            ],
+            "title": "Enforcement",
+            "type": "string"
+          },
+          "entity_type": {
+            "const": "policy",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:policy:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "policy_kind": {
+            "enum": [
+              "access",
+              "data_handling",
+              "model_usage",
+              "cost",
+              "retention",
+              "approval",
+              "other"
+            ],
+            "title": "Policy Kind",
+            "type": "string"
+          },
+          "policy_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "policy_kind",
+          "policy_version",
+          "enforcement",
+          "effective_from"
+        ],
+        "title": "Policy",
+        "type": "object"
+      },
+      "PresentedEdge": {
+        "additionalProperties": false,
+        "description": "An edge as shown to users: observed facts after curation (locks, overrides, rejects).\n\nEvidence and security evidence are always the full union (observed plus anything a\nsteward added); they are never reduced by a decision. ``hidden`` is True when a curated\nreject hides the edge from presented lineage (Auditors can still see it).",
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "curation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Curation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "first_observed": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "last_observed": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "lock": {
+            "$ref": "#/components/schemas/Lock"
+          },
+          "override_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Override Ids",
+            "type": "array"
+          },
+          "pinned": {
+            "title": "Pinned",
+            "type": "boolean"
+          },
+          "relation_type": {
+            "enum": [
+              "invokes",
+              "delegates_to",
+              "uses_model",
+              "reads",
+              "writes",
+              "grounded_by",
+              "owned_by",
+              "depends_on",
+              "supersedes"
+            ],
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "security_evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "title": "Security Evidence Ids",
+            "type": "array"
+          },
+          "source_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "asserted",
+              "inferred",
+              "curated"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity"
+          }
+        },
+        "required": [
+          "edge_id",
+          "relation_type",
+          "source_id",
+          "target_id",
+          "domain_id",
+          "hidden",
+          "status",
+          "confidence",
+          "validity",
+          "lock",
+          "curation",
+          "evidence_ids",
+          "security_evidence_ids",
+          "first_observed",
+          "last_observed",
+          "pinned",
+          "override_ids"
+        ],
+        "title": "PresentedEdge",
+        "type": "object"
+      },
       "PriceEntry": {
         "additionalProperties": false,
         "properties": {
@@ -1298,6 +3808,27 @@
         "title": "PriceEntry",
         "type": "object"
       },
+      "PriceReference": {
+        "additionalProperties": false,
+        "description": "Price sheet reference used for estimates; null when unpriced.",
+        "properties": {
+          "price_effective_date": {
+            "$ref": "#/components/schemas/Date"
+          },
+          "price_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Price Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price_version",
+          "price_effective_date"
+        ],
+        "title": "PriceReference",
+        "type": "object"
+      },
       "PriceTable": {
         "additionalProperties": false,
         "description": "Versioned static price input. No live pricing call is ever made.",
@@ -1327,6 +3858,58 @@
           "price_version"
         ],
         "title": "PriceTable",
+        "type": "object"
+      },
+      "Provenance": {
+        "additionalProperties": false,
+        "description": "Where an edge or alias came from.",
+        "properties": {
+          "connector_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectorVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inference_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferenceVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "enum": [
+              "trace_observation",
+              "observed_access",
+              "declared",
+              "embedding_similarity",
+              "steward_curation",
+              "import",
+              "unknown"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "recorded_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          }
+        },
+        "required": [
+          "method",
+          "source_id",
+          "recorded_at"
+        ],
+        "title": "Provenance",
         "type": "object"
       },
       "ReadyzResponse": {
@@ -1361,6 +3944,12 @@
         "title": "ReadyzResponse",
         "type": "object"
       },
+      "Reason": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Reason",
+        "type": "string"
+      },
       "ReasonCode": {
         "enum": [
           "body_too_large",
@@ -1384,6 +3973,226 @@
         "title": "ReasonCode",
         "type": "string"
       },
+      "RecertificationItem": {
+        "additionalProperties": false,
+        "properties": {
+          "days_until_due": {
+            "title": "Days Until Due",
+            "type": "integer"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "owner_kind": {
+            "title": "Owner Kind",
+            "type": "string"
+          },
+          "recertified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recertified At"
+          },
+          "recertify_by": {
+            "title": "Recertify By",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "due",
+              "overdue"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "owner_id",
+          "domain_id",
+          "owner_kind",
+          "recertified_at",
+          "recertify_by",
+          "state",
+          "days_until_due"
+        ],
+        "title": "RecertificationItem",
+        "type": "object"
+      },
+      "RecertificationPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecertificationItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "scanned": {
+            "title": "Scanned",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "scanned"
+        ],
+        "title": "RecertificationPage",
+        "type": "object"
+      },
+      "RecertifyRequest": {
+        "additionalProperties": false,
+        "description": "Record a recertification of an owner; it is valid for ``valid_for_days`` from now.",
+        "properties": {
+          "valid_for_days": {
+            "maximum": 730.0,
+            "minimum": 1.0,
+            "title": "Valid For Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "valid_for_days"
+        ],
+        "title": "RecertifyRequest",
+        "type": "object"
+      },
+      "RecommendationReference": {
+        "additionalProperties": false,
+        "description": "Recommendation in reference form for the catalog graph. The full document is the recommendations/v1 contract; this node only points at it and its subjects. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "recommendation",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:recommendation:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "recommendation_document_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Recommendation Document Id",
+            "type": "string"
+          },
+          "recommendation_kind": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "subject_ids": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectId"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Subject Ids",
+            "type": "array"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "recommendation_kind",
+          "recommendation_document_id",
+          "subject_ids"
+        ],
+        "title": "RecommendationReference",
+        "type": "object"
+      },
       "Region": {
         "pattern": "^[a-z][a-z0-9]{2,39}$",
         "title": "Region",
@@ -1405,6 +4214,210 @@
           "reason_code"
         ],
         "title": "RejectedItem",
+        "type": "object"
+      },
+      "RelationType": {
+        "enum": [
+          "invokes",
+          "delegates_to",
+          "uses_model",
+          "reads",
+          "writes",
+          "grounded_by",
+          "owned_by",
+          "depends_on",
+          "supersedes"
+        ],
+        "title": "RelationType",
+        "type": "string"
+      },
+      "RequestId": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "RequestId",
+        "type": "string"
+      },
+      "ResourceRef": {
+        "maxLength": 1024,
+        "minLength": 1,
+        "title": "ResourceRef",
+        "type": "string"
+      },
+      "RunReference": {
+        "additionalProperties": false,
+        "description": "Pointer to a run held in the telemetry store. Runs and spans are referenced, never replicated into the graph; no prompt or response body appears here. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "agent_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:agent:[a-z0-9._/=-]+$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "agent_version_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentVersionId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entity_type": {
+            "const": "run_reference",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:run_reference:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "enum": [
+                  "success",
+                  "error",
+                  "cancelled",
+                  "timeout",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Outcome"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "source_run_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Run Id",
+            "type": "string"
+          },
+          "span_count": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpanCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "started_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "agent_id",
+          "source_run_id",
+          "started_at"
+        ],
+        "title": "RunReference",
         "type": "object"
       },
       "ScanRequest": {
@@ -1475,6 +4488,139 @@
           "subscriptions"
         ],
         "title": "ScanResponse",
+        "type": "object"
+      },
+      "SchemaVersion": {
+        "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+        "title": "SchemaVersion",
+        "type": "string"
+      },
+      "Service": {
+        "additionalProperties": false,
+        "description": "Service an agent or tool depends on (Azure service, SaaS, internal API, gateway). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "azure_resource_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AzureResourceType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "service",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:service:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "service_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "azure_service",
+                  "saas",
+                  "internal_api",
+                  "gateway",
+                  "other",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Service Kind"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "source_id"
+        ],
+        "title": "Service",
         "type": "object"
       },
       "ServiceChoice": {
@@ -1604,10 +4750,221 @@
         "title": "ServicePlan",
         "type": "object"
       },
+      "SetConfidence": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "SetConfidence",
+        "type": "number"
+      },
       "Sha256Hash": {
         "pattern": "^sha256:[0-9a-f]{64}$",
         "title": "Sha256Hash",
         "type": "string"
+      },
+      "Sku": {
+        "maxLength": 128,
+        "minLength": 1,
+        "title": "Sku",
+        "type": "string"
+      },
+      "SpanCount": {
+        "minimum": 0.0,
+        "title": "SpanCount",
+        "type": "integer"
+      },
+      "StaleAgentConfirm": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "maxLength": 64,
+            "title": "As Of",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRef"
+            },
+            "maxItems": 500,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "plan_id": {
+            "maxLength": 128,
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "window_days": {
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan_id",
+          "as_of",
+          "window_days",
+          "candidates"
+        ],
+        "title": "StaleAgentConfirm",
+        "type": "object"
+      },
+      "StaleAgentOutcome": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StaleItemResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "items"
+        ],
+        "title": "StaleAgentOutcome",
+        "type": "object"
+      },
+      "StaleAgentPlan": {
+        "additionalProperties": false,
+        "description": "Dry-run result. Nothing was changed. Send ``plan_id``, ``as_of``, ``window_days`` and the\n``candidates`` back to confirm; the server re-derives the set and refuses any difference.",
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/StaleCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "plan_id": {
+            "title": "Plan Id",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan_id",
+          "as_of",
+          "window_days",
+          "candidates"
+        ],
+        "title": "StaleAgentPlan",
+        "type": "object"
+      },
+      "StaleAgentRequest": {
+        "additionalProperties": false,
+        "description": "Dry-run: agents with no observation (edge ``last_observed``) within ``window_days``.",
+        "properties": {
+          "window_days": {
+            "maximum": 3650.0,
+            "minimum": 1.0,
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_days"
+        ],
+        "title": "StaleAgentRequest",
+        "type": "object"
+      },
+      "StaleCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "last_observed": {
+            "title": "Last Observed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "etag",
+          "domain_id",
+          "last_observed"
+        ],
+        "title": "StaleCandidate",
+        "type": "object"
+      },
+      "StaleItemResult": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "status": {
+            "enum": [
+              "marked",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "status"
+        ],
+        "title": "StaleItemResult",
+        "type": "object"
       },
       "Subject": {
         "additionalProperties": false,
@@ -1659,6 +5016,12 @@
         ],
         "title": "Subject",
         "type": "object"
+      },
+      "SubjectId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "SubjectId",
+        "type": "string"
       },
       "SubscriptionScan": {
         "additionalProperties": false,
@@ -1724,6 +5087,168 @@
         "title": "TargetRef",
         "type": "object"
       },
+      "Timestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
+      },
+      "Token": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9][a-z0-9._-]*$",
+        "title": "Token",
+        "type": "string"
+      },
+      "Tool": {
+        "additionalProperties": false,
+        "description": "Callable tool exposed to agents (function, API, MCP tool, search, code interpreter). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "tool",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:tool:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "mcp_server_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpServerRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "side_effects": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read_only",
+                  "writes",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Side Effects"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "tool_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "function",
+                  "api",
+                  "mcp_tool",
+                  "search",
+                  "code_interpreter",
+                  "other",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Tool Kind"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "source_id"
+        ],
+        "title": "Tool",
+        "type": "object"
+      },
+      "TraceId": {
+        "pattern": "^[a-f0-9]{32}$",
+        "title": "TraceId",
+        "type": "string"
+      },
       "Uuid": {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "title": "Uuid",
@@ -1767,6 +5292,30 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "Validity": {
+        "additionalProperties": false,
+        "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
+        "properties": {
+          "valid_from": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "valid_from"
+        ],
+        "title": "Validity",
         "type": "object"
       },
       "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
@@ -1901,6 +5450,1296 @@
         "summary": "Verify Audit Chain",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}": {
+      "get": {
+        "operationId": "presented_catalog_curation_edges__edge_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentedEdge"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Presented",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/decisions": {
+      "post": {
+        "operationId": "decide_catalog_curation_edges__edge_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdgeOverride"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/observations": {
+      "get": {
+        "operationId": "observations_catalog_curation_edges__edge_id__observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_EdgeObservation_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Observations",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/overrides": {
+      "get": {
+        "operationId": "overrides_catalog_curation_edges__edge_id__overrides_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overrides",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/entities": {
+      "get": {
+        "operationId": "list_entities_catalog_entities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "person",
+                      "agent",
+                      "agent_version",
+                      "model_deployment",
+                      "grounding_source",
+                      "tool",
+                      "service",
+                      "domain",
+                      "owner",
+                      "policy",
+                      "recommendation",
+                      "run_reference"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 12,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 512,
+                    "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+                    "type": "string"
+                  },
+                  "maxItems": 100,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "draft",
+                      "active",
+                      "deprecated",
+                      "retired"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Entities",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "post": {
+        "operationId": "create_entity_catalog_entities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Create Entity Catalog Entities Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/entities/{entity_id}": {
+      "get": {
+        "operationId": "get_entity_catalog_entities__entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Get Entity Catalog Entities  Entity Id  Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Entity",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "put": {
+        "operationId": "update_entity_catalog_entities__entity_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Update Entity Catalog Entities  Entity Id  Put"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/entities/{entity_id}/deprecate": {
+      "post": {
+        "operationId": "deprecate_entity_catalog_entities__entity_id__deprecate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Deprecate Entity Catalog Entities  Entity Id  Deprecate Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deprecate Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/entities/{entity_id}/recertify": {
+      "post": {
+        "operationId": "recertify_owner_catalog_entities__entity_id__recertify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecertifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Recertify Owner Catalog Entities  Entity Id  Recertify Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recertify Owner",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/export": {
+      "get": {
+        "operationId": "export_catalog_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "person",
+                      "agent",
+                      "agent_version",
+                      "model_deployment",
+                      "grounding_source",
+                      "tool",
+                      "service",
+                      "domain",
+                      "owner",
+                      "policy",
+                      "recommendation",
+                      "run_reference"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 12,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 512,
+                    "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+                    "type": "string"
+                  },
+                  "maxItems": 100,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "draft",
+                      "active",
+                      "deprecated",
+                      "retired"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/import": {
+      "post": {
+        "operationId": "import_entities_catalog_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Entities",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/lineage/impact": {
+      "post": {
+        "operationId": "impact_catalog_lineage_impact_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineageImpactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Impact",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/lineage/neighbors": {
+      "post": {
+        "operationId": "neighbors_catalog_lineage_neighbors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineageNeighborsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neighbors",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/recertifications": {
+      "get": {
+        "operationId": "recertifications_catalog_recertifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "within_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 0,
+              "title": "Within Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "default": "both",
+              "enum": [
+                "due",
+                "overdue",
+                "both"
+              ],
+              "title": "Include",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecertificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recertifications",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/reconcile/stale-agents/confirm": {
+      "post": {
+        "operationId": "stale_confirm_catalog_reconcile_stale_agents_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaleAgentConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleAgentOutcome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stale Confirm",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/reconcile/stale-agents/dry-run": {
+      "post": {
+        "operationId": "stale_dry_run_catalog_reconcile_stale_agents_dry_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaleAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleAgentPlan"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stale Dry Run",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/search": {
+      "post": {
+        "operationId": "search_catalog_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "catalog"
         ]
       }
     },
