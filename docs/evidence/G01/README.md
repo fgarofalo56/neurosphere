@@ -13,8 +13,12 @@ Prerequisites: `az` installed and already signed in to the Commercial cloud with
 subscription active; a resource group name that does not exist yet (the script creates it, tags it
 `neurosphere:created-by=neurosphere`, and deletes it at the end).
 
+Run it through `uv run` so `neurosphere_core` is importable (the script refuses otherwise). In Git
+Bash, prefix `MSYS_NO_PATHCONV=1` so `--reuse-apim /subscriptions/...` is not rewritten into a
+Windows path.
+
 ```
-NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py \
+MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/g01_deploy_smoke.py \
   --subscription <subscription-guid> \
   --resource-group <new-rg-name> \
   --apim-publisher-email <ops-email> --apim-publisher-name <org-name>

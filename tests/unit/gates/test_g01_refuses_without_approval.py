@@ -180,6 +180,18 @@ def test_subprocess_refuses_end_to_end() -> None:
     assert "REFUSED" in proc.stderr
 
 
+def test_refuses_before_any_az_call_when_register_is_not_importable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A plain `python` run once created the RG and then crashed in teardown on this import.
+    monkeypatch.setitem(sys.modules, "neurosphere_core.deploy.register", None)
+    fake = FakeAz()
+    assert _run(fake, tmp_path) == 2
+    assert "uv run" in capsys.readouterr().err
+    assert fake.calls == []
+    assert not (tmp_path / "ev").exists()
+
+
 @pytest.mark.parametrize("loc", ["usgovvirginia", "usdodeast", "USGovArizona"])
 def test_refuses_government_location(loc: str, tmp_path: Path) -> None:
     fake = FakeAz()
