@@ -1,7 +1,9 @@
 ---
 name: prp-08-deployment-intelligence-and-iac
-status: active
+status: shipped
 started: 2026-10-16
+shipped: 2026-10-17
+pr: 43
 branch: prp-08-deployment-intelligence
 review: required
 created: 2026-10-08
@@ -273,7 +275,7 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
-- Merged commits: items 2 ce671f5, 6 a9f7ee2, 1 3ad6ac0, 3 00c1259, 4 f58a522, 8 c5573b9, 5 d7c9d5f, 7 2f5d890, 9 0982ed0, review rework 9935cae; fix-forwards 9b940ab (test package rename), 68eb575 and 974ad2c (G01 script).
+- Merged commits: items 2 ce671f5, 6 a9f7ee2, 1 3ad6ac0, 3 00c1259, 4 f58a522, 8 c5573b9, 5 d7c9d5f, 7 2f5d890, 9 0982ed0, review rework 9935cae; fix-forwards 9b940ab (test package rename), 68eb575 and 974ad2c (G01 script), 8c2c777 (CodeQL error/warning). PR #43, merged as c9054df with all 16 checks green.
 - Deviations from blueprint and why:
   - Item 8 (API and CI wiring) added at plan approval: routers.py, openapi.json and ci.yml were owned by no item.
   - Item 9 (scan production bootstrap, opt-in `NS_SCAN_ENABLED`) added at operator decision: without it the scan route was 503 in every real deployment.

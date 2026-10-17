@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
 - Telemetry ingestion and cost ledger (PRP-07): authenticated OTLP/JSON and CloudEvents
   push edge, normalizer worker with dedupe, watermarks and bounded retries, blob quarantine
   with replay CLI, redacted archive, cost ledger with double-count resolution and outbox.
+- Deployment intelligence and IaC (PRP-08): per-cloud Bicep modules with reuse inputs, Helm 4
+  chart and App Service profile, consented read-only Resource Graph scan, reuse/create/skip
+  planner projecting to `DeploymentManifest`, ownership register with a live-inventory-guarded
+  uninstall, matrix-gated Fabric provisioning adapter, and the G01 Commercial deploy smoke gate.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
