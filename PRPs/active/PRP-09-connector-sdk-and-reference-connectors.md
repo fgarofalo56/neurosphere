@@ -231,10 +231,10 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 | 0 | merged | prp-09-connector-sdk | opus | committed directly on integration branch; ruff/format/pyright clean; full default suite 3914 passed after licence register regen; sdk-ts typecheck ok; licences PASS (530); validate_planning PASS | 2026-10-17 |
 | 1 | merged | worktree-agent-a95e623057e6e32ed | sonnet | ruff/format/pyright clean; sdk-python 49 passed (re-run on branch); contracts 1683 passed; Snyk Code 0 issues; 35a5fdd. Deviation: credentials module named vault.py (security hook denies *credentials* paths); review APPROVE (6 non-blocking follow-ups); merge 8a311df, sdk-python 49 passed + pyright clean post-merge | 2026-10-17 |
 | 2 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
-| 3 | todo | | sonnet | | 2026-10-17 |
+| 3 | in-progress | (worktree agent) | sonnet | dispatched when item 6 lane freed | 2026-10-17 |
 | 4 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
 | 5 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
-| 6 | in-progress | (worktree agent) | sonnet | dispatched Wave B | 2026-10-17 |
+| 6 | merged | worktree-agent-a4a17a14f0a492cd0 | sonnet | ruff/format/pyright clean; sdk-python 59 passed (re-run on branch); Snyk Code 0 issues; 84f3cdc; review APPROVE (6 non-blocking: verify type coercion True==1, move/copy post-state limits, SDK does not enforce target version — executor must); merge b3910e9, sdk-python 59 passed + pyright clean post-merge | 2026-10-17 |
 
 ## Completion note (filled at ship)
 - Date:
