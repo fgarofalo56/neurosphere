@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-10-catalog-and-relationship-governance](active/PRP-10-catalog-and-relationship-governance.md) |  | 2/8 (25%) | todo 4, in-progress 2, merged 2 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-10-catalog-and-relationship-governance](backlog/PRP-10-catalog-and-relationship-governance.md) |  |  | - | - | ? / ? | required |
 | [prp-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) |  |  | - | - | ? / ? | required |
 | [prp-12-threat-model-and-security-baseline](backlog/PRP-12-threat-model-and-security-baseline.md) |  |  | - | - | ? / ? | required |
 | [prp-13-release-versioning-and-container-publishing](backlog/PRP-13-release-versioning-and-container-publishing.md) |  |  | - | - | ? / ? | none |

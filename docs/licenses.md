@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 130 packages
+## Python (uv.lock) - 131 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | azure-identity | 1.26.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-monitor-opentelemetry | 1.8.11 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-monitor-opentelemetry-exporter | 1.0.0b58 | MIT | runtime | pre-release version; no support window recorded |
+| azure-search-documents | 12.0.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-storage-blob | 12.31.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
