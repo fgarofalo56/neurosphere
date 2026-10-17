@@ -8,7 +8,8 @@ for a failure. Each list is capped at ``max_items``; hitting the cap sets ``trun
 partial coverage, and the connector never loops past it.
 
 Documentation (observed 2026-10-17): https://learn.microsoft.com/azure/foundry/agents/overview
-and https://learn.microsoft.com/azure/foundry/how-to/develop/sdk-overview. Government API
+and the project REST reference https://learn.microsoft.com/rest/api/microsoft-foundry/aiproject
+(API version v1). A reader's page budget being exhausted also sets ``truncated``. Government API
 availability is documented, not live-tested here (G04 stays OPEN).
 """
 
@@ -188,14 +189,16 @@ class FoundryDiscoveryConnector(BaseConnector):
             last_error = exc
         if len(failed) == 2 and last_error is not None:
             raise last_error
+        # Optional reader attribute: lists cut short by the reader's page budget.
+        budget_cut: frozenset[str] = getattr(self._reader, "budget_exceeded", frozenset())
         return DiscoveryResult(
             cloud=self._cloud,
             project_endpoint=self._endpoint,
             observed_at=self._clock(),
             agents=agents,
             deployments=deployments,
-            agents_truncated=agents_cut,
-            deployments_truncated=deployments_cut,
+            agents_truncated=agents_cut or "agents" in budget_cut,
+            deployments_truncated=deployments_cut or "deployments" in budget_cut,
             failed_sources=failed,
             capabilities=capability_reports(self._cloud),
         )

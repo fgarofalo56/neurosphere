@@ -5,10 +5,11 @@ input except the resource and project names, which are validated before use:
 
 - Commercial project endpoint ``https://{resource}.services.ai.azure.com/api/projects/{project}``
   and token scope ``https://ai.azure.com/.default``:
-  https://learn.microsoft.com/azure/foundry/how-to/develop/sdk-overview and the
-  ``AIProjectClient`` reference (``get_bearer_token_provider`` scope).
+  https://learn.microsoft.com/rest/api/microsoft-foundry/aiproject (API version v1; scope
+  ``https://ai.azure.com/.default``) and
+  https://learn.microsoft.com/azure/foundry/how-to/develop/sdk-overview (endpoint form).
 - Government project endpoint ``https://{resource}.services.ai.azure.us/api/projects/{project}``
-  and ``credential_scopes=["https://ai.azure.us/.default"]``:
+  and token scope ``https://ai.azure.us/.default``:
   https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government and
   https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
 """

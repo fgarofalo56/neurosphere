@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-import types
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
@@ -13,17 +11,13 @@ from neurosphere_connector_foundry import (
     FOUNDRY_ENDPOINTS,
     CapabilityStatus,
     FoundryDiscoveryConnector,
-    SdkProjectReader,
     capability_reports,
     project_endpoint,
 )
-from neurosphere_connector_foundry.reader import map_sdk_error
 from neurosphere_core.cloud.profile import CloudName
 from neurosphere_core.errors import (
-    DependencyTransientError,
     ForbiddenError,
     RateLimitedError,
-    UnauthorizedError,
 )
 
 GOV_UNAVAILABLE = {
@@ -192,41 +186,3 @@ async def test_freshness_lag_unknown_not_zero() -> None:
     await c.discover()
     f = await c.freshness()
     assert f.lag_ms is None and f.observed_at is not None
-
-
-def test_map_sdk_error_by_status_only() -> None:
-    class ThrottleError(Exception):
-        status_code = 429
-
-    class BodyError(Exception):
-        status_code = 500
-
-    assert isinstance(map_sdk_error(ThrottleError("secret-body")), RateLimitedError)
-    assert isinstance(map_sdk_error(BodyError("secret-body")), DependencyTransientError)
-    err = type("E", (Exception,), {"status_code": 401})()
-    assert isinstance(map_sdk_error(err), UnauthorizedError)
-    assert "secret-body" not in str(map_sdk_error(BodyError("secret-body")))
-
-
-def test_sdk_reader_never_enables_preview_implicitly(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: dict[str, Any] = {}
-
-    class FakeClient:
-        def __init__(self, endpoint: str, credential: Any, **kwargs: Any) -> None:
-            seen.update(endpoint=endpoint, kwargs=kwargs)
-
-    fake = types.ModuleType("azure.ai.projects.aio")
-    fake.AIProjectClient = FakeClient  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "azure.ai.projects.aio", fake)
-
-    SdkProjectReader(endpoint="https://e", credential=object(), cloud=CloudName.COMMERCIAL)
-    assert seen["kwargs"] == {"allow_preview": False}
-
-    SdkProjectReader(endpoint="https://e", credential=object(), cloud=CloudName.GOVERNMENT)
-    assert seen["kwargs"]["allow_preview"] is False
-    assert seen["kwargs"]["credential_scopes"] == ["https://ai.azure.us/.default"]
-
-    SdkProjectReader(
-        endpoint="https://e", credential=object(), cloud=CloudName.COMMERCIAL, allow_preview=True
-    )
-    assert seen["kwargs"]["allow_preview"] is True

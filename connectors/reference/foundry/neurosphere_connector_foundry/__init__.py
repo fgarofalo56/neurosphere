@@ -12,7 +12,11 @@ from neurosphere_connector_foundry.connector import (
     FoundryDiscoveryConnector,
 )
 from neurosphere_connector_foundry.endpoints import FOUNDRY_ENDPOINTS, project_endpoint
-from neurosphere_connector_foundry.reader import FoundryProjectReader, SdkProjectReader
+from neurosphere_connector_foundry.reader import (
+    FoundryProjectReader,
+    RestProjectReader,
+    default_token_provider,
+)
 
 __all__ = [
     "FOUNDRY_ENDPOINTS",
@@ -23,7 +27,8 @@ __all__ = [
     "DiscoveryResult",
     "FoundryDiscoveryConnector",
     "FoundryProjectReader",
-    "SdkProjectReader",
+    "RestProjectReader",
     "capability_reports",
+    "default_token_provider",
     "project_endpoint",
 ]

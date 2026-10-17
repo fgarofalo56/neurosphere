@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "neurosphere-connector",
   "azure-identity>=1.26,<2",
-  "azure-ai-projects>=2.0,<3",
+  "httpx>=0.28,<0.29",
 ]
 
 [tool.uv.sources]
