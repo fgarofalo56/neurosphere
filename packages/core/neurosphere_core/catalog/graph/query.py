@@ -82,7 +82,6 @@ class _Walk:
     parent: dict[str, tuple[str, str]] = field(default_factory=dict)
     edges: dict[str, PresentedEdge] = field(default_factory=dict)
     scope_cache: dict[str, CatalogEntity | None] = field(default_factory=dict)
-    visited_edges: int = 0
     reason: TruncatedReason | None = None
     stopped: bool = False
 
@@ -203,8 +202,8 @@ class RepositoryGraphQuery:
             paths=paths,
             truncated=walk.reason is not None,
             truncated_reason=walk.reason,
-            visited_nodes=len(walk.scope_cache),
-            visited_edges=walk.visited_edges,
+            visited_nodes=len(walk.nodes),
+            visited_edges=len(walk.edges),
         )
 
     async def _walk(
@@ -298,7 +297,6 @@ class RepositoryGraphQuery:
         if len(edges) > walk.fan_out:
             walk.truncate("max_edges")
             edges = edges[: walk.fan_out]
-        walk.visited_edges += len(edges)
 
         candidates: list[tuple[CatalogEdge, str]] = []
         for edge in edges:

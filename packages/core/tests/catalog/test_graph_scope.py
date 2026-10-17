@@ -139,3 +139,53 @@ async def test_search_limits_and_partial_results_are_truncated() -> None:
     result = await partial.search(SCOPE_A, GraphSearchRequest(term="agent", budget=budget()))
     assert result.truncated is True
     assert len(result.nodes) == 3
+
+
+async def _seed_visible(repo: InMemoryCatalogRepository) -> None:
+    await repo.create_entity(SCOPE_A, agent(NS, "v1", "a"))
+    await repo.create_entity(SCOPE_A, agent(NS, "v2", "a"))
+    await repo.put_edge(SCOPE_A, edge(NS, "v1-v2", "v1", "v2", "a"), None)
+
+
+async def _seed_hidden_extras(repo: InMemoryCatalogRepository) -> None:
+    await repo.create_entity(SCOPE_B, agent(NS, "hx1", "b"))
+    await repo.create_entity(SCOPE_B, agent(NS, "hx2", "b"))
+    await repo.create_entity(SCOPE_A, agent(NS, "v3", "a"))
+    for name, src, dst in (("v1-hx1", "v1", "hx1"), ("hx2-v1", "hx2", "v1")):
+        await repo.put_edge(SCOPE_AB, edge(NS, name, src, dst, "a"), None)
+    rejected = await repo.put_edge(SCOPE_A, edge(NS, "v1-v3", "v1", "v3", "a"), None)
+    await repo.put_override(SCOPE_A, override_for(rejected, "rej-v3", "reject"))
+
+
+async def test_result_counts_do_not_leak_hidden_neighbours_or_edges() -> None:
+    plain = InMemoryCatalogRepository()
+    extra = InMemoryCatalogRepository()
+    await _seed_visible(plain)
+    await _seed_visible(extra)
+    await _seed_hidden_extras(extra)
+
+    for direction in ("out", "in", "both"):
+        base = await make_query(plain).neighbors(
+            SCOPE_A, neighbors_request("v1", direction=direction)
+        )
+        more = await make_query(extra).neighbors(
+            SCOPE_A, neighbors_request("v1", direction=direction)
+        )
+        assert more.visited_nodes == base.visited_nodes == len(base.nodes)
+        assert more.visited_edges == base.visited_edges == len(base.edges)
+        assert more.truncated == base.truncated
+        assert more.truncated_reason == base.truncated_reason
+        assert [n.id for n in more.nodes] == [n.id for n in base.nodes]
+        assert [e.edge_id for e in more.edges] == [e.edge_id for e in base.edges]
+
+    base_impact = await make_query(plain).impact_paths(
+        SCOPE_A, ImpactRequest(node_id=nid("v1"), budget=budget())
+    )
+    more_impact = await make_query(extra).impact_paths(
+        SCOPE_A, ImpactRequest(node_id=nid("v1"), budget=budget())
+    )
+    assert more_impact.visited_nodes == base_impact.visited_nodes == len(base_impact.nodes)
+    assert more_impact.visited_edges == base_impact.visited_edges == len(base_impact.edges)
+    assert more_impact.truncated == base_impact.truncated
+    assert more_impact.truncated_reason == base_impact.truncated_reason
+    assert [p.node_ids for p in more_impact.paths] == [p.node_ids for p in base_impact.paths]
