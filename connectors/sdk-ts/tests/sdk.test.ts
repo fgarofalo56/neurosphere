@@ -20,7 +20,8 @@ import {
 
 const GRAIN = { time_grain: "event", subject_level: "request" } as const;
 const REF = { name: "api_key", vault_ref: "https://demo.vault.azure.net/secrets/api-key" };
-const SECRET = "s3cr3t-value-123";
+// Generated per run so no secret-shaped literal sits in the repo.
+const SECRET = `fixture-${globalThis.crypto.randomUUID()}`;
 
 describe("export surface", () => {
   it("has no write API", () => {
