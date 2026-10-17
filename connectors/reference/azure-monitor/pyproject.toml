@@ -1,0 +1,20 @@
+[project]
+name = "neurosphere-connector-azure-monitor"
+version = "0.0.0"
+description = "Reference bounded polling connector for Application Insights and Log Analytics query APIs (PRP-09 item 4)."
+requires-python = ">=3.12"
+dependencies = [
+  "neurosphere-connector",
+  "httpx>=0.28,<0.29",
+  "azure-identity>=1.26,<2",
+]
+
+[tool.uv.sources]
+neurosphere-connector = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["neurosphere_connector_azure_monitor"]

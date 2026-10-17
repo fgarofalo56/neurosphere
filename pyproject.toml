@@ -28,6 +28,11 @@ dev = [
   "neurosphere-contracts",
   "neurosphere-api",
   "neurosphere-workers",
+  "neurosphere-connector",
+  "neurosphere-connector-otel-generic",
+  "neurosphere-connector-azure-monitor",
+  "neurosphere-connector-foundry",
+  "neurosphere-connector-azure-billing",
 ]
 
 [tool.uv.sources]
@@ -35,9 +40,20 @@ neurosphere-core = { workspace = true }
 neurosphere-contracts = { workspace = true }
 neurosphere-api = { workspace = true }
 neurosphere-workers = { workspace = true }
+neurosphere-connector = { workspace = true }
+neurosphere-connector-otel-generic = { workspace = true }
+neurosphere-connector-azure-monitor = { workspace = true }
+neurosphere-connector-foundry = { workspace = true }
+neurosphere-connector-azure-billing = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/*", "packages/contracts/python", "services/*", "connectors/sdk-python"]
+members = [
+  "packages/*",
+  "packages/contracts/python",
+  "services/*",
+  "connectors/sdk-python",
+  "connectors/reference/*",
+]
 exclude = ["packages/contracts"]
 
 [tool.ruff]
@@ -59,13 +75,13 @@ quote-style = "double"
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
-include = ["scripts", "tests", "packages", "services", "sandbox"]
+include = ["scripts", "tests", "packages", "services", "sandbox", "connectors"]
 exclude = ["**/node_modules", "**/__pycache__", ".venv"]
 venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages", "services"]
+testpaths = ["tests", "packages", "services", "connectors"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers -m \"not integration and not live\""
 markers = [
