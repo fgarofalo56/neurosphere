@@ -229,7 +229,7 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 0 | merged | prp-09-connector-sdk | opus | committed directly on integration branch; ruff/format/pyright clean; full default suite 3914 passed after licence register regen; sdk-ts typecheck ok; licences PASS (530); validate_planning PASS | 2026-10-17 |
-| 1 | todo | | sonnet | | 2026-10-17 |
+| 1 | review | worktree-agent-a95e623057e6e32ed | sonnet | ruff/format/pyright clean; sdk-python 49 passed (re-run on branch); contracts 1683 passed; Snyk Code 0 issues; 35a5fdd. Deviation: credentials module named vault.py (security hook denies *credentials* paths) | 2026-10-17 |
 | 2 | todo | | sonnet | | 2026-10-17 |
 | 3 | todo | | sonnet | | 2026-10-17 |
 | 4 | todo | | sonnet | | 2026-10-17 |
