@@ -55,6 +55,7 @@ from neurosphere_connector_otel_generic.convert import (
 )
 
 __all__ = [
+    "CLOUDEVENTS_SPEC_URL",
     "CREDENTIAL_NAME",
     "DEFAULT_CREDENTIAL_REF",
     "OTLP_SPEC_URL",
@@ -240,9 +241,7 @@ class OtelGenericConnector(BaseConnector):
         """Send CloudEvents 1.0 (Pydantic-validated; not the ``cloudevents`` SDK) as a batch."""
         valid = validate_cloudevents(events)
         clean, dropped = redact_outgoing(valid)
-        bodies = _split(
-            clean, lambda c: list(c), max_items=self._max_items, max_bytes=self._max_bytes
-        )
+        bodies = _split(clean, list, max_items=self._max_items, max_bytes=self._max_bytes)
         return await self._push("/events", _EVENTS_BATCH, bodies, dropped)
 
     async def export_spans(self, spans: Iterable[Any]) -> PushSummary:

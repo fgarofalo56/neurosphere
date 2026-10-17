@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Mapping
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 from neurosphere_connector.testing import ConnectorContractSuite
@@ -108,7 +109,7 @@ def test_government_reports_unavailable_not_empty() -> None:
     for name in GOV_UNAVAILABLE:
         assert reports[name].status is CapabilityStatus.UNAVAILABLE
         assert reports[name].reason
-        assert str(reports[name].source).startswith("https://learn.microsoft")
+        assert urlsplit(str(reports[name].source)).hostname == "learn.microsoft.com"
     assert reports["workflows"].status is CapabilityStatus.PREVIEW
     assert reports["prompt_agents"].status is CapabilityStatus.AVAILABLE
 
