@@ -240,9 +240,9 @@ Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 0 | merged | worktree-agent-afa6790ef3378ec5e | sonnet | 1357ad9; ruff/format/pyright clean; 46 passed (re-run on branch); Snyk Code 0; review APPROVE (5 non-blocking: post-lock-expiry stale confidence/validity, resolved ReviewItem id swallows later conflicts, expired lock set_confidence carries into new lock, observation id ignores confidence, no domain-level edge list); merge 0b38c7d, catalog+search 116 passed + pyright clean post-merge | 2026-10-17 |
-| 1 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
-| 2 | todo | | sonnet | | 2026-10-17 |
-| 3 | todo | | sonnet | | 2026-10-17 |
+| 1 | merged | worktree-agent-a1f3031a9fb234dbc | sonnet | 249f381; ruff/format/pyright clean; unit 75 passed, integration (Cosmos emulator, bounded feasibility only) 23 passed (re-run on branch); Snyk Code 0; review APPROVE (non-blocking: cross-domain duplicate-ID existence signal (unify error type/message), put_override id uniqueness only in-scope, check-then-insert race, fixed RateLimited retry-after); merge d6fd3f9; post-merge collision core/api tests/catalog packages fixed by orchestrator; full default suite 4271 passed | 2026-10-17 |
+| 2 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
+| 3 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
 | 4 | merged | worktree-agent-ac756305fd619d259 | sonnet | 0e272ba; ruff/format/pyright clean; catalog+authz 193 passed (re-run on branch); Snyk Code 0 (run by orchestrator); review APPROVE (non-blocking: caller-supplied EdgeOverride.actor/lock.actor not stamped from scope principal, require() 403s unaudited (repo-wide), no-op inference unaudited by design); merge 16e3d3d; orchestrator wired /catalog/curation in routers.py + regenerated openapi.json; services/api 355 passed + pyright/ruff clean post-merge | 2026-10-17 |
 | 5 | todo | | sonnet | | 2026-10-17 |
 | 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |

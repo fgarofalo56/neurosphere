@@ -10,10 +10,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     FINANCE,
     OPERATIONS,
 )
-from neurosphere_api.authz import route_inventory, undeclared_routes
-from neurosphere_api.catalog.curation import CurationService
-
-from .curation_helpers import (
+from curation_helpers import (  # pyright: ignore[reportMissingImports]
     AUDITOR,
     EDGE_ID,
     OPS_EDGE_ID,
@@ -27,6 +24,8 @@ from .curation_helpers import (
     make_curation,
     make_edge,
 )
+from neurosphere_api.authz import route_inventory, undeclared_routes
+from neurosphere_api.catalog.curation import CurationService
 
 
 def _curation() -> Curation:
@@ -97,7 +96,7 @@ def test_lock_pins_presented_edge_with_reason_and_expiry() -> None:
 def test_lock_without_reason_or_expiry_is_rejected(
     decision: str, lock: dict[str, Any] | None
 ) -> None:
-    from .curation_helpers import PERSON
+    from curation_helpers import PERSON  # pyright: ignore[reportMissingImports]
 
     c = _curation()
     if lock is not None and "actor" in lock:
