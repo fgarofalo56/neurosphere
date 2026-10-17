@@ -5,6 +5,11 @@ requires-python = ">=3.12, <3.14"
 [manifest]
 members = [
     "neurosphere-api",
+    "neurosphere-connector",
+    "neurosphere-connector-azure-billing",
+    "neurosphere-connector-azure-monitor",
+    "neurosphere-connector-foundry",
+    "neurosphere-connector-otel-generic",
     "neurosphere-contracts",
     "neurosphere-core",
     "neurosphere-workers",
@@ -1087,6 +1092,95 @@ requires-dist = [
 ]
 
 [[package]]
+name = "neurosphere-connector"
+version = "0.0.0"
+source = { editable = "connectors/sdk-python" }
+dependencies = [
+    { name = "neurosphere-contracts" },
+    { name = "neurosphere-core" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "neurosphere-contracts", editable = "packages/contracts/python" },
+    { name = "neurosphere-core", editable = "packages/core" },
+    { name = "pydantic", specifier = ">=2.14,<3" },
+]
+
+[[package]]
+name = "neurosphere-connector-azure-billing"
+version = "0.0.0"
+source = { editable = "connectors/reference/azure-billing" }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "azure-storage-blob" },
+    { name = "neurosphere-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.26,<2" },
+    { name = "azure-storage-blob", specifier = ">=12,<13" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+]
+
+[[package]]
+name = "neurosphere-connector-azure-monitor"
+version = "0.0.0"
+source = { editable = "connectors/reference/azure-monitor" }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "httpx" },
+    { name = "neurosphere-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.26,<2" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+]
+
+[[package]]
+name = "neurosphere-connector-foundry"
+version = "0.0.0"
+source = { editable = "connectors/reference/foundry" }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "httpx" },
+    { name = "neurosphere-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-identity", specifier = ">=1.26,<2" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+]
+
+[[package]]
+name = "neurosphere-connector-otel-generic"
+version = "0.0.0"
+source = { editable = "connectors/reference/otel-generic" }
+dependencies = [
+    { name = "httpx" },
+    { name = "neurosphere-connector" },
+    { name = "neurosphere-core" },
+    { name = "opentelemetry-sdk" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-core", editable = "packages/core" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45,<2" },
+    { name = "pydantic", specifier = ">=2.14,<3" },
+]
+
+[[package]]
 name = "neurosphere-contracts"
 version = "0.0.0"
 source = { editable = "packages/contracts/python" }
@@ -1176,6 +1270,11 @@ dev = [
     { name = "httpx" },
     { name = "hypothesis" },
     { name = "neurosphere-api" },
+    { name = "neurosphere-connector" },
+    { name = "neurosphere-connector-azure-billing" },
+    { name = "neurosphere-connector-azure-monitor" },
+    { name = "neurosphere-connector-foundry" },
+    { name = "neurosphere-connector-otel-generic" },
     { name = "neurosphere-contracts" },
     { name = "neurosphere-core" },
     { name = "neurosphere-workers" },
@@ -1197,6 +1296,11 @@ dev = [
     { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "hypothesis", specifier = ">=6.168,<7" },
     { name = "neurosphere-api", editable = "services/api" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-connector-azure-billing", editable = "connectors/reference/azure-billing" },
+    { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
+    { name = "neurosphere-connector-foundry", editable = "connectors/reference/foundry" },
+    { name = "neurosphere-connector-otel-generic", editable = "connectors/reference/otel-generic" },
     { name = "neurosphere-contracts", editable = "packages/contracts/python" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "neurosphere-workers", editable = "services/workers" },

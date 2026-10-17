@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "name": "bad-advisory",
+  "version": "1.0.0",
+  "supported_clouds": ["commercial"],
+  "capabilities": ["usage_reports"],
+  "scopes": [],
+  "granularity": { "time_grain": "day", "subject_level": "tenant" },
+  "freshness": { "typical_delay_ms": null, "max_delay_ms": null },
+  "rate_limits": null,
+  "auth_mode": "managed_identity",
+  "credential_refs": [],
+  "advisory": false,
+  "write_support": { "supported": false, "actions": [] }
+}

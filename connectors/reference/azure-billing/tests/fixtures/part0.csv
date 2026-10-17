@@ -1,0 +1,6 @@
+Date,SubscriptionId,ResourceId,MeterId,MeterName,BillingCurrencyCode,CostInBillingCurrency
+2026-09-01,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-in,Input Tokens,USD,1.50
+2026-09-01,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-out,Output Tokens,USD,2.25
+2026-09-01,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.Search/searchServices/synthetic-search,meter-unit,Search Unit,USD,4.00
+2026-09-02,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-in,Input Tokens,USD,
+2026-09-02,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-out,Output Tokens,USD,3.10

@@ -1,0 +1,20 @@
+[project]
+name = "neurosphere-connector-foundry"
+version = "0.0.0"
+description = "Reference Foundry discovery connector: agents, deployments and per-cloud unavailable capabilities (PRP-09 item 5)."
+requires-python = ">=3.12"
+dependencies = [
+  "neurosphere-connector",
+  "azure-identity>=1.26,<2",
+  "httpx>=0.28,<0.29",
+]
+
+[tool.uv.sources]
+neurosphere-connector = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["neurosphere_connector_foundry"]

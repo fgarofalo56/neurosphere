@@ -1,0 +1,20 @@
+[project]
+name = "neurosphere-connector-azure-billing"
+version = "0.0.0"
+description = "Reference Azure cost export reader and billing-vs-ledger reconciliation variance report (PRP-09 item 5)."
+requires-python = ">=3.12"
+dependencies = [
+  "neurosphere-connector",
+  "azure-identity>=1.26,<2",
+  "azure-storage-blob>=12,<13",
+]
+
+[tool.uv.sources]
+neurosphere-connector = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["neurosphere_connector_azure_billing"]
