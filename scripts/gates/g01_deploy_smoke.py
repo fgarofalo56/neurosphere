@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -812,7 +813,7 @@ def main(
     # Teardown needs the ownership register; prove it imports before anything is created, so a
     # wrong interpreter cannot leave a billable resource group behind (observed 2026-10-16).
     try:
-        import neurosphere_core.deploy.register  # noqa: F401  # pyright: ignore[reportUnusedImport]
+        importlib.import_module("neurosphere_core.deploy.register")
     except ImportError:
         print(
             "REFUSED: neurosphere_core is not importable; run with `uv run python "

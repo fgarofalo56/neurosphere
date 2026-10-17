@@ -174,7 +174,8 @@ async def test_remove_never_calls_deleter_for_reused_shared_or_tagged_resources(
 
 async def test_remove_with_only_protected_rows_makes_zero_calls() -> None:
     deleter = RecordingDeleter()
-    assert await remove(DEP, [row("a", "reused"), row("b", "shared")], deleter) == []
+    deleted = await remove(DEP, [row("a", "reused"), row("b", "shared")], deleter)
+    assert deleted == []
     assert deleter.calls == []
 
 

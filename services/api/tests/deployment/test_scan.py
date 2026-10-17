@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-import neurosphere_api.deploy.scan as scan_pkg
 import pytest
 from authz.authz_helpers import Harness  # pyright: ignore[reportMissingImports]
+from neurosphere_api.deploy import scan as scan_pkg
 from neurosphere_api.deploy.scan import (
     SCAN_QUERY,
     HttpxResourceGraphReader,

@@ -303,7 +303,7 @@ async def test_ensure_capacity_existing_does_not_put() -> None:
     )
     assert not cap.created
     assert [c.method for c in http.calls] == ["GET"]
-    assert "management.usgovcloudapi.net" in http.calls[0].url
+    assert urlsplit(http.calls[0].url).hostname == "management.usgovcloudapi.net"
 
 
 # 5 -------------------------------------------------------------------------
