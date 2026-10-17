@@ -1,0 +1,88 @@
+# Example OpenTelemetry Collector config: forward traces and metrics to the NeuroSphere ingest
+# edge as OTLP/JSON, deleting prompt/response body attributes first. CONFIG ONLY: nothing here
+# is started or deployed by the repo. See README.md in this directory.
+#
+# Replace the placeholders (INGEST_HOST, SOURCE_ID) for your deployment. The producer
+# credential comes from the environment (NS_PRODUCER_CREDENTIAL = "<producer_id>.<secret>"),
+# injected from Key Vault by your platform; never write it into this file.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Remove body attributes before anything leaves the collector. The ingest edge drops them as
+  # well (defence in depth); this keeps them off the wire. Names mirror
+  # neurosphere_core.payload.BODY_FIELD_NAMES; the suffix rule (any "*.prompt" / "*.response")
+  # is covered by the transform processor below.
+  attributes/drop_bodies:
+    actions:
+      - key: prompt
+        action: delete
+      - key: response
+        action: delete
+      - key: gen_ai.prompt
+        action: delete
+      - key: gen_ai.completion
+        action: delete
+      - key: gen_ai.input.messages
+        action: delete
+      - key: gen_ai.output.messages
+        action: delete
+      - key: gen_ai.system_instructions
+        action: delete
+
+  # Anything whose last dotted segment is "prompt" or "response" (for example llm.prompt).
+  transform/drop_body_suffixes:
+    error_mode: ignore
+    trace_statements:
+      - delete_matching_keys(span.attributes, "(?i)^(.*\\.)?(prompt|response)$")
+    metric_statements:
+      - delete_matching_keys(datapoint.attributes, "(?i)^(.*\\.)?(prompt|response)$")
+
+  # Optional producer claim; the edge checks it against the producer registration. Omit it when
+  # the registration has exactly one source.
+  resource/neurosphere:
+    attributes:
+      - key: neurosphere.source_id
+        value: SOURCE_ID
+        action: upsert
+
+  batch:
+    send_batch_size: 200
+    send_batch_max_size: 200
+    timeout: 5s
+
+exporters:
+  otlphttp/neurosphere:
+    # Explicit per-signal endpoints: the edge paths are not the collector's default /v1/traces.
+    traces_endpoint: https://INGEST_HOST/v1/ingest/otlp/traces
+    metrics_endpoint: https://INGEST_HOST/v1/ingest/otlp/metrics
+    # The edge accepts application/json only, uncompressed.
+    encoding: json
+    compression: none
+    headers:
+      authorization: "Bearer ${env:NS_PRODUCER_CREDENTIAL}"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 120s
+    sending_queue:
+      enabled: true
+      queue_size: 1000
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/drop_bodies, transform/drop_body_suffixes, resource/neurosphere, batch]
+      exporters: [otlphttp/neurosphere]
+    metrics:
+      receivers: [otlp]
+      processors: [attributes/drop_bodies, transform/drop_body_suffixes, resource/neurosphere, batch]
+      exporters: [otlphttp/neurosphere]
