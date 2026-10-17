@@ -21,6 +21,12 @@ All notable changes to this project are documented here. The format follows
   chart and App Service profile, consented read-only Resource Graph scan, reuse/create/skip
   planner projecting to `DeploymentManifest`, ownership register with a live-inventory-guarded
   uninstall, matrix-gated Fabric provisioning adapter, and the G01 Commercial deploy smoke gate.
+- Connector SDK and reference connectors (PRP-09): Python and TypeScript connector SDKs with
+  health/rate-limit/coverage/freshness reporting, vault credential references with rotation,
+  a contract test kit and cross-SDK manifest interop; `WriteConnector` protocol for the action
+  executor; reference connectors for generic OpenTelemetry/CloudEvents push, bounded Azure
+  Monitor polling, Foundry discovery and Azure Cost Management exports with a billing-vs-ledger
+  variance report; `docs/connectors/coverage.md`.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
