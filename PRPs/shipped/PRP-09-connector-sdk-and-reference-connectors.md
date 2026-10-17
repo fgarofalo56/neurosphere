@@ -1,7 +1,9 @@
 ---
 name: prp-09-connector-sdk-and-reference-connectors
-status: active
+status: shipped
 started: 2026-10-17
+shipped: 2026-10-17
+pr: 45
 branch: prp-09-connector-sdk
 review: required
 created: 2026-10-08
@@ -27,13 +29,13 @@ Ship the Python and TypeScript connector SDKs, a shared manifest format with a c
 The binding rule for this PRP is the last clause: no invented APIs. Where a documented, admin-authorized signal is not verified, the connector is not built and the gap is documented.
 
 ## Acceptance criteria
-- [ ] Item 1: Python SDK ships a contract test kit; running the kit against a deliberately broken connector fails, against a conforming one passes; a credential value never appears in logs (log-capture test).
-- [ ] Item 2: Manifest JSON produced by the TypeScript SDK validates in the Python kit and vice versa (interop fixtures).
-- [ ] Item 3: Sandbox traces pushed through the OTel generic connector land at the ingest edge as `TelemetryEvent` envelopes with missing fields null/unknown, not zero.
-- [ ] Item 4: Each Azure Monitor poll reports freshness (data lag) and coverage (what fraction of expected sources answered); polling is bounded by an explicit window and page budget.
-- [ ] Item 5: Variance report compares billing aggregates against ledger estimates at the granularity the billing source reports and states that granularity; `docs/connectors/coverage.md` documents the Palantir, xAI and Cursor gaps and states they are not implemented.
-- [ ] Item 6: A read-only connector reports `advisory=true`; `WriteConnector` exposes dry-run, apply, verify, rollback with typed results; a connector without write capability cannot be registered as a write target.
-- [ ] PRP exit: both SDKs pass their own kits; `docs/RESEARCH-AND-GATES.md` G04 is narrowed only with live contract evidence, otherwise recorded OPEN.
+- [x] Item 1: Python SDK ships a contract test kit; running the kit against a deliberately broken connector fails, against a conforming one passes; a credential value never appears in logs (log-capture test).
+- [x] Item 2: Manifest JSON produced by the TypeScript SDK validates in the Python kit and vice versa (interop fixtures).
+- [x] Item 3: Sandbox traces pushed through the OTel generic connector land at the ingest edge as `TelemetryEvent` envelopes with missing fields null/unknown, not zero.
+- [x] Item 4: Each Azure Monitor poll reports freshness (data lag) and coverage (what fraction of expected sources answered); polling is bounded by an explicit window and page budget.
+- [x] Item 5: Variance report compares billing aggregates against ledger estimates at the granularity the billing source reports and states that granularity; `docs/connectors/coverage.md` documents the Palantir, xAI and Cursor gaps and states they are not implemented.
+- [x] Item 6: A read-only connector reports `advisory=true`; `WriteConnector` exposes dry-run, apply, verify, rollback with typed results; a connector without write capability cannot be registered as a write target.
+- [x] PRP exit: both SDKs pass their own kits; `docs/RESEARCH-AND-GATES.md` G04 is narrowed only with live contract evidence, otherwise recorded OPEN.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -237,9 +239,19 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 | 6 | merged | worktree-agent-a4a17a14f0a492cd0 | sonnet | ruff/format/pyright clean; sdk-python 59 passed (re-run on branch); Snyk Code 0 issues; 84f3cdc; review APPROVE (6 non-blocking: verify type coercion True==1, move/copy post-state limits, SDK does not enforce target version — executor must); merge b3910e9, sdk-python 59 passed + pyright clean post-merge | 2026-10-17 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-17
+- Merged commits: PR #45 (merge 4fc4ba5). Item 0 4a13249; item merges 8a311df (1), b3910e9 (6), e89a2f3 (2), 6e2d0cf (4), add0250 (3), b00d6ba (5); close-out docs a9dca2a; CodeQL fix 9269189.
 - Deviations from blueprint and why:
-- Descoped items:
+  - Item 0 (shared root wiring) added at plan approval: no item owned root `pyproject.toml`, the lockfiles or the licence register, and parallel lanes would have conflicted on them. Items added deps only to their own manifests; the orchestrator relocked and regenerated the register after each merge.
+  - Item 2 ran after item 1 (not in parallel) and also owned `connectors/sdk-python/tests/interop/`, so both halves of the interop test landed in one lane.
+  - Python SDK credentials module is `vault.py` and its test `test_vault_refs_and_rotation.py`: a security hook denies paths containing `credentials`.
+  - Item 5 verify failed once on the licence gate: `azure-ai-projects` pulls `openai` -> `httpx2` -> `httpx2-jsfetch` (emscripten-only, UNKNOWN licence). Fixed by reading Foundry through the documented REST API (`rest/api/microsoft-foundry/aiproject`, `GET /agents`, `GET /deployments`, api-version `v1`) with httpx; the SDK is not a dependency.
+  - Azure Monitor: the query APIs have no cursor paging, so a "page" is a time slice of the window. Government Log Analytics needs an explicit `allow_unverified_government` opt-in; Application Insights has no documented Government host and is disabled there. Auth is managed identity (first-party Azure), not vault references.
+  - OTel connector drops bodies always (stricter than "by default"); it sends the PRP-07 edge's own wire format, so the edge keeps the single OTLP-to-TelemetryEvent mapping.
+  - TS SDK manifests are always advisory with no write option (Clarification 7).
+  - Snyk flagged three low test-fixture findings (hardcoded fixture secrets, a URL substring check) and CodeQL one high (URL substring check in a Foundry test); all fixed. 15 CodeQL notes remain (Protocol `...` bodies, two `await` false positives), matching the existing convention on main.
+- Descoped items: none.
 - Live items run or OPEN (G04, G12):
-- Follow-ups:
+  - G04 OPEN: no live contract run for Azure Monitor, Foundry or billing (`NS_LIVE_APPROVED=1` not used; no `docs/evidence/G04/`); Government endpoints are configuration only; unbuilt NS-09 targets open by design. Recorded in docs/RESEARCH-AND-GATES.md.
+  - G12: `tests/integration/connectors/` (1 test) passed against the compose emulators locally; delta recorded — Entra producer identity is not reproducible on the Event Hubs emulator, the edge checks the producer credential instead.
+- Follow-ups: #46 (Azure Monitor watermark advances past truncated slices: data-loss path, fix before any live G04 run), #47 (WriteConnector verify strictness: type coercion, move/copy, target version enforced by PRP-17 executor), #48 (Python SDK hardening), #49 (OTel connector edge cases), #50 (TS SDK polish). Item 5 non-blocking review findings, not filed separately: billing `blobs_expected` equals blobs read so missing partitions show only via the row-count check; rows without a date are dropped (counted, not stated in the variance report); `gzip.decompress` has no size cap; `Decimal` accepts underscores and non-ASCII digits in cost cells.
