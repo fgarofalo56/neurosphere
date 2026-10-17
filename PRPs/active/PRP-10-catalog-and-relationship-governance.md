@@ -243,7 +243,7 @@ Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint
 | 1 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
 | 2 | todo | | sonnet | | 2026-10-17 |
 | 3 | todo | | sonnet | | 2026-10-17 |
-| 4 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
+| 4 | merged | worktree-agent-ac756305fd619d259 | sonnet | 0e272ba; ruff/format/pyright clean; catalog+authz 193 passed (re-run on branch); Snyk Code 0 (run by orchestrator); review APPROVE (non-blocking: caller-supplied EdgeOverride.actor/lock.actor not stamped from scope principal, require() 403s unaudited (repo-wide), no-op inference unaudited by design); merge 16e3d3d; orchestrator wired /catalog/curation in routers.py + regenerated openapi.json; services/api 355 passed + pyright/ruff clean post-merge | 2026-10-17 |
 | 5 | todo | | sonnet | | 2026-10-17 |
 | 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
 | 7 | todo | | operator | deferred by operator; G03 OPEN | 2026-10-17 |

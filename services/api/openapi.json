@@ -255,6 +255,19 @@
         "title": "ChainVerification",
         "type": "object"
       },
+      "Cloud": {
+        "enum": [
+          "commercial",
+          "government"
+        ],
+        "title": "Cloud",
+        "type": "string"
+      },
+      "ConnectorVersion": {
+        "maxLength": 64,
+        "title": "ConnectorVersion",
+        "type": "string"
+      },
       "ConsentRecord": {
         "additionalProperties": false,
         "properties": {
@@ -358,6 +371,85 @@
           "price_version"
         ],
         "title": "CostImplication",
+        "type": "object"
+      },
+      "Curation": {
+        "additionalProperties": false,
+        "description": "Latest steward decision on an edge (full history lives in the audit log).",
+        "properties": {
+          "decided_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decided_by": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected",
+              "overridden"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "override_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverrideId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "decision",
+          "decided_by",
+          "decided_at",
+          "reason"
+        ],
+        "title": "Curation",
+        "type": "object"
+      },
+      "CustomerId": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9._-]+$",
+        "title": "CustomerId",
+        "type": "string"
+      },
+      "DecisionResult": {
+        "additionalProperties": false,
+        "description": "A stored steward decision and the presented edge after it.",
+        "properties": {
+          "override": {
+            "$ref": "#/components/schemas/EdgeOverride"
+          },
+          "presented": {
+            "$ref": "#/components/schemas/PresentedEdge"
+          }
+        },
+        "required": [
+          "override",
+          "presented"
+        ],
+        "title": "DecisionResult",
         "type": "object"
       },
       "Denial": {
@@ -657,6 +749,263 @@
         "title": "DiscoveredResource",
         "type": "object"
       },
+      "DomainId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+        "title": "DomainId",
+        "type": "string"
+      },
+      "EdgeObservation": {
+        "additionalProperties": false,
+        "description": "One raw observation of an edge, stored apart from the (curated) edge document.\n\n``id`` is deterministic for the same input so replays are idempotent. Observations are\nqueryable by Auditor scope only; the presented lineage never depends on them directly.",
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "customer_id": {
+            "pattern": "^[a-z0-9._-]{1,128}$",
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "observed_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "relation_type": {
+            "enum": [
+              "invokes",
+              "delegates_to",
+              "uses_model",
+              "reads",
+              "writes",
+              "grounded_by",
+              "owned_by",
+              "depends_on",
+              "supersedes"
+            ],
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "security_evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Security Evidence Ids",
+            "type": "array"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity"
+          }
+        },
+        "required": [
+          "id",
+          "edge_id",
+          "relation_type",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "observed_at",
+          "confidence",
+          "validity",
+          "provenance",
+          "evidence_ids",
+          "security_evidence_ids"
+        ],
+        "title": "EdgeObservation",
+        "type": "object"
+      },
+      "EdgeOverride": {
+        "additionalProperties": false,
+        "description": "Steward decision on one edge (accept, reject, override, lock, unlock), applied with optimistic concurrency. The schema has no field that removes or replaces evidence_ids or security_evidence_ids, so an override cannot erase security evidence; observed facts are retained and the lock changes presented lineage only. lock and override decisions require a lock with locked=true, reason, expiry and actor. Python validators: validate_override_preserves_security_evidence, validate_customer_segment_matches, validate_override_relation_matches_edge (relation_type equals the type segment of edge_id), validate_lock_expiry_after_decision.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "add_evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceId"
+                },
+                "maxItems": 1000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Add Evidence Ids"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "decided_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decision": {
+            "enum": [
+              "accept",
+              "reject",
+              "override",
+              "lock",
+              "unlock"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(invokes|delegates_to|uses_model|reads|writes|grounded_by|owned_by|depends_on|supersedes):[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "expected_edge_etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "expected_edge_version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lock": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "relation_type": {
+            "$ref": "#/components/schemas/RelationType"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "set_confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SetConfidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "set_validity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Validity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "edge_id",
+          "relation_type",
+          "expected_edge_version",
+          "expected_edge_etag",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "decision",
+          "actor",
+          "reason",
+          "decided_at"
+        ],
+        "title": "EdgeOverride",
+        "type": "object"
+      },
+      "EntityVersion": {
+        "minimum": 1.0,
+        "title": "EntityVersion",
+        "type": "integer"
+      },
+      "Etag": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Etag",
+        "type": "string"
+      },
+      "EvidenceId": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+        "title": "EvidenceId",
+        "type": "string"
+      },
       "FeatureRequest": {
         "additionalProperties": false,
         "description": "An optional feature the deployment wants (for example a Foundry model or CMK).",
@@ -738,6 +1087,11 @@
         "title": "IgnoredItem",
         "type": "object"
       },
+      "InferenceVersion": {
+        "maxLength": 64,
+        "title": "InferenceVersion",
+        "type": "string"
+      },
       "IngestResult": {
         "additionalProperties": false,
         "description": "202 body. Counts and reason codes only; never payload values.",
@@ -772,6 +1126,51 @@
           "accepted"
         ],
         "title": "IngestResult",
+        "type": "object"
+      },
+      "Lock": {
+        "additionalProperties": false,
+        "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "locked"
+        ],
+        "title": "Lock",
         "type": "object"
       },
       "Outcome": {
@@ -810,6 +1209,34 @@
         ],
         "title": "Outcome",
         "type": "object"
+      },
+      "OverrideHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "edge_id": {
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "overrides": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeOverride"
+            },
+            "title": "Overrides",
+            "type": "array"
+          }
+        },
+        "required": [
+          "edge_id",
+          "overrides"
+        ],
+        "title": "OverrideHistory",
+        "type": "object"
+      },
+      "OverrideId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+        "title": "OverrideId",
+        "type": "string"
       },
       "OwnerConsent": {
         "additionalProperties": false,
@@ -940,6 +1367,44 @@
         ],
         "title": "Page[AuditRecord]",
         "type": "object"
+      },
+      "Page_EdgeObservation_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EdgeObservation"
+            },
+            "maxItems": 500,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[EdgeObservation]",
+        "type": "object"
+      },
+      "PersonId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:person:[a-z0-9._/=-]+$",
+        "title": "PersonId",
+        "type": "string"
       },
       "PlanCheck": {
         "additionalProperties": false,
@@ -1253,6 +1718,140 @@
         "title": "PlanResponse",
         "type": "object"
       },
+      "PresentedEdge": {
+        "additionalProperties": false,
+        "description": "An edge as shown to users: observed facts after curation (locks, overrides, rejects).\n\nEvidence and security evidence are always the full union (observed plus anything a\nsteward added); they are never reduced by a decision. ``hidden`` is True when a curated\nreject hides the edge from presented lineage (Auditors can still see it).",
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "curation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Curation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "first_observed": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "last_observed": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "lock": {
+            "$ref": "#/components/schemas/Lock"
+          },
+          "override_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Override Ids",
+            "type": "array"
+          },
+          "pinned": {
+            "title": "Pinned",
+            "type": "boolean"
+          },
+          "relation_type": {
+            "enum": [
+              "invokes",
+              "delegates_to",
+              "uses_model",
+              "reads",
+              "writes",
+              "grounded_by",
+              "owned_by",
+              "depends_on",
+              "supersedes"
+            ],
+            "title": "Relation Type",
+            "type": "string"
+          },
+          "security_evidence_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+              "type": "string"
+            },
+            "title": "Security Evidence Ids",
+            "type": "array"
+          },
+          "source_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "asserted",
+              "inferred",
+              "curated"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "validity": {
+            "$ref": "#/components/schemas/Validity"
+          }
+        },
+        "required": [
+          "edge_id",
+          "relation_type",
+          "source_id",
+          "target_id",
+          "domain_id",
+          "hidden",
+          "status",
+          "confidence",
+          "validity",
+          "lock",
+          "curation",
+          "evidence_ids",
+          "security_evidence_ids",
+          "first_observed",
+          "last_observed",
+          "pinned",
+          "override_ids"
+        ],
+        "title": "PresentedEdge",
+        "type": "object"
+      },
       "PriceEntry": {
         "additionalProperties": false,
         "properties": {
@@ -1329,6 +1928,58 @@
         "title": "PriceTable",
         "type": "object"
       },
+      "Provenance": {
+        "additionalProperties": false,
+        "description": "Where an edge or alias came from.",
+        "properties": {
+          "connector_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectorVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inference_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferenceVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "enum": [
+              "trace_observation",
+              "observed_access",
+              "declared",
+              "embedding_similarity",
+              "steward_curation",
+              "import",
+              "unknown"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "recorded_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          }
+        },
+        "required": [
+          "method",
+          "source_id",
+          "recorded_at"
+        ],
+        "title": "Provenance",
+        "type": "object"
+      },
       "ReadyzResponse": {
         "additionalProperties": false,
         "properties": {
@@ -1360,6 +2011,12 @@
         ],
         "title": "ReadyzResponse",
         "type": "object"
+      },
+      "Reason": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Reason",
+        "type": "string"
       },
       "ReasonCode": {
         "enum": [
@@ -1406,6 +2063,21 @@
         ],
         "title": "RejectedItem",
         "type": "object"
+      },
+      "RelationType": {
+        "enum": [
+          "invokes",
+          "delegates_to",
+          "uses_model",
+          "reads",
+          "writes",
+          "grounded_by",
+          "owned_by",
+          "depends_on",
+          "supersedes"
+        ],
+        "title": "RelationType",
+        "type": "string"
       },
       "ScanRequest": {
         "additionalProperties": false,
@@ -1476,6 +2148,11 @@
         ],
         "title": "ScanResponse",
         "type": "object"
+      },
+      "SchemaVersion": {
+        "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+        "title": "SchemaVersion",
+        "type": "string"
       },
       "ServiceChoice": {
         "additionalProperties": false,
@@ -1604,6 +2281,12 @@
         "title": "ServicePlan",
         "type": "object"
       },
+      "SetConfidence": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "SetConfidence",
+        "type": "number"
+      },
       "Sha256Hash": {
         "pattern": "^sha256:[0-9a-f]{64}$",
         "title": "Sha256Hash",
@@ -1724,6 +2407,17 @@
         "title": "TargetRef",
         "type": "object"
       },
+      "Timestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
+      },
+      "Token": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9][a-z0-9._-]*$",
+        "title": "Token",
+        "type": "string"
+      },
       "Uuid": {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "title": "Uuid",
@@ -1767,6 +2461,30 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "Validity": {
+        "additionalProperties": false,
+        "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
+        "properties": {
+          "valid_from": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "valid_from"
+        ],
+        "title": "Validity",
         "type": "object"
       },
       "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
@@ -1901,6 +2619,217 @@
         "summary": "Verify Audit Chain",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}": {
+      "get": {
+        "operationId": "presented_catalog_curation_edges__edge_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentedEdge"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Presented",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/decisions": {
+      "post": {
+        "operationId": "decide_catalog_curation_edges__edge_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdgeOverride"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/observations": {
+      "get": {
+        "operationId": "observations_catalog_curation_edges__edge_id__observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_EdgeObservation_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Observations",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/catalog/curation/edges/{edge_id}/overrides": {
+      "get": {
+        "operationId": "overrides_catalog_curation_edges__edge_id__overrides_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overrides",
+        "tags": [
+          "catalog-curation"
         ]
       }
     },
