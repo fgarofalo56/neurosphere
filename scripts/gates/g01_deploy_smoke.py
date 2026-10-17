@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -136,6 +137,54 @@ def scrub(value: Any, path: str = "$") -> None:
             scrub(item, f"{path}[{i}]")
     elif isinstance(value, str) and _looks_secret(value):
         raise ScrubError(f"secret-like value at {path}")
+
+
+_SUBSCRIPTION_IN_ID = re.compile(r"/subscriptions/([0-9a-fA-F-]{36})", re.IGNORECASE)
+SUBSCRIPTION_REDACTION_NOTE = (
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the "
+    "lowercase id); the repository is public"
+)
+
+
+def subscription_token(subscription_id: str) -> str:
+    digest = hashlib.sha256(subscription_id.strip().lower().encode("utf-8")).hexdigest()
+    return f"<subscription:{digest[:8]}>"
+
+
+def _collect_subscriptions(value: Any, found: set[str]) -> None:
+    if isinstance(value, dict):
+        for item in value.values():  # pyright: ignore[reportUnknownVariableType]
+            _collect_subscriptions(item, found)
+    elif isinstance(value, (list, tuple)):
+        for item in value:  # pyright: ignore[reportUnknownVariableType]
+            _collect_subscriptions(item, found)
+    elif isinstance(value, str):
+        found.update(m.lower() for m in _SUBSCRIPTION_IN_ID.findall(value))
+
+
+def _replace_ids(value: Any, tokens: dict[str, str]) -> Any:
+    if isinstance(value, dict):
+        return {k: _replace_ids(v, tokens) for k, v in value.items()}  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(value, list):
+        return [_replace_ids(v, tokens) for v in value]  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(value, str):
+        out = value
+        for sub, token in tokens.items():
+            out = re.sub(re.escape(sub), token, out, flags=re.IGNORECASE)
+        return out
+    return value
+
+
+def redact_subscriptions(evidence: dict[str, Any], extra: Sequence[str] = ()) -> dict[str, Any]:
+    """Replace every subscription id (in ARM ids and the given ``extra`` ids) with a token."""
+    found: set[str] = {s.strip().lower() for s in extra if s}
+    _collect_subscriptions(evidence, found)
+    redacted = _replace_ids(evidence, {s: subscription_token(s) for s in found})
+    notes = list(redacted.get("redactions") or [])
+    if SUBSCRIPTION_REDACTION_NOTE not in notes:
+        notes.append(SUBSCRIPTION_REDACTION_NOTE)
+    redacted["redactions"] = notes
+    return redacted
 
 
 def safe_text(text: str, limit: int = 300) -> str:
@@ -513,7 +562,9 @@ class Smoke:
             if res_in.rc == 0:
                 purge[label] = "purged"
                 self.step(label, "ok", "purged")
-            elif "purge protection" in res_in.stderr.lower():
+            elif "purge protection" in res_in.stderr.lower() or (
+                rtype == _KEYVAULT and self._kv_purge_protected(res["name"], res["location"])
+            ):
                 # keyvault.bicep sets enablePurgeProtection=true: the vault stays soft-deleted
                 # until its retention elapses. Recorded explicitly, not hidden.
                 purge[label] = "blocked_by_purge_protection"
@@ -523,6 +574,30 @@ class Smoke:
                 self.step(label, "failed", safe_text(res_in.stderr))
         result["purge"] = purge
         result["ok"] = all(v != "failed" for v in purge.values())
+
+    def _kv_purge_protected(self, name: str, location: str) -> bool:
+        # Azure answers a purge-protected vault with "MethodNotAllowed: Operation
+        # 'DeletedVaultPurge' is not allowed" (observed 2026-10-17), which names no protection.
+        # Ask the soft-deleted vault itself instead of parsing the error text.
+        res = self.run_az(
+            [
+                "keyvault",
+                "show-deleted",
+                "--name",
+                name,
+                "--location",
+                location,
+                "--subscription",
+                self.subscription,
+            ]
+        )
+        if res.rc != 0 or not res.stdout.strip():
+            return False
+        try:
+            body = json.loads(res.stdout)
+        except json.JSONDecodeError:
+            return False
+        return (body.get("properties") or {}).get("purgeProtectionEnabled") is True
 
     @staticmethod
     async def _fill(store: Any, rows: list[Any], deployment_id: str) -> list[Any]:
@@ -591,6 +666,7 @@ def _write_evidence(evidence: dict[str, Any], evidence_dir: Path) -> Path:
     path = evidence_dir / f"{day}-commercial-deploy-smoke.json"
     if path.exists():
         path = evidence_dir / f"{day}-{_utcnow().strftime('%H%M%S')}-commercial-deploy-smoke.json"
+    evidence = redact_subscriptions(evidence, [str(evidence.get("subscription_id") or "")])
     path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     path.with_suffix(".md").write_text(_markdown(evidence), encoding="utf-8")
     return path

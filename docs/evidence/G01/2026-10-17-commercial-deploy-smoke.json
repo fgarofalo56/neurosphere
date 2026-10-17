@@ -1,0 +1,168 @@
+{
+  "cloud": "commercial",
+  "deployment": {
+    "output_resource_ids": {
+      "apimId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-csa-loom-admin-centralus/providers/Microsoft.ApiManagement/service/apim-csa-loom-centralus",
+      "cosmosId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.DocumentDB/databaseAccounts/nsphere-cosmos-p7eiwcjpiszno",
+      "eventHubsId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.EventHub/namespaces/nsphere-eh-p7eiwcjpiszno",
+      "keyVaultId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.KeyVault/vaults/nsphere-kv-p7eiwcjpiszno",
+      "logAnalyticsId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.OperationalInsights/workspaces/nsphere-law-p7eiwcjpiszno",
+      "searchId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Search/searchServices/nsphere-search-p7eiwcjpiszno",
+      "storageId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Storage/storageAccounts/nspherestp7eiwcjpiszno"
+    },
+    "provisioningState": "Succeeded"
+  },
+  "errors": [
+    "teardown did not complete cleanly"
+  ],
+  "finished_utc": "2026-10-17T04:15:01Z",
+  "gate": "G01",
+  "health": {
+    "deployment_provisioning_state": "Succeeded",
+    "not_succeeded": [],
+    "ok": true,
+    "resource_count": 6
+  },
+  "kept": false,
+  "location": "centralus",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-g01-smoke-cus",
+  "resource_group_created_by_script": true,
+  "resources_created": [
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.EventHub/namespaces/nsphere-eh-p7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.EventHub/namespaces"
+    },
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.DocumentDB/databaseAccounts/nsphere-cosmos-p7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.DocumentDB/databaseAccounts"
+    },
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.OperationalInsights/workspaces/nsphere-law-p7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.OperationalInsights/workspaces"
+    },
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Search/searchServices/nsphere-search-p7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.Search/searchServices"
+    },
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Storage/storageAccounts/nspherestp7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.Storage/storageAccounts"
+    },
+    {
+      "id": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.KeyVault/vaults/nsphere-kv-p7eiwcjpiszno",
+      "provisioningState": "Succeeded",
+      "type": "Microsoft.KeyVault/vaults"
+    }
+  ],
+  "result": "FAIL",
+  "reused_apim": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-csa-loom-admin-centralus/providers/Microsoft.ApiManagement/service/apim-csa-loom-centralus",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-17T03:54:58Z",
+  "steps": [
+    {
+      "detail": "rg-neurosphere-g01-smoke-cus",
+      "status": "ok",
+      "step": "resource-group-create"
+    },
+    {
+      "detail": "6 change(s)",
+      "status": "ok",
+      "step": "what-if"
+    },
+    {
+      "detail": "Succeeded",
+      "status": "ok",
+      "step": "deployment-create"
+    },
+    {
+      "detail": "6 resources",
+      "status": "ok",
+      "step": "health"
+    },
+    {
+      "detail": "7 removable, reused untouched",
+      "status": "ok",
+      "step": "removal-plan"
+    },
+    {
+      "detail": "rg-neurosphere-g01-smoke-cus",
+      "status": "ok",
+      "step": "resource-group-delete"
+    },
+    {
+      "detail": "ERROR: (MethodNotAllowed) Operation 'DeletedVaultPurge' is not allowed. Code: MethodNotAllowed Message: Operation 'DeletedVaultPurge' is not allowed.",
+      "status": "failed",
+      "step": "keyvault-purge:nsphere-kv-p7eiwcjpiszno"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>",
+  "teardown": {
+    "ok": false,
+    "performed": true,
+    "purge": {
+      "keyvault-purge:nsphere-kv-p7eiwcjpiszno": "failed"
+    },
+    "steps": [
+      {
+        "detail": "7 removable, reused untouched",
+        "status": "ok",
+        "step": "removal-plan"
+      },
+      {
+        "detail": "rg-neurosphere-g01-smoke-cus",
+        "status": "ok",
+        "step": "resource-group-delete"
+      },
+      {
+        "detail": "ERROR: (MethodNotAllowed) Operation 'DeletedVaultPurge' is not allowed. Code: MethodNotAllowed Message: Operation 'DeletedVaultPurge' is not allowed.",
+        "status": "failed",
+        "step": "keyvault-purge:nsphere-kv-p7eiwcjpiszno"
+      }
+    ]
+  },
+  "what_if": {
+    "changes": [
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.DocumentDB/databaseAccounts/nsphere-cosmos-p7eiwcjpiszno",
+        "resourceType": "Microsoft.DocumentDB/databaseAccounts"
+      },
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.EventHub/namespaces/nsphere-eh-p7eiwcjpiszno",
+        "resourceType": "Microsoft.EventHub/namespaces"
+      },
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.KeyVault/vaults/nsphere-kv-p7eiwcjpiszno",
+        "resourceType": "Microsoft.KeyVault/vaults"
+      },
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.OperationalInsights/workspaces/nsphere-law-p7eiwcjpiszno",
+        "resourceType": "Microsoft.OperationalInsights/workspaces"
+      },
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Search/searchServices/nsphere-search-p7eiwcjpiszno",
+        "resourceType": "Microsoft.Search/searchServices"
+      },
+      {
+        "changeType": "Create",
+        "resourceId": "/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-g01-smoke-cus/providers/Microsoft.Storage/storageAccounts/nspherestp7eiwcjpiszno",
+        "resourceType": "Microsoft.Storage/storageAccounts"
+      }
+    ],
+    "counts_by_change_type": {
+      "Create": 6
+    }
+  }
+}

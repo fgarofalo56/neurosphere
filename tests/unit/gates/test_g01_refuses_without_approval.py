@@ -65,6 +65,7 @@ class FakeAz:
         self.deploy_rc = 0
         self.deploy_state = "Succeeded"
         self.kv_purge: tuple[int, str] = (0, "")
+        self.kv_purge_protected: bool | None = None
         self.resources = [
             _res(COSMOS_ID, "Microsoft.DocumentDB/databaseAccounts", "nscosmos1"),
             _res(KV_ID, "Microsoft.KeyVault/vaults", "nskv1"),
@@ -123,6 +124,11 @@ class FakeAz:
             return r(0, "", "")
         if a[:2] == ["keyvault", "purge"]:
             return r(self.kv_purge[0], "", self.kv_purge[1])
+        if a[:2] == ["keyvault", "show-deleted"]:
+            if self.kv_purge_protected is None:
+                return r(1, "", "not found")
+            props = {"purgeProtectionEnabled": self.kv_purge_protected}
+            return r(0, json.dumps({"properties": props}), "")
         if a[:3] == ["apim", "deletedservice", "purge"]:
             return r(0, "", "")
         return r(1, "", f"unexpected call {a}")
@@ -245,10 +251,15 @@ def test_happy_path_evidence_and_teardown_order(tmp_path: Path) -> None:
     ):
         assert key in ev
     assert ev["result"] == "PASS" and ev["gate"] == "G01" and ev["cloud"] == "commercial"
-    assert ev["subscription_id"] == SUB
+    token = _load().subscription_token(SUB)
+
+    def red(rid: str) -> str:
+        return rid.replace(SUB, token)
+
+    assert ev["subscription_id"] == token
     assert ev["what_if"]["counts_by_change_type"] == {"Create": 3}
-    assert ev["deployment"]["output_resource_ids"] == {"keyVaultId": KV_ID}
-    assert {r["id"] for r in ev["resources_created"]} == {COSMOS_ID, KV_ID, APIM_ID}
+    assert ev["deployment"]["output_resource_ids"] == {"keyVaultId": red(KV_ID)}
+    assert {r["id"] for r in ev["resources_created"]} == {red(COSMOS_ID), red(KV_ID), red(APIM_ID)}
     assert ev["health"]["ok"] is True
     assert path.with_suffix(".md").exists()
 
@@ -367,3 +378,39 @@ def test_keyvault_purge_protection_is_recorded_not_hidden(tmp_path: Path) -> Non
     assert _run(fake, tmp_path) == 0
     _, ev = _evidence(tmp_path)
     assert "blocked_by_purge_protection" in ev["teardown"]["purge"].values()
+
+
+def test_keyvault_method_not_allowed_counts_as_purge_protection_when_vault_says_so(
+    tmp_path: Path,
+) -> None:
+    # Real Azure wording (2026-10-17) never mentions purge protection.
+    fake = FakeAz()
+    fake.kv_purge = (1, "(MethodNotAllowed) Operation 'DeletedVaultPurge' is not allowed.")
+    fake.kv_purge_protected = True
+    assert _run(fake, tmp_path) == 0
+    _, ev = _evidence(tmp_path)
+    assert ev["result"] == "PASS"
+    assert "blocked_by_purge_protection" in ev["teardown"]["purge"].values()
+
+
+def test_evidence_never_contains_a_subscription_id(tmp_path: Path) -> None:
+    # The repository is public: subscription ids are tokenised in the JSON and the Markdown.
+    fake = FakeAz()
+    assert _run(fake, tmp_path) == 0
+    path, ev = _evidence(tmp_path)
+    token = _load().subscription_token(SUB)
+    for text in (path.read_text(encoding="utf-8"), path.with_suffix(".md").read_text("utf-8")):
+        assert SUB.lower() not in text.lower()
+        assert token in text
+    assert ev["subscription_id"] == token
+    assert any("subscription ids replaced" in note for note in ev["redactions"])
+
+
+def test_keyvault_purge_failure_without_protection_still_fails(tmp_path: Path) -> None:
+    fake = FakeAz()
+    fake.kv_purge = (1, "(MethodNotAllowed) Operation 'DeletedVaultPurge' is not allowed.")
+    fake.kv_purge_protected = False
+    assert _run(fake, tmp_path) == 1
+    _, ev = _evidence(tmp_path)
+    assert ev["result"] == "FAIL"
+    assert "failed" in ev["teardown"]["purge"].values()

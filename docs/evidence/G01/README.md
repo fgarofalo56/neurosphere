@@ -28,6 +28,10 @@ Use `--reuse-apim <arm-id>` instead of the publisher flags to reuse an existing 
 modified or purged). Without it, APIM Developer is created (~30-45 minutes) and purged at
 teardown. `--keep` skips teardown. `--location` defaults to the Commercial bicepparam value.
 
+The repository is public, so the script replaces every subscription id in the evidence (bare and
+inside ARM ids) with `<subscription:sha256-8>` and lists the rule under `redactions`. Runs against
+the same subscription share a token.
+
 This deploys billable Azure resources. Key Vault is created with purge protection, so its purge
 at teardown is expected to be blocked and is recorded as `blocked_by_purge_protection`.
 
