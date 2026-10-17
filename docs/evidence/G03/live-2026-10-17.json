@@ -1,0 +1,395 @@
+{
+  "all_bounded_results_correct": true,
+  "cells": [
+    {
+      "container": "skewed-flat-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2321.198,
+        "mean_ms": 1548.845,
+        "min_ms": 1309.899,
+        "n": 30,
+        "p50_ms": 1518.604,
+        "p95_ms": 1704.739
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "request_charge": {
+        "max": 40.04,
+        "mean": 39.415
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "flat",
+      "workload": "skewed"
+    },
+    {
+      "container": "skewed-hier2-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 1615.218,
+        "mean_ms": 1506.742,
+        "min_ms": 1347.109,
+        "n": 30,
+        "p50_ms": 1512.476,
+        "p95_ms": 1609.104
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "request_charge": {
+        "max": 41.47,
+        "mean": 40.823
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier2",
+      "workload": "skewed"
+    },
+    {
+      "container": "skewed-hier3-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 38.1,
+        "mean_nodes_returned": 35.3,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 557,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 1649.965,
+        "mean_ms": 1479.098,
+        "min_ms": 1264.292,
+        "n": 30,
+        "p50_ms": 1482.0,
+        "p95_ms": 1629.81
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 12.8,
+      "request_charge": {
+        "max": 42.77,
+        "mean": 42.103
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier3",
+      "workload": "skewed"
+    },
+    {
+      "container": "high-degree-flat-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 75.7,
+        "mean_nodes_returned": 66.07,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2129.462,
+        "mean_ms": 2058.776,
+        "min_ms": 2000.553,
+        "n": 30,
+        "p50_ms": 2062.549,
+        "p95_ms": 2121.364
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 17.9,
+      "request_charge": {
+        "max": 62.29,
+        "mean": 55.822
+      },
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "flat",
+      "workload": "high_degree"
+    },
+    {
+      "container": "high-degree-hier2-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 71.1,
+        "mean_nodes_returned": 64.23,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2158.932,
+        "mean_ms": 2069.812,
+        "min_ms": 2004.106,
+        "n": 30,
+        "p50_ms": 2066.347,
+        "p95_ms": 2134.68
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 16.37,
+      "request_charge": {
+        "max": 58.15,
+        "mean": 52.94
+      },
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "hier2",
+      "workload": "high_degree"
+    },
+    {
+      "container": "high-degree-hier3-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 73.7,
+        "mean_nodes_returned": 67.43,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 792,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 2120.722,
+        "mean_ms": 2052.763,
+        "min_ms": 2001.264,
+        "n": 30,
+        "p50_ms": 2044.934,
+        "p95_ms": 2117.572
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 17.23,
+      "request_charge": {
+        "max": 63.29,
+        "mean": 57.478
+      },
+      "truncation_counts": {
+        "fanout": 30,
+        "timeout": 30
+      },
+      "variant": "hier3",
+      "workload": "high_degree"
+    },
+    {
+      "container": "cross-domain-flat-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 1682.37,
+        "mean_ms": 1514.29,
+        "min_ms": 1342.365,
+        "n": 30,
+        "p50_ms": 1501.291,
+        "p95_ms": 1642.659
+      },
+      "partition_paths": [
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "request_charge": {
+        "max": 40.04,
+        "mean": 39.11
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "flat",
+      "workload": "cross_domain"
+    },
+    {
+      "container": "cross-domain-hier2-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 1677.337,
+        "mean_ms": 1524.29,
+        "min_ms": 1315.282,
+        "n": 30,
+        "p50_ms": 1526.765,
+        "p95_ms": 1630.357
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "request_charge": {
+        "max": 41.47,
+        "mean": 40.507
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier2",
+      "workload": "cross_domain"
+    },
+    {
+      "container": "cross-domain-hier3-20261017193504-d4c9a4",
+      "correctness": {
+        "checked": 30,
+        "mean_edges_returned": 37.9,
+        "mean_nodes_returned": 35.8,
+        "passed": true,
+        "violations": []
+      },
+      "documents": {
+        "edges": 595,
+        "nodes": 200
+      },
+      "latency": {
+        "max_ms": 1623.811,
+        "mean_ms": 1486.547,
+        "min_ms": 1322.845,
+        "n": 30,
+        "p50_ms": 1488.56,
+        "p95_ms": 1583.084
+      },
+      "partition_paths": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ],
+      "queries_per_traversal_mean": 12.7,
+      "request_charge": {
+        "max": 42.77,
+        "mean": 41.777
+      },
+      "truncation_counts": {
+        "depth": 30
+      },
+      "variant": "hier3",
+      "workload": "cross_domain"
+    }
+  ],
+  "disclaimer": "Latency here is measured from the client recorded under Live account, so it includes that client's network path to the account. Request charge is as reported by the service for this run. No cost, SLA, throughput or performance guarantee is made or implied, and nothing here covers Azure Government.",
+  "environment": {
+    "azure_cosmos_sdk_version": "4.17.1",
+    "credential_mode": "default_azure_credential",
+    "database": "g03-bench-20261017193504-d4c9a4",
+    "endpoint": "https://nsg03live449fcc.documents.azure.com:443/",
+    "live_account": {
+      "operator": "Frank Garofalo (approved in session 2026-10-17); client: operator workstation over P2S VPN, latency includes WAN RTT",
+      "region": "centralus",
+      "sku": "serverless (capacity mode Serverless, local auth disabled, public network access disabled by landing-zone policy, private endpoint in hub VNet, Session consistency, single region, no zone redundancy)",
+      "source": "operator-supplied via environment/flags (not read from the management API)"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "run_id": "20261017193504-d4c9a4",
+    "started_utc": "2026-10-17T19:35:39+00:00"
+  },
+  "gate": "G03",
+  "generated_utc": "2026-10-17T19:47:37+00:00",
+  "label": "live, Commercial Cosmos DB account (operator-approved)",
+  "mode": "live",
+  "p95_ms_by_workload": {
+    "cross_domain": 1642.659,
+    "high_degree": 2121.364,
+    "skewed": 1704.739
+  },
+  "parameters": {
+    "budget": {
+      "limit": 25,
+      "max_depth": 3,
+      "max_edges": 2000,
+      "max_nodes": 500,
+      "timeout_ms": 2000
+    },
+    "charge_capture": true,
+    "domains": 8,
+    "edges_per_node": 3,
+    "hub_degree": 200,
+    "iterations": 30,
+    "nodes": 200,
+    "seed": 42,
+    "skew_factor": 0.8,
+    "variants": {
+      "flat": [
+        "/domain"
+      ],
+      "hier2": [
+        "/tenant",
+        "/domain"
+      ],
+      "hier3": [
+        "/tenant",
+        "/domain",
+        "/shard"
+      ]
+    },
+    "warmup": 2,
+    "workloads": [
+      "skewed",
+      "high_degree",
+      "cross_domain"
+    ]
+  }
+}

@@ -33,7 +33,9 @@ All notable changes to this project are documented here. The format follows
   and time budgets and presented lineage; curation decisions and locks with a review queue;
   outbox projection worker producing inferred INVOKES/USES_MODEL edges; catalog API (CRUD,
   search, lineage, import/export, recertification, stale-agent reconcile); Azure AI Search
-  `AuthorizedSearch` with a server-side scope filter. Live G03 benchmark still open.
+  `AuthorizedSearch` with a server-side scope filter. G03 live benchmark run on a private,
+  Entra-only Commercial account (the harness now provisions through the control plane);
+  G03 narrowed for Commercial.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
