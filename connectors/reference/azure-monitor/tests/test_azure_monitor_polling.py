@@ -272,7 +272,8 @@ def test_government_requires_opt_in_and_app_insights_is_disabled() -> None:
     assert gov.app_insights_base is None
     assert gov.verified is False
     assert set(ENDPOINTS) == set(CloudName)
-    assert endpoints_for(CloudName.COMMERCIAL).log_analytics_base.endswith("loganalytics.azure.com")
+    commercial = endpoints_for(CloudName.COMMERCIAL)
+    assert commercial.log_analytics_base == "https://api.loganalytics.azure.com"
 
 
 @respx.mock
