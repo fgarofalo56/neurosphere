@@ -266,15 +266,26 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 4 | merged | worktree-agent-a6fa15b0bbbb0ab9c | sonnet | ruff/pyright clean; deployment tests 39 passed (re-run on branch and post-merge); full suite 3829 passed on branch; e4f224f, merge f58a522. NS-created inferred from tag `neurosphere:created-by` for planning only (register is the uninstall authority); scan passed in request body; no audit hook | 2026-10-16 |
 | 5 | merged | worktree-agent-a9c807ad5f8a1e02e | sonnet | ruff/pyright clean; core deploy 51 passed; integration tests/integration/deploy 3 passed vs compose Cosmos emulator (re-run on branch and post-merge); full suite 3860 passed on branch; 409e5b4, merge d7c9d5f. Audit = ConsentAuditSink protocol stub; ArmDeleter real removal never run live (OPEN) | 2026-10-16 |
 | 6 | merged | worktree-agent-afe0a02f739901bc8 | sonnet | ruff/pyright clean; deploy tests 20 passed, core suite 653 passed (re-run on branch); 675e3a3, merge a9f7ee2. Gov Fabric token scope undocumented on Learn: required configured value, fails closed | 2026-10-16 |
-| 7 | verifying | worktree-agent-a68259d38be07a565 | sonnet | script built: ruff/pyright clean, tests/unit/gates 42 passed (branch + post-merge); refusal without NS_LIVE_APPROVED verified (exit 2, no az call); be119c4, merge 2f5d890. Live run pending operator go-ahead (subscription/RG); KV purge protection blocks purge (recorded as warning) | 2026-10-16 |
+| 7 | merged | worktree-agent-a68259d38be07a565 | sonnet | script be119c4, merge 2f5d890; refusal without NS_LIVE_APPROVED verified (exit 2, no az call). Live (operator-approved, Limitlessdata DMLZ, reused Loom APIM): run 1 eastus2 2026-10-16 refused (MSYS path rewrite), run 2 eastus2 AI Search InsufficientResourcesAvailable then teardown crashed (plain python, no neurosphere_core; RG deleted by hand), fixed 68eb575; run 3 centralus deploy/health/teardown OK but FAIL from KV purge-protection misclassification; fixed + subscription redaction 974ad2c; run 4 centralus 2026-10-17 PASS (docs/evidence/G01/2026-10-17-060807-commercial-deploy-smoke.json). tests/unit/gates 46 passed | 2026-10-17 |
 | 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
 | 9 | merged | worktree-agent-a8afc23ef8c652947 | sonnet | ruff/pyright clean; api suite 312 passed (branch + post-merge); full suite 3896 passed on branch; opt-in NS_SCAN_ENABLED, DefaultAzureCredential excluding env secrets outside local; 08a246b, merge 0982ed0 | 2026-10-16 |
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-17
+- Merged commits: items 2 ce671f5, 6 a9f7ee2, 1 3ad6ac0, 3 00c1259, 4 f58a522, 8 c5573b9, 5 d7c9d5f, 7 2f5d890, 9 0982ed0, review rework 9935cae; fix-forwards 9b940ab (test package rename), 68eb575 and 974ad2c (G01 script).
 - Deviations from blueprint and why:
-- Descoped items:
+  - Item 8 (API and CI wiring) added at plan approval: routers.py, openapi.json and ci.yml were owned by no item.
+  - Item 9 (scan production bootstrap, opt-in `NS_SCAN_ENABLED`) added at operator decision: without it the scan route was 503 in every real deployment.
+  - API deploy tests live in `services/api/tests/deployment/` (not `deploy/`): the name collided with `packages/core/tests/deploy` under rootdir import mode.
+  - Helm and App Service image references are duplicated values held equal by a test; Helm cannot read files outside the chart.
+  - Scan uses an httpx Resource Graph reader (no ARG SDK in the dependency set); the planner takes the scan result in the request body (#36).
+  - The review blocker (uninstall resource-group delete cascading to unregistered live resources) was fixed by a mandatory live-inventory check before any RG delete.
+  - G01 evidence tokenises subscription ids (`<subscription:sha256-8>`) because the repository is public.
+- Descoped items: none.
 - Live items run or OPEN (G01, G02, G12):
-- Follow-ups:
+  - G01 Commercial: evidenced 2026-10-17, operator-approved run in a Limitlessdata subscription, centralus, reused APIM, PASS (deploy, health on 6 resources, register-guarded teardown, Key Vault purge blocked by purge protection as designed). Earlier runs are recorded on the board; AI Search standard was out of capacity in eastus2 on 2026-10-16.
+  - G01 Government (Fabric, Synapse, Databricks, Search profiles) and G02: OPEN (PRP-20; no Government subscription). Government Fabric token scope unverified (#39).
+  - Uninstall real removal (ArmDeleter + live inventory) never run live: OPEN (#40).
+  - G12 emulator/mock limits: mocked Resource Graph cannot reproduce real subscription visibility, quota or capacity APIs (eastus2 Search capacity was only found live); the Cosmos emulator used by the register integration test has no Entra RBAC or RU accounting; Fabric adapter is stub-tested only.
+- Follow-ups: #35 tag-trusted consent skip, #36 scan in request body, #37 audit events for scan/plan/consent, #38 uninstall api-version table, #39 Government Fabric token scope, #40 live uninstall exercise, #41 record G01 findings in RESEARCH-AND-GATES, #42 frontend container shape (PRP-13).
