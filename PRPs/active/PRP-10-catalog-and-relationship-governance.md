@@ -1,6 +1,8 @@
 ---
 name: prp-10-catalog-and-relationship-governance
-status: backlog
+status: active
+started: 2026-10-17
+branch: prp-10-catalog
 review: required
 created: 2026-10-08
 model: sonnet
@@ -230,6 +232,21 @@ NS_LIVE_APPROVED=1 python scripts/gates/g03_live.py    # operator-approved, requ
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint gap: items 2, 3 and 4 share the catalog protocols, the lock/override rules and the review-queue interface, and router registration lives in a shared file no item owned. Waves: 0 → (1, 4, 6) → (2, 3) → 5. Item 7 deferred by the operator; the PR is held until its evidence lands (D9).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | merged | worktree-agent-afa6790ef3378ec5e | sonnet | 1357ad9; ruff/format/pyright clean; 46 passed (re-run on branch); Snyk Code 0; review APPROVE (5 non-blocking: post-lock-expiry stale confidence/validity, resolved ReviewItem id swallows later conflicts, expired lock set_confidence carries into new lock, observation id ignores confidence, no domain-level edge list); merge 0b38c7d, catalog+search 116 passed + pyright clean post-merge | 2026-10-17 |
+| 1 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
+| 2 | todo | | sonnet | | 2026-10-17 |
+| 3 | todo | | sonnet | | 2026-10-17 |
+| 4 | in-progress | (worktree) | sonnet | dispatched | 2026-10-17 |
+| 5 | todo | | sonnet | | 2026-10-17 |
+| 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
+| 7 | todo | | operator | deferred by operator; G03 OPEN | 2026-10-17 |
 
 ## Completion note (filled at ship)
 - Date:
