@@ -235,7 +235,7 @@ NS_LIVE_APPROVED=1 python scripts/gates/g03_live.py    # operator-approved, requ
 
 ## Execution state
 
-Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint gap: items 2, 3 and 4 share the catalog protocols, the lock/override rules and the review-queue interface, and router registration lives in a shared file no item owned. Waves: 0 → (1, 4, 6) → (2, 3) → 5. Item 7 deferred by the operator; the PR is held until its evidence lands (D9).
+Draft PR #52 open, CI green (2026-10-17), held unmerged until item 7 (live G03) evidence lands; follow-ups #53-#56. Plan approved 2026-10-17. Item 0 was added at plan approval to close a blueprint gap: items 2, 3 and 4 share the catalog protocols, the lock/override rules and the review-queue interface, and router registration lives in a shared file no item owned. Waves: 0 → (1, 4, 6) → (2, 3) → 5. Item 7 deferred by the operator; the PR is held until its evidence lands (D9).
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
