@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from .model import VARIANTS, Budget, TraversalResult, latency_stats
+from .provision import Provisioner
 from .store import CREDENTIAL_MODES, GraphStore, SdkGraphStore, sdk_version
 from .traversal import bounded_traverse, check_correctness
 from .workloads import WORKLOADS, Dataset, generate
@@ -95,6 +96,7 @@ def run_benchmark(
     load_workers: int = 16,
     emulator: dict[str, str] | None = None,
     store: GraphStore | None = None,
+    provisioner: Provisioner | None = None,
     clock: Callable[[], float] = time.perf_counter,
 ) -> BenchmarkResult:
     """Run the G03 benchmark and return a result object.
@@ -102,6 +104,8 @@ def run_benchmark(
     ``credential_mode``: ``emulator_key`` (emulator, http, no TLS verify, no RU) or
     ``default_azure_credential`` (live; RU captured when ``measure_request_charge`` is true,
     which defaults to true for live). ``store`` injects a pre-built GraphStore (tests).
+    ``provisioner`` (live only) creates/deletes the database and containers through the control
+    plane because Entra data-plane tokens cannot.
     Fresh database and containers are created every call; none is ever reused.
     """
     if credential_mode not in CREDENTIAL_MODES:
@@ -117,7 +121,12 @@ def run_benchmark(
     own_store = store is None
     if store is None:
         store = SdkGraphStore(
-            endpoint, credential_mode, database, key=key, measure_request_charge=measure
+            endpoint,
+            credential_mode,
+            database,
+            key=key,
+            measure_request_charge=measure,
+            provisioner=provisioner,
         )
     environment: dict[str, Any] = {
         "run_id": run_id,
