@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "name": "ts-wif-demo",
+  "version": "2.0.0-rc.1",
+  "supported_clouds": [
+    "government"
+  ],
+  "capabilities": [
+    "cost_ingest",
+    "catalog_discovery"
+  ],
+  "scopes": [],
+  "granularity": {
+    "time_grain": "day",
+    "subject_level": "tenant"
+  },
+  "freshness": {
+    "typical_delay_ms": null,
+    "max_delay_ms": 86400000
+  },
+  "rate_limits": [],
+  "auth_mode": "workload_identity_federation",
+  "credential_refs": [],
+  "advisory": true,
+  "write_support": {
+    "supported": false,
+    "actions": []
+  }
+}

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "lib": ["ES2023"],
-    "types": [],
+    "types": ["node"],
+    "resolveJsonModule": true,
     "jsx": "preserve"
   },
   "include": ["src", "tests"]
