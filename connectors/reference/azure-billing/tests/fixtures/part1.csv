@@ -1,0 +1,3 @@
+Date,SubscriptionId,ResourceId,MeterId,MeterName,BillingCurrencyCode,CostInBillingCurrency
+2026-09-03,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-in,Input Tokens,USD,0.00
+2026-09-03,00000000-0000-0000-0000-000000000001,/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/synthetic-aoai,meter-out,Output Tokens,USD,not-a-number

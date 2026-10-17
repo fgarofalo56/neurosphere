@@ -5,8 +5,8 @@ description = "Reference Foundry discovery connector: agents, deployments and pe
 requires-python = ">=3.12"
 dependencies = [
   "neurosphere-connector",
-  "httpx>=0.28,<0.29",
   "azure-identity>=1.26,<2",
+  "httpx>=0.28,<0.29",
 ]
 
 [tool.uv.sources]
