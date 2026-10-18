@@ -35,7 +35,8 @@ async def test_scope_is_a_required_keyword() -> None:
     with pytest.raises(TypeError):
         await adapter.aggregate(make_request())  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        await adapter.aggregate(make_request(), make_scope())  # type: ignore[misc]
+        positional = (make_request(), make_scope())
+        await adapter.aggregate(*positional)  # type: ignore[misc]
 
 
 async def test_non_scope_is_refused() -> None:

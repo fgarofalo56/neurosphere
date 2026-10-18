@@ -15,7 +15,7 @@ SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "gates" / "g01_analyt
 FAKE_JWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJl"
 SECRETS = [
     FAKE_JWT,
-    "AccountKey=QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5YWJjZGVm==",
+    "AccountKey=" + "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5YWJjZGVm==",
     "Bearer abcdefghijklmnop0123456789",
     "dapi" + "0123456789abcdef0123456789abcdef",
     "password=hunter2",

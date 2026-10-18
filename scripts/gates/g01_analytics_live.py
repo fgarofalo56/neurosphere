@@ -672,11 +672,15 @@ async def run_databricks(
     )
     result = AdapterResult(status="FAIL", reason="not completed", run_schema=schema)
     result.caveats = [
-        "Statement Execution API reports no rows scanned or cost: rows_scanned is the returned "
-        "row count and cost_units is 0, so the rows/cost budgets are weak on the live path "
-        "(time budget and returned-row limit apply in full).",
-        "Statement Execution API shape and limits are unverified until this live run; the Entra "
-        "resource id is verified on Learn (2026-10-18).",
+        (
+            "Statement Execution API reports no rows scanned or cost: rows_scanned is the "
+            "returned row count and cost_units is 0, so the rows/cost budgets are weak on the "
+            "live path (time budget and returned-row limit apply in full)."
+        ),
+        (
+            "Statement Execution API shape and limits are unverified until this live run; the "
+            "Entra resource id is verified on Learn (2026-10-18)."
+        ),
     ]
     try:
         adapter = create_adapter(

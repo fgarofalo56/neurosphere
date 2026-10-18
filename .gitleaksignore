@@ -1,0 +1,3 @@
+# Synthetic credential-shaped test fixtures (scrubber tests), verified non-secret.
+# Fingerprint-exact: one commit, file, rule and line. Do not add path or rule wildcards.
+eb7998d77da18540b72ce82e75ad18ffd90436e3:tests/unit/gates/test_g01_analytics_evidence.py:generic-api-key:18
