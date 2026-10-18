@@ -1,0 +1,121 @@
+"""Analytics contracts and the shared spine every adapter builds on (PRP-11, ADR-0007)."""
+
+from neurosphere_core.analytics.base.compare import (
+    QUANTILE_ABS_TOL,
+    QUANTILE_REL_TOL,
+    Mismatch,
+    compare_results,
+)
+from neurosphere_core.analytics.base.dialect import (
+    AnsiDialect,
+    Dialect,
+    Statement,
+    render_statement,
+)
+from neurosphere_core.analytics.base.enforcement import (
+    RETRY_AFTER_SECONDS,
+    BudgetBreach,
+    ExecutionLimits,
+    ExecutionOutcome,
+    SqlExecutor,
+    guarded,
+    run_budgeted,
+)
+from neurosphere_core.analytics.base.models import (
+    AggregateRequest,
+    AggregateResult,
+    AggregateRow,
+    Aggregation,
+    AnalyticsBudget,
+    Cloud,
+    CoUsageCandidate,
+    CoUsageEntity,
+    CoUsageRequest,
+    CoUsageResult,
+    Dimension,
+    ExecutionStats,
+    FilterClause,
+    FilterOp,
+    Granularity,
+    Metric,
+    TimeRange,
+)
+from neurosphere_core.analytics.base.plan import QueryPlan, build_plan, check_scope
+from neurosphere_core.analytics.base.protocols import (
+    AnalyticsAdapter,
+    RecommendationCompute,
+    TelemetryAnalytics,
+)
+from neurosphere_core.analytics.base.records import (
+    AnalyticsRecord,
+    record_from_observation,
+    record_from_telemetry_event,
+)
+from neurosphere_core.analytics.base.registry import (
+    BackendStatus,
+    create_adapter,
+    list_backends,
+)
+from neurosphere_core.analytics.base.sql_adapter import SqlAnalytics
+from neurosphere_core.analytics.base.stub import (
+    AggregateShim,
+    FunctionShim,
+    RewriteRule,
+    Shim,
+    StubSqlEndpoint,
+    standard_shims,
+)
+
+__all__ = [
+    "QUANTILE_ABS_TOL",
+    "QUANTILE_REL_TOL",
+    "RETRY_AFTER_SECONDS",
+    "AggregateRequest",
+    "AggregateResult",
+    "AggregateRow",
+    "AggregateShim",
+    "Aggregation",
+    "AnalyticsAdapter",
+    "AnalyticsBudget",
+    "AnalyticsRecord",
+    "AnsiDialect",
+    "BackendStatus",
+    "BudgetBreach",
+    "Cloud",
+    "CoUsageCandidate",
+    "CoUsageEntity",
+    "CoUsageRequest",
+    "CoUsageResult",
+    "Dialect",
+    "Dimension",
+    "ExecutionLimits",
+    "ExecutionOutcome",
+    "ExecutionStats",
+    "FilterClause",
+    "FilterOp",
+    "FunctionShim",
+    "Granularity",
+    "Metric",
+    "Mismatch",
+    "QueryPlan",
+    "RecommendationCompute",
+    "RewriteRule",
+    "Shim",
+    "SqlAnalytics",
+    "SqlExecutor",
+    "Statement",
+    "StubSqlEndpoint",
+    "TelemetryAnalytics",
+    "TimeRange",
+    "build_plan",
+    "check_scope",
+    "compare_results",
+    "create_adapter",
+    "guarded",
+    "list_backends",
+    "record_from_observation",
+    "record_from_telemetry_event",
+    "render_statement",
+    "run_budgeted",
+    "standard_shims",
+]
