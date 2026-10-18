@@ -1,7 +1,9 @@
 ---
 name: prp-11-analytics-adapters
-status: active
+status: shipped
 started: 2026-10-18
+shipped: 2026-10-18
+pr: 63
 branch: prp-11-analytics-adapters
 review: required
 created: 2026-10-08
@@ -233,9 +235,9 @@ Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at ap
 | 6 | merged | worktree-agent-ad24a3e9f2b364ed4 | sonnet | eb7998d; ruff/format/pyright clean; tests/unit/gates 118 passed (re-run on branch); unapproved run prints REFUSED, exit 2; Databricks Entra resource id verified on Learn (note fixed c4ed6db); review APPROVE (non-blocking: setup/teardown run_sql has no time budget, workload imported from test modules incl. private _cases, CREATE SCHEMA IF NOT EXISTS + DROP CASCADE on reused run id, 256-param/INLINE limits unverified); merge 52a0898. Live runs: Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision; Fabric/Synapse also need an approved TDS driver) | 2026-10-18 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Live items run or OPEN per adapter (Fabric, Synapse, Databricks; G01, G12):
-- Follow-ups:
+- Date: 2026-10-18
+- Merged commits: PR #63 merged as 05c7e89 (CI 16/16 green after two fix commits: 5e05ce4 gitleaks fixture split + fingerprint-exact `.gitleaksignore` for the already-pushed synthetic fixture in eb7998d, and CodeQL string-concat; 2cd101a CodeQL wrong-arguments). Item merges into the integration branch: 1 fcb6752, 2 8431f6d, 3 00591e5, 4 de0d79f, 5 b1fd1fd, 6 52a0898. Orchestrator commits: 888ddf4, cfc631d, c4ed6db (Learn verification notes), 7e6c28a (ADR-0007 amendment, RESEARCH-AND-GATES G01/G12). `verify-gates -Mode full` on the integration branch: lint, typecheck, tests (4813 passed, 65 deselected), build all PASS.
+- Deviations from blueprint and why: (1) budget breach raises `rate_limited` rather than ADR-0007's "truncation marker"; the PRP is authority, ADR amended. (2) `AnalyticsBudget` wraps the PRP-01 `Budget` and adds required `max_rows_scanned` and `max_cost_units`, because the contract lacks them. (3) `tests/integration/analytics/` is not marked `integration`: CI runs only the default `uv run pytest -q`, which deselects `integration`, and the suite is in-process, so the marker would have meant it never ran in CI. Gate command is `uv run pytest -q tests/integration/analytics`. (4) Synapse refuses approximate quantiles in both modes (`capability_unavailable`): Synapse has neither `APPROX_PERCENTILE_CONT` nor an aggregate `PERCENTILE_CONT` (Learn, 2026-10-18). (5) Commercial per-region matrix rows (`commercial_regions.yaml`) make listed Commercial regions `supported` with GA unverified, superseding the plan's "Commercial all disabled" assumption. (6) Stub SQL endpoint is stdlib sqlite3 with declared dialect shims, so no new dependencies; migrations use a separate executor protocol because the stub is SELECT-only. (7) The live script imports its workload from the test package (follow-up #60).
+- Descoped items: none.
+- Live items run or OPEN per adapter (Fabric, Synapse, Databricks; G01, G12): **none ran**. Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision 2026-10-18). Fabric and Synapse also need an approved TDS driver (ADR-0002 row) before they can run at all. Government analytics stays OPEN (no Government subscription; availability is not authorization). G12 stub-vs-live deltas are OPEN; the gaps are listed in each adapter's `G12_PARITY_GAPS` and in `docs/RESEARCH-AND-GATES.md`. The Government Fabric SQL suffix `.fabric.microsoft.us` is inferred and unverified. Snyk Code was not run (CLI unauthenticated in the session).
+- Follow-ups: #59 Synapse windowed quantile path; #60 live-gate hardening (setup and teardown timeouts, workload out of the test package, schema reuse); #61 equivalence and gating suite tightening; #62 adapter hardening nits.

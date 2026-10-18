@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-11-analytics-adapters](active/PRP-11-analytics-adapters.md) |  | 6/6 (100%) | merged 6 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -37,6 +35,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-10-18 | #63 |
 | [prp-08-deployment-intelligence-and-iac](shipped/PRP-08-deployment-intelligence-and-iac.md) | 2026-10-17 | #43 |
 | [prp-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-10-17 | #45 |
 | [prp-10-catalog-and-relationship-governance](shipped/PRP-10-catalog-and-relationship-governance.md) | 2026-10-17 | #52 |
