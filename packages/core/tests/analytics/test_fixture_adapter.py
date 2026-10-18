@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from decimal import Decimal
 
 import pytest
@@ -34,9 +35,12 @@ async def test_scope_is_a_required_keyword() -> None:
     adapter = fixture_adapter()
     with pytest.raises(TypeError):
         await adapter.aggregate(make_request())  # type: ignore[call-arg]
+    # Scope must be keyword-only: binding it positionally is rejected by the signature itself.
     with pytest.raises(TypeError):
-        positional = (make_request(), make_scope())
-        await adapter.aggregate(*positional)  # type: ignore[misc]
+        inspect.signature(adapter.aggregate).bind(make_request(), make_scope())
+    assert inspect.signature(adapter.aggregate).parameters["scope"].kind is (
+        inspect.Parameter.KEYWORD_ONLY
+    )
 
 
 async def test_non_scope_is_refused() -> None:
