@@ -49,9 +49,10 @@ like a credential.
 
 Databricks API shape (docs: https://learn.microsoft.com/azure/databricks/dev-tools/sql-execution-tutorial
 and https://learn.microsoft.com/azure/databricks/dev-tools/auth/ ; the Entra resource id
-2ff814a6-3304-4ab8-85cb-cd0e6f879c1d is the documented Azure Databricks application): UNVERIFIED
-against Learn in this session (the microsoft-learn tools were not available to the implementer).
-The live run is what verifies it.
+2ff814a6-3304-4ab8-85cb-cd0e6f879c1d is the Azure Databricks application, scope
+``<id>/.default``, the same across Azure environments: verified on Learn 2026-10-18,
+https://learn.microsoft.com/azure/databricks/dev-tools/auth/aad-token-manual). The Statement
+Execution API request/response shape and its limits are not verified; the live run verifies them.
 """
 
 from __future__ import annotations
@@ -94,7 +95,7 @@ DRIVER_REASON = (
     "needs mssql-python or ODBC Driver 18, which requires an ADR-0002 stack-pin row and "
     "operator approval. No connection was attempted."
 )
-# Azure Databricks Entra application (resource) id; UNVERIFIED against Learn this session.
+# Azure Databricks Entra application (resource) id; verified on Learn 2026-10-18 (aad-token-manual).
 DATABRICKS_RESOURCE_ID = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
 DATABRICKS_SCOPE = f"{DATABRICKS_RESOURCE_ID}/.default"
 STATEMENTS_PATH = "/api/2.0/sql/statements"
@@ -674,7 +675,8 @@ async def run_databricks(
         "Statement Execution API reports no rows scanned or cost: rows_scanned is the returned "
         "row count and cost_units is 0, so the rows/cost budgets are weak on the live path "
         "(time budget and returned-row limit apply in full).",
-        "Databricks API shape and Entra resource id are unverified against Learn this session.",
+        "Statement Execution API shape and limits are unverified until this live run; the Entra "
+        "resource id is verified on Learn (2026-10-18).",
     ]
     try:
         adapter = create_adapter(

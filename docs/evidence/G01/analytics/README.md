@@ -77,9 +77,9 @@ Exit code: `1` if any adapter FAILed; else `3` if any is OPEN; else `0`. `2` mea
 - The Statement Execution API reports no rows scanned or cost, so on the live path the rows and
   cost budgets are weak (`rows_scanned` is the returned row count, `cost_units` is 0). The time
   budget and returned-row limit apply in full; a timeout cancels the server-side statement.
-- The Databricks API shape and the Entra resource id (`2ff814a6-3304-4ab8-85cb-cd0e6f879c1d`) were
-  not verified against Microsoft Learn when the script was written. The first live run verifies
-  them.
+- The Entra resource id (`2ff814a6-3304-4ab8-85cb-cd0e6f879c1d`, scope `<id>/.default`) is
+  verified on Microsoft Learn (2026-10-18). The Statement Execution API shape and its limits
+  (parameter count, inline result size) are not; the first live run verifies them.
 - Evidence records the SKU class and region the operator supplied. They are not read from a
   management API.
 
