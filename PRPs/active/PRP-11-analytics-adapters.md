@@ -1,6 +1,8 @@
 ---
 name: prp-11-analytics-adapters
-status: backlog
+status: active
+started: 2026-10-18
+branch: prp-11-analytics-adapters
 review: required
 created: 2026-10-08
 model: sonnet
@@ -216,6 +218,19 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_analytics_live.py --adapter databric
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at approval: local `AnalyticsBudget` wraps the PRP-01 `Budget` and adds required `max_rows_scanned`/`max_cost_units`; budget exceed raises `rate_limited` (PRP wins over the ADR-0007 "truncation marker"; ADR amended at close-out); the stub SQL endpoint is stdlib sqlite3 over the shared normalized fixture with per-dialect shims recorded as G12 gaps; no new third-party dependencies; adapter-local per-cloud host suffix tables; Commercial rows are `unverified`, so Commercial profiles show every adapter disabled. Item 6 live runs: operator chose ship the script and record OPEN per adapter.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review APPROVE (non-blocking: registry drops caller executor for fixture, stub scan-counter regex needs quoting-normalising rewrite for bracket/backtick dialects, stub serialises runs via lock, fixture rows_scanned reports full table on early stop, registry ImportError name check loose); merge fcb6752, core 889 passed + pyright clean post-merge. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
+| 2 | merged | worktree-agent-afc3672c2020eac45 | sonnet | dd6a50b; ruff/format/pyright clean; analytics 106 passed (re-run on branch); Snyk Code NOT RUN (CLI unauthenticated); orchestrator verified APPROX_PERCENTILE_CONT + DATETRUNC on Learn (Fabric Warehouse + SQL analytics endpoint); review APPROVE (non-blocking: stale unverified docstrings (fixed 888ddf4), database ident regex allows spaces (not interpolated), no migration concurrency guard, Z-suffixed timestamp text vs datetime2 to check at live gate); merge 8431f6d, analytics 106 passed + pyright clean post-merge | 2026-10-18 |
+| 3 | merged | worktree-agent-a3c359d26e60029ce | sonnet | 9ad4563; ruff/format/pyright clean; analytics 121 passed (re-run on branch); Snyk Code NOT RUN; approx quantile refused (capability_unavailable) in both modes: no approx percentile aggregate in Synapse, PERCENTILE_CONT is window-only; review APPROVE (non-blocking: dedicated workspace named *-ondemand with derived host looks serverless, redundant cross-cloud loop, stub proves shape not Synapse acceptance of OPENROWSET/OPTION LABEL/collation, docstring wording); merge 00591e5, analytics 166 passed + pyright/ruff clean post-merge | 2026-10-18 |
+| 4 | merged | worktree-agent-af33b15df6c952aee | sonnet | 59d64e5; ruff/format/pyright clean; analytics 112 passed (re-run on branch); Snyk Code NOT RUN; orchestrator verified named :markers, approx_percentile, date_trunc on Learn; review APPROVE (non-blocking: migrations _IDENT uses $ not fullmatch, stale docstring (fixed cfc631d), percentile_approx default accuracy, timestamp text binding); merge de0d79f, core 1045 passed + pyright clean post-merge | 2026-10-18 |
+| 5 | merged | worktree-agent-a4961a50ac1caa476 | sonnet | e1114ef; ruff/format/pyright clean; tests/integration/analytics 172 passed (re-run on branch), collected in default suite (4745 passed, 4 skipped pnpm-dependent, implementer); NOT marked integration (deviation: CI runs only default `uv run pytest -q`, which deselects integration; suite is in-process); review APPROVE (non-blocking: gov-registry first loop never reaches its assert, commercial-host test accepts any InvalidSchemaError, dedicated not in constructibility check, narrowed-scope assertion weak, shims test only non-empty); merge b1fd1fd, analytics 388 passed post-merge | 2026-10-18 |
+| 6 | merged | worktree-agent-ad24a3e9f2b364ed4 | sonnet | eb7998d; ruff/format/pyright clean; tests/unit/gates 118 passed (re-run on branch); unapproved run prints REFUSED, exit 2; Databricks Entra resource id verified on Learn (note fixed c4ed6db); review APPROVE (non-blocking: setup/teardown run_sql has no time budget, workload imported from test modules incl. private _cases, CREATE SCHEMA IF NOT EXISTS + DROP CASCADE on reused run id, 256-param/INLINE limits unverified); merge 52a0898. Live runs: Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision; Fabric/Synapse also need an approved TDS driver) | 2026-10-18 |
 
 ## Completion note (filled at ship)
 - Date:
