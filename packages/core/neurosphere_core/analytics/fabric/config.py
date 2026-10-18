@@ -20,9 +20,11 @@ Sources (observed 2026-10-18):
   Texas: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
 * The Commercial SQL endpoint form ``<unique-id>.datawarehouse.fabric.microsoft.com`` is the
   form shown by the Fabric connectivity docs for warehouses and lakehouse SQL analytics
-  endpoints. NOT RE-VERIFIED in the session that wrote this module: the Microsoft Learn MCP
-  tools were not reachable. The alternative ``<id>.<tenant>.fabric.microsoft.com`` form is
-  deliberately NOT accepted because no source confirming it was read.
+  endpoints (https://learn.microsoft.com/fabric/data-warehouse/how-to-connect and the
+  ``*.datawarehouse.fabric.microsoft.com`` TCP 1433 row of
+  https://learn.microsoft.com/fabric/security/fabric-allow-list-urls, observed 2026-10-18).
+  Learn also shows ``<id>.<tenant>.fabric.microsoft.com`` for the SQL analytics endpoint of a
+  Fabric SQL database; that item kind is out of scope here, so the form is not accepted.
 * The Government SQL endpoint suffix ``.fabric.microsoft.us`` is INFERRED, UNVERIFIED: Learn
   documents only the REST host for GCC High. It is a G12 / G01 gap (see ``G12_PARITY_GAPS``) and
   must be confirmed against a real GCC High workspace before any Government use.

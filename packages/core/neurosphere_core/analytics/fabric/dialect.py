@@ -14,10 +14,12 @@ page (https://learn.microsoft.com/fabric/data-warehouse/tsql-surface-area) and t
 (https://learn.microsoft.com/sql/t-sql/functions/approx-percentile-cont-transact-sql,
 https://learn.microsoft.com/sql/t-sql/functions/datetrunc-transact-sql).
 
-HONESTY NOTE: the Microsoft Learn MCP tools were NOT reachable in the session that wrote this
-module, so those pages were not re-fetched and support for each function in Fabric Data
-Warehouse is UNVERIFIED here. It is listed as a G12 / G01 gap; the live gate (Item 6) is what
-confirms it. Stub tests prove the renderer and the contract, never this dialect's validity.
+Verified on Learn by the orchestrator on 2026-10-18: both ``APPROX_PERCENTILE_CONT`` and
+``DATETRUNC`` list "Warehouse in Microsoft Fabric" and "SQL analytics endpoint in Microsoft
+Fabric" under Applies to. ``APPROX_PERCENTILE_CONT`` is a KLL sketch with rank-based error up to
+1.33% at 99% confidence, ignores nulls and returns float(53). Documentation is not execution:
+the live gate (Item 6) is what confirms behaviour. Stub tests prove the renderer and the
+contract, never this dialect's validity.
 """
 
 from __future__ import annotations

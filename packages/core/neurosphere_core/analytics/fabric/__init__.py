@@ -43,9 +43,9 @@ G12_PARITY_GAPS: Final[tuple[str, ...]] = (
     "misses silently disables rows-scanned accounting",
     "quantile emulation: APPROX_PERCENTILE_CONT is emulated as an exact nearest-rank quantile; "
     "the real function interpolates and is approximate, covered only by the compare tolerance",
-    "function support in Fabric Data Warehouse (DATETRUNC, APPROX_PERCENTILE_CONT, TOP, "
-    "datetime2(6), decimal(38,12), ?-placeholders over ODBC) is unverified: Microsoft Learn was "
-    "not reachable when written",
+    "DATETRUNC and APPROX_PERCENTILE_CONT are documented for Fabric Warehouse and SQL analytics "
+    "endpoint (Learn, 2026-10-18) but not executed here; TOP, datetime2(6), decimal(38,12) and "
+    "?-placeholders over ODBC are not exercised against Fabric",
     "timestamp parameters are bound as ISO-8601 text ending in Z; whether Fabric converts that "
     "to datetime2 implicitly is unverified",
     "throttling and capacity: no Fabric capacity-unit (CU) accounting, smoothing, bursting or "
@@ -56,8 +56,8 @@ G12_PARITY_GAPS: Final[tuple[str, ...]] = (
     "Fabric DW DDL semantics (types, no enforced constraints) are unverified",
     "Government SQL endpoint suffix .fabric.microsoft.us is INFERRED, UNVERIFIED: Learn "
     "documents only the GCC High REST host highapi.fabric.microsoft.us (G01 / G12)",
-    "Commercial alternative endpoint form <id>.<tenant>.fabric.microsoft.com is not accepted "
-    "because no confirming source was read",
+    "Commercial form <id>.<tenant>.fabric.microsoft.com (SQL analytics endpoint of a Fabric SQL "
+    "database) is out of scope and not accepted",
 )
 
 

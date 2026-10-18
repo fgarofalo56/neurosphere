@@ -10,7 +10,7 @@ Adapter-local: PRP-13 later generalises the runner. Rules every migration follow
   checksum, so editing an applied migration is detected instead of silently ignored;
 * Fabric Data Warehouse types only (``varchar``, ``bigint``, ``datetime2(6)``,
   ``decimal(38,12)``); no ``nvarchar``, no enforced constraints or indexes. Support for each
-  construct in Fabric DW is unverified here (Learn MCP unreachable), a G12/G01 gap.
+  construct in Fabric DW is not exercised here (DDL runs on SQLite), a G12/G01 gap.
 
 A ``lakehouse_sql_endpoint`` item is read-only: ``apply_migrations`` refuses it before any
 statement runs. ``MigrationExecutor`` is deliberately separate from the read-only
