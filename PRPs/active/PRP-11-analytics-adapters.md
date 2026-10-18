@@ -226,9 +226,9 @@ Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at ap
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review APPROVE (non-blocking: registry drops caller executor for fixture, stub scan-counter regex needs quoting-normalising rewrite for bracket/backtick dialects, stub serialises runs via lock, fixture rows_scanned reports full table on early stop, registry ImportError name check loose); merge fcb6752, core 889 passed + pyright clean post-merge. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
-| 2 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
-| 3 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
-| 4 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
+| 2 | merged | worktree-agent-afc3672c2020eac45 | sonnet | dd6a50b; ruff/format/pyright clean; analytics 106 passed (re-run on branch); Snyk Code NOT RUN (CLI unauthenticated); orchestrator verified APPROX_PERCENTILE_CONT + DATETRUNC on Learn (Fabric Warehouse + SQL analytics endpoint); review APPROVE (non-blocking: stale unverified docstrings (fixed 888ddf4), database ident regex allows spaces (not interpolated), no migration concurrency guard, Z-suffixed timestamp text vs datetime2 to check at live gate); merge 8431f6d, analytics 106 passed + pyright clean post-merge | 2026-10-18 |
+| 3 | review | worktree-agent-a3c359d26e60029ce | sonnet | 9ad4563; ruff/format/pyright clean; analytics 121 passed (re-run on branch); Snyk Code NOT RUN; approx quantile refused (capability_unavailable) in both modes: no approx percentile aggregate in Synapse, PERCENTILE_CONT is window-only; review pending | 2026-10-18 |
+| 4 | review | worktree-agent-af33b15df6c952aee | sonnet | 59d64e5; ruff/format/pyright clean; analytics 112 passed (re-run on branch); Snyk Code NOT RUN; orchestrator verified named :markers, approx_percentile, date_trunc on Learn; review pending | 2026-10-18 |
 | 5 | todo | | sonnet | | 2026-10-18 |
 | 6 | todo | | sonnet | | 2026-10-18 |
 
