@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-11-analytics-adapters](active/PRP-11-analytics-adapters.md) |  | 0/6 (0%) | todo 6 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) |  |  | - | - | ? / ? | required |
 | [prp-12-threat-model-and-security-baseline](backlog/PRP-12-threat-model-and-security-baseline.md) |  |  | - | - | ? / ? | required |
 | [prp-13-release-versioning-and-container-publishing](backlog/PRP-13-release-versioning-and-container-publishing.md) |  |  | - | - | ? / ? | none |
 | [prp-14-dashboards-cost-latency-coverage](backlog/PRP-14-dashboards-cost-latency-coverage.md) |  |  | - | - | ? / ? | none |

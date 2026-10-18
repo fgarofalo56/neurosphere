@@ -1,6 +1,8 @@
 ---
 name: prp-11-analytics-adapters
-status: backlog
+status: active
+started: 2026-10-18
+branch: prp-11-analytics-adapters
 review: required
 created: 2026-10-08
 model: sonnet
@@ -216,6 +218,19 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_analytics_live.py --adapter databric
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at approval: local `AnalyticsBudget` wraps the PRP-01 `Budget` and adds required `max_rows_scanned`/`max_cost_units`; budget exceed raises `rate_limited` (PRP wins over the ADR-0007 "truncation marker"; ADR amended at close-out); the stub SQL endpoint is stdlib sqlite3 over the shared normalized fixture with per-dialect shims recorded as G12 gaps; no new third-party dependencies; adapter-local per-cloud host suffix tables; Commercial rows are `unverified`, so Commercial profiles show every adapter disabled. Item 6 live runs: operator chose ship the script and record OPEN per adapter.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-18 |
+| 2 | todo | | sonnet | | 2026-10-18 |
+| 3 | todo | | sonnet | | 2026-10-18 |
+| 4 | todo | | sonnet | | 2026-10-18 |
+| 5 | todo | | sonnet | | 2026-10-18 |
+| 6 | todo | | sonnet | | 2026-10-18 |
 
 ## Completion note (filled at ship)
 - Date:
