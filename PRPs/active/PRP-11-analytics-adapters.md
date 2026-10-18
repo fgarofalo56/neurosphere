@@ -225,10 +225,10 @@ Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at ap
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | review | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review pending. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
-| 2 | todo | | sonnet | | 2026-10-18 |
-| 3 | todo | | sonnet | | 2026-10-18 |
-| 4 | todo | | sonnet | | 2026-10-18 |
+| 1 | merged | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review APPROVE (non-blocking: registry drops caller executor for fixture, stub scan-counter regex needs quoting-normalising rewrite for bracket/backtick dialects, stub serialises runs via lock, fixture rows_scanned reports full table on early stop, registry ImportError name check loose); merge fcb6752, core 889 passed + pyright clean post-merge. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
+| 2 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
+| 3 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
+| 4 | in-progress | (worktree agent) | sonnet | dispatched | 2026-10-18 |
 | 5 | todo | | sonnet | | 2026-10-18 |
 | 6 | todo | | sonnet | | 2026-10-18 |
 
