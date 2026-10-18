@@ -36,6 +36,13 @@ All notable changes to this project are documented here. The format follows
   `AuthorizedSearch` with a server-side scope filter. G03 live benchmark run on a private,
   Entra-only Commercial account (the harness now provisions through the control plane);
   G03 narrowed for Commercial.
+- Analytics adapters (PRP-11): `TelemetryAnalytics` and `RecommendationCompute` contracts with
+  required `AnalyticsBudget` (time, rows scanned, cost units; breach cancels and raises
+  `rate_limited`), a shared whitelisted-identifier SQL renderer, a matrix-gated registry that
+  lists disabled backends with reasons, a sandbox-only fixture adapter, and Fabric, Synapse
+  (serverless/dedicated) and Azure Databricks adapters with per-cloud host checks and versioned
+  migrations; stub-endpoint equivalence and profile-gating suites (contract conformance only);
+  `scripts/gates/g01_analytics_live.py`. Live analytics runs are OPEN for every adapter.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
