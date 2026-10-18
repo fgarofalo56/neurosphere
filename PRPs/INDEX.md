@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-11-analytics-adapters](active/PRP-11-analytics-adapters.md) |  | 2/6 (33%) | todo 2, review 2, merged 2 | ? / ? | required |
+| [prp-11-analytics-adapters](active/PRP-11-analytics-adapters.md) |  | 4/6 (66%) | todo 1, in-progress 1, merged 4 | ? / ? | required |
 
 ## Backlog
 
