@@ -225,7 +225,7 @@ Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at ap
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-18 |
+| 1 | review | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review pending. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
 | 2 | todo | | sonnet | | 2026-10-18 |
 | 3 | todo | | sonnet | | 2026-10-18 |
 | 4 | todo | | sonnet | | 2026-10-18 |
