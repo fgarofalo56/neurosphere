@@ -1,7 +1,9 @@
 ---
 name: prp-10-catalog-and-relationship-governance
-status: active
+status: shipped
 started: 2026-10-17
+shipped: 2026-10-17
+pr: 52
 branch: prp-10-catalog
 review: required
 created: 2026-10-08
@@ -250,9 +252,15 @@ PR #52 (CI green 2026-10-17); item 7 live G03 evidence filed 2026-10-17, so the 
 | 7 | merged | worktree-agent-a4dbe5c8fb2d6deca | sonnet | harness delta 457904d (control-plane provisioning via az; offline 80 passed, emulator smoke 1 passed, Snyk 0; review APPROVE, merge e47672a); evidence writer fix (live disclaimer + Live account section; 82 passed, Snyk 0, Haiku APPROVE); live run 2026-10-17 operator-approved (Frank Garofalo), serverless Entra-only account in Limitlessdata - DMLZ centralus via private endpoint + P2S VPN: all 9 cells correct, mean 39-58 RU/traversal, p95 1.58-2.13 s incl. WAN RTT; evidence docs/evidence/G03/live-2026-10-17.{md,json}; RG deleted, DNS records gone. First attempt blocked by landing-zone policy (public access forced off) | 2026-10-17 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-17
+- Merged commits: PR #52 (merge b67b8ab). Item merges: 0b38c7d (0), d6fd3f9 (1), 0aef02e (2, incl. rework 4c30a74), 066ff14 (3), 16e3d3d (4), d3c0b51 (5), e62bcfd (6), e47672a (7 harness delta); G03 evidence 6ac7ae6. Orchestrator commits: 03b876f (azure-search-documents 12.0, relock), 70f6598 and 074b2f5 (router registration, openapi.json), 86bcbdf (test-package collision fix).
 - Deviations from blueprint and why:
-- Descoped items:
-- G03 live run: date, operator approval, evidence path (or OPEN, in which case this PRP must not have merged):
-- Follow-ups:
+  - Item 0 (shared catalog core) added at plan approval: items 2, 3 and 4 needed the same protocols, lock/override rules and review-queue interface, which no item owned.
+  - Router registration in `services/api/neurosphere_api/routers.py` and `openapi.json` regeneration done by the orchestrator at merge time (shared files).
+  - `services/api/tests/catalog/` has no `__init__.py`: with one, it collided with `packages/core/tests/catalog` as a top-level `catalog` test package.
+  - Item 3 ships `TraceEventSource` and `ClaimsSource` as protocols with in-memory implementations only: no trace-event readback by `doc_id` and no worker managed-identity wiring exist yet (#55).
+  - Item 7 (clarification 13): the PRP-02 G03 harness could not run under Entra (data-plane tokens cannot create databases/containers, 403/5300); with operator sign-off it now provisions through the control plane via `az`, and the evidence writer gained a live disclaimer and account section.
+  - Item 7 target: Limitlessdata - DMLZ, where the landing-zone Modify policy forces Cosmos public network access off; the run used a private endpoint in the hub VNet and the operator workstation over the Entra P2S VPN, so the live latency includes WAN round trip.
+- Descoped items: none. (Embedding inference, Purview/Unity connectors, review-queue UI and map rendering were out of scope per "NOT building".)
+- G03 live run: 2026-10-17, operator approval Frank Garofalo (in session), `docs/evidence/G03/live-2026-10-17.md` and `.json`. All 9 cells correct; mean 39-58 RU per traversal; p95 1.58-2.13 s incl. WAN RTT. G03 NARROWED (Commercial); in-region latency, 429, index tuning and Government remain open.
+- Follow-ups: #53 (authorization/existence-signal hardening), #54 (lock/observation/review-queue semantics), #55 (production wiring), #56 (search/budget/test nits), #57 (G03 in-region run, ADR-0005 key decision, matrix rows, enterprise networking guide, harness hardening).
