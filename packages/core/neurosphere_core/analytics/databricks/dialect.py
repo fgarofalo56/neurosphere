@@ -1,8 +1,11 @@
 """Databricks SQL dialect for the shared renderer (PRP-11 item 4).
 
-Sources (Microsoft Learn, Azure Databricks language manual), observed 2026-10-18. The Learn MCP
-lookup tools were not reachable in the authoring session, so these pages are cited from the
-documented structure and MUST be re-checked at the live gate (G12):
+Sources (Microsoft Learn, Azure Databricks language manual), observed 2026-10-18. The
+orchestrator verified on Learn that named ``:name`` markers are supplied by the Statement
+Execution API and cannot be mixed with ``?``; that ``approx_percentile`` is a synonym of
+``percentile_approx`` (default accuracy 10000, relative error 1/accuracy); and that
+``date_trunc(unit, expr)`` accepts DATE, TIMESTAMP or STRING. Documentation is not execution;
+the live gate (G12) confirms behaviour:
 
 * identifiers, backtick quoting:
   https://learn.microsoft.com/azure/databricks/sql/language-manual/sql-ref-identifiers
