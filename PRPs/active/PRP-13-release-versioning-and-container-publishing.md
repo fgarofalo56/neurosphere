@@ -1,8 +1,10 @@
 ---
 name: prp-13-release-versioning-and-container-publishing
-status: backlog
+status: active
+started: 2026-10-18
 review: none
 created: 2026-10-08
+branch: prp-13-release-versioning-and-container-publishing
 model: sonnet
 phase: 1
 ns: NS-10
@@ -114,9 +116,9 @@ Make NeuroSphere releasable: multi-stage non-root Dockerfiles for api, workers a
 
 ### Item 2 — publish-workflow
 - Deliverable: `release.yml` triggered by `v*.*.*` tags and manual dispatch with `dry_run`; builds images, pushes to GHCR, attaches SBOM, cosign signs by digest, packages the Helm chart.
-- Owned files (may edit): `.github/workflows/release.yml`, `tests/release/test_release_workflow.py`.
-- Must NOT touch: `.github/workflows/ci.yml`, `security.yml` (PRP-12), `codeql.yml`, `secret-scan.yml`, the Dockerfiles (item 1).
-- Depends on: item 1.
+- Owned files (may edit): `.github/workflows/release.yml`, `tests/release/test_release_workflow.py`, and only the `discover-images` step of `.github/workflows/security.yml` (widen discovery to `frontend/Dockerfile`; decided at plan approval 2026-10-18).
+- Must NOT touch: `.github/workflows/ci.yml`, the rest of `security.yml` (PRP-12), `codeql.yml`, `secret-scan.yml`, the Dockerfiles (item 1).
+- Depends on: items 1 and 3 (tag runs create a draft GitHub Release whose notes come from `scripts/release/changelog.py`).
 - Acceptance criteria:
   - Dry-run on a branch completes all steps except push and sign, with logged outputs.
   - Tag `v0.1.0` (or a pre-release tag) yields signed images; `cosign verify` command in `docs/release/` succeeds against the published digest.
@@ -193,6 +195,18 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: A = (1, 3, 4) in parallel, B = 2 (after 1 and 3) and 5 (after 3). Design calls at approval: images run as uid 10001 (matches Helm `runAsUser`), work with read-only root + writable `/tmp`, and must pass the PRP-12 `security.yml` Trivy/Grype High gate locally before merge (else every PR goes red); frontend image is an unprivileged static server on 8080 serving runtime `config.json`; `.dockerignore` is rewritten (it currently excludes `frontend/`). Item 2 also owns the `discover-images` step of `security.yml` to scan `frontend/Dockerfile`; `release.yml` adds a path-filtered `pull_request` trigger that forces dry-run so the PR exercises it; tag runs push the chart to GHCR as OCI and create a draft GitHub Release from the item 3 changelog script; SBOM is syft CycloneDX attached via `cosign attest`. Item 4 covers forward/rollback, idempotency and concurrent-runner `stale_version` with in-memory unit tests too, because the `integration` marker never runs in CI; emulator output is recorded as G12 bounded-feasibility evidence.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-18 |
+| 2 | todo | | sonnet | | 2026-10-18 |
+| 3 | todo | | sonnet | | 2026-10-18 |
+| 4 | todo | | sonnet | | 2026-10-18 |
+| 5 | todo | | sonnet | | 2026-10-18 |
 
 ## Completion note (filled at ship)
 - Date:
