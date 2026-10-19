@@ -1,0 +1,143 @@
+name: security
+
+# Supply-chain scans (PRP-12 item 2). ci.yml is untouched; this workflow adds SBOMs,
+# image scans and a High-and-above dependency gate of its own.
+#
+# syft, Trivy and Grype are installed as release binaries pinned by version AND sha256
+# (same pattern as secret-scan.yml). The vendor scan actions are deliberately not used:
+# Trivy's action and release pipeline were compromised in March 2026
+# (GHSA-69fq-xp46-6x23, trivy v0.69.4-v0.69.6). Pinned Trivy v0.76.0 is outside that
+# window and above the patched versions of the 2026 path-traversal advisories.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "41 5 * * 1"   # weekly: new CVEs land against unchanged code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SYFT_VERSION: "1.54.1"
+  SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
+  TRIVY_VERSION: "0.76.0"
+  TRIVY_SHA256: "e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+  GRYPE_VERSION: "0.120.1"
+  GRYPE_SHA256: "0a9ee97ef5ae2ee953b0a80098105052e846cdbe319a57d808b519c33cd1343d"
+
+jobs:
+  discover-images:
+    name: discover production images
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.find.outputs.matrix }}
+      has_images: ${{ steps.find.outputs.has_images }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Find services/*/Dockerfile
+        id: find
+        # Production images only (PRP-13). Dockerfile.dev is a dev image and is not scanned.
+        run: |
+          shopt -s nullglob
+          items=()
+          for f in services/*/Dockerfile; do
+            svc="$(basename "$(dirname "$f")")"
+            items+=("{\"service\":\"${svc}\",\"dockerfile\":\"${f}\"}")
+          done
+          if [ "${#items[@]}" -eq 0 ]; then
+            echo "::notice::no image yet (PRP-13)"
+            echo "has_images=false" >> "$GITHUB_OUTPUT"
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          joined="$(IFS=,; echo "${items[*]}")"
+          echo "has_images=true" >> "$GITHUB_OUTPUT"
+          echo "matrix={\"include\":[${joined}]}" >> "$GITHUB_OUTPUT"
+
+  image-scan:
+    name: image ${{ matrix.service }} (build, SBOM, Trivy, Grype)
+    needs: discover-images
+    if: needs.discover-images.outputs.has_images == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.discover-images.outputs.matrix) }}
+    env:
+      IMAGE: neurosphere-${{ matrix.service }}:scan
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install syft, trivy and grype (version and sha256 pinned)
+        run: |
+          set -euo pipefail
+          dl="$RUNNER_TEMP/scanners"
+          mkdir -p "$dl/bin"
+          curl -sSfL -o "$dl/syft.tgz" "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          echo "${SYFT_SHA256}  $dl/syft.tgz" | sha256sum -c -
+          curl -sSfL -o "$dl/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $dl/trivy.tgz" | sha256sum -c -
+          curl -sSfL -o "$dl/grype.tgz" "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          echo "${GRYPE_SHA256}  $dl/grype.tgz" | sha256sum -c -
+          tar -xzf "$dl/syft.tgz" -C "$dl/bin" syft
+          tar -xzf "$dl/trivy.tgz" -C "$dl/bin" trivy
+          tar -xzf "$dl/grype.tgz" -C "$dl/bin" grype
+          echo "$dl/bin" >> "$GITHUB_PATH"
+      - name: Build image
+        # A Dockerfile that exists but does not build fails the job here.
+        run: docker build -f "${{ matrix.dockerfile }}" -t "$IMAGE" .
+      - name: SBOM (syft, CycloneDX)
+        run: syft "$IMAGE" -o "cyclonedx-json=$RUNNER_TEMP/sbom-image-${{ matrix.service }}.cdx.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-image-${{ matrix.service }}
+          path: ${{ runner.temp }}/sbom-image-${{ matrix.service }}.cdx.json
+          if-no-files-found: error
+      - name: Trivy image scan (High and Critical fail)
+        run: trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 "$IMAGE"
+      - name: Grype image scan (High and Critical fail)
+        run: grype "$IMAGE" --fail-on high
+
+  dependency-audit:
+    name: dependency audit (High and above)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install syft, trivy and grype (version and sha256 pinned)
+        run: |
+          set -euo pipefail
+          dl="$RUNNER_TEMP/scanners"
+          mkdir -p "$dl/bin"
+          curl -sSfL -o "$dl/syft.tgz" "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          echo "${SYFT_SHA256}  $dl/syft.tgz" | sha256sum -c -
+          curl -sSfL -o "$dl/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  $dl/trivy.tgz" | sha256sum -c -
+          curl -sSfL -o "$dl/grype.tgz" "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          echo "${GRYPE_SHA256}  $dl/grype.tgz" | sha256sum -c -
+          tar -xzf "$dl/syft.tgz" -C "$dl/bin" syft
+          tar -xzf "$dl/trivy.tgz" -C "$dl/bin" trivy
+          tar -xzf "$dl/grype.tgz" -C "$dl/bin" grype
+          echo "$dl/bin" >> "$GITHUB_PATH"
+      - name: SBOM of the source tree (syft)
+        run: syft dir:. -o "cyclonedx-json=$RUNNER_TEMP/sbom-source.cdx.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-source
+          path: ${{ runner.temp }}/sbom-source.cdx.json
+          if-no-files-found: error
+      # pip-audit has no severity field, so the Python High gate is Trivy and Grype
+      # over uv.lock. ci.yml keeps its own pip-audit run untouched.
+      - name: Trivy filesystem scan of lockfiles (High and Critical fail)
+        run: trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .
+      - name: Grype scan of the source tree (High and Critical fail)
+        run: grype dir:. --fail-on high
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: pnpm audit (High and above)
+        run: pnpm audit --audit-level high
