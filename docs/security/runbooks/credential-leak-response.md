@@ -27,9 +27,10 @@ Only after this step is the exposure contained.
 
 ## 3. Scope assessment
 
-- Was it only local (never pushed)? Check `git log --all -S` is not needed for
-  the value; use `gitleaks git . --config .gitleaks.toml --redact` to locate
-  commit, file and rule without printing it.
+- Was it only local (never pushed)? Do not search for the value with
+  `git log -S <value>`: that writes the secret into shell history. Use
+  `gitleaks git . --config .gitleaks.toml --redact` to locate commit, file and
+  rule without printing it.
 - Pushed? Which branches, forks, PRs, CI logs and artifacts? Cached clones are
   presumed to hold it.
 - What can the credential reach (data, tenant, cloud: Commercial versus

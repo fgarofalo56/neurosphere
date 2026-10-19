@@ -59,8 +59,10 @@ compliance claim (control narratives belong to PRP-23).
 
 ## Rollback
 
-While the old credential is still valid (before step 6), re-enable the previous
-Key Vault version, or set it as latest, and restart consumers. After step 6,
+While the old credential is still valid (before step 6), pin consumers to the
+previous Key Vault secret version id (the versioned reference, not the
+versionless one) and restart them. Key Vault cannot make an older version
+"latest" without writing its value again, so do not try. After step 6,
 rollback is a forward fix: issue another new credential. Never restore a
 credential believed compromised.
 
