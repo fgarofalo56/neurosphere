@@ -65,10 +65,10 @@ function Detail({
   return (
     <article aria-label={STRINGS.detailTitle}>
       <h1>{KIND_LABELS[rec.kind]}</h1>
-      <p>
+      <div>
         <AdvisoryBadge advisory={rec.advisory} executable={data.execution.executable} />{" "}
         <EvidenceStatus rec={rec} />
-      </p>
+      </div>
       {rec.kind === "candidate_duplicate" ? (
         <p data-testid="duplicate-note">{STRINGS.duplicateNote}</p>
       ) : null}
