@@ -56,12 +56,12 @@ describe.each([
 });
 
 describe("controls and errors", () => {
-  it("requests the contract path with domain_id, days and grain", async () => {
+  it("requests the contract path with the domain as a path segment, days and grain", async () => {
     const { fetchImpl } = setupPage("/dashboards/cost?domain_id=dom-1&days=7&grain=hour", BODIES);
     await screen.findAllByTestId("lag-indicator");
     const url = new URL(String(fetchImpl.mock.calls[0]?.[0]));
-    expect(url.pathname).toBe("/api/v1/dashboards/cost");
-    expect(url.searchParams.get("domain_id")).toBe("dom-1");
+    expect(url.pathname).toBe("/api/v1/dashboards/domains/dom-1/cost");
+    expect(url.searchParams.has("domain_id")).toBe(false);
     expect(url.searchParams.get("days")).toBe("7");
     expect(url.searchParams.get("grain")).toBe("hour");
   });

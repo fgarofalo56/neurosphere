@@ -2,21 +2,20 @@ import { createQueryHook } from "../../api/index.js";
 import type { DashboardParams, DashboardResponse } from "./types";
 
 /**
- * The shared client refuses `domain_id` in its `query` option (scope keys are normally derived
- * server-side). The dashboards contract requires an explicit single domain_id that the server
- * authorizes, so it is encoded in the path here.
+ * The domain is the addressed resource (a path segment), not a scope claim: the shared client
+ * refuses `domain_id`/`customer_id` as parameters, and the server authorizes the domain against
+ * the derived IdentityScope (403 when outside it).
  */
 export function dashboardPath(p: DashboardParams): string {
-  const qs = new URLSearchParams({
-    domain_id: p.domainId,
-    days: String(p.days),
-    grain: p.grain,
-  });
-  return `/api/v1/dashboards/${p.metric}?${qs.toString()}`;
+  return `/api/v1/dashboards/domains/${encodeURIComponent(p.domainId)}/${p.metric}`;
 }
 
 export const useDashboard = createQueryHook<DashboardParams, DashboardResponse>({
   key: "dashboard",
   fetcher: (client, params, signal) =>
-    client.get<DashboardResponse>(dashboardPath(params), undefined, signal),
+    client.get<DashboardResponse>(
+      dashboardPath(params),
+      { days: params.days, grain: params.grain },
+      signal,
+    ),
 });

@@ -107,7 +107,7 @@ export function setupPage(
     if (typeof bodies === "number") {
       return Promise.resolve(new Response(JSON.stringify({ status: bodies }), { status: bodies }));
     }
-    const metric = /dashboards\/(\w+)/.exec(String(input))?.[1] as DashboardMetric;
+    const metric = /dashboards\/domains\/[^/]+\/(\w+)/.exec(String(input))?.[1] as DashboardMetric;
     return Promise.resolve(new Response(JSON.stringify(bodies[metric]), { status: 200 }));
   });
   const client = createApiClient({
