@@ -1,7 +1,9 @@
 ---
 name: prp-12-threat-model-and-security-baseline
-status: active
+status: shipped
 started: 2026-10-18
+shipped: 2026-10-18
+pr: 65
 branch: prp-12-threat-model-security-baseline
 review: required
 created: 2026-10-08
@@ -213,9 +215,9 @@ Plan approved 2026-10-18. Waves: A = (1, 2, 3, 4) in parallel, B = 5. Design cal
 | 5 | merged | worktree-agent-a2ab26eb29892ee94 | sonnet | 75bfb39; full-history gitleaks clean, validate_planning PASS, PII grep empty (orchestrator re-run); 90-day cadences and IR targets are labelled operator-tunable defaults; review APPROVE (non-blocking nits fixed by orchestrator in 99a30e2: leak scope search wording, CI PII scan coverage overstated, gitleaks rule cadence, Key Vault rollback via pinned version id); merge 469eeaf, validate_planning PASS + gitleaks dir clean post-merge | 2026-10-18 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Open gates recorded (ids and where):
-- Follow-ups:
+- Date: 2026-10-18
+- Merged commits: PR #65 merged as e10f286 (CI 18 pass, 1 skipping: the per-image matrix, because no production Dockerfile exists yet). Item merges into the integration branch: 2 4039b52, 5 469eeaf, 1 2d9e32f, 3 227826c, 4 b796ba9. Orchestrator commits: cb1c681 (activate), 99a30e2 (runbook review nits), 1e3cafb (ruff-format README code block on item 4 branch), ab99e73 (denial-audit correction on item 1 branch), cd54797 (ADR-0002 scanner pins, G08/G12 notes). `verify-gates -Mode full` on the integration branch: lint, typecheck, tests (4904 passed, 65 deselected), build all PASS; full-history gitleaks clean; actionlint clean; Snyk Code on `tests/security` 0 issues.
+- Deviations from blueprint and why: (1) Item 3 network module is wired into root `infra/bicep/modules/main.bicep` (one `module network` block, all params defaulted) and private endpoints target only resources the deployment *created*; reuse mode passes `''` so shared enterprise resources are never touched (review blocker, fixed in rework ed86232). (2) Private DNS zone names derive from `environment()` (portal, storage and keyvaultDns suffixes), not per-cloud params files, because `test_bicep_endpoints.py` bans literal Commercial hostnames and the params files belong to PRP-08/PRP-20; derivations match Learn's zone table for both clouds and the inputs were confirmed with `az cloud show`. (3) No what-if fixture was fabricated: the tests assert on real `az bicep build` and `helm template` output. (4) `networkPolicy.enabled` defaults to true, and the default-deny is scoped to the release's `app.kubernetes.io/instance` (not namespace-wide). (5) Item 2 scans only production `services/*/Dockerfile` (PRP-13), not `Dockerfile.dev`. The dependency High gate uses Trivy/Grype on lockfiles plus `pnpm audit --audit-level high`, because pip-audit has no severity. Scanners are sha256-pinned binaries, not third-party actions (Trivy had a 2026 supply-chain compromise, GHSA-69fq-xp46-6x23). (6) The threat model adds a State column, and after review it records real gaps instead of claiming them: no `DenialRecorder` is wired in the app, there is no allowed-read audit, and the consent audit sink is a no-op. My own rework brief initially overclaimed "denials are audited", which I corrected in ab99e73. (7) The DFDs were rendered with a local wrapper around `scripts/render_mermaid.py`, because that script requires exactly five ARCHITECTURE blocks.
+- Descoped items: none.
+- Open gates recorded (ids and where): G02 unchanged (OPEN). G08 NARROWED, with the scanner pins noted in `docs/RESEARCH-AND-GATES.md` and ADR-0002. G12 OPEN, with the emulator limits recorded in the threat model. The live what-if against a subscription **did not run** and is OPEN (needs `NS_LIVE_APPROVED=1`; noted in the G12 row). The `security.yml` image build, scan and SBOM-upload path is unexercised in CI until PRP-13. The DFD render is local only; CI's G10 gate covers ARCHITECTURE only.
+- Follow-ups: #66 security.yml hardening; #67 network baseline (Helm render tests skip in CI, workload egress to Entra/Azure Monitor, LB probes, VNet CIDR param); #68 render `docs/security/dfd` in CI; #69 threat-model gaps (denial recorder, allowed-read audit, consent audit, APIM rate limit); #70 injection corpus README and stub clarifications.
