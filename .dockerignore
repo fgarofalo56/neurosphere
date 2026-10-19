@@ -1,15 +1,26 @@
 # Keep the Docker build context small and free of local secrets.
-.git
-.venv
-.claude
+# Secrets: no exception, not even .env.example.
 .env
 .env.*
-!.env.example
-**/__pycache__
-**/.pytest_cache
-**/.ruff_cache
-**/node_modules
-frontend
+**/.env
+**/.env.*
+.git
+.githooks
+.github
+.venv
+**/.venv
+.claude
 temp
 docs
 PRPs
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/node_modules
+frontend/dist
+**/dist
+**/test-results
+**/playwright-report
+tests
+**/tests
