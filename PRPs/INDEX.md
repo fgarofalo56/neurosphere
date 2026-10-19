@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-12-threat-model-and-security-baseline](active/PRP-12-threat-model-and-security-baseline.md) |  | 0/5 (0%) | todo 5 | ? / ? | required |
+| [prp-12-threat-model-and-security-baseline](active/PRP-12-threat-model-and-security-baseline.md) |  | 5/5 (100%) | merged 5 | ? / ? | required |
 
 ## Backlog
 
