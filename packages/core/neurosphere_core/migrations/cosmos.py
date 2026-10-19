@@ -1,9 +1,11 @@
 """Cosmos (``azure.cosmos.aio``) implementations of the migration stores.
 
 Concurrency uses ``replace_item`` with ``etag`` + ``MatchConditions.IfNotModified``. Mapping:
-412 (and 409 on ledger create, 404 on replace) -> ``StaleVersionError``; 408/429/5xx ->
-``DependencyTransientError``. Both containers must use partition key ``/id``. Build the client
-with ``neurosphere_core.clients.create_cosmos_client``; no credentials are handled here.
+412 (and 409 on ledger create, 404 on replace) -> ``StaleVersionError``; everything else goes
+through ``neurosphere_core.clients.errors.translate_sdk_error`` (429 -> ``RateLimitedError``,
+408/5xx -> ``DependencyTransientError``). Both containers must use partition key ``/id``.
+Build the client with ``neurosphere_core.clients.create_cosmos_client``; no credentials are
+handled here.
 """
 
 from __future__ import annotations
@@ -18,7 +20,8 @@ from azure.cosmos.exceptions import (
 )
 from azure.cosmos.exceptions import CosmosHttpResponseError as _CosmosError
 
-from neurosphere_core.errors import DependencyTransientError, StaleVersionError
+from neurosphere_core.clients.errors import translate_sdk_error
+from neurosphere_core.errors import StaleVersionError
 from neurosphere_core.migrations.models import MigrationLedger
 from neurosphere_core.migrations.protocols import StoredDocument
 
@@ -37,12 +40,8 @@ def _clean(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _translate(exc: _CosmosError) -> Exception:
-    status = exc.status_code
-    if status == 412:
-        return StaleVersionError("precondition failed (ETag mismatch)")
-    if status is not None and (status in (408, 429) or status >= 500):
-        return DependencyTransientError(f"cosmos unavailable (HTTP {status})", reason="cosmos")
-    return exc
+    # One taxonomy mapping for every Cosmos caller: reuse the shared client translation.
+    return translate_sdk_error(exc) or exc
 
 
 class CosmosDocumentStore:

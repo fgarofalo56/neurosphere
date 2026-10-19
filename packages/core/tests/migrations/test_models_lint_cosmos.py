@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from azure.cosmos.exceptions import CosmosHttpResponseError
-from neurosphere_core.errors import DependencyTransientError, StaleVersionError
+from neurosphere_core.errors import DependencyTransientError, RateLimitedError, StaleVersionError
 from neurosphere_core.migrations import (
     AnalyticsSchemaStore,
     AppliedStep,
@@ -127,7 +127,8 @@ def _http_error(status: int) -> CosmosHttpResponseError:
 
 def test_cosmos_error_mapping() -> None:
     assert isinstance(_translate(_http_error(412)), StaleVersionError)
-    for status in (408, 429, 500, 503):
+    assert isinstance(_translate(_http_error(429)), RateLimitedError)
+    for status in (408, 500, 503):
         mapped = _translate(_http_error(status))
         assert isinstance(mapped, DependencyTransientError)
         assert mapped.code == "dependency_transient"
