@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-14-dashboards-cost-latency-coverage](active/PRP-14-dashboards-cost-latency-coverage.md) |  | 5/5 (100%) | merged 5 | ? / ? | none |
+_none_
 
 ## Backlog
 
@@ -35,6 +33,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [prp-13-release-versioning-and-container-publishing](shipped/PRP-13-release-versioning-and-container-publishing.md) | 2026-10-19 | #72 |
+| [prp-14-dashboards-cost-latency-coverage](shipped/PRP-14-dashboards-cost-latency-coverage.md) | 2026-10-19 | #74 |
 | [prp-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-10-18 | #63 |
 | [prp-12-threat-model-and-security-baseline](shipped/PRP-12-threat-model-and-security-baseline.md) | 2026-10-18 | #65 |
 | [prp-08-deployment-intelligence-and-iac](shipped/PRP-08-deployment-intelligence-and-iac.md) | 2026-10-17 | #43 |

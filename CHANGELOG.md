@@ -58,6 +58,15 @@ All notable changes to this project are documented here. The format follows
   Helm chart as OCI and a draft GitHub Release (exercised on `v0.1.0-rc.1`); a versioned
   Cosmos/analytics migrations runner with ledger, rollback, dry run and expand-then-contract
   lint; and a release Definition-of-Done checklist (`docs/release/dod-checklist.md`).
+- Dashboards for cost, latency and coverage (PRP-14): a hot-aggregates projection worker
+  (90-day rolling day/hour rollups from the outbox, idempotent, null never 0, `complete` and
+  watermark on every document) with a core `AggregateReader` store; scoped
+  `GET /api/v1/dashboards/domains/{domain}/{metric}` and
+  `GET /api/v1/reconciliation/domains/{domain}` APIs (403 outside scope, 503 fail closed,
+  bounded budgets, `Server-Timing`); cost, latency/errors, coverage and reconciliation pages
+  with estimated/invoiced and price-version badges, lag indicator and analytics-state chip;
+  Playwright e2e on the mock API and measured G07 latency evidence
+  (`docs/evidence/G07/dashboards/`).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
