@@ -1,6 +1,8 @@
 ---
 name: prp-12-threat-model-and-security-baseline
-status: backlog
+status: active
+started: 2026-10-18
+branch: prp-12-threat-model-security-baseline
 review: required
 created: 2026-10-08
 model: opus
@@ -197,6 +199,18 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: A = (1, 2, 3, 4) in parallel, B = 5. Design calls at approval: item 3 adds `infra/bicep/modules/network/main.bicep` and owns one `module network` block (all params defaulted) in root `infra/bicep/modules/main.bicep`; endpoint suffixes derive from `environment()` (repo convention), not params files; no fabricated what-if fixture: the test asserts on real `az bicep build` output and live what-if is OPEN unless run with NS_LIVE_APPROVED=1; item 3 owns the `networkPolicy:` block of `infra/helm/values.yaml`, default `enabled: true`, allowlist is DNS + CIDR/port entries (NetworkPolicy has no FQDN support), and may adjust `tests/unit/infra/test_helm_render.py` only if the flip breaks it; item 2 image jobs target production `services/*/Dockerfile` (PRP-13), `Dockerfile.dev` not scanned; dependency High gate via Trivy/Grype on lockfiles + `pnpm audit --audit-level high` (pip-audit has no severity); High-CVE evidence from a local run against a pulled old public image (not committed).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-a4316afa2ca679f6b | opus | 52f5a88; 17 boundaries (9 required + 8 additional) with STRIDE rows; 22 cited PRP ids all exist in master index; 3 DFDs render with pinned mermaid-cli 12.0.0 (orchestrator re-run, 0 syntax errors; CI render gate covers ARCHITECTURE only); full-history gitleaks clean; not-FedRAMP/no-ATO disclaimer present; review CHANGES REQUIRED (blocking: B5 R and A3 R claim allowed-read audit "In repo", but authz/recorder.py audits denials only); rework round 1: 2e81704 (B5 R, A3 R, B2 S state, consent-audit overclaim); orchestrator follow-on ab99e73 (no DenialRecorder is wired in the app, so denial-audit claims in B1 R, B3 R, B5 R, A3 R corrected to Gap; my brief had overclaimed it); Haiku confirm CONFIRMED; merge 2d9e32f, validate_planning PASS + gitleaks dir clean post-merge | 2026-10-18 |
+| 2 | merged | worktree-agent-adb46686ecfc8e1d7 | sonnet | 667c73d; actionlint exit 0, validate_planning PASS, full-history gitleaks clean, no `|| true`/continue-on-error (orchestrator re-run); pins syft 1.54.1, trivy 0.76.0 (outside GHSA-69fq-xp46-6x23 0.69.4-0.69.6), grype 0.120.1, sha256-verified; local debian:buster: trivy exit 1 (26 High, 2 Critical), grype --fail-on high exit 2, syft SBOM 435 components; dependency scans on lockfiles clean; image/artifact paths unexercised until PRP-13 Dockerfiles exist; review APPROVE (non-blocking: matrix values interpolated in run: (move to env:), duplicated install block, trivy fs --include-dev-deps, aggregator job if made required); merge 4039b52, actionlint + validate_planning PASS post-merge | 2026-10-18 |
+| 3 | merged | worktree-agent-a140b0baf9317a3b1 | sonnet | e928a9c; network+infra 67 passed, ruff/pyright clean, az bicep build root + helm lint PASS, full-history gitleaks clean (orchestrator re-run); zone derivation inputs confirmed via az cloud show (portal, storage, keyvaultDns, both clouds); default-flip edit to test_helm_render (2 assertions); live what-if OPEN; review CHANGES REQUIRED (blocking: reuse mode passes reused ids to the network module, creating private endpoints and zones against shared resources); rework round 1 dispatched (also scopes default-deny podSelector to the release); rework ed86232: network target ids gated on created, default-deny scoped to app.kubernetes.io/instance; network+infra 73 passed, ruff clean (orchestrator re-run); Haiku confirm CONFIRMED; merge 227826c, network+infra 73 passed, bicep build + helm lint PASS post-merge | 2026-10-18 |
+| 4 | merged | worktree-agent-ab07eb0dcb9be7558 | opus | f23d37d + 1e3cafb (orchestrator: ruff-format README code block, CI runs ruff format --check . which formats markdown); 78 cases / 12 categories (65 deny, 13 abstain); injection 67 passed, ruff/pyright clean, full-history gitleaks clean, PII grep empty (orchestrator re-run); review APPROVE (non-blocking: README import path only resolves with tests/ on sys.path, follow_instruction abstain cases are trivially met by the offline stub, Escalate of an already-held permission returns comply); merge b796ba9, tests/security 948 passed post-merge | 2026-10-18 |
+| 5 | merged | worktree-agent-a2ab26eb29892ee94 | sonnet | 75bfb39; full-history gitleaks clean, validate_planning PASS, PII grep empty (orchestrator re-run); 90-day cadences and IR targets are labelled operator-tunable defaults; review APPROVE (non-blocking nits fixed by orchestrator in 99a30e2: leak scope search wording, CI PII scan coverage overstated, gitleaks rule cadence, Key Vault rollback via pinned version id); merge 469eeaf, validate_planning PASS + gitleaks dir clean post-merge | 2026-10-18 |
 
 ## Completion note (filled at ship)
 - Date:

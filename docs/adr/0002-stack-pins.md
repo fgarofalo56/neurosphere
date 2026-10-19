@@ -78,6 +78,9 @@ unless stated. Versions are major.minor; exact pins live in `uv.lock` and
 | Azurite | `latest` | MIT | https://learn.microsoft.com/azure/storage/common/storage-use-azurite | Table preview; no ADLS Gen2 |
 | MkDocs Material | 9.7.x | MIT | https://squidfunk.github.io/mkdocs-material/ | **EOL scheduled 2026-11-05**; Insiders split removed in 9.7. PRP-25 evaluates Zensical (MIT, same authors) before building the site |
 | gitleaks | 8.30.1 binary, sha256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` | MIT | https://github.com/gitleaks/gitleaks/releases | gitleaks-action needs a licence on org repos; binary used instead |
+| syft | 1.54.1 linux_amd64 binary, sha256 `c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47` | Apache-2.0 | https://github.com/anchore/syft/releases | SBOM in `.github/workflows/security.yml` (PRP-12); binary, not anchore/sbom-action |
+| Trivy | 0.76.0 linux_amd64 binary, sha256 `e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7` | Apache-2.0 | https://github.com/aquasecurity/trivy/releases | Image and lockfile scans, HIGH/CRITICAL blocking (PRP-12). Outside the 2026 compromised range 0.69.4-0.69.6 (GHSA-69fq-xp46-6x23); binary, not trivy-action |
+| Grype | 0.120.1 linux_amd64 binary, sha256 `0a9ee97ef5ae2ee953b0a80098105052e846cdbe319a57d808b519c33cd1343d` | Apache-2.0 | https://github.com/anchore/grype/releases | Image and source scans, `--fail-on high` (PRP-12); binary, not anchore/scan-action |
 | GitHub Actions | checkout v7, setup-python v7, setup-node v7, pnpm/action-setup v6, codeql-action v4, astral-sh/setup-uv v7 | MIT | github.com | Dependabot keeps majors current |
 
 ## Consequences

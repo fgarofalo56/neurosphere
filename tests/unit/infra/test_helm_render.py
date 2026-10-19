@@ -181,7 +181,8 @@ def test_no_literal_azure_endpoints() -> None:
 
 
 def test_extension_points_left_to_later_prps() -> None:
-    assert not (CHART / "templates" / "networkpolicy.yaml").exists()  # PRP-12
     assert not (CHART / "values-government.yaml").exists()  # PRP-20
+    # PRP-12 shipped the NetworkPolicy template; it is on by default.
+    assert (CHART / "templates" / "networkpolicy.yaml").exists()
     values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
-    assert values["networkPolicy"]["enabled"] is False
+    assert values["networkPolicy"]["enabled"] is True

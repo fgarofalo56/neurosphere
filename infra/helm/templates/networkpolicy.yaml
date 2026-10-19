@@ -1,0 +1,114 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /*
+  Default-deny for ingress and egress, then explicit allows rendered from values.
+  NetworkPolicy has no FQDN support: egress is by CIDR and port only (for example the
+  private endpoint subnet range). Cloud endpoints are therefore never named here.
+*/ -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-default-deny
+  labels:
+    {{- include "neurosphere.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-dns
+  labels:
+    {{- include "neurosphere.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.dns.namespaceLabels | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.dns.podLabels | nindent 14 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-intra-release
+  labels:
+    {{- include "neurosphere.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-ingress-controller
+  labels:
+    {{- include "neurosphere.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressController.namespaceLabels | nindent 14 }}
+{{- end }}
+{{- range $i, $entry := .Values.networkPolicy.egressAllowlist }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-allow-egress-{{ required "networkPolicy.egressAllowlist[].name is required" $entry.name }}
+  labels:
+    {{- include "neurosphere.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ required "networkPolicy.egressAllowlist[].cidr is required" $entry.cidr | quote }}
+      ports:
+        {{- range (required "networkPolicy.egressAllowlist[].ports is required" $entry.ports) }}
+        - protocol: {{ .protocol | default "TCP" }}
+          port: {{ required "networkPolicy.egressAllowlist[].ports[].port is required" .port }}
+        {{- end }}
+{{- end }}
+{{- end }}
