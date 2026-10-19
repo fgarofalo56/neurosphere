@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-12-threat-model-and-security-baseline](active/PRP-12-threat-model-and-security-baseline.md) |  | 0/5 (0%) | todo 5 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-12-threat-model-and-security-baseline](backlog/PRP-12-threat-model-and-security-baseline.md) |  |  | - | - | ? / ? | required |
 | [prp-13-release-versioning-and-container-publishing](backlog/PRP-13-release-versioning-and-container-publishing.md) |  |  | - | - | ? / ? | none |
 | [prp-14-dashboards-cost-latency-coverage](backlog/PRP-14-dashboards-cost-latency-coverage.md) |  |  | - | - | ? / ? | none |
 | [prp-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) |  |  | - | - | ? / ? | none |

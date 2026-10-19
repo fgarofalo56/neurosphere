@@ -1,6 +1,8 @@
 ---
 name: prp-12-threat-model-and-security-baseline
-status: backlog
+status: active
+started: 2026-10-18
+branch: prp-12-threat-model-security-baseline
 review: required
 created: 2026-10-08
 model: opus
@@ -197,6 +199,18 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: A = (1, 2, 3, 4) in parallel, B = 5. Design calls at approval: item 3 adds `infra/bicep/modules/network/main.bicep` and owns one `module network` block (all params defaulted) in root `infra/bicep/modules/main.bicep`; endpoint suffixes derive from `environment()` (repo convention), not params files; no fabricated what-if fixture: the test asserts on real `az bicep build` output and live what-if is OPEN unless run with NS_LIVE_APPROVED=1; item 3 owns the `networkPolicy:` block of `infra/helm/values.yaml`, default `enabled: true`, allowlist is DNS + CIDR/port entries (NetworkPolicy has no FQDN support), and may adjust `tests/unit/infra/test_helm_render.py` only if the flip breaks it; item 2 image jobs target production `services/*/Dockerfile` (PRP-13), `Dockerfile.dev` not scanned; dependency High gate via Trivy/Grype on lockfiles + `pnpm audit --audit-level high` (pip-audit has no severity); High-CVE evidence from a local run against a pulled old public image (not committed).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo |  | opus |  | 2026-10-18 |
+| 2 | todo |  | sonnet |  | 2026-10-18 |
+| 3 | todo |  | sonnet |  | 2026-10-18 |
+| 4 | todo |  | opus |  | 2026-10-18 |
+| 5 | todo |  | sonnet |  | 2026-10-18 |
 
 ## Completion note (filled at ship)
 - Date:
