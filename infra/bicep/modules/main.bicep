@@ -126,6 +126,20 @@ module apim 'apim.bicep' = {
   }
 }
 
+module network 'network/main.bicep' = {
+  name: 'ns-network'
+  params: {
+    namePrefix: namePrefix
+    location: location
+    tags: tags
+    cosmosId: cosmos.outputs.id
+    eventHubsId: eventHubs.outputs.id
+    storageId: storage.outputs.id
+    keyVaultId: keyVault.outputs.id
+    searchId: search.outputs.id
+  }
+}
+
 @description('Cosmos DB account resource id.')
 output cosmosId string = cosmos.outputs.id
 

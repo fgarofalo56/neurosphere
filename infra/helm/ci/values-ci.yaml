@@ -6,3 +6,10 @@ image:
 serviceAccount:
   workloadIdentity:
     clientId: 00000000-0000-0000-0000-000000000000
+networkPolicy:
+  egressAllowlist:
+    - name: private-endpoints
+      cidr: 10.40.1.0/24 # default private-endpoint subnet of the network Bicep module
+      ports:
+        - port: 443
+          protocol: TCP
