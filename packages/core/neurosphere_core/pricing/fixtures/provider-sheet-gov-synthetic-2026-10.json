@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "snapshot_id": "synthetic-gov-sheet-2026-10",
+    "source": "provider_price_sheet",
+    "source_url": "https://pricing.invalid/synthetic-government-sheet",
+    "retrieval_date": "2026-10-19",
+    "effective_date": "2026-10-01",
+    "currency": "USD",
+    "clouds": [
+      "government"
+    ],
+    "synthetic": true,
+    "notes": "SYNTHETIC test fixture standing in for an official provider price sheet that explicitly applies to Azure Government. Values are invented."
+  },
+  "rows": [
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1 input",
+      "meter_name": "SYNTHETIC gpt-4.1 input tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.002400",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1",
+        "model_version": "2025-04-14",
+        "kind": "input"
+      }
+    },
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1 output",
+      "meter_name": "SYNTHETIC gpt-4.1 output tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.009600",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1",
+        "model_version": "2025-04-14",
+        "kind": "output"
+      }
+    },
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1 cached",
+      "meter_name": "SYNTHETIC gpt-4.1 cached tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.000600",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1",
+        "model_version": "2025-04-14",
+        "kind": "cached"
+      }
+    },
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1-mini input",
+      "meter_name": "SYNTHETIC gpt-4.1-mini input tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.000480",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1-mini",
+        "model_version": "2025-04-14",
+        "kind": "input"
+      }
+    },
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1-mini output",
+      "meter_name": "SYNTHETIC gpt-4.1-mini output tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.001920",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1-mini",
+        "model_version": "2025-04-14",
+        "kind": "output"
+      }
+    },
+    {
+      "service_name": "SYNTHETIC provider sheet",
+      "sku_name": "gpt-4.1-mini cached",
+      "meter_name": "SYNTHETIC gpt-4.1-mini cached tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1K",
+      "retail_price": "0.000120",
+      "price_type": "Consumption",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1-mini",
+        "model_version": "2025-04-14",
+        "kind": "cached"
+      }
+    }
+  ]
+}
