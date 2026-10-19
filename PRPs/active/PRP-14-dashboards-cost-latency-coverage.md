@@ -240,9 +240,9 @@ A source with no data has `coverage.status: "unknown"`, not 0. `variance = sourc
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-19 |
+| 1 | in-progress | (agent worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
 | 2 | todo | | sonnet | | 2026-10-19 |
-| 3 | todo | | sonnet | | 2026-10-19 |
+| 3 | in-progress | (agent worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
 | 4 | todo | | sonnet | | 2026-10-19 |
 | 5 | todo | | sonnet | | 2026-10-19 |
 
