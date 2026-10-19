@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-14-dashboards-cost-latency-coverage](active/PRP-14-dashboards-cost-latency-coverage.md) |  | 0/5 (0%) | todo 3, in-progress 2 | ? / ? | none |
+| [prp-14-dashboards-cost-latency-coverage](active/PRP-14-dashboards-cost-latency-coverage.md) |  | 1/5 (20%) | todo 3, in-progress 1, merged 1 | ? / ? | none |
 
 ## Backlog
 
