@@ -1,4 +1,6 @@
 import { useRoles } from "../auth";
+import { dashboardNavItems } from "../features/dashboards";
+import { reconciliationNavItems } from "../features/reconciliation";
 import { workspaceNavItems } from "../features/workspaces";
 import type { NavItem } from "./routes";
 
@@ -9,5 +11,11 @@ import type { NavItem } from "./routes";
  */
 export function useAppNavItems(): readonly NavItem[] {
   const { roles } = useRoles();
-  return [{ to: "/", label: "Home" }, ...workspaceNavItems(roles)];
+  return [
+    { to: "/", label: "Home" },
+    ...workspaceNavItems(roles),
+    // Always listed: the pages call the API, which answers 403 for a domain the caller cannot read.
+    ...dashboardNavItems(),
+    ...reconciliationNavItems(),
+  ];
 }

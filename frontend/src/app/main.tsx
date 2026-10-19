@@ -1,6 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
+import { dashboardRoutes } from "../features/dashboards";
+import { reconciliationRoutes } from "../features/reconciliation";
 import { workspaceRoutes } from "../features/workspaces";
 import { App } from "./App";
 import { useAppNavItems } from "./workspaceNav";
@@ -15,6 +17,8 @@ async function loadAuthInstance(): Promise<IPublicClientApplication | undefined>
   return undefined;
 }
 
+const appRoutes = [...workspaceRoutes, ...dashboardRoutes, ...reconciliationRoutes];
+
 const container = document.getElementById("root");
 if (container === null) throw new Error("Missing #root element");
 const root = createRoot(container);
@@ -22,7 +26,7 @@ const root = createRoot(container);
 void loadAuthInstance().then((authInstance) => {
   root.render(
     <StrictMode>
-      <App extraRoutes={workspaceRoutes} useNavItems={useAppNavItems} authInstance={authInstance} />
+      <App extraRoutes={appRoutes} useNavItems={useAppNavItems} authInstance={authInstance} />
     </StrictMode>,
   );
 });
