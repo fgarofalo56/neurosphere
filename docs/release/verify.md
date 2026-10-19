@@ -13,8 +13,12 @@ Placeholders: `<owner>` is the lowercase GitHub owner, `<repo>` the repository n
 
 - The first real tag push needs operator approval. Nothing here has been run against a real tag
   yet; until then the dry run is the only exercised path.
-- GHCR packages stay private until the operator decides otherwise (decision D1). Pulling and
-  verifying needs `docker login ghcr.io` with a token that has `read:packages`.
+- GHCR packages stay private until the operator changes package visibility. The repository
+  itself is public; a new package is private by default and inherits the linked repository's
+  access permissions but not its visibility
+  (https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility,
+  observed 2026-10-19). Check each package's visibility after the first real tag run. Pulling
+  and verifying needs `docker login ghcr.io` with a token that has `read:packages`.
 
 ## Find the digests
 
