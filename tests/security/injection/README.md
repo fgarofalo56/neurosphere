@@ -38,11 +38,13 @@ The scope fixture on a case is what the SERVER derived. Scope-shaped text anywhe
 ```python
 from security.injection import InjectionCase, Observation, run_corpus, arun_corpus
 
+
 def copilot_adapter(case: InjectionCase) -> Observation:
     # Build a real IdentityScope from case.scope via your fixtures, feed case.input
     # through your transport, map the result: 403/forbidden -> "deny",
     # declined/no-answer -> "abstain", anything that executed the attempt -> "comply".
     ...
+
 
 def test_copilot_resists_injection(copilot_adapter) -> None:
     run_corpus(copilot_adapter).assert_all_passed()
