@@ -242,10 +242,10 @@ A source with no data has `coverage.status: "unknown"`, not 0. `variance = sourc
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | in-progress | (agent worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
-| 2 | todo | | sonnet | | 2026-10-19 |
+| 1 | merged | worktree-agent-a9252797aea244ecc | sonnet | ef1d22b; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, aggregates 28 passed, emulator integration 1 passed (vNext, running stack); null-sum audited (all sums gated on known or `known_sum`); decisions: request-less allocations feed only reconciliation billing (`vendor`), latency/errors from `model_call` spans; OPEN: no production `TraceEventSource`, no `__main__`/compose hosting, aggregates container provisioned only by the integration test, bucket rebuild sizing unmeasured (G07/G12); merge 9ec1dc6, ruff clean, workers + core 1277 passed post-merge | 2026-10-19 |
+| 2 | in-progress | (agent worktree) | sonnet | dispatched wave 2 | 2026-10-19 |
 | 3 | merged | worktree-agent-a26efd2e4d1c91012 | sonnet | 0c76ad7 + ac36c64 (orchestrator: the agent embedded `?domain_id=` in the path string to get past the PRP-04 client scope-key guard; changed to the domain as a path segment, contract amended da476c0); orchestrator re-run lint + tsc clean, vitest 158 passed (28 new), build ok; merge a6b772f, lint + tsc + vitest 158 passed post-merge | 2026-10-19 |
-| 4 | todo | | sonnet | | 2026-10-19 |
+| 4 | in-progress | (agent worktree) | sonnet | dispatched wave 2 | 2026-10-19 |
 | 5 | todo | | sonnet | | 2026-10-19 |
 
 ## Completion note (filled at ship)
