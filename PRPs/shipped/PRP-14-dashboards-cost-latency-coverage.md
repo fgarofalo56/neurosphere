@@ -1,7 +1,9 @@
 ---
 name: prp-14-dashboards-cost-latency-coverage
-status: active
+status: shipped
 started: 2026-10-19
+shipped: 2026-10-19
+pr: 74
 review: none
 created: 2026-10-08
 branch: prp-14-dashboards-cost-latency-coverage
@@ -249,9 +251,9 @@ A source with no data has `coverage.status: "unknown"`, not 0. `variance = sourc
 | 5 | merged | worktree-agent-ab06388655b9d7961 | sonnet | 5dd2877 + 7a42bb4 + a762139; also regenerated `services/api/openapi.json` (outside ownership, generated, additive only; required by `test_openapi_drift` once both routers registered); orchestrator re-run on branch: ruff clean, pyright 0, 395 passed, Playwright 17 passed (incl. analytics-down, 403, axe); merge 6599cf3; post-merge on integration branch: verify-gates full PASS (lint, pyright 0 errors, 5105 passed, build), validate_planning PASS, licences PASS (534), full-history gitleaks clean (253 commits), emulator integration (slice + emulator p95 + aggregates idempotency) 13 passed in 9m16s; measured p95 in-memory 9-17 ms, emulator 64-252 ms vs the 2 s planning target (target, not a guarantee); evidence docs/evidence/G07/dashboards/ | 2026-10-19 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Open gates recorded (ids and where):
-- Follow-ups:
+- Date: 2026-10-19
+- Merged commits: PR #74 merged as e15c6c4 (CI all green: 21 checks including CodeQL, full-history gitleaks, image scans, contracts drift, planning, python and frontend). Item merges into the integration branch: 3 a6b772f, 1 9ec1dc6, 2 188ecc6, 4 e21cff0, 5 6599cf3. Before the PR: `verify-gates -Mode full` PASS (lint, pyright 0 errors, 5105 passed, build), validate_planning PASS, licences PASS (534), full-history gitleaks clean, emulator integration 13 passed (9m16s), Playwright 17 passed.
+- Deviations from blueprint and why: D1, item 4 reads item 1 reconciliation rollups instead of the ledger (the PRP gotcha forbids ledger reads on the request path). D2, the repo has no compose-backed browser e2e: Playwright runs in CI on the mock API, the compose slice is an in-process `integration` test run locally, and item 5 took ownership of the wiring files (routers.py, main.tsx, workspaceNav.ts, mock-api server). Item 1 also owns the new `neurosphere_core/aggregates` because the API depends only on core. The contract was amended so the domain is a path segment: the PRP-04 client refuses `domain_id`/`customer_id` params, and item 3's first cut had smuggled `?domain_id=` into the path string, which the orchestrator rejected. Item 5 regenerated `services/api/openapi.json` (generated, additive) for the drift test. Item 2: latency totals are always unknown (percentiles do not combine) and `Server-Timing` appears on 2xx responses only. Item 4 added per-currency `references[]`.
+- Descoped items: none.
+- Open gates recorded (ids and where): G07 (dashboards p95 narrowed only; sized/cost evidence goes to PRP-21) and G12 (emulator deltas for the aggregates slice), both in docs/RESEARCH-AND-GATES.md. Evidence is in docs/evidence/G07/dashboards/. G04 is untouched (reconciliation shows coverage gaps but does not close it).
+- Follow-ups: production bootstrap of `app.state.aggregate_reader` (both routes return 503 on a real deployment until it exists, the same as `catalog_graph`); hosting the aggregates worker in the compose `workers` container with a `__main__`; a production `TraceEventSource` for latency/errors; provisioning the aggregates Cosmos container (partition `/customer_id`) in migrations/IaC; browser e2e against compose in CI; normalizing the router prefixes, which are inconsistent (`/catalog`, `/v1/ingest`, `/api/v1/...`) and predate this PRP.
