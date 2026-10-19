@@ -215,7 +215,9 @@ Ownership note: `neurosphere_api` depends only on `neurosphere-core` (not on `ne
 ### Wire contract (decided at approval; items 2-5 code against it)
 `MetricValue = {"value": number|null, "status": "known"|"unknown", "complete": bool, "price_version": {"id": str, "effective_date": "YYYY-MM-DD"}|null}`. `status: "unknown"` always pairs with `value: null`. A total that includes unknown components has `complete: false` and the sum of the known parts; it is never silently presented as complete.
 
-`GET /api/v1/dashboards/{metric}`, metric in `cost | latency | errors | coverage`. Query: `domain_id` (required, single); `days` (1-90, default 30); `grain` (`day | hour`, default `day`, hour limited to 14 days); `max_series` (1-50, default 20); `max_points` (1-2160, default 720). If the derived `IdentityScope` lacks read on `domain_id`, the response is 403 (problem+json). A policy store outage is 503. The response:
+Amended 2026-10-19 after item 3: the domain is a PATH SEGMENT. The PRP-04 client (`frontend/src/api/client.ts`) refuses `domain_id`/`customer_id` as parameters because scope is derived server-side. Here the domain is the addressed resource, authorized against the derived scope, not a scope claim. Response bodies still echo `domain_id`.
+
+`GET /api/v1/dashboards/domains/{domain}/{metric}`, metric in `cost | latency | errors | coverage`. Query: `days` (1-90, default 30); `grain` (`day | hour`, default `day`, hour limited to 14 days); `max_series` (1-50, default 20); `max_points` (1-2160, default 720). If the derived `IdentityScope` lacks read on `{domain}`, the response is 403 (problem+json). A policy store outage is 503. The response:
 ```
 { "metric", "domain_id", "grain", "window": {"start", "end"},
   "freshness": {"watermark": iso|null, "lag_seconds": number|null, "billing_source_freshness": iso|null},
@@ -227,7 +229,7 @@ Ownership note: `neurosphere_api` depends only on `neurosphere-core` (not on `ne
 ```
 Cost returns separate `estimated` and `invoiced` series per currency and never a blended series. Latency returns `p50`, `p95` and `p99` (ms). Errors returns `error_rate` (ratio) and `error_count`. Coverage returns `coverage` (ratio of ledger entries with a known amount). Responses carry a `Server-Timing: app;dur=<ms>` header. The analytics state comes from the capability matrix and adapter health; UI strings name no vendor.
 
-`GET /api/v1/reconciliation` with query `domain_id` (required) and `days` (1-90). Same 403/503 rules. The response:
+`GET /api/v1/reconciliation/domains/{domain}` with query `days` (1-90). Same 403/503 rules. The response:
 ```
 { "domain_id", "window", "freshness", "complete",
   "reference": {"label": "ledger (one record per request)", "amount": MetricValue, "currency": str|null},
