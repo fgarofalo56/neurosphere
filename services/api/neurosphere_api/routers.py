@@ -97,6 +97,18 @@ def _register_catalog_curation(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_dashboards(registry: RouterRegistry) -> None:
+    from neurosphere_api.dashboards import register
+
+    register(registry)
+
+
+def _register_reconciliation(registry: RouterRegistry) -> None:
+    from neurosphere_api.reconciliation import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -105,6 +117,8 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_deploy_plan,
     _register_catalog,
     _register_catalog_curation,
+    _register_dashboards,
+    _register_reconciliation,
 )
 
 
