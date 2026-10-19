@@ -93,7 +93,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 
 | | Threat | Mitigation | State | Owner |
 |---|---|---|---|---|
-| S | Attacker bypasses APIM and calls the API or a data service directly | APIM is the only public ingress; data services default to `publicNetworkAccess: 'Disabled'` (`infra/bicep/modules/*.bicep`); default-deny network module and private endpoints (PRP-12 item 3). The API validates every token itself, so a bypass gains no authority | In progress | PRP-12, PRP-08 |
+| S | Attacker bypasses APIM and calls the API or a data service directly | APIM is the only public ingress; data services default to `publicNetworkAccess: 'Disabled'` (`infra/bicep/modules/*.bicep`); default-deny network module and private endpoints (PRP-12 item 3). The API validates every token itself, so a bypass gains no authority | In repo (publicNetworkAccess defaults) / In progress (private endpoints, NSG) | PRP-12, PRP-08 |
 | T | Script injection in the UI rewrites requests or exfiltrates data; chart specs execute code | React escaping; copilot chart plans are a Vega-Lite subset (no `expr`, signals or external `url` data) rendered by `vega-interpreter` in a sandboxed iframe; CSP for the shell | Planned | PRP-19, PRP-04 |
 | R | Requests cannot be correlated across gateway and API | `services/api/neurosphere_api/middleware/correlation.py` accepts a valid caller correlation id or generates a UUID4 and stamps it on responses, logs and audit | In repo | PRP-05 |
 | I | Error bodies leak stack traces, hosts or other domains' existence; hidden navigation mistaken for protection | `middleware/problem.py` renders RFC 9457 bodies with a correlation id and never a trace or host. Hidden navigation is not authorization: the API denies regardless of what the UI shows; theme is never permission | In repo | PRP-05, PRP-04 |
@@ -128,7 +128,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 |---|---|---|---|---|
 | S | Adapter pointed at an attacker host or, in Government, at a Commercial workspace | Hosts come from config validated against per-cloud suffixes (for example `packages/core/neurosphere_core/analytics/fabric/config.py`); `create_adapter` resolves the backend through the capability matrix before importing vendor code; a disabled backend raises `capability_unavailable` with the matrix reason and nothing is routed to another cloud (`analytics/base/registry.py`) | In repo | PRP-11, PRP-02 |
 | T | SQL injection, or LLM-generated SQL reaching the engine | No method accepts query text; requests are closed enums, bounded numbers and pattern-checked short values (`analytics/base/models.py`); identifiers come from a closed column whitelist and every value is a bound parameter (`analytics/base/dialect.py`) | In repo | PRP-11 |
-| R | Analytics reads cannot be tied to a principal | The calling route's authorization decision is audited with the correlation id; the adapter receives the same scope object | In repo | PRP-06, PRP-11 |
+| R | Analytics reads cannot be tied to a principal | Denials are audited (`services/api/neurosphere_api/authz/recorder.py`); allowed reads carry the correlation id in logs only; the adapter receives the same scope object | In repo (denials) / Gap (allowed-read audit) | PRP-06, PRP-11 |
 | I | Rows from other customers, domains or clouds returned | `scope` is a required keyword-only argument, never a request field; customer, cloud and allowed domains are always the first predicates and caller filters only narrow (`analytics/base/plan.py`); a scope whose cloud differs from the adapter's is `forbidden` (`cloud_mismatch`) | In repo | PRP-11 |
 | D | Unbounded scans exhaust capacity units, DBUs or concurrency | `run_budgeted` enforces time, rows scanned, cost units and returned rows; breach raises `rate_limited` (`analytics/base/enforcement.py`). **G12**: the sqlite stub cannot reproduce throttling, capacity units, DWU or DBU sizing (`G12_PARITY_GAPS` per adapter); live behaviour is OPEN until `g01_analytics_live.py` runs | In repo (stub only) | PRP-11 |
 | E | Adapter identity holds write or admin rights on the workspace | Managed identity with a read role on the serving tables; role assignment is deployment configuration recorded in the evidence manifest | Planned | PRP-08, PRP-20 |
@@ -207,7 +207,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 |---|---|---|---|---|
 | S | Key-based access to the search service | `disableLocalAuth: true` (`infra/bicep/modules/search.bicep`); managed identity via the client factory | In repo | PRP-08, PRP-05 |
 | T | Query syntax injection from a model or user | The term is only tokenized, never parsed or evaluated; filters are allowlisted (`packages/core/neurosphere_core/search/protocol.py`) | In repo | PRP-03, PRP-10 |
-| R | Search access not attributable | Route decision audited | In repo | PRP-06 |
+| R | Search access not attributable | Denials are audited (`services/api/neurosphere_api/authz/recorder.py`); allowed reads carry the correlation id in logs only | In repo (denials) / Gap (allowed-read audit) | PRP-06 |
 | I | Out-of-scope documents influence results or scores | Scope applied before ranking; `tests/security/authz/test_search_paths.py` | In repo | PRP-10, PRP-06 |
 | D | Expensive searches | `Budget` on every request | In repo | PRP-10 |
 | E | Index admin rights on the query identity | Query identity holds index-reader role only; index management is deployment-time | Planned | PRP-08 |
@@ -229,7 +229,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 |---|---|---|---|---|
 | S | Scan runs under a credential the operator did not consent to | Keyless credential; route gated by `config.manage`; fails closed 503 (`scan_not_configured`) unless enabled (`services/api/neurosphere_api/deploy/scan/`) | In repo | PRP-08 |
 | T | IaC modifies or deletes a reused shared resource | Reuse-or-create modules never write to a reused id (`infra/bicep/modules/apim.bicep` header); reusing a shared resource needs a granted consent record (`services/api/neurosphere_api/deploy/plan/planner.py`); the ownership register's removal guard is the only deletion path and never removes a resource absent from the register (`packages/core/neurosphere_core/deploy/register/guard.py`) | In repo | PRP-08 |
-| R | Who consented to reuse, and which plan was approved | Consent records go through an audit sink adapted to the PRP-06 audit repository (`deploy/register/consent.py`); the plan projects to the PRP-01 `DeploymentManifest` | In repo | PRP-08, PRP-06 |
+| R | Who consented to reuse, and which plan was approved | Consent records call a `ConsentAuditSink` hook that defaults to a no-op (`deploy/register/consent.py`); no adapter to the PRP-06 audit repository is wired yet; the plan projects to the PRP-01 `DeploymentManifest` | In repo (hook) / Gap (audit wiring) | PRP-08, PRP-06 |
 | I | Scan becomes an unrestricted tenant inventory | Visibility is requested intersected with consented intersected with readable (`deploy/scan/service.py`); fixed `SCAN_QUERY` | In repo | PRP-08 |
 | D | Resource Graph throttling or unbounded paging stalls planning | Reader timeout (30 s default) and page cap (50 pages) in `deploy/scan/graph.py`; failure is surfaced, not retried silently | In repo | PRP-08 |
 | E | Read scan escalates to writes; an unavailable Government feature silently enabled or swapped for Commercial | Read-only by construction (the only POST is the fixed Resource Graph query, `deploy/scan/graph.py`); capability matrix disables unavailable options with a reason; Government is gated, not banned, and never backed by Commercial | In repo; Government profile Planned | PRP-08, PRP-02, PRP-20 |
@@ -346,5 +346,10 @@ these production behaviours, so the affected rows above rely on live gates for t
 
 - **B2 D, Gap**: no APIM rate-limit or quota policy exists in `infra/bicep/modules/apim.bicep`.
   Record as a follow-up issue against PRP-12; the API size cap is the only current request bound.
+- **Allowed-read audit for analytics and search, Gap** (owner PRP-06): only denials
+  (`authz/recorder.py`) and mutations are audited; nothing under
+  `services/api/neurosphere_api/search` or `analytics` writes audit for allowed reads (B5 R, A3 R).
+- **Consent audit wiring, Gap** (owner PRP-06, PRP-08): `ConsentAuditSink` defaults to a no-op and
+  no adapter to the audit repository exists (deploy boundary R row).
 - Every *Planned* row is a dependency on its owning PRP shipping. Re-review this document when
   PRP-17, PRP-18, PRP-19, PRP-20, PRP-21, PRP-22 and PRP-25 ship.
