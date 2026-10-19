@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
-[Semantic Versioning](https://semver.org/). Release automation arrives with PRP-13.
+[Semantic Versioning](https://semver.org/). The release process is in `docs/release/release-process.md`.
 
 ## [Unreleased]
 
@@ -49,6 +49,10 @@ All notable changes to this project are documented here. The format follows
   created resources only and a release-scoped default-deny Helm NetworkPolicy, a shared
   78-case prompt-injection corpus and harness (`tests/security/injection/`), and secrets,
   rotation, leak-response and incident runbooks. Live what-if is OPEN.
+- Release tooling (PRP-13): SemVer policy with the contract and migration version mapping
+  (`docs/release/versioning.md`), the operator release process
+  (`docs/release/release-process.md`), and `scripts/release/changelog.py`, which builds
+  Keep-a-Changelog sections from conventional commits.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
