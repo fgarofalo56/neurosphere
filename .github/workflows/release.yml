@@ -1,0 +1,356 @@
+name: release
+
+# Tag-triggered publish (PRP-13 item 2). Builds the api, workers and frontend images,
+# pushes them to GHCR, attaches a syft CycloneDX SBOM, signs keylessly with cosign by
+# digest, pushes the Helm chart as OCI and drafts a GitHub Release.
+#
+# Modes
+#   tag v*.*.*         real publish (images, signatures, chart, DRAFT release)
+#   workflow_dispatch  dry_run=true by default; dry_run=false only on a v*.*.* tag
+#   pull_request       path-filtered, always dry run: builds, SBOMs, lints and packages,
+#                      pushes and signs nothing
+#
+# Fails closed: no step suppresses a failing exit code. Binaries are installed by version
+# and sha256 (same pattern as security.yml); no third-party docker, cosign or syft action.
+# Only the `sign` job holds id-token: write; only `release-notes` holds contents: write.
+# GHCR packages stay private until the operator decides otherwise (PRP-13 decision D1).
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build, SBOM, lint and package only; push and sign nothing"
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - "services/*/Dockerfile"
+      - "frontend/Dockerfile"
+      - "frontend/nginx.conf"
+      - ".dockerignore"
+      - ".github/workflows/release.yml"
+      - "infra/helm/**"
+      - "scripts/release/**"
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SYFT_VERSION: "1.54.1"
+  SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
+  COSIGN_VERSION: "3.1.3"
+  COSIGN_SHA256: "4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71"
+  OIDC_ISSUER: "https://token.actions.githubusercontent.com"
+
+jobs:
+  meta:
+    name: resolve version and mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      version: ${{ steps.resolve.outputs.version }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
+      previous_tag: ${{ steps.resolve.outputs.previous_tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Resolve dry run, version, prerelease and previous tag
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          is_tag=false
+          if [ "$REF_TYPE" = "tag" ] && [[ "$REF_NAME" =~ ^v[0-9]+[.][0-9]+[.][0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            is_tag=true
+          fi
+
+          dry_run=false
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            dry_run=true
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$INPUT_DRY_RUN" != "false" ]; then
+            dry_run=true
+          fi
+
+          if [ "$dry_run" = "false" ] && [ "$is_tag" != "true" ]; then
+            echo "::error::a real publish needs a v*.*.* tag ref; got '${REF_NAME}'. Re-run with dry_run=true or push a tag."
+            exit 1
+          fi
+
+          semver='^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)(-([0-9A-Za-z-]+)([.][0-9A-Za-z-]+)*)?([+][0-9A-Za-z.-]+)?$'
+          prerelease=false
+          if [ "$dry_run" = "true" ]; then
+            version="0.0.0-dryrun.${GITHUB_RUN_NUMBER}"
+          else
+            version="${REF_NAME#v}"
+            if ! [[ "$version" =~ $semver ]]; then
+              echo "::error::tag '${REF_NAME}' is not a valid SemVer version"
+              exit 1
+            fi
+          fi
+          case "$version" in
+            *-*) prerelease=true ;;
+          esac
+
+          # Previous tag for the changelog: newest v*.*.* tag that is not this one,
+          # else the root commit.
+          previous=""
+          for t in $(git tag --list 'v*.*.*' --sort=-v:refname); do
+            if [ "$t" != "$REF_NAME" ]; then
+              previous="$t"
+              break
+            fi
+          done
+          if [ -z "$previous" ]; then
+            previous="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          {
+            echo "dry_run=${dry_run}"
+            echo "version=${version}"
+            echo "prerelease=${prerelease}"
+            echo "previous_tag=${previous}"
+          } >> "$GITHUB_OUTPUT"
+          echo "dry_run=${dry_run} version=${version} prerelease=${prerelease} previous=${previous}"
+
+  images:
+    name: image ${{ matrix.service }} (build, SBOM, push)
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api
+            dockerfile: services/api/Dockerfile
+          - service: workers
+            dockerfile: services/workers/Dockerfile
+          - service: frontend
+            dockerfile: frontend/Dockerfile
+    env:
+      SERVICE: ${{ matrix.service }}
+      DOCKERFILE: ${{ matrix.dockerfile }}
+      VERSION: ${{ needs.meta.outputs.version }}
+      DRY_RUN: ${{ needs.meta.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install syft (version and sha256 pinned)
+        run: |
+          set -euo pipefail
+          dl="$RUNNER_TEMP/tools"
+          mkdir -p "$dl/bin"
+          curl -sSfL -o "$dl/syft.tgz" "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          echo "${SYFT_SHA256}  $dl/syft.tgz" | sha256sum -c -
+          tar -xzf "$dl/syft.tgz" -C "$dl/bin" syft
+          echo "$dl/bin" >> "$GITHUB_PATH"
+      - name: Resolve image reference
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "IMAGE=ghcr.io/${owner}/neurosphere/${SERVICE}:${VERSION}" >> "$GITHUB_ENV"
+      - name: Build image
+        run: docker build -f "$DOCKERFILE" -t "$IMAGE" .
+      - name: SBOM (syft, CycloneDX JSON)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/out"
+          syft "$IMAGE" -o "cyclonedx-json=$RUNNER_TEMP/out/${SERVICE}.cdx.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.service }}
+          path: ${{ runner.temp }}/out/${{ matrix.service }}.cdx.json
+          if-no-files-found: error
+      - name: Dry run - log what would be pushed and signed
+        if: env.DRY_RUN == 'true'
+        run: |
+          echo "dry-run: would push ${IMAGE}"
+          echo "dry-run: would sign and attest the pushed digest with cosign (keyless, CycloneDX predicate)"
+          echo "dry-run: nothing was pushed or signed"
+      - name: Log in to GHCR
+        if: env.DRY_RUN == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Push image and record digest
+        if: env.DRY_RUN == 'false'
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE"
+          ref="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE")"
+          case "$ref" in
+            *@sha256:*) ;;
+            *) echo "::error::no sha256 digest recorded for ${IMAGE}"; exit 1 ;;
+          esac
+          echo "pushed ${ref}"
+          mkdir -p "$RUNNER_TEMP/out"
+          echo "$ref" > "$RUNNER_TEMP/out/${SERVICE}.digest"
+      - uses: actions/upload-artifact@v7
+        if: env.DRY_RUN == 'false'
+        with:
+          name: digest-${{ matrix.service }}
+          path: ${{ runner.temp }}/out/${{ matrix.service }}.digest
+          if-no-files-found: error
+
+  sign:
+    name: sign and attest images (cosign keyless)
+    needs: [meta, images]
+    if: needs.meta.outputs.dry_run == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Install cosign (version and sha256 pinned)
+        run: |
+          set -euo pipefail
+          dl="$RUNNER_TEMP/tools"
+          mkdir -p "$dl/bin"
+          curl -sSfL -o "$dl/cosign" "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-amd64"
+          echo "${COSIGN_SHA256}  $dl/cosign" | sha256sum -c -
+          install -m 0755 "$dl/cosign" "$dl/bin/cosign"
+          echo "$dl/bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digest-*
+          path: ${{ runner.temp }}/in
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: sbom-*
+          path: ${{ runner.temp }}/in
+          merge-multiple: true
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Sign, attest and verify each image by digest
+        run: |
+          set -euo pipefail
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}"
+          for svc in api workers frontend; do
+            ref="$(cat "$RUNNER_TEMP/in/${svc}.digest")"
+            sbom="$RUNNER_TEMP/in/${svc}.cdx.json"
+            echo "== ${svc}: ${ref}"
+            cosign sign --yes "$ref"
+            cosign attest --yes --type cyclonedx --predicate "$sbom" "$ref"
+            cosign verify \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer "$OIDC_ISSUER" \
+              "$ref"
+            cosign verify-attestation --type cyclonedx \
+              --certificate-identity "$identity" \
+              --certificate-oidc-issuer "$OIDC_ISSUER" \
+              "$ref"
+          done
+
+  chart:
+    name: helm chart (lint, package, push)
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      DRY_RUN: ${{ needs.meta.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+        with:
+          version: v4.3.0
+      - name: Helm major version is 4
+        run: |
+          helm version --short
+          helm version --short | grep -E '^v4[.]'
+      - name: Helm lint
+        run: helm lint --strict infra/helm -f infra/helm/ci/values-ci.yaml
+      - name: Helm package
+        run: helm package infra/helm --version "$VERSION" --app-version "$VERSION" -d dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: chart
+          path: dist/neurosphere-*.tgz
+          if-no-files-found: error
+      - name: Dry run - log what would be pushed
+        if: env.DRY_RUN == 'true'
+        run: |
+          echo "dry-run: would push dist/neurosphere-${VERSION}.tgz to oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts"
+          echo "dry-run: nothing was pushed"
+      - name: Log in to GHCR registry (helm)
+        if: env.DRY_RUN == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Push chart (OCI)
+        if: env.DRY_RUN == 'false'
+        run: |
+          set -euo pipefail
+          helm push "dist/neurosphere-${VERSION}.tgz" "oci://ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/charts"
+
+  release-notes:
+    name: release notes and draft release
+    needs: [meta, images, sign, chart]
+    # sign is skipped on a dry run, which would skip this job; run it unless something failed.
+    if: ${{ !cancelled() && needs.images.result == 'success' && needs.chart.result == 'success' && (needs.sign.result == 'success' || needs.meta.outputs.dry_run == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      PREV: ${{ needs.meta.outputs.previous_tag }}
+      DRY_RUN: ${{ needs.meta.outputs.dry_run }}
+      PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+      - name: Generate release notes
+        run: python scripts/release/changelog.py --from "$PREV" --to HEAD --version "$VERSION" > notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: notes.md
+          if-no-files-found: error
+      - uses: actions/download-artifact@v8
+        with:
+          name: chart
+          path: dist
+      - name: Dry run - log notes
+        if: env.DRY_RUN == 'true'
+        run: |
+          head -n 40 notes.md
+          echo "dry-run: no GitHub Release was created"
+      - name: Create draft GitHub Release
+        if: env.DRY_RUN == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          flags=(--draft --notes-file notes.md)
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$TAG" "${flags[@]}" dist/*.tgz

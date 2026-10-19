@@ -37,9 +37,10 @@ jobs:
       has_images: ${{ steps.find.outputs.has_images }}
     steps:
       - uses: actions/checkout@v7
-      - name: Find services/*/Dockerfile
+      - name: Find services/*/Dockerfile and frontend/Dockerfile
         id: find
-        # Production images only (PRP-13). Dockerfile.dev is a dev image and is not scanned.
+        # Production images only (PRP-13): services/*/Dockerfile plus frontend/Dockerfile.
+        # Dockerfile.dev is a dev image and is not scanned.
         run: |
           shopt -s nullglob
           items=()
@@ -47,6 +48,9 @@ jobs:
             svc="$(basename "$(dirname "$f")")"
             items+=("{\"service\":\"${svc}\",\"dockerfile\":\"${f}\"}")
           done
+          if [ -f frontend/Dockerfile ]; then
+            items+=('{"service":"frontend","dockerfile":"frontend/Dockerfile"}')
+          fi
           if [ "${#items[@]}" -eq 0 ]; then
             echo "::notice::no image yet (PRP-13)"
             echo "has_images=false" >> "$GITHUB_OUTPUT"
