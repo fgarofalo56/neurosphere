@@ -215,10 +215,10 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-19 |
-| 2 | todo | | sonnet | | 2026-10-19 |
-| 3 | todo | | sonnet | | 2026-10-19 |
-| 4 | todo | | sonnet | | 2026-10-19 |
+| 1 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
+| 2 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
+| 3 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
+| 4 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
 | 5 | todo | | sonnet | | 2026-10-19 |
 | 6 | todo | | sonnet | | 2026-10-19 |
 
