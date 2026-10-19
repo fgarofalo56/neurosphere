@@ -210,7 +210,49 @@ def test_private_endpoints_cover_the_five_services(
         ("keyVault", "keyVaultId"),
         ("search", "searchId"),
     ):
-        assert f"ns-{module.lower()}" in params[param]["value"].lower(), param
+        assert f"'ns-{module.lower()}'" in params[param].lower(), param
+
+
+@pytest.mark.parametrize(
+    ("module", "param"),
+    [
+        ("cosmos", "cosmosId"),
+        ("eventhubs", "eventHubsId"),
+        ("storage", "storageId"),
+        ("keyvault", "keyVaultId"),
+        ("search", "searchId"),
+    ],
+)
+def test_network_target_ids_are_gated_on_created(
+    main_arm: dict[str, Any], module: str, param: str
+) -> None:
+    # Reuse mode must not create a private endpoint against a shared resource.
+    expr = _deployments(main_arm)["ns-network"]["parameters"][param]
+    assert isinstance(expr, str), param
+    ref = f"reference(resourceId('Microsoft.Resources/deployments', 'ns-{module}')"
+    assert expr.startswith(f"[if({ref}"), expr
+    assert ".outputs.created.value," in expr, expr
+    assert expr.endswith("createObject('value', ''))]"), expr
+    assert expr.count(ref) == 2, expr  # created flag and id from the same module
+
+
+def test_network_resources_are_conditional_on_non_empty_target_id(
+    network_arm: dict[str, Any],
+) -> None:
+    conditional = {
+        "Microsoft.Network/privateEndpoints",
+        "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+        "Microsoft.Network/privateDnsZones",
+        "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+    }
+    found = set()
+    for r in _resources(network_arm):
+        if r["type"] in conditional:
+            assert r.get("condition") == (
+                "[not(empty(variables('endpoints')[copyIndex()].targetId))]"
+            ), r["type"]
+            found.add(r["type"])
+    assert found == conditional
 
 
 def test_nsg_outbound_denies_internet_with_service_tag_allowlist(

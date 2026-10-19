@@ -43,9 +43,10 @@ def _by_name(policies: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return {p["metadata"]["name"]: p for p in policies}
 
 
-def test_default_deny_covers_all_pods_both_directions() -> None:
+def test_default_deny_covers_release_pods_both_directions() -> None:
     deny = _by_name(_policies())["neurosphere-default-deny"]["spec"]
-    assert deny["podSelector"] == {}
+    # Scoped to this release, never the whole namespace.
+    assert deny["podSelector"] == {"matchLabels": {"app.kubernetes.io/instance": "neurosphere"}}
     assert set(deny["policyTypes"]) == {"Ingress", "Egress"}
     assert "ingress" not in deny  # no rules at all means nothing is allowed
     assert "egress" not in deny

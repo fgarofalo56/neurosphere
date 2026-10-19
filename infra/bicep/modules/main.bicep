@@ -132,11 +132,12 @@ module network 'network/main.bicep' = {
     namePrefix: namePrefix
     location: location
     tags: tags
-    cosmosId: cosmos.outputs.id
-    eventHubsId: eventHubs.outputs.id
-    storageId: storage.outputs.id
-    keyVaultId: keyVault.outputs.id
-    searchId: search.outputs.id
+    // Reuse mode must not touch shared resources: only created services get a private endpoint.
+    cosmosId: cosmos.outputs.created ? cosmos.outputs.id : ''
+    eventHubsId: eventHubs.outputs.created ? eventHubs.outputs.id : ''
+    storageId: storage.outputs.created ? storage.outputs.id : ''
+    keyVaultId: keyVault.outputs.created ? keyVault.outputs.id : ''
+    searchId: search.outputs.created ? search.outputs.id : ''
   }
 }
 

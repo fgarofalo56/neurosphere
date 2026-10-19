@@ -11,7 +11,9 @@ metadata:
   labels:
     {{- include "neurosphere.labels" . | nindent 4 }}
 spec:
-  podSelector: {}
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
     - Egress

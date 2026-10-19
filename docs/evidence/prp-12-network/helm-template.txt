@@ -10,10 +10,13 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: neurosphere-0.1.0
 spec:
-  podSelector: {}
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: neurosphere
   policyTypes:
-  - Ingress
-  - Egress
+    - Ingress
+    - Egress
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -29,20 +32,21 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: neurosphere
   policyTypes:
-  - Egress
+    - Egress
   egress:
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: kube-system
-      podSelector:
-        matchLabels:
-          k8s-app: kube-dns
-    ports:
-    - protocol: UDP
-      port: 53
-    - protocol: TCP
-      port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -58,18 +62,19 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: neurosphere
   policyTypes:
-  - Ingress
-  - Egress
+    - Ingress
+    - Egress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/instance: neurosphere
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: neurosphere
   egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/instance: neurosphere
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: neurosphere
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -85,11 +90,12 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: neurosphere
   policyTypes:
-  - Egress
+    - Egress
   egress:
-  - to:
-    - ipBlock:
-        cidr: 10.40.1.0/24
-    ports:
-    - protocol: TCP
-      port: 443
+    - to:
+        - ipBlock:
+            cidr: "10.40.1.0/24"
+      ports:
+        - protocol: TCP
+          port: 443
+
