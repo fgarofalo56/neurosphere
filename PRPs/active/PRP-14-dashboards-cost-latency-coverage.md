@@ -210,6 +210,34 @@ Plan approved 2026-10-19 with two deltas signed off by the operator, because the
 
 Waves: 1 = items 1 and 3 in parallel; 2 = items 2 and 4 in parallel (after item 1); 3 = item 5 (after 1-4).
 
+Ownership note: `neurosphere_api` depends only on `neurosphere-core` (not on `neurosphere_workers`), so item 1 also owns the new `packages/core/neurosphere_core/aggregates/`: aggregate document models plus an `AggregateStore` protocol with in-memory and Cosmos implementations. The worker rollup logic stays in `services/workers/neurosphere_workers/aggregates/`. Items 2 and 4 read through `neurosphere_core.aggregates` only.
+
+### Wire contract (decided at approval; items 2-5 code against it)
+`MetricValue = {"value": number|null, "status": "known"|"unknown", "complete": bool, "price_version": {"id": str, "effective_date": "YYYY-MM-DD"}|null}`. `status: "unknown"` always pairs with `value: null`. A total that includes unknown components has `complete: false` and the sum of the known parts; it is never silently presented as complete.
+
+`GET /api/v1/dashboards/{metric}`, metric in `cost | latency | errors | coverage`. Query: `domain_id` (required, single); `days` (1-90, default 30); `grain` (`day | hour`, default `day`, hour limited to 14 days); `max_series` (1-50, default 20); `max_points` (1-2160, default 720). If the derived `IdentityScope` lacks read on `domain_id`, the response is 403 (problem+json). A policy store outage is 503. The response:
+```
+{ "metric", "domain_id", "grain", "window": {"start", "end"},
+  "freshness": {"watermark": iso|null, "lag_seconds": number|null, "billing_source_freshness": iso|null},
+  "analytics": {"state": "available"|"delayed"|"disabled", "reason": str|null},
+  "complete": bool, "truncated": bool,
+  "series": [ {"key": str, "label": str, "kind": "estimated"|"invoiced"|null, "unit": "currency"|"ms"|"ratio"|"count",
+               "currency": str|null, "total": MetricValue, "points": [ {"t": iso, "value": MetricValue} ]} ],
+  "price_versions": [ {"id", "effective_date"} ] }
+```
+Cost returns separate `estimated` and `invoiced` series per currency and never a blended series. Latency returns `p50`, `p95` and `p99` (ms). Errors returns `error_rate` (ratio) and `error_count`. Coverage returns `coverage` (ratio of ledger entries with a known amount). Responses carry a `Server-Timing: app;dur=<ms>` header. The analytics state comes from the capability matrix and adapter health; UI strings name no vendor.
+
+`GET /api/v1/reconciliation` with query `domain_id` (required) and `days` (1-90). Same 403/503 rules. The response:
+```
+{ "domain_id", "window", "freshness", "complete",
+  "reference": {"label": "ledger (one record per request)", "amount": MetricValue, "currency": str|null},
+  "sources": [ {"source": "gateway"|"app"|"billing", "granularity": "request"|"vendor"|"unknown",
+                "amount": MetricValue, "coverage": MetricValue, "variance": MetricValue, "currency": str|null} ],
+  "unknown_remainder": MetricValue,
+  "disclaimer": "not_all_spend_observable" }
+```
+A source with no data has `coverage.status: "unknown"`, not 0. `variance = source amount - reference amount` and is unknown if either side is unknown. The reference counts each request once (no double counting).
+
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | todo | | sonnet | | 2026-10-19 |
