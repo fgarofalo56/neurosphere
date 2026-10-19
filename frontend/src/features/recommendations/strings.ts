@@ -29,7 +29,8 @@ export const STRINGS = {
   allKinds: "All kinds",
   searchLabel: "Search",
   domainLabel: "Domain",
-  apply: "Apply",
+  // Filter submit only; never a recommendation action (advisory until PRP-17 gates pass).
+  apply: "Apply filters",
   evidenceNotSufficient: "Insufficient history",
   sections: {
     evidenceWindow: "Evidence window",
