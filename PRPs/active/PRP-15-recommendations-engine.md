@@ -211,15 +211,17 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 - `POST /api/v1/recommendations/domains/{domain}/review-requests`, body `{ "recommendation_id" }` (`action.propose`): 202 `{ "review_request_id", "state": "pending_review" }` through a `ReviewRouter` protocol, in-memory stub until PRP-17.
 - `POST /api/v1/recommendations/domains/{domain}/executions`: always refuses with `capability_unavailable`, reason "action gates not passed"; no executing code path.
 
+`recommendation_id` = `{cloud}:{customer_id}:neurosphere:recommendation:{kind with _ as -}-{h}`, where `h` is the first 24 hex chars of sha256 over `generator_id|generator_version|sorted subject_ids|window.start|window.end`. Amended after item 3: the canonical-id grammar forbids `_` in the last segment.
+
 `Recommendation` is the PRP-01 schema document verbatim (`packages/contracts/schemas/recommendations/v1/recommendation.schema.json`).
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
 | 2 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
-| 3 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
+| 3 | merged | worktree-agent-a2f115cb4eb7c644b | sonnet | d1eadaa; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, pricing + projection 47 passed, no network imports, fixtures labelled synthetic; decisions: identical re-put is an idempotent no-op, conflicting re-put raises `SnapshotConflictError`; right-sizing records are `method: rule`, `insufficient_evidence`, no score (nothing measures candidate quality); candidate priced from the same snapshot as the current model, else `invalid_schema` `price_unresolved`; Retail Prices snapshots apply to commercial only (Learn, verified 2026-10-19); deviation: id kind segment uses hyphens (contract amended); merge 6e1f468, ruff clean, 47 passed post-merge | 2026-10-19 |
 | 4 | in-progress | (worktree) | sonnet | dispatched wave 1 | 2026-10-19 |
-| 5 | todo | | sonnet | | 2026-10-19 |
+| 5 | in-progress | (worktree) | sonnet | dispatched into item 3's freed slot | 2026-10-19 |
 | 6 | todo | | sonnet | | 2026-10-19 |
 
 ## Completion note (filled at ship)
