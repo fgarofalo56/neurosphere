@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { dashboardRoutes } from "../features/dashboards";
 import { reconciliationRoutes } from "../features/reconciliation";
+import { recommendationRoutes } from "../features/recommendations";
 import { workspaceRoutes } from "../features/workspaces";
 import { App } from "./App";
 import { useAppNavItems } from "./workspaceNav";
@@ -17,7 +18,12 @@ async function loadAuthInstance(): Promise<IPublicClientApplication | undefined>
   return undefined;
 }
 
-const appRoutes = [...workspaceRoutes, ...dashboardRoutes, ...reconciliationRoutes];
+const appRoutes = [
+  ...workspaceRoutes,
+  ...dashboardRoutes,
+  ...reconciliationRoutes,
+  ...recommendationRoutes,
+];
 
 const container = document.getElementById("root");
 if (container === null) throw new Error("Missing #root element");

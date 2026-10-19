@@ -89,7 +89,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "current_version_id": {
             "anyOf": [
@@ -167,7 +167,7 @@
             "$ref": "#/components/schemas/Token"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -237,7 +237,7 @@
             ]
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -265,7 +265,7 @@
           "released_at": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Timestamp"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
               },
               {
                 "type": "null"
@@ -286,7 +286,7 @@
             "$ref": "#/components/schemas/SchemaVersion"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -585,6 +585,12 @@
         "title": "Budget",
         "type": "object"
       },
+      "CanonicalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "Result of verifying one chain. ``first_invalid_index`` is a position in the input.",
@@ -793,12 +799,69 @@
         "title": "CostImplication",
         "type": "object"
       },
+      "Coverage": {
+        "additionalProperties": false,
+        "description": "How much of the relevant population the evidence observed. observed_fraction null means unknown, never 0.",
+        "properties": {
+          "method": {
+            "enum": [
+              "full",
+              "sampled",
+              "partial",
+              "unknown"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "missing_source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CanonicalId"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Source Ids"
+          },
+          "observed_fraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservedFraction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SamplingRate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "method",
+          "observed_fraction"
+        ],
+        "title": "Coverage",
+        "type": "object"
+      },
       "Curation": {
         "additionalProperties": false,
         "description": "Latest steward decision on an edge (full history lives in the audit log).",
         "properties": {
           "decided_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "decided_by": {
             "$ref": "#/components/schemas/PersonId"
@@ -847,6 +910,11 @@
         ],
         "title": "Curation",
         "type": "object"
+      },
+      "Currency": {
+        "pattern": "^[A-Z]{3}$",
+        "title": "Currency",
+        "type": "string"
       },
       "CurrentVersionId": {
         "maxLength": 512,
@@ -932,9 +1000,9 @@
         "title": "DashboardResponse",
         "type": "object"
       },
-      "Date": {
-        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-        "title": "Date",
+      "Decimal": {
+        "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$",
+        "title": "Decimal",
         "type": "string"
       },
       "DecisionResult": {
@@ -942,7 +1010,7 @@
         "description": "A stored steward decision and the presented edge after it.",
         "properties": {
           "override": {
-            "$ref": "#/components/schemas/EdgeOverride"
+            "$ref": "#/components/schemas/EdgeOverride-Output"
           },
           "presented": {
             "$ref": "#/components/schemas/PresentedEdge"
@@ -1300,7 +1368,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -1349,7 +1417,7 @@
             "$ref": "#/components/schemas/SchemaVersion"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -1481,7 +1549,7 @@
             "type": "string"
           },
           "observed_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "provenance": {
             "$ref": "#/components/schemas/Provenance"
@@ -1511,7 +1579,7 @@
             "type": "array"
           },
           "validity": {
-            "$ref": "#/components/schemas/Validity"
+            "$ref": "#/components/schemas/Validity-Output"
           }
         },
         "required": [
@@ -1531,7 +1599,7 @@
         "title": "EdgeObservation",
         "type": "object"
       },
-      "EdgeOverride": {
+      "EdgeOverride-Input": {
         "additionalProperties": false,
         "description": "Steward decision on one edge (accept, reject, override, lock, unlock), applied with optimistic concurrency. The schema has no field that removes or replaces evidence_ids or security_evidence_ids, so an override cannot erase security evidence; observed facts are retained and the lock changes presented lineage only. lock and override decisions require a lock with locked=true, reason, expiry and actor. Python validators: validate_override_preserves_security_evidence, validate_customer_segment_matches, validate_override_relation_matches_edge (relation_type equals the type segment of edge_id), validate_lock_expiry_after_decision.",
         "properties": {
@@ -1561,7 +1629,7 @@
             "$ref": "#/components/schemas/CustomerId"
           },
           "decided_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/Timestamp-Input"
           },
           "decision": {
             "enum": [
@@ -1598,7 +1666,7 @@
           "lock": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Lock"
+                "$ref": "#/components/schemas/Lock-Input"
               },
               {
                 "type": "null"
@@ -1640,7 +1708,142 @@
           "set_validity": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Validity"
+                "$ref": "#/components/schemas/Validity-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "edge_id",
+          "relation_type",
+          "expected_edge_version",
+          "expected_edge_etag",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "decision",
+          "actor",
+          "reason",
+          "decided_at"
+        ],
+        "title": "EdgeOverride",
+        "type": "object"
+      },
+      "EdgeOverride-Output": {
+        "additionalProperties": false,
+        "description": "Steward decision on one edge (accept, reject, override, lock, unlock), applied with optimistic concurrency. The schema has no field that removes or replaces evidence_ids or security_evidence_ids, so an override cannot erase security evidence; observed facts are retained and the lock changes presented lineage only. lock and override decisions require a lock with locked=true, reason, expiry and actor. Python validators: validate_override_preserves_security_evidence, validate_customer_segment_matches, validate_override_relation_matches_edge (relation_type equals the type segment of edge_id), validate_lock_expiry_after_decision.",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/PersonId"
+          },
+          "add_evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EvidenceId"
+                },
+                "maxItems": 1000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Add Evidence Ids"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "decided_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "decision": {
+            "enum": [
+              "accept",
+              "reject",
+              "override",
+              "lock",
+              "unlock"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "edge_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(invokes|delegates_to|uses_model|reads|writes|grounded_by|owned_by|depends_on|supersedes):[a-z0-9._/=-]+$",
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "expected_edge_etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "expected_edge_version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lock": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Lock-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "relation_type": {
+            "$ref": "#/components/schemas/RelationType"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "set_confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SetConfidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "set_validity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Validity-Output"
               },
               {
                 "type": "null"
@@ -1757,6 +1960,24 @@
         "title": "EvidenceId",
         "type": "string"
       },
+      "ExecutionState": {
+        "additionalProperties": false,
+        "properties": {
+          "executable": {
+            "const": false,
+            "default": false,
+            "title": "Executable",
+            "type": "boolean"
+          },
+          "reason": {
+            "default": "action gates not passed",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "ExecutionState",
+        "type": "object"
+      },
       "ExportPage": {
         "additionalProperties": false,
         "description": "One page of the scope-filtered export. Page through ``next_cursor``.",
@@ -1800,7 +2021,7 @@
                   "$ref": "#/components/schemas/Domain"
                 },
                 {
-                  "$ref": "#/components/schemas/Owner"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                 },
                 {
                   "$ref": "#/components/schemas/Policy"
@@ -1922,6 +2143,23 @@
         "title": "Freshness",
         "type": "object"
       },
+      "Generator": {
+        "additionalProperties": false,
+        "properties": {
+          "generator_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "generator_version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "generator_id",
+          "generator_version"
+        ],
+        "title": "Generator",
+        "type": "object"
+      },
       "GraphPath": {
         "additionalProperties": false,
         "description": "One impact path: alternating node and edge IDs (``len(node_ids) == len(edge_ids)+1``).",
@@ -1994,7 +2232,7 @@
                   "$ref": "#/components/schemas/Domain"
                 },
                 {
-                  "$ref": "#/components/schemas/Owner"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                 },
                 {
                   "$ref": "#/components/schemas/Policy"
@@ -2145,7 +2383,7 @@
             "title": "Contains Personal Data"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -2200,7 +2438,7 @@
             "$ref": "#/components/schemas/Token"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -2490,7 +2728,7 @@
         "title": "LineageNeighborsRequest",
         "type": "object"
       },
-      "Lock": {
+      "Lock-Input": {
         "additionalProperties": false,
         "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
         "properties": {
@@ -2507,7 +2745,52 @@
           "expiry": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Timestamp"
+                "$ref": "#/components/schemas/Timestamp-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "locked"
+        ],
+        "title": "Lock",
+        "type": "object"
+      },
+      "Lock-Output": {
+        "additionalProperties": false,
+        "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
               },
               {
                 "type": "null"
@@ -2585,7 +2868,7 @@
             ]
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -2723,7 +3006,7 @@
             "title": "Supports Tool Calling"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -2752,6 +3035,17 @@
         "maxLength": 128,
         "minLength": 1,
         "title": "ModelVersion",
+        "type": "string"
+      },
+      "ObservedFraction": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "ObservedFraction",
+        "type": "number"
+      },
+      "OpaqueId": {
+        "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$",
+        "title": "OpaqueId",
         "type": "string"
       },
       "Outcome": {
@@ -2800,7 +3094,7 @@
           },
           "overrides": {
             "items": {
-              "$ref": "#/components/schemas/EdgeOverride"
+              "$ref": "#/components/schemas/EdgeOverride-Output"
             },
             "title": "Overrides",
             "type": "array"
@@ -2818,147 +3112,6 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:edge_override:[a-z0-9._/=-]+$",
         "title": "OverrideId",
         "type": "string"
-      },
-      "Owner": {
-        "additionalProperties": false,
-        "description": "Accountable owner (team, group, service principal or pseudonymous person) targeted by OWNED_BY. A person-kind owner carries no display_name; it points at a Person. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
-        "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Attributes"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "classification": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Classification"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "unknown"
-          },
-          "cloud": {
-            "$ref": "#/components/schemas/Cloud"
-          },
-          "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DisplayName"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "domain_id": {
-            "$ref": "#/components/schemas/DomainId"
-          },
-          "entity_type": {
-            "const": "owner",
-            "title": "Entity Type",
-            "type": "string"
-          },
-          "etag": {
-            "$ref": "#/components/schemas/Etag"
-          },
-          "id": {
-            "maxLength": 512,
-            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:owner:[a-z0-9._/=-]+$",
-            "title": "Id",
-            "type": "string"
-          },
-          "lifecycle_status": {
-            "$ref": "#/components/schemas/LifecycleStatus"
-          },
-          "owner_kind": {
-            "enum": [
-              "person",
-              "group",
-              "team",
-              "service_principal"
-            ],
-            "title": "Owner Kind",
-            "type": "string"
-          },
-          "principal_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonId"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "recertified_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "recertify_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Timestamp"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "residency_region": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Token"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "schema_version": {
-            "$ref": "#/components/schemas/SchemaVersion"
-          },
-          "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
-          },
-          "version": {
-            "$ref": "#/components/schemas/EntityVersion"
-          }
-        },
-        "required": [
-          "schema_version",
-          "id",
-          "entity_type",
-          "version",
-          "etag",
-          "lifecycle_status",
-          "created_at",
-          "updated_at",
-          "cloud",
-          "customer_id",
-          "domain_id",
-          "owner_kind"
-        ],
-        "title": "Owner",
-        "type": "object"
       },
       "OwnerConsent": {
         "additionalProperties": false,
@@ -3153,7 +3306,7 @@
                   "$ref": "#/components/schemas/Domain"
                 },
                 {
-                  "$ref": "#/components/schemas/Owner"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                 },
                 {
                   "$ref": "#/components/schemas/Policy"
@@ -3205,7 +3358,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -3266,7 +3419,7 @@
             "$ref": "#/components/schemas/SchemaVersion"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -3675,7 +3828,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -3697,12 +3850,12 @@
             "$ref": "#/components/schemas/DomainId"
           },
           "effective_from": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "effective_to": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Timestamp"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
               },
               {
                 "type": "null"
@@ -3768,7 +3921,7 @@
             "$ref": "#/components/schemas/SchemaVersion"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -3793,6 +3946,58 @@
           "effective_from"
         ],
         "title": "Policy",
+        "type": "object"
+      },
+      "Prerequisite": {
+        "additionalProperties": false,
+        "description": "A precondition for acting on the recommendation (NS-03: compatibility, quality regression, cost comparison, staged rollout, rollback).",
+        "properties": {
+          "evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OpaqueId"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Ids"
+          },
+          "kind": {
+            "enum": [
+              "capability_compatibility",
+              "context_compatibility",
+              "tool_compatibility",
+              "quality_regression_test",
+              "cost_comparison",
+              "staged_rollout_plan",
+              "rollback_plan",
+              "owner_consent",
+              "approval",
+              "write_connector_available"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "met",
+              "unmet",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "status"
+        ],
+        "title": "Prerequisite",
         "type": "object"
       },
       "PresentedEdge": {
@@ -3836,17 +4041,17 @@
             "type": "array"
           },
           "first_observed": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "hidden": {
             "title": "Hidden",
             "type": "boolean"
           },
           "last_observed": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "lock": {
-            "$ref": "#/components/schemas/Lock"
+            "$ref": "#/components/schemas/Lock-Output"
           },
           "override_ids": {
             "items": {
@@ -3904,7 +4109,7 @@
             "type": "string"
           },
           "validity": {
-            "$ref": "#/components/schemas/Validity"
+            "$ref": "#/components/schemas/Validity-Output"
           }
         },
         "required": [
@@ -3979,7 +4184,7 @@
         "description": "Price sheet reference used for estimates; null when unpriced.",
         "properties": {
           "price_effective_date": {
-            "$ref": "#/components/schemas/Date"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Date"
           },
           "price_version": {
             "maxLength": 128,
@@ -4046,6 +4251,78 @@
         "title": "PriceVersion",
         "type": "object"
       },
+      "ProjectedEstimate": {
+        "additionalProperties": false,
+        "description": "Projected cost effect. Always an estimate, always cites price_version (estimated spend without a price version is invalid, matching CostRecord).",
+        "properties": {
+          "baseline_amount": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "estimate_kind": {
+            "const": "estimated",
+            "title": "Estimate Kind",
+            "type": "string"
+          },
+          "lower_amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period": {
+            "enum": [
+              "monthly",
+              "annual",
+              "evidence_window"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "price_effective_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price_version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "projected_amount": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "upper_amount": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "estimate_kind",
+          "period",
+          "baseline_amount",
+          "projected_amount",
+          "currency",
+          "price_version"
+        ],
+        "title": "ProjectedEstimate",
+        "type": "object"
+      },
       "Provenance": {
         "additionalProperties": false,
         "description": "Where an edge or alias came from.",
@@ -4084,7 +4361,7 @@
             "type": "string"
           },
           "recorded_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "source_id": {
             "$ref": "#/components/schemas/Token"
@@ -4268,6 +4545,221 @@
         "title": "RecertifyRequest",
         "type": "object"
       },
+      "Recommendation": {
+        "additionalProperties": false,
+        "description": "An evidence-backed suggestion (NS-03): kind, evidence window, coverage, uncertainty, prerequisites, projected estimate and owner. Recommendations are insights, not actions: executing one goes through the shared action executor (schemas/actions/v1). Cold start uses bounded rules rather than fabricated scores: when evidence_status is insufficient_evidence, score must be absent; when score is absent, evidence_status must be insufficient_evidence. A projected_estimate always cites price_version. candidate_duplicate is always advisory (consolidation review, never an automatic merge). Unknown numeric values are null, never 0. Rules JSON Schema cannot express: evidence_window.start < evidence_window.end (tests/contracts/validators.py::check_time_range_order); uncertainty.lower <= score <= uncertainty.upper when both present (tests/contracts/validators.py::check_recommendation_score_interval); every subject_ids and owner_id belongs to the same cloud and customer as the document (tests/contracts/validators.py::check_recommendation_same_boundary).",
+        "properties": {
+          "advisory": {
+            "title": "Advisory",
+            "type": "boolean"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Timestamp"
+          },
+          "customer_id": {
+            "pattern": "^[a-z0-9._-]{1,128}$",
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          },
+          "evidence_ids": {
+            "items": {
+              "$ref": "#/components/schemas/OpaqueId"
+            },
+            "maxItems": 200,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "evidence_status": {
+            "enum": [
+              "sufficient",
+              "insufficient_evidence"
+            ],
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "evidence_window": {
+            "$ref": "#/components/schemas/TimeRange"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Generator"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "cost_spike",
+              "latency_degradation",
+              "error_rate_degradation",
+              "unused_agent",
+              "candidate_duplicate",
+              "model_right_sizing"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "rule",
+              "statistical",
+              "ml"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Owner"
+          },
+          "prerequisites": {
+            "items": {
+              "$ref": "#/components/schemas/Prerequisite"
+            },
+            "maxItems": 20,
+            "title": "Prerequisites",
+            "type": "array"
+          },
+          "projected_estimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProjectedEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recommendation_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "subject_ids": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalId"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Subject Ids",
+            "type": "array"
+          },
+          "uncertainty": {
+            "$ref": "#/components/schemas/Uncertainty"
+          }
+        },
+        "required": [
+          "schema_version",
+          "recommendation_id",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "kind",
+          "subject_ids",
+          "method",
+          "evidence_status",
+          "evidence_window",
+          "evidence_ids",
+          "coverage",
+          "uncertainty",
+          "prerequisites",
+          "owner",
+          "advisory",
+          "created_at"
+        ],
+        "title": "Recommendation",
+        "type": "object"
+      },
+      "RecommendationDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "execution": {
+            "$ref": "#/components/schemas/ExecutionState"
+          },
+          "recommendation": {
+            "$ref": "#/components/schemas/Recommendation"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewState"
+          }
+        },
+        "required": [
+          "recommendation",
+          "review",
+          "execution"
+        ],
+        "title": "RecommendationDetail",
+        "type": "object"
+      },
+      "RecommendationList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "RecommendationList",
+        "type": "object"
+      },
       "RecommendationReference": {
         "additionalProperties": false,
         "description": "Recommendation in reference form for the catalog graph. The full document is the recommendations/v1 contract; this node only points at it and its subjects. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -4297,7 +4789,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -4354,7 +4846,7 @@
             "type": "array"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -4561,6 +5053,72 @@
         "title": "ResourceRef",
         "type": "string"
       },
+      "ReviewRequestBody": {
+        "description": "Only the recommendation id is read; ``domain_id``/``customer_id`` in the body are ignored.",
+        "properties": {
+          "recommendation_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Recommendation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recommendation_id"
+        ],
+        "title": "ReviewRequestBody",
+        "type": "object"
+      },
+      "ReviewRequestCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "review_request_id": {
+            "title": "Review Request Id",
+            "type": "string"
+          },
+          "state": {
+            "const": "pending_review",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_request_id",
+          "state"
+        ],
+        "title": "ReviewRequestCreated",
+        "type": "object"
+      },
+      "ReviewState": {
+        "additionalProperties": false,
+        "properties": {
+          "review_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Request Id"
+          },
+          "state": {
+            "enum": [
+              "not_routed",
+              "pending_review"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "review_request_id"
+        ],
+        "title": "ReviewState",
+        "type": "object"
+      },
       "RunReference": {
         "additionalProperties": false,
         "description": "Pointer to a run held in the telemetry store. Runs and spans are referenced, never replicated into the graph; no prompt or response body appears here. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -4606,7 +5164,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -4617,7 +5175,7 @@
           "ended_at": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Timestamp"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
               },
               {
                 "type": "null"
@@ -4700,7 +5258,7 @@
             ]
           },
           "started_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "trace_id": {
             "anyOf": [
@@ -4713,7 +5271,7 @@
             ]
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -4737,6 +5295,12 @@
         ],
         "title": "RunReference",
         "type": "object"
+      },
+      "SamplingRate": {
+        "exclusiveMinimum": 0.0,
+        "maximum": 1.0,
+        "title": "SamplingRate",
+        "type": "number"
       },
       "ScanRequest": {
         "additionalProperties": false,
@@ -4922,7 +5486,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -4987,7 +5551,7 @@
             "$ref": "#/components/schemas/Token"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -5528,7 +6092,24 @@
         "title": "TargetRef",
         "type": "object"
       },
-      "Timestamp": {
+      "TimeRange": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Timestamp"
+          },
+          "start": {
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Timestamp"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TimeRange",
+        "type": "object"
+      },
+      "Timestamp-Input": {
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
         "title": "Timestamp",
         "type": "string"
@@ -5568,7 +6149,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "created_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
             "$ref": "#/components/schemas/CustomerId"
@@ -5661,7 +6242,7 @@
             "title": "Tool Kind"
           },
           "updated_at": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "version": {
             "$ref": "#/components/schemas/EntityVersion"
@@ -5689,6 +6270,63 @@
         "pattern": "^[a-f0-9]{32}$",
         "title": "TraceId",
         "type": "string"
+      },
+      "Uncertainty": {
+        "additionalProperties": false,
+        "description": "Uncertainty of the score or estimate. not_estimable is the honest value on cold start; it carries no bounds.",
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "method": {
+            "enum": [
+              "confidence_interval",
+              "credible_interval",
+              "bootstrap",
+              "rule_bound",
+              "not_estimable"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "Uncertainty",
+        "type": "object"
       },
       "UnknownRemainder": {
         "additionalProperties": false,
@@ -5781,17 +6419,17 @@
         "title": "ValidationError",
         "type": "object"
       },
-      "Validity": {
+      "Validity-Input": {
         "additionalProperties": false,
         "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
         "properties": {
           "valid_from": {
-            "$ref": "#/components/schemas/Timestamp"
+            "$ref": "#/components/schemas/Timestamp-Input"
           },
           "valid_to": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Timestamp"
+                "$ref": "#/components/schemas/Timestamp-Input"
               },
               {
                 "type": "null"
@@ -5804,6 +6442,35 @@
         ],
         "title": "Validity",
         "type": "object"
+      },
+      "Validity-Output": {
+        "additionalProperties": false,
+        "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
+        "properties": {
+          "valid_from": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "valid_from"
+        ],
+        "title": "Validity",
+        "type": "object"
+      },
+      "Version": {
+        "pattern": "^[A-Za-z0-9._+-]{1,64}$",
+        "title": "Version",
+        "type": "string"
       },
       "Window": {
         "additionalProperties": false,
@@ -5914,9 +6581,201 @@
         "title": "UtcTimestamp",
         "type": "string"
       },
+      "neurosphere_contracts__catalog__v1__common__Date": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "title": "Date",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__common__Timestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__owner__Owner": {
+        "additionalProperties": false,
+        "description": "Accountable owner (team, group, service principal or pseudonymous person) targeted by OWNED_BY. A person-kind owner carries no display_name; it points at a Person. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DisplayName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "owner",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:owner:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "owner_kind": {
+            "enum": [
+              "person",
+              "group",
+              "team",
+              "service_principal"
+            ],
+            "title": "Owner Kind",
+            "type": "string"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recertified_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recertify_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "owner_kind"
+        ],
+        "title": "Owner",
+        "type": "object"
+      },
       "neurosphere_contracts__deployment__v1__deployment_manifest__UtcTimestamp": {
         "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$",
         "title": "UtcTimestamp",
+        "type": "string"
+      },
+      "neurosphere_contracts__recommendations__v1__recommendation__Date": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
+        "title": "Date",
+        "type": "string"
+      },
+      "neurosphere_contracts__recommendations__v1__recommendation__Owner": {
+        "additionalProperties": false,
+        "description": "Owner of the subject. resolution unresolved means owner_id is null (owner unknown, routed to stewards).",
+        "properties": {
+          "owner_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolution": {
+            "enum": [
+              "assigned",
+              "inferred",
+              "unresolved"
+            ],
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution",
+          "owner_id"
+        ],
+        "title": "Owner",
+        "type": "object"
+      },
+      "neurosphere_contracts__recommendations__v1__recommendation__Timestamp": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
         "type": "string"
       }
     }
@@ -6033,6 +6892,272 @@
         "summary": "Get Dashboard",
         "tags": [
           "dashboards"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}": {
+      "get": {
+        "operationId": "list_recommendations_api_v1_recommendations_domains__domain__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "cost_spike",
+                    "latency_degradation",
+                    "error_rate_degradation",
+                    "unused_agent",
+                    "candidate_duplicate",
+                    "model_right_sizing"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Recommendations",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/executions": {
+      "post": {
+        "operationId": "refuse_execution_api_v1_recommendations_domains__domain__executions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refuse Execution",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/items/{recommendation_id}": {
+      "get": {
+        "operationId": "get_recommendation_api_v1_recommendations_domains__domain__items__recommendation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "recommendation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Recommendation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/review-requests": {
+      "post": {
+        "operationId": "create_review_request_api_v1_recommendations_domains__domain__review_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRequestCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Review Request",
+        "tags": [
+          "recommendations"
         ]
       }
     },
@@ -6271,7 +7396,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EdgeOverride"
+                "$ref": "#/components/schemas/EdgeOverride-Input"
               }
             }
           },
@@ -6608,7 +7733,7 @@
                       "$ref": "#/components/schemas/Domain"
                     },
                     {
-                      "$ref": "#/components/schemas/Owner"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                     },
                     {
                       "$ref": "#/components/schemas/Policy"
@@ -6689,7 +7814,7 @@
                       "$ref": "#/components/schemas/Domain"
                     },
                     {
-                      "$ref": "#/components/schemas/Owner"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                     },
                     {
                       "$ref": "#/components/schemas/Policy"
@@ -6791,7 +7916,7 @@
                       "$ref": "#/components/schemas/Domain"
                     },
                     {
-                      "$ref": "#/components/schemas/Owner"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                     },
                     {
                       "$ref": "#/components/schemas/Policy"
@@ -6883,7 +8008,7 @@
                       "$ref": "#/components/schemas/Domain"
                     },
                     {
-                      "$ref": "#/components/schemas/Owner"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                     },
                     {
                       "$ref": "#/components/schemas/Policy"
@@ -6985,7 +8110,7 @@
                       "$ref": "#/components/schemas/Domain"
                     },
                     {
-                      "$ref": "#/components/schemas/Owner"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
                     },
                     {
                       "$ref": "#/components/schemas/Policy"
