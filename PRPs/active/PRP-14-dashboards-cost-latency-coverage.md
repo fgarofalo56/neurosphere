@@ -243,10 +243,10 @@ A source with no data has `coverage.status: "unknown"`, not 0. `variance = sourc
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-a9252797aea244ecc | sonnet | ef1d22b; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, aggregates 28 passed, emulator integration 1 passed (vNext, running stack); null-sum audited (all sums gated on known or `known_sum`); decisions: request-less allocations feed only reconciliation billing (`vendor`), latency/errors from `model_call` spans; OPEN: no production `TraceEventSource`, no `__main__`/compose hosting, aggregates container provisioned only by the integration test, bucket rebuild sizing unmeasured (G07/G12); merge 9ec1dc6, ruff clean, workers + core 1277 passed post-merge | 2026-10-19 |
-| 2 | in-progress | (agent worktree) | sonnet | dispatched wave 2 | 2026-10-19 |
+| 2 | merged | worktree-agent-aaf2c98d692ab135a | sonnet | 019aec3; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, dashboards 64 passed; deviations: Server-Timing only on served (2xx) responses, latency totals always unknown (percentiles do not combine), price versions with null effective date dropped and the value marked incomplete, analytics `disabled` when no adapter or region, `delayed` on raising/hanging health or lag > 900 s; merge 188ecc6, services/api 454 passed post-merge | 2026-10-19 |
 | 3 | merged | worktree-agent-a26efd2e4d1c91012 | sonnet | 0c76ad7 + ac36c64 (orchestrator: the agent embedded `?domain_id=` in the path string to get past the PRP-04 client scope-key guard; changed to the domain as a path segment, contract amended da476c0); orchestrator re-run lint + tsc clean, vitest 158 passed (28 new), build ok; merge a6b772f, lint + tsc + vitest 158 passed post-merge | 2026-10-19 |
-| 4 | in-progress | (agent worktree) | sonnet | dispatched wave 2 | 2026-10-19 |
-| 5 | todo | | sonnet | | 2026-10-19 |
+| 4 | merged | worktree-agent-a489ea981c681ada3 | sonnet | 98868a3; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, reconciliation 16 passed, vitest reconciliation 8 passed, lint + tsc clean; deviations: per-currency `references[]` added (top-level `reference` only when one currency), `unknown_remainder` is an entry count, XXX bucket reported with currency null, extra `truncated`; tests build fixtures with the worker `rollup_bucket` (test-only import); merge e21cff0, ruff clean, pyright 0, services/api 470 passed, vitest 166 passed post-merge | 2026-10-19 |
+| 5 | in-progress | (agent worktree) | sonnet | dispatched wave 3 | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
