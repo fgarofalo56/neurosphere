@@ -126,6 +126,21 @@ module apim 'apim.bicep' = {
   }
 }
 
+module network 'network/main.bicep' = {
+  name: 'ns-network'
+  params: {
+    namePrefix: namePrefix
+    location: location
+    tags: tags
+    // Reuse mode must not touch shared resources: only created services get a private endpoint.
+    cosmosId: cosmos.outputs.created ? cosmos.outputs.id : ''
+    eventHubsId: eventHubs.outputs.created ? eventHubs.outputs.id : ''
+    storageId: storage.outputs.created ? storage.outputs.id : ''
+    keyVaultId: keyVault.outputs.created ? keyVault.outputs.id : ''
+    searchId: search.outputs.created ? search.outputs.id : ''
+  }
+}
+
 @description('Cosmos DB account resource id.')
 output cosmosId string = cosmos.outputs.id
 

@@ -58,9 +58,23 @@ ingress:
     enabled: false
     secretName: "" # pre-existing TLS secret name
 
-# PRP-12 owns the NetworkPolicy template; this flag is only the extension point.
+# PRP-12: default-deny ingress and egress for the release's pods, plus explicit allows.
+# NetworkPolicy has no FQDN support, so egress is by CIDR and port only.
 networkPolicy:
-  enabled: false
+  enabled: true
+  dns:
+    namespaceLabels:
+      kubernetes.io/metadata.name: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  # Namespace of the ingress controller; used only when ingress.enabled.
+  ingressController:
+    namespaceLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  # Egress allowlist: list of {name, cidr, ports: [{port, protocol}]}. Typical entry is the
+  # private-endpoint subnet range from the network Bicep module (443/TCP). Empty = DNS and
+  # intra-release traffic only.
+  egressAllowlist: []
 
 api:
   replicas: 2
