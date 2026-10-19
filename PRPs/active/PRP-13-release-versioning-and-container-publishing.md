@@ -1,8 +1,10 @@
 ---
 name: prp-13-release-versioning-and-container-publishing
-status: backlog
+status: active
+started: 2026-10-18
 review: none
 created: 2026-10-08
+branch: prp-13-release-versioning-and-container-publishing
 model: sonnet
 phase: 1
 ns: NS-10
@@ -114,9 +116,9 @@ Make NeuroSphere releasable: multi-stage non-root Dockerfiles for api, workers a
 
 ### Item 2 — publish-workflow
 - Deliverable: `release.yml` triggered by `v*.*.*` tags and manual dispatch with `dry_run`; builds images, pushes to GHCR, attaches SBOM, cosign signs by digest, packages the Helm chart.
-- Owned files (may edit): `.github/workflows/release.yml`, `tests/release/test_release_workflow.py`.
-- Must NOT touch: `.github/workflows/ci.yml`, `security.yml` (PRP-12), `codeql.yml`, `secret-scan.yml`, the Dockerfiles (item 1).
-- Depends on: item 1.
+- Owned files (may edit): `.github/workflows/release.yml`, `tests/release/test_release_workflow.py`, and only the `discover-images` step of `.github/workflows/security.yml` (widen discovery to `frontend/Dockerfile`; decided at plan approval 2026-10-18).
+- Must NOT touch: `.github/workflows/ci.yml`, the rest of `security.yml` (PRP-12), `codeql.yml`, `secret-scan.yml`, the Dockerfiles (item 1).
+- Depends on: items 1 and 3 (tag runs create a draft GitHub Release whose notes come from `scripts/release/changelog.py`).
 - Acceptance criteria:
   - Dry-run on a branch completes all steps except push and sign, with logged outputs.
   - Tag `v0.1.0` (or a pre-release tag) yields signed images; `cosign verify` command in `docs/release/` succeeds against the published digest.
@@ -193,6 +195,18 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-18. Waves: A = (1, 3, 4) in parallel, B = 2 (after 1 and 3) and 5 (after 3). Design calls at approval: images run as uid 10001 (matches Helm `runAsUser`), work with read-only root + writable `/tmp`, and must pass the PRP-12 `security.yml` Trivy/Grype High gate locally before merge (else every PR goes red); frontend image is an unprivileged static server on 8080 serving runtime `config.json`; `.dockerignore` is rewritten (it currently excludes `frontend/`). Item 2 also owns the `discover-images` step of `security.yml` to scan `frontend/Dockerfile`; `release.yml` adds a path-filtered `pull_request` trigger that forces dry-run so the PR exercises it; tag runs push the chart to GHCR as OCI and create a draft GitHub Release from the item 3 changelog script; SBOM is syft CycloneDX attached via `cosign attest`. Item 4 covers forward/rollback, idempotency and concurrent-runner `stale_version` with in-memory unit tests too, because the `integration` marker never runs in CI; emulator output is recorded as G12 bounded-feasibility evidence.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-a179b757c97d5edca | sonnet | 673fddf; python:3.12-alpine + nginx-unprivileged:stable-alpine + node:24-alpine, all digest-pinned (debian slim failed Trivy: 44 unfixed High); all 3 build, uid 10001, start under --read-only --tmpfs /tmp; trivy + grype 0 High/Critical on all 3; tests/release 24 passed, ruff/pyright clean; orchestrator re-run: tests/release 24 passed, full-history gitleaks clean, api + frontend rebuilt, `id -u` 10001; caveat: `apk upgrade` layers make rebuilds pull newer packages than the digest alone; evidence docs/evidence/PRP-13/images.md; merge 44891ac, tests/release 37 passed post-merge | 2026-10-19 |
+| 2 | merged | worktree-agent-a640a0c4c1179ea39 | sonnet | 874d8b6; cosign v3.1.3 flags confirmed from `--help` (sign/attest --yes, attest --type cyclonedx, verify + verify-attestation with identity/issuer); id-token only on sign, contents: write only on release-notes, push/sign/helm push/gh release gated on dry_run == false, real publish requires a SemVer tag; security.yml discover step also emits frontend/Dockerfile; orchestrator re-run: actionlint 0, tests/release 62 passed, validate_planning PASS, full-history gitleaks clean; GHCR referrers and live publish unexercised until the PR dry run and an approved rc tag; merge b7af3b6; verify-gates full PASS (lint, pyright 0 errors, 4992 passed, build) | 2026-10-19 |
+| 3 | merged | worktree-agent-ad78e31da767d4d41 | sonnet | a93489e; tests/release 13 passed, ruff + format clean, pyright 0 errors, validate_planning PASS; full-history gitleaks (228 commits) clean (orchestrator re-run; harness refused it in the agent); deviation: `--write` inserts at the end of the Unreleased block so hand entries are not relabelled; CHANGELOG diff is header sentence + one Added bullet; merge 73ed83e, tests/release 13 passed post-merge | 2026-10-18 |
+| 4 | merged | worktree-agent-a59a91897e35c3c70 | sonnet | 90f512e + e1b81be (orchestrator: reuse `translate_sdk_error`, 429 -> `RateLimitedError`; my brief had mapped 429 to dependency_transient); unit 26 passed, emulator integration 5 passed (vNext, reused running stack), packages/core 1071 passed, ruff + format + pyright clean, full-history gitleaks clean (orchestrator re-run); extra lint rule `remove_without_deprecate`; merge 9a0847d, migrations + release 39 passed post-merge; evidence docs/evidence/PRP-13/migrations-emulator.md (G12 bounded feasibility) | 2026-10-18 |
+| 5 | merged | worktree-agent-a6e49882b26050bce | sonnet | 56ebac4; tests/release 23 passed, 1 expected fail (sibling evidence images.md + migrations-emulator.md not yet on its branch); merge held until item 1 merges ; merge 84fe9a6 after items 1 + 4, release + migrations 74 passed (link-existence check green), ruff + format clean, validate_planning PASS | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
