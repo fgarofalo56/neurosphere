@@ -1,0 +1,233 @@
+{
+  "backend": "InMemoryAggregateStore",
+  "dataset": {
+    "documents_by_grain_metric": {
+      "day:cost": 618,
+      "day:coverage": 360,
+      "day:errors": 270,
+      "day:latency": 270,
+      "day:reconciliation": 360,
+      "hour:cost": 1486,
+      "hour:coverage": 988,
+      "hour:errors": 972,
+      "hour:latency": 972,
+      "hour:reconciliation": 988,
+      "requests": 1509
+    },
+    "documents_total": 7284,
+    "domain_ids_from": "sandbox World plan (tiny profile, domains overridden)",
+    "domains": 3,
+    "generator": "worker rollup_bucket over synthetic ledger entries and model_call spans",
+    "hour_grain_days": 14,
+    "requests_per_domain_day": 2,
+    "window_days": 90
+  },
+  "date": "2026-10-19",
+  "disclaimer": "Measured on a developer machine through an in-process ASGI transport with dev-issuer tokens validated in memory. RU accounting, range/composite indexing and Entra are not reproduced (G12). This narrows the dashboard planning target only; sized-profile and cost evidence stay OPEN (G07, PRP-21). Not a guarantee or an SLA.",
+  "environment": {
+    "cpu_count": 32,
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13"
+  },
+  "foreign_domain_status": 403,
+  "iterations_per_workload": 100,
+  "label": "sandbox on compose, emulators; bounded feasibility",
+  "p95_vs_target": {
+    "cost_day_90d": {
+      "p95_ms": 11.222,
+      "ratio_of_target": 0.0056,
+      "target_ms": 2000.0
+    },
+    "cost_hour_14d": {
+      "p95_ms": 16.475,
+      "ratio_of_target": 0.0082,
+      "target_ms": 2000.0
+    },
+    "coverage_day_90d": {
+      "p95_ms": 10.078,
+      "ratio_of_target": 0.005,
+      "target_ms": 2000.0
+    },
+    "coverage_hour_14d": {
+      "p95_ms": 11.762,
+      "ratio_of_target": 0.0059,
+      "target_ms": 2000.0
+    },
+    "errors_day_90d": {
+      "p95_ms": 9.922,
+      "ratio_of_target": 0.005,
+      "target_ms": 2000.0
+    },
+    "errors_hour_14d": {
+      "p95_ms": 14.401,
+      "ratio_of_target": 0.0072,
+      "target_ms": 2000.0
+    },
+    "latency_day_90d": {
+      "p95_ms": 10.445,
+      "ratio_of_target": 0.0052,
+      "target_ms": 2000.0
+    },
+    "latency_hour_14d": {
+      "p95_ms": 17.395,
+      "ratio_of_target": 0.0087,
+      "target_ms": 2000.0
+    },
+    "reconciliation_day_90d": {
+      "p95_ms": 9.441,
+      "ratio_of_target": 0.0047,
+      "target_ms": 2000.0
+    }
+  },
+  "p95_wall_clock_ms_by_workload": {
+    "cost_day_90d": 11.222,
+    "cost_hour_14d": 16.475,
+    "coverage_day_90d": 10.078,
+    "coverage_hour_14d": 11.762,
+    "errors_day_90d": 9.922,
+    "errors_hour_14d": 14.401,
+    "latency_day_90d": 10.445,
+    "latency_hour_14d": 17.395,
+    "reconciliation_day_90d": 9.441
+  },
+  "scope_violations": [],
+  "target_label": "PRD planning target (dashboard p95 <= 2 s on bounded 90-day aggregates): target, not a guarantee",
+  "target_ms_for_context_only": 2000.0,
+  "workloads": {
+    "cost_day_90d": {
+      "series_or_sources_returned": 4,
+      "server_timing_app": {
+        "max_ms": 96.6,
+        "p50_ms": 7.4,
+        "p95_ms": 9.5,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 98.376,
+        "p50_ms": 8.703,
+        "p95_ms": 11.222,
+        "samples": 100.0
+      }
+    },
+    "cost_hour_14d": {
+      "series_or_sources_returned": 4,
+      "server_timing_app": {
+        "max_ms": 115.0,
+        "p50_ms": 12.4,
+        "p95_ms": 14.6,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 116.914,
+        "p50_ms": 14.02,
+        "p95_ms": 16.475,
+        "samples": 100.0
+      }
+    },
+    "coverage_day_90d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 8.8,
+        "p50_ms": 6.3,
+        "p95_ms": 8.2,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 10.735,
+        "p50_ms": 7.896,
+        "p95_ms": 10.078,
+        "samples": 100.0
+      }
+    },
+    "coverage_hour_14d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 92.9,
+        "p50_ms": 7.2,
+        "p95_ms": 10.0,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 94.089,
+        "p50_ms": 8.72,
+        "p95_ms": 11.762,
+        "samples": 100.0
+      }
+    },
+    "errors_day_90d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 8.7,
+        "p50_ms": 6.6,
+        "p95_ms": 8.4,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 10.643,
+        "p50_ms": 8.065,
+        "p95_ms": 9.922,
+        "samples": 100.0
+      }
+    },
+    "errors_hour_14d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 13.2,
+        "p50_ms": 11.1,
+        "p95_ms": 12.5,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 14.907,
+        "p50_ms": 12.829,
+        "p95_ms": 14.401,
+        "samples": 100.0
+      }
+    },
+    "latency_day_90d": {
+      "series_or_sources_returned": 3,
+      "server_timing_app": {
+        "max_ms": 9.6,
+        "p50_ms": 6.5,
+        "p95_ms": 8.7,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 11.471,
+        "p50_ms": 7.821,
+        "p95_ms": 10.445,
+        "samples": 100.0
+      }
+    },
+    "latency_hour_14d": {
+      "series_or_sources_returned": 3,
+      "server_timing_app": {
+        "max_ms": 106.0,
+        "p50_ms": 12.9,
+        "p95_ms": 15.4,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 107.644,
+        "p50_ms": 14.416,
+        "p95_ms": 17.395,
+        "samples": 100.0
+      }
+    },
+    "reconciliation_day_90d": {
+      "series_or_sources_returned": 6,
+      "server_timing_app": {
+        "max_ms": 5.1,
+        "p50_ms": 3.1,
+        "p95_ms": 4.3,
+        "samples": 100.0
+      },
+      "wall_clock": {
+        "max_ms": 10.31,
+        "p50_ms": 7.57,
+        "p95_ms": 9.441,
+        "samples": 100.0
+      }
+    }
+  }
+}
