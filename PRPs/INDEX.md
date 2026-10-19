@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-13-release-versioning-and-container-publishing](active/PRP-13-release-versioning-and-container-publishing.md) |  | 2/5 (40%) | todo 1, in-progress 1, verifying 1, merged 2 | ? / ? | none |
+| [prp-13-release-versioning-and-container-publishing](active/PRP-13-release-versioning-and-container-publishing.md) |  | 4/5 (80%) | in-progress 1, merged 4 | ? / ? | none |
 
 ## Backlog
 

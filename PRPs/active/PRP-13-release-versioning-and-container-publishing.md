@@ -202,11 +202,11 @@ Plan approved 2026-10-18. Waves: A = (1, 3, 4) in parallel, B = 2 (after 1 and 3
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | in-progress | | sonnet | dispatched wave A | 2026-10-18 |
-| 2 | todo | | sonnet | | 2026-10-18 |
+| 1 | merged | worktree-agent-a179b757c97d5edca | sonnet | 673fddf; python:3.12-alpine + nginx-unprivileged:stable-alpine + node:24-alpine, all digest-pinned (debian slim failed Trivy: 44 unfixed High); all 3 build, uid 10001, start under --read-only --tmpfs /tmp; trivy + grype 0 High/Critical on all 3; tests/release 24 passed, ruff/pyright clean; orchestrator re-run: tests/release 24 passed, full-history gitleaks clean, api + frontend rebuilt, `id -u` 10001; caveat: `apk upgrade` layers make rebuilds pull newer packages than the digest alone; evidence docs/evidence/PRP-13/images.md; merge 44891ac, tests/release 37 passed post-merge | 2026-10-19 |
+| 2 | in-progress | | sonnet | dispatched after items 1 + 3 merged | 2026-10-19 |
 | 3 | merged | worktree-agent-ad78e31da767d4d41 | sonnet | a93489e; tests/release 13 passed, ruff + format clean, pyright 0 errors, validate_planning PASS; full-history gitleaks (228 commits) clean (orchestrator re-run; harness refused it in the agent); deviation: `--write` inserts at the end of the Unreleased block so hand entries are not relabelled; CHANGELOG diff is header sentence + one Added bullet; merge 73ed83e, tests/release 13 passed post-merge | 2026-10-18 |
 | 4 | merged | worktree-agent-a59a91897e35c3c70 | sonnet | 90f512e + e1b81be (orchestrator: reuse `translate_sdk_error`, 429 -> `RateLimitedError`; my brief had mapped 429 to dependency_transient); unit 26 passed, emulator integration 5 passed (vNext, reused running stack), packages/core 1071 passed, ruff + format + pyright clean, full-history gitleaks clean (orchestrator re-run); extra lint rule `remove_without_deprecate`; merge 9a0847d, migrations + release 39 passed post-merge; evidence docs/evidence/PRP-13/migrations-emulator.md (G12 bounded feasibility) | 2026-10-18 |
-| 5 | verifying | worktree-agent-a6e49882b26050bce | sonnet | 56ebac4; tests/release 23 passed, 1 expected fail (sibling evidence images.md + migrations-emulator.md not yet on its branch); merge held until item 1 merges | 2026-10-18 |
+| 5 | merged | worktree-agent-a6e49882b26050bce | sonnet | 56ebac4; tests/release 23 passed, 1 expected fail (sibling evidence images.md + migrations-emulator.md not yet on its branch); merge held until item 1 merges ; merge 84fe9a6 after items 1 + 4, release + migrations 74 passed (link-existence check green), ruff + format clean, validate_planning PASS | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
