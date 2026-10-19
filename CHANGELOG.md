@@ -52,7 +52,12 @@ All notable changes to this project are documented here. The format follows
 - Release tooling (PRP-13): SemVer policy with the contract and migration version mapping
   (`docs/release/versioning.md`), the operator release process
   (`docs/release/release-process.md`), and `scripts/release/changelog.py`, which builds
-  Keep-a-Changelog sections from conventional commits.
+  Keep-a-Changelog sections from conventional commits. Multi-stage non-root production
+  Dockerfiles for api, workers and frontend; tag-triggered `release.yml` publishing to GHCR
+  with syft CycloneDX SBOM attestations, cosign keyless signatures verified in-workflow, the
+  Helm chart as OCI and a draft GitHub Release (exercised on `v0.1.0-rc.1`); a versioned
+  Cosmos/analytics migrations runner with ledger, rollback, dry run and expand-then-contract
+  lint; and a release Definition-of-Done checklist (`docs/release/dod-checklist.md`).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

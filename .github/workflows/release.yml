@@ -13,8 +13,8 @@ name: release
 # Fails closed: no step suppresses a failing exit code. Binaries are installed by version
 # and sha256 (same pattern as security.yml); no third-party docker, cosign or syft action.
 # Only the `sign` job holds id-token: write; only `release-notes` holds contents: write.
-# New GHCR packages are private by default (they inherit the repository's access, not its
-# visibility) and stay private until the operator changes package visibility.
+# Packages published by this public repository come out publicly pullable (observed on
+# v0.1.0-rc.1, 2026-10-19; kept public by the operator). See docs/release/verify.md.
 on:
   push:
     tags: ["v*.*.*"]

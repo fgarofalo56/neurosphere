@@ -1,7 +1,9 @@
 ---
 name: prp-13-release-versioning-and-container-publishing
-status: active
+status: shipped
 started: 2026-10-18
+shipped: 2026-10-19
+pr: 72
 review: none
 created: 2026-10-08
 branch: prp-13-release-versioning-and-container-publishing
@@ -209,9 +211,9 @@ Plan approved 2026-10-18. Waves: A = (1, 3, 4) in parallel, B = 2 (after 1 and 3
 | 5 | merged | worktree-agent-a6e49882b26050bce | sonnet | 56ebac4; tests/release 23 passed, 1 expected fail (sibling evidence images.md + migrations-emulator.md not yet on its branch); merge held until item 1 merges ; merge 84fe9a6 after items 1 + 4, release + migrations 74 passed (link-existence check green), ruff + format clean, validate_planning PASS | 2026-10-19 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Open gates recorded (ids and where):
-- Follow-ups:
+- Date: 2026-10-19
+- Merged commits: PR #72 merged as 7fa088f (CI all green, including the first `security.yml` image scans of the three production images and the `release.yml` PR dry run, run 39201812165). Item merges into the integration branch: 3 73ed83e, 4 9a0847d, 1 44891ac, 5 84fe9a6, 2 b7af3b6; wording fix 8c1fdac. `verify-gates -Mode full` PASS before the PR (lint, pyright 0 errors, 4992 passed, build). Tag `v0.1.0-rc.1` (operator-approved) published on run 39202842374: three signed + SBOM-attested images, chart at `oci://ghcr.io/fgarofalo56/charts/neurosphere:0.1.0-rc.1`, draft prerelease; independent anonymous `cosign verify` + `verify-attestation` passed for all three (`docs/evidence/PRP-13/release-v0.1.0-rc.1.md`).
+- Deviations from blueprint and why: (1) Alpine bases (python:3.12-alpine, node:24-alpine, nginx-unprivileged:stable-alpine) instead of debian slim, which failed the PRP-12 Trivy gate with 44 unfixed High; runtime stages run `apk upgrade`, so rebuilds can pull newer packages than the base digest alone. (2) Item 2 also owns the `discover-images` step of `security.yml` so `frontend/Dockerfile` is scanned (approved at plan time), depends on item 3 (draft release notes come from `scripts/release/changelog.py`), and adds a path-filtered `pull_request` dry-run trigger so the PR exercises the workflow. (3) `changelog.py --write` inserts at the end of the Unreleased block rather than under its heading, so hand-written Unreleased entries are not relabelled. (4) Migrations reuse `clients/errors.translate_sdk_error` (429 -> `rate_limited`); the brief had wrongly mapped 429 to `dependency_transient` (orchestrator fix e1b81be). Extra lint rule `remove_without_deprecate`. (5) Repository is public, not private as D1 and the brief assumed; GHCR packages published from it came out publicly pullable despite the documented private default, and the operator kept them public (`docs/release/verify.md`). Gitleaks full-history was refused inside agent worktrees and re-run by the orchestrator on every item branch.
+- Descoped items: none.
+- Open gates recorded (ids and where): G08 NARROWED (image scans now run in CI, SBOM attestations published; `docs/RESEARCH-AND-GATES.md`). G12 OPEN (migrations on the Cosmos vNext emulator only: no index/RU/429/live-account behaviour; `docs/RESEARCH-AND-GATES.md`, `docs/evidence/PRP-13/migrations-emulator.md`). G07 untouched (PRP-21). DoD checklist OPEN lines: G01, G02, G03, G04, G06, G07, G09, G12 (`docs/release/dod-checklist.md`).
+- Follow-ups: (a) Helm chart and App Service profile do not require `NS_CLOUD`; images default `NS_ENV=prod` and refuse to start without it (PRP-08 chart / PRP-20 profile smoke). (b) `docs/DECISIONS-LOG.md` D1 still records a private repository; the repo is public by operator intent, so D1 needs an operator update. (c) cosign sign job takes ~4.5 min per image after the first; investigate. (d) `ubuntu-latest` migrates to Ubuntu 26 from 2026-10-19 (runner annotation); watch the release and security jobs. (e) PRP-11 analytics adapters should implement `AnalyticsSchemaStore`. (f) Published chart not yet installed on a cluster.

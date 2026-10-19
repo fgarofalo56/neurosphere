@@ -11,14 +11,18 @@ Placeholders: `<owner>` is the lowercase GitHub owner, `<repo>` the repository n
 
 ## Status and approvals
 
-- The first real tag push needs operator approval. Nothing here has been run against a real tag
-  yet; until then the dry run is the only exercised path.
-- GHCR packages stay private until the operator changes package visibility. The repository
-  itself is public; a new package is private by default and inherits the linked repository's
-  access permissions but not its visibility
+- Every real tag push needs operator approval. The first one, `v0.1.0-rc.1` on 2026-10-19,
+  published, signed, attested and verified all three images and pushed the chart
+  (`docs/evidence/PRP-13/release-v0.1.0-rc.1.md`).
+- The packages are **public**. GitHub's documentation says a new package is private by default
+  and inherits the linked repository's access but not its visibility
   (https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility,
-  observed 2026-10-19). Check each package's visibility after the first real tag run. Pulling
-  and verifying needs `docker login ghcr.io` with a token that has `read:packages`.
+  observed 2026-10-19), but the packages published from this public repository's workflow came
+  out anonymously pullable (anonymous manifest GET returned 200 for all four on 2026-10-19).
+  The operator kept them public; the images carry only code that is already public and no
+  secrets. Anyone can pull and verify without logging in. If a private copy is ever needed,
+  change visibility in each package's settings in the GitHub UI and add `docker login ghcr.io`
+  with a `read:packages` token to the commands below.
 
 ## Find the digests
 
