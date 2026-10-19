@@ -43,6 +43,12 @@ All notable changes to this project are documented here. The format follows
   (serverless/dedicated) and Azure Databricks adapters with per-cloud host checks and versioned
   migrations; stub-endpoint equivalence and profile-gating suites (contract conformance only);
   `scripts/gates/g01_analytics_live.py`. Live analytics runs are OPEN for every adapter.
+- Threat model and security baseline (PRP-12): STRIDE threat model per trust boundary with
+  abuse-case DFDs (`docs/security/`), `security.yml` supply-chain workflow (syft SBOM, Trivy and
+  Grype blocking on High, sha256-pinned binaries), Bicep network module with private endpoints for
+  created resources only and a release-scoped default-deny Helm NetworkPolicy, a shared
+  78-case prompt-injection corpus and harness (`tests/security/injection/`), and secrets,
+  rotation, leak-response and incident runbooks. Live what-if is OPEN.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
