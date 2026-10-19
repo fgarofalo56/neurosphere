@@ -1,8 +1,10 @@
 ---
 name: prp-14-dashboards-cost-latency-coverage
-status: backlog
+status: active
+started: 2026-10-19
 review: none
 created: 2026-10-08
+branch: prp-14-dashboards-cost-latency-coverage
 model: sonnet
 phase: 1
 ns: NS-01, NS-07
@@ -107,7 +109,7 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 ## Implementation blueprint
 
 ### Item 1 — hot-aggregates-worker  [P]
-- Deliverable: worker materializing 90-day rollups (cost estimated, cost invoiced, latency percentiles, error rate, coverage) per domain from the outbox, with lag and coverage metadata and an explicit `complete` flag.
+- Deliverable: worker materializing 90-day rollups (cost estimated, cost invoiced, latency percentiles, error rate, coverage) per domain from the outbox, with lag and coverage metadata and an explicit `complete` flag. Delta D1: also per-source reconciliation rollups (gateway, app, billing: amount, coverage, granularity label) per domain and day, read by item 4.
 - Owned files (may edit): `services/workers/neurosphere_workers/aggregates/`.
 - Must NOT touch: `services/workers/neurosphere_workers/projections/outbox/` (PRP-07), `services/api/neurosphere_api/dashboards/`, `neurosphere_core/ledger/`, root `pyproject.toml`, `docker-compose.yml`.
 - Depends on: none.
@@ -142,11 +144,11 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 - Pattern references: Fluent UI v9 components, TanStack Query, PRP-04 typed client and error mapping.
 - Tests to write: `frontend/src/features/dashboards/__tests__/unknown.test.tsx`, `badges.test.tsx`, `lag-indicator.test.tsx`.
 
-### Item 4 — reconciliation-view  [P]
+### Item 4 — reconciliation-view
 - Deliverable: coverage and variance view from the PRP-07 ledger: per-source variance, granularity label, coverage percent with explicit unknown remainder.
 - Owned files (may edit): `frontend/src/features/reconciliation/`, `services/api/neurosphere_api/reconciliation/`.
 - Must NOT touch: `frontend/src/features/dashboards/` (item 3), `services/api/neurosphere_api/dashboards/` (item 2), `neurosphere_core/ledger/` (PRP-07), `frontend/src/api/`.
-- Depends on: none.
+- Depends on: item 1 (delta D1: reads item 1 reconciliation rollups, not the ledger).
 - Acceptance criteria:
   - Variance per source is displayed with a granularity label (for example vendor-level or request-level, as reported by the source); no claim that all spend is observable.
   - A source with no data shows "unknown" coverage, not 0 percent.
@@ -156,15 +158,15 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 
 ### Item 5 — vertical-slice-e2e
 - Deliverable: Playwright test driving sandbox seed, ingest, aggregation and UI, including the analytics-down scenario, runnable in CI against compose.
-- Owned files (may edit): `tests/e2e/dashboards/`, `docs/evidence/G07/dashboards/` (measured p95 JSON and a short markdown note, labelled "sandbox on compose, emulators").
+- Owned files (may edit), per delta D2: `frontend/tests/e2e/dashboards/`, `frontend/tests/mock-api/server.ts`, `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, `services/api/neurosphere_api/routers.py`, `tests/integration/dashboards/`, `tests/load/dashboards_latency/`, `docs/evidence/G07/dashboards/` (measured p95 JSON and a short markdown note, labelled "sandbox on compose, emulators").
 - Must NOT touch: `frontend/playwright.config.ts` (PRP-04), `docker-compose.yml`, `scripts/sandbox/` (PRP-03), items 1-4 paths.
 - Depends on: items 1, 2, 3, 4.
 - Acceptance criteria:
-  - Passes headless in CI with `docker compose --profile app up -d --wait`.
+  - Playwright passes headless in CI against the mock API (delta D2); the compose-backed slice passes locally with `docker compose up -d --wait`. Browser e2e against compose in CI is recorded OPEN.
   - Asserts "unknown" cell, estimated and invoiced badges, price version, lag indicator, and analytics-down continuity.
   - Records timings used for the latency evidence file.
 - Pattern references: Playwright under `frontend/tests/e2e` conventions from PRP-04 (config reused, not edited).
-- Tests to write: `tests/e2e/dashboards/dashboards.spec.ts`, `tests/e2e/dashboards/analytics-down.spec.ts`.
+- Tests to write: `frontend/tests/e2e/dashboards/dashboards.spec.ts`, `frontend/tests/e2e/dashboards/analytics-down.spec.ts`, `tests/integration/dashboards/test_vertical_slice.py`, `tests/load/dashboards_latency/test_dashboards_p95.py`.
 
 ## Validation gates
 ```
@@ -198,6 +200,23 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-19 with two deltas signed off by the operator, because the repo contradicted the blueprint:
+
+- D1: item 1 also materializes per-source reconciliation rollups (gateway, app and billing amount, coverage and granularity per domain and day) from the outbox. Item 4 reads those rollups instead of the ledger (the PRP gotcha forbids ledger reads on the request path), so item 4 depends on item 1.
+- D2: the CI Playwright job runs against the Node mock API (`frontend/tests/mock-api/server.ts`) with stubbed sign-in, CI never starts compose, the compose `workers` container runs only `IdleWorker`, and `frontend/playwright.config.ts` has `testDir: ./tests/e2e`. Item 5 therefore becomes "wiring + vertical slice" and owns: router registration in `services/api/neurosphere_api/routers.py`; route and nav registration in `frontend/src/app/main.tsx` and `frontend/src/app/workspaceNav.ts`; dashboards and reconciliation fixtures in `frontend/tests/mock-api/server.ts`; Playwright specs in `frontend/tests/e2e/dashboards/` (in CI, mock API, including analytics-down); an in-process compose-backed slice in `tests/integration/dashboards/` (seed, ingest, outbox, aggregates, API, including analytics-down; local, `integration` marker); and a p95 harness in `tests/load/dashboards_latency/` writing `docs/evidence/G07/dashboards/`. Recorded OPEN: browser e2e against compose in CI, and hosting the aggregates worker in the compose `workers` container (the catalog projection is not hosted there either).
+
+Waves: 1 = items 1 and 3 in parallel; 2 = items 2 and 4 in parallel (after item 1); 3 = item 5 (after 1-4).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-19 |
+| 2 | todo | | sonnet | | 2026-10-19 |
+| 3 | todo | | sonnet | | 2026-10-19 |
+| 4 | todo | | sonnet | | 2026-10-19 |
+| 5 | todo | | sonnet | | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
