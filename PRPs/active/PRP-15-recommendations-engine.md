@@ -1,8 +1,10 @@
 ---
 name: prp-15-recommendations-engine
-status: backlog
+status: active
+started: 2026-10-19
 review: none
 created: 2026-10-08
+branch: prp-15-recommendations-engine
 model: sonnet
 phase: 2
 ns: NS-03
@@ -189,6 +191,36 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-19 with four deltas signed off by the operator, because the repo contradicted the blueprint:
+
+- D1: `RecommendationCompute` (PRP-11) exposes only `co_usage_candidates` (model/provider co-usage across domains), and `TelemetryAnalytics.aggregate` cannot group by agent (`Dimension` has no agent). The fixture adapter builds its own dataset, not the sandbox output, and the PRP-14 aggregates have no agent grain. Item 1 therefore evaluates rules over a narrow `AgentSeriesSource` protocol (per agent per day: events, cost known/unknown, latency p95, errors, per-source coverage) with one implementation that reads sandbox output files (`agents.ndjson`, `telemetry.ndjson`, `cost.ndjson`; telemetry carries `canonical_agent_id`). Recorded OPEN: a production series source needs an agent dimension on the PRP-11 contract and its four adapters.
+- D2: agent-pair duplicates cannot run through `RecommendationCompute` (co-usage pairs models, not agents). The sandbox defines a duplicate as shared grounding sources plus the same model deployment, which are catalog relations. Item 2 computes similarity in the worker over presented relations through the read-only `GraphQuery` (in-memory catalog loaded from sandbox output); embeddings are an optional signal hook only. Precision is measured against the manifest's `duplicate_agent_candidates`.
+- D3: `neurosphere_api` depends only on `neurosphere-core`, so item 4 also owns the new `packages/core/neurosphere_core/recommendations/` (store protocol plus in-memory implementation over the generated `neurosphere_contracts` `Recommendation`, scope-filtered list/get/search). Items 1-3 emit the generated contract model. Item 4 no longer depends on items 1-3 (it tests on contract fixtures).
+- D4: the UI is split out of item 4 into item 5 (`frontend/src/features/recommendations/`). A new item 6 owns the shared wiring: router registration in `services/api/neurosphere_api/routers.py`; route and nav in `frontend/src/app/main.tsx` and `frontend/src/app/workspaceNav.ts`; recommendations fixtures in `frontend/tests/mock-api/server.ts`; Playwright specs in `frontend/tests/e2e/recommendations/`; `services/api/openapi.json` regeneration; the worker pipeline `services/workers/neurosphere_workers/recommendations/pipeline.py` (runs items 1-3 over sandbox output into the store); an in-process slice in `tests/integration/recommendations/`; and evidence in `docs/evidence/G12/recommendations/` with measured detection and precision. Item 1 creates `services/workers/neurosphere_workers/recommendations/__init__.py`; no other item edits it.
+
+Waves: 1 = items 1, 2, 3, 4 in parallel; 2 = item 5 (first free slot); 3 = item 6 (after 1-5).
+
+### Wire contract (decided at approval; items 4-6 code against it)
+The domain is a path segment, authorized against the server-derived `IdentityScope`; out-of-scope domain returns 403 (problem+json), policy store outage 503.
+
+- `GET /api/v1/recommendations/domains/{domain}` (`data.read`), query `kind`, `q` (bounded text over kind and subject ids), `cursor`, `limit`: `{ "items": [Recommendation], "next_cursor": str|null }`.
+- `GET /api/v1/recommendations/domains/{domain}/items/{recommendation_id:path}` (`data.read`): `{ "recommendation": Recommendation, "review": {"state": "not_routed"|"pending_review", "review_request_id": str|null}, "execution": {"executable": false, "reason": "action gates not passed"} }`.
+- `POST /api/v1/recommendations/domains/{domain}/review-requests`, body `{ "recommendation_id" }` (`action.propose`): 202 `{ "review_request_id", "state": "pending_review" }` through a `ReviewRouter` protocol, in-memory stub until PRP-17.
+- `POST /api/v1/recommendations/domains/{domain}/executions`: always refuses with `capability_unavailable`, reason "action gates not passed"; no executing code path.
+
+`Recommendation` is the PRP-01 schema document verbatim (`packages/contracts/schemas/recommendations/v1/recommendation.schema.json`).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-19 |
+| 2 | todo | | sonnet | | 2026-10-19 |
+| 3 | todo | | sonnet | | 2026-10-19 |
+| 4 | todo | | sonnet | | 2026-10-19 |
+| 5 | todo | | sonnet | | 2026-10-19 |
+| 6 | todo | | sonnet | | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
