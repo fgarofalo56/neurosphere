@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-14-dashboards-cost-latency-coverage](active/PRP-14-dashboards-cost-latency-coverage.md) |  | 5/5 (100%) | merged 5 | ? / ? | none |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-14-dashboards-cost-latency-coverage](backlog/PRP-14-dashboards-cost-latency-coverage.md) |  |  | - | - | ? / ? | none |
 | [prp-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) |  |  | - | - | ? / ? | none |
 | [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) |  |  | - | - | ? / ? | required |
 | [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) |  |  | - | - | ? / ? | required |

@@ -1,0 +1,234 @@
+{
+  "backend": "CosmosAggregateStore (compose vNext emulator)",
+  "dataset": {
+    "documents_by_grain_metric": {
+      "day:cost": 206,
+      "day:coverage": 121,
+      "day:errors": 90,
+      "day:latency": 90,
+      "day:reconciliation": 121,
+      "hour:cost": 506,
+      "hour:coverage": 332,
+      "hour:errors": 324,
+      "hour:latency": 324,
+      "hour:reconciliation": 332,
+      "requests": 503
+    },
+    "documents_total": 2446,
+    "domain_ids_from": "sandbox World plan (tiny profile, domains overridden)",
+    "domains": 1,
+    "emulator_load_seconds": 35.0,
+    "generator": "worker rollup_bucket over synthetic ledger entries and model_call spans",
+    "hour_grain_days": 14,
+    "requests_per_domain_day": 2,
+    "window_days": 90
+  },
+  "date": "2026-10-19",
+  "disclaimer": "Measured on a developer machine through an in-process ASGI transport with dev-issuer tokens validated in memory. RU accounting, range/composite indexing and Entra are not reproduced (G12). This narrows the dashboard planning target only; sized-profile and cost evidence stay OPEN (G07, PRP-21). Not a guarantee or an SLA.",
+  "environment": {
+    "cpu_count": 32,
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13"
+  },
+  "foreign_domain_status": 403,
+  "iterations_per_workload": 50,
+  "label": "sandbox on compose, emulators; bounded feasibility",
+  "p95_vs_target": {
+    "cost_day_90d": {
+      "p95_ms": 143.975,
+      "ratio_of_target": 0.072,
+      "target_ms": 2000.0
+    },
+    "cost_hour_14d": {
+      "p95_ms": 251.598,
+      "ratio_of_target": 0.1258,
+      "target_ms": 2000.0
+    },
+    "coverage_day_90d": {
+      "p95_ms": 95.202,
+      "ratio_of_target": 0.0476,
+      "target_ms": 2000.0
+    },
+    "coverage_hour_14d": {
+      "p95_ms": 144.454,
+      "ratio_of_target": 0.0722,
+      "target_ms": 2000.0
+    },
+    "errors_day_90d": {
+      "p95_ms": 63.661,
+      "ratio_of_target": 0.0318,
+      "target_ms": 2000.0
+    },
+    "errors_hour_14d": {
+      "p95_ms": 173.796,
+      "ratio_of_target": 0.0869,
+      "target_ms": 2000.0
+    },
+    "latency_day_90d": {
+      "p95_ms": 64.217,
+      "ratio_of_target": 0.0321,
+      "target_ms": 2000.0
+    },
+    "latency_hour_14d": {
+      "p95_ms": 156.895,
+      "ratio_of_target": 0.0784,
+      "target_ms": 2000.0
+    },
+    "reconciliation_day_90d": {
+      "p95_ms": 100.028,
+      "ratio_of_target": 0.05,
+      "target_ms": 2000.0
+    }
+  },
+  "p95_wall_clock_ms_by_workload": {
+    "cost_day_90d": 143.975,
+    "cost_hour_14d": 251.598,
+    "coverage_day_90d": 95.202,
+    "coverage_hour_14d": 144.454,
+    "errors_day_90d": 63.661,
+    "errors_hour_14d": 173.796,
+    "latency_day_90d": 64.217,
+    "latency_hour_14d": 156.895,
+    "reconciliation_day_90d": 100.028
+  },
+  "scope_violations": [],
+  "target_label": "PRD planning target (dashboard p95 <= 2 s on bounded 90-day aggregates): target, not a guarantee",
+  "target_ms_for_context_only": 2000.0,
+  "workloads": {
+    "cost_day_90d": {
+      "series_or_sources_returned": 4,
+      "server_timing_app": {
+        "max_ms": 184.3,
+        "p50_ms": 131.1,
+        "p95_ms": 140.2,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 188.114,
+        "p50_ms": 132.991,
+        "p95_ms": 143.975,
+        "samples": 50.0
+      }
+    },
+    "cost_hour_14d": {
+      "series_or_sources_returned": 4,
+      "server_timing_app": {
+        "max_ms": 261.4,
+        "p50_ms": 175.5,
+        "p95_ms": 250.3,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 263.078,
+        "p50_ms": 177.384,
+        "p95_ms": 251.598,
+        "samples": 50.0
+      }
+    },
+    "coverage_day_90d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 96.4,
+        "p50_ms": 88.3,
+        "p95_ms": 93.0,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 98.194,
+        "p50_ms": 90.038,
+        "p95_ms": 95.202,
+        "samples": 50.0
+      }
+    },
+    "coverage_hour_14d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 176.1,
+        "p50_ms": 123.5,
+        "p95_ms": 142.6,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 177.561,
+        "p50_ms": 125.103,
+        "p95_ms": 144.454,
+        "samples": 50.0
+      }
+    },
+    "errors_day_90d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 120.6,
+        "p50_ms": 57.8,
+        "p95_ms": 61.8,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 122.404,
+        "p50_ms": 59.405,
+        "p95_ms": 63.661,
+        "samples": 50.0
+      }
+    },
+    "errors_hour_14d": {
+      "series_or_sources_returned": 2,
+      "server_timing_app": {
+        "max_ms": 200.7,
+        "p50_ms": 121.9,
+        "p95_ms": 171.7,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 202.842,
+        "p50_ms": 123.646,
+        "p95_ms": 173.796,
+        "samples": 50.0
+      }
+    },
+    "latency_day_90d": {
+      "series_or_sources_returned": 3,
+      "server_timing_app": {
+        "max_ms": 73.1,
+        "p50_ms": 58.5,
+        "p95_ms": 62.4,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 75.063,
+        "p50_ms": 60.142,
+        "p95_ms": 64.217,
+        "samples": 50.0
+      }
+    },
+    "latency_hour_14d": {
+      "series_or_sources_returned": 3,
+      "server_timing_app": {
+        "max_ms": 188.0,
+        "p50_ms": 123.7,
+        "p95_ms": 155.2,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 190.023,
+        "p50_ms": 125.547,
+        "p95_ms": 156.895,
+        "samples": 50.0
+      }
+    },
+    "reconciliation_day_90d": {
+      "series_or_sources_returned": 6,
+      "server_timing_app": {
+        "max_ms": 95.5,
+        "p50_ms": 90.4,
+        "p95_ms": 95.1,
+        "samples": 50.0
+      },
+      "wall_clock": {
+        "max_ms": 100.985,
+        "p50_ms": 95.318,
+        "p95_ms": 100.028,
+        "samples": 50.0
+      }
+    }
+  }
+}

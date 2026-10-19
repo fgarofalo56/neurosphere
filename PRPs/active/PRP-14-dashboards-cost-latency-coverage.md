@@ -1,8 +1,10 @@
 ---
 name: prp-14-dashboards-cost-latency-coverage
-status: backlog
+status: active
+started: 2026-10-19
 review: none
 created: 2026-10-08
+branch: prp-14-dashboards-cost-latency-coverage
 model: sonnet
 phase: 1
 ns: NS-01, NS-07
@@ -107,7 +109,7 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 ## Implementation blueprint
 
 ### Item 1 — hot-aggregates-worker  [P]
-- Deliverable: worker materializing 90-day rollups (cost estimated, cost invoiced, latency percentiles, error rate, coverage) per domain from the outbox, with lag and coverage metadata and an explicit `complete` flag.
+- Deliverable: worker materializing 90-day rollups (cost estimated, cost invoiced, latency percentiles, error rate, coverage) per domain from the outbox, with lag and coverage metadata and an explicit `complete` flag. Delta D1: also per-source reconciliation rollups (gateway, app, billing: amount, coverage, granularity label) per domain and day, read by item 4.
 - Owned files (may edit): `services/workers/neurosphere_workers/aggregates/`.
 - Must NOT touch: `services/workers/neurosphere_workers/projections/outbox/` (PRP-07), `services/api/neurosphere_api/dashboards/`, `neurosphere_core/ledger/`, root `pyproject.toml`, `docker-compose.yml`.
 - Depends on: none.
@@ -142,11 +144,11 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 - Pattern references: Fluent UI v9 components, TanStack Query, PRP-04 typed client and error mapping.
 - Tests to write: `frontend/src/features/dashboards/__tests__/unknown.test.tsx`, `badges.test.tsx`, `lag-indicator.test.tsx`.
 
-### Item 4 — reconciliation-view  [P]
+### Item 4 — reconciliation-view
 - Deliverable: coverage and variance view from the PRP-07 ledger: per-source variance, granularity label, coverage percent with explicit unknown remainder.
 - Owned files (may edit): `frontend/src/features/reconciliation/`, `services/api/neurosphere_api/reconciliation/`.
 - Must NOT touch: `frontend/src/features/dashboards/` (item 3), `services/api/neurosphere_api/dashboards/` (item 2), `neurosphere_core/ledger/` (PRP-07), `frontend/src/api/`.
-- Depends on: none.
+- Depends on: item 1 (delta D1: reads item 1 reconciliation rollups, not the ledger).
 - Acceptance criteria:
   - Variance per source is displayed with a granularity label (for example vendor-level or request-level, as reported by the source); no claim that all spend is observable.
   - A source with no data shows "unknown" coverage, not 0 percent.
@@ -156,15 +158,15 @@ Deliver the first operator-facing analytics surface: materialized 90-day hot agg
 
 ### Item 5 — vertical-slice-e2e
 - Deliverable: Playwright test driving sandbox seed, ingest, aggregation and UI, including the analytics-down scenario, runnable in CI against compose.
-- Owned files (may edit): `tests/e2e/dashboards/`, `docs/evidence/G07/dashboards/` (measured p95 JSON and a short markdown note, labelled "sandbox on compose, emulators").
+- Owned files (may edit), per delta D2: `frontend/tests/e2e/dashboards/`, `frontend/tests/mock-api/server.ts`, `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, `services/api/neurosphere_api/routers.py`, `tests/integration/dashboards/`, `tests/load/dashboards_latency/`, `docs/evidence/G07/dashboards/` (measured p95 JSON and a short markdown note, labelled "sandbox on compose, emulators").
 - Must NOT touch: `frontend/playwright.config.ts` (PRP-04), `docker-compose.yml`, `scripts/sandbox/` (PRP-03), items 1-4 paths.
 - Depends on: items 1, 2, 3, 4.
 - Acceptance criteria:
-  - Passes headless in CI with `docker compose --profile app up -d --wait`.
+  - Playwright passes headless in CI against the mock API (delta D2); the compose-backed slice passes locally with `docker compose up -d --wait`. Browser e2e against compose in CI is recorded OPEN.
   - Asserts "unknown" cell, estimated and invoiced badges, price version, lag indicator, and analytics-down continuity.
   - Records timings used for the latency evidence file.
 - Pattern references: Playwright under `frontend/tests/e2e` conventions from PRP-04 (config reused, not edited).
-- Tests to write: `tests/e2e/dashboards/dashboards.spec.ts`, `tests/e2e/dashboards/analytics-down.spec.ts`.
+- Tests to write: `frontend/tests/e2e/dashboards/dashboards.spec.ts`, `frontend/tests/e2e/dashboards/analytics-down.spec.ts`, `tests/integration/dashboards/test_vertical_slice.py`, `tests/load/dashboards_latency/test_dashboards_p95.py`.
 
 ## Validation gates
 ```
@@ -198,6 +200,53 @@ Feature-specific:
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-19 with two deltas signed off by the operator, because the repo contradicted the blueprint:
+
+- D1: item 1 also materializes per-source reconciliation rollups (gateway, app and billing amount, coverage and granularity per domain and day) from the outbox. Item 4 reads those rollups instead of the ledger (the PRP gotcha forbids ledger reads on the request path), so item 4 depends on item 1.
+- D2: the CI Playwright job runs against the Node mock API (`frontend/tests/mock-api/server.ts`) with stubbed sign-in, CI never starts compose, the compose `workers` container runs only `IdleWorker`, and `frontend/playwright.config.ts` has `testDir: ./tests/e2e`. Item 5 therefore becomes "wiring + vertical slice" and owns: router registration in `services/api/neurosphere_api/routers.py`; route and nav registration in `frontend/src/app/main.tsx` and `frontend/src/app/workspaceNav.ts`; dashboards and reconciliation fixtures in `frontend/tests/mock-api/server.ts`; Playwright specs in `frontend/tests/e2e/dashboards/` (in CI, mock API, including analytics-down); an in-process compose-backed slice in `tests/integration/dashboards/` (seed, ingest, outbox, aggregates, API, including analytics-down; local, `integration` marker); and a p95 harness in `tests/load/dashboards_latency/` writing `docs/evidence/G07/dashboards/`. Recorded OPEN: browser e2e against compose in CI, and hosting the aggregates worker in the compose `workers` container (the catalog projection is not hosted there either).
+
+Waves: 1 = items 1 and 3 in parallel; 2 = items 2 and 4 in parallel (after item 1); 3 = item 5 (after 1-4).
+
+Ownership note: `neurosphere_api` depends only on `neurosphere-core` (not on `neurosphere_workers`), so item 1 also owns the new `packages/core/neurosphere_core/aggregates/`: aggregate document models plus an `AggregateStore` protocol with in-memory and Cosmos implementations. The worker rollup logic stays in `services/workers/neurosphere_workers/aggregates/`. Items 2 and 4 read through `neurosphere_core.aggregates` only.
+
+### Wire contract (decided at approval; items 2-5 code against it)
+`MetricValue = {"value": number|null, "status": "known"|"unknown", "complete": bool, "price_version": {"id": str, "effective_date": "YYYY-MM-DD"}|null}`. `status: "unknown"` always pairs with `value: null`. A total that includes unknown components has `complete: false` and the sum of the known parts; it is never silently presented as complete.
+
+Amended 2026-10-19 after item 3: the domain is a PATH SEGMENT. The PRP-04 client (`frontend/src/api/client.ts`) refuses `domain_id`/`customer_id` as parameters because scope is derived server-side. Here the domain is the addressed resource, authorized against the derived scope, not a scope claim. Response bodies still echo `domain_id`.
+
+`GET /api/v1/dashboards/domains/{domain}/{metric}`, metric in `cost | latency | errors | coverage`. Query: `days` (1-90, default 30); `grain` (`day | hour`, default `day`, hour limited to 14 days); `max_series` (1-50, default 20); `max_points` (1-2160, default 720). If the derived `IdentityScope` lacks read on `{domain}`, the response is 403 (problem+json). A policy store outage is 503. The response:
+```
+{ "metric", "domain_id", "grain", "window": {"start", "end"},
+  "freshness": {"watermark": iso|null, "lag_seconds": number|null, "billing_source_freshness": iso|null},
+  "analytics": {"state": "available"|"delayed"|"disabled", "reason": str|null},
+  "complete": bool, "truncated": bool,
+  "series": [ {"key": str, "label": str, "kind": "estimated"|"invoiced"|null, "unit": "currency"|"ms"|"ratio"|"count",
+               "currency": str|null, "total": MetricValue, "points": [ {"t": iso, "value": MetricValue} ]} ],
+  "price_versions": [ {"id", "effective_date"} ] }
+```
+Cost returns separate `estimated` and `invoiced` series per currency and never a blended series. Latency returns `p50`, `p95` and `p99` (ms). Errors returns `error_rate` (ratio) and `error_count`. Coverage returns `coverage` (ratio of ledger entries with a known amount). Responses carry a `Server-Timing: app;dur=<ms>` header. The analytics state comes from the capability matrix and adapter health; UI strings name no vendor.
+
+`GET /api/v1/reconciliation/domains/{domain}` with query `days` (1-90). Same 403/503 rules. The response:
+```
+{ "domain_id", "window", "freshness", "complete",
+  "reference": {"label": "ledger (one record per request)", "amount": MetricValue, "currency": str|null},
+  "sources": [ {"source": "gateway"|"app"|"billing", "granularity": "request"|"vendor"|"unknown",
+                "amount": MetricValue, "coverage": MetricValue, "variance": MetricValue, "currency": str|null} ],
+  "unknown_remainder": MetricValue,
+  "disclaimer": "not_all_spend_observable" }
+```
+A source with no data has `coverage.status: "unknown"`, not 0. `variance = source amount - reference amount` and is unknown if either side is unknown. The reference counts each request once (no double counting).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-a9252797aea244ecc | sonnet | ef1d22b; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, aggregates 28 passed, emulator integration 1 passed (vNext, running stack); null-sum audited (all sums gated on known or `known_sum`); decisions: request-less allocations feed only reconciliation billing (`vendor`), latency/errors from `model_call` spans; OPEN: no production `TraceEventSource`, no `__main__`/compose hosting, aggregates container provisioned only by the integration test, bucket rebuild sizing unmeasured (G07/G12); merge 9ec1dc6, ruff clean, workers + core 1277 passed post-merge | 2026-10-19 |
+| 2 | merged | worktree-agent-aaf2c98d692ab135a | sonnet | 019aec3; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, dashboards 64 passed; deviations: Server-Timing only on served (2xx) responses, latency totals always unknown (percentiles do not combine), price versions with null effective date dropped and the value marked incomplete, analytics `disabled` when no adapter or region, `delayed` on raising/hanging health or lag > 900 s; merge 188ecc6, services/api 454 passed post-merge | 2026-10-19 |
+| 3 | merged | worktree-agent-a26efd2e4d1c91012 | sonnet | 0c76ad7 + ac36c64 (orchestrator: the agent embedded `?domain_id=` in the path string to get past the PRP-04 client scope-key guard; changed to the domain as a path segment, contract amended da476c0); orchestrator re-run lint + tsc clean, vitest 158 passed (28 new), build ok; merge a6b772f, lint + tsc + vitest 158 passed post-merge | 2026-10-19 |
+| 4 | merged | worktree-agent-a489ea981c681ada3 | sonnet | 98868a3; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, reconciliation 16 passed, vitest reconciliation 8 passed, lint + tsc clean; deviations: per-currency `references[]` added (top-level `reference` only when one currency), `unknown_remainder` is an entry count, XXX bucket reported with currency null, extra `truncated`; tests build fixtures with the worker `rollup_bucket` (test-only import); merge e21cff0, ruff clean, pyright 0, services/api 470 passed, vitest 166 passed post-merge | 2026-10-19 |
+| 5 | merged | worktree-agent-ab06388655b9d7961 | sonnet | 5dd2877 + 7a42bb4 + a762139; also regenerated `services/api/openapi.json` (outside ownership, generated, additive only; required by `test_openapi_drift` once both routers registered); orchestrator re-run on branch: ruff clean, pyright 0, 395 passed, Playwright 17 passed (incl. analytics-down, 403, axe); merge 6599cf3; post-merge on integration branch: verify-gates full PASS (lint, pyright 0 errors, 5105 passed, build), validate_planning PASS, licences PASS (534), full-history gitleaks clean (253 commits), emulator integration (slice + emulator p95 + aggregates idempotency) 13 passed in 9m16s; measured p95 in-memory 9-17 ms, emulator 64-252 ms vs the 2 s planning target (target, not a guarantee); evidence docs/evidence/G07/dashboards/ | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
