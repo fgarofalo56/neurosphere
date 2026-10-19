@@ -13,7 +13,7 @@ package = false
 
 [dependency-groups]
 dev = [
-  "ruff>=0.16,<0.17",
+  "ruff>=0.16,<0.18",
   "pyright>=1.1.400,<2",
   "pytest>=9.1,<10",
   "pytest-asyncio>=1.4,<2",
