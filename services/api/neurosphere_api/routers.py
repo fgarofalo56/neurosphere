@@ -115,6 +115,12 @@ def _register_recommendations(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_evaluation(registry: RouterRegistry) -> None:
+    from neurosphere_api.evaluation import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -126,6 +132,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_dashboards,
     _register_reconciliation,
     _register_recommendations,
+    _register_evaluation,
 )
 
 

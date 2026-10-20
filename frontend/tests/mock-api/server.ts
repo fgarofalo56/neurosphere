@@ -510,6 +510,150 @@ function recommendationHandler(
   send(res, 404, { error: "not found" }, cors);
 }
 
+// ---- PRP-16 fixtures: GET /api/v1/evaluation/domains/{domain}/quality. The shape follows the
+// item 4 wire contract (`QualityResponse`); the numbers are SYNTHETIC. DOMAIN_OK answers a
+// populated response, DOMAIN_NO_PILOT a response with nothing estimable, any other domain 403
+// (never an empty 200).
+const EVALUATION_QUALITY = /^\/api\/v1\/evaluation\/domains\/([^/]+)\/quality\/?$/;
+/** Readable, but no pilot data and no judged items yet: everything is unknown. */
+export const DOMAIN_NO_PILOT = "commercial:e2e:sandbox:domain:no-pilot";
+export const PILOT_TARGET_LABEL = "pilot-set target: at least 90%";
+export const QUALITY_JUDGE_MODEL = "commercial:e2e:foundry:modeldeployment:judge-a";
+export const QUALITY_UNCALIBRATED_MODEL = "commercial:e2e:foundry:modeldeployment:judge-b";
+
+const NULL_JUDGE = {
+  judge_model_id: null,
+  judge_model_version: null,
+  judge_prompt_version: null,
+  program_version: null,
+};
+
+function qualityBody(domain: string): Record<string, unknown> {
+  const target = { target: 0.9, target_label: PILOT_TARGET_LABEL };
+  if (domain === DOMAIN_NO_PILOT) {
+    return {
+      trends: [],
+      coverage: [],
+      missing_labels: { judged: 0, labelled: null, missing: null },
+      pilot_grounded_rate: {
+        value: null,
+        lower: null,
+        upper: null,
+        level: null,
+        n: 0,
+        method: "not_estimable",
+        ...target,
+      },
+      drift_alerts: [],
+    };
+  }
+  const llm = {
+    judge_kind: "llm_judge",
+    judge_model_id: QUALITY_JUDGE_MODEL,
+    judge_model_version: "2026-04-14",
+    judge_prompt_version: "grounded-v1",
+    program_version: null,
+  };
+  return {
+    trends: [
+      {
+        dimension: "groundedness",
+        points: [
+          {
+            bucket_start: "2026-10-19T00:00:00Z",
+            value: 0.875,
+            lower: 0.7389,
+            upper: 0.9454,
+            level: 0.95,
+            sample_size: 40,
+            judge: llm,
+            calibration_state: "calibrated",
+          },
+          {
+            // Online groundedness is not estimable (bodies are not archived): unknown, never 0.
+            bucket_start: "2026-10-19T00:00:00Z",
+            value: null,
+            lower: null,
+            upper: null,
+            level: null,
+            sample_size: 0,
+            judge: { ...NULL_JUDGE, judge_kind: "programmatic", program_version: "outcome-1.0.0" },
+            calibration_state: "not_applicable",
+          },
+        ],
+      },
+      {
+        dimension: "tool_correctness",
+        points: [
+          {
+            bucket_start: "2026-10-19T00:00:00Z",
+            value: 0.8,
+            lower: 0.62,
+            upper: 0.91,
+            level: 0.95,
+            sample_size: 25,
+            judge: {
+              ...llm,
+              judge_model_id: QUALITY_UNCALIBRATED_MODEL,
+              judge_prompt_version: "tools-v2",
+            },
+            calibration_state: "uncalibrated",
+          },
+        ],
+      },
+    ],
+    coverage: [
+      { stratum: "finance/groundedness/public", sampled: 16, population: 16, coverage_fraction: 1 },
+      {
+        stratum: "finance/groundedness/restricted",
+        sampled: 0,
+        population: 8,
+        coverage_fraction: 0,
+      },
+      { stratum: "finance/tool/unmapped", sampled: 5, population: null, coverage_fraction: null },
+    ],
+    missing_labels: { judged: 40, labelled: 34, missing: 6 },
+    pilot_grounded_rate: {
+      value: 0.875,
+      lower: 0.7389,
+      upper: 0.9454,
+      level: 0.95,
+      n: 40,
+      method: "wilson_score",
+      ...target,
+    },
+    drift_alerts: [
+      {
+        dimension: "groundedness",
+        subject_id: "commercial:e2e:sandbox:agent:support-bot",
+        detected_at: "2026-10-19T12:00:00Z",
+        statistic: 0.7297,
+        threshold: 0.25,
+      },
+    ],
+  };
+}
+
+function qualityHandler(
+  res: ServerResponse,
+  req: IncomingMessage,
+  url: URL,
+  domainSegment: string,
+  cors: Record<string, string>,
+  correlationId: string,
+): void {
+  if (roleFromAuthorization(req.headers.authorization) === undefined) {
+    send(res, 401, { error: "missing or unrecognised token" }, cors);
+    return;
+  }
+  const domain = decodeURIComponent(domainSegment);
+  if (domain !== DOMAIN_OK && domain !== DOMAIN_NO_PILOT) {
+    send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
+    return;
+  }
+  send(res, 200, qualityBody(domain), { ...cors, "server-timing": "app;dur=1.0" });
+}
+
 function send(
   res: ServerResponse,
   status: number,
@@ -585,6 +729,11 @@ export function createMockApi(options: MockApiOptions): Server {
         cors,
         correlationId,
       );
+      return;
+    }
+    const quality = EVALUATION_QUALITY.exec(url.pathname);
+    if (quality !== null) {
+      qualityHandler(res, req, url, quality[1] ?? "", cors, correlationId);
       return;
     }
     const reconciliation = RECONCILIATION_PATH.exec(url.pathname);

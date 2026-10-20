@@ -1,0 +1,451 @@
+{
+  "fixture_version": "1.0.0",
+  "notice": "SYNTHETIC sandbox data. Invented content; not derived from any production data.",
+  "responses": {
+    "01e80ee8b40e0acc22a12db247844ba17788616261d5de19726f75a6cd9f1a70": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 27,
+      "value": 1.0
+    },
+    "037a4ee918789e49ab87c7612c54f1a600f129141fb1742b95bdc641775eefdb": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 16,
+      "value": 0.0
+    },
+    "05abf91d60e828771137ab6e54e6bcce840fb53dec195a9242319bec95622a4e": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 14,
+      "value": 1.0
+    },
+    "071a5cff8ce437c8dca8a372878b3cf49a463b1a550a77dfac9cef118a6065b3": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 37,
+      "value": 1.0
+    },
+    "07a75878d6f017a5d9d74a969ff008102534ed6fa543565e246655d757e2c645": {
+      "abstained": true,
+      "input_tokens": 183,
+      "output_tokens": 13,
+      "value": null
+    },
+    "083aa4d0233edab9bbffc83541492241a23d6b47224a99a52339a0cd320b1a92": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 14,
+      "value": 1.0
+    },
+    "0e7f1fa2ac54059b4545868e13bbebbe2a98a5d3cbdfd4d9a448b3bdf12c9d07": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 25,
+      "value": 1.0
+    },
+    "12b9c678a8c1c51934775510ab15b916c121d7aed523d0876117ddf86d71715e": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 37,
+      "value": 1.0
+    },
+    "148dea91ddcbef70810f0a30a7c741ecd0e543fd332872dd4748024abdafc104": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 30,
+      "value": 1.0
+    },
+    "23d1d28e45b6e2a5000df14ce6cae67de5cca00cd6f70ecc9a87899ad284235a": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 14,
+      "value": 1.0
+    },
+    "252c4d50fc09865c6aaa8b27ec672c32adbe23053a5418ac755e8d6905e3f595": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 32,
+      "value": 1.0
+    },
+    "2a874334adefa7da1ceb1e265a11b99e676344995094c08d3b8c4cba2064ab96": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 27,
+      "value": 1.0
+    },
+    "2ade8d9754880261187512d8040964d494d2f9ceceb49cf3458c8d9f3fd90646": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 27,
+      "value": 1.0
+    },
+    "2e6f905ba6a1495fa9bbb9375a9da26b66b5ba6da0618bee5f5dfb44bec229ab": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 30,
+      "value": 1.0
+    },
+    "2fc367d9cd969613bd983597cb7901f42a2e3cccdfe66f0c5421936d93c630a5": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 13,
+      "value": 1.0
+    },
+    "30f2677fd1c3d0e0f8b494d66018cc3a65d3ee18af8fd3a3635af4f0dc149c69": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 22,
+      "value": 0.0
+    },
+    "348cec5b2591029ff8f741bfdd74c131c6b4373cd180dde787fba698e1b79dac": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 19,
+      "value": 1.0
+    },
+    "36f021911ba59f14e72df6a292dbd50d65b49718c4863886855aef7162f2616f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 25,
+      "value": 1.0
+    },
+    "376045f6876e7cbc7768e67b933fcfaf6425bc896db28f40585360c8985b2b31": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 34,
+      "value": 1.0
+    },
+    "38183c228a2f039e29d8bb8540ec3ab2eb53cfedbb6fc4913e47506e1b13177e": {
+      "abstained": false,
+      "input_tokens": 184,
+      "output_tokens": 17,
+      "value": 1.0
+    },
+    "382813d076f10807cd3cb3d0ef7537f27679f446c35dfb982105f9e8ccbdbcb5": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 35,
+      "value": 1.0
+    },
+    "3acf02b1fcc3cf98447a5ce63384c311b5f2fdd60ab84b072a3677686dc559be": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 15,
+      "value": 1.0
+    },
+    "3b79906ed9b1d8865afd5a9dfa154f6511df552e121eaa6b08f8a93bbc256044": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 29,
+      "value": 1.0
+    },
+    "3c1f3ce79f0cc940813765fbac4b4fe2d01b005ce83574da13ea88a5a2706459": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 34,
+      "value": 1.0
+    },
+    "4202d97f4d2c5064821c7f7b0cb22f4101a8860bce486759114151c1af493ecb": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 19,
+      "value": 1.0
+    },
+    "421aacd35f1b2b4e2199440158a37cc28c9e68fb2846dbd36f8385fd571ff11f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 38,
+      "value": 1.0
+    },
+    "4553ff9443a76ec5b89fbae007e2cf95dcc5a25710da5e1c8d10f7705b1ccfb3": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 29,
+      "value": 0.0
+    },
+    "47f2c43f2c29644d63772e836c88e31832af52880e31ae934a80d29b86afaaa1": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 35,
+      "value": 0.0
+    },
+    "4b5ea2d4b5c4a315220f794b1fb2db88d7f72ffa446942ac9d194b9ff6dd3d80": {
+      "abstained": true,
+      "input_tokens": 183,
+      "output_tokens": 15,
+      "value": null
+    },
+    "4c0e51f5a86d0908e6866f6d1f6df021904e9e33020b13eb2ddec8177a4e8cf3": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 28,
+      "value": 0.0
+    },
+    "4f14c4a9647103c5dc7efb46b7cff489e7e6ea45d8ef8875f076e51c9e393b44": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 20,
+      "value": 1.0
+    },
+    "4f926c7405300c000bcf19daf9d994fa2b5a9128105c47da94f95ec7b2a61ccb": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 23,
+      "value": 1.0
+    },
+    "57d556f0f36c45cc5c372eb96f814157c1e2c0296708b4b6420e871d42b75e0b": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 15,
+      "value": 1.0
+    },
+    "5ae5a46e7bf688895d2ca8f6213eeac9b887323350f8b94e19b5c06d91472514": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 21,
+      "value": 1.0
+    },
+    "5af78462f3e7506cab55598e173ef94186d3c5ab07a6e4151e0a08a1f1c7492d": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 35,
+      "value": 0.0
+    },
+    "5c61489c917f5fa3ac065fbaecc13e5d683a7913604e501b32ffdb5c6f8cffc7": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 13,
+      "value": 0.0
+    },
+    "6a47f9e391616c98bc000dd0054d5f519a15f7b94b5aefdf0923d18d3c2bd2e1": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 18,
+      "value": 0.0
+    },
+    "6b8f8d95fe59078df9ad626c2d816ebf63833c45feb2f3ff5a8401f62370f75f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 28,
+      "value": 1.0
+    },
+    "7100a5e48bebcce4560f7441e2718031f8be23fe1e526cf48ee7b7dff8a20fa0": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 26,
+      "value": 1.0
+    },
+    "747ba96fe50aa5a6dbb2b8c95c979abdb539d8225505df0d28c7d23ef414555a": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 20,
+      "value": 1.0
+    },
+    "750ebd10415ba49321c2956c1d1f9c09eb8221d327d0ff93f9562bae80b3d676": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 28,
+      "value": 1.0
+    },
+    "7bd4e00d8e9a33d8b3f20768db459aaff0e0e154fb54c3f25bf7078d1811cd64": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 13,
+      "value": 1.0
+    },
+    "7d9c6f6169855c833dbe94907a31b4e427425e3eb0dd702c1fdfa47b88c9a7c7": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 14,
+      "value": 0.0
+    },
+    "892dcda6e7dd1a79b44ad25e3011ea906860b8e644c84e0e96fb048984a5de08": {
+      "abstained": false,
+      "input_tokens": 184,
+      "output_tokens": 34,
+      "value": 1.0
+    },
+    "89ad9ca1b8e5ad0e6ee762fac85e15d8cb5aeeee2b05f4d25f5658b40c9b675f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 20,
+      "value": 1.0
+    },
+    "8d253da58c1fdfcaaea8bfce90eb0ad90e60f4d5367f2db69b5d0a4ca7d0a942": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 17,
+      "value": 1.0
+    },
+    "92156078a0034c5fce4a9f4d99d93d183475d10e186e39b7f3eec0530cfc9952": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 25,
+      "value": 0.0
+    },
+    "945e4d5e91bf2dacfecf8f89649d00d200f50487147039c0c6360ae2ca7a305b": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 21,
+      "value": 0.0
+    },
+    "94c45f5f49c855052840d94218a1eeecd4f2e18c2d69ded7a73bd4e5e869ef78": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 35,
+      "value": 1.0
+    },
+    "a387e7b3452e246d1b4ff0e0e50baf5acdfeed8d410a1bb6b61e32e000850cf4": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 16,
+      "value": 0.0
+    },
+    "a6d9c7da61b8822bdbb6607a4174c4c57b1538dc34327248da21f417cbc40c30": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 34,
+      "value": 1.0
+    },
+    "ae5740770255af7134697b52993ca40a264115573de3a69d4e1021ff683fb692": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 18,
+      "value": 0.0
+    },
+    "b22a9ad3f5e711128be3aeabb9c1988ba2d035f119669a90aede3011bcb26026": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 37,
+      "value": 1.0
+    },
+    "b753fd073843b354aec1ae6c3066ccf9573d1becd6b28d792da64b28232773d7": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 30,
+      "value": 1.0
+    },
+    "b8b08c27a5b1fd5431506b891767c32257bf87aa941ec54d6ec826cebbf418fc": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 23,
+      "value": 1.0
+    },
+    "b976bf8f1ea5825a443c651c9000d3a5d7cb9245b756170a24df7195759a7768": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 32,
+      "value": 1.0
+    },
+    "be3120fa14c4a08ccedff07c4fb6931170e76c10d3fa23dd42d886713043d73f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 30,
+      "value": 1.0
+    },
+    "c279643697f702634594a5d4e249d1e3581e021448b0acc1a9af4f3dbfb369cf": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 19,
+      "value": 1.0
+    },
+    "c4c8da5b5c4b6f9c05daa0d791ec95911b182636c3ba10405b2fcf36b122fffc": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 22,
+      "value": 1.0
+    },
+    "c7f38aed91d7c6a5606838030044477a15f3835e9749415ee72965327c43cea7": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 37,
+      "value": 1.0
+    },
+    "d1b70724ecc9572929da97da29aa53900cec912166ea87db36c18eec3b07cead": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 19,
+      "value": 1.0
+    },
+    "d31eb65eb6b20beedbb7f3600e10cd7a6f3bd1b4176dc00a0c4106e4d2c7c1d9": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 35,
+      "value": 1.0
+    },
+    "d91ade4331c36c4180397cfbf793ce82259d7897e8443d319ee3918b60fcc20b": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 40,
+      "value": 0.0
+    },
+    "dbf12ccffb6a35090d1f0e67272194231dc46ca5dfe3ee832c51b635e800a21f": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 17,
+      "value": 1.0
+    },
+    "df12ce7a08710a86781d66bd91645f74b9a56bd597b09aa2ce4999f02fb78492": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 14,
+      "value": 1.0
+    },
+    "e5dfc0928375afaeb7abdf7f462e42ea3c1e461ff12ae3bcc10cdfb7d90d2f93": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 39,
+      "value": 1.0
+    },
+    "e98eb07d7c6ff054ad4523fe7bcb55d6071c5f5251fdb60c782dc4fe9342e33b": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 39,
+      "value": 1.0
+    },
+    "ebc1f97001b85620c2fd66bb2674a27bcb679896dfa4d3eb555ca47ad6c46b5d": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 34,
+      "value": 1.0
+    },
+    "ef576f16cccfd4fac2f227044868db67b454087d4060e637a7b2177318dd4203": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 32,
+      "value": 1.0
+    },
+    "f56d690fe8419edc80ded5940e661b7e4319d5def2f72e8c989976bd864cd594": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 33,
+      "value": 1.0
+    },
+    "f86b7d13a5d73319cb9a7b8d5810b159dc00046f2ab6a85ab33175283c76c076": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 30,
+      "value": 1.0
+    },
+    "f86d5e9c35a89f08a3556ac57fd7893f968e29f5fc2da4db1c47ec358a0ba0af": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 25,
+      "value": 1.0
+    },
+    "f9ea4eeb81e50bf2bb6f824ac42f78c733c829e509375cbe349a2becd685467d": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 26,
+      "value": 1.0
+    },
+    "fdc29d0afdb618b6d8e34be1e1f94fdc43e42b07775b342e11959cd4acd6b739": {
+      "abstained": false,
+      "input_tokens": 183,
+      "output_tokens": 40,
+      "value": 1.0
+    }
+  },
+  "synthetic": true
+}
