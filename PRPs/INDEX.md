@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-15-recommendations-engine](active/PRP-15-recommendations-engine.md) |  | 6/6 (100%) | merged 6 | ? / ? | none |
+| [prp-15-recommendations-engine](active/PRP-15-recommendations-engine.md) |  | 6/7 (85%) | in-progress 1, merged 6 | ? / ? | none |
 
 ## Backlog
 
