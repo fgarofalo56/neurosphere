@@ -1,0 +1,260 @@
+{
+  "dataset_id": "sbx-groundedness-pilot",
+  "dataset_version": "1.0.0",
+  "label_set_id": "sbx-groundedness-pilot-human-labels",
+  "labels": [
+    {
+      "item_id": "sbx-gp-000",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-001",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-002",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-003",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-004",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-005",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-006",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-007",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-008",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-009",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-010",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-011",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-012",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-013",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-014",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-015",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-016",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-017",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-018",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-019",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-020",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-021",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-022",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-023",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-024",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-025",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-026",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-027",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-028",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-029",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-030",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-031",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-032",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-033",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-034",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-035",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-036",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-037",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-038",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-039",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-040",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-041",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-042",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-043",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 0.0
+    },
+    {
+      "item_id": "sbx-gp-044",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-045",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-046",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-047",
+      "labeller": "psn_2d6067bb1ed0dd7770fac9f0a36df42b",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-048",
+      "labeller": "psn_45d01c2965f2930edbcc34d183808de4",
+      "value": 1.0
+    },
+    {
+      "item_id": "sbx-gp-049",
+      "labeller": "psn_2f55da2c3f99ecdb152f80b2c2a9a21d",
+      "value": 1.0
+    }
+  ],
+  "notice": "SYNTHETIC sandbox data. Invented content; not derived from any production data.",
+  "synthetic": true,
+  "version": "1.0.0"
+}
