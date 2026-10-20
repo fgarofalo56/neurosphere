@@ -322,6 +322,39 @@
         "title": "AgentVersionId",
         "type": "string"
       },
+      "Agreement": {
+        "additionalProperties": false,
+        "properties": {
+          "metric": {
+            "enum": [
+              "cohen_kappa",
+              "krippendorff_alpha",
+              "spearman",
+              "accuracy"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "sample_size": {
+            "minimum": 1.0,
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "value": {
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "metric",
+          "value",
+          "sample_size"
+        ],
+        "title": "Agreement",
+        "type": "object"
+      },
       "AnalyticsInfo": {
         "additionalProperties": false,
         "properties": {
@@ -528,6 +561,47 @@
         "title": "AzureResourceType",
         "type": "string"
       },
+      "BiasCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "check": {
+            "enum": [
+              "position_bias",
+              "verbosity_bias",
+              "self_preference_bias",
+              "length_bias"
+            ],
+            "title": "Check",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_run"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "check",
+          "result"
+        ],
+        "title": "BiasCheck",
+        "type": "object"
+      },
       "Budget": {
         "additionalProperties": false,
         "description": "Shared bounded-execution budget for every query, traversal, search, export and viewport expansion (PRP-01 clarification 15; NS-05, NS-06). timeout_ms, limit and max_depth are mandatory. The maxima here are contract ceilings; the server may clamp to lower policy values and reports the effective values and any truncation in Page. Not a standalone document, so it carries no schema_version.",
@@ -583,6 +657,46 @@
           "max_depth"
         ],
         "title": "Budget",
+        "type": "object"
+      },
+      "Calibration": {
+        "additionalProperties": false,
+        "properties": {
+          "agreement": {
+            "$ref": "#/components/schemas/Agreement"
+          },
+          "bias_checks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BiasCheck"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bias Checks"
+          },
+          "calibrated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp"
+          },
+          "calibration_ref": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "human_label_set_version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "calibration_ref",
+          "human_label_set_version",
+          "agreement",
+          "calibrated_at"
+        ],
+        "title": "Calibration",
         "type": "object"
       },
       "CanonicalId": {
@@ -856,6 +970,55 @@
         "title": "Coverage",
         "type": "object"
       },
+      "CoverageFraction": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "CoverageFraction",
+        "type": "number"
+      },
+      "CoveragePoint": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Fraction"
+          },
+          "population": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population"
+          },
+          "sampled": {
+            "title": "Sampled",
+            "type": "integer"
+          },
+          "stratum": {
+            "title": "Stratum",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stratum",
+          "sampled",
+          "population",
+          "coverage_fraction"
+        ],
+        "title": "CoveragePoint",
+        "type": "object"
+      },
       "Curation": {
         "additionalProperties": false,
         "description": "Latest steward decision on an edge (full history lives in the audit log).",
@@ -982,7 +1145,7 @@
             "type": "boolean"
           },
           "window": {
-            "$ref": "#/components/schemas/Window"
+            "$ref": "#/components/schemas/neurosphere_api__dashboards__models__Window"
           }
         },
         "required": [
@@ -998,6 +1161,52 @@
           "price_versions"
         ],
         "title": "DashboardResponse",
+        "type": "object"
+      },
+      "DataHandling": {
+        "additionalProperties": false,
+        "properties": {
+          "boundary_cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Boundary Cloud",
+            "type": "string"
+          },
+          "data_state": {
+            "enum": [
+              "redacted",
+              "approved",
+              "synthetic"
+            ],
+            "title": "Data State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data_state",
+          "boundary_cloud"
+        ],
+        "title": "DataHandling",
+        "type": "object"
+      },
+      "Dataset": {
+        "additionalProperties": false,
+        "description": "Versioned dataset; for online_sampled this is the versioned sampling frame definition.",
+        "properties": {
+          "dataset_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "dataset_version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "dataset_version"
+        ],
+        "title": "Dataset",
         "type": "object"
       },
       "Decimal": {
@@ -1444,6 +1653,40 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
         "title": "DomainId",
         "type": "string"
+      },
+      "DriftAlertOut": {
+        "additionalProperties": false,
+        "properties": {
+          "detected_at": {
+            "title": "Detected At",
+            "type": "string"
+          },
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "statistic": {
+            "title": "Statistic",
+            "type": "number"
+          },
+          "subject_id": {
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "number"
+          }
+        },
+        "required": [
+          "dimension",
+          "subject_id",
+          "detected_at",
+          "statistic",
+          "threshold"
+        ],
+        "title": "DriftAlertOut",
+        "type": "object"
       },
       "EdgeFilter": {
         "additionalProperties": false,
@@ -1949,11 +2192,210 @@
         "title": "EntityVersion",
         "type": "integer"
       },
+      "EstimatedCost": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "price_version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "amount",
+          "currency",
+          "price_version"
+        ],
+        "title": "EstimatedCost",
+        "type": "object"
+      },
       "Etag": {
         "maxLength": 256,
         "minLength": 1,
         "title": "Etag",
         "type": "string"
+      },
+      "EvaluationResult": {
+        "additionalProperties": false,
+        "description": "Result of an offline benchmark or a sampled online evaluation of one subject (NS-03). Datasets, rubrics and judges are versioned; every score reports uncertainty and sample size; sampling coverage is explicit; an LLM judge requires a calibration reference against human labels. Quality is not inferred from feedback alone: a run whose only dimension is user_feedback is rejected. Unknown values are null, never 0. Evaluation runs on approved, redacted or synthetic data inside the selected cloud boundary (data_handling). Rules JSON Schema cannot express: started_at <= completed_at and sampling.window.start < sampling.window.end (tests/contracts/validators.py::check_evaluation_times); score.value and uncertainty bounds within score.scale (tests/contracts/validators.py::check_evaluation_score_scale); sampling.sample_size <= sampling.population_size when known (tests/contracts/validators.py::check_evaluation_sampling_counts).",
+        "properties": {
+          "calibration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Calibration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "completed_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp"
+          },
+          "customer_id": {
+            "pattern": "^[a-z0-9._-]{1,128}$",
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "data_handling": {
+            "$ref": "#/components/schemas/DataHandling"
+          },
+          "dataset": {
+            "$ref": "#/components/schemas/Dataset"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          },
+          "evaluation_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "evaluator_usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvaluatorUsage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OpaqueId"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Ids"
+          },
+          "judge": {
+            "$ref": "#/components/schemas/Judge"
+          },
+          "mode": {
+            "enum": [
+              "offline_benchmark",
+              "online_sampled"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rubric": {
+            "$ref": "#/components/schemas/Rubric"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/Sampling"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/Score"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "title": "Scores",
+            "type": "array"
+          },
+          "started_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "partial",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          }
+        },
+        "required": [
+          "schema_version",
+          "evaluation_id",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "subject_id",
+          "mode",
+          "status",
+          "dataset",
+          "rubric",
+          "judge",
+          "scores",
+          "sampling",
+          "calibration",
+          "data_handling",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "EvaluationResult",
+        "type": "object"
+      },
+      "EvaluatorUsage": {
+        "additionalProperties": false,
+        "description": "Evaluator token and cost consumption against its budget. Estimated cost always cites price_version.",
+        "properties": {
+          "estimated_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EstimatedCost"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "judge_input_tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NullableCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "judge_output_tokens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NullableCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "judge_input_tokens",
+          "judge_output_tokens"
+        ],
+        "title": "EvaluatorUsage",
+        "type": "object"
       },
       "EvidenceId": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
@@ -2651,6 +3093,134 @@
         "title": "IngestResult",
         "type": "object"
       },
+      "Judge": {
+        "additionalProperties": false,
+        "properties": {
+          "judge_kind": {
+            "enum": [
+              "llm_judge",
+              "human",
+              "programmatic",
+              "hybrid"
+            ],
+            "title": "Judge Kind",
+            "type": "string"
+          },
+          "judge_model_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "judge_model_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Version"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "judge_prompt_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Version"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "program_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Version"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "judge_kind"
+        ],
+        "title": "Judge",
+        "type": "object"
+      },
+      "JudgeOut": {
+        "additionalProperties": false,
+        "properties": {
+          "judge_kind": {
+            "enum": [
+              "llm_judge",
+              "human",
+              "programmatic",
+              "hybrid"
+            ],
+            "title": "Judge Kind",
+            "type": "string"
+          },
+          "judge_model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model Id"
+          },
+          "judge_model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Model Version"
+          },
+          "judge_prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Prompt Version"
+          },
+          "program_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Program Version"
+          }
+        },
+        "required": [
+          "judge_kind",
+          "judge_model_id",
+          "judge_model_version",
+          "judge_prompt_version",
+          "program_version"
+        ],
+        "title": "JudgeOut",
+        "type": "object"
+      },
       "LifecycleStatus": {
         "enum": [
           "draft",
@@ -2828,6 +3398,52 @@
         "minLength": 1,
         "title": "McpServerRef",
         "type": "string"
+      },
+      "MissingLabels": {
+        "additionalProperties": false,
+        "description": "Counts of judged items, items with a consensus human label, and items missing one.\n\n``labelled``/``missing`` are null when judged items exist but no calibration report says how\nmany are labelled (unknown, not 0).",
+        "properties": {
+          "judged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judged"
+          },
+          "labelled": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labelled"
+          },
+          "missing": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing"
+          }
+        },
+        "required": [
+          "judged",
+          "labelled",
+          "missing"
+        ],
+        "title": "MissingLabels",
+        "type": "object"
       },
       "ModelDeployment": {
         "additionalProperties": false,
@@ -3036,6 +3652,22 @@
         "minLength": 1,
         "title": "ModelVersion",
         "type": "string"
+      },
+      "NullableCount": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/NullableCount1"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "NullableCount"
+      },
+      "NullableCount1": {
+        "minimum": 0.0,
+        "title": "NullableCount1",
+        "type": "integer"
       },
       "ObservedFraction": {
         "maximum": 1.0,
@@ -3447,6 +4079,87 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:person:[a-z0-9._/=-]+$",
         "title": "PersonId",
         "type": "string"
+      },
+      "PilotGroundedRate": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "method": {
+            "enum": [
+              "wilson_score",
+              "not_estimable"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "target": {
+            "default": 0.9,
+            "title": "Target",
+            "type": "number"
+          },
+          "target_label": {
+            "default": "pilot-set target: at least 90%",
+            "title": "Target Label",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "value",
+          "lower",
+          "upper",
+          "level",
+          "n",
+          "method"
+        ],
+        "title": "PilotGroundedRate",
+        "type": "object"
       },
       "PlanCheck": {
         "additionalProperties": false,
@@ -4375,6 +5088,47 @@
         "title": "Provenance",
         "type": "object"
       },
+      "QualityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "items": {
+              "$ref": "#/components/schemas/CoveragePoint"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "drift_alerts": {
+            "items": {
+              "$ref": "#/components/schemas/DriftAlertOut"
+            },
+            "title": "Drift Alerts",
+            "type": "array"
+          },
+          "missing_labels": {
+            "$ref": "#/components/schemas/MissingLabels"
+          },
+          "pilot_grounded_rate": {
+            "$ref": "#/components/schemas/PilotGroundedRate"
+          },
+          "trends": {
+            "items": {
+              "$ref": "#/components/schemas/Trend"
+            },
+            "title": "Trends",
+            "type": "array"
+          }
+        },
+        "required": [
+          "trends",
+          "coverage",
+          "missing_labels",
+          "pilot_grounded_rate",
+          "drift_alerts"
+        ],
+        "title": "QualityResponse",
+        "type": "object"
+      },
       "ReadyzResponse": {
         "additionalProperties": false,
         "properties": {
@@ -4685,7 +5439,7 @@
             "type": "array"
           },
           "uncertainty": {
-            "$ref": "#/components/schemas/Uncertainty"
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Uncertainty"
           }
         },
         "required": [
@@ -4916,7 +5670,7 @@
             "$ref": "#/components/schemas/UnknownRemainder"
           },
           "window": {
-            "$ref": "#/components/schemas/Window"
+            "$ref": "#/components/schemas/neurosphere_api__reconciliation__models__Window"
           }
         },
         "required": [
@@ -5053,6 +5807,35 @@
         "title": "ResourceRef",
         "type": "string"
       },
+      "ResultsList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluationResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ResultsList",
+        "type": "object"
+      },
       "ReviewRequestBody": {
         "description": "Only the recommendation id is read; ``domain_id``/``customer_id`` in the body are ignored.",
         "properties": {
@@ -5117,6 +5900,23 @@
           "review_request_id"
         ],
         "title": "ReviewState",
+        "type": "object"
+      },
+      "Rubric": {
+        "additionalProperties": false,
+        "properties": {
+          "rubric_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "rubric_version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        },
+        "required": [
+          "rubric_id",
+          "rubric_version"
+        ],
+        "title": "Rubric",
         "type": "object"
       },
       "RunReference": {
@@ -5296,11 +6096,96 @@
         "title": "RunReference",
         "type": "object"
       },
+      "Sampling": {
+        "additionalProperties": false,
+        "description": "Sampling coverage. coverage_fraction null means unknown.",
+        "properties": {
+          "coverage_fraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverageFraction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "enum": [
+              "full",
+              "uniform_random",
+              "stratified",
+              "targeted"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "population_size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NullableCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "sample_size": {
+            "minimum": 0.0,
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "window": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Window"
+          }
+        },
+        "required": [
+          "method",
+          "sample_size",
+          "population_size",
+          "coverage_fraction",
+          "window"
+        ],
+        "title": "Sampling",
+        "type": "object"
+      },
       "SamplingRate": {
         "exclusiveMinimum": 0.0,
         "maximum": 1.0,
         "title": "SamplingRate",
         "type": "number"
+      },
+      "Scale": {
+        "additionalProperties": false,
+        "properties": {
+          "max": {
+            "title": "Max",
+            "type": "number"
+          },
+          "min": {
+            "title": "Min",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "Scale",
+        "type": "object"
       },
       "ScanRequest": {
         "additionalProperties": false,
@@ -5376,6 +6261,64 @@
         "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
         "title": "SchemaVersion",
         "type": "string"
+      },
+      "Score": {
+        "additionalProperties": false,
+        "properties": {
+          "abstained_count": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NullableCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dimension": {
+            "enum": [
+              "task_success",
+              "groundedness",
+              "safety",
+              "tool_correctness",
+              "user_feedback",
+              "drift"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "sample_size": {
+            "minimum": 0.0,
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "scale": {
+            "$ref": "#/components/schemas/Scale"
+          },
+          "uncertainty": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Uncertainty"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "dimension",
+          "value",
+          "scale",
+          "uncertainty",
+          "sample_size"
+        ],
+        "title": "Score",
+        "type": "object"
       },
       "Series": {
         "additionalProperties": false,
@@ -6271,15 +7214,50 @@
         "title": "TraceId",
         "type": "string"
       },
-      "Uncertainty": {
+      "Trend": {
         "additionalProperties": false,
-        "description": "Uncertainty of the score or estimate. not_estimable is the honest value on cold start; it carries no bounds.",
         "properties": {
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dimension",
+          "points"
+        ],
+        "title": "Trend",
+        "type": "object"
+      },
+      "TrendPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket_start": {
+            "title": "Bucket Start",
+            "type": "string"
+          },
+          "calibration_state": {
+            "enum": [
+              "calibrated",
+              "uncalibrated",
+              "not_applicable"
+            ],
+            "title": "Calibration State",
+            "type": "string"
+          },
+          "judge": {
+            "$ref": "#/components/schemas/JudgeOut"
+          },
           "level": {
             "anyOf": [
               {
-                "exclusiveMaximum": 1.0,
-                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -6299,16 +7277,9 @@
             ],
             "title": "Lower"
           },
-          "method": {
-            "enum": [
-              "confidence_interval",
-              "credible_interval",
-              "bootstrap",
-              "rule_bound",
-              "not_estimable"
-            ],
-            "title": "Method",
-            "type": "string"
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
           },
           "upper": {
             "anyOf": [
@@ -6320,12 +7291,30 @@
               }
             ],
             "title": "Upper"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
           }
         },
         "required": [
-          "method"
+          "bucket_start",
+          "value",
+          "lower",
+          "upper",
+          "level",
+          "sample_size",
+          "judge",
+          "calibration_state"
         ],
-        "title": "Uncertainty",
+        "title": "TrendPoint",
         "type": "object"
       },
       "UnknownRemainder": {
@@ -6472,25 +7461,6 @@
         "title": "Version",
         "type": "string"
       },
-      "Window": {
-        "additionalProperties": false,
-        "properties": {
-          "end": {
-            "title": "End",
-            "type": "string"
-          },
-          "start": {
-            "title": "Start",
-            "type": "string"
-          }
-        },
-        "required": [
-          "start",
-          "end"
-        ],
-        "title": "Window",
-        "type": "object"
-      },
       "neurosphere_api__dashboards__models__MetricValue": {
         "additionalProperties": false,
         "properties": {
@@ -6536,6 +7506,25 @@
         "title": "MetricValue",
         "type": "object"
       },
+      "neurosphere_api__dashboards__models__Window": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "Window",
+        "type": "object"
+      },
       "neurosphere_api__reconciliation__models__MetricValue": {
         "additionalProperties": false,
         "description": "``status: \"unknown\"`` always pairs with ``value: None``; never 0 for unknown.",
@@ -6574,6 +7563,25 @@
           "complete"
         ],
         "title": "MetricValue",
+        "type": "object"
+      },
+      "neurosphere_api__reconciliation__models__Window": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "Window",
         "type": "object"
       },
       "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
@@ -6737,6 +7745,95 @@
         "title": "UtcTimestamp",
         "type": "string"
       },
+      "neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
+      },
+      "neurosphere_contracts__evaluation__v1__evaluation_result__Uncertainty": {
+        "additionalProperties": false,
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "method": {
+            "enum": [
+              "confidence_interval",
+              "credible_interval",
+              "bootstrap",
+              "not_estimable"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "standard_error": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Error"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "Uncertainty",
+        "type": "object"
+      },
+      "neurosphere_contracts__evaluation__v1__evaluation_result__Window": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp"
+          },
+          "start": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "Window",
+        "type": "object"
+      },
       "neurosphere_contracts__recommendations__v1__recommendation__Date": {
         "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
         "title": "Date",
@@ -6777,6 +7874,63 @@
         "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
         "title": "Timestamp",
         "type": "string"
+      },
+      "neurosphere_contracts__recommendations__v1__recommendation__Uncertainty": {
+        "additionalProperties": false,
+        "description": "Uncertainty of the score or estimate. not_estimable is the honest value on cold start; it carries no bounds.",
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "method": {
+            "enum": [
+              "confidence_interval",
+              "credible_interval",
+              "bootstrap",
+              "rule_bound",
+              "not_estimable"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "Uncertainty",
+        "type": "object"
       }
     }
   },
@@ -6892,6 +8046,184 @@
         "summary": "Get Dashboard",
         "tags": [
           "dashboards"
+        ]
+      }
+    },
+    "/api/v1/evaluation/domains/{domain}/quality": {
+      "get": {
+        "operationId": "quality_api_v1_evaluation_domains__domain__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality",
+        "tags": [
+          "evaluation"
+        ]
+      }
+    },
+    "/api/v1/evaluation/domains/{domain}/results": {
+      "get": {
+        "operationId": "list_results_api_v1_evaluation_domains__domain__results_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "task_success",
+                    "groundedness",
+                    "safety",
+                    "tool_correctness",
+                    "user_feedback",
+                    "drift"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dimension"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultsList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Results",
+        "tags": [
+          "evaluation"
         ]
       }
     },
