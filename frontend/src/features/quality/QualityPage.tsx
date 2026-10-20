@@ -32,7 +32,8 @@ function Trends({ data }: { readonly data: QualityResponse }): ReactElement {
           </thead>
           <tbody>
             {trend.points.map((p) => (
-              <tr key={p.bucket_start} data-testid="trend-row">
+              // The API emits one point per judge per UTC day, so the bucket alone is not unique.
+              <tr key={`${p.bucket_start}|${judgeText(p.judge)}`} data-testid="trend-row">
                 <th scope="row">{p.bucket_start}</th>
                 <td data-testid="trend-value">{numberText(p.value)}</td>
                 <td>{intervalText(p.lower, p.upper, p.level)}</td>
