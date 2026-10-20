@@ -67,6 +67,15 @@ All notable changes to this project are documented here. The format follows
   with estimated/invoiced and price-version badges, lag indicator and analytics-state chip;
   Playwright e2e on the mock API and measured G07 latency evidence
   (`docs/evidence/G07/dashboards/`).
+- Recommendations engine (PRP-15): advisory-only, evidence-backed recommendations. Versioned
+  bounded rules (cost spike, latency, error rate, unused agent) with no-score
+  `insufficient_evidence` on cold start or sparse data and `unknown` coverage never reported as
+  unused; read-only duplicate consolidation-review candidates over the presented catalog;
+  immutable content-hashed price snapshots and right-sizing estimates that always cite a price
+  version; scoped `GET /api/v1/recommendations/domains/{domain}` list, detail and search,
+  review routing, and an executions route that always refuses (`capability_unavailable`);
+  list and detail pages with advisory badge and route-to-review; sandbox pipeline, Playwright
+  e2e and measured G12 evidence (`docs/evidence/G12/recommendations/`).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
