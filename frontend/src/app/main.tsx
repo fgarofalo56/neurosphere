@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { dashboardRoutes } from "../features/dashboards";
 import { reconciliationRoutes } from "../features/reconciliation";
+import { qualityRoutes } from "../features/quality";
 import { recommendationRoutes } from "../features/recommendations";
 import { workspaceRoutes } from "../features/workspaces";
 import { App } from "./App";
@@ -23,6 +24,7 @@ const appRoutes = [
   ...dashboardRoutes,
   ...reconciliationRoutes,
   ...recommendationRoutes,
+  ...qualityRoutes,
 ];
 
 const container = document.getElementById("root");

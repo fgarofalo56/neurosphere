@@ -1,6 +1,7 @@
 import { useRoles } from "../auth";
 import { dashboardNavItems } from "../features/dashboards";
 import { reconciliationNavItems } from "../features/reconciliation";
+import { qualityNavItems } from "../features/quality";
 import { recommendationNavItems } from "../features/recommendations";
 import { workspaceNavItems } from "../features/workspaces";
 import type { NavItem } from "./routes";
@@ -19,5 +20,6 @@ export function useAppNavItems(): readonly NavItem[] {
     ...dashboardNavItems(),
     ...reconciliationNavItems(),
     ...recommendationNavItems(),
+    ...qualityNavItems(),
   ];
 }
