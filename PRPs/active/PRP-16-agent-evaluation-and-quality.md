@@ -215,9 +215,9 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-19 |
+| 1 | in-progress | (worktree agent) | sonnet | dispatched wave 1 | 2026-10-19 |
 | 2 | todo | | sonnet | | 2026-10-19 |
-| 3 | todo | | sonnet | | 2026-10-19 |
+| 3 | review | worktree-agent-ad46a0d0831c2c90d | sonnet | 5e26b91; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, evaluation + import boundaries 40 passed; Wilson CI (45/50 -> [0.78640, 0.95652]), bootstrap agreement interval (seeded), strict-majority consensus (tie = unlabelled), PSI drift with insufficient_evidence below min_n, uncalibrated below 20 labels | 2026-10-19 |
 | 4 | todo | | sonnet | | 2026-10-19 |
 | 5 | todo | | sonnet | | 2026-10-19 |
 | 6 | todo | | sonnet | | 2026-10-19 |
