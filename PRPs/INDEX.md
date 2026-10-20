@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-16-agent-evaluation-and-quality](active/PRP-16-agent-evaluation-and-quality.md) |  | 5/6 (83%) | in-progress 1, merged 5 | ? / ? | required |
+| [prp-16-agent-evaluation-and-quality](active/PRP-16-agent-evaluation-and-quality.md) |  | 6/6 (100%) | merged 6 | ? / ? | required |
 
 ## Backlog
 
