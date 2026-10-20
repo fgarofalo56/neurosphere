@@ -13,7 +13,7 @@ Status: **OPEN**. The live judge run has not been performed.
 
 Judge behaviour in CI comes from recorded fixtures (`neurosphere_core.evaluation.judge.RecordedFixtureJudge`)
 and counting doubles. The restricted-content guard, budgets and stratified sampling are tested with
-the real code paths in `services/workers/tests/evaluation/`. None of that is live evidence, and no
+the real code paths in `services/workers/tests/evaluation_worker/`. None of that is live evidence, and no
 test or CI job makes a paid call.
 
 ## Why the live run is not built
