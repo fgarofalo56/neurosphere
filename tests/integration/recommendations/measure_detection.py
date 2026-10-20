@@ -13,6 +13,10 @@ Definitions (the same ones the evidence document states):
 * an anomaly type is *detected* for an agent when the stored recommendation of the matching kind
   lists the agent as a subject and its ``evidence_status`` is ``sufficient`` (a cold-start record
   is a bounded "insufficient history" result, not a detection);
+* ``insufficient_evidence`` counts labelled agents with a no-score insufficient-evidence record of
+  the matching kind; it is neither a detection nor a false positive. ``insufficient_unlabelled``
+  counts such records on unlabelled agents. ``silent_miss`` is labelled, not detected and without
+  any record: it must be 0;
 * a *false positive* is a detected agent that no manifest anomaly of ANY type names (a cost-spike
   agent that also trips the latency rule is a real effect, counted apart as ``cross_type``);
 * duplicate precision and recall compare stored ``candidate_duplicate`` subject pairs with the
@@ -85,8 +89,12 @@ def setups() -> list[Setup]:
             parity,
             (3, 11),
         ),
-        Setup("dense (40 agents, 4 domains, 7 days, 20 traces/agent-day)", dense, (3, 11, 7)),
-        Setup("pilot density (200 agents, 8 domains, 7 days, 2 traces/agent-day)", sparse, (3, 11)),
+        Setup("dense (40 agents, 4 domains, 7 days, 20 traces/agent-day)", dense, (3, 11, 7, 5)),
+        # Seed 5 is held out for the pilot density and the dense profile (never used to set a
+        # threshold).
+        Setup(
+            "pilot density (200 agents, 8 domains, 7 days, 2 traces/agent-day)", sparse, (3, 11, 5)
+        ),
     ]
 
 
@@ -131,12 +139,24 @@ async def measure(profile: Profile, seed: int) -> dict[str, Any]:
             if r.kind == kind and r.evidence_status == "sufficient"
             for s in r.subject_ids
         }
+        insufficient = {
+            s.root
+            for r in stored
+            if r.kind == kind and r.evidence_status == "insufficient_evidence"
+            for s in r.subject_ids
+        }
         result["types"][anomaly_type] = {
             "detected": len(truth & detected),
             "total": len(truth),
             "false_positives": len(detected - labelled),
             "cross_type": len((detected - truth) & labelled),
-            "missed": sorted(truth - detected),
+            # Reported apart: an insufficient-evidence record is neither a detection nor a false
+            # positive. ``silent_miss`` = labelled, not detected, no insufficient-evidence record.
+            "insufficient_evidence": len(truth & insufficient),
+            "insufficient_unlabelled": len(insufficient - labelled),
+            "silent_miss": len(truth - detected - insufficient),
+            "missed": sorted(truth - detected - insufficient),
+            "unlabelled_flags": sorted(detected - labelled),
         }
     truth_pairs = {
         frozenset(an["affected_ids"])
