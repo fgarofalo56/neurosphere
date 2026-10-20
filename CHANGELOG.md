@@ -76,6 +76,16 @@ All notable changes to this project are documented here. The format follows
   review routing, and an executions route that always refuses (`capability_unavailable`);
   list and detail pages with advisory badge and route-to-review; sandbox pipeline, Playwright
   e2e and measured G12 evidence (`docs/evidence/G12/recommendations/`).
+- Agent evaluation and quality (PRP-16): append-only versioned datasets, rubrics and judge
+  configs with fail-closed judge approval (unknown classification is restricted, judge cloud must
+  match, capability-matrix availability); a stratified, seeded sampling worker that checks
+  classification and reserves worst-case token/cost budget before every judge call and stops
+  with `budget_exhausted`; recorded-fixture judges only (no paid calls in CI); human-label
+  calibration (agreement with interval, bias, coverage), Wilson intervals and PSI drift alerts;
+  scoped `GET /api/v1/evaluation/domains/{domain}/results` and `/quality`; a quality page where
+  every score carries judge version, calibration state and uncertainty, unknown is never 0, and
+  the grounded-answer rate is a pilot-set target with a confidence interval, not a guarantee;
+  sandbox pipeline, Playwright e2e and measured G12 evidence (`docs/evidence/G12/evaluation/`).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
