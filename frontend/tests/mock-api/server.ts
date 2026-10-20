@@ -296,6 +296,220 @@ function serveDomainRead(
   send(res, 200, body(domain), { ...cors, "server-timing": "app;dur=1.0" });
 }
 
+// ---- PRP-15 fixtures: /api/v1/recommendations/domains/{domain}[/items/{id}|/review-requests|
+// /executions]. Shapes follow the Recommendation schema and item 4's responses. Synthetic data.
+// Only DOMAIN_OK is readable; every other domain answers 403 (never an empty 200).
+const RECOMMENDATION_BASE = /^\/api\/v1\/recommendations\/domains\/([^/]+)(\/.*)?$/;
+const REC_PREFIX = "commercial:e2e:neurosphere:recommendation:";
+export const REC_RIGHT_SIZING = `${REC_PREFIX}model-right-sizing-0a1b2c3d4e5f60718293a4b5`;
+export const REC_UNUSED = `${REC_PREFIX}unused-agent-1b2c3d4e5f60718293a4b5c6`;
+export const REC_COST_SPIKE = `${REC_PREFIX}cost-spike-2c3d4e5f60718293a4b5c6d7`;
+export const REC_DUPLICATE = `${REC_PREFIX}candidate-duplicate-3d4e5f60718293a4b5c6d7e8`;
+export const RECOMMENDATION_NEXT_CURSOR = "page-2";
+export const RECOMMENDATION_REVIEW_ID = "review-e2e-0001";
+export const RECOMMENDATION_PRICE_VERSION = "sandbox-prices-2026-10";
+const REC_OWNER = "commercial:e2e:entra:owner:team-support";
+
+function recBase(id: string, kind: string): Record<string, unknown> {
+  return {
+    schema_version: "1.0.0",
+    recommendation_id: id,
+    cloud: "commercial",
+    customer_id: "e2e",
+    domain_id: DOMAIN_OK,
+    kind,
+    subject_ids: ["commercial:e2e:sandbox:agent:support-bot"],
+    method: "rule",
+    advisory: true,
+    created_at: "2026-10-10T06:00:00Z",
+  };
+}
+
+function recommendationFixtures(): Record<string, Record<string, unknown>> {
+  const window = { start: "2026-10-03T00:00:00Z", end: "2026-10-10T00:00:00Z" };
+  return {
+    [REC_RIGHT_SIZING]: {
+      ...recBase(REC_RIGHT_SIZING, "model_right_sizing"),
+      subject_ids: [
+        "commercial:e2e:sandbox:agent:support-bot",
+        "commercial:e2e:sandbox:model_deployment:gpt-large",
+      ],
+      generator: { generator_id: "rule.right-sizing", generator_version: "1.0.0" },
+      evidence_status: "insufficient_evidence",
+      evidence_window: window,
+      evidence_ids: ["ev:telemetry:tokens"],
+      coverage: { method: "partial", observed_fraction: 0.6 },
+      uncertainty: { method: "not_estimable" },
+      prerequisites: [
+        { kind: "quality_regression_test", status: "unmet" },
+        { kind: "tool_compatibility", status: "unmet" },
+      ],
+      projected_estimate: {
+        estimate_kind: "estimated",
+        period: "monthly",
+        baseline_amount: "1840.00",
+        projected_amount: "1210.50",
+        lower_amount: "1105.00",
+        upper_amount: "1390.00",
+        currency: "USD",
+        price_version: RECOMMENDATION_PRICE_VERSION,
+        price_effective_date: "2026-10-01",
+      },
+      owner: { resolution: "inferred", owner_id: REC_OWNER },
+    },
+    [REC_UNUSED]: {
+      ...recBase(REC_UNUSED, "unused_agent"),
+      evidence_status: "insufficient_evidence",
+      evidence_window: window,
+      evidence_ids: [],
+      coverage: { method: "unknown", observed_fraction: null },
+      uncertainty: { method: "not_estimable" },
+      prerequisites: [],
+      owner: { resolution: "unresolved", owner_id: null },
+    },
+    [REC_COST_SPIKE]: {
+      ...recBase(REC_COST_SPIKE, "cost_spike"),
+      generator: { generator_id: "cost-spike-ratio", generator_version: "1.0.0" },
+      evidence_status: "sufficient",
+      score: 0.86,
+      evidence_window: window,
+      evidence_ids: ["ev:cost:2026-10"],
+      coverage: { method: "full", observed_fraction: 0.97 },
+      uncertainty: { method: "bootstrap", lower: 0.78, upper: 0.91, level: 0.95 },
+      prerequisites: [],
+      owner: { resolution: "assigned", owner_id: REC_OWNER },
+    },
+    [REC_DUPLICATE]: {
+      ...recBase(REC_DUPLICATE, "candidate_duplicate"),
+      subject_ids: [
+        "commercial:e2e:sandbox:agent:support-bot",
+        "commercial:e2e:sandbox:agent:support-bot-2",
+      ],
+      generator: { generator_id: "duplicate-similarity", generator_version: "1.0.0" },
+      evidence_status: "sufficient",
+      score: 0.93,
+      evidence_window: window,
+      evidence_ids: ["ev:catalog:shared-sources"],
+      coverage: { method: "full", observed_fraction: 1 },
+      uncertainty: { method: "not_estimable" },
+      prerequisites: [],
+      owner: { resolution: "assigned", owner_id: REC_OWNER },
+    },
+  };
+}
+
+function recommendationHandler(
+  res: ServerResponse,
+  req: IncomingMessage,
+  url: URL,
+  parts: { domain: string; rest: string },
+  state: { routed: Map<string, string> },
+  cors: Record<string, string>,
+  correlationId: string,
+  readBody: () => Promise<string>,
+): void {
+  if (roleFromAuthorization(req.headers.authorization) === undefined) {
+    send(res, 401, { error: "missing or unrecognised token" }, cors);
+    return;
+  }
+  if (parts.domain !== DOMAIN_OK) {
+    send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
+    return;
+  }
+  const fixtures = recommendationFixtures();
+  const order = [REC_RIGHT_SIZING, REC_UNUSED, REC_COST_SPIKE, REC_DUPLICATE];
+  const { rest } = parts;
+  if (req.method === "GET" && rest === "") {
+    const kind = url.searchParams.get("kind");
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const cursor = url.searchParams.get("cursor");
+    const matching = order
+      .map((id) => fixtures[id] as Record<string, unknown>)
+      .filter((r) => kind === null || r["kind"] === kind)
+      .filter((r) => q === "" || `${String(r["kind"])} ${String(r["subject_ids"])}`.includes(q));
+    // The unfiltered view is split in two pages so the cursor path is exercised.
+    const paged = kind === null && q === "";
+    const items = !paged
+      ? matching
+      : cursor === RECOMMENDATION_NEXT_CURSOR
+        ? matching.slice(3)
+        : matching.slice(0, 3);
+    const next = paged && cursor !== RECOMMENDATION_NEXT_CURSOR ? RECOMMENDATION_NEXT_CURSOR : null;
+    send(res, 200, { items, next_cursor: next }, { ...cors, "server-timing": "app;dur=1.0" });
+    return;
+  }
+  const detail = /^\/items\/(.+)$/.exec(rest);
+  if (req.method === "GET" && detail !== null) {
+    const id = decodeURIComponent(detail[1] ?? "");
+    const rec = fixtures[id];
+    if (rec === undefined) {
+      send(res, 404, { detail: "recommendation not found" }, cors);
+      return;
+    }
+    const reviewId = state.routed.get(id);
+    send(
+      res,
+      200,
+      {
+        recommendation: rec,
+        review:
+          reviewId === undefined
+            ? { state: "not_routed", review_request_id: null }
+            : { state: "pending_review", review_request_id: reviewId },
+        execution: { executable: false, reason: "action gates not passed" },
+      },
+      cors,
+    );
+    return;
+  }
+  if (req.method === "POST" && rest === "/review-requests") {
+    void readBody().then((raw) => {
+      let id: string;
+      try {
+        const parsed = JSON.parse(raw) as { recommendation_id?: unknown };
+        id = typeof parsed.recommendation_id === "string" ? parsed.recommendation_id : "";
+      } catch {
+        id = "";
+      }
+      if (fixtures[id] === undefined) {
+        send(res, 404, { detail: "recommendation not found" }, cors);
+        return;
+      }
+      state.routed.set(id, RECOMMENDATION_REVIEW_ID);
+      send(
+        res,
+        202,
+        { review_request_id: RECOMMENDATION_REVIEW_ID, state: "pending_review" },
+        cors,
+      );
+    });
+    return;
+  }
+  if (req.method === "POST" && rest === "/executions") {
+    // There is no executing path: the mock mirrors the API's refusal.
+    send(
+      res,
+      409,
+      {
+        schema_version: "1.0.0",
+        type: "https://neurosphere.invalid/problems/capability-unavailable",
+        title: "Capability unavailable",
+        status: 409,
+        detail: "action gates not passed",
+        instance: url.pathname,
+        code: "capability_unavailable",
+        reason: "action_gates_not_passed",
+        retryable: false,
+        correlation_id: correlationId,
+      } satisfies ProblemDetails,
+      cors,
+      "application/problem+json",
+    );
+    return;
+  }
+  send(res, 404, { error: "not found" }, cors);
+}
+
 function send(
   res: ServerResponse,
   status: number,
@@ -307,13 +521,22 @@ function send(
   res.end(JSON.stringify(body));
 }
 
+function readRequestBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+  });
+}
+
 export function createMockApi(options: MockApiOptions): Server {
+  const recommendationState = { routed: new Map<string, string>() };
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const correlationId = `e2e-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const cors: Record<string, string> = {
       "access-control-allow-origin": options.allowedOrigin,
       "access-control-allow-headers": "authorization, content-type, x-correlation-id, if-match",
-      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-methods": "GET, POST, OPTIONS",
       "access-control-expose-headers": "x-correlation-id, retry-after",
       vary: "Origin",
       "x-correlation-id": correlationId,
@@ -323,6 +546,20 @@ export function createMockApi(options: MockApiOptions): Server {
     if (req.method === "OPTIONS") {
       res.writeHead(204, cors);
       res.end();
+      return;
+    }
+    const recommendation = RECOMMENDATION_BASE.exec(url.pathname);
+    if (recommendation !== null) {
+      recommendationHandler(
+        res,
+        req,
+        url,
+        { domain: decodeURIComponent(recommendation[1] ?? ""), rest: recommendation[2] ?? "" },
+        recommendationState,
+        cors,
+        correlationId,
+        () => readRequestBody(req),
+      );
       return;
     }
     if (req.method !== "GET") {

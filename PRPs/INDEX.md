@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-15-recommendations-engine](active/PRP-15-recommendations-engine.md) |  | 7/7 (100%) | merged 7 | ? / ? | none |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) |  |  | - | - | ? / ? | none |
 | [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) |  |  | - | - | ? / ? | required |
 | [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) |  |  | - | - | ? / ? | required |
 | [prp-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) |  |  | - | - | ? / ? | required |
