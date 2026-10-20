@@ -1,0 +1,66 @@
+{
+  "judge_configs": [
+    {
+      "approved_classifications": [
+        "public",
+        "internal"
+      ],
+      "capability_row_id": "foundry.base.commercial.global.any",
+      "cloud": "commercial",
+      "input_price_per_1k_tokens": "0.002",
+      "judge_config_id": "sbx-judge-commercial",
+      "judge_kind": "llm_judge",
+      "judge_model_id": "commercial:sandbox:foundry:modeldeployment:judge-commercial",
+      "judge_model_version": "2026-04-14",
+      "judge_prompt_version": "grounded-v1",
+      "max_output_tokens": 256,
+      "output_price_per_1k_tokens": "0.008",
+      "price_version": "sandbox-prices-1",
+      "program_version": null,
+      "version": "1.0.0"
+    },
+    {
+      "approved_classifications": [
+        "public",
+        "internal",
+        "cui"
+      ],
+      "capability_row_id": "foundry.model_gpt_4_1.government.usgovvirginia.data-zone-standard",
+      "cloud": "government",
+      "input_price_per_1k_tokens": "0.002",
+      "judge_config_id": "sbx-judge-government",
+      "judge_kind": "llm_judge",
+      "judge_model_id": "government:sandbox:foundry:modeldeployment:judge-government",
+      "judge_model_version": "2026-04-14",
+      "judge_prompt_version": "grounded-v1",
+      "max_output_tokens": 256,
+      "output_price_per_1k_tokens": "0.008",
+      "price_version": "sandbox-prices-1",
+      "program_version": null,
+      "version": "1.0.0"
+    },
+    {
+      "approved_classifications": [
+        "public",
+        "internal",
+        "cui",
+        "restricted"
+      ],
+      "capability_row_id": null,
+      "cloud": "commercial",
+      "input_price_per_1k_tokens": null,
+      "judge_config_id": "sbx-judge-programmatic",
+      "judge_kind": "programmatic",
+      "judge_model_id": null,
+      "judge_model_version": null,
+      "judge_prompt_version": null,
+      "max_output_tokens": 1,
+      "output_price_per_1k_tokens": null,
+      "price_version": null,
+      "program_version": "sbx-exact-match-1.0.0",
+      "version": "1.0.0"
+    }
+  ],
+  "notice": "SYNTHETIC sandbox data. Invented content; not derived from any production data.",
+  "synthetic": true
+}
