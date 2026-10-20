@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-16-agent-evaluation-and-quality](active/PRP-16-agent-evaluation-and-quality.md) |  | 6/6 (100%) | merged 6 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -32,6 +30,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-10-20 | #81 |
 | [prp-13-release-versioning-and-container-publishing](shipped/PRP-13-release-versioning-and-container-publishing.md) | 2026-10-19 | #72 |
 | [prp-14-dashboards-cost-latency-coverage](shipped/PRP-14-dashboards-cost-latency-coverage.md) | 2026-10-19 | #74 |
 | [prp-15-recommendations-engine](shipped/PRP-15-recommendations-engine.md) | 2026-10-19 | #79 |
