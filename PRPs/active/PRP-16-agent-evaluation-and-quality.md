@@ -1,6 +1,8 @@
 ---
 name: prp-16-agent-evaluation-and-quality
-status: backlog
+status: active
+started: 2026-10-19
+branch: prp-16-agent-evaluation-and-quality
 review: required
 created: 2026-10-08
 model: sonnet
@@ -190,6 +192,35 @@ Optional live judge run (not required for merge): operator-approved, requires NS
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-19 with five deltas signed off by the operator, because the repo contradicted the blueprint:
+
+- D1: the PRP-01 `EvaluationResult` schema requires `dataset_version` and `rubric_version`, and judge versions only for `llm_judge`/`hybrid` (model + prompt version) and `programmatic` (`program_version`); `human` carries no version. Contracts are not changed here. Item 1 adds `check_result_references(result, registry)`, which rejects a result whose dataset, rubric or judge-config version is not registered, and rejects `judge_kind: human` results from this pipeline (human labels are calibration input, item 3). AC item 1 is met by the schema where it can express it plus the registry check for the rest.
+- D2: the PRP-07 archive drops prompt/response bodies unconditionally (`archive/serialize.py::redact_record` refuses leftovers). Online sampled evaluation therefore scores only metadata-derivable dimensions (task success from run status, tool correctness from tool spans); online groundedness is `value: null`, `not_estimable`, status `partial`, coverage reported limited, never fabricated. Judge-scored groundedness and safety run as offline benchmarks over synthetic sandbox datasets (item 1) with recorded fixtures; the AC 4 pilot-set grounded-answer rate comes from the offline pilot set. Restricted guard and budgets apply on both paths. Classification is the telemetry `classification` field; null is treated as restricted (fail closed).
+- D3: `neurosphere_core.evaluation` did not exist. The orchestrator created `packages/core/neurosphere_core/evaluation/__init__.py`, `services/workers/neurosphere_workers/evaluation/__init__.py`, `packages/core/tests/evaluation/__init__.py` and `services/workers/tests/evaluation/__init__.py` on the integration branch before dispatch; no item edits them. Item 1 also owns `packages/core/neurosphere_core/evaluation/judge.py` (judge protocol plus `RecordedFixtureJudge`, request hash to canned response).
+- D4: `neurosphere_api` depends only on `neurosphere-core`, so item 4 also owns `packages/core/neurosphere_core/evaluation/store.py` (scope-filtered store protocol plus in-memory implementation). Items 2-3 emit contract/core models; item 4 tests on fixtures.
+- D5: the UI is split out of item 4 into item 5 (`frontend/src/features/quality/`). New item 6 owns the shared wiring: `services/api/neurosphere_api/routers.py`; `frontend/src/app/main.tsx` and `frontend/src/app/workspaceNav.ts`; evaluation fixtures in `frontend/tests/mock-api/server.ts`; Playwright spec at `frontend/tests/e2e/quality/quality.spec.ts` (directory convention, replaces the blueprint path); `services/api/openapi.json` regeneration; the worker pipeline `services/workers/neurosphere_workers/evaluation/pipeline.py`; the in-process slice in `tests/integration/evaluation/`; evidence in `docs/evidence/G12/evaluation/`; OPEN rows in `docs/RESEARCH-AND-GATES.md`. Item 3 no longer depends on item 1 (pure statistics over plain version strings).
+
+Waves: 1 = items 1, 3 in parallel; 2 = item 2 (after 1) and item 4 (after 3); 3 = item 5 (after 4); 4 = item 6 (after 1-5).
+
+### Wire contract (decided at approval; items 4-6 code against it)
+The domain is a path segment, authorized against the server-derived `IdentityScope`; out-of-scope domain returns 403 (problem+json), policy store outage 503.
+
+- `GET /api/v1/evaluation/domains/{domain}/results` (`data.read`), query `subject_id`, `dimension`, `cursor`, `limit`: `{ "items": [EvaluationResult], "next_cursor": str|null }`.
+- `GET /api/v1/evaluation/domains/{domain}/quality` (`data.read`), query `subject_id`: `{ "trends": [{dimension, points: [{bucket_start, value|null, lower|null, upper|null, level|null, sample_size, judge: {judge_kind, judge_model_id|null, judge_model_version|null, judge_prompt_version|null, program_version|null}, calibration_state: "calibrated"|"uncalibrated"|"not_applicable"}]}], "coverage": [{stratum, sampled, population|null, coverage_fraction|null}], "missing_labels": {judged, labelled, missing}, "pilot_grounded_rate": {value|null, lower|null, upper|null, level|null, n, method, target: 0.9, target_label: "pilot-set target: at least 90%"}, "drift_alerts": [{dimension, subject_id, detected_at, statistic, threshold}] }`.
+
+`EvaluationResult` is the PRP-01 schema document verbatim (`packages/contracts/schemas/evaluation/v1/evaluation-result.schema.json`). Unknown is null, never 0.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-19 |
+| 2 | todo | | sonnet | | 2026-10-19 |
+| 3 | todo | | sonnet | | 2026-10-19 |
+| 4 | todo | | sonnet | | 2026-10-19 |
+| 5 | todo | | sonnet | | 2026-10-19 |
+| 6 | todo | | sonnet | | 2026-10-19 |
 
 ## Completion note (filled at ship)
 - Date:
