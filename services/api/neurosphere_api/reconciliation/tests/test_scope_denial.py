@@ -17,7 +17,14 @@ from .support import entry, fetch, make_api, make_store
 def _both() -> InMemoryAggregateStore:
     return make_store(
         entry("fin", "10", {"gateway": "10", "app": "10", "billing": "10"}, domain=FINANCE),
-        entry("ops", "99", {"gateway": "99", "app": "99", "billing": "99"}, domain=OPERATIONS),
+        # A dotted amount cannot occur inside the random hex ids a problem body carries ("99"
+        # did, which made the leak check below fail whenever an id contained "99").
+        entry(
+            "ops",
+            "4321.98",
+            {"gateway": "4321.98", "app": "4321.98", "billing": "4321.98"},
+            domain=OPERATIONS,
+        ),
     )
 
 
@@ -26,7 +33,8 @@ def test_a_viewer_of_domain_a_gets_403_for_domain_b_not_an_empty_200() -> None:
     response = client.get(f"{PREFIX}/domains/{OPERATIONS}", headers=h.auth(ALICE))
     assert response.status_code == 403
     assert response.headers["content-type"].startswith("application/problem+json")
-    assert "99" not in response.text
+    assert "4321.98" not in response.text
+    assert not {"reference", "references", "sources", "unknown_remainder"} & set(response.json())
     own = fetch(h, client, FINANCE)
     assert own["reference"]["amount"]["value"] == 10.0
 
