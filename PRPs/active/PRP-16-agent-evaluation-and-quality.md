@@ -215,10 +215,10 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | in-progress | (worktree agent) | sonnet | dispatched wave 1 | 2026-10-19 |
+| 1 | merged | worktree-agent-a5656cc86f28b8a5a | sonnet | c63ad89; reviewer APPROVED (no blockers; follow-ups: cloud-mismatch only when all candidates wrong-cloud, classification type hints, Cosmos registry OPEN, `latest()` = last registered not highest version); orchestrator spot-check: all 5 datasets `data_state: synthetic`, items flagged synthetic, builder NOTICE; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, evaluation + import boundaries 68 passed, no production `sandbox` import; generated `Judge` model keeps llm versions optional, so the JSON Schema (jsonschema) rejects a missing judge version and `check_result_references` is the second line; shipped matrix has only an `unverified` commercial Foundry row, so the sandbox commercial judge reports disabled with reason (matrix working as intended); pilot set 50 items (16 public, 16 internal, 10 cui, 8 restricted), 7 ungrounded, no LLM fixture for restricted items | 2026-10-19 |
 | 2 | todo | | sonnet | | 2026-10-19 |
-| 3 | review | worktree-agent-ad46a0d0831c2c90d | sonnet | 5e26b91; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, evaluation + import boundaries 40 passed; Wilson CI (45/50 -> [0.78640, 0.95652]), bootstrap agreement interval (seeded), strict-majority consensus (tie = unlabelled), PSI drift with insufficient_evidence below min_n, uncalibrated below 20 labels | 2026-10-19 |
-| 4 | todo | | sonnet | | 2026-10-19 |
+| 3 | merged | worktree-agent-ad46a0d0831c2c90d | sonnet | 5e26b91; reviewer APPROVED (no blockers; follow-ups: accuracy CI via round(), asymmetric bootstrap index, shared-scale assumption for bias, agreement interval + coverage not in contract block, PSI threshold uncalibrated, type-ignore on kwargs); merge 7499937, evaluation + import boundaries 40 passed, pyright 0 errors post-merge; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, evaluation + import boundaries 40 passed; Wilson CI (45/50 -> [0.78640, 0.95652]), bootstrap agreement interval (seeded), strict-majority consensus (tie = unlabelled), PSI drift with insufficient_evidence below min_n, uncalibrated below 20 labels | 2026-10-19 |
+| 4 | in-progress | (worktree agent) | sonnet | dispatched wave 2 after item 3 merge | 2026-10-19 |
 | 5 | todo | | sonnet | | 2026-10-19 |
 | 6 | todo | | sonnet | | 2026-10-19 |
 
