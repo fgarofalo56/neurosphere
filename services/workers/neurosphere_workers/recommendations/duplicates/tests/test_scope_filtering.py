@@ -10,7 +10,11 @@ import asyncio
 import json
 from pathlib import Path
 
-from neurosphere_workers.recommendations.duplicates import DuplicateDetector, DuplicateRun
+from neurosphere_workers.recommendations.duplicates import (
+    DuplicateDetector,
+    DuplicateRun,
+    SignalBreakdown,
+)
 
 from .support import (
     CREATED_AT,
@@ -26,11 +30,21 @@ def _agent_domains(sandbox_dir: Path) -> dict[str, str]:
     return {a["id"]: a["domain_id"] for a in read_ndjson(sandbox_dir / "agents.ndjson")}
 
 
+def _duplicate_domains(estate: Estate, agent_domain: dict[str, str]) -> list[str]:
+    """Domains holding a sandbox duplicate pair, in a stable order.
+
+    ``duplicate_pairs`` is a set, so iterating it directly depends on PYTHONHASHSEED."""
+    domains: list[str] = []
+    for pair in sorted(sorted(p) for p in estate.duplicate_pairs):
+        domain = agent_domain[pair[0]]
+        assert agent_domain[pair[1]] == domain, "sandbox duplicates live in one domain"
+        if domain not in domains:
+            domains.append(domain)
+    return domains
+
+
 def _domain_of_a_duplicate(estate: Estate, agent_domain: dict[str, str]) -> str:
-    pair = sorted(next(iter(estate.duplicate_pairs)))
-    domain = agent_domain[pair[0]]
-    assert agent_domain[pair[1]] == domain, "sandbox duplicates live in one domain"
-    return domain
+    return _duplicate_domains(estate, agent_domain)[0]
 
 
 def _run(
@@ -103,18 +117,26 @@ def test_pairs_never_span_domains_and_each_candidate_stays_in_a_scoped_domain(
 def test_narrow_scope_marks_hidden_targets_as_unobserved_not_as_mismatch(
     estate: Estate, sandbox_dir: Path
 ) -> None:
-    """Model deployments live in another domain: under a single-domain scope the signal is
-    unobserved (GraphQuery cuts the out-of-scope target), never scored as a mismatch."""
+    """A model deployment homed in another domain: under a single-domain scope the signal is
+    unobserved (GraphQuery cuts the out-of-scope target), never scored as a mismatch.
+
+    Not every duplicate's deployment is homed elsewhere, so the test uses the first duplicate
+    domain (stable order) where one is, and requires that such a domain exists."""
     agent_domain = _agent_domains(sandbox_dir)
-    domain_a = _domain_of_a_duplicate(estate, agent_domain)
-    run, _, _ = _run(estate, [domain_a])
-    seen = [
-        *(c.breakdown for c in run.candidates),
-        *(r.breakdown for r in run.review_candidates),
-    ]
-    assert seen
-    hidden = [b for b in seen if "model_deployment" in b.unobserved_signals]
-    assert hidden, "sandbox model deployments are homed outside this domain"
+    run: DuplicateRun | None = None
+    hidden: list[SignalBreakdown] = []
+    for domain_a in _duplicate_domains(estate, agent_domain):
+        run, _, _ = _run(estate, [domain_a])
+        seen = [
+            *(c.breakdown for c in run.candidates),
+            *(r.breakdown for r in run.review_candidates),
+        ]
+        assert seen
+        hidden = [b for b in seen if "model_deployment" in b.unobserved_signals]
+        if hidden:
+            break
+    assert run is not None
+    assert hidden, "some sandbox duplicate's model deployment is homed outside its domain"
     for b in hidden:
         assert b.shared_model_deployment_ids == ()
         assert b.model_deployment == 0.0
