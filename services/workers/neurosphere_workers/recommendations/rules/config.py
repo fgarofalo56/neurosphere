@@ -9,7 +9,8 @@ the evaluation window end (exclusive). The baseline is the older part, the recen
 newer part. ``min_history_days`` is the history an agent needs before a rule may make a claim;
 below it the output is a cold-start bounded-rule result with NO score.
 
-Score (documented, deterministic, bounded). For the three time-series rules:
+Score (documented, deterministic, bounded). The pooled-window latency rule documents its own score
+on ``LatencyDegradationConfig``. For the cost and error-rate rules:
 
     score = breach_days / recent_window_days            in [0, 1]
 
@@ -42,25 +43,32 @@ class _Frozen(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
-class _WindowedRule(_Frozen):
+class _Windows(_Frozen):
     version: str = Field(pattern=r"^[A-Za-z0-9._+-]{1,64}$")
     baseline_window_days: int = Field(ge=1, le=60)
     recent_window_days: int = Field(ge=1, le=60)
     min_history_days: int = Field(ge=2, le=120)
-    min_breach_days: int = Field(ge=1, le=60)
 
     @model_validator(mode="after")
-    def _windows_consistent(self) -> _WindowedRule:
+    def _windows_consistent(self) -> _Windows:
         span = self.baseline_window_days + self.recent_window_days
         if self.min_history_days < span:
             raise ValueError("min_history_days must cover baseline plus recent window")
-        if self.min_breach_days > self.recent_window_days:
-            raise ValueError("min_breach_days cannot exceed recent_window_days")
         return self
 
     @property
     def lookback_days(self) -> int:
         return self.baseline_window_days + self.recent_window_days
+
+
+class _WindowedRule(_Windows):
+    min_breach_days: int = Field(ge=1, le=60)
+
+    @model_validator(mode="after")
+    def _breach_consistent(self) -> _WindowedRule:
+        if self.min_breach_days > self.recent_window_days:
+            raise ValueError("min_breach_days cannot exceed recent_window_days")
+        return self
 
 
 class CostSpikeConfig(_WindowedRule):
@@ -73,20 +81,34 @@ class CostSpikeConfig(_WindowedRule):
     min_baseline_known_days: int = Field(ge=1)
 
 
-class LatencyDegradationConfig(_WindowedRule):
-    """A recent day breaches when its daily latency statistic exceeds ``ratio`` x the baseline
-    median of that statistic. The rule fires when at least ``min_breach_days`` recent days breach
-    AND the recent median also exceeds ``ratio`` x the baseline median. ``percentile`` selects the
-    daily statistic of request-span duration: ``p50`` (default) or ``p95``. Measured on the sandbox
-    pilot, the daily p95 of a handful of heavy-tailed requests is too noisy to separate a 3x
-    regression from ordinary days (control agents reached 9x), the daily median is not, hence the
-    default. A day only has a statistic with at least ``min_requests_per_day`` requests."""
+class LatencyDegradationConfig(_Windows):
+    """Pooled-window latency rule (version 2.x).
+
+    Request-span durations are pooled over the WHOLE baseline window and the WHOLE recent window
+    (not day by day: at pilot density one agent has 1 to 3 requests a day, so a daily statistic
+    does not exist). The rule fires when the recent pooled statistic exceeds ``ratio`` x the
+    baseline pooled statistic. ``percentile`` selects the statistic (``p50`` default, nearest
+    rank; the p95 of a handful of heavy-tailed requests is too noisy).
+
+    Evidence floor: each window needs at least ``min_window_requests`` request durations. Below it
+    nothing is claimed and no score is produced; an ``insufficient_evidence`` record is emitted
+    for EVERY active agent below the floor that has at least one observed duration, stating the
+    threshold and what was observed (the cold-start contract). It is deliberately not gated on a
+    hint of regression: a regression on a sparse agent may show no hint at all in 1 to 4
+    observations, and silence there would be a silent miss. Such a record is not a finding of
+    degradation, carries no score, and the volume is the stated price. With no duration observed
+    in either window there is nothing to state: outcome ``baseline_unavailable``.
+
+    Score (sufficient evidence): ``score = min(1, (r - 1) / (2 * (ratio - 1)))`` with ``r`` the
+    observed recent/baseline statistic ratio (0.5 exactly at the threshold, 1.0 at 2x ratio - 1).
+    The ``rule_bound`` interval re-evaluates the same formula with the recent statistic one rank
+    lower and the baseline statistic one rank higher (lower) and the reverse (upper), so
+    ``lower <= score <= upper``."""
 
     rule_id: Literal["latency_degradation"] = "latency_degradation"
     percentile: Literal["p50", "p95"] = "p50"
     ratio: float = Field(gt=1)
-    min_requests_per_day: int = Field(ge=1)
-    min_baseline_known_days: int = Field(ge=1)
+    min_window_requests: int = Field(ge=1)
 
 
 class ErrorRateConfig(_WindowedRule):
@@ -144,14 +166,12 @@ DEFAULT_RULES = RuleSet(
         min_baseline_known_days=2,
     ),
     latency_degradation=LatencyDegradationConfig(
-        version="1.0.0",
+        version="2.0.0",
         baseline_window_days=3,
         recent_window_days=4,
         min_history_days=7,
-        min_breach_days=2,
         ratio=2.0,
-        min_requests_per_day=4,
-        min_baseline_known_days=2,
+        min_window_requests=8,
     ),
     error_rate_degradation=ErrorRateConfig(
         version="1.0.0",

@@ -108,6 +108,10 @@ START = date(2026, 10, 1)
 
 def day(offset: int, **kw: Any) -> AgentDay:
     kw.setdefault("covered", True)
+    p50, requests = kw.get("latency_p50_ms"), kw.get("request_count")
+    if "durations_ms" not in kw and p50 is not None and requests:
+        # Constructed series state a daily median; the pooled latency rule reads the durations.
+        kw["durations_ms"] = (int(p50),) * requests
     return AgentDay(day=START + timedelta(days=offset), **kw)
 
 

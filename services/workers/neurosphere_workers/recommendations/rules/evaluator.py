@@ -13,6 +13,8 @@ Outcomes per (agent, rule), returned as ``RuleResult``:
   ``RuleResult.threshold`` states the applicable minimum and what was observed.
 * ``unknown_coverage``: telemetry coverage of the agent's source is unknown in the window. No
   record: unknown is never reported as unused or as zero.
+* (latency) ``insufficient_evidence`` also covers a window holding fewer request durations than
+  the rule's floor (``min_window_requests``): record without score, threshold and counts stated.
 * ``baseline_unavailable``: enough history, but the baseline holds too few known values to compare
   against (for example no cost data). No record and no claim.
 * ``no_activity`` (time-series rules, agent with zero events: ``unused_agent`` owns that case) and
@@ -22,6 +24,7 @@ Outcomes per (agent, rule), returned as ``RuleResult``:
 from __future__ import annotations
 
 import hashlib
+import math
 import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -251,7 +254,7 @@ def _cold(
 
 def _eval_windowed(
     series: AgentSeries,
-    cfg: CostSpikeConfig | LatencyDegradationConfig | ErrorRateConfig,
+    cfg: CostSpikeConfig | ErrorRateConfig,
     window: tuple[date, date],
     created_at: str,
 ) -> RuleResult:
@@ -292,21 +295,6 @@ def _eval_windowed(
             return result("baseline_unavailable", threshold=threshold)
         limit = median * cfg.ratio
         breaches = [d for d in recent if d.cost_amount is not None and d.cost_amount > limit]
-    elif isinstance(cfg, LatencyDegradationConfig):
-
-        def stat(d: AgentDay) -> float | None:
-            if (d.request_count or 0) < cfg.min_requests_per_day:
-                return None
-            return d.latency_p95_ms if cfg.percentile == "p95" else d.latency_p50_ms
-
-        base_lat = [v for v in (stat(d) for d in baseline) if v is not None]
-        if len(base_lat) < cfg.min_baseline_known_days:
-            return result("baseline_unavailable", threshold=threshold)
-        limit_ms = statistics.median(base_lat) * cfg.ratio
-        recent_lat = [(d, v) for d in recent if (v := stat(d)) is not None]
-        breaches = [d for d, v in recent_lat if v > limit_ms]
-        if recent_lat and statistics.median(v for _, v in recent_lat) <= limit_ms:
-            breaches = []
     else:
         base_requests = sum(d.request_count or 0 for d in baseline if d.error_count is not None)
         if base_requests < cfg.min_baseline_requests:
@@ -336,6 +324,100 @@ def _eval_windowed(
         created_at=created_at,
     )
     return result("detected", threshold=threshold, breach_days=len(breaches), recommendation=rec)
+
+
+def _rank_value(ordered: Sequence[int], q: float, shift: int = 0) -> int:
+    """Nearest-rank order statistic of an ascending sequence, ``shift`` ranks up (clamped)."""
+    index = max(1, math.ceil(q * len(ordered))) - 1 + shift
+    return ordered[min(len(ordered) - 1, max(0, index))]
+
+
+def _latency_score(ratio_observed: float, ratio: float) -> float:
+    return min(1.0, max(0.0, (ratio_observed - 1.0) / (2.0 * (ratio - 1.0))))
+
+
+def _eval_latency(
+    series: AgentSeries,
+    cfg: LatencyDegradationConfig,
+    window: tuple[date, date],
+    created_at: str,
+) -> RuleResult:
+    """Pooled-window latency rule (see ``LatencyDegradationConfig``)."""
+    rule_id, version = cfg.rule_id, cfg.version
+    prep = _prep(series, window[0], window[1], cfg.lookback_days)
+
+    def result(outcome: Outcome, **kw: Any) -> RuleResult:
+        return RuleResult(rule_id, version, series.agent_id, outcome, **kw)
+
+    if prep is None:
+        return result("not_applicable")
+    if not prep.covered:
+        return result("unknown_coverage")
+    if not prep.active:
+        return result("no_activity")
+    if prep.history_days < cfg.min_history_days:
+        return _cold(
+            series,
+            kind=rule_id,
+            rule_id=rule_id,
+            version=version,
+            prep=prep,
+            created_at=created_at,
+            min_history=cfg.min_history_days,
+        )
+    recent_days = [d for d in prep.days[-cfg.recent_window_days :] if d.covered]
+    base_days = [
+        d for d in prep.days[: -cfg.recent_window_days][-cfg.baseline_window_days :] if d.covered
+    ]
+    base = sorted(x for d in base_days for x in (d.durations_ms or ()))
+    recent = sorted(x for d in recent_days for x in (d.durations_ms or ()))
+    q = 0.95 if cfg.percentile == "p95" else 0.5
+    threshold: dict[str, Any] = cfg.model_dump(mode="json")
+    threshold |= {"baseline_requests": len(base), "recent_requests": len(recent)}
+    if not base and not recent:
+        return result("baseline_unavailable", threshold=threshold)
+    if min(len(base), len(recent)) < cfg.min_window_requests:
+        threshold["statement"] = (
+            f"{rule_id} needs {cfg.min_window_requests} request durations in each of the baseline "
+            f"and recent windows; {len(base)} and {len(recent)} observed. No score is produced "
+            "below this threshold."
+        )
+        rec = _build(
+            series,
+            kind=rule_id,
+            rule_id=rule_id,
+            rule_version=version,
+            prep=prep,
+            evidence_days=[d for d in (*base_days, *recent_days) if d.durations_ms],
+            score=None,
+            bounds=None,
+            created_at=created_at,
+        )
+        return result("insufficient_evidence", threshold=threshold, recommendation=rec)
+    base_stat, recent_stat = _rank_value(base, q), _rank_value(recent, q)
+    if base_stat <= 0:
+        return result("baseline_unavailable", threshold=threshold)
+    observed = recent_stat / base_stat
+    threshold["observed_ratio"] = round(observed, 4)
+    evidence_days = [d for d in recent_days if d.durations_ms]
+    if observed <= cfg.ratio:
+        return result("not_detected", threshold=threshold)
+    lower_ratio = _rank_value(recent, q, -1) / max(1, _rank_value(base, q, 1))
+    upper_ratio = _rank_value(recent, q, 1) / max(1, _rank_value(base, q, -1))
+    score = _latency_score(observed, cfg.ratio)
+    rec = _build(
+        series,
+        kind=rule_id,
+        rule_id=rule_id,
+        rule_version=version,
+        prep=prep,
+        evidence_days=evidence_days,
+        score=score,
+        bounds=(min(score, _latency_score(lower_ratio, cfg.ratio)),
+                max(score, _latency_score(upper_ratio, cfg.ratio))),
+        created_at=created_at,
+    )  # fmt: skip
+    return result("detected", threshold=threshold, recommendation=rec)
 
 
 def _eval_unused(
@@ -419,7 +501,7 @@ def evaluate_rules(
         ):
             continue
         results.append(_eval_windowed(series, rules.cost_spike, window, stamp))
-        results.append(_eval_windowed(series, rules.latency_degradation, window, stamp))
+        results.append(_eval_latency(series, rules.latency_degradation, window, stamp))
         results.append(_eval_windowed(series, rules.error_rate_degradation, window, stamp))
         results.append(_eval_unused(series, rules.unused_agent, window, stamp))
     return results

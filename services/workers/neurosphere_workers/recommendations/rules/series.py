@@ -17,6 +17,19 @@ from datetime import date
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
+MAX_DURATION_SAMPLES_PER_DAY = 256
+
+
+def bound_durations(values: Iterable[int]) -> tuple[int, ...]:
+    """Sorted durations, deterministically thinned to ``MAX_DURATION_SAMPLES_PER_DAY`` evenly
+    spaced order statistics (distribution shape kept, memory bounded)."""
+    ordered = sorted(values)
+    n = len(ordered)
+    if n <= MAX_DURATION_SAMPLES_PER_DAY:
+        return tuple(ordered)
+    cap = MAX_DURATION_SAMPLES_PER_DAY
+    return tuple(ordered[(i * (n - 1)) // (cap - 1)] for i in range(cap))
+
 
 @dataclass(frozen=True, slots=True)
 class AgentDay:
@@ -28,6 +41,10 @@ class AgentDay:
     latency_p95_ms: float | None = None
     latency_p50_ms: float | None = None
     cost_amount: Decimal | None = None
+    # Request-span durations (ms) observed on the day, sorted ascending, at most
+    # ``MAX_DURATION_SAMPLES_PER_DAY`` (a deterministic quantile thinning when more were seen).
+    # ``None`` = not observed. The pooled-window latency rule merges these across days.
+    durations_ms: tuple[int, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)

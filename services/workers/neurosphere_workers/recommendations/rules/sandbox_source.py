@@ -32,7 +32,11 @@ from neurosphere_contracts.cost.v1.cost_record import CostRecord
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from pydantic import ValidationError
 
-from neurosphere_workers.recommendations.rules.series import AgentDay, AgentSeries
+from neurosphere_workers.recommendations.rules.series import (
+    AgentDay,
+    AgentSeries,
+    bound_durations,
+)
 
 _ERROR_OUTCOMES = frozenset({"error", "timeout"})
 _COST_PRIORITY = {"application": 0, "gateway": 1, "billing": 2}
@@ -275,4 +279,5 @@ class SandboxSeriesSource:
             latency_p95_ms=_percentile(acc.durations, 0.95) if acc.durations else None,
             latency_p50_ms=_percentile(acc.durations, 0.5) if acc.durations else None,
             cost_amount=cost,
+            durations_ms=bound_durations(acc.durations) if acc.durations else None,
         )
