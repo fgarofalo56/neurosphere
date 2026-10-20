@@ -184,6 +184,13 @@ class EvaluationService:
             raise InvalidSchemaError(
                 "dataset is not the registered version", reason="dataset_version_unregistered"
             )
+        # ``data_state`` is not covered by the content hash, so the caller's label is untrusted:
+        # only the registry's stored state may select the guard path or be reported.
+        if stored.data_state != dataset.data_state:
+            raise InvalidSchemaError(
+                "dataset data_state differs from the registered version",
+                reason="dataset_data_state_mismatch",
+            )
         started = self._clock()
         domain = config.domain_id.rsplit(":", 1)[-1]
         candidates = [
@@ -198,7 +205,7 @@ class EvaluationService:
                 domain_id=config.domain_id,
                 subject_id=config.subject_id,
             )
-            for item in dataset.items
+            for item in stored.items
         ]
         sample = stratified_sample(candidates, rate=1.0, seed=0)
         return await self._run(
@@ -206,7 +213,7 @@ class EvaluationService:
             config=config,
             dataset_id=dataset.dataset_id,
             dataset_version=dataset.version,
-            data_state=dataset.data_state,
+            data_state=stored.data_state,
             started=started,
             sample=sample,
             population_total=len(candidates),
@@ -215,7 +222,7 @@ class EvaluationService:
             rate=None,
             # Synthetic benchmark payloads may legitimately contain a ``response`` field (safety
             # items); archive-derived data is always body-checked.
-            check_bodies=dataset.data_state != "synthetic",
+            check_bodies=stored.data_state != "synthetic",
             excluded={},
             limited={},
             calibrations=calibrations,
