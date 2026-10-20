@@ -88,7 +88,7 @@ async def test_binary_scores_carry_a_wilson_interval() -> None:
     assert 0.0 <= score.uncertainty.lower and score.uncertainty.upper <= 1.0
     assert task.sampling.method == "stratified"
     assert task.sampling.population_size is not None
-    assert task.sampling.population_size.root.root == 20
+    assert task.sampling.population_size.model_dump() == 20
     assert task.sampling.coverage_fraction is not None
     assert task.sampling.coverage_fraction.root == 1.0
     assert task.judge.judge_kind == "llm_judge"

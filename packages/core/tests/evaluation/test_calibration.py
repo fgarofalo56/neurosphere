@@ -122,7 +122,9 @@ def test_accuracy_uses_wilson() -> None:
 def test_spearman_on_ordinal_scores() -> None:
     rng = random.Random(3)  # noqa: S311 - seeded fixture data
     human = {f"i{i}": float(rng.randint(1, 5)) for i in range(40)}
-    judge = {k: v + (1.0 if i % 5 == 0 else 0.0) for i, (k, v) in enumerate(human.items())}
+    judge: dict[str, float | None] = {
+        k: v + (1.0 if i % 5 == 0 else 0.0) for i, (k, v) in enumerate(human.items())
+    }
     rep = run(judged(judge), label_set(human), metric="spearman")
     assert rep.state == "calibrated"
     assert rep.agreement is not None and rep.agreement > 0.85

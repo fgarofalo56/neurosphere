@@ -150,7 +150,7 @@ async def test_offline_result_after_calibration_reports_pilot_rate_with_interval
     assert result.sampling.method == "full"
     assert (
         result.sampling.population_size is not None
-        and result.sampling.population_size.root.root == 50
+        and result.sampling.population_size.model_dump() == 50
     )
     score = result.scores[0]
     assert score.dimension == "groundedness"

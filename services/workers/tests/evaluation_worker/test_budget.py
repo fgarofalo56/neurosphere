@@ -225,6 +225,6 @@ async def test_budget_exhausted_result_is_partial() -> None:
     assert result.sampling.sample_size == judge.call_count == 3
     assert result.evaluator_usage is not None
     assert result.evaluator_usage.judge_input_tokens is not None
-    assert result.evaluator_usage.judge_input_tokens.root.root == 3 * IN
+    assert result.evaluator_usage.judge_input_tokens.model_dump() == 3 * IN
     assert result.evaluator_usage.estimated_cost is not None
     assert result.evaluator_usage.estimated_cost.price_version.root == "p1"

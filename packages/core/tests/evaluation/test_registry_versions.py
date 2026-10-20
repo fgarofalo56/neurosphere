@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from neurosphere_core.evaluation.registry import (
     DatasetItem,
@@ -172,7 +174,7 @@ def test_judge_config_kind_rules() -> None:
         _judge(program_version=None)
     with pytest.raises(ValidationError, match="requires"):
         _judge(judge_kind="llm_judge", program_version=None)
-    llm: dict[str, object] = {
+    llm: dict[str, Any] = {
         "judge_kind": "llm_judge",
         "program_version": None,
         "judge_model_id": "government:c:s:t:m",
