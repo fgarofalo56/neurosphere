@@ -1,0 +1,46 @@
+{
+  "prp": "PRP-18 item 3",
+  "target": ">= 30 fps at 2000 visible nodes on documented hardware",
+  "enforced": true,
+  "headless": false,
+  "windowMs": 5000,
+  "measuredAt": "2026-10-21T17:54:16.723Z",
+  "result": {
+    "fpsMean": 38.57,
+    "fpsP5": 24.04,
+    "frames": 194,
+    "elapsedMs": 5029,
+    "frameTimeMs": {
+      "mean": 25.9,
+      "p50": 25,
+      "p95": 41.6,
+      "p99": 41.8,
+      "max": 58.2
+    },
+    "meetsTarget": true
+  },
+  "scene": {
+    "nodes": 2000,
+    "edges": 4000,
+    "animatedEdges": 1334,
+    "edgeAnimation": "on",
+    "animationFramesDuringWindow": 195
+  },
+  "browser": {
+    "name": "chromium",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+    "hardwareConcurrency": 32,
+    "webglRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 (0x00002B85) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "webglVendor": "Google Inc. (NVIDIA)",
+    "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+  },
+  "host": {
+    "platform": "win32",
+    "release": "10.0.26300",
+    "arch": "x64",
+    "cpuModel": "AMD Ryzen 9 5950X 16-Core Processor            ",
+    "cpuCount": 32,
+    "totalMemBytes": 137333514240,
+    "node": "v24.20.0"
+  }
+}

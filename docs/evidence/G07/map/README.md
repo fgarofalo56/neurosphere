@@ -95,4 +95,36 @@ These numbers narrow the planning target only for this shape of load (5 events/s
 
 ## Browser frame rate (item 3)
 
-_Added by the orchestrator from the item 3 documented-hardware run._
+**Label: one developer workstation, headed Chromium against the e2e mock API; hardware-specific.**
+Measured 2026-10-21 by the orchestrator on the item 3 rework commit `bb9040c` (the merged code
+differs only by import paths, `5a0622c`). This is not a universal frame-rate claim.
+
+**Documented hardware:** AMD Ryzen 9 5950X (16 cores, 32 threads), 128 GB RAM, NVIDIA GeForce
+RTX 5090 through ANGLE Direct3D11 (WebGL 2.0), Windows 10.0.26300, Chromium 156 (Playwright),
+Node 24.20.
+
+**What was measured:** `frontend/tests/e2e/map-perf.spec.ts` loads the deterministic 2,000-node,
+4,000-edge mock viewport (`commercial:e2e:sandbox:domain:map-perf`), drives a live session through
+a fake gateway WebSocket so observed-edge animation is on (1,334 animated edges), then counts
+`requestAnimationFrame` frames over a 5 s window while the camera pans and zooms every frame.
+fps mean is frames over elapsed time; fps p5 is derived from the 95th-percentile frame time (the
+slowest 5% of frames).
+
+| File | fps mean | fps p5 | frame time p95 (ms) | frames in 5 s |
+|------|----------|--------|---------------------|---------------|
+| `fps-run1.json` | 41.84 | 29.94 | 33.4 | 211 |
+| `fps-run2.json` | 41.03 | 30.03 | 33.3 | 206 |
+| `fps-run3.json` | 38.57 | 24.04 | 41.6 | 194 |
+
+**Against the target (PRD planning target >= 30 fps at 2k visible nodes on documented hardware):**
+the mean met it in all three runs; the slowest 5% of frames did not in run 3 (24 fps) and sat at
+the line in runs 1 and 2. Treat the target as met on average, not at the tail, on this hardware.
+An earlier measurement on the pre-rework commit `c940730` (same hardware) gave mean 37.2 / 30.5 /
+32.2 and p5 29.9 / 24.0 / 24.0; caching the observed-edge id list per frame raised the mean.
+
+**Not a hardware result:** headless Chromium falls back to SwiftShader software GL and measured
+about 4-5 fps mean on the same machine. Headless and CI numbers say nothing about the target.
+
+Reproduce (run alone, nothing else heavy on the machine):
+`cd frontend && NS_MAP_PERF_HEADED=1 NS_MAP_PERF_ENFORCE=1 pnpm exec playwright test tests/e2e/map-perf.spec.ts --reporter=line`;
+results land in `temp/map-perf/fps.json`.
