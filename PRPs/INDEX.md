@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-17-action-executor-and-hitl](active/PRP-17-action-executor-and-hitl.md) |  | 5/7 (71%) | in-progress 1, review 1, merged 5 | ? / ? | required |
+| [prp-17-action-executor-and-hitl](active/PRP-17-action-executor-and-hitl.md) |  | 6/7 (85%) | in-progress 1, merged 6 | ? / ? | required |
 
 ## Backlog
 
