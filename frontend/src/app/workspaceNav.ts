@@ -1,5 +1,7 @@
 import { useRoles } from "../auth";
+import { actionsNavItems } from "../features/actions";
 import { dashboardNavItems } from "../features/dashboards";
+import { reviewNavItems } from "../features/review";
 import { reconciliationNavItems } from "../features/reconciliation";
 import { qualityNavItems } from "../features/quality";
 import { recommendationNavItems } from "../features/recommendations";
@@ -21,5 +23,7 @@ export function useAppNavItems(): readonly NavItem[] {
     ...reconciliationNavItems(),
     ...recommendationNavItems(),
     ...qualityNavItems(),
+    ...actionsNavItems(),
+    ...reviewNavItems(),
   ];
 }
