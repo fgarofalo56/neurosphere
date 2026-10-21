@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from foundry_swap_fakes import (
+from foundry_swap_fakes import (  # pyright: ignore[reportMissingImports]
     ACCOUNT,
     DEFAULT_MODELS,
     TODAY,
@@ -224,6 +224,19 @@ async def test_apply_failed_provisioning_restores_prior_model() -> None:
     assert restore["tags"] == {"team": "ai"}
     assert restore["properties"]["raiPolicyName"] == "Microsoft.Default"
     assert restore["properties"]["versionUpgradeOption"] == "NoAutoUpgrade"
+
+
+async def test_apply_put_error_still_restores_prior_model() -> None:
+    # The swap PUT's response is lost or an error: ARM may still have applied it, so restore.
+    arm = FakeArm(post_put_states=["Succeeded"])
+    arm.fail_put_number = 1
+    with pytest.raises(CapabilityUnavailableError) as err:
+        await _connector(arm).apply(swap_request())
+    assert err.value.reason == "apply_failed_restored"
+    assert err.value.retryable is False
+    assert len(arm.puts) == 2
+    # The failed PUT is not recorded, so the last body is the restore.
+    assert arm.put_bodies[-1]["properties"]["model"]["name"] == "gpt-4o"
 
 
 async def test_apply_failed_and_restore_put_fails() -> None:

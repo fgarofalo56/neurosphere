@@ -470,10 +470,10 @@
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/rest/api/aiservices/accountmanagement/deployments/create-or-update
-  observed_on: '2026-10-11'
+  observed_on: '2026-10-20'
   notes: Deployments - Create Or Update (Azure AI Services account management, api-version 2024-10-01)
     is documented on the ARM Commercial host. Availability follows the unverified Commercial base row;
-    Learn page re-checked 2026-10-20 (observed_on is capped at the pinned test date 2026-10-11). The live swap (G05) is OPEN, so no Commercial region has been verified for a deployment write.
+    Learn page checked 2026-10-20. The live swap (G05) is OPEN, so no Commercial region has been verified for a deployment write.
 - schema_version: 1.1.0
   id: foundry.deployment_write.government.global.any
   service: foundry
@@ -485,7 +485,7 @@
   ga_status: unverified
   authorization_scope: none_claimed
   source_url: https://learn.microsoft.com/azure/foundry/concepts/foundry-azure-government
-  observed_on: '2026-10-11'
+  observed_on: '2026-10-20'
   notes: Disabled until verified. Foundry deployment write (model swap) support in Azure Government is
     unverified (G01); the connector refuses Government targets with capability_unavailable and never
     routes to a Commercial endpoint.

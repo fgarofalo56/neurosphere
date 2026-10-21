@@ -242,12 +242,13 @@ class FoundryModelSwapConnector:
         prior = model_of(current)
         # Re-read immediately before the write: If-Match is not documented for this PUT.
         latest = await self._current(name, request.target_version)
-        put = await self._arm.put_deployment(name, build_put_body(latest, model_of(patched)))
         try:
+            put = await self._arm.put_deployment(name, build_put_body(latest, model_of(patched)))
             final = await self._await_terminal(name, put)
         except Exception as cause:
-            # The PUT was sent, so the real deployment may have changed and no ApplyResult will
-            # reach the executor. Restore the prior model here; the error is not retryable.
+            # The PUT may have reached ARM (even when its response was lost), so the real
+            # deployment may have changed and no ApplyResult will reach the executor. Restore
+            # the prior model here; the error is not retryable.
             restored = await self._restore_prior(name, latest, prior)
             reason = "apply_failed_restored" if restored else "apply_failed_restore_failed"
             raise CapabilityUnavailableError(

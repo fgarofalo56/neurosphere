@@ -9,6 +9,7 @@ members = [
     "neurosphere-connector-azure-billing",
     "neurosphere-connector-azure-monitor",
     "neurosphere-connector-foundry",
+    "neurosphere-connector-foundry-actions",
     "neurosphere-connector-otel-generic",
     "neurosphere-contracts",
     "neurosphere-core",
@@ -1176,6 +1177,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "neurosphere-connector-foundry-actions"
+version = "0.0.0"
+source = { editable = "connectors/reference/foundry-actions" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "httpx" },
+    { name = "neurosphere-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-core", specifier = ">=1.30" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+]
+
+[[package]]
 name = "neurosphere-connector-otel-generic"
 version = "0.0.0"
 source = { editable = "connectors/reference/otel-generic" }
@@ -1294,6 +1312,7 @@ dev = [
     { name = "neurosphere-connector-azure-billing" },
     { name = "neurosphere-connector-azure-monitor" },
     { name = "neurosphere-connector-foundry" },
+    { name = "neurosphere-connector-foundry-actions" },
     { name = "neurosphere-connector-otel-generic" },
     { name = "neurosphere-contracts" },
     { name = "neurosphere-core" },
@@ -1320,6 +1339,7 @@ dev = [
     { name = "neurosphere-connector-azure-billing", editable = "connectors/reference/azure-billing" },
     { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
     { name = "neurosphere-connector-foundry", editable = "connectors/reference/foundry" },
+    { name = "neurosphere-connector-foundry-actions", editable = "connectors/reference/foundry-actions" },
     { name = "neurosphere-connector-otel-generic", editable = "connectors/reference/otel-generic" },
     { name = "neurosphere-contracts", editable = "packages/contracts/python" },
     { name = "neurosphere-core", editable = "packages/core" },

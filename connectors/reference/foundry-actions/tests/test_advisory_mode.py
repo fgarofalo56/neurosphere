@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from foundry_swap_fakes import (
+from foundry_swap_fakes import (  # pyright: ignore[reportMissingImports]
     ACCOUNT,
     READ_PERMS,
     SUB,
