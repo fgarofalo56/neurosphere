@@ -235,6 +235,7 @@ Plan approved 2026-10-21 with three deltas signed off by the operator.
 
 - D1: no item owned the shared hookup files (router registry, OpenAPI export, app-state revocation wiring, frontend deps/lockfile, `main.tsx`, `workspaceNav.ts`, mock API, `tests/integration/map`). New item 7 owns them and runs alone, after items 1, 2, 5 and before items 3, 4. Items 1, 2, 5 ship a `register(registry)` hook and are not added to `routers.py` themselves.
 - D2: map, table and replay routes require the existing `data.read` permission in the target domain. No new permission constant (PRP-06 owns that file).
+- D4 (2026-10-21, orchestrator, within D1 scope): item 7 also creates placeholder `frontend/src/features/map/index.ts` (`mapRoutes`, `mapNavItems`) and `frontend/src/features/map-table/index.ts` (`mapTableRoutes`, `mapTableNavItems`) and wires them, so items 3 and 4 never edit `main.tsx`/`workspaceNav.ts`; they replace the placeholder contents and keep the export names. Item 7's composition-root test is in-process and unmarked (CI runs it) plus a Cosmos-emulator variant marked `integration`, because no production composition root wires authz/aggregates yet (`main.py` wires ingest and scan only, as in PRP-14).
 - D3: people are always pseudonymized in this PRP. The "reveal with explicit scoped permission and audit" path needs a permission PRP-06 never defined, so it is a follow-up, not built here.
 
 Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D = item 6. Models: all implementers sonnet; every item gets one reviewer pass (PRP is `review: required`); rework confirmation passes haiku.
@@ -252,7 +253,7 @@ Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D 
 | 4 | todo | | sonnet | | 2026-10-21 |
 | 5 | merged | worktree-agent-a71966c3e37cd8b6a | sonnet | 42b68b7; orchestrator re-run: only replay/ (api, tests, frontend feature) touched, ruff + format clean, pyright 0 errors, replay + test_app + openapi drift 44 passed, vitest replay 9 passed, tsc + eslint clean; deviations (additive): list shape {items, next_cursor} + page_size, extra Gap/Span/Completeness fields, tool.name null (no tool name in telemetry contract), error is outcome code only; open: ArchiveTraceReader bounded 7-day/2000-blob scan, never run against real storage; reviewer APPROVED (follow-ups: import-ban test ignores relative imports and importlib/__import__, missing_parent detail text reveals another domain has spans, duplicate React keys for same-reason gap badges, archive reader full scan per call needs an index later); merge ef8543f; post-merge replay vitest 9 passed, replay suites green; realtime suite flaky (CancelledError on WS teardown, ~1 in 3, pre-existing from item 1) -> fix-forward dispatched | 2026-10-21 |
 | 6 | todo | | sonnet | | 2026-10-21 |
-| 7 | todo | | sonnet | | 2026-10-21 |
+| 7 | in-progress | (worktree agent) | sonnet | dispatched wave B after item 1 fix-forward e673459 (gateway disconnect cleanup race; 8/8 orchestrator reruns of realtime 41 passed; post-merge replay + realtime + map + authz + test_app + openapi drift 252 passed) | 2026-10-21 |
 
 ## Completion note (filled at ship)
 - Date:
