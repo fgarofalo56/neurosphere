@@ -12,18 +12,17 @@ intent reach ``executing``; this is defence in depth).
 from __future__ import annotations
 
 from collections.abc import Mapping
-from types import MappingProxyType
 from typing import Final
 
 from neurosphere_connector.write import WriteConnector, WriteTargetRegistry
+from neurosphere_core.actions.targets import ACTION_CONNECTORS
 from neurosphere_core.errors import CapabilityUnavailableError
 
 __all__ = ["DEFAULT_ACTION_CONNECTORS", "resolve_connector"]
 
-#: ``action_kind`` -> write connector manifest name. Extend by passing a mapping to the executor.
-DEFAULT_ACTION_CONNECTORS: Final[Mapping[str, str]] = MappingProxyType(
-    {"model_deployment_swap": "foundry-model-swap"}
-)
+#: The ONE action-kind table lives in core (item 4); this is an alias of that same object.
+#: Extend by passing a mapping to the executor.
+DEFAULT_ACTION_CONNECTORS: Final[Mapping[str, str]] = ACTION_CONNECTORS
 
 
 def _unavailable(detail: str) -> CapabilityUnavailableError:
