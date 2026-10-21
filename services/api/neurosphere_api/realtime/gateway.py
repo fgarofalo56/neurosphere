@@ -27,7 +27,7 @@ Guarantees, each enforced here:
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any, Final, Literal
 
@@ -153,6 +153,27 @@ async def _close(websocket: WebSocket, code: int, reason: str) -> None:
         _LOG.debug("websocket close failed")
 
 
+async def _reap(tasks: Sequence["asyncio.Future[None]"]) -> bool:
+    """Cancel ``tasks`` and wait until every one has finished.
+
+    Shielded so a cancellation of the caller cannot abandon a half-cancelled child; returns True
+    when the caller was cancelled while waiting (the caller decides whether to re-raise).
+    """
+    for task in tasks:
+        task.cancel()
+    pending = asyncio.gather(*tasks, return_exceptions=True)
+    cancelled = False
+    while True:
+        try:
+            await asyncio.shield(pending)
+        except asyncio.CancelledError:
+            cancelled = True
+            if pending.done():
+                return cancelled
+        else:
+            return cancelled
+
+
 class _Connection:
     def __init__(self, websocket: WebSocket, gateway: RealtimeState, authz: AuthzState) -> None:
         self._ws = websocket
@@ -176,15 +197,24 @@ class _Connection:
             asyncio.ensure_future(self._guarded(self._receive_loop, session)),
             asyncio.ensure_future(self._guarded(self._pump_loop, session)),
         ]
+        cancelled = False
         try:
-            await session.finished.wait()
+            try:
+                await session.finished.wait()
+            except asyncio.CancelledError:
+                cancelled = True
+            # Child tasks are always cancelled AND awaited, even if we are cancelled meanwhile.
+            cancelled = await _reap(tasks) or cancelled
         finally:
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
             registry.remove(session)
-        if not session.disconnected:
-            await _close(self._ws, session.close_code or _CLOSE_INTERNAL, session.close_reason)
+        if session.disconnected:
+            # The peer is gone and cleanup is complete. A cancellation that raced the disconnect
+            # (a server shutting the connection task down just as the client left) has nothing
+            # left to interrupt, so the endpoint returns normally instead of dying cancelled.
+            return
+        if cancelled:
+            raise asyncio.CancelledError  # a real cancel of this endpoint is never swallowed
+        await _close(self._ws, session.close_code or _CLOSE_INTERNAL, session.close_reason)
 
     async def _guarded(self, loop: Callable[[Session], Awaitable[None]], session: Session) -> None:
         try:
