@@ -1,0 +1,19 @@
+{
+  "action_kind": "model_deployment_swap",
+  "target": {
+    "canonical_id": "commercial:contoso:foundry:model_deployment:support-gpt",
+    "entity_type": "model_deployment"
+  },
+  "target_version": "etag-7",
+  "proposed_diff": {
+    "format": "json_patch",
+    "operations": [
+      { "op": "replace", "path": "/properties/model/name", "value": "gpt-4.1-mini" },
+      { "op": "replace", "path": "/properties/model/version", "value": "2026-04-14" }
+    ]
+  },
+  "evidence": [],
+  "idempotency_key": "button-swap-0001-fixture",
+  "channel": "button",
+  "dry_run": false
+}
