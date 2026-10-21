@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-17-action-executor-and-hitl](active/PRP-17-action-executor-and-hitl.md) |  | 7/7 (100%) | merged 7 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -31,6 +29,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-10-21 | #83 |
 | [prp-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-10-20 | #81 |
 | [prp-13-release-versioning-and-container-publishing](shipped/PRP-13-release-versioning-and-container-publishing.md) | 2026-10-19 | #72 |
 | [prp-14-dashboards-cost-latency-coverage](shipped/PRP-14-dashboards-cost-latency-coverage.md) | 2026-10-19 | #74 |
