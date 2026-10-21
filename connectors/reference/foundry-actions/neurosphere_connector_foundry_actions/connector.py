@@ -99,6 +99,11 @@ def _manifest(*, advisory: bool) -> ConnectorManifest:
     )
 
 
+def _describe(exc: Exception) -> str:
+    reason = getattr(exc, "reason", None)
+    return f"{type(exc).__name__}: {reason}" if reason else type(exc).__name__
+
+
 def _refuse_cloud(account: AccountRef) -> None:
     """Government is disabled by the capability matrix (G01); never reroute to Commercial."""
     if account.cloud is not CloudName.COMMERCIAL:
@@ -238,7 +243,16 @@ class FoundryModelSwapConnector:
         # Re-read immediately before the write: If-Match is not documented for this PUT.
         latest = await self._current(name, request.target_version)
         put = await self._arm.put_deployment(name, build_put_body(latest, model_of(patched)))
-        final = await self._await_terminal(name, put)
+        try:
+            final = await self._await_terminal(name, put)
+        except Exception as cause:
+            # The PUT was sent, so the real deployment may have changed and no ApplyResult will
+            # reach the executor. Restore the prior model here; the error is not retryable.
+            restored = await self._restore_prior(name, latest, prior)
+            reason = "apply_failed_restored" if restored else "apply_failed_restore_failed"
+            raise CapabilityUnavailableError(
+                reason, f"apply failed after the PUT ({_describe(cause)}); restored={restored}"
+            ) from cause
         return ApplyResult(
             target=request.target,
             version_before=request.target_version,
@@ -246,6 +260,17 @@ class FoundryModelSwapConnector:
             applied_diff=request.proposed_diff,
             rollback_token=json.dumps(prior, separators=(",", ":"), sort_keys=True),
         )
+
+    async def _restore_prior(
+        self, name: str, latest: dict[str, Any], prior: dict[str, str]
+    ) -> bool:
+        """Best-effort restore of the prior model after a failed apply; True when it settled."""
+        try:
+            put = await self._arm.put_deployment(name, build_put_body(latest, prior))
+            await self._await_terminal(name, put)
+        except Exception:
+            return False
+        return True
 
     async def verify(self, request: WriteRequest) -> VerifyResult:
         _refuse_cloud(self.account)
@@ -324,6 +349,9 @@ async def create_swap_connector(
         return FoundryModelSwapAdvisoryConnector(
             account, reason="permissions could not be read; write access unproven"
         )
+    except BaseException:
+        await arm.close()
+        raise
     if not can_write_deployments(permissions):
         await arm.close()
         return FoundryModelSwapAdvisoryConnector(

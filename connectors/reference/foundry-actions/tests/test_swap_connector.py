@@ -29,7 +29,6 @@ from neurosphere_connector_foundry_actions import (
 from neurosphere_core.cloud.profile import CloudName
 from neurosphere_core.errors import (
     CapabilityUnavailableError,
-    DependencyTransientError,
     InvalidSchemaError,
     StaleVersionError,
 )
@@ -206,26 +205,63 @@ async def test_future_deprecation_passes_and_unknowns_are_warnings_not_passes() 
     assert not any(c.status == "failed" for c in checks.values())
 
 
-async def test_apply_failed_provisioning_is_an_error() -> None:
-    arm = FakeArm(post_put_states=["Creating", "Failed"])
+async def test_apply_failed_provisioning_restores_prior_model() -> None:
+    arm = FakeArm(post_put_states=["Creating", "Failed", "Succeeded"])
     with pytest.raises(CapabilityUnavailableError) as err:
         await _connector(arm).apply(swap_request())
-    assert err.value.reason == "provisioning_failed"
+    assert err.value.reason == "apply_failed_restored"
+    assert err.value.retryable is False
+    assert "provisioning_failed" in str(err.value)
+    assert len(arm.puts) == 2
+    assert arm.put_bodies[0]["properties"]["model"]["name"] == "gpt-4.1"
+    restore = arm.put_bodies[1]
+    assert restore["properties"]["model"] == {
+        "format": "OpenAI",
+        "name": "gpt-4o",
+        "version": "2024-08-06",
+    }
+    assert restore["sku"] == {"name": "Standard", "capacity": 3}
+    assert restore["tags"] == {"team": "ai"}
+    assert restore["properties"]["raiPolicyName"] == "Microsoft.Default"
+    assert restore["properties"]["versionUpgradeOption"] == "NoAutoUpgrade"
 
 
-async def test_apply_canceled_provisioning_is_an_error() -> None:
-    arm = FakeArm(put_state="Canceled")
-    with pytest.raises(CapabilityUnavailableError):
+async def test_apply_failed_and_restore_put_fails() -> None:
+    arm = FakeArm(post_put_states=["Creating", "Failed"])
+    arm.fail_put_number = 2
+    with pytest.raises(CapabilityUnavailableError) as err:
         await _connector(arm).apply(swap_request())
+    assert err.value.reason == "apply_failed_restore_failed"
+    assert err.value.retryable is False
+    assert len(arm.puts) == 2
 
 
-async def test_polling_is_bounded() -> None:
+async def test_apply_canceled_provisioning_attempts_restore() -> None:
+    arm = FakeArm(put_state="Canceled")
+    with pytest.raises(CapabilityUnavailableError) as err:
+        await _connector(arm).apply(swap_request())
+    assert err.value.reason in {"apply_failed_restored", "apply_failed_restore_failed"}
+    assert len(arm.puts) == 2
+
+
+async def test_polling_is_bounded_and_timeout_attempts_restore() -> None:
     arm = FakeArm(post_put_states=["Creating"] * 500)
     sleeper = Sleeper()
-    with pytest.raises(DependencyTransientError) as err:
+    with pytest.raises(CapabilityUnavailableError) as err:
         await _connector(arm, sleeper).apply(swap_request())
-    assert err.value.reason == "poll_timeout"
-    assert len(sleeper.sleeps) <= 61
+    assert err.value.reason == "apply_failed_restore_failed"
+    assert err.value.retryable is False
+    assert "poll_timeout" in str(err.value)
+    assert len(arm.puts) == 2
+    assert len(sleeper.sleeps) <= 122
+
+
+async def test_poll_timeout_then_restore_succeeds() -> None:
+    arm = FakeArm(post_put_states=["Creating"] * 61 + ["Succeeded"])
+    with pytest.raises(CapabilityUnavailableError) as err:
+        await _connector(arm).apply(swap_request())
+    assert err.value.reason == "apply_failed_restored"
+    assert len(arm.puts) == 2
 
 
 async def test_verify_reads_observed_state_after_apply() -> None:

@@ -124,6 +124,7 @@ class FakeArm:
         self.requests: list[httpx.Request] = []
         self.put_bodies: list[dict[str, Any]] = []
         self.on_get: Callable[[FakeArm], None] | None = None
+        self.fail_put_number: int | None = None  # 1-based PUT index that answers HTTP 500
         self._etag_n = 1
         self._putting = False
 
@@ -152,6 +153,8 @@ class FakeArm:
         return httpx.Response(404, json={"error": {"code": "NotFound"}})
 
     def _put(self, request: httpx.Request) -> httpx.Response:
+        if self.fail_put_number is not None and len(self.puts) == self.fail_put_number:
+            return httpx.Response(500, json={"error": {"code": "InternalServerError"}})
         body = json.loads(request.content)
         self.put_bodies.append(copy.deepcopy(body))
         self._etag_n += 1

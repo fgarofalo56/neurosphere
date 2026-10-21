@@ -41,8 +41,15 @@ Host: `management.azure.com` (Commercial). No other request shape is used.
   for the account location with the same `format`, `lifecycleStatus` not `Deprecated`, inference
   deprecation date not past, deployment sku name in the model's `skus`, capability keys present
   on the current model present on the target.
-- **Failed provisioning during apply.** If the PUT reaches `Failed`/`Canceled`, `apply` raises and
-  returns no `ApplyResult`, so no rollback token is issued for that attempt. The executor should
-  `verify` and restore from its own pre-change record.
+- **Failure after the PUT is restored by the connector.** If anything fails once the PUT was sent
+  (`Failed`/`Canceled` provisioning, or a poll timeout), `apply` makes a best-effort restore PUT
+  of the prior model (sku, tags, `raiPolicyName` and `versionUpgradeOption` preserved), polls it,
+  and raises a non-retryable `capability_unavailable` error whose reason is
+  `apply_failed_restored` (restore settled) or `apply_failed_restore_failed` (restore did not;
+  the deployment may still be on the new model and needs operator attention). The original cause
+  is kept in the error detail. The executor must not re-apply after either reason. No
+  `ApplyResult` or rollback token is returned in these cases. The live script mirrors this:
+  once apply was attempted it always rolls back from the pre-read model unless the connector
+  reported `apply_failed_restored`, and writes evidence on every approved-path outcome.
 - **Commercial availability is `unverified`** in the capability matrix
   (`foundry.deployment_write.commercial.global.any`) until this gate runs.
