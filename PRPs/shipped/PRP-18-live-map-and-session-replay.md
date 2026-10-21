@@ -1,9 +1,11 @@
 ---
 name: prp-18-live-map-and-session-replay
-status: active
+status: shipped
 review: required
 created: 2026-10-08
 started: 2026-10-21
+shipped: 2026-10-21
+pr: 85
 branch: prp-18-live-map-and-session-replay
 model: sonnet
 phase: 3
@@ -255,10 +257,50 @@ Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D 
 | 6 | merged | worktree-agent-a67cd6d6950fe6991 | sonnet | 58285e8 (dispatched early, in parallel with the item 3 rework: it measures event to WS delta receipt, so it depends on item 1 in practice); orchestrator re-run: only tests/load/map_freshness/ + docs/evidence/G07/map/, ruff + format clean, pyright 0 errors, unmarked 1 passed (9.8 s), `-m integration` on the compose Cosmos emulator 1 passed; emulator-unreachable `pytest.fail` path verified by reading only (emulator_env() pins the endpoint; shared emulator not stopped); measured p95 in-memory 2.003 s, emulator 2.028 s, 60 samples each, target p95 <= 10 s shown beside, dominated by the 2 s poll interval; zero cross-domain deltas asserted; reviewer APPROVED (follow-ups: drain briefly before close to catch late foreign deltas, hour-bucket boundary can reset frequency and flake, weak p50 >= 0 assertion, note p95 of 60 samples is near max); merge 1954c5b; post-merge unmarked 1 passed, `-m integration` map_freshness + integration/map 4 passed; orchestrator added fps-run1..3.json + README frame-rate section and PRP-18 notes on the G07/G12 rows in docs/RESEARCH-AND-GATES.md | 2026-10-21 |
 | 7 | merged | worktree-agent-ad351e401d67bfedf | sonnet | 0b9a0a7; orchestrator re-run: only item 7 owned files, ruff + pyright 0 errors, test_app + openapi drift + tests/integration/map 22 passed, licences PASS (540), cosmograph 0 in package.json and lockfile, tsc clean, vitest app + replay 24 passed; implementer: Cosmos emulator `-m integration tests/integration/map` 3 passed, Playwright smoke + dashboards 13 passed; openapi +3 paths, NOT purely additive (Coverage, Sampling components renamed module-qualified); mock API: viewport on DOMAIN_OK (cluster:agents, cursor page-2/page-3), 2000-node perf on DOMAIN_MAP_PERF or fixture=perf, replay traces trace-e2e-complete/-gap/-sampled/-late; reviewer APPROVED (follow-ups: mock 404 body not problem+json, graphology-types if item 3 needs it, production bootstrap of app.state still OPEN); merge c6bb582; post-merge 258 passed, licences PASS, tsc clean, vitest 24 passed | 2026-10-21 |
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-21
+- Merged commits: PR #85, merge `3d14d00` into main. Item merges on `prp-18-live-map-and-session-replay`: item 2 `c248fd7`, item 1 `5ed083b` (fix-forward `e673459`), item 5 `ef8543f`, item 7 `c6bb582`, item 4 `5bdd395`, item 3 `cc75028`, orchestrator seam fix `5a0622c`, item 6 `1954c5b`, evidence `12c163a`. CI on PR #85: 21 checks passed (2 licence-register regeneration jobs skipped, nothing to regenerate). Local `verify-gates -Mode full`: PASS (6173 passed, 95 deselected).
 - Deviations from blueprint and why:
-- Descoped items:
-- Measured fps and hardware:
-- Measured freshness p95 and environment (or OPEN):
-- Follow-ups:
+  - D1: new item 7 owns the shared hookup files (router registry, OpenAPI export, app-state revocation wiring, frontend deps and lockfile, `main.tsx`, `workspaceNav.ts`, mock API, `tests/integration/map`), because no item owned them.
+  - D2: map, table and replay require the existing `data.read`; no new permission constant (PRP-06 owns that file).
+  - D3: people are always pseudonymized; there is no reveal path (see Follow-ups).
+  - D4: item 7 created placeholder map and map-table route exports, so items 3 and 4 never edited the shared app files. The composition-root test is in-process and unmarked, with a Cosmos twin marked `integration`, because no production composition root wires authz or aggregates (`main.py` wires ingest and scan only, as in PRP-14).
+  - Item 6 was dispatched in parallel with the item 3 rework: it measures event to WebSocket receipt, so in practice it depends only on item 1.
+  - Item 3's rework also took a non-blocking perf follow-up (cached observed-edge ids), because the fps margin was thin.
+  - Orchestrator fix `5a0622c` added path-only `paths.ts` modules after the post-merge run found the map-table tests loading sigma (WebGL) through the map index, plus a map/map-table import cycle.
+  - Fix rounds: item 1 (WebSocket teardown race, ~1 in 3 runs), item 4 (focus lost after the last "Load more"), item 3 (one review rework: stale data animated as live).
+  - Shipped wire shapes are additive to the wire contract: extra WebSocket messages (`subscribed`/`unsubscribed`/`pong`) and close codes 1009/1011/1013; deltas are one domain-level cluster node with empty edges; per-node metrics are mostly null with health `unknown`, because aggregates are domain-level; replay list `{items, next_cursor}`; extra gap/span/completeness fields; `tool.name` null.
+  - `openapi.json` is not purely additive: `Coverage` and `Sampling` were renamed to module-qualified names.
+- Descoped items: none. Not built, per D3 and "NOT building": identity reveal with scoped permission and audit; a production `app.state` bootstrap for authz, aggregates, catalog and the trace reader.
+- Measured fps and hardware: headed Chromium 156 (Playwright) on AMD Ryzen 9 5950X 16C/32T, 128 GB, NVIDIA GeForce RTX 5090 via ANGLE D3D11 (WebGL 2), Windows 10.0.26300. Scene: 2000 nodes, 4000 edges, 1334 animated, 5 s window, camera moving. Three runs on `bb9040c`: fps mean 41.84 / 41.03 / 38.57; p5 29.94 / 30.03 / 24.04. The >= 30 fps target is met on the mean and not at the p5 tail. Headless SwiftShader gives ~5 fps, which is not a hardware result. Evidence: `docs/evidence/G07/map/fps-run{1,2,3}.json` and `README.md`.
+- Measured freshness p95 and environment (or OPEN): event-to-view p95 is 2.003 s in-memory and 2.028 s on the compose Cosmos vNext emulator. Each run took 60 samples across 3 domains and 6 scoped subscribers at 5 events/s, with the 2 s poll interval dominating. The target is p95 <= 10 s, a PRD planning target. Event Hubs transport and billing freshness are excluded. Bounded feasibility only (`docs/evidence/G07/map/p95*.json`). G07 is OPEN: no live Commercial run (`NS_LIVE_APPROVED=1` not set), and sized profiles are PRP-21. G12 is OPEN, with emulator-vs-live deltas recorded on its row.
+- Follow-ups (non-blocking, from reviews):
+  - Viewport and gateway:
+    - Batch viewport edge lookups (a 2000-node page takes ~15 s in-memory).
+    - Make the gateway pump sleep `min(poll, refresh)`.
+    - Add a slow-consumer test.
+    - Vet WebSocket error reasons for token text.
+    - Document send-time scope staleness (up to `refresh_seconds`).
+  - Map renderer:
+    - Guard `onDelta` after a revoke.
+    - Add tests for close codes 1009/1011/1013.
+    - Fade edges with an old `last_observed_at`.
+    - Add a lineage route to link from the panel.
+  - Table:
+    - Fix focus theft during `loadMore`.
+    - Fix a stale `activeKey` leaving no tabbable row.
+    - Make per-cluster errors retryable.
+    - Add e2e for ArrowRight/Left, End, 401 and 503.
+  - Replay:
+    - Make the import ban cover relative imports and `importlib`.
+    - Use generic `missing_parent` text.
+    - Fix duplicate gap-badge React keys.
+    - Index the archive instead of a full scan.
+  - Mock API: return a problem+json 404.
+  - Freshness test:
+    - Drain before close.
+    - Fix the hour-bucket boundary flake risk.
+    - Strengthen the p50 assertion.
+  - Production composition root for `app.state`.
+  - Reveal-with-audit for people.
+  - Cross-replica revocation is bounded by TTL plus one interval; it is not exercised end to end.
+  - The emulator-unreachable fail path was verified by reading only.

@@ -99,6 +99,17 @@ All notable changes to this project are documented here. The format follows
   advisory mode for read-only or Government targets, and a confirmation dialog showing exact
   target, version, diff and expiry. G05 stays OPEN (live swap not run); production action
   execution remains blocked.
+- Live map and session replay (PRP-18): scoped WebSocket gateway at `/api/v1/realtime/ws` fed
+  by hot aggregates, with `ns.bearer` subprotocol auth, send-time scope filtering, per-session
+  budgets and revocation fan-out that closes sockets (4403). Bounded viewport API at
+  `/api/v1/map` (2000-node cap, kind clusters, paginated expansion, pseudonymized people,
+  coverage and lag). sigma.js 4 + graphology WebGL map that animates observed edges only while
+  the session is live and coverage is fresh, with reduced motion, plus an accessible treegrid
+  table on the same API. Read-only trace replay at `/api/v1/replay` with gap, sampling and
+  late-span labels and a static ban on action, executor and connector imports. Measured, not
+  guaranteed: freshness p95 about 2 s on emulators (poll-interval bound) against a 10 s target;
+  38.6-41.8 fps mean at 2k nodes on one documented workstation, with p5 below 30 fps. G07 stays
+  OPEN (no live run).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
