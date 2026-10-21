@@ -246,11 +246,11 @@ Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-21 |
-| 2 | todo | | sonnet | | 2026-10-21 |
+| 1 | in-progress | (worktree agent) | sonnet | dispatched wave A | 2026-10-21 |
+| 2 | review | worktree-agent-a607026f270842696 | sonnet | 7584988; orchestrator re-run: only map/ + tests/map/ touched, ruff + format clean, pyright 0 errors, map + test_app + openapi drift 33 passed; deviations: per-node metrics null (aggregates are domain-level), list_entities for listing, person id = pseudonym; open: one neighbors walk per node (~15s per 2000-node page in-memory) | 2026-10-21 |
 | 3 | todo | | sonnet | | 2026-10-21 |
 | 4 | todo | | sonnet | | 2026-10-21 |
-| 5 | todo | | sonnet | | 2026-10-21 |
+| 5 | in-progress | (worktree agent) | sonnet | dispatched wave A | 2026-10-21 |
 | 6 | todo | | sonnet | | 2026-10-21 |
 | 7 | todo | | sonnet | | 2026-10-21 |
 
