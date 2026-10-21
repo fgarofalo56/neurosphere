@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-18-live-map-and-session-replay](active/PRP-18-live-map-and-session-replay.md) |  | 5/7 (71%) | in-progress 1, review 1, merged 5 | ? / ? | required |
+| [prp-18-live-map-and-session-replay](active/PRP-18-live-map-and-session-replay.md) |  | 6/7 (85%) | in-progress 1, merged 6 | ? / ? | required |
 
 ## Backlog
 
