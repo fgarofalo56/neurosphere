@@ -1,7 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
+import { actionsRoutes } from "../features/actions";
 import { dashboardRoutes } from "../features/dashboards";
+import { reviewRoutes } from "../features/review";
 import { reconciliationRoutes } from "../features/reconciliation";
 import { qualityRoutes } from "../features/quality";
 import { recommendationRoutes } from "../features/recommendations";
@@ -25,6 +27,8 @@ const appRoutes = [
   ...reconciliationRoutes,
   ...recommendationRoutes,
   ...qualityRoutes,
+  ...actionsRoutes,
+  ...reviewRoutes,
 ];
 
 const container = document.getElementById("root");

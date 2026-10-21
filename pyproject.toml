@@ -32,6 +32,7 @@ dev = [
   "neurosphere-connector-otel-generic",
   "neurosphere-connector-azure-monitor",
   "neurosphere-connector-foundry",
+  "neurosphere-connector-foundry-actions",
   "neurosphere-connector-azure-billing",
 ]
 
@@ -44,6 +45,7 @@ neurosphere-connector = { workspace = true }
 neurosphere-connector-otel-generic = { workspace = true }
 neurosphere-connector-azure-monitor = { workspace = true }
 neurosphere-connector-foundry = { workspace = true }
+neurosphere-connector-foundry-actions = { workspace = true }
 neurosphere-connector-azure-billing = { workspace = true }
 
 [tool.uv.workspace]

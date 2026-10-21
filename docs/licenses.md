@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 131 packages
+## Python (uv.lock) - 132 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -42,7 +42,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | cachecontrol | 0.14.4 | Apache-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| certifi | 2026.7.22 | MPL-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
+| certifi | 2026.10.19 | MPL-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | cffi | 2.1.1 | MIT-0 | runtime | no EOL published locally; Dependabot tracks releases |
 | charset-normalizer | 3.5.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | click | 8.5.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
@@ -83,6 +83,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | neurosphere-connector-azure-billing | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-azure-monitor | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-foundry | 0.0.0 | first-party | first-party | workspace member |
+| neurosphere-connector-foundry-actions | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-otel-generic | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-contracts | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-core | 0.0.0 | first-party | first-party | workspace member |

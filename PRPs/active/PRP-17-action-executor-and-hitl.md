@@ -1,0 +1,279 @@
+---
+name: prp-17-action-executor-and-hitl
+status: active
+review: required
+created: 2026-10-08
+started: 2026-10-20
+branch: prp-17-action-executor-and-hitl
+model: opus
+phase: 3
+ns: NS-04, NS-06
+depends_on: PRP-04, PRP-06, PRP-09, PRP-10
+wave: W6
+absorbs: P3.2, P3.4, G05
+---
+
+# PRP-17: Action executor and human-in-the-loop workflow
+
+## Goal
+Ship the single durable action plane and the HITL workflow around it: an intent store and state machine, an executor worker that rechecks permission and target version at execution time, a maker-checker approval workflow with SLA timers and notification interfaces, the shared action and review-queue API, a Foundry model-swap write connector, and the reviewer and confirmation UI. It is for stewards, reviewers and agent owners who change real systems. It is Opus work with required review because it is the highest-risk code path (authorization, idempotency, rollback). It lands in W6 after identity (PRP-06), the write-connector interface (PRP-09) and the catalog (PRP-10). The copilot (PRP-19) and MCP (PRP-22) later reuse this executor unchanged.
+
+> Route low-confidence relationships, disputed evaluations, recommendation reviews and policy exceptions to scoped reviewers. Persistent states: pending, assigned, approved, rejected, expired, escalated, executed and failed; SLA timers, reassignment, notifications and immutable decisions. Separate insight review from maker-checker approval of executable changes; prohibit self-approval where configured.
+
+> The same action API serves copilot, recommendation buttons, REST and MCP. Recheck current resource permission and policy at execution; bind confirmation to target/version/diff and expiry. Idempotent execution, approvals, dry-run, audit before/after, canary, rollback and emergency disable are mandatory. External systems need a supported write connector and delegated credentials; unsupported actions are advisory, not catalog-only pretend changes.
+
+Binding contract from PRP.md section 3:
+
+> Action states: drafted -> validated -> awaiting_confirmation -> awaiting_approval -> executing -> succeeded/failed/rolled_back/expired. Intent contains actor, target/version, proposed diff, prerequisite results, evidence, confirmation hash/expiry and idempotency key. Execution rechecks permission/current target and delegates to a supported connector. Durable audit and safe recovery are part of the contract.
+
+## Acceptance criteria
+- [ ] Item 1: A duplicate request with the same idempotency key cannot double-execute; an expired confirmation is rejected; only allowlisted state transitions succeed.
+- [ ] Item 2: Given a permission revoked after approval, When the executor runs, Then execution is blocked and audited; a failed verification triggers rollback and the rollback test passes; the emergency disable flag stops all execution.
+- [ ] Item 3: A maker cannot approve their own change when policy forbids; an SLA breach escalates; decisions are immutable (update/delete rejected).
+- [ ] Item 4: Draft, validate, confirm, approve and status endpoints and the review queue API all call the one executor; policy store outage returns 503.
+- [ ] Item 5: A supported Foundry target is changed and verified in the operator-approved live gate; against a read-only or unsupported target the action is advisory and no state is changed anywhere.
+- [ ] Item 6: A button action and the equivalent REST call produce an identical intent hash; confirmation dialog shows exact target, version, diff and expiry.
+- [ ] PRP exit: items 1-6 green under `verify-gates -Mode full`; reviewer verifies no code path changes catalog metadata as a stand-in for a real change; G05 live status recorded.
+
+## Clarifications (decided)
+| # | Question | Options offered | Decision |
+|---|---|---|---|
+| 1 | Model and review | sonnet; opus | opus, review required (D6): authorization and irreversible-change risk |
+| 2 | One executor or per-surface | per surface; one | One durable executor for button, chat, REST and MCP. All surfaces build an `ActionIntent` and compute the same intent hash; surfaces differ only in `channel` metadata. Superseded in part by delta D1 (2026-10-20): the hash is the PRP-01 `confirmation_hash` (target, target_version, proposed_diff, confirmation_expires_at, actor; channel excluded), not an actor-independent hash with an expiry bucket |
+| 3 | Live gate | mock only; operator-approved live | Foundry swap live verification is operator-approved (D7) with `NS_LIVE_APPROVED=1` against the Commercial subscription. Without it G05 stays OPEN and the connector runs in advisory mode |
+| 4 | Read-only connectors | execute anyway; advisory | Advisory: the intent can be drafted and reviewed but never executes, and nothing is changed in the catalog to simulate a change |
+| 5 | Maker-checker | always; policy-configured | Policy-configured per action type; when self-approval is forbidden the maker cannot approve, and a second distinct approver with the right scope is required. Insight review (NS-04 reviewer queue) is separate from maker-checker approval of executable changes |
+| 6 | Notifications | build full delivery; interface | A `Notifier` interface with stubbed email and Teams adapters that record sends to the audit log. Real delivery is out of scope |
+| 7 | Timers | cron; durable timers | Durable timers in `hitl_timers` worker for assignment, SLA, escalation, reassignment and expiry; restart-safe from stored deadlines |
+| 8 | Confirmation binding | token only; hash of diff | Confirmation hash binds target, version, diff and expiry; a changed target version invalidates it (`stale_version`) |
+| 9 | Decision immutability | editable; append-only | Decisions are append-only with hash-chained audit via PRP-06 audit store; corrections are new records |
+| 10 | Canary and rollback | optional; mandatory | Mandatory per NS-06: dry-run, canary, verify, rollback and emergency disable on every executable connector path |
+| 11 | Government | assume parity; matrix-gated | Connector availability read from the capability matrix; Foundry write support in Government is unverified, so the action is disabled with reason there |
+| 12 | Credentials | stored; delegated | Delegated credentials via vault reference or on-behalf-of; the executor never holds user secrets in intent records or logs |
+| 13 | HITL queues for other PRPs | build per PRP; shared | One shared review queue API consumed by catalog conflicts (PRP-10), disputed evaluations (PRP-16), recommendation reviews (PRP-15) |
+
+## Context manifest
+
+### Files that matter
+- `PRP.md` - section 3 (action states and intent fields, quoted above), sections 1-2.
+- `docs/PRD.md` - NS-04 and NS-06 text; NS-03 model-swap sentence.
+- `docs/ARCHITECTURE.md` - action plane and worker diagrams.
+- `docs/RESEARCH-AND-GATES.md` - G05, G12, G01 rows; Foundry Government notes.
+- `docs/adr/0002-stack-pins.md` - Python and frontend pins.
+- `docs/DECISIONS-LOG.md` - D6, D7, D8, D11.
+- `pyproject.toml`, `docker-compose.yml`, `infra/compose/eventhubs.config.json`, `.env.example`, `.claude/hooks/config.ps1`, `scripts/validate_planning.py`.
+- Created by PRP-01: `packages/contracts/schemas/actions/` (`ActionIntent`, state enum, `ApprovalDecision`), `.../audit/`, `.../errors/`.
+- Created by PRP-04: `frontend/src/design-system/`, `frontend/src/api/`, `frontend/src/auth/`.
+- Created by PRP-05: `neurosphere_core.errors`, worker runtime base (graceful shutdown, checkpoints), `neurosphere_core.clients`.
+- Created by PRP-06: `neurosphere_core.auth.scope`, `neurosphere_api.authz` (`require(permission)`), `neurosphere_core.audit`, `neurosphere_core.auth.revocation`.
+- Created by PRP-09: `connectors/sdk-python/neurosphere_connector/write/` (`WriteConnector`: dry-run, apply, verify, rollback, advisory flag).
+- Created by PRP-10: catalog repository, curation review-queue interface, `neurosphere_api.catalog.curation`.
+
+### Patterns to match
+- Pydantic v2 models with `model_config = ConfigDict(extra="forbid")`, generated from `packages/contracts`.
+- FastAPI routers per module under `services/api/neurosphere_api/<module>/router.py` (`actions/`, `hitl/`).
+- Async Azure SDK clients from `packages/core/neurosphere_core/clients`; error taxonomy exceptions from `neurosphere_core.errors` (`stale_version`, `forbidden`, `dependency_transient`, `capability_unavailable`).
+- State machine as an explicit allowlist table; invalid transitions raise, they are never coerced.
+- Tests beside packages plus cross-package suites in `tests/`; `pytest.mark.live` and `pytest.mark.integration` markers (declared in root `pyproject.toml`).
+- TypeScript strict with `@fluentui/react-components`; Vitest + Testing Library; Playwright under `frontend/tests/e2e`.
+
+### Conventions
+- ruff config in root `pyproject.toml` (line 100, py312, S rules on); pyright standard; conventional commits; owned-file discipline.
+- Evidence under `docs/evidence/<gate>/`; live scripts under `scripts/gates/` refuse without `NS_LIVE_APPROVED=1`.
+- Forward slashes only in commands.
+
+### Gotchas
+- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
+- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
+- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
+- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
+- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
+- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
+- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
+- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
+- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
+- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
+- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
+- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
+- Hidden navigation is not authorization; the API must deny.
+- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
+- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
+- PRP-specific: the intent hash must not include the surface (button, chat, REST, MCP) or the actor session, or the same logical change hashes differently per surface. PRP-19 and PRP-22 tests assert equality against this PRP's hash.
+- PRP-specific: recheck permission and target version at execution time, not only at confirmation. Approval is not a standing grant: revocation (PRP-06) between approval and execution must block.
+- PRP-specific: idempotency keys are scoped per actor and intent; a retry after a crash in `executing` must resume through verify, not re-apply. Safe recovery means a restarted worker reads the stored state and never repeats a non-idempotent apply.
+- PRP-specific: never change catalog metadata to represent a model swap. The only success evidence is verification against the target system through the connector.
+- PRP-specific: a read-only connector reports `advisory=true`; the API must refuse `confirm` and `approve` transitions for advisory intents with `capability_unavailable`.
+- PRP-specific: self-approval prohibition compares authenticated principal ids, not display names or session ids. Pseudonymized ids are still compared on the real principal server-side.
+- PRP-specific: Foundry deployment-swap API behavior and Government availability are unverified. Do not invent request shapes; use only documented operations and record the exact API version used in the evidence file.
+- PRP-specific: notification adapters are stubs. A recorded send is not proof of delivery; never mark an escalation as notified-and-read.
+
+### External references
+- Foundry models and Agent Service in Azure Government: docs/RESEARCH-AND-GATES.md "Infrastructure and tooling" (observed 2026-10-08 per the register).
+- Cosmos DB hierarchical partition keys (intent store partitioning): https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys (observed 2026-04-27).
+- Cosmos DB vNext Linux emulator limits (no sprocs or triggers, so no transactional batch logic outside documented APIs): https://learn.microsoft.com/azure/cosmos-db/emulator-linux (GA June 2026).
+- MCP authorization and versioning (future consumer of this executor): https://modelcontextprotocol.io/specification/versioning (spec 2026-07-28, per docs/adr/0002-stack-pins.md).
+- Stack pins: docs/adr/0002-stack-pins.md (observed 2026-10-08).
+
+## Implementation blueprint
+
+### Item 1 - action-state-machine  [P]
+- Deliverable: durable intent store, allowlisted state machine (drafted to expired), idempotency key handling, and confirmation hash bound to diff, version and expiry.
+- Owned files (may edit): `packages/core/neurosphere_core/actions/`.
+- Must NOT touch: `packages/core/neurosphere_core/hitl/`, `services/workers/neurosphere_workers/actions/`, `services/api/neurosphere_api/actions/`, `packages/contracts/`, root `pyproject.toml`, `docker-compose.yml`, `docs/RESEARCH-AND-GATES.md`.
+- Depends on: none.
+- Acceptance criteria:
+  - Duplicate request with the same idempotency key returns the original intent and cannot double-execute.
+  - Expired confirmation is rejected; a changed target version invalidates the confirmation with `stale_version`.
+  - Transitions outside the PRP.md section 3 allowlist raise; the intent hash is identical across `source` values.
+- Pattern references: generated `ActionIntent`; errors taxonomy; ETag concurrency.
+- Tests to write: `packages/core/tests/actions/test_state_machine.py`, `packages/core/tests/actions/test_intent_hash.py`, `packages/core/tests/actions/test_idempotency.py`.
+
+### Item 2 - executor-worker
+- Deliverable: executor that rechecks permission and target version, delegates to a connector, runs canary, verify and rollback, and honors an emergency disable flag.
+- Owned files (may edit): `services/workers/neurosphere_workers/actions/`.
+- Must NOT touch: `packages/core/neurosphere_core/actions/`, `services/workers/neurosphere_workers/hitl_timers/`, `services/workers/neurosphere_workers/runtime/`, `connectors/`, `services/api/`, root `pyproject.toml`.
+- Depends on: Item 1.
+- Acceptance criteria:
+  - Permission revoked after approval blocks execution and writes a denied audit record.
+  - Failed verify triggers rollback; rollback test passes; emergency disable stops execution without data loss.
+  - Worker crash during `executing` resumes via verify and never re-applies (fault-injection test).
+  - Audit records written before and after each apply.
+- Pattern references: worker runtime base and checkpoint interface (PRP-05); `WriteConnector` protocol (PRP-09); revocation (PRP-06).
+- Tests to write: `services/workers/tests/actions/test_recheck.py`, `services/workers/tests/actions/test_rollback.py`, `services/workers/tests/actions/test_crash_recovery.py`, `services/workers/tests/actions/test_emergency_disable.py`.
+
+### Item 3 - hitl-workflow  [P]
+- Deliverable: HITL domain logic and timers for assignment, SLA, escalation, reassignment and expiry; maker-checker; self-approval prohibition; immutable decisions; `Notifier` interface with stubbed email and Teams adapters.
+- Owned files (may edit): `services/workers/neurosphere_workers/hitl_timers/`, `packages/core/neurosphere_core/hitl/`.
+- Must NOT touch: `packages/core/neurosphere_core/actions/`, `services/workers/neurosphere_workers/actions/`, `services/api/neurosphere_api/hitl/`, `packages/contracts/`, root `pyproject.toml`.
+- Depends on: none.
+- Acceptance criteria:
+  - Maker cannot approve their own change when policy forbids (compared on real principal id).
+  - SLA breach escalates; timers survive a worker restart.
+  - Decision update or delete is rejected; corrections are new records.
+  - Stub adapters record sends to audit and perform no network calls.
+- Pattern references: audit store (PRP-06); worker runtime base.
+- Tests to write: `packages/core/tests/hitl/test_maker_checker.py`, `services/workers/tests/hitl_timers/test_sla_escalation.py`, `services/workers/tests/hitl_timers/test_restart_timers.py`.
+
+### Item 4 - action-and-hitl-api
+- Deliverable: shared action API (draft, validate, confirm, approve, status) and review queue API.
+- Owned files (may edit): `services/api/neurosphere_api/actions/`, `services/api/neurosphere_api/hitl/`.
+- Must NOT touch: `packages/core/neurosphere_core/actions/`, `packages/core/neurosphere_core/hitl/`, `services/api/neurosphere_api/catalog/`, `services/api/neurosphere_api/authz/`, root `pyproject.toml`.
+- Depends on: Items 1, 3.
+- Acceptance criteria:
+  - Every route builds an `ActionIntent` and enters the single executor path; a test asserts no alternative execution path exists.
+  - Advisory intents refuse `confirm` and `approve` with `capability_unavailable`.
+  - Policy store outage returns 503; insufficient scope returns 403; review queue is scope-filtered.
+- Pattern references: router per module; `require(permission)`; pagination models (PRP-05).
+- Tests to write: `services/api/tests/actions/test_action_api.py`, `services/api/tests/hitl/test_review_queue.py`, `tests/security/actions/test_single_executor_path.py`.
+
+### Item 5 - foundry-model-swap-connector  [P]
+- Deliverable: write connector implementing the PRP-09 `WriteConnector` protocol for a Foundry deployment swap; advisory mode when the target is read-only or unsupported.
+- Owned files (may edit): `connectors/reference/foundry-actions/`, `scripts/gates/g05_foundry_swap_live.py`, `docs/evidence/G05/`.
+- Must NOT touch: `connectors/sdk-python/`, `connectors/reference/foundry/`, `services/workers/neurosphere_workers/actions/`, `docs/RESEARCH-AND-GATES.md` (G05 row update goes in the completion note, not this item).
+- Depends on: none.
+- Acceptance criteria:
+  - Dry-run, apply, verify and rollback implemented; compatibility checks (capability, context, tools) precede apply.
+  - Against a read-only credential the connector reports `advisory=true` and performs zero writes.
+  - Operator-approved live gate changes a supported target and verifies it; evidence recorded under `docs/evidence/G05/`; script refuses without `NS_LIVE_APPROVED=1`.
+- Pattern references: `WriteConnector` protocol; credentials as vault references.
+- Tests to write: `connectors/reference/foundry-actions/tests/test_swap_connector.py`, `connectors/reference/foundry-actions/tests/test_advisory_mode.py`, `tests/unit/gates/test_g05_live_refuses.py`.
+
+### Item 6 - review-and-action-ui
+- Deliverable: reviewer queue, diff and confirmation dialog with expiry countdown, and action status views.
+- Owned files (may edit): `frontend/src/features/actions/`, `frontend/src/features/review/`.
+- Must NOT touch: `frontend/src/api/`, `frontend/src/design-system/`, `frontend/src/features/workspaces/`, `services/api/`, root `pyproject.toml`.
+- Depends on: Item 4.
+- Acceptance criteria:
+  - Button action and REST call produce an identical intent hash (e2e test compares).
+  - Dialog shows exact target, version, diff and expiry; expired or stale confirmation cannot be submitted.
+  - Hidden controls are not relied on: a Viewer deep link to approve receives API 403 and a clear message.
+  - Advisory actions show "advisory only" and no execute control; axe clean.
+- Pattern references: Fluent UI v9; typed API client from PRP-04; error taxonomy mapping.
+- Tests to write: `frontend/src/features/actions/actions.test.tsx`, `frontend/src/features/review/review.test.tsx`, `frontend/tests/e2e/actions.spec.ts`.
+
+## Validation gates
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
+python scripts/validate_planning.py
+```
+Feature-specific:
+```
+docker compose up -d --wait
+python -m pytest packages/core/tests/actions packages/core/tests/hitl services/workers/tests/actions services/workers/tests/hitl_timers services/api/tests/actions services/api/tests/hitl
+python -m pytest -m integration tests/integration/actions
+python -m pytest tests/security/actions
+python -m pytest connectors/reference/foundry-actions/tests
+pnpm --filter frontend test
+pnpm --filter frontend exec playwright test frontend/tests/e2e/actions.spec.ts
+NS_LIVE_APPROVED=1 python scripts/gates/g05_foundry_swap_live.py    # operator-approved, requires NS_LIVE_APPROVED=1
+```
+
+## Live and open gates
+- G05 (model swap compatibility): item 5 live run, if approved, supplies evidence of a changed and verified supported target plus compatibility, regression, canary and rollback results; this NARROWS G05 for the tested target only. Without it G05 stays OPEN and production action execution is blocked per the register.
+- G12 (emulator parity): record behavior of the intent store on the Cosmos emulator versus live (no sprocs or triggers, no RU accounting).
+- G01: Foundry write support in Government is unverified; no evidence closes it here.
+- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+
+## NOT building
+- Copilot-driven action drafting (PRP-19) and MCP action tools (PRP-22); they call this executor.
+- Real email or Teams delivery; only stubbed adapters.
+- Write connectors other than Foundry swap; GitOps, APIM and other connectors are later work.
+- Automatic merging of duplicate agents (NS-03 forbids it).
+- Recommendation generation (PRP-15) and evaluation scoring (PRP-16); they only enqueue reviews.
+- Contract changes to `ActionIntent` or the state enum; request them through PRP-01.
+
+## Definition of Ready check
+- [x] Every item has owned files declared
+- [x] Every item has acceptance criteria and pattern references
+- [x] Gates are executable commands, not intentions
+- [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-20 with seven deltas signed off by the operator, because the repo contradicted the blueprint. G05 live run: operator chose to leave G05 OPEN this PRP (script built, refusal tested, no Azure resources).
+
+- D1: the hash is the PRP-01 `confirmation_hash` exactly as `packages/contracts/schemas/actions/v1/confirmation-hash.json` defines it (RFC 8785 JCS + SHA-256 over target, target_version, proposed_diff, confirmation_expires_at, actor; channel, idempotency_key, state, evidence, prerequisite_results excluded; must reproduce the file's `test_vector`). Same actor, any channel, same hash; the exact expiry is hashed, not a bucket. Clarification 2 is updated. Contracts are not changed.
+- D2: `ActionIntent.actor` carries only a pseudonym, so item 1 adds a server-side `StoredIntent` envelope: the `ActionIntent` plus the real `principal_id`, `customer_id`, `domain_id`, idempotency scope `(principal_id, idempotency_key)`, store ETag, `payload_digest` (for key-reuse detection) and the execution/apply record. Self-approval, permission rechecks and idempotency compare the real principal id. The envelope never leaves the server; API views expose `intent` and derived flags only.
+- D3: the error taxonomy (`unauthorized, forbidden, capability_unavailable, stale_version, rate_limited, invalid_schema, dependency_transient`) has no `confirmation_expired` or `validation_error` code (corrected 2026-10-20: `validation_error` is only a problem-details `$def`; invalid input is `invalid_schema`). Expired confirmation is `stale_version` reason `confirmation_expired`; changed target version is `stale_version` reason `target_version_changed`; hash mismatch is `invalid_schema` reason `confirmation_hash_mismatch`; advisory intents refuse confirm/approve with `capability_unavailable` reason `advisory_connector`; reused idempotency key with a different payload is `invalid_schema` reason `idempotency_key_reused`; emergency disable is `capability_unavailable` reason `emergency_disabled`.
+- D4: the PRP-09 `WriteConnector` has no canary method and the documented Foundry deployment PUT has no traffic split. Canary is an executor phase: recheck -> dry_run -> audit(before) -> apply -> canary probe (pluggable `CanaryProbe`; default records `canary: verify_only`) -> verify -> audit(after) -> succeeded. Canary or verify failure -> rollback -> `rolled_back` (rollback failure -> `failed` reason `rollback_failed`). G05 evidence states the swap is in place with no traffic-split canary.
+- D5: `services/api` and `services/workers` depended only on `neurosphere-core`, and the connector SDK depends on core (core cannot import it). The orchestrator adds `neurosphere-connector` to both service pyprojects before dispatch. `neurosphere_core.actions`/`hitl` stay connector-agnostic. The API's validate step calls `dry_run` and reads `advisory` through a `WriteTargetRegistry` on `app.state`; only the worker `ActionExecutor` calls `apply`/`rollback` (item 4's security test asserts it repo-wide).
+- D6: test dirs renamed to names unique across `packages/*/tests` and `services/*/tests` (PRP-16 shadowing clash): `packages/core/tests/actions/`, `packages/core/tests/hitl/`, `services/workers/tests/action_executor/`, `services/workers/tests/hitl_timers/`, `services/api/tests/actions_api/`, `services/api/tests/hitl_api/`. New item 7 owns shared wiring: `services/api/neurosphere_api/routers.py`; `services/api/openapi.json` regeneration; `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`; action/review fixtures in `frontend/tests/mock-api/server.ts`; Playwright spec at `frontend/tests/e2e/actions/actions.spec.ts` (directory convention, replaces `frontend/tests/e2e/actions.spec.ts`); the in-process slice `tests/integration/actions/` (except item 1's Cosmos store test) including the button-vs-REST hash equality test fed by item 6's request-builder fixture; root `pyproject.toml` uv source/dev entry for the new connector; `docs/evidence/G12/actions/README.md`; G05/G12 rows in `docs/RESEARCH-AND-GATES.md`.
+- D7: item 1 ships a Cosmos intent store (ETag-conditional replace, hierarchical key `/customer_id`,`/domain_id`) plus an in-memory store, with an emulator test `tests/integration/actions/test_intent_store_cosmos.py` (G12 evidence). Item 3 ships a HITL store protocol plus in-memory implementation; restart safety is tested by rebuilding the timer worker over the persisted store. Decisions are append-only through the PRP-06 hash-chained audit store. A Cosmos HITL store is a follow-up (OPEN). Item 5 also owns new `foundry.deployment_write.*` rows in `packages/core/neurosphere_core/capabilities/data/foundry.yaml` (Commercial `unverified`; Government disabled with reason, G01).
+
+Waves: 0 = orchestrator skeleton (service deps, `uv.lock`, this board); 1 = items 1, 3, 5 in parallel; 2 = item 2 (after 1) and item 4 (after 1, 3); 3 = item 6 (after 4); 4 = item 7 (after 1-6). Models: items 1-4 opus, items 5-7 sonnet, confirmation passes haiku; every item gets one reviewer pass.
+
+### Wire contract (decided at approval; items 4, 6, 7 code against it)
+Domain is a path segment authorized against the server-derived `IdentityScope` (`require(..., domain_from_path("domain"))`); out of scope 403, policy store outage 503 (problem+json). Lists are `{ "items": [...], "next_cursor": str|null }`.
+
+- `POST /api/v1/actions/domains/{domain}/intents` (`action.propose`), body `{action_kind, target: TargetRef, target_version, proposed_diff: ProposedDiff, evidence: [EvidenceRef] = [], idempotency_key, channel: "button"|"chat"|"rest"|"mcp" = "rest", dry_run: bool = false}` -> 201 `ActionView`; replay with the same principal + key + payload -> 200 with the original intent.
+- `POST .../intents/{intent_id}/validate` (`action.propose`) -> prerequisites + connector `dry_run` -> `validated` or `failed`.
+- `POST .../intents/{intent_id}/confirmation` (`action.propose`, maker only) -> `awaiting_confirmation`, sets `confirmation_hash` + `confirmation_expires_at` (default TTL 15 min).
+- `POST .../intents/{intent_id}/confirm` (`action.execute`, maker only), body `{confirmation_hash}` -> recheck permission + target version -> `awaiting_approval` (opens a maker-checker review item) or `executing` (handed to the executor).
+- `POST .../intents/{intent_id}/decisions` (`action.approve`), body `{decision: "approved"|"rejected", reason, confirmation_hash}` -> maker-checker via HITL, recheck -> `executing` or `failed`.
+- `GET .../intents/{intent_id}` and `GET .../intents?state=&cursor=&limit=` (`data.read`).
+- `GET /api/v1/actions/emergency-disable` (`data.read`) and `PUT` (`config.manage`), body `{disabled: bool, reason}`.
+- `ActionView = {intent: ActionIntent, advisory: bool, requires_approval: bool, self_approval_forbidden: bool, review_item_id: str|null, execution: {phase, canary: "passed"|"failed"|"verify_only"|null, verify_matched: bool|null, rolled_back: bool} | null}`.
+- `GET /api/v1/review/domains/{domain}/items?kind=&state=&cursor=&limit=` (`data.read`, then filtered: `maker_checker` items need `action.approve` on the domain, insight kinds need `catalog.curate`).
+- `POST /api/v1/review/domains/{domain}/items/{item_id}/assignment`, body `{assignee_principal_id: str|null}` (null = claim); `POST .../items/{item_id}/decisions`, body `{decision, reason, confirmation_hash?}` (a `maker_checker` item delegates to the same action approval service, never a second path).
+- `ReviewItemView = {item_id, kind: "maker_checker"|"relationship"|"evaluation_dispute"|"recommendation"|"policy_exception", state: ReviewItemState, domain_id, subject_ref, intent_id|null, assignee_pseudonym|null, sla_due_at, escalation_level, created_at, decisions: [ApprovalDecision]}`.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-af54a4999f517d062 | opus | 004913e; orchestrator re-run on branch: only owned files touched, ruff + format clean, pyright 0 errors, actions + import boundaries + tests/contracts 1861 passed 3 skipped (pre-existing node tooling skips), Cosmos emulator `-m integration tests/integration/actions` 8 passed, no connector/api/workers imports; API: `compute_confirmation_hash`, `StoredIntent` (principal_id hidden from repr), `ExecutionRecord` (+ `apply_may_have_happened()`), `IntentStore` + in-memory + `cosmos_store.CosmosIntentStore`, `ActionService(store, auditor, rechecker, execution_control, clock, id_factory)` (draft, record_validation, present_confirmation, confirm, decline, apply_approval, link_review_item, begin/recheck/record/finish_execution, expire_due), ports `PermissionRechecker`, `ActionAuditor`, `ExecutionControl` + `require_execution_enabled`; deviations: `InvalidSchemaError` via `ActionValidationError`, methods take `IntentKey` + `ActionCaller`, refusals (hash mismatch, caller denied, advisory) leave state unchanged while a revoked maker at approval/execution fails the intent, `unknown` prerequisite fails validation, payload digest excludes channel, each method enforces its exact source state (approval-bypass regression test); open: approval must land before confirmation expiry (item 4 passes a longer ttl when approval is required), kill-switch changes not audited in core; reviewer APPROVED (no blockers; follow-ups: `execution_control=None` silently skips the kill switch (item 2 makes it required), in-memory idempotency map is global across customers unlike Cosmos, `actor.on_behalf_of` not in payload digest, a failed after-audit surfaces an error although state changed, `record_validation` has no caller check, lease claims / `link_review_item` / kill-switch changes unaudited, one malformed due document aborts the `expire_due` sweep); merge f504351; post-merge: ruff clean, pyright 0 errors, packages/core + tests/contracts + foundry-actions + unit/capabilities 3135 passed, Cosmos emulator 8 passed, full-suite collection 5763 ok | 2026-10-20 |
+| 2 | merged | worktree-agent-a1aaea34acafb7d6c + worktree-agent-a5774ccb570f6b67f | opus | 9cd2870; orchestrator re-run on branch: only owned files touched, ruff + format clean, pyright 0 errors, services/workers + core actions + core auth + foundry-actions + import boundaries 894 passed in one session; only `services/workers/neurosphere_workers/actions/executor.py` calls `connector.apply`/`rollback`; API: `PolicyPermissionRechecker(cloud, policy_repository, revocation_checker, clock, store_timeout_seconds)`, `ActionExecutor(service, registry, *, execution_control (required), worker_id, action_connectors=DEFAULT_ACTION_CONNECTORS, canary, clock, lease)` -> `ExecutionReport` (succeeded/failed/rolled_back/deferred/skipped), `ActionExecutorWorker(executor, store)`, `CanaryProbe`/`VerifyOnlyCanary`; deviations: revoked maker fails `forbidden` reason `permission_revoked`; stale version fails via `finish_execution` without a separate denied audit; any live revocation entry denies (no token iat); policy rules copied from `ScopeDeriver._build` + `permits` with parity tests (no public token-free evaluator, auth not edited); worker has its own `DEFAULT_ACTION_CONNECTORS` table in `neurosphere_workers/actions/targets.py` (item 7 unifies with item 4's core table); fixed stored ApplyResult alias round-trip; open: outcome discovered by verify after a crash has no rollback token, no retry cap on policy outage; reviewer CHANGES REQUIRED: the lease (5 min) is not renewed during `connector.apply`, which can run longer for Foundry, so a second worker can finalize a landed swap as `failed` `apply_not_observed` (no rollback, after-audit lost; no double apply); rechecker parity with `ScopeDeriver._build` + `permits` CONFIRMED, kill switch, crash safety, audit and verify-only success CONFIRMED; follow-ups: version recheck passes the stored version (dry_run is the real check), transient pre-PUT error fails instead of retrying, a recovered `apply_failed_restore_failed` whose verify matches can end `succeeded`, parity tests lack other-cloud/customer membership and policy-changes-between-checks cases, crash during ARM provisioning ends `apply_not_observed` without deferral; rework 2f7295f (`_LeaseKeeper` renews the lease every `lease_renewal` (1 min) during `connector.apply`/`rollback`, stale renewal -> `skipped` `lease_lost` with no finalization, `_discover` defers `apply_window_open` until max(apply_started_at, last renewal) + lease, lease default 20 min must cover `max_connector_call` (15 min) and exceed 2 x renewal; crash-mid-apply recovery now waits ~20 min instead of 5; rework re-run on branch: ruff + format clean, pyright 0 errors, workers + core actions + foundry-actions 561 passed); Haiku confirmation CONFIRMED; merge c40bd4a; post-merge: ruff clean, pyright 0 errors, services/workers + packages/core + foundry-actions + tests/contracts 3557 passed, full-suite collection 5997 ok | 2026-10-20 |
+| 3 | merged | worktree-agent-a3cfe4fac8263fa49 + worktree-agent-aba50789ab727db8b | opus | b79d18f; orchestrator re-run on branch: only owned files touched, ruff + format clean, pyright 0 errors, hitl core + hitl_timers + import boundaries 139 passed, no network imports in `neurosphere_core.hitl`; API: `HitlService(store, decisions, audit, policies, authorizer, notifiers, id_factory)` with `open_item`/`assign`/`decide`/`mark_executed`/`mark_failed`/`apply_timers`, `HitlStore` + `InMemoryHitlStore`, `ReviewPolicyRegistry`, `ReviewerAuthorizer`, `DecisionLog` (update/delete -> `forbidden` `decision_append_only`), `EmailNotifierStub`/`TeamsNotifierStub` (`recorded` only), `HitlTimerWorker(service, clock, batch_limit)`; deviations: added `scope_hash`, Actor args and `maker_on_behalf_of_principal_id`; reasons `review_item_final`, `review_item_assigned_to_other`, `confirmation_hash_not_applicable`; escalation releases the assignee; decision appended before the ETag replace; reviewer CHANGES REQUIRED: on-behalf-of separation fails open (a maker_checker item with an agent maker whose `on_behalf_of` is set but no `maker_on_behalf_of_principal_id` lets the human behind the agent self-approve); rework also adds a secondary pseudonym-equality refusal so every emitted ApprovalDecision passes the PRP-01 `validate_maker_checker_separation`; follow-ups: item 4 must treat only `item.decision_id` as effective and mark other logged decisions superseded (race loser / timer), crash between replace and notify loses the notification (outbox before real delivery), `item_subject` digest still includes `assignee_principal_id`, a store outage during decide leaves orphaned decisions per retry; rework ae95389 (open refused for an on-behalf-of maker without a real on-behalf-of id, secondary pseudonym-equality refusal, emitted decisions satisfy the contract separation rule; rework re-run on branch: ruff + format clean, pyright 0 errors, 140 passed); Haiku confirmation CONFIRMED (open refusal at models.py:156-159, secondary refusal audited, real-id check still primary); merge 1a1825e; post-merge: ruff clean, pyright 0 errors, packages/core + services/workers + tests/contracts 3418 passed, full-suite collection 5903 ok | 2026-10-20 |
+| 4 | merged | worktree-agent-ae81bef7cb3fd586f | opus | 20fcb0d; orchestrator re-run on branch: only owned files touched, ruff + format clean, pyright 0 errors, gate set (actions_api, hitl_api, tests/security/actions, core actions + hitl, openapi drift, import boundaries) 373 passed, all of services/api + tests/security 1415 passed; wiring for item 7: `neurosphere_api.actions.register` (`/api/v1/actions`), `neurosphere_api.hitl.register` (`/api/v1/review`), `configure_action_plane(app, ...)` sets app.state `action_service`, `intent_store`, `hitl_service`, `review_policies`, `write_targets`, `permission_rechecker`, `execution_control`, `audit_repository` (missing -> 503 `action_plane_unconfigured`; optional `action_api_settings`, `action_clock`, `reviewer_directory`); HitlService built with `RecheckerReviewerAuthorizer(rechecker)`; wire deltas for item 6: `ReviewItemView` adds `effective_decision_id`, `superseded_decision_ids`; added `GET /api/v1/review/domains/{domain}/items/{item_id}`; emergency-disable `reason` is a snake_case code, required when disabling, GET/PUT return `{disabled, reason, changed_by (pseudonym), changed_at}`; intent JSON round-trips to `confirmation_hash` (`from: null` fix); deviations: validate is maker-only, review routes declare `data.read` then check per-kind permission, resend-to-resume after an outage between decision and apply; open: nothing marks a review item executed/failed when the worker finishes (item 7), API-side refusals not audited, kill-switch audit chain `<customer>.execution-control` not mappable by the audit read API, Recommendations `ReviewRouter` not connected to the HITL queue; reviewer APPROVED (no blockers; single path, advisory refusal, effective-decision-only approval and resend-to-resume CONFIRMED, security scan has a negative control; follow-ups: `PUT /emergency-disable` requires `config.manage` anywhere, so a single-domain admin can re-enable execution customer-wide (needs a customer-level permission), a rejection hit by a policy outage leaves the intent `awaiting_approval` until expiry (resume only handles approvals), `open_item` ok + `link_review_item` fail leaves an orphan review item, resume test uses a Viewer instead of a second steward, resume matches the reviewer by pseudonym, a domain named `execution-control` would share the kill-switch audit chain); merge a5f1027; post-merge: ruff clean, pyright 0 errors, actions_api + hitl_api + tests/security/actions + openapi drift + packages/core + action_executor 1650 passed, full-suite collection 6055 ok | 2026-10-20 |
+| 5 | merged | worktree-agent-ac39cbe600457b35a + worktree-agent-a15adb10bd6aee961 | sonnet | 38b9f19 + rework 6e7cba6 (post-PUT failure restores the prior model, non-retryable `apply_failed_restored`/`apply_failed_restore_failed`; G05 script always rolls back in `finally`; evidence written on every outcome; rework re-run on branch: ruff + format clean, 52 passed, script REFUSED exit 2; Haiku confirmation CONFIRMED both blockers, noted the swap PUT itself was outside the try); merge 1c8faa6 plus orchestrator fixes: swap PUT moved inside the restore `try` (+ test `test_apply_put_error_still_restores_prior_model`), root uv source/dependency for `neurosphere-connector-foundry-actions` + `uv.lock`, matrix row count 532 -> 534, the two `deployment_write` rows carry the real `observed_on: 2026-10-20` with `test_loader.py`/`test_row_lint.py` pins moved to 2026-10-20 (agent had backdated the rows to the old pin), `foundry_swap_fakes` imports use the repo's `pyright: ignore[reportMissingImports]` sibling-helper pattern; post-merge: ruff + format clean, pyright 0 errors, foundry-actions + unit/gates + unit/capabilities + packages/core 1398 passed, G05 script REFUSED exit 2; reviewer CHANGES REQUIRED then confirmed (see rework); follow-ups: canonical_id account binding unchecked, other DeploymentProperties not carried through the PUT, fallback ApplyResult with `version_after=None` skips the etag check on rollback; manifest `foundry-model-swap` action `model_deployment_swap`, advisory `foundry-model-swap-advisory`; G05 OPEN (operator decision) | 2026-10-20 |
+| 6 | merged | worktree-agent-a6d17eaae16210291 | sonnet | 8b98466; orchestrator re-run on branch: only `frontend/src/features/actions|review` touched, eslint + tsc + prettier clean, vitest 235 passed (29 files; feature tests include axe on detail and review item pages); routes for 7b: `actionsRoutes`/`actionsNavItems()` (`actions`, `actions/detail?domain_id&intent_id`, `actions/propose?domain_id`), `reviewRoutes`/`reviewNavItems()` (`review`, `review/item?domain_id&item_id`); hash fixture `frontend/src/features/actions/__fixtures__/button-intent-request.json` (builder `buildDraftIntentRequest`, channel `button`, no identity fields); deviations: reuses `ActionIntent`/`ApprovalDecision` from `@neurosphere/contracts`, review item page fetches the intent via the actions endpoint for diff + server hash, confirmation dialog is `alertdialog` (Escape does not dismiss); open: assign-to-other UI not built (claim only); reviewer APPROVED (no blockers; fixture passes `DraftIntentBody` validation and the connector's path allowlist / canonical-id parsing; follow-ups: review 503 text says the decision was not recorded although it may be recorded but not applied (resend-to-resume), `OPEN_STATES` omits `approved` so a reviewer cannot resend after refresh, advisory maker_checker items still show Approve/Reject (unreachable today), `MutationError` matches `self_approval_forbidden` but core also uses `self_approval_prohibited`, review diff list omits `op.from`, static dialog id); merge 6b4e921; post-merge: eslint + tsc clean, vitest 235 passed | 2026-10-20 |
+| 7 | merged | worktree-agent-a16a1ba12adacf831 (7a) + worktree-agent-a6847bf5057c4d7f6 (7b) | sonnet | 7a e793f82: routers.py hooks, openapi.json regenerated (component `EvidenceId` replaced by module-qualified names, `-Input`/`-Output` variants for `EvidenceRef`/`UtcTimestamp`, wire JSON unchanged), worker table is core `ACTION_CONNECTORS`, `ActionExecutor(on_finished=)` + `completion.ReviewItemCompletion` (8 tests), slice `tests/integration/actions/test_action_vertical_slice.py` 14 tests (happy path, self-approval + Viewer 403, revocation after approval, verify mismatch rollback, kill switch, read-only advisory, Government, policy outage 503, button-vs-REST hash with a test-built body), G12 actions README, G05/G12 rows (G05 OPEN, not narrowed); orchestrator re-run on 7a branch: only owned files, ruff + format clean, pyright 0 errors, gate set 153 passed 8 deselected, validate_planning exit 0; deviations: Government target refused at draft (403 `target_out_of_scope`), no-catalog-change asserted by construction (no catalog repository in the action plane), completion hook only re-fires when `execute` runs again (sweep for terminal intents with stale review items is a follow-up); 7a reviewer APPROVED (no blockers; PRP exit check CONFIRMED: no action-plane module imports a catalog module or repository, success only from `VerifyResult.matched` read from the target; G05/G12 docs honest, no FedRAMP/ATO/parity claims; follow-ups: completion-hook retry only happens if `execute` runs again (worker lists `executing` only) so a reconcile sweep over terminal intents with `approved` items is needed, intents expiring outside the executor never fire the hook, duplicate audit + warning on hook failure, slice conftest puts `services/api/tests` first on sys.path (`authz` name clash risk)); 7a merge b7291f1; post-merge: repo-wide ruff clean, repo-wide pyright 0 errors, slice + workers + api actions/hitl/openapi/app + security actions + core actions/hitl 754 passed 8 deselected, full-suite collection 6079 ok; 7b 675b485: actions/review routes + nav in `main.tsx`/`workspaceNav.ts`, mock API fixtures (synthetic; test-only `/__e2e/reset/{id}`; domain-based Viewer persona because the stub token is always Viewer), `frontend/tests/e2e/actions/actions.spec.ts` (16 specs incl. 4 axe scans: actions list, detail with dialog open, review queue, review item), `tests/integration/actions/test_button_fixture_hash.py` (item 6 UI fixture unchanged vs REST copy -> identical `confirmation_hash`, distinct `intent_id`, hash equals `compute_confirmation_hash`, zero PUTs); orchestrator re-run on 7b branch: only its 5 files in its commit, eslint + tsc + prettier clean, vitest 235 passed, Playwright full suite 58 passed, `tests/integration/actions` 15 passed 8 deselected; 7b reviewer APPROVED (no blockers; follow-ups: mock 401/404 not problem+json, mock lacks rate_limited/invalid_schema/dependency_transient cases, emergency-banner spec stubs via `page.route`); orchestrator fix 8259ec2 (item 6 `ActionDetail` header `<p>` -> `<div>`: Fluent Badge is a div, invalid nesting logged a hydration warning, found by the 7b e2e run; actions + review vitest 30 passed); 7b merge 598ac77 | 2026-10-20 |
+
+Integration branch gates after all items merged (598ac77 + licence register regeneration), 2026-10-20: `verify-gates -Mode full` run 1: lint PASS, typecheck PASS (pyright 0 errors repo-wide), build PASS, tests FAIL 1 failed / 6079 passed: `tests/test_licenses_report.py::test_real_repo_register_is_current` (register stale after the new `neurosphere-connector-foundry-actions` workspace package); fixed by `python scripts/licenses_report.py` (`docs/licenses.md` and the `docs/adr/0002-stack-pins.md` appendix gain only that first-party line, 131 -> 132 Python packages). Run 2: lint PASS, typecheck PASS, build PASS, tests FAIL 1 failed / 6079 passed: `services/api/neurosphere_api/dashboards/tests/test_scope_denial.py::test_caller_supplied_scope_params_never_widen_scope[params2]`, a pre-existing PRP-14 flake (asserts `"700" not in denied.text` while the 403 body carries a random correlation UUID; reproduced 1 failure in 5 isolated runs; file untouched by PRP-17, last changed 019aec3). Touched suites pass: actions/hitl core, workers, API, security, slice, foundry-actions, capabilities; vitest 235; Playwright 58 (incl. axe).
+
+## Completion note (filled at ship)
+- Date:
+- Merged commits:
+- Deviations from blueprint and why:
+- Descoped items:
+- G05 live run: date, operator approval, evidence path (or OPEN):
+- Follow-ups:

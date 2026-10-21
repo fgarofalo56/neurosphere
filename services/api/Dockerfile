@@ -17,6 +17,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY packages ./packages
 COPY services ./services
+COPY connectors/sdk-python ./connectors/sdk-python
 RUN uv sync --frozen --no-dev --no-editable --package neurosphere-api
 
 # python:3.12-alpine, digest observed 2026-10-18

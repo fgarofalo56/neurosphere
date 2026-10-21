@@ -19,9 +19,10 @@ RUN pnpm --filter @neurosphere/frontend build
 # nginxinc/nginx-unprivileged:stable-alpine, digest observed 2026-10-18
 FROM nginxinc/nginx-unprivileged:stable-alpine@sha256:782bb89768cc87b7f95c18b95baa1af250e5d451f26794f59363540161147c01
 
-# Pull in fixed Alpine package versions that postdate the pinned base image.
+# Pull in fixed Alpine package versions that postdate the pinned base image, then drop curl:
+# nginx never uses it and it carried an unfixed High CVE (CVE-2026-92392, 2026-10-21).
 USER root
-RUN apk upgrade --no-cache
+RUN apk upgrade --no-cache && apk del --no-cache curl
 
 COPY frontend/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html

@@ -75,7 +75,8 @@ def test_caller_supplied_scope_params_never_widen_scope(params: dict[str, str]) 
 
     denied = api.get(ALICE, OPERATIONS, "cost", **params)
     assert denied.status_code == 403
-    assert "700" not in denied.text
+    # "700.0" not "700": the 403 body carries a random correlation UUID, and hex never has a "."
+    assert "700.0" not in denied.text
 
 
 def test_other_customers_data_is_not_readable_by_domain_name() -> None:

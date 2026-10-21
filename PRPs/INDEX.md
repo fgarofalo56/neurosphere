@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-17-action-executor-and-hitl](active/PRP-17-action-executor-and-hitl.md) |  | 7/7 (100%) | merged 7 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) |  |  | - | - | ? / ? | required |
 | [prp-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) |  |  | - | - | ? / ? | required |
 | [prp-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) |  |  | - | - | ? / ? | required |
 | [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) |  |  | - | - | ? / ? | required |
