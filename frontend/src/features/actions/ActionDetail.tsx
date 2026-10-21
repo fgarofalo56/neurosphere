@@ -18,7 +18,7 @@ export function ActionDetail({
   const D = STRINGS.detail;
   return (
     <article aria-label={STRINGS.detailTitle} data-testid="action-detail">
-      <p>
+      <div>
         <code>{intent.action_kind}</code> <StateBadge state={intent.state} />
         {intent.status_reason !== null ? (
           <>
@@ -26,7 +26,7 @@ export function ActionDetail({
             {D.statusReason}: <code data-testid="status-reason">{intent.status_reason}</code>
           </>
         ) : null}
-      </p>
+      </div>
       <dl>
         <dt>{D.target}</dt>
         <dd data-testid="detail-target">{intent.target.canonical_id}</dd>
