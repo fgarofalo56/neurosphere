@@ -75,6 +75,7 @@ from neurosphere_core.errors import CapabilityUnavailableError, NeuroSphereError
 from pydantic import ValidationError
 
 from neurosphere_workers.actions.canary import CANARY_OUTCOMES, CanaryProbe, VerifyOnlyCanary
+from neurosphere_workers.actions.completion import FinishedHook
 from neurosphere_workers.actions.targets import DEFAULT_ACTION_CONNECTORS, resolve_connector
 
 __all__ = [
@@ -103,6 +104,7 @@ ROLLBACK_FAILED: Final = "rollback_failed"
 CANARY_FAILED: Final = "canary_failed"
 VERIFICATION_FAILED: Final = "verification_failed"
 CAPABILITY_UNAVAILABLE: Final = "capability_unavailable"
+_TERMINAL_STATES: Final = frozenset({"succeeded", "failed", "rolled_back", "expired"})
 _REASON_RE: Final = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _LEASE_RENEWED_AT: Final = "lease_renewed_at"
 
@@ -254,6 +256,7 @@ class ActionExecutor:
         lease_renewal: timedelta = DEFAULT_LEASE_RENEWAL,
         max_connector_call: timedelta = DEFAULT_MAX_CONNECTOR_CALL,
         sleep: Sleep = asyncio.sleep,
+        on_finished: FinishedHook | None = None,
     ) -> None:
         if not isinstance(execution_control, ExecutionControl):
             raise TypeError("execution_control is required: the emergency disable is mandatory")
@@ -277,6 +280,7 @@ class ActionExecutor:
         self._lease = lease
         self._renewal = lease_renewal
         self._sleep = sleep
+        self._on_finished = on_finished
 
     @property
     def worker_id(self) -> str:
@@ -285,7 +289,36 @@ class ActionExecutor:
     # -- entry point -------------------------------------------------------------------------
 
     async def execute(self, key: IntentKey) -> ExecutionReport:
-        """One pass over one intent. Never raises for per-intent conditions."""
+        """One pass over one intent. Never raises for per-intent conditions.
+
+        When the intent is terminal after the pass (also on a repeat pass over an already
+        finished intent, which makes a failed hook retry-safe) the optional ``on_finished`` hook
+        runs. A hook failure is logged and never changes the report or the intent.
+        """
+        report = await self._execute_pass(key)
+        if self._on_finished is not None and report.state in _TERMINAL_STATES:
+            await self._notify_finished(key, report)
+        return report
+
+    async def _notify_finished(self, key: IntentKey, report: ExecutionReport) -> None:
+        hook = self._on_finished
+        if hook is None:
+            return
+        try:
+            stored = await self._service.get(key)
+            if stored.review_item_id is not None:
+                await hook(stored, report)
+        except Exception as exc:  # never alters the outcome; the next pass retries
+            logger.warning(
+                "completion hook failed",
+                extra={
+                    "event": "action.completion_hook_failed",
+                    "intent_id": key.intent_id,
+                    "reason": _reason(exc),
+                },
+            )
+
+    async def _execute_pass(self, key: IntentKey) -> ExecutionReport:
         try:
             current = await self._service.get(key)
         except IntentNotFoundError:

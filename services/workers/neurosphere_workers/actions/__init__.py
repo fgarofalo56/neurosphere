@@ -11,6 +11,11 @@ Composition (the API's validate step only ever calls ``dry_run``; apply/rollback
 """
 
 from neurosphere_workers.actions.canary import CANARY_OUTCOMES, CanaryProbe, VerifyOnlyCanary
+from neurosphere_workers.actions.completion import (
+    FinishedHook,
+    ReviewItemCompletion,
+    ReviewItemOutcomes,
+)
 from neurosphere_workers.actions.executor import (
     APPLY_FAILED_RESTORE_FAILED,
     APPLY_FAILED_RESTORED,
@@ -45,7 +50,10 @@ __all__ = [
     "ActionExecutorWorker",
     "CanaryProbe",
     "ExecutionReport",
+    "FinishedHook",
     "ReportOutcome",
+    "ReviewItemCompletion",
+    "ReviewItemOutcomes",
     "VerifyOnlyCanary",
     "resolve_connector",
 ]
