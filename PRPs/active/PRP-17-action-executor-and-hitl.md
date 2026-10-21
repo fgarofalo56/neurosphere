@@ -260,11 +260,11 @@ Domain is a path segment authorized against the server-derived `IdentityScope` (
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | opus | | 2026-10-20 |
+| 1 | in-progress | (agent worktree) | opus | dispatched wave 1 | 2026-10-20 |
 | 2 | todo | | opus | | 2026-10-20 |
-| 3 | todo | | opus | | 2026-10-20 |
+| 3 | in-progress | (agent worktree) | opus | dispatched wave 1 | 2026-10-20 |
 | 4 | todo | | opus | | 2026-10-20 |
-| 5 | todo | | sonnet | | 2026-10-20 |
+| 5 | in-progress | (agent worktree) | sonnet | dispatched wave 1 | 2026-10-20 |
 | 6 | todo | | sonnet | | 2026-10-20 |
 | 7 | todo | | sonnet | | 2026-10-20 |
 
