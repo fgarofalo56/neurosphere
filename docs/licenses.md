@@ -153,7 +153,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | wrapt | 2.5.0 | BSD-2-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | yarl | 1.25.1 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 
-## npm (pnpm-lock.yaml) - 403 packages
+## npm (pnpm-lock.yaml) - 408 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -399,6 +399,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | estraverse | 5.3.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | estree-walker | 3.0.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | esutils | 2.0.3 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
+| events | 3.3.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | expect-type | 1.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | fast-deep-equal | 3.1.3 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | fast-json-stable-stringify | 2.1.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -416,6 +417,9 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | get-caller-file | 2.0.5 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | get-east-asian-width | 1.7.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | glob-parent | 6.0.2 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
+| graphology | 0.26.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| graphology-types | 0.24.8 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| graphology-utils | 2.5.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | graphql | 16.14.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | hashery | 1.5.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | headers-polyfill | 5.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -507,6 +511,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | set-cookie-parser | 3.1.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | shebang-command | 2.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | shebang-regex | 3.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| sigma | 4.0.3 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | signal-exit | 4.1.0 | ISC | dev-only | no EOL published locally; Dependabot tracks releases |
 | source-map-js | 1.2.2 | BSD-3-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | statuses | 2.0.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
