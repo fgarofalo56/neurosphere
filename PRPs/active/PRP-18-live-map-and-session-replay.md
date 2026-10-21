@@ -246,8 +246,8 @@ Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | in-progress | (worktree agent) | sonnet | dispatched wave A | 2026-10-21 |
-| 2 | review | worktree-agent-a607026f270842696 | sonnet | 7584988; orchestrator re-run: only map/ + tests/map/ touched, ruff + format clean, pyright 0 errors, map + test_app + openapi drift 33 passed; deviations: per-node metrics null (aggregates are domain-level), list_entities for listing, person id = pseudonym; open: one neighbors walk per node (~15s per 2000-node page in-memory) | 2026-10-21 |
+| 1 | review | worktree-agent-ae0b2d0e25b7acbe4 | sonnet | ee2540e; orchestrator re-run: only realtime/ + tests/realtime/ touched, ruff + format clean, pyright 0 errors, realtime + authz + test_app + openapi drift 205 passed; deviations: extra close codes 1013/1009/1011, domain-level cluster deltas with empty edges, subscribed/unsubscribed/pong messages; open: cross-replica revocation bound TTL + one poll, slow-consumer path untested | 2026-10-21 |
+| 2 | merged | worktree-agent-a607026f270842696 | sonnet | 7584988; orchestrator re-run: only map/ + tests/map/ touched, ruff + format clean, pyright 0 errors, map + test_app + openapi drift 33 passed; deviations: per-node metrics null (aggregates are domain-level), list_entities for listing, person id = pseudonym; open: one neighbors walk per node (~15s per 2000-node page in-memory); reviewer APPROVED (follow-ups: batch edge lookups via bulk edges-among-ids or one list_edges scan, document scan_limit approximate cluster counts, test oversized node_budget on cluster page, configurable delayed threshold); merge c248fd7; post-merge map + test_app + openapi drift 33 passed | 2026-10-21 |
 | 3 | todo | | sonnet | | 2026-10-21 |
 | 4 | todo | | sonnet | | 2026-10-21 |
 | 5 | in-progress | (worktree agent) | sonnet | dispatched wave A | 2026-10-21 |
