@@ -7,7 +7,11 @@ from datetime import timedelta
 
 import pytest
 from neurosphere_core.actions import StoredIntent
-from neurosphere_workers.actions import DEFAULT_ACTION_CONNECTORS, ActionExecutorWorker
+from neurosphere_workers.actions import (
+    DEFAULT_ACTION_CONNECTORS,
+    DEFAULT_LEASE,
+    ActionExecutorWorker,
+)
 
 from .executor_support import (
     FOUNDRY_SWAP_OPS,
@@ -20,7 +24,7 @@ from .executor_support import (
     phase_is,
 )
 
-LEASE_LAPSED = timedelta(minutes=6)
+LEASE_LAPSED = DEFAULT_LEASE + timedelta(minutes=1)
 
 
 async def crash_then_resume(h: Harness, *, same_worker: bool = False) -> str:

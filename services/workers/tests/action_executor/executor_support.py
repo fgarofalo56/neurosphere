@@ -334,7 +334,9 @@ class Harness:
         *,
         canary: CanaryProbe | None = None,
         table: dict[str, str] | None = None,
+        **options: Any,
     ) -> ActionExecutor:
+        """``options``: extra executor keywords (``lease``, ``lease_renewal``, ``sleep``, ...)."""
         return ActionExecutor(
             self.service,
             self.registry,
@@ -343,6 +345,7 @@ class Harness:
             action_connectors=table if table is not None else {ACTION_KIND: FAKE_CONNECTOR},
             canary=canary,
             clock=self.clock,
+            **options,
         )
 
     async def executing(self, request: DraftRequest | None = None) -> IntentKey:
