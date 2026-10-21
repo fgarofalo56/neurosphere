@@ -86,6 +86,19 @@ All notable changes to this project are documented here. The format follows
   every score carries judge version, calibration state and uncertainty, unknown is never 0, and
   the grounded-answer rate is a pilot-set target with a confidence interval, not a guarantee;
   sandbox pipeline, Playwright e2e and measured G12 evidence (`docs/evidence/G12/evaluation/`).
+- Action executor and human-in-the-loop workflow (PRP-17): one durable action plane for button,
+  chat, REST and MCP. Allowlisted intent state machine, PRP-01 confirmation hash bound to target,
+  version, diff, expiry and actor (channel excluded), idempotent intent store (in-memory and
+  Cosmos), and an executor worker that is the only caller of connector apply/rollback: it
+  rechecks permission (token-free, revocation-aware), target version and the emergency kill
+  switch, then dry-run, apply, verify-only canary, verify and audit, with rollback on failure,
+  crash-safe resume that never re-applies and a lease kept alive across long connector calls.
+  Maker-checker review queue with self-approval refused on real principal ids, append-only
+  hash-chained decisions, durable SLA/escalation timers and stub notifiers that only record.
+  `/api/v1/actions` and `/api/v1/review` APIs, a Foundry deployment-swap write connector with
+  advisory mode for read-only or Government targets, and a confirmation dialog showing exact
+  target, version, diff and expiry. G05 stays OPEN (live swap not run); production action
+  execution remains blocked.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

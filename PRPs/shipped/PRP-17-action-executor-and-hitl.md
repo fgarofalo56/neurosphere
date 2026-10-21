@@ -1,9 +1,11 @@
 ---
 name: prp-17-action-executor-and-hitl
-status: active
+status: shipped
 review: required
 created: 2026-10-08
 started: 2026-10-20
+shipped: 2026-10-21
+pr: 83
 branch: prp-17-action-executor-and-hitl
 model: opus
 phase: 3
@@ -271,9 +273,9 @@ Domain is a path segment authorized against the server-derived `IdentityScope` (
 Integration branch gates after all items merged (598ac77 + licence register regeneration), 2026-10-20: `verify-gates -Mode full` run 1: lint PASS, typecheck PASS (pyright 0 errors repo-wide), build PASS, tests FAIL 1 failed / 6079 passed: `tests/test_licenses_report.py::test_real_repo_register_is_current` (register stale after the new `neurosphere-connector-foundry-actions` workspace package); fixed by `python scripts/licenses_report.py` (`docs/licenses.md` and the `docs/adr/0002-stack-pins.md` appendix gain only that first-party line, 131 -> 132 Python packages). Run 2: lint PASS, typecheck PASS, build PASS, tests FAIL 1 failed / 6079 passed: `services/api/neurosphere_api/dashboards/tests/test_scope_denial.py::test_caller_supplied_scope_params_never_widen_scope[params2]`, a pre-existing PRP-14 flake (asserts `"700" not in denied.text` while the 403 body carries a random correlation UUID; reproduced 1 failure in 5 isolated runs; file untouched by PRP-17, last changed 019aec3). Touched suites pass: actions/hitl core, workers, API, security, slice, foundry-actions, capabilities; vitest 235; Playwright 58 (incl. axe).
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- G05 live run: date, operator approval, evidence path (or OPEN):
-- Follow-ups:
+- Date: 2026-10-21
+- Merged commits: PR #83, merge 9a032ea. Item merges on the integration branch: item 5 1c8faa6 (+ fixes 42531e9), item 1 f504351, item 3 1a1825e, item 2 c40bd4a, item 4 a5f1027, item 6 6b4e921 (+ fix 8259ec2), item 7a b7291f1, item 7b 598ac77; skeleton e1afb77; licence register 3e55de7; PRP-14 flake fix ec637bb; CI security fixes f2c4069. CI on PR #83: 27 passed, 3 skipped (path filters), 0 failed on f2c4069.
+- Deviations from blueprint and why: D1-D7 in Execution state (operator-approved 2026-10-20): the hash is the PRP-01 `confirmation_hash` (actor included, exact expiry, channel excluded); `StoredIntent` envelope keeps the real principal id server-side; error codes map to the existing taxonomy (`invalid_schema`, not `validation_error`, corrected mid-flight); canary is an executor phase (verify-only default) because neither the connector protocol nor the Foundry PUT has a canary/traffic split; `services/api` and `services/workers` depend on `neurosphere-connector` (Dockerfiles copy `connectors/sdk-python`); test dirs renamed to unique names and a wiring item 7 added (split into 7a backend and 7b frontend so 7a ran in parallel with item 6); Cosmos intent store but in-memory HITL store. During execution: item 2 also owns `actions/recheck.py` (token-free `PolicyPermissionRechecker`, policy rules mirrored from `ScopeDeriver._build` + `permits` with parity tests because core auth has no public token-free evaluator); item 4 owns `actions/targets.py` (single action_kind -> connector table, worker aliases it); executor lease default 20 min with renewal during connector calls (crash-mid-apply recovery waits ~20 min); Government targets refused at draft (403) as well as advisory at the connector; the e2e spec lives at `frontend/tests/e2e/actions/actions.spec.ts`. Out-of-ownership fixes, operator-approved: de-flaked the PRP-14 `test_scope_denial.py` leak assertion (random correlation UUID), and the CI security fixes in f2c4069 (certifi 2026.10.19 for GHSA-6q48-6c7w-9gw2, frontend runtime image drops curl for unfixed CVE-2026-92392, CodeQL `py/illegal-raise`, `.gitleaksignore` fingerprint for a synthetic idempotency key). Capability test date pins moved to 2026-10-20 so new matrix rows carry their real observation date.
+- Descoped items: none. Out of scope by the PRP: real email/Teams delivery (stub notifiers record only), write connectors other than the Foundry swap, copilot/MCP action surfaces (PRP-19/PRP-22 reuse this executor).
+- G05 live run: NOT run; operator decision 2026-10-20 to leave G05 OPEN this PRP. Script `scripts/gates/g05_foundry_swap_live.py` refuses without `NS_LIVE_APPROVED=1` (tested); evidence README `docs/evidence/G05/README.md`; `docs/RESEARCH-AND-GATES.md` G05 row records OPEN and that production action execution stays blocked. G12: intent store proven on the Cosmos emulator only (8 tests, `integration` marker, not in CI), slice and HITL in-memory (`docs/evidence/G12/actions/README.md`). G01: Foundry write in Government unverified, disabled with reason.
+- Follow-ups: reconcile sweep for terminal intents whose review item is still `approved` (completion hook retries only on re-execute) and for intents expiring outside the executor; customer-level permission for `PUT /emergency-disable` (any single-domain `config.manage` holder can re-enable customer-wide); rejection hit by a policy outage leaves the intent `awaiting_approval` until expiry; orphan review item when `link_review_item` fails after `open_item`; Cosmos HITL store; notification outbox before real delivery; retry cap for long policy outages; a public token-free policy evaluator in `neurosphere_core.auth` to replace the mirrored rules; Foundry connector canonical-id account binding, carry remaining `DeploymentProperties`, fallback rollback without etag; UI: review 503 copy, resend after refresh (`OPEN_STATES` lacks `approved`), `self_approval_prohibited` reason mapping; mock API 401/404 as problem+json; production bootstrap of `configure_action_plane`; live G05 run in Limitlessdata when approved.
