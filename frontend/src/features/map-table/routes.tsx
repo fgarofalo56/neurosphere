@@ -1,8 +1,9 @@
 import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
 import { MapTablePage } from "./MapTablePage";
+import { MAP_TABLE_PATH } from "./paths";
 
-export const MAP_TABLE_PATH = "/map/table";
+export { MAP_TABLE_PATH };
 
 export const mapTableRoutes: RouteObject[] = [
   { path: MAP_TABLE_PATH.replace(/^\//, ""), element: <MapTablePage /> },

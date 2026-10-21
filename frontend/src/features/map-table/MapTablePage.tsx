@@ -15,7 +15,7 @@ import {
 } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ForbiddenError, UnauthorizedError, type ApiError } from "../../api/index.js";
-import { MAP_PATH } from "../map";
+import { MAP_PATH } from "../map/paths";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import {
   COLUMN_COUNT,

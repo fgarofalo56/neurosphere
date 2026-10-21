@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import { Link, useSearchParams } from "react-router";
 import { ForbiddenError, useApiClient, type ApiError } from "../../api/index.js";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
-import { MAP_TABLE_PATH } from "../map-table";
+import { MAP_TABLE_PATH } from "../map-table/paths";
 import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
 import { MapCanvas } from "./MapCanvas";
