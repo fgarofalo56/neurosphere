@@ -1,8 +1,10 @@
 ---
 name: prp-18-live-map-and-session-replay
-status: backlog
+status: active
 review: required
 created: 2026-10-08
+started: 2026-10-21
+branch: prp-18-live-map-and-session-replay
 model: sonnet
 phase: 3
 ns: NS-05
@@ -183,6 +185,13 @@ PRD planning targets (to be measured, not guaranteed): map freshness p95 <=10s a
 - Pattern references: PRP-02 evidence format; sandbox generator load mode.
 - Tests to write: `tests/load/map_freshness/test_freshness_p95.py`.
 
+### Item 7 - wiring  (added at approval, delta D1)
+- Deliverable: attach items 1, 2 and 5 to the app and the frontend shell; nothing else touches these shared files.
+- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json` (regenerate only), API app-state wiring that registers the gateway with `RevocationHookRegistry.register_push_registry("websocket", ...)`, `frontend/package.json` + `pnpm-lock.yaml` (sigma 4, graphology 0.26 only), `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, map/replay fixtures in `frontend/tests/mock-api/server.ts`, `tests/integration/map/`.
+- Must NOT touch: any item 1-6 owned directory.
+- Depends on: Items 1, 2, 5. Items 3 and 4 depend on it.
+- Acceptance criteria: routes reachable in-process and in OpenAPI (drift test green); revocation fan-out closes gateway sessions in an in-process integration test; frontend build green; no `@cosmograph` in package.json or lockfile; licence gate green.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -219,6 +228,31 @@ A live Commercial freshness run is optional: operator-approved, requires NS_LIVE
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-21 with three deltas signed off by the operator.
+
+- D1: no item owned the shared hookup files (router registry, OpenAPI export, app-state revocation wiring, frontend deps/lockfile, `main.tsx`, `workspaceNav.ts`, mock API, `tests/integration/map`). New item 7 owns them and runs alone, after items 1, 2, 5 and before items 3, 4. Items 1, 2, 5 ship a `register(registry)` hook and are not added to `routers.py` themselves.
+- D2: map, table and replay routes require the existing `data.read` permission in the target domain. No new permission constant (PRP-06 owns that file).
+- D3: people are always pseudonymized in this PRP. The "reveal with explicit scoped permission and audit" path needs a permission PRP-06 never defined, so it is a follow-up, not built here.
+
+Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D = item 6. Models: all implementers sonnet; every item gets one reviewer pass (PRP is `review: required`); rework confirmation passes haiku.
+
+### Wire contract (decided at approval; items 3, 4, 6, 7 code against it)
+- Viewport: `GET /api/v1/map/domains/{domain_id}/viewport?cluster_id=&cursor=&node_budget=&edge_budget=`. `node_budget` <= 2000 server-clamped. Response: `nodes[]` (`id`, `kind` in person|agent|sub_agent|model|source|cluster, `label` (pseudonym for person), `cluster_id`, `member_count` for clusters, `metrics` {`tokens`, `context_size`, `frequency`, `latency_p95_ms`, `health` in ok|degraded|failing|unknown}; unknown metrics are null, never 0), `edges[]` (`id`, `source`, `target`, `provenance` in observed|declared|inferred, `last_observed_at`), `truncated` bool + `truncation_reason`, `next_cursor`, `coverage` {`state` in complete|partial|delayed|unknown, `lag_seconds`, `as_of`}.
+- WebSocket: `/api/v1/realtime/ws`. Browser auth via `Sec-WebSocket-Protocol: ns.bearer, <token>`. Client `{"type":"subscribe","domain_id":...}` / `unsubscribe`; server `{"type":"delta","domain_id","seq","nodes":[],"edges":[],"coverage":{},"emitted_at"}`, `{"type":"error","code":"rate_limited"|...}`. Close codes: 4401 unauthenticated, 4403 forbidden or revoked, 4429 budget exceeded.
+- Replay: `GET /api/v1/replay/domains/{domain_id}/traces?cursor=` and `GET /api/v1/replay/domains/{domain_id}/traces/{trace_id}`. Trace: `trace_id`, `spans[]` (`span_id`, `parent_span_id`, `name`, `kind` in agent|model|tool|retrieval|other, `started_at`, `ended_at`, `duration_ms`, `status` in ok|error|unknown, `error`, `tool` {name, outcome}, `late` bool, `payload` only when policy and opt-in allow, else `payload_state`), `gaps[]` (`parent_span_id`, `reason` in missing_parent|sampled_out|late_arrival|unknown), `sampling` {`rate`, `reason`}, `completeness`. GET only.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-21 |
+| 2 | todo | | sonnet | | 2026-10-21 |
+| 3 | todo | | sonnet | | 2026-10-21 |
+| 4 | todo | | sonnet | | 2026-10-21 |
+| 5 | todo | | sonnet | | 2026-10-21 |
+| 6 | todo | | sonnet | | 2026-10-21 |
+| 7 | todo | | sonnet | | 2026-10-21 |
 
 ## Completion note (filled at ship)
 - Date:
