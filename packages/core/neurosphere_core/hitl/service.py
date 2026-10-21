@@ -241,7 +241,7 @@ class HitlService:
             await self._authorize(by_principal_id, item, policy)
             if target_id != by_principal_id:
                 await self._authorize(target_id, item, policy)
-            self._check_separation(target_id, item, policy)
+            self._check_separation(target_id, target_actor, item, policy)
 
         await self._guard(ctx, item, check)
         updated = transition(
@@ -295,7 +295,7 @@ class HitlService:
                     "decision must be approved or rejected", reason="bad_decision"
                 )
             await self._authorize(reviewer_principal_id, item, policy)
-            self._check_separation(reviewer_principal_id, item, policy)
+            self._check_separation(reviewer_principal_id, reviewer, item, policy)
             if (
                 item.state_name == "assigned"
                 and item.assignee_principal_id != reviewer_principal_id
@@ -456,7 +456,10 @@ class HitlService:
             )
 
     @staticmethod
-    def _check_separation(principal_id: str, item: ReviewItem, policy: ReviewPolicy) -> None:
+    def _check_separation(
+        principal_id: str, actor: Actor | None, item: ReviewItem, policy: ReviewPolicy
+    ) -> None:
+        """Primary rule: real principal ids. Secondary: the contract's pseudonym rule."""
         if not policy.self_approval_forbidden:
             return
         makers = {p for p in (item.maker_principal_id, item.maker_on_behalf_of_principal_id) if p}
@@ -464,6 +467,12 @@ class HitlService:
             raise ForbiddenError(
                 "the maker cannot review their own change", reason="self_approval_forbidden"
             )
+        if actor is not None and item.maker is not None:
+            maker_names = {item.maker.principal_pseudonym, item.maker.on_behalf_of} - {None}
+            if actor.principal_pseudonym in maker_names:
+                raise ForbiddenError(
+                    "the maker cannot review their own change", reason="self_approval_forbidden"
+                )
 
     @staticmethod
     def _check_confirmation(item: ReviewItem, confirmation_hash: str | None) -> None:

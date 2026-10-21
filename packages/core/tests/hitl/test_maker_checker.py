@@ -84,16 +84,59 @@ async def test_same_principal_under_a_different_pseudonym_is_still_the_maker() -
     assert info.value.reason == "self_approval_forbidden"
 
 
-async def test_distinct_principals_with_colliding_pseudonyms_are_separate_people() -> None:
-    """Pseudonyms (and display names) are never compared: only the real principal id is."""
+async def test_distinct_principals_with_colliding_pseudonyms_are_refused() -> None:
+    """The real principal id is primary; a pseudonym match is a secondary refusal, since the
+    contract rule (validate_maker_checker_separation) compares pseudonyms."""
     harness = build()
     shared = actor("p-collide")
     item = await open_maker_checker(harness, maker=shared)
-    decision = await _decide(harness, item.item_id, CHECKER_ID, shared)
-    assert decision.decision == "approved"
-    assert decision.self_approval_allowed is False
+    with pytest.raises(ForbiddenError) as info:
+        await _decide(harness, item.item_id, CHECKER_ID, shared)
+    assert info.value.reason == "self_approval_forbidden"
+    assert await _denials(harness) == ["self_approval_forbidden"]
     stored = await harness.store.get(item.item_id)
-    assert stored is not None and stored.state_name == "approved"
+    assert stored is not None and stored.state_name == "pending"
+    assert await harness.decision_store.list_for_item(item.item_id) == []
+
+
+async def test_reviewer_pseudonym_equal_to_makers_on_behalf_of_is_refused() -> None:
+    harness = build()
+    agent = actor("p-copilot", kind="agent", on_behalf_of="p-maker")
+    item = await open_maker_checker(
+        harness, maker_principal_id=AGENT_ID, maker=agent, on_behalf_of_principal_id=MAKER_ID
+    )
+    with pytest.raises(ForbiddenError) as info:
+        await _decide(harness, item.item_id, CHECKER_ID, actor("p-maker"))
+    assert info.value.reason == "self_approval_forbidden"
+
+
+async def test_agent_maker_without_on_behalf_of_principal_id_is_refused_at_open() -> None:
+    """Fail closed: an on-behalf-of actor must carry the real principal id it acted for."""
+    harness = build()
+    agent = actor("p-copilot", kind="agent", on_behalf_of="p-maker")
+    with pytest.raises(InvalidSchemaError) as info:
+        await open_maker_checker(harness, maker_principal_id=AGENT_ID, maker=agent)
+    assert info.value.reason == "invalid_review_item"
+
+
+async def test_every_emitted_decision_satisfies_the_contract_separation_rule() -> None:
+    """Re-check of tests/contracts validators.validate_maker_checker_separation, inline."""
+    harness = build()
+    agent = actor("p-copilot", kind="agent", on_behalf_of="p-maker")
+    item = await open_maker_checker(
+        harness, maker_principal_id=AGENT_ID, maker=agent, on_behalf_of_principal_id=MAKER_ID
+    )
+    other = await open_maker_checker(harness)
+    decisions = [
+        await _decide(harness, item.item_id, CHECKER_ID, CHECKER),
+        await _decide(harness, other.item_id, THIRD_ID, THIRD, decision="rejected"),
+    ]
+    for emitted in decisions:
+        doc = emitted.model_dump(mode="json")
+        assert doc["self_approval_allowed"] is False
+        reviewer = doc["reviewer"]["principal_pseudonym"]
+        assert reviewer != doc["maker"]["principal_pseudonym"]
+        assert reviewer != doc["maker"].get("on_behalf_of")
 
 
 async def test_principal_the_agent_acted_for_cannot_approve() -> None:

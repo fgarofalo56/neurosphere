@@ -153,6 +153,11 @@ class ReviewItem(BaseModel):
             ]
             if missing:
                 raise ValueError(f"maker_checker items require {', '.join(missing)}")
+            if self.maker is not None and (
+                self.maker.on_behalf_of is not None and self.maker_on_behalf_of_principal_id is None
+            ):
+                # open_item maps this ValidationError to InvalidSchemaError(invalid_review_item).
+                raise ValueError("an on-behalf-of maker needs maker_on_behalf_of_principal_id")
         elif self.intent_id is not None or self.confirmation_hash is not None:
             raise ValueError("insight review items carry no intent_id or confirmation_hash")
         if (self.assignee_principal_id is None) != (self.state_name != "assigned"):
