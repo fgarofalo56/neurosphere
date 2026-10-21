@@ -1091,6 +1091,7 @@ source = { editable = "services/api" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "neurosphere-connector" },
     { name = "neurosphere-core" },
     { name = "pydantic" },
     { name = "uvicorn" },
@@ -1100,6 +1101,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.143,<0.144" },
     { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.14,<3" },
     { name = "uvicorn", specifier = ">=0.54,<0.55" },
@@ -1262,6 +1264,7 @@ version = "0.0.0"
 source = { editable = "services/workers" }
 dependencies = [
     { name = "aiohttp" },
+    { name = "neurosphere-connector" },
     { name = "neurosphere-core" },
     { name = "pydantic" },
 ]
@@ -1269,6 +1272,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9,<4" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.14,<3" },
 ]

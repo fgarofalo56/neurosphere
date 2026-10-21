@@ -1,8 +1,10 @@
 ---
 name: prp-17-action-executor-and-hitl
-status: backlog
+status: active
 review: required
 created: 2026-10-08
+started: 2026-10-20
+branch: prp-17-action-executor-and-hitl
 model: opus
 phase: 3
 ns: NS-04, NS-06
@@ -37,7 +39,7 @@ Binding contract from PRP.md section 3:
 | # | Question | Options offered | Decision |
 |---|---|---|---|
 | 1 | Model and review | sonnet; opus | opus, review required (D6): authorization and irreversible-change risk |
-| 2 | One executor or per-surface | per surface; one | One durable executor for button, chat, REST and MCP. All surfaces build an `ActionIntent` and compute the same intent hash over actor-independent fields (target, version, diff, prerequisites) plus expiry bucket; surfaces differ only in `source` metadata |
+| 2 | One executor or per-surface | per surface; one | One durable executor for button, chat, REST and MCP. All surfaces build an `ActionIntent` and compute the same intent hash; surfaces differ only in `channel` metadata. Superseded in part by delta D1 (2026-10-20): the hash is the PRP-01 `confirmation_hash` (target, target_version, proposed_diff, confirmation_expires_at, actor; channel excluded), not an actor-independent hash with an expiry bucket |
 | 3 | Live gate | mock only; operator-approved live | Foundry swap live verification is operator-approved (D7) with `NS_LIVE_APPROVED=1` against the Commercial subscription. Without it G05 stays OPEN and the connector runs in advisory mode |
 | 4 | Read-only connectors | execute anyway; advisory | Advisory: the intent can be drafted and reviewed but never executes, and nothing is changed in the catalog to simulate a change |
 | 5 | Maker-checker | always; policy-configured | Policy-configured per action type; when self-approval is forbidden the maker cannot approve, and a second distinct approver with the right scope is required. Insight review (NS-04 reviewer queue) is separate from maker-checker approval of executable changes |
@@ -226,6 +228,45 @@ NS_LIVE_APPROVED=1 python scripts/gates/g05_foundry_swap_live.py    # operator-a
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-20 with seven deltas signed off by the operator, because the repo contradicted the blueprint. G05 live run: operator chose to leave G05 OPEN this PRP (script built, refusal tested, no Azure resources).
+
+- D1: the hash is the PRP-01 `confirmation_hash` exactly as `packages/contracts/schemas/actions/v1/confirmation-hash.json` defines it (RFC 8785 JCS + SHA-256 over target, target_version, proposed_diff, confirmation_expires_at, actor; channel, idempotency_key, state, evidence, prerequisite_results excluded; must reproduce the file's `test_vector`). Same actor, any channel, same hash; the exact expiry is hashed, not a bucket. Clarification 2 is updated. Contracts are not changed.
+- D2: `ActionIntent.actor` carries only a pseudonym, so item 1 adds a server-side `StoredIntent` envelope: the `ActionIntent` plus the real `principal_id`, `customer_id`, `domain_id`, idempotency scope `(principal_id, idempotency_key)`, store ETag, `payload_digest` (for key-reuse detection) and the execution/apply record. Self-approval, permission rechecks and idempotency compare the real principal id. The envelope never leaves the server; API views expose `intent` and derived flags only.
+- D3: the error taxonomy has no `confirmation_expired` code. Expired confirmation is `stale_version` reason `confirmation_expired`; changed target version is `stale_version` reason `target_version_changed`; hash mismatch is `validation_error` reason `confirmation_hash_mismatch`; advisory intents refuse confirm/approve with `capability_unavailable` reason `advisory_connector`; reused idempotency key with a different payload is `validation_error` reason `idempotency_key_reused`; emergency disable is `capability_unavailable` reason `emergency_disabled`.
+- D4: the PRP-09 `WriteConnector` has no canary method and the documented Foundry deployment PUT has no traffic split. Canary is an executor phase: recheck -> dry_run -> audit(before) -> apply -> canary probe (pluggable `CanaryProbe`; default records `canary: verify_only`) -> verify -> audit(after) -> succeeded. Canary or verify failure -> rollback -> `rolled_back` (rollback failure -> `failed` reason `rollback_failed`). G05 evidence states the swap is in place with no traffic-split canary.
+- D5: `services/api` and `services/workers` depended only on `neurosphere-core`, and the connector SDK depends on core (core cannot import it). The orchestrator adds `neurosphere-connector` to both service pyprojects before dispatch. `neurosphere_core.actions`/`hitl` stay connector-agnostic. The API's validate step calls `dry_run` and reads `advisory` through a `WriteTargetRegistry` on `app.state`; only the worker `ActionExecutor` calls `apply`/`rollback` (item 4's security test asserts it repo-wide).
+- D6: test dirs renamed to names unique across `packages/*/tests` and `services/*/tests` (PRP-16 shadowing clash): `packages/core/tests/actions/`, `packages/core/tests/hitl/`, `services/workers/tests/action_executor/`, `services/workers/tests/hitl_timers/`, `services/api/tests/actions_api/`, `services/api/tests/hitl_api/`. New item 7 owns shared wiring: `services/api/neurosphere_api/routers.py`; `services/api/openapi.json` regeneration; `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`; action/review fixtures in `frontend/tests/mock-api/server.ts`; Playwright spec at `frontend/tests/e2e/actions/actions.spec.ts` (directory convention, replaces `frontend/tests/e2e/actions.spec.ts`); the in-process slice `tests/integration/actions/` (except item 1's Cosmos store test) including the button-vs-REST hash equality test fed by item 6's request-builder fixture; root `pyproject.toml` uv source/dev entry for the new connector; `docs/evidence/G12/actions/README.md`; G05/G12 rows in `docs/RESEARCH-AND-GATES.md`.
+- D7: item 1 ships a Cosmos intent store (ETag-conditional replace, hierarchical key `/customer_id`,`/domain_id`) plus an in-memory store, with an emulator test `tests/integration/actions/test_intent_store_cosmos.py` (G12 evidence). Item 3 ships a HITL store protocol plus in-memory implementation; restart safety is tested by rebuilding the timer worker over the persisted store. Decisions are append-only through the PRP-06 hash-chained audit store. A Cosmos HITL store is a follow-up (OPEN). Item 5 also owns new `foundry.deployment_write.*` rows in `packages/core/neurosphere_core/capabilities/data/foundry.yaml` (Commercial `unverified`; Government disabled with reason, G01).
+
+Waves: 0 = orchestrator skeleton (service deps, `uv.lock`, this board); 1 = items 1, 3, 5 in parallel; 2 = item 2 (after 1) and item 4 (after 1, 3); 3 = item 6 (after 4); 4 = item 7 (after 1-6). Models: items 1-4 opus, items 5-7 sonnet, confirmation passes haiku; every item gets one reviewer pass.
+
+### Wire contract (decided at approval; items 4, 6, 7 code against it)
+Domain is a path segment authorized against the server-derived `IdentityScope` (`require(..., domain_from_path("domain"))`); out of scope 403, policy store outage 503 (problem+json). Lists are `{ "items": [...], "next_cursor": str|null }`.
+
+- `POST /api/v1/actions/domains/{domain}/intents` (`action.propose`), body `{action_kind, target: TargetRef, target_version, proposed_diff: ProposedDiff, evidence: [EvidenceRef] = [], idempotency_key, channel: "button"|"chat"|"rest"|"mcp" = "rest", dry_run: bool = false}` -> 201 `ActionView`; replay with the same principal + key + payload -> 200 with the original intent.
+- `POST .../intents/{intent_id}/validate` (`action.propose`) -> prerequisites + connector `dry_run` -> `validated` or `failed`.
+- `POST .../intents/{intent_id}/confirmation` (`action.propose`, maker only) -> `awaiting_confirmation`, sets `confirmation_hash` + `confirmation_expires_at` (default TTL 15 min).
+- `POST .../intents/{intent_id}/confirm` (`action.execute`, maker only), body `{confirmation_hash}` -> recheck permission + target version -> `awaiting_approval` (opens a maker-checker review item) or `executing` (handed to the executor).
+- `POST .../intents/{intent_id}/decisions` (`action.approve`), body `{decision: "approved"|"rejected", reason, confirmation_hash}` -> maker-checker via HITL, recheck -> `executing` or `failed`.
+- `GET .../intents/{intent_id}` and `GET .../intents?state=&cursor=&limit=` (`data.read`).
+- `GET /api/v1/actions/emergency-disable` (`data.read`) and `PUT` (`config.manage`), body `{disabled: bool, reason}`.
+- `ActionView = {intent: ActionIntent, advisory: bool, requires_approval: bool, self_approval_forbidden: bool, review_item_id: str|null, execution: {phase, canary: "passed"|"failed"|"verify_only"|null, verify_matched: bool|null, rolled_back: bool} | null}`.
+- `GET /api/v1/review/domains/{domain}/items?kind=&state=&cursor=&limit=` (`data.read`, then filtered: `maker_checker` items need `action.approve` on the domain, insight kinds need `catalog.curate`).
+- `POST /api/v1/review/domains/{domain}/items/{item_id}/assignment`, body `{assignee_principal_id: str|null}` (null = claim); `POST .../items/{item_id}/decisions`, body `{decision, reason, confirmation_hash?}` (a `maker_checker` item delegates to the same action approval service, never a second path).
+- `ReviewItemView = {item_id, kind: "maker_checker"|"relationship"|"evaluation_dispute"|"recommendation"|"policy_exception", state: ReviewItemState, domain_id, subject_ref, intent_id|null, assignee_pseudonym|null, sla_due_at, escalation_level, created_at, decisions: [ApprovalDecision]}`.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | opus | | 2026-10-20 |
+| 2 | todo | | opus | | 2026-10-20 |
+| 3 | todo | | opus | | 2026-10-20 |
+| 4 | todo | | opus | | 2026-10-20 |
+| 5 | todo | | sonnet | | 2026-10-20 |
+| 6 | todo | | sonnet | | 2026-10-20 |
+| 7 | todo | | sonnet | | 2026-10-20 |
 
 ## Completion note (filled at ship)
 - Date:

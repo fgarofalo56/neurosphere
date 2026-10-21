@@ -5,12 +5,14 @@ description = "NeuroSphere background workers (ingestion, projection). Must neve
 requires-python = ">=3.12"
 dependencies = [
   "neurosphere-core",
+  "neurosphere-connector",
   "pydantic>=2.14,<3",
   "aiohttp>=3.9,<4",
 ]
 
 [tool.uv.sources]
 neurosphere-core = { workspace = true }
+neurosphere-connector = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
