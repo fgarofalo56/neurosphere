@@ -149,14 +149,15 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
     });
   }, []);
 
-  const focusRow = useCallback((key: string) => {
+  const focusRow = useCallback((key: string): boolean => {
     const rows = gridRef.current?.querySelectorAll<HTMLElement>("tr[data-row-key]");
     for (const row of rows ?? []) {
       if (row.dataset["rowKey"] === key) {
         row.focus();
-        return;
+        return true;
       }
     }
+    return false;
   }, []);
 
   const ctx = useMemo<GridContextValue>(() => {

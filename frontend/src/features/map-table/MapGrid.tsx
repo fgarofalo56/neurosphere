@@ -1,6 +1,14 @@
 import { makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 import type { InfiniteData, UseInfiniteQueryResult } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, type KeyboardEvent, type ReactElement } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+} from "react";
 import type { ApiError } from "../../api/index.js";
 import { useViewport } from "./hooks";
 import { HealthIcon, KindIcon } from "./icons";
@@ -32,7 +40,7 @@ export interface GridContextValue {
   readonly collapse: (key: string) => void;
   readonly expand: (key: string, node: ViewportNode) => void;
   readonly report: (section: string, data: SectionData | null) => void;
-  readonly focusRow: (key: string) => void;
+  readonly focusRow: (key: string) => boolean;
 }
 
 export const GridContext = createContext<GridContextValue | undefined>(undefined);
@@ -207,6 +215,26 @@ export function SectionRows({
     return () => report(section, null);
   }, [pages, report, section]);
 
+  // Focus the first newly loaded row once it is committed to the DOM. The "Load more" button may
+  // unmount (last page), so focus must never be left on it: fall back to the cluster row.
+  const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+  const loadedCount = nodes.length;
+  useLayoutEffect(() => {
+    if (pendingFocus === null) return;
+    if (focusRow(pendingFocus)) {
+      setPendingFocus(null);
+      return;
+    }
+    // The query observer may not have re-rendered with the new page yet: keep waiting (this effect
+    // re-runs when the loaded row count changes). Once the row is loaded but still missing from
+    // the DOM, fall back to the cluster row rather than leave focus on a removed element.
+    const loaded = nodes.some((n) => rowKeyOf(section, n) === pendingFocus);
+    if (loaded) {
+      if (!focusRow(section)) focusRow(grid.activeKey ?? "");
+      setPendingFocus(null);
+    }
+  }, [pendingFocus, loadedCount, focusRow, section, grid.activeKey]);
+
   if (last === undefined) return null;
 
   const loadMore = async (): Promise<void> => {
@@ -215,8 +243,7 @@ export function SectionRows({
     const all = res.data?.pages.flatMap((p) => p.nodes) ?? [];
     const firstNew = all[before];
     if (firstNew !== undefined) {
-      const key = rowKeyOf(section, firstNew);
-      requestAnimationFrame(() => focusRow(key));
+      setPendingFocus(rowKeyOf(section, firstNew));
     }
   };
 
