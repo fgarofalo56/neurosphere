@@ -173,8 +173,9 @@ class InMemoryIntentStore:
         self.error = error
 
     def _check(self) -> None:
-        if self.error is not None:
-            raise self.error
+        error = self.error
+        if error is not None:
+            raise error
 
     def _next_etag(self) -> str:
         return f'"{next(self._etags)}"'

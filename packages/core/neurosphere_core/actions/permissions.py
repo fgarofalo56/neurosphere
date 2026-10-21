@@ -50,6 +50,7 @@ class GrantTablePermissionRechecker:
     ) -> bool:
         entry = (principal_id, customer_id, domain_id, permission)
         self.calls.append(entry)
-        if self.error is not None:
-            raise self.error
+        error = self.error
+        if error is not None:
+            raise error
         return entry in self._grants

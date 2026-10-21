@@ -105,8 +105,9 @@ class InMemoryExecutionControl:
         self.error = error
 
     async def get(self, customer_id: str) -> ExecutionControlState:
-        if self.error is not None:
-            raise self.error
+        error = self.error
+        if error is not None:
+            raise error
         return self._states.get(customer_id) or ExecutionControlState(customer_id=customer_id)
 
     async def set(
@@ -118,8 +119,9 @@ class InMemoryExecutionControl:
         changed_by: str,
         now: datetime,
     ) -> ExecutionControlState:
-        if self.error is not None:
-            raise self.error
+        error = self.error
+        if error is not None:
+            raise error
         state = ExecutionControlState(
             customer_id=customer_id,
             disabled=disabled,

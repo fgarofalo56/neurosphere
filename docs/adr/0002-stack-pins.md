@@ -138,7 +138,7 @@ only when the package is dev-only (hypothesis, for example).
 | black | 26.10.1 | MIT | https://pypi.org/project/black/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | https://pypi.org/project/boolean-py/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | cachecontrol | 0.14.4 | Apache-2.0 | https://pypi.org/project/cachecontrol/ | dev-only; 0.x: minor releases may break; no support window recorded |
-| certifi | 2026.7.22 | MPL-2.0 | https://pypi.org/project/certifi/ | runtime; no EOL published locally; Dependabot tracks releases |
+| certifi | 2026.10.19 | MPL-2.0 | https://pypi.org/project/certifi/ | runtime; no EOL published locally; Dependabot tracks releases |
 | cffi | 2.1.1 | MIT-0 | https://pypi.org/project/cffi/ | runtime; no EOL published locally; Dependabot tracks releases |
 | charset-normalizer | 3.5.2 | MIT | https://pypi.org/project/charset-normalizer/ | runtime; no EOL published locally; Dependabot tracks releases |
 | click | 8.5.0 | BSD-3-Clause | https://pypi.org/project/click/ | runtime; no EOL published locally; Dependabot tracks releases |

@@ -162,7 +162,8 @@ class RecordingActionAuditor:
         self.error = error
 
     async def record(self, event: ActionAuditEvent) -> None:
-        if self.error is not None:
-            raise self.error
+        error = self.error
+        if error is not None:
+            raise error
         assert_metadata_only(_to_draft(event).model_dump(mode="json"))
         self.events.append(event)

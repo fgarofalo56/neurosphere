@@ -42,7 +42,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | cachecontrol | 0.14.4 | Apache-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| certifi | 2026.7.22 | MPL-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
+| certifi | 2026.10.19 | MPL-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | cffi | 2.1.1 | MIT-0 | runtime | no EOL published locally; Dependabot tracks releases |
 | charset-normalizer | 3.5.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | click | 8.5.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
