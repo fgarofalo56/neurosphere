@@ -9,6 +9,7 @@
  *
  * Run directly with Node 24 (native type stripping): node tests/mock-api/server.ts
  */
+import { createHash, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import type { ProblemDetails } from "@neurosphere/contracts";
@@ -654,6 +655,712 @@ function qualityHandler(
   send(res, 200, qualityBody(domain), { ...cors, "server-timing": "app;dur=1.0" });
 }
 
+// ---- PRP-17 fixtures: /api/v1/actions/** and /api/v1/review/**. Shapes follow the item 4 wire
+// models (ActionView, ReviewItemView, ApprovalDecision); every identity and number is SYNTHETIC.
+// The mock imitates only the OUTCOMES the real API owns: DOMAIN_OK allows every call, DOMAIN_VIEWER
+// can read but every write answers a 403 problem+json (the Viewer persona), any other domain is
+// 403 on every call (never an empty 200). The stub sign-in is always a Viewer token, so the
+// persona is selected by the addressed domain rather than by the token.
+const ACTIONS_PATH = /^\/api\/v1\/actions\/(.*)$/;
+const REVIEW_PATH = /^\/api\/v1\/review\/(.*)$/;
+const E2E_PATH = /^\/__e2e\/(.*)$/;
+/** Readable, but the caller holds no approver permission: every write is a 403 problem+json. */
+export const DOMAIN_VIEWER = "commercial:e2e:sandbox:domain:viewer-only";
+const ACTION_TARGET = "commercial:e2e:foundry:model_deployment:support-gpt";
+const PAST = "2026-10-01T00:00:00Z";
+const RECENT = "2026-10-20T10:00:00Z";
+export const INTENT_FLOW = "aaaaaaaa-0000-4000-8000-000000000001";
+export const INTENT_ADVISORY = "aaaaaaaa-0000-4000-8000-000000000002";
+export const INTENT_EXPIRED = "aaaaaaaa-0000-4000-8000-000000000003";
+export const INTENT_STALE = "aaaaaaaa-0000-4000-8000-000000000004";
+export const INTENT_REVIEW = "aaaaaaaa-0000-4000-8000-000000000005";
+export const INTENT_VIEWER = "aaaaaaaa-0000-4000-8000-000000000006";
+export const ITEM_MAKER_CHECKER = "bbbbbbbb-0000-4000-8000-000000000001";
+export const ITEM_SUPERSEDED = "bbbbbbbb-0000-4000-8000-000000000002";
+export const ITEM_INSIGHT = "bbbbbbbb-0000-4000-8000-000000000003";
+export const ITEM_VIEWER = "bbbbbbbb-0000-4000-8000-000000000004";
+
+interface MockPrincipal {
+  principal_pseudonym: string;
+  principal_kind: string;
+  on_behalf_of: string | null;
+}
+
+interface MockIntent {
+  schema_version: string;
+  intent_id: string;
+  action_kind: string;
+  actor: MockPrincipal;
+  target: { canonical_id: string; entity_type: string };
+  target_version: string;
+  proposed_diff: { format: string; operations: Record<string, unknown>[] };
+  prerequisite_results: unknown[];
+  evidence: unknown[];
+  confirmation_hash: string | null;
+  confirmation_expires_at: string | null;
+  idempotency_key: string;
+  channel: string;
+  state: string;
+  status_reason: string | null;
+  dry_run: boolean;
+  correlation_id: string;
+  created_at: string;
+  state_changed_at: string;
+}
+
+interface MockActionView {
+  intent: MockIntent;
+  advisory: boolean;
+  requires_approval: boolean;
+  self_approval_forbidden: boolean;
+  review_item_id: string | null;
+  execution: unknown;
+}
+
+interface MockDecision {
+  schema_version: string;
+  decision_id: string;
+  review_item_id: string;
+  review_kind: string;
+  intent_id: string | null;
+  approved_confirmation_hash: string | null;
+  reviewer: MockPrincipal;
+  maker: MockPrincipal;
+  self_approval_allowed: boolean;
+  decision: string;
+  reason: string;
+  policy_version: string;
+  decided_at: string;
+  correlation_id: string;
+}
+
+interface MockReviewItem {
+  item_id: string;
+  kind: string;
+  state: string;
+  domain_id: string;
+  subject_ref: string;
+  intent_id: string | null;
+  assignee_pseudonym: string | null;
+  sla_due_at: string;
+  escalation_level: number;
+  created_at: string;
+  decisions: MockDecision[];
+  effective_decision_id: string | null;
+  superseded_decision_ids: string[];
+}
+
+interface ActionsState {
+  intents: Map<string, { domain: string; view: MockActionView }>;
+  items: Map<string, { domain: string; item: MockReviewItem }>;
+  drafts: Map<string, string>;
+  stale: Set<string>;
+}
+
+const MAKER: MockPrincipal = {
+  principal_pseudonym: "p-maker",
+  principal_kind: "user",
+  on_behalf_of: null,
+};
+
+function operations(): Record<string, unknown>[] {
+  return [
+    { op: "replace", path: "/properties/model/name", value: "gpt-4.1-mini" },
+    { op: "replace", path: "/properties/model/version", value: "2026-04-14" },
+  ];
+}
+
+/** Synthetic stand-in for the server's confirmation hash: stable for an exact target+version+diff. */
+function confirmationHashFor(intent: MockIntent): string {
+  const digest = createHash("sha256")
+    .update(JSON.stringify([intent.target, intent.target_version, intent.proposed_diff]))
+    .digest("hex");
+  return `sha256:${digest}`;
+}
+
+function minutesFromNow(minutes: number): string {
+  return new Date(Date.now() + minutes * 60_000).toISOString();
+}
+
+function makeIntent(id: string, over: Partial<MockIntent> = {}): MockIntent {
+  return {
+    schema_version: "1.0",
+    intent_id: id,
+    action_kind: "model_deployment_swap",
+    actor: MAKER,
+    target: { canonical_id: ACTION_TARGET, entity_type: "model_deployment" },
+    target_version: "etag-7",
+    proposed_diff: { format: "json_patch", operations: operations() },
+    prerequisite_results: [
+      {
+        check_id: "actor_permission",
+        status: "passed",
+        detail: null,
+        evaluated_at: RECENT,
+        evidence_ids: [],
+      },
+    ],
+    evidence: [],
+    confirmation_hash: null,
+    confirmation_expires_at: null,
+    idempotency_key: `seed-${id}`,
+    channel: "button",
+    state: "drafted",
+    status_reason: null,
+    dry_run: false,
+    correlation_id: `c-${id.slice(-4)}`,
+    created_at: RECENT,
+    state_changed_at: RECENT,
+    ...over,
+  };
+}
+
+function withConfirmation(intent: MockIntent, expiresAt: string): MockIntent {
+  return {
+    ...intent,
+    state: "awaiting_confirmation",
+    confirmation_hash: confirmationHashFor(intent),
+    confirmation_expires_at: expiresAt,
+  };
+}
+
+function makeView(intent: MockIntent, over: Partial<MockActionView> = {}): MockActionView {
+  return {
+    intent,
+    advisory: false,
+    requires_approval: true,
+    self_approval_forbidden: false,
+    review_item_id: null,
+    execution: null,
+    ...over,
+  };
+}
+
+function seedIntents(): ActionsState["intents"] {
+  const entries: [string, string, MockActionView][] = [
+    [INTENT_FLOW, DOMAIN_OK, makeView(makeIntent(INTENT_FLOW))],
+    [
+      INTENT_ADVISORY,
+      DOMAIN_OK,
+      makeView(
+        makeIntent(INTENT_ADVISORY, {
+          action_kind: "agent_instruction_update",
+          state: "validated",
+        }),
+        { advisory: true, requires_approval: false },
+      ),
+    ],
+    [
+      INTENT_EXPIRED,
+      DOMAIN_OK,
+      makeView(withConfirmation(makeIntent(INTENT_EXPIRED, { state: "validated" }), PAST)),
+    ],
+    [
+      INTENT_STALE,
+      DOMAIN_OK,
+      makeView(
+        withConfirmation(makeIntent(INTENT_STALE, { state: "validated" }), minutesFromNow(60)),
+      ),
+    ],
+    [
+      INTENT_REVIEW,
+      DOMAIN_OK,
+      makeView({
+        ...withConfirmation(makeIntent(INTENT_REVIEW), minutesFromNow(60)),
+        state: "awaiting_approval",
+      }),
+    ],
+    [
+      INTENT_VIEWER,
+      DOMAIN_VIEWER,
+      makeView({
+        ...withConfirmation(makeIntent(INTENT_VIEWER), minutesFromNow(60)),
+        state: "awaiting_approval",
+      }),
+    ],
+  ];
+  return new Map(entries.map(([id, domain, view]) => [id, { domain, view }]));
+}
+
+function makeDecision(
+  item: { id: string; kind: string; intent: string | null; hash: string | null },
+  id: string,
+  decision: string,
+  reason: string,
+): MockDecision {
+  return {
+    schema_version: "1.0",
+    decision_id: id,
+    review_item_id: item.id,
+    review_kind: item.kind,
+    intent_id: item.intent,
+    approved_confirmation_hash: item.hash,
+    reviewer: {
+      principal_pseudonym: `rev-${id.slice(-4)}`,
+      principal_kind: "user",
+      on_behalf_of: null,
+    },
+    maker: MAKER,
+    self_approval_allowed: false,
+    decision,
+    reason,
+    policy_version: "p-1",
+    decided_at: "2026-10-20T11:00:00Z",
+    correlation_id: `c-${id.slice(-4)}`,
+  };
+}
+
+function makeItem(id: string, domain: string, over: Partial<MockReviewItem> = {}): MockReviewItem {
+  return {
+    item_id: id,
+    kind: "maker_checker",
+    state: "pending",
+    domain_id: domain,
+    subject_ref: ACTION_TARGET,
+    intent_id: null,
+    assignee_pseudonym: null,
+    sla_due_at: "2099-01-01T00:00:00Z",
+    escalation_level: 0,
+    created_at: RECENT,
+    decisions: [],
+    effective_decision_id: null,
+    superseded_decision_ids: [],
+    ...over,
+  };
+}
+
+function seedItems(): ActionsState["items"] {
+  const first = "cccccccc-0000-4000-8000-000000000001";
+  const second = "cccccccc-0000-4000-8000-000000000002";
+  const hash = confirmationHashFor(makeIntent(INTENT_REVIEW));
+  const base = { id: ITEM_SUPERSEDED, kind: "maker_checker", intent: INTENT_REVIEW, hash };
+  const entries: [string, string, MockReviewItem][] = [
+    [
+      ITEM_MAKER_CHECKER,
+      DOMAIN_OK,
+      makeItem(ITEM_MAKER_CHECKER, DOMAIN_OK, { intent_id: INTENT_REVIEW }),
+    ],
+    [
+      ITEM_SUPERSEDED,
+      DOMAIN_OK,
+      makeItem(ITEM_SUPERSEDED, DOMAIN_OK, {
+        state: "approved",
+        intent_id: INTENT_REVIEW,
+        assignee_pseudonym: "rev-0001",
+        // The approval won the race; the later rejection was logged but did not take effect.
+        decisions: [
+          makeDecision(base, first, "approved", "Diff matches the change request"),
+          makeDecision(base, second, "rejected", "Late rejection after the approval landed"),
+        ],
+        effective_decision_id: first,
+        superseded_decision_ids: [second],
+      }),
+    ],
+    [
+      ITEM_INSIGHT,
+      DOMAIN_OK,
+      makeItem(ITEM_INSIGHT, DOMAIN_OK, {
+        kind: "recommendation",
+        subject_ref: "commercial:e2e:sandbox:agent:support-bot",
+      }),
+    ],
+    [
+      ITEM_VIEWER,
+      DOMAIN_VIEWER,
+      makeItem(ITEM_VIEWER, DOMAIN_VIEWER, { intent_id: INTENT_VIEWER }),
+    ],
+  ];
+  return new Map(entries.map(([id, domain, item]) => [id, { domain, item }]));
+}
+
+function freshActionsState(): ActionsState {
+  return {
+    intents: seedIntents(),
+    items: seedItems(),
+    drafts: new Map(),
+    stale: new Set([INTENT_STALE]),
+  };
+}
+
+function actionProblem(
+  status: number,
+  code: ProblemDetails["code"],
+  reason: string | undefined,
+  detail: string,
+  instance: string,
+  correlationId: string,
+): ProblemDetails {
+  return {
+    schema_version: "1.0.0",
+    type: `https://neurosphere.invalid/problems/${code.replaceAll("_", "-")}`,
+    title: code.replaceAll("_", " "),
+    status,
+    detail,
+    instance,
+    code,
+    ...(reason !== undefined && { reason }),
+    retryable: false,
+    correlation_id: correlationId,
+  } satisfies ProblemDetails;
+}
+
+interface ActionsContext {
+  res: ServerResponse;
+  req: IncomingMessage;
+  url: URL;
+  cors: Record<string, string>;
+  correlationId: string;
+  readBody: () => Promise<string>;
+  state: ActionsState;
+}
+
+function sendProblem(
+  ctx: ActionsContext,
+  status: number,
+  code: ProblemDetails["code"],
+  reason: string | undefined,
+  detail: string,
+): void {
+  send(
+    ctx.res,
+    status,
+    actionProblem(status, code, reason, detail, ctx.url.pathname, ctx.correlationId),
+    ctx.cors,
+    "application/problem+json",
+  );
+}
+
+function parseJson(raw: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Domain gate shared by actions and review: 401 without a token, 403 outside the readable set,
+ * and 403 on every write in the viewer-only domain. Returns false when it already answered. */
+function admitDomain(ctx: ActionsContext, domain: string, write: boolean): boolean {
+  if (roleFromAuthorization(ctx.req.headers.authorization) === undefined) {
+    send(ctx.res, 401, { error: "missing or unrecognised token" }, ctx.cors);
+    return false;
+  }
+  if (domain !== DOMAIN_OK && domain !== DOMAIN_VIEWER) {
+    send(
+      ctx.res,
+      403,
+      problem(ctx.correlationId, ctx.url.pathname),
+      ctx.cors,
+      "application/problem+json",
+    );
+    return false;
+  }
+  if (write && domain === DOMAIN_VIEWER) {
+    sendProblem(
+      ctx,
+      403,
+      "forbidden",
+      "permission_denied",
+      "The caller does not hold the permission for this action.",
+    );
+    return false;
+  }
+  return true;
+}
+
+function setIntent(
+  state: ActionsState,
+  id: string,
+  next: (view: MockActionView) => MockActionView,
+): MockActionView | undefined {
+  const entry = state.intents.get(id);
+  if (entry === undefined) return undefined;
+  const view = next(entry.view);
+  state.intents.set(id, { domain: entry.domain, view });
+  return view;
+}
+
+function transitionIntent(ctx: ActionsContext, domain: string, id: string, step: string): void {
+  const entry = ctx.state.intents.get(id);
+  if (entry === undefined || entry.domain !== domain) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  const { view } = entry;
+  const intent = view.intent;
+  if (view.advisory) {
+    sendProblem(ctx, 400, "capability_unavailable", "advisory_connector", "advisory only");
+    return;
+  }
+  if (step === "validate") {
+    if (intent.state !== "drafted") {
+      sendProblem(ctx, 409, "stale_version", "state_conflict", "not in the drafted state");
+      return;
+    }
+    const next = setIntent(ctx.state, id, (v) => ({
+      ...v,
+      intent: { ...v.intent, state: "validated", state_changed_at: RECENT },
+    }));
+    send(ctx.res, 200, next, ctx.cors);
+    return;
+  }
+  if (step === "confirmation") {
+    if (intent.state !== "validated") {
+      sendProblem(ctx, 409, "stale_version", "state_conflict", "not in the validated state");
+      return;
+    }
+    const next = setIntent(ctx.state, id, (v) => ({
+      ...v,
+      intent: withConfirmation(v.intent, minutesFromNow(10)),
+    }));
+    send(ctx.res, 200, next, ctx.cors);
+    return;
+  }
+  void ctx.readBody().then((raw) => {
+    const body = parseJson(raw);
+    if (intent.state !== "awaiting_confirmation" && intent.state !== "validated") {
+      sendProblem(ctx, 409, "stale_version", "state_conflict", "not awaiting confirmation");
+      return;
+    }
+    if (ctx.state.stale.has(id)) {
+      sendProblem(ctx, 409, "stale_version", "target_version_changed", "the target changed");
+      return;
+    }
+    const expires = intent.confirmation_expires_at;
+    if (expires === null || Date.parse(expires) <= Date.now()) {
+      sendProblem(ctx, 409, "stale_version", "confirmation_expired", "confirmation expired");
+      return;
+    }
+    if (body?.["confirmation_hash"] !== intent.confirmation_hash) {
+      sendProblem(ctx, 422, "invalid_schema", "confirmation_hash_mismatch", "hash mismatch");
+      return;
+    }
+    const next = setIntent(ctx.state, id, (v) => ({
+      ...v,
+      review_item_id: ITEM_MAKER_CHECKER,
+      intent: { ...v.intent, state: "awaiting_approval", state_changed_at: RECENT },
+    }));
+    send(ctx.res, 200, next, ctx.cors);
+  });
+}
+
+function draftIntent(ctx: ActionsContext, domain: string): void {
+  void ctx.readBody().then((raw) => {
+    const body = parseJson(raw);
+    const target = body?.["target"] as
+      { canonical_id?: unknown; entity_type?: unknown } | undefined;
+    const diff = body?.["proposed_diff"] as MockIntent["proposed_diff"] | undefined;
+    const key = body?.["idempotency_key"];
+    if (
+      typeof body?.["action_kind"] !== "string" ||
+      typeof target?.canonical_id !== "string" ||
+      typeof target.entity_type !== "string" ||
+      typeof body["target_version"] !== "string" ||
+      diff === undefined ||
+      typeof key !== "string"
+    ) {
+      sendProblem(ctx, 422, "invalid_schema", undefined, "invalid draft request");
+      return;
+    }
+    const replay = ctx.state.drafts.get(key);
+    const existing = replay === undefined ? undefined : ctx.state.intents.get(replay);
+    if (existing !== undefined) {
+      send(ctx.res, 200, existing.view, ctx.cors);
+      return;
+    }
+    const id = randomUUID();
+    const view = makeView(
+      makeIntent(id, {
+        action_kind: body["action_kind"],
+        target: { canonical_id: target.canonical_id, entity_type: target.entity_type },
+        target_version: body["target_version"],
+        proposed_diff: diff,
+        idempotency_key: key,
+        channel: typeof body["channel"] === "string" ? body["channel"] : "button",
+      }),
+    );
+    ctx.state.intents.set(id, { domain, view });
+    ctx.state.drafts.set(key, id);
+    send(ctx.res, 201, view, ctx.cors);
+  });
+}
+
+function actionsHandler(ctx: ActionsContext, rest: string): void {
+  const { req, state } = ctx;
+  if (req.method === "GET" && rest === "emergency-disable") {
+    if (roleFromAuthorization(req.headers.authorization) === undefined) {
+      send(ctx.res, 401, { error: "missing or unrecognised token" }, ctx.cors);
+      return;
+    }
+    send(
+      ctx.res,
+      200,
+      // Always enabled here: the switch is global, so a spec that needs the disabled banner
+      // overrides this one response in its own page instead of flipping shared state.
+      { disabled: false, reason: null, changed_by: null, changed_at: null },
+      ctx.cors,
+    );
+    return;
+  }
+  const match =
+    /^domains\/([^/]+)\/intents(?:\/([^/]+)(?:\/(validate|confirmation|confirm))?)?\/?$/.exec(rest);
+  if (match === null) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  const domain = decodeURIComponent(match[1] ?? "");
+  const id = match[2] === undefined ? undefined : decodeURIComponent(match[2]);
+  const step = match[3];
+  const write = req.method === "POST";
+  if (!admitDomain(ctx, domain, write)) return;
+  if (id === undefined) {
+    if (req.method === "POST") {
+      draftIntent(ctx, domain);
+      return;
+    }
+    const wanted = ctx.url.searchParams.get("state");
+    const items = [...state.intents.values()]
+      .filter((e) => e.domain === domain)
+      .map((e) => e.view)
+      .filter((v) => wanted === null || v.intent.state === wanted);
+    send(ctx.res, 200, { items, next_cursor: null }, ctx.cors);
+    return;
+  }
+  if (step !== undefined && req.method === "POST") {
+    transitionIntent(ctx, domain, id, step);
+    return;
+  }
+  const entry = state.intents.get(id);
+  if (req.method === "GET" && entry !== undefined && entry.domain === domain) {
+    send(ctx.res, 200, entry.view, ctx.cors);
+    return;
+  }
+  send(ctx.res, 404, { error: "not found" }, ctx.cors);
+}
+
+function reviewDecide(ctx: ActionsContext, domain: string, id: string): void {
+  void ctx.readBody().then((raw) => {
+    const body = parseJson(raw);
+    const entry = ctx.state.items.get(id);
+    if (entry === undefined || entry.domain !== domain) {
+      send(ctx.res, 404, { error: "not found" }, ctx.cors);
+      return;
+    }
+    const item = entry.item;
+    const decision = body?.["decision"];
+    const reason = body?.["reason"];
+    if (
+      (decision !== "approved" && decision !== "rejected") ||
+      typeof reason !== "string" ||
+      reason.trim() === ""
+    ) {
+      sendProblem(ctx, 422, "invalid_schema", undefined, "decision and reason are required");
+      return;
+    }
+    if (!["pending", "assigned", "escalated"].includes(item.state)) {
+      sendProblem(ctx, 409, "stale_version", "state_conflict", "the item is closed");
+      return;
+    }
+    const intent = item.intent_id === null ? undefined : ctx.state.intents.get(item.intent_id);
+    const expected = intent?.view.intent.confirmation_hash ?? null;
+    if (item.kind === "maker_checker" && body?.["confirmation_hash"] !== expected) {
+      sendProblem(ctx, 422, "invalid_schema", "confirmation_hash_mismatch", "hash mismatch");
+      return;
+    }
+    const decisionId = randomUUID();
+    const next: MockReviewItem = {
+      ...item,
+      state: decision,
+      assignee_pseudonym: item.assignee_pseudonym ?? "rev-e2e",
+      decisions: [
+        ...item.decisions,
+        makeDecision(
+          { id, kind: item.kind, intent: item.intent_id, hash: expected },
+          decisionId,
+          decision,
+          reason.trim(),
+        ),
+      ],
+      effective_decision_id: decisionId,
+    };
+    ctx.state.items.set(id, { domain, item: next });
+    send(ctx.res, 200, next, ctx.cors);
+  });
+}
+
+function reviewHandler(ctx: ActionsContext, rest: string): void {
+  const { req, state } = ctx;
+  const match = /^domains\/([^/]+)\/items(?:\/([^/]+)(?:\/(assignment|decisions))?)?\/?$/.exec(
+    rest,
+  );
+  if (match === null) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  const domain = decodeURIComponent(match[1] ?? "");
+  const id = match[2] === undefined ? undefined : decodeURIComponent(match[2]);
+  const action = match[3];
+  if (!admitDomain(ctx, domain, req.method === "POST")) return;
+  if (id === undefined) {
+    const kind = ctx.url.searchParams.get("kind");
+    const wanted = ctx.url.searchParams.get("state");
+    const items = [...state.items.values()]
+      .filter((e) => e.domain === domain)
+      .map((e) => e.item)
+      .filter((i) => kind === null || i.kind === kind)
+      .filter((i) => wanted === null || i.state === wanted);
+    send(ctx.res, 200, { items, next_cursor: null }, ctx.cors);
+    return;
+  }
+  const entry = state.items.get(id);
+  if (entry === undefined || entry.domain !== domain) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  if (req.method === "GET" && action === undefined) {
+    send(ctx.res, 200, entry.item, ctx.cors);
+    return;
+  }
+  if (req.method === "POST" && action === "assignment") {
+    const next = { ...entry.item, state: "assigned", assignee_pseudonym: "rev-e2e" };
+    state.items.set(id, { domain, item: next });
+    send(ctx.res, 200, next, ctx.cors);
+    return;
+  }
+  if (req.method === "POST" && action === "decisions") {
+    reviewDecide(ctx, domain, id);
+    return;
+  }
+  send(ctx.res, 404, { error: "not found" }, ctx.cors);
+}
+
+function noContent(ctx: ActionsContext): void {
+  ctx.res.writeHead(204, ctx.cors);
+  ctx.res.end();
+}
+
+/** Test-only controls (loopback mock, never the product API): restore one seeded record. Specs
+ * reset the records they mutate so reruns against a reused server and
+ * parallel workers stay independent. */
+function e2eHandler(ctx: ActionsContext, rest: string): void {
+  const reset = /^reset\/([^/]+)$/.exec(rest);
+  if (reset !== null) {
+    const id = decodeURIComponent(reset[1] ?? "");
+    const intent = seedIntents().get(id);
+    const item = seedItems().get(id);
+    if (intent !== undefined) ctx.state.intents.set(id, intent);
+    if (item !== undefined) ctx.state.items.set(id, item);
+    if (intent === undefined && item === undefined)
+      send(ctx.res, 404, { error: "no seed" }, ctx.cors);
+    else noContent(ctx);
+    return;
+  }
+  send(ctx.res, 404, { error: "not found" }, ctx.cors);
+}
+
 function send(
   res: ServerResponse,
   status: number,
@@ -675,6 +1382,7 @@ function readRequestBody(req: IncomingMessage): Promise<string> {
 
 export function createMockApi(options: MockApiOptions): Server {
   const recommendationState = { routed: new Map<string, string>() };
+  const actionsState = freshActionsState();
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const correlationId = `e2e-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const cors: Record<string, string> = {
@@ -690,6 +1398,30 @@ export function createMockApi(options: MockApiOptions): Server {
     if (req.method === "OPTIONS") {
       res.writeHead(204, cors);
       res.end();
+      return;
+    }
+    const actionsCtx: ActionsContext = {
+      res,
+      req,
+      url,
+      cors,
+      correlationId,
+      readBody: () => readRequestBody(req),
+      state: actionsState,
+    };
+    const actions = ACTIONS_PATH.exec(url.pathname);
+    if (actions !== null) {
+      actionsHandler(actionsCtx, actions[1] ?? "");
+      return;
+    }
+    const review = REVIEW_PATH.exec(url.pathname);
+    if (review !== null) {
+      reviewHandler(actionsCtx, review[1] ?? "");
+      return;
+    }
+    const e2e = E2E_PATH.exec(url.pathname);
+    if (e2e !== null && req.method === "POST") {
+      e2eHandler(actionsCtx, e2e[1] ?? "");
       return;
     }
     const recommendation = RECOMMENDATION_BASE.exec(url.pathname);
