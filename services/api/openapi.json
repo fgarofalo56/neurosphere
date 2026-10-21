@@ -1,6 +1,236 @@
 {
   "components": {
     "schemas": {
+      "ActionIntent": {
+        "additionalProperties": false,
+        "description": "Durable intent executed by the single action executor shared by button, chat, REST and MCP (PRP.md section 3, PRD NS-06). The intent binds actor, target, target_version, proposed_diff and confirmation expiry into confirmation_hash, defined field-by-field in ./confirmation-hash.json, so every channel computes the same value. Legal state changes are the allowlist in ./transitions.json; enforcement belongs to PRP-17. Rules JSON Schema cannot express are checked by Python validators in tests/contracts/test_action_transitions.py: `validate_confirmation_hash` (confirmation_hash equals the recomputed hash), `validate_state_transition` (every state change is an allowlisted (from, to) pair) and `validate_intent_timestamps` (created_at <= state_changed_at, and confirmation_expires_at > created_at).",
+        "properties": {
+          "action_kind": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Action Kind",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "channel": {
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "confirmation_expires_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__UtcTimestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confirmation_hash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sha256Hash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "correlation_id": {
+            "$ref": "#/components/schemas/CorrelationId"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__UtcTimestamp"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef-Output"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "intent_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "prerequisite_results": {
+            "items": {
+              "$ref": "#/components/schemas/PrerequisiteResult"
+            },
+            "title": "Prerequisite Results",
+            "type": "array"
+          },
+          "proposed_diff": {
+            "$ref": "#/components/schemas/ProposedDiff"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ActionState"
+          },
+          "state_changed_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__UtcTimestamp"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TargetRef"
+          },
+          "target_version": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Target Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "intent_id",
+          "action_kind",
+          "actor",
+          "target",
+          "target_version",
+          "proposed_diff",
+          "prerequisite_results",
+          "evidence",
+          "confirmation_hash",
+          "confirmation_expires_at",
+          "idempotency_key",
+          "channel",
+          "state",
+          "status_reason",
+          "dry_run",
+          "correlation_id",
+          "created_at",
+          "state_changed_at"
+        ],
+        "title": "ActionIntent",
+        "type": "object"
+      },
+      "ActionList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActionView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ActionList",
+        "type": "object"
+      },
+      "ActionState": {
+        "enum": [
+          "drafted",
+          "validated",
+          "awaiting_confirmation",
+          "awaiting_approval",
+          "executing",
+          "succeeded",
+          "failed",
+          "rolled_back",
+          "expired"
+        ],
+        "title": "ActionState",
+        "type": "string"
+      },
+      "ActionView": {
+        "additionalProperties": false,
+        "description": "Wire-contract ``ActionView``: the intent plus derived flags, never the envelope.",
+        "properties": {
+          "advisory": {
+            "title": "Advisory",
+            "type": "boolean"
+          },
+          "execution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent": {
+            "$ref": "#/components/schemas/ActionIntent"
+          },
+          "requires_approval": {
+            "title": "Requires Approval",
+            "type": "boolean"
+          },
+          "review_item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Item Id"
+          },
+          "self_approval_forbidden": {
+            "title": "Self Approval Forbidden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "intent",
+          "advisory",
+          "requires_approval",
+          "self_approval_forbidden",
+          "review_item_id",
+          "execution"
+        ],
+        "title": "ActionView",
+        "type": "object"
+      },
       "Actor": {
         "additionalProperties": false,
         "description": "Pseudonymous reference to the principal that performed or requested an operation (Clarification 8: no email, display name or other free-text identity field). Used by ActionIntent, ApprovalDecision and AuditRecord. Derived server-side from validated identity; never taken from a request body or model output.",
@@ -384,6 +614,135 @@
           "reason"
         ],
         "title": "AnalyticsInfo",
+        "type": "object"
+      },
+      "ApprovalDecision": {
+        "additionalProperties": false,
+        "description": "Immutable decision on a HITL review item (PRD NS-04). Written once and never updated: a changed mind is a new review item with a new decision, never an edit, so the schema has no update-capable field. Insight review and maker-checker approval of executable changes are separate kinds. A maker-checker approval binds to the exact confirmation_hash it approves, so an approval cannot be replayed against a different target, version or diff. Rules JSON Schema cannot express are checked by `validate_maker_checker_separation` in tests/contracts/test_action_transitions.py: when self_approval_allowed is false, reviewer.principal_pseudonym differs from maker.principal_pseudonym and from maker.on_behalf_of.",
+        "properties": {
+          "approved_confirmation_hash": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sha256Hash"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "correlation_id": {
+            "pattern": "^[A-Za-z0-9._-]{1,128}$",
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "decided_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__approval_decision__UtcTimestamp"
+          },
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected",
+              "escalated"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "decision_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "intent_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "review_item_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "review_kind": {
+            "enum": [
+              "maker_checker",
+              "insight_review"
+            ],
+            "title": "Review Kind",
+            "type": "string"
+          },
+          "reviewer": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "schema_version": {
+            "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "self_approval_allowed": {
+            "title": "Self Approval Allowed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "decision_id",
+          "review_item_id",
+          "review_kind",
+          "intent_id",
+          "approved_confirmation_hash",
+          "reviewer",
+          "maker",
+          "self_approval_allowed",
+          "decision",
+          "reason",
+          "policy_version",
+          "decided_at",
+          "correlation_id"
+        ],
+        "title": "ApprovalDecision",
+        "type": "object"
+      },
+      "AssignmentBody": {
+        "additionalProperties": false,
+        "description": "``null`` claims the item for the caller; a principal id assigns another reviewer.",
+        "properties": {
+          "assignee_principal_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=@-]{0,511}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Principal Id"
+          }
+        },
+        "title": "AssignmentBody",
         "type": "object"
       },
       "Attributes": {
@@ -798,6 +1157,22 @@
         "title": "ConfigHash",
         "type": "string"
       },
+      "ConfirmBody": {
+        "additionalProperties": false,
+        "description": "``POST .../confirm``: the hash the maker was shown (``awaiting_confirmation``).",
+        "properties": {
+          "confirmation_hash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Confirmation Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation_hash"
+        ],
+        "title": "ConfirmBody",
+        "type": "object"
+      },
       "ConnectorVersion": {
         "maxLength": 64,
         "title": "ConnectorVersion",
@@ -840,6 +1215,11 @@
         "minimum": 0.0,
         "title": "ContextWindowTokens",
         "type": "integer"
+      },
+      "CorrelationId": {
+        "pattern": "^[A-Za-z0-9._-]{1,128}$",
+        "title": "CorrelationId",
+        "type": "string"
       },
       "CostImplication": {
         "additionalProperties": false,
@@ -1057,7 +1437,7 @@
           "review_item_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EvidenceId"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__EvidenceId"
               },
               {
                 "type": "null"
@@ -1213,6 +1593,38 @@
         "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$",
         "title": "Decimal",
         "type": "string"
+      },
+      "DecisionBody": {
+        "additionalProperties": false,
+        "description": "``POST .../decisions`` (maker-checker). ``reason`` is the reviewer's justification.",
+        "properties": {
+          "confirmation_hash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Confirmation Hash",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "confirmation_hash"
+        ],
+        "title": "DecisionBody",
+        "type": "object"
       },
       "DecisionResult": {
         "additionalProperties": false,
@@ -1654,6 +2066,67 @@
         "title": "DomainId",
         "type": "string"
       },
+      "DraftIntentBody": {
+        "additionalProperties": false,
+        "description": "``POST .../intents``. ``channel`` is metadata only (audit, display); never hashed.",
+        "properties": {
+          "action_kind": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Action Kind",
+            "type": "string"
+          },
+          "channel": {
+            "default": "rest",
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef-Input"
+            },
+            "maxItems": 64,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "proposed_diff": {
+            "$ref": "#/components/schemas/ProposedDiff"
+          },
+          "target": {
+            "$ref": "#/components/schemas/TargetRef"
+          },
+          "target_version": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Target Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_kind",
+          "target",
+          "target_version",
+          "proposed_diff",
+          "idempotency_key"
+        ],
+        "title": "DraftIntentBody",
+        "type": "object"
+      },
       "DriftAlertOut": {
         "additionalProperties": false,
         "properties": {
@@ -1853,7 +2326,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/EvidenceId"
+                  "$ref": "#/components/schemas/EvidenceId-Input"
                 },
                 "maxItems": 1000,
                 "type": "array"
@@ -1928,7 +2401,7 @@
           "review_item_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EvidenceId"
+                "$ref": "#/components/schemas/EvidenceId-Input"
               },
               {
                 "type": "null"
@@ -1988,7 +2461,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/EvidenceId"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__EvidenceId"
                 },
                 "maxItems": 1000,
                 "type": "array"
@@ -2063,7 +2536,7 @@
           "review_item_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EvidenceId"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__EvidenceId"
               },
               {
                 "type": "null"
@@ -2110,6 +2583,85 @@
           "decided_at"
         ],
         "title": "EdgeOverride",
+        "type": "object"
+      },
+      "EmergencyDisableBody": {
+        "additionalProperties": false,
+        "description": "``PUT /emergency-disable``. ``reason`` is a snake_case code, required when disabling.",
+        "properties": {
+          "disabled": {
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "disabled"
+        ],
+        "title": "EmergencyDisableBody",
+        "type": "object"
+      },
+      "EmergencyDisableView": {
+        "additionalProperties": false,
+        "description": "Kill-switch state for the caller's customer. ``changed_by`` is a pseudonym.",
+        "properties": {
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          },
+          "changed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed By"
+          },
+          "disabled": {
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "disabled",
+          "reason",
+          "changed_by",
+          "changed_at"
+        ],
+        "title": "EmergencyDisableView",
         "type": "object"
       },
       "EntityFilter": {
@@ -2397,10 +2949,106 @@
         "title": "EvaluatorUsage",
         "type": "object"
       },
-      "EvidenceId": {
+      "EvidenceId-Input": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
         "title": "EvidenceId",
         "type": "string"
+      },
+      "EvidenceRef-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "recommendation",
+              "evaluation_result",
+              "telemetry_query",
+              "cost_record",
+              "catalog_entity",
+              "policy",
+              "document"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcTimestamp-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "ref",
+          "observed_at"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "EvidenceRef-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "recommendation",
+              "evaluation_result",
+              "telemetry_query",
+              "cost_record",
+              "catalog_entity",
+              "policy",
+              "document"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__UtcTimestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "ref",
+          "observed_at"
+        ],
+        "title": "EvidenceRef",
+        "type": "object"
       },
       "ExecutionState": {
         "additionalProperties": false,
@@ -2418,6 +3066,65 @@
           }
         },
         "title": "ExecutionState",
+        "type": "object"
+      },
+      "ExecutionView": {
+        "additionalProperties": false,
+        "properties": {
+          "canary": {
+            "anyOf": [
+              {
+                "enum": [
+                  "passed",
+                  "failed",
+                  "verify_only"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canary"
+          },
+          "phase": {
+            "enum": [
+              "pending",
+              "rechecked",
+              "dry_run_done",
+              "applying",
+              "applied",
+              "canary",
+              "verifying",
+              "rolling_back",
+              "done"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "rolled_back": {
+            "title": "Rolled Back",
+            "type": "boolean"
+          },
+          "verify_matched": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verify Matched"
+          }
+        },
+        "required": [
+          "phase",
+          "canary",
+          "verify_matched",
+          "rolled_back"
+        ],
+        "title": "ExecutionView",
         "type": "object"
       },
       "ExportPage": {
@@ -3982,6 +4689,58 @@
         "title": "ParentDomainId",
         "type": "string"
       },
+      "PatchOperation": {
+        "additionalProperties": false,
+        "description": "One RFC 6902 operation. add/replace/test require `value`; move/copy require `from`; remove takes neither.",
+        "properties": {
+          "from": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "pattern": "^(/([^~/]|~[01])*)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From"
+          },
+          "op": {
+            "enum": [
+              "add",
+              "remove",
+              "replace",
+              "move",
+              "copy",
+              "test"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "path": {
+            "maxLength": 1024,
+            "pattern": "^(/([^~/]|~[01])*)*$",
+            "title": "Path",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "op",
+          "path"
+        ],
+        "title": "PatchOperation",
+        "type": "object"
+      },
       "Person": {
         "additionalProperties": false,
         "description": "Person as a pseudonymous principal only. There is deliberately no email, name, UPN, display_name, free-text or attributes field; re-identification is a policy-store concern, not a contract field. The id segment of the canonical ID is the pseudonym. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_person_id_is_pseudonym (id segment equals principal_pseudonym).",
@@ -4713,6 +5472,58 @@
         "title": "Prerequisite",
         "type": "object"
       },
+      "PrerequisiteResult": {
+        "additionalProperties": false,
+        "properties": {
+          "check_id": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Check Id",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "evaluated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__UtcTimestamp"
+          },
+          "evidence_ids": {
+            "items": {
+              "$ref": "#/components/schemas/neurosphere_contracts__actions__v1__action_intent__EvidenceId"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "warning",
+              "not_applicable",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "check_id",
+          "status",
+          "detail",
+          "evaluated_at",
+          "evidence_ids"
+        ],
+        "title": "PrerequisiteResult",
+        "type": "object"
+      },
       "PresentedEdge": {
         "additionalProperties": false,
         "description": "An edge as shown to users: observed facts after curation (locks, overrides, rejects).\n\nEvidence and security evidence are always the full union (observed plus anything a\nsteward added); they are never reduced by a decision. ``hidden`` is True when a curated\nreject hides the edge from presented lineage (Auditors can still see it).",
@@ -5034,6 +5845,32 @@
           "price_version"
         ],
         "title": "ProjectedEstimate",
+        "type": "object"
+      },
+      "ProposedDiff": {
+        "additionalProperties": false,
+        "description": "RFC 6902 JSON Patch against the target document at target_version. `value` members are opaque target data validated by the write connector and must never hold secret material (use vault references).",
+        "properties": {
+          "format": {
+            "const": "json_patch",
+            "title": "Format",
+            "type": "string"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/PatchOperation"
+            },
+            "maxItems": 256,
+            "minItems": 1,
+            "title": "Operations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "format",
+          "operations"
+        ],
+        "title": "ProposedDiff",
         "type": "object"
       },
       "Provenance": {
@@ -5834,6 +6671,193 @@
           "next_cursor"
         ],
         "title": "ResultsList",
+        "type": "object"
+      },
+      "ReviewDecisionBody": {
+        "additionalProperties": false,
+        "description": "Maker-checker decisions carry the confirmation hash; insight decisions must not.",
+        "properties": {
+          "confirmation_hash": {
+            "anyOf": [
+              {
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmation Hash"
+          },
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "ReviewDecisionBody",
+        "type": "object"
+      },
+      "ReviewItemList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewItemView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ReviewItemList",
+        "type": "object"
+      },
+      "ReviewItemView": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_pseudonym": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Pseudonym"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalDecision"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "effective_decision_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Decision Id"
+          },
+          "escalation_level": {
+            "title": "Escalation Level",
+            "type": "integer"
+          },
+          "intent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Id"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "maker_checker",
+              "relationship",
+              "evaluation_dispute",
+              "recommendation",
+              "policy_exception"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sla_due_at": {
+            "format": "date-time",
+            "title": "Sla Due At",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "assigned",
+              "approved",
+              "rejected",
+              "expired",
+              "escalated",
+              "executed",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject_ref": {
+            "title": "Subject Ref",
+            "type": "string"
+          },
+          "superseded_decision_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Superseded Decision Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "item_id",
+          "kind",
+          "state",
+          "domain_id",
+          "subject_ref",
+          "intent_id",
+          "assignee_pseudonym",
+          "sla_due_at",
+          "escalation_level",
+          "created_at",
+          "decisions",
+          "effective_decision_id",
+          "superseded_decision_ids"
+        ],
+        "title": "ReviewItemView",
         "type": "object"
       },
       "ReviewRequestBody": {
@@ -7363,6 +8387,11 @@
         "title": "UnknownRemainder",
         "type": "object"
       },
+      "UtcTimestamp-Input": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
+      },
       "Uuid": {
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "title": "Uuid",
@@ -7584,6 +8613,22 @@
         "title": "Window",
         "type": "object"
       },
+      "neurosphere_contracts__actions__v1__action_intent__EvidenceId": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "EvidenceId",
+        "type": "string"
+      },
+      "neurosphere_contracts__actions__v1__action_intent__UtcTimestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
+      },
+      "neurosphere_contracts__actions__v1__approval_decision__UtcTimestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
+      },
       "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
         "title": "UtcTimestamp",
@@ -7592,6 +8637,11 @@
       "neurosphere_contracts__catalog__v1__common__Date": {
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
         "title": "Date",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__common__EvidenceId": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
+        "title": "EvidenceId",
         "type": "string"
       },
       "neurosphere_contracts__catalog__v1__common__Timestamp": {
@@ -7940,6 +8990,509 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/actions/domains/{domain}/intents": {
+      "get": {
+        "operationId": "list_intents_api_v1_actions_domains__domain__intents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "drafted",
+                    "validated",
+                    "awaiting_confirmation",
+                    "awaiting_approval",
+                    "executing",
+                    "succeeded",
+                    "failed",
+                    "rolled_back",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Intents",
+        "tags": [
+          "actions"
+        ]
+      },
+      "post": {
+        "operationId": "draft_intent_api_v1_actions_domains__domain__intents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftIntentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Intent",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/domains/{domain}/intents/{intent_id}": {
+      "get": {
+        "operationId": "get_intent_api_v1_actions_domains__domain__intents__intent_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "intent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Intent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Intent",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/domains/{domain}/intents/{intent_id}/confirm": {
+      "post": {
+        "operationId": "confirm_intent_api_v1_actions_domains__domain__intents__intent_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "intent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Intent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Intent",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/domains/{domain}/intents/{intent_id}/confirmation": {
+      "post": {
+        "operationId": "present_confirmation_api_v1_actions_domains__domain__intents__intent_id__confirmation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "intent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Intent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Present Confirmation",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/domains/{domain}/intents/{intent_id}/decisions": {
+      "post": {
+        "operationId": "decide_intent_api_v1_actions_domains__domain__intents__intent_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "intent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Intent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Intent",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/domains/{domain}/intents/{intent_id}/validate": {
+      "post": {
+        "operationId": "validate_intent_api_v1_actions_domains__domain__intents__intent_id__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "intent_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Intent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Intent",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/v1/actions/emergency-disable": {
+      "get": {
+        "operationId": "read_emergency_disable_api_v1_actions_emergency_disable_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyDisableView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Emergency Disable",
+        "tags": [
+          "actions"
+        ]
+      },
+      "put": {
+        "operationId": "set_emergency_disable_api_v1_actions_emergency_disable_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmergencyDisableBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyDisableView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Emergency Disable",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
     "/api/v1/dashboards/domains/{domain}/{metric}": {
       "get": {
         "operationId": "get_dashboard_api_v1_dashboards_domains__domain___metric__get",
@@ -8546,6 +10099,311 @@
         "summary": "Reconcile",
         "tags": [
           "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/review/domains/{domain}/items": {
+      "get": {
+        "operationId": "list_items_api_v1_review_domains__domain__items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "maker_checker",
+                    "relationship",
+                    "evaluation_dispute",
+                    "recommendation",
+                    "policy_exception"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "assigned",
+                    "approved",
+                    "rejected",
+                    "expired",
+                    "escalated",
+                    "executed",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItemList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Items",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/api/v1/review/domains/{domain}/items/{item_id}": {
+      "get": {
+        "operationId": "get_item_api_v1_review_domains__domain__items__item_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItemView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Item",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/api/v1/review/domains/{domain}/items/{item_id}/assignment": {
+      "post": {
+        "operationId": "assign_item_api_v1_review_domains__domain__items__item_id__assignment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItemView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Item",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/api/v1/review/domains/{domain}/items/{item_id}/decisions": {
+      "post": {
+        "operationId": "decide_item_api_v1_review_domains__domain__items__item_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewItemView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Item",
+        "tags": [
+          "review"
         ]
       }
     },
