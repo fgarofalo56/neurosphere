@@ -1152,6 +1152,50 @@
         "title": "Cloud",
         "type": "string"
       },
+      "Completeness": {
+        "additionalProperties": false,
+        "properties": {
+          "gap_count": {
+            "title": "Gap Count",
+            "type": "integer"
+          },
+          "late_count": {
+            "title": "Late Count",
+            "type": "integer"
+          },
+          "span_count": {
+            "title": "Span Count",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "complete",
+              "partial",
+              "unknown"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "withheld_span_count": {
+            "title": "Withheld Span Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "state",
+          "span_count",
+          "gap_count",
+          "late_count",
+          "withheld_span_count"
+        ],
+        "title": "Completeness",
+        "type": "object"
+      },
       "ConfigHash": {
         "pattern": "^sha256:[a-f0-9]{64}$",
         "title": "ConfigHash",
@@ -1291,63 +1335,6 @@
           "price_version"
         ],
         "title": "CostImplication",
-        "type": "object"
-      },
-      "Coverage": {
-        "additionalProperties": false,
-        "description": "How much of the relevant population the evidence observed. observed_fraction null means unknown, never 0.",
-        "properties": {
-          "method": {
-            "enum": [
-              "full",
-              "sampled",
-              "partial",
-              "unknown"
-            ],
-            "title": "Method",
-            "type": "string"
-          },
-          "missing_source_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/CanonicalId"
-                },
-                "maxItems": 100,
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Missing Source Ids"
-          },
-          "observed_fraction": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ObservedFraction"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "sampling_rate": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SamplingRate"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "method",
-          "observed_fraction"
-        ],
-        "title": "Coverage",
         "type": "object"
       },
       "CoverageFraction": {
@@ -2855,7 +2842,7 @@
             "$ref": "#/components/schemas/Rubric"
           },
           "sampling": {
-            "$ref": "#/components/schemas/Sampling"
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Sampling"
           },
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
@@ -3290,6 +3277,59 @@
           "billing_source_freshness"
         ],
         "title": "Freshness",
+        "type": "object"
+      },
+      "Gap": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "reason": {
+            "enum": [
+              "missing_parent",
+              "sampled_out",
+              "late_arrival",
+              "unknown"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Id"
+          }
+        },
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "Gap",
         "type": "object"
       },
       "Generator": {
@@ -4359,6 +4399,68 @@
         "minLength": 1,
         "title": "ModelVersion",
         "type": "string"
+      },
+      "NodeMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "context_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Size"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency"
+          },
+          "health": {
+            "default": "unknown",
+            "enum": [
+              "ok",
+              "degraded",
+              "failing",
+              "unknown"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "latency_p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency P95 Ms"
+          },
+          "tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens"
+          }
+        },
+        "title": "NodeMetrics",
+        "type": "object"
       },
       "NullableCount": {
         "anyOf": [
@@ -6153,7 +6255,7 @@
             "type": "string"
           },
           "coverage": {
-            "$ref": "#/components/schemas/Coverage"
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Coverage"
           },
           "created_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__Timestamp"
@@ -7120,72 +7222,6 @@
         "title": "RunReference",
         "type": "object"
       },
-      "Sampling": {
-        "additionalProperties": false,
-        "description": "Sampling coverage. coverage_fraction null means unknown.",
-        "properties": {
-          "coverage_fraction": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CoverageFraction"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "method": {
-            "enum": [
-              "full",
-              "uniform_random",
-              "stratified",
-              "targeted"
-            ],
-            "title": "Method",
-            "type": "string"
-          },
-          "population_size": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NullableCount"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "rate": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "maximum": 1.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rate"
-          },
-          "sample_size": {
-            "minimum": 0.0,
-            "title": "Sample Size",
-            "type": "integer"
-          },
-          "window": {
-            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Window"
-          }
-        },
-        "required": [
-          "method",
-          "sample_size",
-          "population_size",
-          "coverage_fraction",
-          "window"
-        ],
-        "title": "Sampling",
-        "type": "object"
-      },
       "SamplingRate": {
         "exclusiveMinimum": 0.0,
         "maximum": 1.0,
@@ -7739,6 +7775,174 @@
         "title": "SourceLine",
         "type": "object"
       },
+      "Span": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "kind": {
+            "enum": [
+              "agent",
+              "model",
+              "tool",
+              "retrieval",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "late": {
+            "default": false,
+            "title": "Late",
+            "type": "boolean"
+          },
+          "late_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Reason"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "payload_state": {
+            "default": "absent",
+            "enum": [
+              "absent",
+              "redacted",
+              "pending",
+              "redaction_failed",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Payload State",
+            "type": "string"
+          },
+          "sampled": {
+            "default": false,
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Rate"
+          },
+          "span_id": {
+            "title": "Span Id",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "span_id",
+          "name",
+          "kind",
+          "started_at",
+          "status"
+        ],
+        "title": "Span",
+        "type": "object"
+      },
       "SpanCount": {
         "minimum": 0.0,
         "title": "SpanCount",
@@ -8233,10 +8437,157 @@
         "title": "Tool",
         "type": "object"
       },
+      "ToolInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "outcome": {
+            "default": "unknown",
+            "enum": [
+              "success",
+              "error",
+              "cancelled",
+              "timeout",
+              "unknown"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "title": "ToolInfo",
+        "type": "object"
+      },
+      "TraceDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "completeness": {
+            "$ref": "#/components/schemas/Completeness"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "sampling": {
+            "$ref": "#/components/schemas/neurosphere_api__replay__models__Sampling"
+          },
+          "spans": {
+            "items": {
+              "$ref": "#/components/schemas/Span"
+            },
+            "title": "Spans",
+            "type": "array"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "spans",
+          "gaps",
+          "sampling",
+          "completeness"
+        ],
+        "title": "TraceDetail",
+        "type": "object"
+      },
       "TraceId": {
         "pattern": "^[a-f0-9]{32}$",
         "title": "TraceId",
         "type": "string"
+      },
+      "TracePage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraceSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TracePage",
+        "type": "object"
+      },
+      "TraceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "root_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Name"
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Rate"
+          },
+          "span_count": {
+            "title": "Span Count",
+            "type": "integer"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "trace_id": {
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trace_id",
+          "started_at",
+          "span_count",
+          "error_count"
+        ],
+        "title": "TraceSummary",
+        "type": "object"
       },
       "Trend": {
         "additionalProperties": false,
@@ -8490,6 +8841,177 @@
         "title": "Version",
         "type": "string"
       },
+      "ViewportEdge": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Observed At"
+          },
+          "provenance": {
+            "enum": [
+              "observed",
+              "declared",
+              "inferred"
+            ],
+            "title": "Provenance",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "target",
+          "provenance"
+        ],
+        "title": "ViewportEdge",
+        "type": "object"
+      },
+      "ViewportNode": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "agent",
+              "sub_agent",
+              "model",
+              "source",
+              "cluster"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "member_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Member Count"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/NodeMetrics"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "title": "ViewportNode",
+        "type": "object"
+      },
+      "ViewportResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/neurosphere_api__map__models__Coverage"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/ViewportEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/ViewportNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncation_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "node_budget",
+                  "edge_budget",
+                  "scan_limit",
+                  "traversal_incomplete",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncation Reason"
+          }
+        },
+        "required": [
+          "domain_id",
+          "nodes",
+          "edges",
+          "truncated",
+          "coverage"
+        ],
+        "title": "ViewportResponse",
+        "type": "object"
+      },
       "neurosphere_api__dashboards__models__MetricValue": {
         "additionalProperties": false,
         "properties": {
@@ -8554,6 +9076,48 @@
         "title": "Window",
         "type": "object"
       },
+      "neurosphere_api__map__models__Coverage": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "lag_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lag Seconds"
+          },
+          "state": {
+            "enum": [
+              "complete",
+              "partial",
+              "delayed",
+              "unknown"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "Coverage",
+        "type": "object"
+      },
       "neurosphere_api__reconciliation__models__MetricValue": {
         "additionalProperties": false,
         "description": "``status: \"unknown\"`` always pairs with ``value: None``; never 0 for unknown.",
@@ -8611,6 +9175,35 @@
           "end"
         ],
         "title": "Window",
+        "type": "object"
+      },
+      "neurosphere_api__replay__models__Sampling": {
+        "additionalProperties": false,
+        "properties": {
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "Sampling",
         "type": "object"
       },
       "neurosphere_contracts__actions__v1__action_intent__EvidenceId": {
@@ -8795,6 +9388,72 @@
         "title": "UtcTimestamp",
         "type": "string"
       },
+      "neurosphere_contracts__evaluation__v1__evaluation_result__Sampling": {
+        "additionalProperties": false,
+        "description": "Sampling coverage. coverage_fraction null means unknown.",
+        "properties": {
+          "coverage_fraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverageFraction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "enum": [
+              "full",
+              "uniform_random",
+              "stratified",
+              "targeted"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "population_size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NullableCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "sample_size": {
+            "minimum": 0.0,
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "window": {
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__Window"
+          }
+        },
+        "required": [
+          "method",
+          "sample_size",
+          "population_size",
+          "coverage_fraction",
+          "window"
+        ],
+        "title": "Sampling",
+        "type": "object"
+      },
       "neurosphere_contracts__evaluation__v1__evaluation_result__Timestamp": {
         "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
         "title": "Timestamp",
@@ -8882,6 +9541,63 @@
           "end"
         ],
         "title": "Window",
+        "type": "object"
+      },
+      "neurosphere_contracts__recommendations__v1__recommendation__Coverage": {
+        "additionalProperties": false,
+        "description": "How much of the relevant population the evidence observed. observed_fraction null means unknown, never 0.",
+        "properties": {
+          "method": {
+            "enum": [
+              "full",
+              "sampled",
+              "partial",
+              "unknown"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "missing_source_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CanonicalId"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Source Ids"
+          },
+          "observed_fraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservedFraction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SamplingRate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "method",
+          "observed_fraction"
+        ],
+        "title": "Coverage",
         "type": "object"
       },
       "neurosphere_contracts__recommendations__v1__recommendation__Date": {
@@ -9780,6 +10496,106 @@
         ]
       }
     },
+    "/api/v1/map/domains/{domain_id}/viewport": {
+      "get": {
+        "operationId": "get_viewport_api_v1_map_domains__domain_id__viewport_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cluster_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cluster Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "node_budget",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "minimum": 1,
+              "title": "Node Budget",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "edge_budget",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "minimum": 1,
+              "title": "Edge Budget",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Viewport",
+        "tags": [
+          "map"
+        ]
+      }
+    },
     "/api/v1/recommendations/domains/{domain}": {
       "get": {
         "operationId": "list_recommendations_api_v1_recommendations_domains__domain__get",
@@ -10099,6 +10915,145 @@
         "summary": "Reconcile",
         "tags": [
           "reconciliation"
+        ]
+      }
+    },
+    "/api/v1/replay/domains/{domain_id}/traces": {
+      "get": {
+        "operationId": "list_traces_api_v1_replay_domains__domain_id__traces_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "pattern": "^[A-Za-z0-9_\\-=.~]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TracePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Traces",
+        "tags": [
+          "replay"
+        ]
+      }
+    },
+    "/api/v1/replay/domains/{domain_id}/traces/{trace_id}": {
+      "get": {
+        "operationId": "get_trace_api_v1_replay_domains__domain_id__traces__trace_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "trace_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f]{32}$",
+              "title": "Trace Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_payload",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Payload",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Trace",
+        "tags": [
+          "replay"
         ]
       }
     },

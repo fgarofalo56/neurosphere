@@ -3,6 +3,9 @@ import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { actionsRoutes } from "../features/actions";
 import { dashboardRoutes } from "../features/dashboards";
+import { mapRoutes } from "../features/map";
+import { mapTableRoutes } from "../features/map-table";
+import { replayRoutes } from "../features/replay";
 import { reviewRoutes } from "../features/review";
 import { reconciliationRoutes } from "../features/reconciliation";
 import { qualityRoutes } from "../features/quality";
@@ -29,6 +32,9 @@ const appRoutes = [
   ...qualityRoutes,
   ...actionsRoutes,
   ...reviewRoutes,
+  ...mapRoutes,
+  ...mapTableRoutes,
+  ...replayRoutes,
 ];
 
 const container = document.getElementById("root");

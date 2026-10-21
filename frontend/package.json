@@ -19,9 +19,11 @@
     "@fluentui/react-components": "^9.74.0",
     "@neurosphere/contracts": "workspace:*",
     "@tanstack/react-query": "^5.104.1",
+    "graphology": "^0.26.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router": "^8.4.0",
+    "sigma": "^4.0.3",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

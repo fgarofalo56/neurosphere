@@ -1,0 +1,78 @@
+{
+  "backend": "CosmosAggregateStore (compose vNext emulator)",
+  "correctness": {
+    "foreign_attempts_expected": 6,
+    "foreign_domain_deltas_received": 0,
+    "foreign_domain_subscriptions_refused": 6,
+    "unexpected_errors": [],
+    "unobserved_samples": 0
+  },
+  "definition": {
+    "freshness": "t1 - t0 per (subscriber, event)",
+    "t0": "instant the normalized event is handed to AggregateProjection.handle (worker aggregate rollup path), time.perf_counter",
+    "t1": "instant a subscribed WebSocket client receives a delta whose node frequency has reached the event's ordinal within its domain, time.perf_counter"
+  },
+  "disclaimer": "Measured on a developer machine, one process, in-process ASGI transport and dev-issuer tokens. Not a guarantee or an SLA; G07 sized-profile evidence stays OPEN.",
+  "environment": {
+    "cpu_model": "AMD Ryzen 9 5950X 16-Core Processor",
+    "heartbeat_seconds": 15.0,
+    "knobs": {
+      "NS_MAP_FRESHNESS_DOMAINS": 3,
+      "NS_MAP_FRESHNESS_DURATION_SECONDS": 6.0,
+      "NS_MAP_FRESHNESS_EVENTS_PER_SECOND": 5.0,
+      "NS_MAP_FRESHNESS_SUBSCRIBERS": 6
+    },
+    "logical_cpus": 32,
+    "os": "Windows-11-10.0.26300-SP0",
+    "poll_interval_seconds": 2.0,
+    "python": "3.12.13",
+    "ram_gib": 127.9,
+    "revocation_ttl_seconds": 10.0,
+    "scope_refresh_seconds": 1.0,
+    "source_read_cache_ttl_seconds": 1.0
+  },
+  "exclusions": [
+    "Event Hubs transport and ingest edge (emulator lacks Entra; the edge is measured elsewhere): events enter at the normalized, post-ingestion boundary",
+    "provider billing freshness (days of lag; the map shows the billing watermark instead)",
+    "Entra / JWKS (dev-issuer tokens validated in memory)",
+    "network between client and API (in-process ASGI transport and TestClient)",
+    "browser rendering and frame rate (separate item)",
+    "RU accounting, throttling and index policy of a real Cosmos account (G12)",
+    "sized profiles and concurrency at production scale (G07, PRP-21)"
+  ],
+  "expected_samples": 60,
+  "failures": [],
+  "freshness": {
+    "max_seconds": 2.1031,
+    "mean_seconds": 1.1239,
+    "p50_seconds": 1.0853,
+    "p95_seconds": 2.0276,
+    "p99_seconds": 2.1031
+  },
+  "git_sha": "3bde2f528fb9ae2728d3d726f1d59877711437cd",
+  "label": "sandbox on compose, emulators; bounded feasibility",
+  "load": {
+    "events_by_domain": {
+      "commercial:contoso:sandbox:domain:dom-001": 10,
+      "commercial:contoso:sandbox:domain:dom-002": 10,
+      "commercial:contoso:sandbox:domain:dom-003": 10
+    },
+    "events_total": 30,
+    "generator_max_slip_seconds": 0.0166,
+    "generator_mean_slip_seconds": 0.0087,
+    "subscribers_by_domain": {
+      "commercial:contoso:sandbox:domain:dom-001": 2,
+      "commercial:contoso:sandbox:domain:dom-002": 2,
+      "commercial:contoso:sandbox:domain:dom-003": 2
+    },
+    "write_phase_seconds": 5.931
+  },
+  "meets_target": true,
+  "samples": 60,
+  "target": {
+    "asserted": false,
+    "label": "PRD planning target (event-to-view freshness p95 <= 10 s): target, not a guarantee",
+    "p95_seconds_at_most": 10.0
+  },
+  "timestamp": "2026-10-21T17:51:09+00:00"
+}

@@ -655,6 +655,491 @@ function qualityHandler(
   send(res, 200, qualityBody(domain), { ...cors, "server-timing": "app;dur=1.0" });
 }
 
+// ---- PRP-18 fixtures: GET /api/v1/map/domains/{domain}/viewport and
+// GET /api/v1/replay/domains/{domain}/traces[/{trace_id}]. Shapes are generated from the shipped
+// Python models (map/models.py, replay/models.py), not from memory. DOMAIN_OK and DOMAIN_MAP_PERF
+// are readable; every other domain answers 403 (never an empty 200); no token answers 401.
+//
+// Viewport modes:
+//  - no cluster_id: truncated top level (clusters with member_count plus one node of every kind).
+//  - cluster_id=<id>: 5 nodes per page, `cursor=page-2` then `cursor=page-3` (last, no next_cursor);
+//    page 2 coverage is `delayed`.
+//  - perf: DOMAIN_MAP_PERF, or `fixture=perf` on any readable domain. Deterministic
+//    min(node_budget, 2000) nodes (default 2000) and min(edge_budget, 5000) edges, never truncated.
+const MAP_VIEWPORT = /^\/api\/v1\/map\/domains\/([^/]+)\/viewport\/?$/;
+const REPLAY_TRACES = /^\/api\/v1\/replay\/domains\/([^/]+)\/traces\/?$/;
+const REPLAY_TRACE = /^\/api\/v1\/replay\/domains\/([^/]+)\/traces\/([^/]+)\/?$/;
+/** Readable by the stub caller; serves the deterministic 2000-node viewport by default. */
+export const DOMAIN_MAP_PERF = "commercial:e2e:sandbox:domain:map-perf";
+export const MAP_CLUSTER_AGENTS = "cluster:agents";
+export const MAP_CLUSTER_MODELS = "cluster:models";
+export const MAP_NEXT_CURSOR = "page-2";
+export const MAP_PERF_NODE_COUNT = 2000;
+export const MAP_PERF_MAX_EDGES = 5000;
+export const TRACE_COMPLETE = "trace-e2e-complete";
+export const TRACE_GAP = "trace-e2e-gap";
+export const TRACE_SAMPLED = "trace-e2e-sampled";
+export const TRACE_LATE = "trace-e2e-late";
+export const TRACE_NEXT_CURSOR = "page-2";
+export const TRACE_UNKNOWN_ID = "trace-e2e-unknown";
+
+const MAP_AS_OF = "2026-10-20T10:00:00Z";
+const MAP_NODE_KINDS = ["agent", "sub_agent", "model", "source", "person"] as const;
+const MAP_HEALTH = ["ok", "degraded", "failing", "unknown"] as const;
+const MAP_PROVENANCE = ["observed", "declared", "inferred"] as const;
+
+interface MapMetrics {
+  tokens: number | null;
+  context_size: number | null;
+  frequency: number | null;
+  latency_p95_ms: number | null;
+  health: (typeof MAP_HEALTH)[number];
+}
+
+const NULL_MAP_METRICS: MapMetrics = {
+  tokens: null,
+  context_size: null,
+  frequency: null,
+  latency_p95_ms: null,
+  health: "unknown",
+};
+
+function mapNode(
+  id: string,
+  kind: string,
+  label: string,
+  over: { cluster_id?: string | null; member_count?: number | null; metrics?: MapMetrics } = {},
+): Record<string, unknown> {
+  return {
+    id,
+    kind,
+    label,
+    cluster_id: over.cluster_id ?? null,
+    member_count: over.member_count ?? null,
+    metrics: over.metrics ?? NULL_MAP_METRICS,
+  };
+}
+
+function mapEdge(
+  id: string,
+  source: string,
+  target: string,
+  provenance: (typeof MAP_PROVENANCE)[number],
+): Record<string, unknown> {
+  return {
+    id,
+    source,
+    target,
+    provenance,
+    last_observed_at: provenance === "observed" ? MAP_AS_OF : null,
+  };
+}
+
+function viewportResponse(
+  domain: string,
+  parts: {
+    nodes: Record<string, unknown>[];
+    edges: Record<string, unknown>[];
+    truncated: boolean;
+    truncation_reason?: string | null;
+    next_cursor?: string | null;
+    coverage: { state: string; lag_seconds: number | null; as_of: string | null };
+  },
+): Record<string, unknown> {
+  return {
+    domain_id: domain,
+    nodes: parts.nodes,
+    edges: parts.edges,
+    truncated: parts.truncated,
+    truncation_reason: parts.truncation_reason ?? null,
+    next_cursor: parts.next_cursor ?? null,
+    coverage: parts.coverage,
+  };
+}
+
+function intParam(url: URL, name: string, fallback: number, max: number): number {
+  const raw = Number(url.searchParams.get(name));
+  return Number.isInteger(raw) && raw >= 1 ? Math.min(raw, max) : fallback;
+}
+
+function perfViewport(domain: string, url: URL): Record<string, unknown> {
+  const nodeCount = intParam(url, "node_budget", MAP_PERF_NODE_COUNT, MAP_PERF_NODE_COUNT);
+  const edgeCount = Math.min(
+    intParam(url, "edge_budget", MAP_PERF_MAX_EDGES, MAP_PERF_MAX_EDGES),
+    nodeCount * 2,
+  );
+  const nodes: Record<string, unknown>[] = [];
+  for (let i = 0; i < nodeCount; i += 1) {
+    const kind = MAP_NODE_KINDS[i % MAP_NODE_KINDS.length] ?? "agent";
+    const metrics: MapMetrics =
+      i % 7 === 0
+        ? NULL_MAP_METRICS
+        : {
+            tokens: 1000 + (i % 97) * 10,
+            context_size: 4096,
+            frequency: (i % 13) + 0.5,
+            latency_p95_ms: 100 + (i % 50) * 5,
+            health: MAP_HEALTH[i % MAP_HEALTH.length] ?? "unknown",
+          };
+    nodes.push(
+      mapNode(
+        `perf:node:${i}`,
+        kind,
+        kind === "person" ? `Person-${(i % 9973).toString(16).padStart(4, "0")}` : `${kind}-${i}`,
+        { metrics },
+      ),
+    );
+  }
+  const edges: Record<string, unknown>[] = [];
+  for (let i = 0; i < edgeCount; i += 1) {
+    const source = i % nodeCount;
+    const target = (i * 7 + 1) % nodeCount;
+    edges.push(
+      mapEdge(
+        `perf:edge:${i}`,
+        `perf:node:${source}`,
+        `perf:node:${target === source ? (target + 1) % nodeCount : target}`,
+        MAP_PROVENANCE[i % MAP_PROVENANCE.length] ?? "observed",
+      ),
+    );
+  }
+  return viewportResponse(domain, {
+    nodes,
+    edges,
+    truncated: false,
+    coverage: { state: "complete", lag_seconds: 0, as_of: MAP_AS_OF },
+  });
+}
+
+function topLevelViewport(domain: string): Record<string, unknown> {
+  const healthy: MapMetrics = {
+    tokens: 52000,
+    context_size: 8192,
+    frequency: 4.5,
+    latency_p95_ms: 820,
+    health: "ok",
+  };
+  const nodes = [
+    mapNode(MAP_CLUSTER_AGENTS, "cluster", "Agents", { member_count: 120 }),
+    mapNode(MAP_CLUSTER_MODELS, "cluster", "Models", { member_count: 14 }),
+    mapNode("e2e:agent:support", "agent", "support-agent", { metrics: healthy }),
+    mapNode("e2e:sub_agent:triage", "sub_agent", "triage-sub-agent", {
+      metrics: { ...healthy, health: "degraded", latency_p95_ms: 2400 },
+    }),
+    mapNode("e2e:model:gpt", "model", "support-gpt"),
+    mapNode("e2e:source:kb", "source", "knowledge-base"),
+    mapNode("e2e:person:1", "person", "Person-3fa9"),
+  ];
+  const edges = [
+    mapEdge("e2e:edge:1", "e2e:person:1", "e2e:agent:support", "observed"),
+    mapEdge("e2e:edge:2", "e2e:agent:support", "e2e:sub_agent:triage", "declared"),
+    mapEdge("e2e:edge:3", "e2e:sub_agent:triage", "e2e:model:gpt", "inferred"),
+    mapEdge("e2e:edge:4", "e2e:agent:support", "e2e:source:kb", "observed"),
+  ];
+  return viewportResponse(domain, {
+    nodes,
+    edges,
+    truncated: true,
+    truncation_reason: "node_budget",
+    coverage: { state: "partial", lag_seconds: 45, as_of: MAP_AS_OF },
+  });
+}
+
+function clusterViewport(
+  domain: string,
+  clusterId: string,
+  cursor: string,
+): Record<string, unknown> {
+  const page = cursor === "page-3" ? 3 : cursor === MAP_NEXT_CURSOR ? 2 : 1;
+  const kind = clusterId === MAP_CLUSTER_MODELS ? "model" : "agent";
+  const nodes: Record<string, unknown>[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    const n = (page - 1) * 5 + i;
+    nodes.push(
+      mapNode(`${clusterId}:member:${n}`, kind, `${kind}-${n}`, {
+        cluster_id: clusterId,
+        metrics:
+          n % 4 === 0
+            ? NULL_MAP_METRICS
+            : {
+                tokens: 900 + n,
+                context_size: 4096,
+                frequency: 2,
+                latency_p95_ms: 300 + n,
+                health: "ok",
+              },
+      }),
+    );
+  }
+  const edges: Record<string, unknown>[] = [];
+  for (let i = 1; i < nodes.length; i += 1) {
+    edges.push(
+      mapEdge(
+        `${clusterId}:edge:${page}:${i}`,
+        `${clusterId}:member:${(page - 1) * 5}`,
+        `${clusterId}:member:${(page - 1) * 5 + i}`,
+        MAP_PROVENANCE[i % MAP_PROVENANCE.length] ?? "observed",
+      ),
+    );
+  }
+  const last = page === 3;
+  return viewportResponse(domain, {
+    nodes,
+    edges,
+    truncated: !last,
+    truncation_reason: last ? null : "node_budget",
+    next_cursor: last ? null : page === 1 ? MAP_NEXT_CURSOR : "page-3",
+    coverage:
+      page === 2
+        ? { state: "delayed", lag_seconds: 300, as_of: MAP_AS_OF }
+        : { state: "complete", lag_seconds: 0, as_of: MAP_AS_OF },
+  });
+}
+
+function viewportBody(domain: string, url: URL): Record<string, unknown> {
+  if (domain === DOMAIN_MAP_PERF || url.searchParams.get("fixture") === "perf") {
+    return perfViewport(domain, url);
+  }
+  const clusterId = url.searchParams.get("cluster_id");
+  if (clusterId !== null && clusterId !== "") {
+    return clusterViewport(domain, clusterId, url.searchParams.get("cursor") ?? "");
+  }
+  return topLevelViewport(domain);
+}
+
+function admitReadDomain(
+  res: ServerResponse,
+  req: IncomingMessage,
+  url: URL,
+  domainSegment: string,
+  cors: Record<string, string>,
+  correlationId: string,
+): string | undefined {
+  if (roleFromAuthorization(req.headers.authorization) === undefined) {
+    send(res, 401, { error: "missing or unrecognised token" }, cors);
+    return undefined;
+  }
+  const domain = decodeURIComponent(domainSegment);
+  if (domain !== DOMAIN_OK && domain !== DOMAIN_MAP_PERF) {
+    send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
+    return undefined;
+  }
+  return domain;
+}
+
+function replaySpan(
+  id: string,
+  parent: string | null,
+  name: string,
+  kind: string,
+  startSecond: number,
+  durationMs: number | null,
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const started = new Date(Date.parse("2026-10-20T10:00:00Z") + startSecond * 1000);
+  const iso = (d: Date): string => d.toISOString().replace(".000Z", "Z");
+  return {
+    span_id: id,
+    parent_span_id: parent,
+    name,
+    kind,
+    started_at: iso(started),
+    ended_at: durationMs === null ? null : iso(new Date(started.getTime() + durationMs)),
+    duration_ms: durationMs,
+    status: "ok",
+    error: null,
+    tool: null,
+    agent: null,
+    late: false,
+    late_reason: null,
+    sampled: false,
+    sampling_rate: null,
+    payload_state: "absent",
+    payload: null,
+    ...over,
+  };
+}
+
+function traceCompleteness(
+  state: string,
+  spanCount: number,
+  gapCount: number,
+  lateCount: number,
+): Record<string, unknown> {
+  return {
+    state,
+    span_count: spanCount,
+    gap_count: gapCount,
+    late_count: lateCount,
+    withheld_span_count: 0,
+    truncated: false,
+  };
+}
+
+function traceDetail(traceId: string): Record<string, unknown> | undefined {
+  const root = replaySpan("s1", null, "support-agent", "agent", 0, 2400, {
+    agent: "support-agent",
+  });
+  const model = replaySpan("s2", "s1", "support-gpt", "model", 0.2, 1200, {
+    payload_state: "redacted",
+  });
+  const tool = replaySpan("s3", "s1", "lookup-order", "tool", 1.5, 700, {
+    tool: { name: null, outcome: "success" },
+  });
+  switch (traceId) {
+    case TRACE_COMPLETE:
+      return {
+        trace_id: traceId,
+        spans: [root, model, tool],
+        gaps: [],
+        sampling: { rate: 1, reason: null },
+        completeness: traceCompleteness("complete", 3, 0, 0),
+      };
+    case TRACE_GAP:
+      return {
+        trace_id: traceId,
+        spans: [
+          root,
+          replaySpan("s4", "s-missing", "orphan-tool", "tool", 1.8, 300, {
+            status: "error",
+            error: "timeout",
+            tool: { name: null, outcome: "timeout" },
+          }),
+        ],
+        gaps: [
+          {
+            parent_span_id: "s-missing",
+            reason: "missing_parent",
+            span_id: "s4",
+            count: 1,
+            detail: "Parent span was never received.",
+          },
+        ],
+        sampling: { rate: 1, reason: null },
+        completeness: traceCompleteness("partial", 2, 1, 0),
+      };
+    case TRACE_SAMPLED:
+      return {
+        trace_id: traceId,
+        spans: [
+          { ...root, sampled: true, sampling_rate: 0.25 },
+          { ...model, sampled: true, sampling_rate: 0.25 },
+        ],
+        gaps: [
+          {
+            parent_span_id: "s1",
+            reason: "sampled_out",
+            span_id: null,
+            count: 3,
+            detail: "Child spans were dropped by sampling.",
+          },
+        ],
+        sampling: { rate: 0.25, reason: "head_based" },
+        completeness: traceCompleteness("partial", 2, 1, 0),
+      };
+    case TRACE_LATE:
+      return {
+        trace_id: traceId,
+        spans: [
+          root,
+          replaySpan("s5", "s1", "late-retrieval", "retrieval", 2, null, {
+            late: true,
+            late_reason: "arrived_after_root_closed",
+            payload_state: "pending",
+          }),
+        ],
+        gaps: [
+          {
+            parent_span_id: "s1",
+            reason: "late_arrival",
+            span_id: "s5",
+            count: 1,
+            detail: "Span arrived after the trace was assembled.",
+          },
+        ],
+        sampling: { rate: 1, reason: null },
+        completeness: traceCompleteness("partial", 2, 1, 1),
+      };
+    default:
+      return undefined;
+  }
+}
+
+function replayList(cursor: string): Record<string, unknown> {
+  if (cursor === TRACE_NEXT_CURSOR) {
+    return {
+      items: [
+        {
+          trace_id: TRACE_LATE,
+          started_at: "2026-10-20T09:00:00Z",
+          span_count: 2,
+          error_count: 0,
+          sampling_rate: 1,
+          root_name: "support-agent",
+        },
+      ],
+      next_cursor: null,
+    };
+  }
+  return {
+    items: [
+      {
+        trace_id: TRACE_COMPLETE,
+        started_at: "2026-10-20T10:00:00Z",
+        span_count: 3,
+        error_count: 0,
+        sampling_rate: 1,
+        root_name: "support-agent",
+      },
+      {
+        trace_id: TRACE_GAP,
+        started_at: "2026-10-20T09:50:00Z",
+        span_count: 2,
+        error_count: 1,
+        sampling_rate: 1,
+        root_name: "support-agent",
+      },
+      {
+        trace_id: TRACE_SAMPLED,
+        started_at: "2026-10-20T09:40:00Z",
+        span_count: 2,
+        error_count: 0,
+        sampling_rate: 0.25,
+        root_name: null,
+      },
+    ],
+    next_cursor: TRACE_NEXT_CURSOR,
+  };
+}
+
+/** Serves the map viewport and replay routes; returns false when the path is not one of them. */
+function mapReplayHandler(
+  res: ServerResponse,
+  req: IncomingMessage,
+  url: URL,
+  cors: Record<string, string>,
+  correlationId: string,
+): boolean {
+  const viewport = MAP_VIEWPORT.exec(url.pathname);
+  const detail = REPLAY_TRACE.exec(url.pathname);
+  const list = REPLAY_TRACES.exec(url.pathname);
+  const segment = viewport?.[1] ?? detail?.[1] ?? list?.[1];
+  if (segment === undefined) return false;
+  const domain = admitReadDomain(res, req, url, segment, cors, correlationId);
+  if (domain === undefined) return true;
+  const headers = { ...cors, "server-timing": "app;dur=1.0" };
+  if (viewport !== null) {
+    send(res, 200, viewportBody(domain, url), headers);
+  } else if (detail !== null) {
+    const body = traceDetail(decodeURIComponent(detail[2] ?? ""));
+    if (body === undefined) send(res, 404, { error: "trace not found" }, cors);
+    else send(res, 200, body, headers);
+  } else {
+    send(res, 200, replayList(url.searchParams.get("cursor") ?? ""), headers);
+  }
+  return true;
+}
+
 // ---- PRP-17 fixtures: /api/v1/actions/** and /api/v1/review/**. Shapes follow the item 4 wire
 // models (ActionView, ReviewItemView, ApprovalDecision); every identity and number is SYNTHETIC.
 // The mock imitates only the OUTCOMES the real API owns: DOMAIN_OK allows every call, DOMAIN_VIEWER
@@ -1463,6 +1948,7 @@ export function createMockApi(options: MockApiOptions): Server {
       );
       return;
     }
+    if (mapReplayHandler(res, req, url, cors, correlationId)) return;
     const quality = EVALUATION_QUALITY.exec(url.pathname);
     if (quality !== null) {
       qualityHandler(res, req, url, quality[1] ?? "", cors, correlationId);

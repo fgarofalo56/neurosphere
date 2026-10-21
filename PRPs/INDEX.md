@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-18-live-map-and-session-replay](active/PRP-18-live-map-and-session-replay.md) |  | 7/7 (100%) | merged 7 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) |  |  | - | - | ? / ? | required |
 | [prp-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) |  |  | - | - | ? / ? | required |
 | [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) |  |  | - | - | ? / ? | required |
 | [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) |  |  | - | - | ? / ? | none |

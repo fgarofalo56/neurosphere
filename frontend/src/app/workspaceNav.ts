@@ -1,6 +1,9 @@
 import { useRoles } from "../auth";
 import { actionsNavItems } from "../features/actions";
 import { dashboardNavItems } from "../features/dashboards";
+import { mapNavItems } from "../features/map";
+import { mapTableNavItems } from "../features/map-table";
+import { replayNavItems } from "../features/replay";
 import { reviewNavItems } from "../features/review";
 import { reconciliationNavItems } from "../features/reconciliation";
 import { qualityNavItems } from "../features/quality";
@@ -25,5 +28,8 @@ export function useAppNavItems(): readonly NavItem[] {
     ...qualityNavItems(),
     ...actionsNavItems(),
     ...reviewNavItems(),
+    ...mapNavItems(),
+    ...mapTableNavItems(),
+    ...replayNavItems(),
   ];
 }
