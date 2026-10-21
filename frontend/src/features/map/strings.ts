@@ -29,7 +29,10 @@ export const STRINGS = {
   reduceMotion: "Reduce motion",
   reduceMotionSystem: "Reduce motion (set by your system preference)",
   edgeAnimationOn: "Observed edges animate",
-  edgeAnimationOff: "Edge animation is off",
+  edgeAnimationOffReduced: "Edge animation paused: reduced motion",
+  edgeAnimationOffNotLive: "Edge animation paused: live updates not connected",
+  edgeAnimationOffDelayed: "Edge animation paused: data delayed",
+  edgeAnimationOffUnknown: "Edge animation paused: coverage unknown",
   // Truncation
   truncatedTitle: "Partial view",
   truncatedBody: (reason: string) =>
@@ -63,6 +66,8 @@ export const STRINGS = {
   liveDisconnected: "Live updates: disconnected. The map is a snapshot and is not updating.",
   liveUnavailable: "Live updates unavailable. The map is a snapshot and is not updating.",
   liveUnauthenticated: "Live updates: sign-in expired. The map is a snapshot and is not updating.",
+  accessRevoked:
+    "Access revoked: your access to this domain was revoked or is not permitted. The map data has been removed from this view.",
   liveRevoked:
     "Live updates stopped: your access to this domain was revoked or is not permitted. The map is a stale snapshot.",
 } as const;

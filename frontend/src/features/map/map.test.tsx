@@ -20,7 +20,7 @@ import {
 } from "./appearance";
 import { MapGraph, parseNode, worstCoverage } from "./mapGraph";
 import { MapView } from "./MapPage";
-import { effectiveReducedMotion } from "./motion";
+import { animationGate, effectiveReducedMotion } from "./motion";
 import {
   createLiveClient,
   parseServerMessage,
@@ -813,10 +813,140 @@ describe("MapView", () => {
     );
   });
 
+  /** Opens the (fake) gateway socket and subscribes: the status becomes "live". */
+  async function goLive(): Promise<FakeSocket> {
+    await screen.findByTestId("map-canvas");
+    await waitFor(() => expect(FakeSocket.instances).toHaveLength(1));
+    const socket = FakeSocket.instances[0] as FakeSocket;
+    act(() => socket.open());
+    act(() => socket.receive({ type: "subscribed", domain_id: "d1" }));
+    return socket;
+  }
+
+  const liveDelta = (seq: number, state: Coverage["state"], lag: number | null = 0) => ({
+    type: "delta",
+    domain_id: "d1",
+    seq,
+    nodes: [],
+    edges: [],
+    coverage: { state, lag_seconds: lag, as_of: "t" },
+    emitted_at: "t",
+  });
+
+  it("does not animate before the socket is live, and says why", async () => {
+    const sched = manualScheduler();
+    await mount({}, 200, sched.scheduler);
+    const canvas = await screen.findByTestId("map-canvas");
+    expect(canvas).toHaveAttribute("data-edge-animation", "off");
+    expect(sched.requested()).toBe(0);
+    expect(screen.getByTestId("animation-status")).toHaveTextContent(
+      "Edge animation paused: live updates not connected",
+    );
+  });
+
+  it("stops the animator when the socket closes, and resumes when live again", async () => {
+    const sched = manualScheduler();
+    await mount({}, 200, sched.scheduler);
+    const socket = await goLive();
+    const canvas = screen.getByTestId("map-canvas");
+    await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "on"));
+    expect(sched.pending()).toBeGreaterThan(0);
+
+    act(() => socket.drop(1006)); // lost after being live: reconnecting
+    await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "off"));
+    expect(canvas).toHaveAttribute("data-animated-edges", "0");
+    expect(sched.pending()).toBe(0);
+    expect(screen.getByTestId("animation-status")).toHaveTextContent(
+      "Edge animation paused: live updates not connected",
+    );
+  });
+
+  it.each([
+    "connecting",
+    "reconnecting",
+    "disconnected",
+    "unavailable",
+    "unauthenticated",
+    "revoked",
+  ] as const)("never animates while the live status is %s", (status) => {
+    expect(animationGate(false, status, "complete")).toBe("notLive");
+    expect(animationGate(false, status, "partial")).toBe("notLive");
+  });
+
+  it("animates only when live with complete or partial coverage, and reduced motion wins", () => {
+    expect(animationGate(false, "live", "complete")).toBe("on");
+    expect(animationGate(false, "live", "partial")).toBe("on");
+    expect(animationGate(false, "live", "delayed")).toBe("delayed");
+    expect(animationGate(false, "live", "unknown")).toBe("unknown");
+    expect(animationGate(false, "live", null)).toBe("unknown");
+    expect(animationGate(true, "live", "complete")).toBe("reduced");
+  });
+
+  it("clears the graph and animation on 4403 (access revoked)", async () => {
+    const sched = manualScheduler();
+    await mount({}, 200, sched.scheduler);
+    const socket = await goLive();
+    const canvas = screen.getByTestId("map-canvas");
+    await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "on"));
+    expect(screen.getByTestId("node-count")).toHaveTextContent("4 nodes");
+
+    act(() => socket.drop(4403));
+    await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "off"));
+    expect(sched.pending()).toBe(0);
+    expect(screen.getByTestId("access-revoked")).toHaveTextContent(/Access revoked/);
+    expect(screen.getByTestId("node-count")).toHaveTextContent("0 nodes, 0 edges");
+    expect(canvas).toHaveAttribute("data-node-count", "0");
+    expect(canvas).toHaveAttribute("data-animated-edges", "0");
+    expect(screen.queryByTestId("coverage-label")).toBeNull();
+    expect(screen.queryByTestId("truncation-banner")).toBeNull();
+  });
+
+  it.each([
+    ["delayed", "Edge animation paused: data delayed", 120],
+    ["unknown", "Edge animation paused: coverage unknown", null],
+  ] as const)(
+    "pauses animation when coverage becomes %s and resumes when complete",
+    async (state, text, lag) => {
+      const sched = manualScheduler();
+      await mount({}, 200, sched.scheduler);
+      const socket = await goLive();
+      const canvas = screen.getByTestId("map-canvas");
+      await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "on"));
+
+      act(() => socket.receive(liveDelta(1, state, lag)));
+      await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "off"));
+      expect(sched.pending()).toBe(0);
+      expect(canvas).toHaveAttribute("data-animated-edges", "0");
+      expect(screen.getByTestId("animation-status")).toHaveTextContent(text);
+
+      act(() => socket.receive(liveDelta(2, "complete")));
+      await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "on"));
+      expect(canvas).toHaveAttribute("data-animated-edges", "1");
+      expect(sched.pending()).toBeGreaterThan(0);
+      expect(screen.getByTestId("animation-status")).toHaveTextContent("Observed edges animate");
+    },
+  );
+
+  it("caches the observed-edge ids between frames instead of filtering per frame", () => {
+    const g = new MapGraph();
+    g.upsertNodes(TOP.nodes);
+    g.upsertEdges(TOP.edges);
+    g.restyle();
+    const spy = vi.spyOn(g.graph, "filterEdges");
+    const first = g.animatedEdgeIds();
+    expect(g.animatedEdgeIds()).toBe(first);
+    expect(g.animatedEdgeIds()).toBe(first);
+    expect(spy).toHaveBeenCalledTimes(1);
+    g.restyle({ sizeBy: "tokens", animateEdges: true });
+    g.animatedEdgeIds();
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it("turns edge animation off for the system preference and the in-app toggle", async () => {
     const user = userEvent.setup();
     const sched = manualScheduler();
     await mount({}, 200, sched.scheduler);
+    await goLive();
     const canvas = await screen.findByTestId("map-canvas");
     await waitFor(() => expect(canvas).toHaveAttribute("data-edge-animation", "on"));
     expect(screen.getByTestId("animation-status")).toHaveTextContent("Observed edges animate");
@@ -831,6 +961,9 @@ describe("MapView", () => {
     expect(canvas).toHaveAttribute("data-animated-edges", "0");
     expect(sched.pending()).toBe(0);
     expect(lastRenderer().setReducedMotion).toHaveBeenLastCalledWith(true);
+    expect(screen.getByTestId("animation-status")).toHaveTextContent(
+      "Edge animation paused: reduced motion",
+    );
   });
 
   it("honours prefers-reduced-motion from the start: no animation frame is ever scheduled", async () => {

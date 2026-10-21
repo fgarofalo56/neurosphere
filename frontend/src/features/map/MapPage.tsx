@@ -16,7 +16,7 @@ import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
 import { MapCanvas } from "./MapCanvas";
 import { MapGraph, worstCoverage } from "./mapGraph";
-import { useReducedMotion } from "./motion";
+import { animationGate, useReducedMotion, type AnimationGate } from "./motion";
 import { NodePanel, type ClusterExpansion } from "./NodePanel";
 import type { Scheduler } from "./animator";
 import { STRINGS, TRUNCATION_REASON_LABEL, coverageText } from "./strings";
@@ -54,6 +54,14 @@ const LIVE_TEXT: Readonly<Record<LiveStatus, string>> = {
   unavailable: STRINGS.liveUnavailable,
   unauthenticated: STRINGS.liveUnauthenticated,
   revoked: STRINGS.liveRevoked,
+};
+
+const ANIMATION_TEXT: Readonly<Record<AnimationGate, string>> = {
+  on: STRINGS.edgeAnimationOn,
+  reduced: STRINGS.edgeAnimationOffReduced,
+  notLive: STRINGS.edgeAnimationOffNotLive,
+  delayed: STRINGS.edgeAnimationOffDelayed,
+  unknown: STRINGS.edgeAnimationOffUnknown,
 };
 
 function ErrorState({ error }: { readonly error: ApiError }): ReactElement {
@@ -102,8 +110,11 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const [topFailed, setTopFailed] = useState(false);
   const [liveCoverage, setLiveCoverage] = useState<Coverage | null>(null);
 
+  const revokedRef = useRef(false);
+
   const applyPage = useCallback(
     (sourceKey: string, page: ViewportResponse) => {
+      if (revokedRef.current) return; // an in-flight page must not redraw revoked data
       mapGraph.upsertNodes(page.nodes);
       mapGraph.upsertEdges(page.edges);
       mapGraph.restyle();
@@ -130,12 +141,6 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     setTopCursor(data.next_cursor);
   }, [initial.data, applyPage]);
 
-  // Legend and motion settings drive the derived render attributes.
-  useEffect(() => {
-    mapGraph.restyle({ sizeBy, animateEdges: !motion.reduced });
-    bump();
-  }, [mapGraph, sizeBy, motion.reduced, bump]);
-
   const onDelta = useCallback(
     (delta: DeltaMessage) => {
       mapGraph.applyDelta(delta.nodes, delta.edges);
@@ -145,6 +150,38 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
     [mapGraph, bump],
   );
   const live = useLiveUpdates(domainId, initial.isSuccess, onDelta);
+  const revoked = live.status === "revoked";
+
+  const coverage = useMemo(
+    () =>
+      worstCoverage([
+        ...Object.values(sources).map((s) => s.coverage),
+        ...(liveCoverage !== null ? [liveCoverage] : []),
+      ]),
+    [sources, liveCoverage],
+  );
+
+  // Observed edges animate only while the data is live and fresh enough: a map that animates
+  // stale data as live is misleading. Reduced motion is checked first so its reason wins.
+  const coverageState = coverage?.state ?? null;
+  const animation = animationGate(motion.reduced, live.status, coverageState);
+  const animateEdges = animation === "on";
+
+  // Legend and animation gate drive the derived render attributes.
+  useEffect(() => {
+    if (revokedRef.current) return;
+    mapGraph.restyle({ sizeBy, animateEdges });
+    bump();
+  }, [mapGraph, sizeBy, animateEdges, bump]);
+
+  // Access revoked: remove the data from the view instead of leaving the last frame drawn.
+  useEffect(() => {
+    if (!revoked) return;
+    revokedRef.current = true;
+    mapGraph.clear();
+    setSelectedId(null);
+    bump();
+  }, [revoked, mapGraph, bump]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -155,7 +192,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   }, []);
 
   const loadTopMore = useCallback(async () => {
-    if (topCursor === null || topLoading) return;
+    if (revokedRef.current || topCursor === null || topLoading) return;
     if (mapGraph.remainingBudget <= 0) return;
     setTopLoading(true);
     setTopFailed(false);
@@ -176,6 +213,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
   const expandCluster = useCallback(
     async (clusterId: string) => {
+      if (revokedRef.current) return;
       const current = expansions[clusterId];
       if (current?.loading === true) return;
       if (current?.nextCursor === null) return;
@@ -218,10 +256,6 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   if (initial.isError) return <ErrorState error={initial.error} />;
   if (initial.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
 
-  const coverage = worstCoverage([
-    ...Object.values(sources).map((s) => s.coverage),
-    ...(liveCoverage !== null ? [liveCoverage] : []),
-  ]);
   const incomplete = Object.values(sources).filter((s) => s.truncated);
   const truncatedReason = incomplete[0]?.reason ?? null;
   const anyTruncated = incomplete.length > 0 || topCursor !== null;
@@ -245,9 +279,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
             disabled={motion.systemPrefers}
             onChange={(_, data) => motion.setAppToggle(data.checked)}
           />
-          <span data-testid="animation-status">
-            {motion.reduced ? STRINGS.edgeAnimationOff : STRINGS.edgeAnimationOn}
-          </span>
+          <span data-testid="animation-status">{ANIMATION_TEXT[animation]}</span>
           <span data-testid="node-count">
             {STRINGS.nodeCount(mapGraph.nodeCount, mapGraph.edgeCount)}
           </span>
@@ -258,7 +290,13 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           {live.lastErrorCode !== null ? ` (${live.lastErrorCode})` : ""}
         </div>
 
-        {coverage !== null ? (
+        {revoked ? (
+          <MessageBar intent="error" role="alert" data-testid="access-revoked">
+            <MessageBarBody>{STRINGS.accessRevoked}</MessageBarBody>
+          </MessageBar>
+        ) : null}
+
+        {coverage !== null && !revoked ? (
           <MessageBar
             intent={coverage.state === "complete" ? "success" : "warning"}
             data-testid="coverage-label"
@@ -270,7 +308,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           </MessageBar>
         ) : null}
 
-        {anyTruncated ? (
+        {anyTruncated && !revoked ? (
           <MessageBar intent="warning" data-testid="truncation-banner">
             <MessageBarBody>
               <MessageBarTitle>{STRINGS.truncatedTitle}</MessageBarTitle>
@@ -297,7 +335,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           </MessageBar>
         ) : null}
 
-        {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 ? (
+        {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 && !revoked ? (
           <p data-testid="empty-state">{STRINGS.empty}</p>
         ) : null}
 
@@ -305,6 +343,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           mapGraph={mapGraph}
           version={version}
           reducedMotion={motion.reduced}
+          animateEdges={animateEdges}
           selectedId={selectedId}
           onSelect={setSelectedId}
           onActivate={onActivate}

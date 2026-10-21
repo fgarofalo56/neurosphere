@@ -137,7 +137,7 @@ export function createMapRenderer(
     callbacks.onActivate(node);
   });
 
-  if (import.meta.env.MODE !== "production") {
+  if (!import.meta.env.PROD) {
     // Test hook (e2e and local debugging only; absent from production builds).
     (container as HTMLElement & { __nsMap?: unknown }).__nsMap = {
       camera: sigma.getCamera(),

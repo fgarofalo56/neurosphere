@@ -23,7 +23,10 @@ export interface MapCanvasProps {
   readonly mapGraph: MapGraph;
   /** Bumped whenever the graph changed; triggers a redraw. */
   readonly version: number;
+  /** Reduced motion: also governs camera transitions and inertia. */
   readonly reducedMotion: boolean;
+  /** Edge animation gate: motion allowed AND live AND coverage complete/partial. */
+  readonly animateEdges: boolean;
   readonly selectedId: string | null;
   readonly onSelect: (id: string | null) => void;
   readonly onActivate: (id: string) => void;
@@ -40,6 +43,7 @@ export function MapCanvas({
   mapGraph,
   version,
   reducedMotion,
+  animateEdges,
   selectedId,
   onSelect,
   onActivate,
@@ -94,15 +98,18 @@ export function MapCanvas({
     rendererRef.current?.select(selectedId);
   }, [selectedId, ready]);
 
-  // Edge animation: observed edges only, and only while motion is allowed.
+  useEffect(() => {
+    rendererRef.current?.setReducedMotion(reducedMotion);
+  }, [reducedMotion, ready]);
+
+  // Edge animation: observed edges only, and only while the data is live and fresh enough.
   useEffect(() => {
     const frame = frameRef.current;
     const renderer = rendererRef.current;
     if (frame === null || renderer === null) return;
-    renderer.setReducedMotion(reducedMotion);
-    frame.dataset["edgeAnimation"] = reducedMotion ? "off" : "on";
+    frame.dataset["edgeAnimation"] = animateEdges ? "on" : "off";
     frame.dataset["animationFrames"] = "0";
-    if (reducedMotion) {
+    if (!animateEdges) {
       animatorRef.current?.stop();
       animatorRef.current = null;
       return;
@@ -123,7 +130,7 @@ export function MapCanvas({
       animator.stop();
       if (animatorRef.current === animator) animatorRef.current = null;
     };
-  }, [reducedMotion, ready, mapGraph, scheduler]);
+  }, [animateEdges, ready, mapGraph, scheduler]);
 
   return (
     <div
@@ -132,7 +139,7 @@ export function MapCanvas({
       role="region"
       aria-label={STRINGS.mapRegionName}
       data-testid="map-canvas"
-      data-edge-animation={reducedMotion ? "off" : "on"}
+      data-edge-animation={animateEdges ? "on" : "off"}
       data-renderer={failed ? "unavailable" : "webgl"}
     >
       {failed ? (

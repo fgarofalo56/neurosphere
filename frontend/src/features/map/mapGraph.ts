@@ -56,7 +56,7 @@ export interface MapEdgeAttributes {
 
 export interface MapSettings {
   readonly sizeBy: SizeMetric;
-  /** True when observed edges may animate (reduced motion is off). */
+  /** True when observed edges may animate (motion allowed, live, coverage complete/partial). */
   readonly animateEdges: boolean;
 }
 
@@ -168,6 +168,8 @@ export class MapGraph {
   /** Edges whose endpoints have not been loaded yet (a later page may supply them). */
   private readonly pendingEdges = new Map<string, ViewportEdge>();
   private settings: MapSettings = DEFAULT_SETTINGS;
+  /** Observed-edge ids, rebuilt only when edges or settings change (never per frame). */
+  private animatedCache: string[] | null = null;
 
   get nodeCount(): number {
     return this.graph.order;
@@ -243,6 +245,7 @@ export class MapGraph {
   }
 
   private flushPendingEdges(): void {
+    this.animatedCache = null;
     for (const [id, edge] of this.pendingEdges) {
       if (!this.graph.hasNode(edge.source) || !this.graph.hasNode(edge.target)) continue;
       this.pendingEdges.delete(id);
@@ -268,6 +271,7 @@ export class MapGraph {
   /** Re-derives size, colour and edge style from the legend settings. */
   restyle(settings: MapSettings = this.settings): void {
     this.settings = settings;
+    this.animatedCache = null;
     const g = this.graph;
     const range: MetricRange | null = metricRange(
       g.mapNodes((_, a) => (a.kind === "cluster" ? null : metricValue(a.metrics, settings.sizeBy))),
@@ -307,7 +311,17 @@ export class MapGraph {
   /** Ids of the edges that animate (observed only, and only when motion is allowed). */
   animatedEdgeIds(): string[] {
     if (!this.settings.animateEdges) return [];
-    return this.graph.filterEdges((_, a) => a.animated);
+    this.animatedCache ??= this.graph.filterEdges((_, a) => a.animated);
+    return this.animatedCache;
+  }
+
+  /** Drops every node and edge (access revoked: stale data must not stay drawn). */
+  clear(): void {
+    this.graph.clear();
+    this.kindCounts.clear();
+    this.clusterCounts.clear();
+    this.pendingEdges.clear();
+    this.animatedCache = null;
   }
 
   /** Min/max of the known values of a metric, for the size legend. */

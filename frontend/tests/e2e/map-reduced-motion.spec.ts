@@ -10,6 +10,115 @@ import { DOMAIN_OK } from "../mock-api/server.ts";
 
 const MAP_URL = `/map?domain_id=${encodeURIComponent(DOMAIN_OK)}`;
 
+// The mock API does not serve the realtime gateway. This init script replaces ONLY the gateway
+// WebSocket (the real client code still runs) with a fake that speaks the wire contract: it
+// requires the `ns.bearer` subprotocol plus a token, answers `subscribe` with `subscribed` and one
+// `delta` for the addressed domain carrying the coverage state below. Test control lives on
+// window.__nsFakeGateway; it exists only in these specs and never ships.
+interface FakeGatewayControl {
+  coverage: string;
+  refuse: boolean;
+  sockets: { dropWith(code: number): void; deliver(state: string): void }[];
+}
+
+function installFakeGateway(initialCoverage: string): void {
+  const RealWebSocket = window.WebSocket;
+  const control: FakeGatewayControl = { coverage: initialCoverage, refuse: false, sockets: [] };
+  let seq = 0;
+
+  class FakeGatewaySocket {
+    onopen: ((e: unknown) => void) | null = null;
+    onmessage: ((e: { data: unknown }) => void) | null = null;
+    onclose: ((e: { code: number }) => void) | null = null;
+    onerror: ((e: unknown) => void) | null = null;
+    private closed = false;
+    private domain = "";
+    private readonly protocols: string[];
+
+    constructor(_url: string, protocols: string[]) {
+      this.protocols = protocols;
+      control.sockets.push(this);
+      setTimeout(() => {
+        if (control.refuse) return this.dropWith(1006);
+        if (this.protocols[0] !== "ns.bearer" || !this.protocols[1]) return this.dropWith(4401);
+        this.onopen?.({});
+      }, 0);
+    }
+
+    private emit(message: object): void {
+      if (!this.closed) this.onmessage?.({ data: JSON.stringify(message) });
+    }
+
+    deliver(state: string): void {
+      seq += 1;
+      this.emit({
+        type: "delta",
+        domain_id: this.domain,
+        seq,
+        nodes: [],
+        edges: [],
+        coverage: { state, lag_seconds: state === "delayed" ? 300 : 0, as_of: null },
+        emitted_at: new Date().toISOString(),
+      });
+    }
+
+    send(data: string): void {
+      const m = JSON.parse(data) as { type?: string; domain_id?: string };
+      if (m.type !== "subscribe" || typeof m.domain_id !== "string") return;
+      this.domain = m.domain_id;
+      this.emit({ type: "subscribed", domain_id: this.domain });
+      this.deliver(control.coverage);
+    }
+
+    dropWith(code: number): void {
+      if (this.closed) return;
+      this.closed = true;
+      this.onclose?.({ code });
+    }
+
+    close(): void {
+      this.closed = true;
+    }
+  }
+
+  window.WebSocket = function (url: string | URL, protocols?: string | string[]) {
+    if (!String(url).includes("/api/v1/realtime/ws")) return new RealWebSocket(url, protocols);
+    return new FakeGatewaySocket(String(url), Array.isArray(protocols) ? protocols : []);
+  } as unknown as typeof WebSocket;
+  (window as unknown as { __nsFakeGateway: unknown }).__nsFakeGateway = {
+    /** Every later connection attempt closes at once (1006): the gateway is gone. */
+    refuseNewConnections: () => {
+      control.refuse = true;
+    },
+    dropAll: (code: number) => control.sockets.forEach((s) => s.dropWith(code)),
+    sendDelta: (state: string) => {
+      control.coverage = state;
+      control.sockets.at(-1)?.deliver(state);
+    },
+  };
+}
+
+type Gateway = {
+  refuseNewConnections(): void;
+  dropAll(code: number): void;
+  sendDelta(state: string): void;
+};
+
+const refuseNewConnections = (page: Page): Promise<void> =>
+  page.evaluate(() =>
+    (window as unknown as { __nsFakeGateway: Gateway }).__nsFakeGateway.refuseNewConnections(),
+  );
+const dropAll = (page: Page, code: number): Promise<void> =>
+  page.evaluate(
+    (c) => (window as unknown as { __nsFakeGateway: Gateway }).__nsFakeGateway.dropAll(c),
+    code,
+  );
+const sendDelta = (page: Page, state: string): Promise<void> =>
+  page.evaluate(
+    (s) => (window as unknown as { __nsFakeGateway: Gateway }).__nsFakeGateway.sendDelta(s),
+    state,
+  );
+
 interface ViewportBody {
   edges: { provenance: string }[];
 }
@@ -27,9 +136,14 @@ const frames = async (page: Page): Promise<number> =>
   Number(await page.getByTestId("map-canvas").getAttribute("data-animation-frames"));
 
 test.describe("map reduced motion", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(installFakeGateway, "complete");
+  });
+
   test("no preference: only observed edges animate", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     const { observed, others } = await openMap(page);
+    await expect(page.getByTestId("live-status")).toHaveAttribute("data-live-status", "live");
     expect(observed).toBeGreaterThan(0);
     expect(others).toBeGreaterThan(0); // declared and inferred edges exist and stay static
     const canvas = page.getByTestId("map-canvas");
@@ -47,7 +161,9 @@ test.describe("map reduced motion", () => {
     await expect(canvas).toHaveAttribute("data-animated-edges", "0");
     await page.waitForTimeout(600);
     expect(await frames(page)).toBe(0);
-    await expect(page.getByTestId("animation-status")).toHaveText("Edge animation is off");
+    await expect(page.getByTestId("animation-status")).toHaveText(
+      "Edge animation paused: reduced motion",
+    );
     // The system preference cannot be switched back on from the app.
     const toggle = page.getByRole("switch", { name: /reduce motion/i });
     await expect(toggle).toBeChecked();
@@ -57,6 +173,7 @@ test.describe("map reduced motion", () => {
   test("in-app toggle turns animation off and back on", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
     const { observed } = await openMap(page);
+    await expect(page.getByTestId("live-status")).toHaveAttribute("data-live-status", "live");
     const canvas = page.getByTestId("map-canvas");
     const toggle = page.getByRole("switch", { name: /reduce motion/i });
     await expect(canvas).toHaveAttribute("data-edge-animation", "on");
@@ -70,6 +187,57 @@ test.describe("map reduced motion", () => {
     await toggle.click();
     await expect(canvas).toHaveAttribute("data-edge-animation", "on");
     await expect(canvas).toHaveAttribute("data-animated-edges", String(observed));
+    await expect.poll(() => frames(page)).toBeGreaterThan(3);
+  });
+});
+
+// Animation is a claim that the data is live. It must stop the moment that stops being true.
+test.describe("map edge animation follows live state", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(installFakeGateway, "complete");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+  });
+
+  test("off after the socket closes, with the reason shown", async ({ page }) => {
+    await openMap(page);
+    const canvas = page.getByTestId("map-canvas");
+    await expect(canvas).toHaveAttribute("data-edge-animation", "on");
+    await refuseNewConnections(page);
+    await dropAll(page, 1006);
+    await expect(canvas).toHaveAttribute("data-edge-animation", "off");
+    await expect(canvas).toHaveAttribute("data-animated-edges", "0");
+    await expect(page.getByTestId("animation-status")).toHaveText(
+      "Edge animation paused: live updates not connected",
+    );
+    await page.waitForTimeout(400);
+    expect(await frames(page)).toBe(0);
+  });
+
+  test("off and the data removed after access is revoked (4403)", async ({ page }) => {
+    await openMap(page);
+    const canvas = page.getByTestId("map-canvas");
+    await expect(canvas).toHaveAttribute("data-edge-animation", "on");
+    await dropAll(page, 4403);
+    await expect(canvas).toHaveAttribute("data-edge-animation", "off");
+    await expect(page.getByTestId("access-revoked")).toBeVisible();
+    await expect(canvas).toHaveAttribute("data-node-count", "0");
+    await page.waitForTimeout(400);
+    expect(await frames(page)).toBe(0);
+  });
+
+  test("off while coverage is delayed, on again when complete", async ({ page }) => {
+    await openMap(page);
+    const canvas = page.getByTestId("map-canvas");
+    await expect(canvas).toHaveAttribute("data-edge-animation", "on");
+    await sendDelta(page, "delayed");
+    await expect(canvas).toHaveAttribute("data-edge-animation", "off");
+    await expect(page.getByTestId("animation-status")).toHaveText(
+      "Edge animation paused: data delayed",
+    );
+    await page.waitForTimeout(400);
+    expect(await frames(page)).toBe(0);
+    await sendDelta(page, "complete");
+    await expect(canvas).toHaveAttribute("data-edge-animation", "on");
     await expect.poll(() => frames(page)).toBeGreaterThan(3);
   });
 });
