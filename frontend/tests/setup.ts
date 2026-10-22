@@ -7,11 +7,18 @@
  */
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll, expect } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import * as axeMatchers from "vitest-axe/matchers";
 import { setupServer } from "msw/node";
 
 expect.extend(axeMatchers);
+
+/**
+ * findBy and waitFor default to 1 s. Fluent dialogs and portals mount slower than that when
+ * every test file runs in parallel workers, which made the full suite flaky about 1 run in 5
+ * (PRP-19). The cap only bounds how long a lookup may wait; passing tests are not slowed.
+ */
+configure({ asyncUtilTimeout: 5000 });
 
 /** Shared MSW server; tests add per-test handlers with server.use(...). */
 export const server = setupServer();
