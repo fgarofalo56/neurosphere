@@ -244,10 +244,10 @@ Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-21 |
+| 1 | in-progress | (worktree) | sonnet | dispatched wave A | 2026-10-21 |
 | 2 | todo | | sonnet | | 2026-10-21 |
-| 3 | todo | | sonnet | | 2026-10-21 |
-| 4 | todo | | sonnet | | 2026-10-21 |
+| 3 | merged | worktree-agent-ac5d48f3d669cd67c | sonnet | b408ba0; orchestrator re-run: only copilot/__init__ + copilot/models/ + test_adapter_* touched, ruff + format clean, pyright 0 errors, core copilot + import boundaries 82 passed; deviations: `oauth_scope` field name (S106), Gov Foundry needs explicit oauth_scope, GUIDs redacted; open: no Commercial foundry.model_* matrix rows (Commercial resolves disabled on the shipped matrix), Gov foundry.agent_function_calling unverified -> disabled, Foundry Responses wire shape unverified vs Learn, httpx undeclared in packages/core/pyproject.toml (item 7); reviewer APPROVED (follow-ups: redaction misses phones/addresses/names and "password is x" phrasing, tool_call_id/tool_name unredacted, oauth_scope allow-list, fixture scenario via create_adapter test); merge 817f683; post-merge core copilot + import boundaries 82 passed | 2026-10-21 |
+| 4 | in-progress | (worktree) | sonnet | dispatched wave A | 2026-10-21 |
 | 5 | todo | | sonnet | | 2026-10-21 |
 | 6 | todo | | sonnet | | 2026-10-21 |
 | 7 | todo | | sonnet | | 2026-10-21 |
