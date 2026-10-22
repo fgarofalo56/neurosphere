@@ -54,8 +54,7 @@ class ChartPlanInvalidError(InvalidSchemaError):
 
     def __init__(self, violations: Iterable[ValidationIssue]) -> None:
         issues = tuple(violations)
-        super().__init__(f"chart plan rejected with {len(issues)} violation(s)")
-        self.errors = issues
+        super().__init__(f"chart plan rejected with {len(issues)} violation(s)", errors=issues)
 
     @property
     def violations(self) -> tuple[ValidationIssue, ...]:

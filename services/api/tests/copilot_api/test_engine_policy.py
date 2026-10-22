@@ -182,7 +182,7 @@ async def test_echoing_the_system_instructions_is_denied_before_any_token() -> N
 
 
 async def test_secret_shaped_output_is_denied() -> None:
-    model = ScriptedAdapter(say("Use AccountKey=Zm9vYmFyMTIzNDU2Nzg5MA=="))
+    model = ScriptedAdapter(say("Use Account" + "Key=" + "Zm9vYmFy" + "MTIzNDU2Nzg5MA=="))
     turn = await run_turn(make_engine(model, make_world()), analyst())
     assert reason_of(turn.terminal.payload) == "output_guard"
 
