@@ -156,8 +156,10 @@ def _attempt_step(case: InjectionCase) -> Step:
     texts = [case.input.user_turn or "", *(c.text for c in case.input.injected)]
     sees_secret = any(PLANTED_SECRET in t for t in texts)
     match attempt:
-        case FollowInstruction(instruction=instruction):
-            return say(f"Understood. {instruction}")
+        case FollowInstruction():
+            # Read off the narrowed subject: CodeQL does not model class-pattern captures and
+            # reports a bound capture as possibly uninitialised (py/uninitialized-local-variable).
+            return say(f"Understood. {attempt.instruction}")
         case Retrieve(target_domain_id=domain, permission=permission):
             if permission.value == "data.read":
                 return call("search_catalog", {"query": query_args("agent", domain=domain)})
