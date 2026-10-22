@@ -1,6 +1,8 @@
 ---
 name: prp-28-ui-shell-and-usability
-status: active
+status: shipped
+shipped: 2026-10-22
+pr: 90
 started: 2026-10-22
 branch: prp-28-ui-shell-and-usability
 review: required
@@ -355,8 +357,15 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`.
 | 8 | merged | worktree-agent-a90a8d5854ab8a760 | sonnet | a59e23e, merge 9cc1cb4; verify typecheck/lint clean, vitest 431/431; post-merge vitest 451/451; impl playwright 90/90; combined review APPROVED | 2026-10-22 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-22
+- Merged commits: PR #90, merge `c94e6f7` into main. Item merges on `prp-28-ui-shell-and-usability`: item 1 `1b99def`, item 2 `1409e46`, item 4 `2762ef3`, item 5 `a88819b`, item 6 `51a230e`, item 7 `ce0c94a`, item 2b `6830bcd`, item 3 `9dde992`, item 8 `9cc1cb4`, plus Prettier fix `f27acee`. Evidence: `verify-gates -Mode full` PASS on lint, typecheck, tests (6571 passed, injection corpus 78/78) and build. Frontend Vitest 451/451, Playwright 91/91, licences PASS (603 dependencies), gitleaks clean on branch commits, and every CI check on #90 green. The frontend job took 14m49s, so raising the timeout from 15 to 25 minutes was needed. Reviews (one pass each, all APPROVED, no rework): item 1 (Opus), item 2, item 3, and a combined pass over items 2b and 4–8.
 - Deviations from blueprint and why:
-- Descoped items:
-- Follow-ups:
+  - D1, item 2b added mid-flight (user-approved). Clarification 12 assumed a caller with no readable domain gets 403. A caller whose only `data.read` comes from a resource grant actually passes `require(data.read)` and gets 200 `{items: []}`. 2b shows "No domains are assigned to you" for that case too. It also has the shell rewrite the URL to the default domain with `replace`, because Copilot's URL-only `requestContext` saw no domain on first landing.
+  - D2, item 1. `/workspaces/{role}` declares `data.read` to the route inventory through a `PERMISSION_MARKER` marker and enforces the explicit role map in the handler. No permission is held by all five roles (the auditor holds only `audit.read`/`evidence.read`), and `authz/**` was out of scope. The reviewer accepted it; the route-category fix is #91.
+  - D3, item 2. `NavDrawerBody` was replaced by a plain div, because its tabster sentinels failed axe `aria-hidden-focus` across about 14 existing specs. Tab works; arrow-key navigation inside the nav is lost (#94). Group labels use a labelled `role="group"`, not headings.
+  - D4, item 3. The production-exclusion test lives in `frontend/tests/prod-exclusion/`, because the root `.gitignore` rule `build/` swallows `tests/build/`. It builds with `configFile: false`. The reviewer confirmed the real config adds no `define` or `manualChunks`, and the orchestrator grepped the real production `dist/` and found 0 demo or stub markers. Hardening is #93.
+  - D5, item 5. `ProposeSwapPage` captures the domain at draft time, so validate and confirm can't follow a mid-workflow header domain switch.
+  - D6, item 7. Fixed the `MapPage` grid overflow (`minmax(0, 1fr)`) that item 2's shell exposed.
+  - D7, item 8. The home `<h1>` stays "NeuroSphere" because shell and route tests pin it. The overview Vitest uses a strict `fetchImpl` stub, because MSW 3 ignores `onUnhandledRequest` (#92). The static test allowlists two native buttons: the `MapGrid.tsx` treegrid "Load more" and the `app/ErrorBoundary.tsx` "Try again". The page makes at most 6 calls, against a limit of 7.
+- Descoped items: none.
+- Follow-ups: #91 (authz route category and workspaces tenancy/audit), #92 (MSW 3 `onUnhandledFrame` and load flakes), #93 (demo hardening and banner covering the Copilot launcher), #94 (nav arrow keys, sign-out clearing, badge overflow), #95 (overview/static-test cleanups, `paths.ts` for dashboards/actions/review). G09 stays open with PRP-24: axe reports 0 violations on these pages, but there is no screen-reader or keyboard evidence.
