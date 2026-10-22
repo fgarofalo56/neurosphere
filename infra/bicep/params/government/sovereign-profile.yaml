@@ -1,0 +1,188 @@
+# Azure Government sovereign profile (PRP-20 item 2). Host-level manifest for the usgov deployment.
+#
+# main.bicepparam cannot carry hostnames (modules/main.bicep derives them from environment()), so
+# this file is the reviewable record of the hosts, audiences, private DNS zones, egress allowlist,
+# allowed regions and disabled options. tests/unit/government_profile/ asserts it against
+# neurosphere_core.cloud and infra/helm/values-government.yaml. Government data never routes to
+# another cloud: only Government hosts appear anywhere in this file.
+#
+# Availability, feature maturity and authorization are separate gates. Nothing here claims
+# FedRAMP authorization or an ATO.
+cloud: government
+azureEnvironment: AzureUSGovernment
+
+endpoints:
+  login: login.microsoftonline.us
+  resourceManager: management.usgovcloudapi.net
+  portal: portal.azure.us
+  graph: graph.microsoft.us
+  cosmosSuffix: .documents.azure.us
+  eventHubsSuffix: .servicebus.usgovcloudapi.net
+  searchSuffix: .search.azure.us
+  keyVaultSuffix: .vault.usgovcloudapi.net
+  storageBlobSuffix: .blob.core.usgovcloudapi.net
+  apimGatewaySuffix: .azure-api.us
+  appServiceSuffix: .azurewebsites.us
+  acrSuffix: .azurecr.us
+  logAnalytics: api.loganalytics.us
+  monitor: monitor.azure.us
+  openAiSuffix: .openai.azure.us
+  cognitiveServicesSuffix: .cognitiveservices.azure.us
+
+# Token audiences. verified=true: value read from `az cloud show --name AzureUSGovernment` (offline,
+# 2026-10-22) or a first-party Learn page. verified=false: no first-party page checked states the
+# value, so none is recorded (null). Do not guess; resolve before relying on it.
+audiences:
+  resourceManager:
+    value: https://management.usgovcloudapi.net/
+    verified: true
+    source: az cloud show --name AzureUSGovernment (endpoints.activeDirectoryResourceId), 2026-10-22
+  managementLegacy:
+    value: https://management.core.usgovcloudapi.net/
+    verified: true
+    source: az cloud show --name AzureUSGovernment (endpoints.management), 2026-10-22
+  microsoftGraph:
+    value: https://graph.microsoft.us/
+    verified: true
+    source: az cloud show --name AzureUSGovernment (endpoints.microsoftGraphResourceId), 2026-10-22
+  logAnalytics:
+    value: https://api.loganalytics.us
+    verified: true
+    source: az cloud show --name AzureUSGovernment (endpoints.logAnalyticsResourceId), 2026-10-22
+  storage:
+    value: https://storage.usgovcloudapi.net/.default
+    verified: true
+    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  monitor:
+    value: https://monitor.azure.us
+    verified: true
+    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  cosmosDb:
+    value: null
+    verified: false
+    checked: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+    source: no first-party page checked states the Government data-plane audience
+  aiSearch:
+    value: null
+    verified: false
+    checked: https://learn.microsoft.com/azure/search/search-security-rbac
+    source: no first-party page checked states the Government data-plane audience
+  eventHubs:
+    value: null
+    verified: false
+    checked: https://learn.microsoft.com/azure/event-hubs/authenticate-application
+    source: no first-party page checked states the Government data-plane audience
+
+# Government private DNS zones.
+# Source: https://learn.microsoft.com/azure/private-link/private-endpoint-dns#government
+# (retrieved 2026-10-22). cosmos, eventhubs, search, keyVault and blob equal what
+# infra/bicep/modules/network/main.bicep derives under AzureUSGovernment.
+privateDnsZones:
+  cosmosSql: privatelink.documents.azure.us
+  eventHubs: privatelink.servicebus.usgovcloudapi.net
+  search: privatelink.search.azure.us
+  keyVault: privatelink.vaultcore.usgovcloudapi.net
+  storageBlob: privatelink.blob.core.usgovcloudapi.net
+  storageQueue: privatelink.queue.core.usgovcloudapi.net
+  storageTable: privatelink.table.core.usgovcloudapi.net
+  storageFile: privatelink.file.core.usgovcloudapi.net
+  storageDfs: privatelink.dfs.core.usgovcloudapi.net
+  apimGateway: privatelink.azure-api.us
+  appService: privatelink.azurewebsites.us
+  acr: privatelink.azurecr.us
+  cognitiveServices: privatelink.cognitiveservices.azure.us
+  monitor: privatelink.monitor.azure.us
+  monitorAdx: privatelink.adx.monitor.azure.us
+  omsOpInsights: privatelink.oms.opinsights.azure.us
+  odsOpInsights: privatelink.ods.opinsights.azure.us
+  agentSvc: privatelink.agentsvc.azure-automation.us
+  synapseSql: privatelink.sql.azuresynapse.usgovcloudapi.net
+  synapseDev: privatelink.dev.azuresynapse.usgovcloudapi.net
+  databricks: privatelink.databricks.azure.us
+
+# Host allowlist for egress review (FQDN level; the cluster NetworkPolicy itself is CIDR-only).
+egressHosts:
+  - login.microsoftonline.us
+  - management.usgovcloudapi.net
+  - graph.microsoft.us
+  - api.loganalytics.us
+  - monitor.azure.us
+  - "*.documents.azure.us"
+  - "*.servicebus.usgovcloudapi.net"
+  - "*.search.azure.us"
+  - "*.vault.usgovcloudapi.net"
+  - "*.blob.core.usgovcloudapi.net"
+  - "*.azure-api.us"
+  - "*.azurewebsites.us"
+  - "*.azurecr.us"
+  - "*.openai.azure.us"
+  - "*.cognitiveservices.azure.us"
+  - "*.ods.opinsights.azure.us"
+  - "*.oms.opinsights.azure.us"
+
+# The customer selects the region; main.bicepparam only carries a documented default.
+allowedRegions:
+  - name: usgovvirginia
+    default: true
+    fabricOnly: false
+  - name: usgovarizona
+    default: false
+    fabricOnly: false
+  - name: usgovtexas
+    default: false
+    # Fabric-only: AI Search semantic ranker and agentic retrieval are not available in
+    # US Gov Texas (capability rows ai_search.semantic_ranker.government.usgovtexas.any).
+    fabricOnly: true
+    capabilityRow: ai_search.semantic_ranker.government.usgovtexas.any
+
+# Disabled with a reason, never silently omitted and never bridged to another cloud. Reasons map
+# to the capability_unavailable error style. capabilityRow references the matrix in
+# packages/core/neurosphere_core/capabilities/data/ instead of duplicating its truth.
+disabledOptions:
+  - id: fabric-outside-virginia-texas
+    reason: capability_unavailable. Fabric in GCC High is GA (2026-10-01) in US Gov Virginia and US Gov Texas only; CMK, workspace identity and Fabric IQ items are unsupported.
+    source: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+    capabilityRow:
+      - fabric.base.government.usgovvirginia.any
+      - fabric.base.government.usgovtexas.any
+      - fabric.customer_managed_keys.government.usgovvirginia.any
+      - fabric.workspace_identity.government.usgovvirginia.any
+      - fabric.fabric_iq_items.government.usgovvirginia.any
+  - id: fabric-gcc-and-dod
+    reason: capability_unavailable. Fabric in GCC (not GCC High) and DoD is not described by the cited GCC High source; availability is unverified so the option stays disabled.
+    source: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+    capabilityRow:
+      - fabric.base_gcc.government.any.any
+      - fabric.base_dod.government.any.any
+  - id: event-hubs-data-geo-replication
+    reason: capability_unavailable. Data geo-replication is GA on Premium and Dedicated only and Government support is not stated, so it is unverified and disabled.
+    source: https://learn.microsoft.com/azure/event-hubs/geo-replication
+    capabilityRow:
+      - event_hubs.data_geo_replication.government.global.premium
+      - event_hubs.data_geo_replication.government.global.dedicated
+  - id: foundry-hosted-agents
+    reason: capability_unavailable. Hosted agents are unavailable in Azure Government.
+    source: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+    capabilityRow: foundry.agent_hosted_agents.government.global.any
+  - id: foundry-web-search
+    reason: capability_unavailable. Web search is unavailable in Azure Government.
+    source: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+    capabilityRow: foundry.agent_web_search.government.global.any
+  - id: foundry-bing-grounding
+    reason: capability_unavailable. Bing grounding is unavailable in Azure Government.
+    source: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+    capabilityRow: foundry.agent_bing_grounding.government.global.any
+  - id: foundry-fabric-tool
+    reason: capability_unavailable. The Fabric tool for agents is unavailable in Azure Government.
+    source: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+    capabilityRow: foundry.agent_fabric_tool.government.global.any
+  - id: foundry-agent-to-agent
+    reason: capability_unavailable. Agent-to-agent is unavailable in Azure Government.
+    source: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+    capabilityRow: foundry.agent_to_agent.government.global.any
+  - id: app-service-managed-certificate
+    reason: capability_unavailable. App Service Managed Certificate, App Service Certificate and App Service Domain are not available in Azure Government; supply a customer certificate.
+    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  - id: azure-ad-b2c
+    reason: capability_unavailable. Azure AD B2C is not available in Azure Government.
+    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
