@@ -1,6 +1,8 @@
 import { Button, MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ChartFrame } from "../charts";
 import {
   Citations,
@@ -86,29 +88,38 @@ function DeleteButton({ report }: { readonly report: ReportView }): ReactElement
 
 export function ReportViewPage(): ReactElement {
   const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const reportId = params.get("report_id") ?? "";
   const enabled = domainId !== "" && reportId !== "";
   const query = useReport({ domainId, reportId }, enabled);
 
   if (!enabled) {
     return (
-      <section aria-label={STRINGS.viewTitle}>
+      <PageTemplate title={STRINGS.viewTitle}>
         <p data-testid="report-required">{STRINGS.domainRequired}</p>
-      </section>
+      </PageTemplate>
     );
   }
   if (query.isError) {
-    return <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
+    return (
+      <PageTemplate title={STRINGS.viewTitle}>
+        <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />
+      </PageTemplate>
+    );
   }
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <PageTemplate title={STRINGS.viewTitle} busy>
+        <p aria-busy="true">{STRINGS.loading}</p>
+      </PageTemplate>
+    );
+  }
   const report = query.data;
   // A reviewer reads the definition of a pending request but cannot run it (the API says 404).
   const canRun = !report.can_decide_publication;
 
   return (
-    <section aria-label={report.title}>
-      <h1>{report.title}</h1>
+    <PageTemplate title={report.title}>
       <p>
         <PublicationBadge state={report.publication.state} />{" "}
         {report.is_owner ? STRINGS.youAreOwner : `${STRINGS.owner}: ${report.owner}`}
@@ -121,6 +132,6 @@ export function ReportViewPage(): ReactElement {
       ) : null}
       <DecisionControls report={report} />
       {canRun ? <RunSection report={report} /> : null}
-    </section>
+    </PageTemplate>
   );
 }

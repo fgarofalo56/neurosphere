@@ -13,7 +13,9 @@ import {
   type KeyboardEvent,
   type ReactElement,
 } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ForbiddenError, UnauthorizedError, type ApiError } from "../../api/index.js";
 import { MAP_PATH } from "../map/paths";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
@@ -302,14 +304,11 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
 }
 
 export function MapTablePage(): ReactElement {
-  const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const mapHref =
     domainId === "" ? MAP_PATH : `${MAP_PATH}?domain_id=${encodeURIComponent(domainId)}`;
   return (
-    <section aria-labelledby="map-table-heading">
-      <h1 id="map-table-heading">{STRINGS.title}</h1>
-      <p>{STRINGS.intro}</p>
+    <PageTemplate title={STRINGS.title} description={STRINGS.intro}>
       <p>
         <Link to={mapHref}>{STRINGS.viewAsMap}</Link>
       </p>
@@ -318,6 +317,6 @@ export function MapTablePage(): ReactElement {
       ) : (
         <MapTable key={domainId} domainId={domainId} />
       )}
-    </section>
+    </PageTemplate>
   );
 }

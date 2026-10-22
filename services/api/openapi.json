@@ -2324,6 +2324,51 @@
         "title": "DomainId",
         "type": "string"
       },
+      "DomainView": {
+        "additionalProperties": false,
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "display_name_source": {
+            "enum": [
+              "catalog",
+              "derived"
+            ],
+            "title": "Display Name Source",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "domain_id",
+          "display_name",
+          "display_name_source",
+          "cloud",
+          "permissions"
+        ],
+        "title": "DomainView",
+        "type": "object"
+      },
       "DraftIntentBody": {
         "additionalProperties": false,
         "description": "``POST .../intents``. ``channel`` is metadata only (audit, display); never hashed.",
@@ -4565,6 +4610,23 @@
         "minLength": 1,
         "title": "McpServerRef",
         "type": "string"
+      },
+      "MeDomains": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DomainView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "MeDomains",
+        "type": "object"
       },
       "MessageBody": {
         "additionalProperties": false,
@@ -10348,6 +10410,36 @@
         "title": "ViewportResponse",
         "type": "object"
       },
+      "WorkspaceBody": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "workspace": {
+            "enum": [
+              "viewer",
+              "analyst",
+              "steward",
+              "admin",
+              "auditor"
+            ],
+            "title": "Workspace",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace",
+          "items"
+        ],
+        "title": "WorkspaceBody",
+        "type": "object"
+      },
       "neurosphere_api__actions__models__DecisionBody": {
         "additionalProperties": false,
         "description": "``POST .../decisions`` (maker-checker). ``reason`` is the reviewer's justification.",
@@ -12250,6 +12342,27 @@
         ]
       }
     },
+    "/api/v1/me/domains": {
+      "get": {
+        "operationId": "my_domains_api_v1_me_domains_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDomains"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Domains",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/recommendations/domains/{domain}": {
       "get": {
         "operationId": "list_recommendations_api_v1_recommendations_domains__domain__get",
@@ -13710,6 +13823,48 @@
         "summary": "Decide Item",
         "tags": [
           "review"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{role}": {
+      "get": {
+        "operationId": "workspace_api_v1_workspaces__role__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceBody"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Workspace",
+        "tags": [
+          "workspaces"
         ]
       }
     },

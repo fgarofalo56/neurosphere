@@ -46,7 +46,8 @@ jobs:
   frontend:
     name: frontend (lint, typecheck, vitest, audit)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Ran ~10.5 min on PR #87 and hit the old 15-min cap on a slow runner for PR #88.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - name: Detect frontend workspace

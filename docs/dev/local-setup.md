@@ -75,6 +75,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates
 
 The `~/` spelling is deliberate: it runs through bash, where `$env:USERPROFILE\...` would expand `$env` to empty. Planning alignment check: `python scripts/validate_planning.py`.
 
+## Local demo (mock API)
+
+`pnpm demo` (from the repo root, or `pnpm --filter @neurosphere/frontend demo`) starts the e2e mock API and the Vite dev server in `demo` mode, waits until both are healthy, then prints the URL (default `http://127.0.0.1:5180`). It needs no Docker, no Azure and no tenant.
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `NS_DEMO_APP_PORT` | `5180` | Vite app port (strict: fails if taken) |
+| `NS_DEMO_API_PORT` | `5181` | Mock API port; also passed to the app as `VITE_NS_DEMO_API_PORT` |
+
+What is stubbed: sign-in is the same fake MSAL instance the e2e suite uses (a fixed "E2E User", no redirects), the runtime config points at the mock API instead of `public/config.json`, and every response is synthetic fixture data from `frontend/tests/mock-api/server.ts`. A persistent "Demo data, mock API" banner is shown on every page so a demo is never mistaken for a real environment.
+
+It never ships: the demo branch sits behind `import.meta.env.MODE === "demo"` and is tree-shaken from production builds. `frontend/tests/prod-exclusion/no-demo-in-prod.test.ts` builds for production and fails if the banner or stub sign-in appears, and fails if the Dockerfile, nginx config or Helm chart mention a demo flag.
+
+Stop it with Ctrl+C; both child processes are stopped. If a port is busy, set the env vars above to free ones.
+
 ## Emulator limits
 
 Document and respect these. They are the known gaps between the emulators and the real services; the parity gate is [G12 in RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).

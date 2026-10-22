@@ -4,6 +4,7 @@ import { createApiClient, QueryProvider } from "../api";
 import { AuthProvider, getToken } from "../auth";
 import { AppThemeProvider } from "../design-system";
 import { useAppConfig } from "./ConfigContext";
+import { DomainProvider } from "./domain";
 
 export interface ProvidersProps {
   readonly children: ReactNode;
@@ -24,7 +25,9 @@ export function Providers({ children, authInstance }: ProvidersProps): ReactElem
   return (
     <AppThemeProvider>
       <AuthProvider config={config} instance={authInstance}>
-        <QueryProvider client={client}>{children}</QueryProvider>
+        <QueryProvider client={client}>
+          <DomainProvider>{children}</DomainProvider>
+        </QueryProvider>
       </AuthProvider>
     </AppThemeProvider>
   );

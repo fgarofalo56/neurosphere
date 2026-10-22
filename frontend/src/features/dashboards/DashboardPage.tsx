@@ -1,7 +1,15 @@
-import { MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
-import { useId, type ReactElement } from "react";
+import {
+  Field,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
+  Select,
+} from "@fluentui/react-components";
+import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import { ForbiddenError } from "../../api/index.js";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { AnalyticsChip, LagIndicator, SeriesBlock } from "./components";
 import { useDashboard } from "./hooks";
@@ -70,12 +78,11 @@ function MetricSection({
 
 export function DashboardPage({ title, metrics }: DashboardPageProps): ReactElement {
   const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const rawDays = Number(params.get("days") ?? 30);
   const grain: Grain = params.get("grain") === "hour" ? "hour" : "day";
   const days = Number.isInteger(rawDays) && rawDays >= 1 && rawDays <= 90 ? rawDays : 30;
   const effectiveDays = grain === "hour" ? Math.min(days, HOUR_MAX_DAYS) : days;
-  const ids = { domain: useId(), days: useId(), grain: useId() };
 
   const update = (key: string, value: string): void => {
     const next = new URLSearchParams(params);
@@ -87,36 +94,32 @@ export function DashboardPage({ title, metrics }: DashboardPageProps): ReactElem
   };
 
   return (
-    <section aria-label={`${title} dashboard`}>
-      <h1>{title}</h1>
-      <form
-        aria-label="Dashboard filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const value = new FormData(e.currentTarget).get("domain_id");
-          update("domain_id", typeof value === "string" ? value.trim() : "");
-        }}
-      >
-        <label htmlFor={ids.domain}>Domain</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <button type="submit">Apply</button> <label htmlFor={ids.days}>Days</label>{" "}
-        <select
-          id={ids.days}
-          value={effectiveDays}
-          onChange={(e) => update("days", e.target.value)}
-        >
-          {DAY_OPTIONS.filter((d) => grain === "day" || d <= HOUR_MAX_DAYS).map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>{" "}
-        <label htmlFor={ids.grain}>Grain</label>{" "}
-        <select id={ids.grain} value={grain} onChange={(e) => update("grain", e.target.value)}>
-          <option value="day">day</option>
-          <option value="hour">hour</option>
-        </select>
-      </form>
+    <PageTemplate
+      title={title}
+      toolbarLabel="Dashboard filters"
+      toolbar={
+        <>
+          <Field label="Days">
+            <Select
+              value={String(effectiveDays)}
+              onChange={(_e, data) => update("days", data.value)}
+            >
+              {DAY_OPTIONS.filter((d) => grain === "day" || d <= HOUR_MAX_DAYS).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Grain">
+            <Select value={grain} onChange={(_e, data) => update("grain", data.value)}>
+              <option value="day">day</option>
+              <option value="hour">hour</option>
+            </Select>
+          </Field>
+        </>
+      }
+    >
       {domainId === "" ? (
         <p data-testid="domain-required">Choose a domain to view this dashboard.</p>
       ) : (
@@ -131,6 +134,6 @@ export function DashboardPage({ title, metrics }: DashboardPageProps): ReactElem
           />
         ))
       )}
-    </section>
+    </PageTemplate>
   );
 }

@@ -1,5 +1,8 @@
-import { useId, type ReactElement } from "react";
+import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
+import { useState, type ReactElement } from "react";
 import { useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import {
   CalibrationBadge,
   PilotRate,
@@ -148,38 +151,60 @@ function Body({
   );
 }
 
-export function QualityPage(): ReactElement {
-  const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
-  const subjectId = params.get("subject_id") ?? "";
-  const ids = { domain: useId(), subject: useId() };
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+});
+
+function QualityFilters({ subjectId }: { readonly subjectId: string }): ReactElement {
+  const styles = useStyles();
+  const [, setParams] = useSearchParams();
+  const [subject, setSubject] = useState(subjectId);
   return (
-    <section aria-label={STRINGS.title}>
-      <h1>{STRINGS.title}</h1>
-      <form
-        aria-label="Quality filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          const next = new URLSearchParams();
-          for (const key of ["domain_id", "subject_id"] as const) {
-            const v = data.get(key);
-            if (typeof v === "string" && v.trim() !== "") next.set(key, v.trim());
-          }
-          setParams(next);
-        }}
-      >
-        <label htmlFor={ids.domain}>{STRINGS.domainLabel}</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <label htmlFor={ids.subject}>{STRINGS.subjectLabel}</label>{" "}
-        <input id={ids.subject} name="subject_id" defaultValue={subjectId} />{" "}
-        <button type="submit">{STRINGS.apply}</button>
-      </form>
+    <form
+      aria-label="Quality filters"
+      className={styles.form}
+      onSubmit={(e) => {
+        e.preventDefault();
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
+          const v = subject.trim();
+          if (v === "") next.delete("subject_id");
+          else next.set("subject_id", v);
+          return next;
+        });
+      }}
+    >
+      <Field label={STRINGS.subjectLabel}>
+        <Input value={subject} onChange={(_e, data) => setSubject(data.value)} />
+      </Field>
+      <Button type="submit" appearance="primary">
+        {STRINGS.apply}
+      </Button>
+    </form>
+  );
+}
+
+export function QualityPage(): ReactElement {
+  const [params] = useSearchParams();
+  const { domainId } = useSelectedDomain();
+  const subjectId = params.get("subject_id") ?? "";
+  return (
+    <PageTemplate
+      title={STRINGS.title}
+      toolbar={<QualityFilters key={subjectId} subjectId={subjectId} />}
+      toolbarLabel="Quality filters"
+    >
       {domainId === "" ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
         <Body key={`${domainId}|${subjectId}`} domainId={domainId} subjectId={subjectId} />
       )}
-    </section>
+    </PageTemplate>
   );
 }

@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { actionsRoutes } from "../features/actions";
@@ -13,7 +13,7 @@ import { reconciliationRoutes } from "../features/reconciliation";
 import { qualityRoutes } from "../features/quality";
 import { recommendationRoutes } from "../features/recommendations";
 import { workspaceRoutes } from "../features/workspaces";
-import { App } from "./App";
+import { App, type AppProps } from "./App";
 import { useAppNavItems } from "./workspaceNav";
 
 async function loadAuthInstance(): Promise<IPublicClientApplication | undefined> {
@@ -23,7 +23,21 @@ async function loadAuthInstance(): Promise<IPublicClientApplication | undefined>
     const { createStubMsalInstance } = await import("../../tests/e2e-support/stubMsal");
     return createStubMsalInstance();
   }
+  if (import.meta.env.MODE === "demo") {
+    // Local demo only (`pnpm demo`): same stub sign-in as e2e. Dead code in production builds.
+    const { createStubMsalInstance } = await import("../../tests/e2e-support/stubMsal");
+    return createStubMsalInstance();
+  }
   return undefined;
+}
+
+async function renderApp(authInstance: IPublicClientApplication | undefined): Promise<ReactNode> {
+  const props: AppProps = { extraRoutes: appRoutes, useNavItems: useAppNavItems, authInstance };
+  if (import.meta.env.MODE === "demo") {
+    const demo = await import("./demo");
+    return demo.withDemoBanner(<App {...props} configLoader={demo.demoConfigLoader} />);
+  }
+  return <App {...props} />;
 }
 
 const appRoutes = [
@@ -45,10 +59,8 @@ const container = document.getElementById("root");
 if (container === null) throw new Error("Missing #root element");
 const root = createRoot(container);
 
-void loadAuthInstance().then((authInstance) => {
-  root.render(
-    <StrictMode>
-      <App extraRoutes={appRoutes} useNavItems={useAppNavItems} authInstance={authInstance} />
-    </StrictMode>,
-  );
-});
+void loadAuthInstance()
+  .then(renderApp)
+  .then((tree) => {
+    root.render(<StrictMode>{tree}</StrictMode>);
+  });

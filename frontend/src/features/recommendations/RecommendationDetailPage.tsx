@@ -1,5 +1,8 @@
+import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import {
   AdvisoryBadge,
   EstimateBlock,
@@ -35,13 +38,12 @@ function ReviewControl({
   }
   return (
     <div>
-      <button
-        type="button"
+      <Button
         disabled={mutation.isPending}
         onClick={() => mutation.mutate({ domainId, recommendationId: rec.recommendation_id })}
       >
         {mutation.isPending ? STRINGS.routing : STRINGS.routeToReview}
-      </button>
+      </Button>
       {mutation.isError ? (
         <p role="alert" data-testid="route-error">
           {STRINGS.routeFailed}
@@ -63,8 +65,7 @@ function Detail({
   const S = STRINGS.sections;
   const insufficient = rec.evidence_status === "insufficient_evidence";
   return (
-    <article aria-label={STRINGS.detailTitle}>
-      <h1>{KIND_LABELS[rec.kind]}</h1>
+    <>
       <div>
         <AdvisoryBadge advisory={rec.advisory} executable={data.execution.executable} />{" "}
         <EvidenceStatus rec={rec} />
@@ -127,23 +128,26 @@ function Detail({
         </ul>
       )}
       <ReviewControl domainId={domainId} data={data} />
-    </article>
+    </>
   );
 }
 
 export function RecommendationDetailPage(): ReactElement {
   const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const recommendationId = params.get("recommendation_id") ?? "";
   const ready = domainId !== "" && recommendationId !== "";
   const query = useRecommendation({ domainId, recommendationId }, ready);
   const back = `/recommendations?${new URLSearchParams({ domain_id: domainId }).toString()}`;
+  const title =
+    ready && query.isSuccess ? KIND_LABELS[query.data.recommendation.kind] : STRINGS.detailTitle;
 
   return (
-    <section aria-label={STRINGS.detailTitle}>
-      <p>
-        <Link to={back}>{STRINGS.back}</Link>
-      </p>
+    <PageTemplate
+      title={title}
+      busy={ready && query.isPending}
+      description={<Link to={back}>{STRINGS.back}</Link>}
+    >
       {!ready ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : query.isError ? (
@@ -153,6 +157,6 @@ export function RecommendationDetailPage(): ReactElement {
       ) : (
         <Detail domainId={domainId} data={query.data} />
       )}
-    </section>
+    </PageTemplate>
   );
 }

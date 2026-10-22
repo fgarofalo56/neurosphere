@@ -1,5 +1,8 @@
-import { useId, useState, type ReactElement } from "react";
+import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-components";
+import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { PublicationBadge, QueryErrorState } from "./components";
 import { useReportList } from "./hooks";
 import { reportViewHref } from "./paths";
@@ -60,59 +63,74 @@ function ListBody({
       )}
       <p>
         {cursors.length > 1 ? (
-          <button type="button" onClick={() => setCursors([""])}>
-            {STRINGS.firstPage}
-          </button>
+          <Button onClick={() => setCursors([""])}>{STRINGS.firstPage}</Button>
         ) : null}{" "}
         {next !== null ? (
-          <button type="button" onClick={() => setCursors([...cursors, next])}>
-            {STRINGS.nextPage}
-          </button>
+          <Button onClick={() => setCursors([...cursors, next])}>{STRINGS.nextPage}</Button>
         ) : null}
       </p>
     </>
   );
 }
 
-export function ReportsListPage(): ReactElement {
-  const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
-  const pending = params.get("publication") === "pending";
-  const ids = { domain: useId(), filter: useId() };
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+});
 
+function ReportFilters({ pending }: { readonly pending: boolean }): ReactElement {
+  const styles = useStyles();
+  const [, setParams] = useSearchParams();
+  const [filter, setFilter] = useState(pending ? "pending" : "");
   return (
-    <section aria-label={STRINGS.listTitle}>
-      <h1>{STRINGS.listTitle}</h1>
-      <form
-        aria-label="Report filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          const domain = data.get("domain_id");
-          const filter = data.get("publication");
-          const next = new URLSearchParams();
-          if (typeof domain === "string" && domain.trim() !== "") {
-            next.set("domain_id", domain.trim());
-          }
+    <form
+      aria-label="Report filters"
+      className={styles.form}
+      onSubmit={(e) => {
+        e.preventDefault();
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
           if (filter === "pending") next.set("publication", "pending");
-          setParams(next);
-        }}
-      >
-        <label htmlFor={ids.domain}>{STRINGS.domainLabel}</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <label htmlFor={ids.filter}>{STRINGS.filterLabel}</label>{" "}
-        <select id={ids.filter} name="publication" defaultValue={pending ? "pending" : ""}>
+          else next.delete("publication");
+          return next;
+        });
+      }}
+    >
+      <Field label={STRINGS.filterLabel}>
+        <Select value={filter} onChange={(_e, data) => setFilter(data.value)}>
           <option value="">{STRINGS.allReports}</option>
           <option value="pending">{STRINGS.pendingFilter}</option>
-        </select>{" "}
-        <button type="submit">{STRINGS.apply}</button>
-      </form>
+        </Select>
+      </Field>
+      <Button type="submit" appearance="primary">
+        {STRINGS.apply}
+      </Button>
+    </form>
+  );
+}
+
+export function ReportsListPage(): ReactElement {
+  const [params] = useSearchParams();
+  const { domainId } = useSelectedDomain();
+  const pending = params.get("publication") === "pending";
+
+  return (
+    <PageTemplate
+      title={STRINGS.listTitle}
+      toolbar={<ReportFilters key={String(pending)} pending={pending} />}
+      toolbarLabel="Report filters"
+    >
       {domainId === "" ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
         // Re-keyed so a new filter resets the cursor history.
         <ListBody key={`${domainId}|${pending}`} domainId={domainId} pending={pending} />
       )}
-    </section>
+    </PageTemplate>
   );
 }
