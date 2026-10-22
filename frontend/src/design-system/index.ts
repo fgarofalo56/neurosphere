@@ -3,6 +3,8 @@ export type { AppThemeProviderProps } from "./AppThemeProvider";
 export { LogoSlot } from "./LogoSlot";
 export type { LogoSlotProps } from "./LogoSlot";
 export { ThemeGallery } from "./ThemeGallery";
+export { PageHeader, PageTemplate, PageToolbar } from "./page";
+export type { PageHeaderProps, PageTemplateProps, PageToolbarProps } from "./page";
 export { NODE_TYPES, NodeTypeIcon, nodeTypeLabel, nodeTypeShape } from "./icons";
 export type { NodeShape, NodeType, NodeTypeIconProps } from "./icons";
 export { useThemeStore } from "./theme-store";

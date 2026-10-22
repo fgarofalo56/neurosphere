@@ -68,6 +68,32 @@ export function mockPublicConfig(apiBaseUrl: string): Record<string, string> {
   };
 }
 
+// ---- PRP-28: GET /api/v1/me/domains. The stub caller lists the domains the other fixtures treat
+// as readable; DOMAIN_FORBIDDEN is never listed. A token carrying the `nodomain` role (for
+// example "ns-e2e-fake-token.NoDomain") holds data.read nowhere and gets 403, like the real API.
+export const ME_DOMAINS_PATH = "/api/v1/me/domains";
+export const NO_DOMAIN_ROLE = "nodomain";
+
+function meDomainItems(): readonly Record<string, unknown>[] {
+  // Declared after the DOMAIN_* constants below it is called at request time only.
+  const entry = (
+    domain_id: string,
+    display_name: string,
+    display_name_source: "catalog" | "derived",
+  ): Record<string, unknown> => ({
+    domain_id,
+    display_name,
+    display_name_source,
+    cloud: "commercial",
+    permissions: ["data.read"],
+  });
+  return [
+    entry(DOMAIN_ANALYTICS_DOWN, "Analytics (batch down)", "catalog"),
+    entry(DOMAIN_OK, "Finance", "catalog"),
+    entry(DOMAIN_VIEWER, "Viewer Only", "derived"),
+  ];
+}
+
 // ---- PRP-14 fixtures: GET /api/v1/dashboards/domains/{domain}/{metric} and
 // GET /api/v1/reconciliation/domains/{domain}. Shapes follow the contract (Wire contract plus
 // the item 4 per-currency references); the numbers are synthetic. The mock only imitates the
@@ -1998,6 +2024,19 @@ export function createMockApi(options: MockApiOptions): Server {
     }
     if (url.pathname === "/config.json") {
       send(res, 200, mockPublicConfig(options.apiBaseUrl), cors);
+      return;
+    }
+    if (url.pathname === ME_DOMAINS_PATH) {
+      const role = roleFromAuthorization(req.headers.authorization);
+      if (role === undefined) {
+        send(res, 401, { error: "missing or unrecognised token" }, cors);
+        return;
+      }
+      if (role === NO_DOMAIN_ROLE) {
+        send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
+        return;
+      }
+      send(res, 200, { items: meDomainItems() }, cors);
       return;
     }
     const dashboard = DASHBOARD_PATH.exec(url.pathname);

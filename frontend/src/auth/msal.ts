@@ -18,6 +18,9 @@ export function buildMsalConfiguration(config: AuthConfig): Configuration {
       ...(redirectUri === undefined ? {} : { redirectUri }),
     },
     // C8: sessionStorage only; no localStorage, no tokens in logs.
+    // C8 governs tokens and auth state. PRP-28 separately stores ONE non-secret value in
+    // localStorage: the last selected domain id, under `ns.lastDomain.<pseudonymous user key>`
+    // (app/domain.tsx), cleared on sign-out. No token or other data is ever written there.
     cache: { cacheLocation: "sessionStorage" },
     system: {
       loggerOptions: {
