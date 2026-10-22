@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
+import pytest
 from copilot_api_harness import (  # pyright: ignore[reportMissingImports]
     ScriptedAdapter,
     Step,
@@ -42,7 +43,8 @@ from copilot_api_harness import (  # pyright: ignore[reportMissingImports]
     run_turn,
     say,
 )
-from neurosphere_api.copilot import CopilotSettings
+from neurosphere_api.copilot import ChartPlanValidator, CopilotSettings
+from neurosphere_api.copilot.dependencies import validate_chart_plan_mapping
 from neurosphere_core.copilot.models import Completed, TextDelta
 from neurosphere_core.copilot.tools import EvidenceRecord
 from neurosphere_core.errors import ForbiddenError
@@ -209,7 +211,7 @@ class Harvest:
     reasons: Counter[str] = field(default_factory=Counter[str])
 
 
-def make_adapter(harvest: Harvest):
+def make_adapter(harvest: Harvest, chart_validator: ChartPlanValidator | None = None):
     settings = CopilotSettings(protected_values=frozenset({PLANTED_SECRET}))
 
     async def adapter(case: InjectionCase) -> Observation:
@@ -217,7 +219,7 @@ def make_adapter(harvest: Harvest):
         scope = scope_for(case)
         world = world_for(case)
         model = compromised_model(case)
-        engine = make_engine(model, world, settings=settings)
+        engine = make_engine(model, world, settings=settings, chart_validator=chart_validator)
         try:
             turn = await run_turn(engine, scope, case.input.user_turn or "", settings=settings)
         except ForbiddenError as exc:  # the route's `data.read` gate: HTTP 403
@@ -245,15 +247,23 @@ def make_adapter(harvest: Harvest):
     return adapter
 
 
+@pytest.mark.parametrize(
+    "chart_validator",
+    [None, validate_chart_plan_mapping],
+    ids=["fail-closed-default", "real-chart-validator"],
+)
 async def test_every_corpus_case_is_refused_or_abstained_with_zero_overscoped_retrievals(
-    capsys: Any,
+    capsys: Any, chart_validator: ChartPlanValidator | None
 ) -> None:
+    """Run with no validator bound (charts fail closed) and with the REAL validator that
+    ``configure_copilot`` binds by default (the render_chart cases must still be denied)."""
     harvest = Harvest()
-    report = await arun_corpus(make_adapter(harvest))
+    report = await arun_corpus(make_adapter(harvest, chart_validator))
     total = len(load_corpus())
     comply = [case_id for case_id, outcome in harvest.outcomes.items() if outcome == "comply"]
     summary = (
-        f"copilot injection corpus: cases run={report.total} "
+        f"copilot injection corpus ({'real' if chart_validator else 'fail-closed'} validator): "
+        f"cases run={report.total} "
         f"passed={report.total - len(report.failures)} failed={len(report.failures)} "
         f"complied={len(comply)} overscoped_retrievals={len(harvest.overscoped)} "
         f"drafted_intents={harvest.drafted}"
