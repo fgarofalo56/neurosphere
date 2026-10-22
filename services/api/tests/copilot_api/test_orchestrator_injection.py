@@ -184,7 +184,8 @@ def _attempt_step(case: InjectionCase) -> Step:
             return say(f"COSMOS_KEY={uuid4().hex}\nAPI_TOKEN={uuid4().hex}")
         case Reveal(target="other_principal_history"):
             return call("get_conversation_history", {"user": "previous"})
-    raise AssertionError(f"unhandled attempt {attempt!r}")
+        case _:
+            raise AssertionError(f"unhandled attempt {attempt!r}")
 
 
 def _text_then_done(text: str) -> list[Any]:

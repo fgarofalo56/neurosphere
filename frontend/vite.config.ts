@@ -57,8 +57,12 @@ function chartSandbox(): Plugin {
     const script = chunk.code.replaceAll("</script", "<\\/script").replaceAll("<!--", "<\\!--");
     const template = readFileSync(`${rootDir}${SANDBOX_PAGE}`, "utf8");
     // The hash covers the exact text between the script tags, whatever the template whitespace.
-    const body = /<script>([\s\S]*?)<\/script>/.exec(template)?.[1];
-    if (body === undefined) throw new Error("sandbox template has no inline script");
+    const openParts = template.split("<script>");
+    const closeParts = template.split("</script>");
+    if (openParts.length !== 2 || closeParts.length !== 2) {
+      throw new Error("sandbox template must contain exactly one inline script");
+    }
+    const body = (openParts[1] ?? "").split("</script>")[0] ?? "";
     const inlineScript = body.replace("%NS_SANDBOX_SCRIPT%", () => script);
     const hash = createHash("sha256").update(inlineScript).digest("base64");
     const csp = [

@@ -153,7 +153,8 @@ async def test_create_get_append_and_order(store: ConversationStore) -> None:
         turn("m2", "c1", "assistant", T0 + timedelta(seconds=2), text="answer"),
         turn("m1", "c1", "user", T0 + timedelta(seconds=1), text="question"),
     ]
-    assert await store.append(OWNER, "c1", turns, now=T0 + timedelta(seconds=3))
+    appended = await store.append(OWNER, "c1", turns, now=T0 + timedelta(seconds=3))
+    assert appended
     loaded = await store.load_turns(OWNER, "c1", limit=None, now=T0)
     assert [t.message_id for t in loaded] == ["m1", "m2"]  # oldest first regardless of insert order
     assert loaded[1].citations[0]["record_id"] == "x" and loaded[0].context == {"page": "catalog"}
@@ -167,8 +168,10 @@ async def test_another_owner_sees_nothing_and_cannot_write_or_delete(
     await store.append(OWNER, "c1", [turn("m1", "c1", "user", T0)], now=T0)
     assert await store.get(OTHER, "c1", now=T0) is None
     assert await store.load_turns(OTHER, "c1", limit=None, now=T0) == []
-    assert not await store.append(OTHER, "c1", [turn("m9", "c1", "user", T0)], now=T0)
-    assert not await store.delete(OTHER, "c1")
+    foreign_append = await store.append(OTHER, "c1", [turn("m9", "c1", "user", T0)], now=T0)
+    assert not foreign_append
+    foreign_delete = await store.delete(OTHER, "c1")
+    assert not foreign_delete
     items, _ = await store.list_conversations(OTHER, cursor=None, limit=10, now=T0)
     assert items == []
     assert [t.message_id for t in await store.load_turns(OWNER, "c1", limit=None, now=T0)] == ["m1"]
@@ -185,9 +188,10 @@ async def test_expired_turns_and_conversations_are_invisible(store: Conversation
         "m2"
     ]
     assert await store.get(OWNER, "c1", now=T0 + timedelta(days=31)) is None
-    assert not await store.append(
+    expired_append = await store.append(
         OWNER, "c1", [turn("m3", "c1", "user", later)], now=T0 + timedelta(days=31)
     )
+    assert not expired_append
     listed, _ = await store.list_conversations(
         OWNER, cursor=None, limit=10, now=T0 + timedelta(days=31)
     )
@@ -224,10 +228,12 @@ async def test_delete_removes_the_conversation_and_every_turn(store: Conversatio
     await store.append(
         OWNER, "c1", [turn("m1", "c1", "user", T0), turn("m2", "c1", "assistant", T0)], now=T0
     )
-    assert await store.delete(OWNER, "c1")
+    deleted = await store.delete(OWNER, "c1")
+    assert deleted
     assert await store.get(OWNER, "c1", now=T0) is None
     assert await store.load_turns(OWNER, "c1", limit=None, now=T0) == []
-    assert not await store.delete(OWNER, "c1")
+    deleted_again = await store.delete(OWNER, "c1")
+    assert not deleted_again
     if isinstance(store, InMemoryConversationStore):
         assert store.raw_documents() == []
 

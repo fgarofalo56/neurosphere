@@ -89,7 +89,8 @@ async def test_roundtrip_isolation_and_delete_on_the_emulator(container: Contain
         _turn(str(uuid4()), cid, "user", T0),
         _turn(str(uuid4()), cid, "assistant", T0 + timedelta(milliseconds=1)),
     ]
-    assert await store.append(OWNER, cid, turns, now=T0)
+    appended = await store.append(OWNER, cid, turns, now=T0)
+    assert appended
 
     assert [t.role for t in await store.load_turns(OWNER, cid, limit=None, now=T0)] == [
         "user",
@@ -103,6 +104,8 @@ async def test_roundtrip_isolation_and_delete_on_the_emulator(container: Contain
     raw = await container.read_item(item=turns[0].message_id, partition_key=OWNER)
     assert raw["ttl"] == 30 * 86400 and raw["owner"] == OWNER
 
-    assert not await store.delete(OTHER, cid)
-    assert await store.delete(OWNER, cid)
+    foreign_delete = await store.delete(OTHER, cid)
+    assert not foreign_delete
+    owner_delete = await store.delete(OWNER, cid)
+    assert owner_delete
     assert await store.get(OWNER, cid, now=T0) is None
