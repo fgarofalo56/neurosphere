@@ -147,14 +147,14 @@ only when the package is dev-only (hypothesis, for example).
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | https://pypi.org/project/cyclonedx-python-lib/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.83.0 | MIT | https://pypi.org/project/datamodel-code-generator/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | https://pypi.org/project/defusedxml/ | dev-only; 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.143.0 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.143.3 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
 | filelock | 4.0.12 | MIT | https://pypi.org/project/filelock/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | https://pypi.org/project/frozenlist/ | runtime; no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | https://pypi.org/project/genson/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | h11 | 0.16.0 | MIT | https://pypi.org/project/h11/ | runtime; 0.x: minor releases may break; no support window recorded |
 | httpcore | 1.0.9 | BSD-3-Clause | https://pypi.org/project/httpcore/ | runtime; no EOL published locally; Dependabot tracks releases |
 | httpx | 0.28.1 | BSD-3-Clause | https://pypi.org/project/httpx/ | runtime; 0.x: minor releases may break; no support window recorded |
-| hypothesis | 6.170.0 | MPL-2.0 | https://pypi.org/project/hypothesis/ | dev-only; dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
+| hypothesis | 6.170.1 | MPL-2.0 | https://pypi.org/project/hypothesis/ | dev-only; dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | https://pypi.org/project/idna/ | runtime; no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | https://pypi.org/project/inflect/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | https://pypi.org/project/iniconfig/ | dev-only; no EOL published locally; Dependabot tracks releases |
@@ -236,7 +236,7 @@ only when the package is dev-only (hypothesis, for example).
 | respx | 0.23.1 | BSD-3-Clause | https://pypi.org/project/respx/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | rich | 15.0.0 | MIT | https://pypi.org/project/rich/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | rpds-py | 2026.9.1 | MIT | https://pypi.org/project/rpds-py/ | runtime; no EOL published locally; Dependabot tracks releases |
-| ruff | 0.16.10 | MIT | https://pypi.org/project/ruff/ | dev-only; 0.x: minor releases may break; no support window recorded |
+| ruff | 0.17.0 | MIT | https://pypi.org/project/ruff/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | sortedcontainers | 2.4.0 | Apache-2.0 | https://pypi.org/project/sortedcontainers/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | starlette | 1.7.0 | BSD-3-Clause | https://pypi.org/project/starlette/ | runtime; no EOL published locally; Dependabot tracks releases |
 | tomli | 2.5.0 | MIT | https://pypi.org/project/tomli/ | dev-only; no EOL published locally; Dependabot tracks releases |

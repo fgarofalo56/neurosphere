@@ -51,14 +51,14 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.83.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.143.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.143.3 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | filelock | 4.0.12 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | h11 | 0.16.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | httpcore | 1.0.9 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | httpx | 0.28.1 | BSD-3-Clause | runtime | 0.x: minor releases may break; no support window recorded |
-| hypothesis | 6.170.0 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
+| hypothesis | 6.170.1 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -140,7 +140,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | respx | 0.23.1 | BSD-3-Clause | dev-only | 0.x: minor releases may break; no support window recorded |
 | rich | 15.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | rpds-py | 2026.9.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| ruff | 0.16.10 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| ruff | 0.17.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | sortedcontainers | 2.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | starlette | 1.7.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | tomli | 2.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
