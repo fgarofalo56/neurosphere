@@ -338,12 +338,12 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`.
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-ad5aa5f746e8881fc | sonnet | 75867cc, merge 1b99def; verify 195 passed targeted (pre+post merge), ruff/format clean; impl 831 api passed, pyright 0; review APPROVED (5 non-blocking follow-ups) | 2026-10-22 |
-| 2 | review | worktree-agent-a5c2e30dee17dc54b | sonnet | 0a9125e; orchestrator verify: typecheck/lint clean, vitest 412/412, build ok, playwright 86/87 (quality.spec:38 flake, 30/30 on repeat-each=3) | 2026-10-22 |
+| 2 | merged | worktree-agent-a5c2e30dee17dc54b | sonnet | 0a9125e, merge 1409e46; verify typecheck/lint clean, vitest 412/412, build ok, playwright 86/87 (quality.spec:38 flake, 30/30 on repeat-each=3); post-merge vitest 412/412 + shell/hidden-route/smoke 7/7; review APPROVED (4 non-blocking follow-ups) | 2026-10-22 |
 | 3 | todo | | sonnet | | 2026-10-22 |
-| 4 | todo | | sonnet | | 2026-10-22 |
-| 5 | todo | | sonnet | | 2026-10-22 |
-| 6 | todo | | sonnet | | 2026-10-22 |
-| 7 | todo | | sonnet | | 2026-10-22 |
+| 4 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
+| 5 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
+| 6 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
+| 7 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
 | 8 | todo | | sonnet | | 2026-10-22 |
 
 ## Completion note (filled at ship)
