@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { QueryProvider, createApiClient } from "../../../api/index.js";
@@ -227,6 +228,19 @@ describe("quality page", () => {
     expect(text).not.toMatch(/\bSLA\b/i);
     expect(text).not.toMatch(/ensures?/i);
     expect(text).not.toMatch(/promise/i);
+  });
+
+  it("has no domain text box; the subject filter keeps the domain in the URL", async () => {
+    const user = userEvent.setup();
+    const { fetchImpl } = setup(PATH, { body: quality() });
+    await screen.findByTestId("pilot-rate");
+    expect(screen.queryByRole("textbox", { name: "Domain" })).toBeNull();
+    await user.type(screen.getByRole("textbox", { name: "Subject (optional)" }), "agent-7");
+    await user.click(screen.getByRole("button", { name: "Apply filters" }));
+    await screen.findByTestId("pilot-rate");
+    const last = new URL(String(fetchImpl.mock.calls.at(-1)?.[0]));
+    expect(last.pathname).toContain("commercial%3Acontoso%3Acatalog%3Adomain%3Afinance");
+    expect(last.searchParams.get("subject_id")).toBe("agent-7");
   });
 
   it("has headings and table semantics", async () => {
