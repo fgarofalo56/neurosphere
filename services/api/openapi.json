@@ -552,6 +552,45 @@
         "title": "AgentVersionId",
         "type": "string"
       },
+      "Aggregation": {
+        "additionalProperties": false,
+        "properties": {
+          "as": {
+            "$ref": "#/components/schemas/Alias"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnyField"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "op": {
+            "enum": [
+              "count",
+              "count_distinct",
+              "sum",
+              "avg",
+              "min",
+              "max",
+              "p50",
+              "p95",
+              "p99"
+            ],
+            "title": "Op",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "as"
+        ],
+        "title": "Aggregation",
+        "type": "object"
+      },
       "Agreement": {
         "additionalProperties": false,
         "properties": {
@@ -585,6 +624,11 @@
         "title": "Agreement",
         "type": "object"
       },
+      "Alias": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+        "title": "Alias",
+        "type": "string"
+      },
       "AnalyticsInfo": {
         "additionalProperties": false,
         "properties": {
@@ -615,6 +659,29 @@
         ],
         "title": "AnalyticsInfo",
         "type": "object"
+      },
+      "AnyField": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IdField"
+          },
+          {
+            "$ref": "#/components/schemas/KeywordField"
+          },
+          {
+            "$ref": "#/components/schemas/NumberField"
+          },
+          {
+            "$ref": "#/components/schemas/MoneyField"
+          },
+          {
+            "$ref": "#/components/schemas/TimeField"
+          },
+          {
+            "$ref": "#/components/schemas/BooleanField"
+          }
+        ],
+        "title": "AnyField"
       },
       "ApprovalDecision": {
         "additionalProperties": false,
@@ -961,6 +1028,39 @@
         "title": "BiasCheck",
         "type": "object"
       },
+      "BooleanField": {
+        "enum": [
+          "advisory",
+          "locked",
+          "has_owner"
+        ],
+        "title": "BooleanField",
+        "type": "string"
+      },
+      "BooleanFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/BooleanField"
+          },
+          "op": {
+            "const": "eq",
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "title": "BooleanFilter",
+        "type": "object"
+      },
       "Budget": {
         "additionalProperties": false,
         "description": "Shared bounded-execution budget for every query, traversal, search, export and viewport expansion (PRP-01 clarification 15; NS-05, NS-06). timeout_ms, limit and max_depth are mandatory. The maxima here are contract ceilings; the server may clamp to lower policy values and reports the effective values and any truncation in Page. Not a standalone document, so it carries no schema_version.",
@@ -1064,6 +1164,24 @@
         "title": "CanonicalId",
         "type": "string"
       },
+      "CatalogEntity": {
+        "enum": [
+          "person",
+          "agent",
+          "agent_version",
+          "model_deployment",
+          "grounding_source",
+          "tool",
+          "service",
+          "domain",
+          "owner",
+          "policy",
+          "recommendation",
+          "run_reference"
+        ],
+        "title": "CatalogEntity",
+        "type": "string"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "Result of verifying one chain. ``first_invalid_index`` is a position in the input.",
@@ -1130,6 +1248,52 @@
           "records_checked"
         ],
         "title": "ChainVerification",
+        "type": "object"
+      },
+      "CitationView": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "freshness": {
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ],
+            "title": "Freshness",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "kind",
+          "source",
+          "as_of",
+          "freshness"
+        ],
+        "title": "CitationView",
         "type": "object"
       },
       "Classification": {
@@ -1259,6 +1423,140 @@
         "minimum": 0.0,
         "title": "ContextWindowTokens",
         "type": "integer"
+      },
+      "ConversationCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "retention_class": {
+            "title": "Retention Class",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "retention_class",
+          "expires_at"
+        ],
+        "title": "ConversationCreated",
+        "type": "object"
+      },
+      "ConversationList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ConversationList",
+        "type": "object"
+      },
+      "ConversationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "retention_class": {
+            "title": "Retention Class",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "retention_class",
+          "expires_at"
+        ],
+        "title": "ConversationSummary",
+        "type": "object"
+      },
+      "ConversationView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "retention_class": {
+            "title": "Retention Class",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/TurnView"
+            },
+            "title": "Turns",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "retention_class",
+          "expires_at",
+          "turns"
+        ],
+        "title": "ConversationView",
+        "type": "object"
       },
       "CorrelationId": {
         "pattern": "^[A-Za-z0-9._-]{1,128}$",
@@ -1452,6 +1750,11 @@
         "title": "CurrentVersionId",
         "type": "string"
       },
+      "Cursor": {
+        "pattern": "^[A-Za-z0-9_-]{1,512}$",
+        "title": "Cursor",
+        "type": "string"
+      },
       "CustomerId": {
         "maxLength": 128,
         "pattern": "^[a-z0-9._-]+$",
@@ -1580,38 +1883,6 @@
         "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$",
         "title": "Decimal",
         "type": "string"
-      },
-      "DecisionBody": {
-        "additionalProperties": false,
-        "description": "``POST .../decisions`` (maker-checker). ``reason`` is the reviewer's justification.",
-        "properties": {
-          "confirmation_hash": {
-            "pattern": "^sha256:[0-9a-f]{64}$",
-            "title": "Confirmation Hash",
-            "type": "string"
-          },
-          "decision": {
-            "enum": [
-              "approved",
-              "rejected"
-            ],
-            "title": "Decision",
-            "type": "string"
-          },
-          "reason": {
-            "maxLength": 2048,
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision",
-          "reason",
-          "confirmation_hash"
-        ],
-        "title": "DecisionBody",
-        "type": "object"
       },
       "DecisionResult": {
         "additionalProperties": false,
@@ -2282,7 +2553,7 @@
             "type": "array"
           },
           "validity": {
-            "$ref": "#/components/schemas/Validity-Output"
+            "$ref": "#/components/schemas/Validity"
           }
         },
         "required": [
@@ -2332,7 +2603,7 @@
             "$ref": "#/components/schemas/CustomerId"
           },
           "decided_at": {
-            "$ref": "#/components/schemas/Timestamp-Input"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "decision": {
             "enum": [
@@ -2369,7 +2640,7 @@
           "lock": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Lock-Input"
+                "$ref": "#/components/schemas/Lock"
               },
               {
                 "type": "null"
@@ -2411,7 +2682,7 @@
           "set_validity": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Validity-Input"
+                "$ref": "#/components/schemas/Validity"
               },
               {
                 "type": "null"
@@ -2504,7 +2775,7 @@
           "lock": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Lock-Output"
+                "$ref": "#/components/schemas/Lock"
               },
               {
                 "type": "null"
@@ -2546,7 +2817,7 @@
           "set_validity": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Validity-Output"
+                "$ref": "#/components/schemas/Validity"
               },
               {
                 "type": "null"
@@ -2650,6 +2921,22 @@
         ],
         "title": "EmergencyDisableView",
         "type": "object"
+      },
+      "Entity": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/CatalogEntity"
+          },
+          {
+            "enum": [
+              "telemetry_event",
+              "cost_record",
+              "evaluation_result"
+            ],
+            "type": "string"
+          }
+        ],
+        "title": "Entity"
       },
       "EntityFilter": {
         "additionalProperties": false,
@@ -3234,6 +3521,29 @@
         "title": "FeatureRequest",
         "type": "object"
       },
+      "Filter": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IdFilter"
+          },
+          {
+            "$ref": "#/components/schemas/KeywordFilter"
+          },
+          {
+            "$ref": "#/components/schemas/NumberFilter"
+          },
+          {
+            "$ref": "#/components/schemas/MoneyFilter"
+          },
+          {
+            "$ref": "#/components/schemas/TimeFilter"
+          },
+          {
+            "$ref": "#/components/schemas/BooleanFilter"
+          }
+        ],
+        "title": "Filter"
+      },
       "Freshness": {
         "additionalProperties": false,
         "properties": {
@@ -3651,6 +3961,17 @@
         "title": "GroundingSource",
         "type": "object"
       },
+      "GroupField": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/IdField"
+          },
+          {
+            "$ref": "#/components/schemas/KeywordField"
+          }
+        ],
+        "title": "GroupField"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3677,6 +3998,74 @@
           "status"
         ],
         "title": "HealthzResponse",
+        "type": "object"
+      },
+      "IdField": {
+        "enum": [
+          "id",
+          "agent_id",
+          "agent_version_id",
+          "model_deployment_id",
+          "owner_id",
+          "domain_id",
+          "source_id",
+          "tool_id",
+          "service_id",
+          "policy_id",
+          "subject_id",
+          "principal_id"
+        ],
+        "title": "IdField",
+        "type": "string"
+      },
+      "IdFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/IdField"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "in",
+              "not_in"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CanonicalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CanonicalId"
+                },
+                "maxItems": 100,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "IdFilter",
         "type": "object"
       },
       "IgnoredItem": {
@@ -3968,6 +4357,82 @@
         "title": "JudgeOut",
         "type": "object"
       },
+      "Keyword": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+        "title": "Keyword",
+        "type": "string"
+      },
+      "KeywordField": {
+        "enum": [
+          "cloud",
+          "environment",
+          "provider",
+          "model_name",
+          "model_version",
+          "lifecycle_status",
+          "outcome",
+          "status",
+          "kind",
+          "classification",
+          "span_kind",
+          "relation_status",
+          "observation_source",
+          "currency"
+        ],
+        "title": "KeywordField",
+        "type": "string"
+      },
+      "KeywordFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/KeywordField"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "in",
+              "not_in",
+              "prefix"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Keyword"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Keyword"
+                },
+                "maxItems": 100,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "KeywordFilter",
+        "type": "object"
+      },
       "LifecycleStatus": {
         "enum": [
           "draft",
@@ -4045,52 +4510,7 @@
         "title": "LineageNeighborsRequest",
         "type": "object"
       },
-      "Lock-Input": {
-        "additionalProperties": false,
-        "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
-        "properties": {
-          "actor": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PersonId"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "expiry": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Timestamp-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "locked": {
-            "title": "Locked",
-            "type": "boolean"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Reason"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "locked"
-        ],
-        "title": "Lock",
-        "type": "object"
-      },
-      "Lock-Output": {
+      "Lock": {
         "additionalProperties": false,
         "description": "Steward lock. Locks change presented lineage, never retained observations; re-inference must respect them. A lock (locked=true) requires reason, expiry and actor. Python validator validate_lock_expiry_after_decision enforces expiry later than the decision time.",
         "properties": {
@@ -4145,6 +4565,112 @@
         "minLength": 1,
         "title": "McpServerRef",
         "type": "string"
+      },
+      "MessageBody": {
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/MessageContext"
+          },
+          "text": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "MessageBody",
+        "type": "object"
+      },
+      "MessageContext": {
+        "additionalProperties": false,
+        "description": "What the UI shows the user right now. A hint that can only narrow the derived scope.",
+        "properties": {
+          "domain_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Id"
+          },
+          "filters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                }
+              ]
+            },
+            "propertyNames": {
+              "maxLength": 128
+            },
+            "title": "Filters",
+            "type": "object"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "selection": {
+            "items": {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Selection",
+            "type": "array"
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_api__copilot__models__TimeRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "MessageContext",
+        "type": "object"
       },
       "MissingLabels": {
         "additionalProperties": false,
@@ -4400,6 +4926,66 @@
         "title": "ModelVersion",
         "type": "string"
       },
+      "MoneyField": {
+        "enum": [
+          "amount",
+          "baseline_amount",
+          "projected_amount"
+        ],
+        "title": "MoneyField",
+        "type": "string"
+      },
+      "MoneyFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/MoneyField"
+          },
+          "op": {
+            "enum": [
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "between"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Decimal"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "MoneyFilter",
+        "type": "object"
+      },
       "NodeMetrics": {
         "additionalProperties": false,
         "properties": {
@@ -4477,6 +5063,79 @@
         "minimum": 0.0,
         "title": "NullableCount1",
         "type": "integer"
+      },
+      "NumberField": {
+        "enum": [
+          "confidence",
+          "duration_ms",
+          "input_tokens",
+          "output_tokens",
+          "cached_tokens",
+          "reasoning_tokens",
+          "total_tokens",
+          "retries",
+          "error_rate",
+          "latency_p50_ms",
+          "latency_p95_ms",
+          "request_count",
+          "score"
+        ],
+        "title": "NumberField",
+        "type": "string"
+      },
+      "NumberFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/NumberField"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "between"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "NumberFilter",
+        "type": "object"
       },
       "ObservedFraction": {
         "maximum": 1.0,
@@ -5677,7 +6336,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "lock": {
-            "$ref": "#/components/schemas/Lock-Output"
+            "$ref": "#/components/schemas/Lock"
           },
           "override_ids": {
             "items": {
@@ -5735,7 +6394,7 @@
             "type": "string"
           },
           "validity": {
-            "$ref": "#/components/schemas/Validity-Output"
+            "$ref": "#/components/schemas/Validity"
           }
         },
         "required": [
@@ -6027,6 +6686,82 @@
         "title": "Provenance",
         "type": "object"
       },
+      "Publication": {
+        "additionalProperties": false,
+        "description": "Add-to-UI workflow state. ``approved`` requires a different principal with\n``config.manage``; any change to the report resets it to ``none``.",
+        "properties": {
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested At"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "state": {
+            "default": "none",
+            "enum": [
+              "none",
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "Publication",
+        "type": "object"
+      },
       "QualityResponse": {
         "additionalProperties": false,
         "properties": {
@@ -6285,7 +7020,7 @@
             "type": "string"
           },
           "evidence_window": {
-            "$ref": "#/components/schemas/TimeRange"
+            "$ref": "#/components/schemas/TimeRange-Output"
           },
           "expires_at": {
             "anyOf": [
@@ -6733,6 +7468,163 @@
         ],
         "title": "RelationType",
         "type": "string"
+      },
+      "ReportBody": {
+        "additionalProperties": false,
+        "description": "Create / replace body. ``chart_plan`` is validated by the server chart validator.",
+        "properties": {
+          "chart_plan": {
+            "additionalProperties": true,
+            "title": "Chart Plan",
+            "type": "object"
+          },
+          "metric": {
+            "default": "cost",
+            "enum": [
+              "cost",
+              "latency",
+              "errors"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "query_spec": {
+            "$ref": "#/components/schemas/StructuredQuery"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f]+$",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "chart_plan",
+          "query_spec"
+        ],
+        "title": "ReportBody",
+        "type": "object"
+      },
+      "ReportList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReportView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ReportList",
+        "type": "object"
+      },
+      "ReportView": {
+        "additionalProperties": false,
+        "description": "Wire shape of a stored report (no result data). ``shares`` is empty for non-owners.",
+        "properties": {
+          "can_decide_publication": {
+            "default": false,
+            "title": "Can Decide Publication",
+            "type": "boolean"
+          },
+          "chart_plan": {
+            "additionalProperties": true,
+            "title": "Chart Plan",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_owner": {
+            "default": false,
+            "title": "Is Owner",
+            "type": "boolean"
+          },
+          "metric": {
+            "enum": [
+              "cost",
+              "latency",
+              "errors"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "publication": {
+            "$ref": "#/components/schemas/Publication"
+          },
+          "query_spec": {
+            "additionalProperties": true,
+            "title": "Query Spec",
+            "type": "object"
+          },
+          "shares": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "domain_id",
+          "owner",
+          "title",
+          "chart_plan",
+          "query_spec",
+          "metric",
+          "shares",
+          "publication",
+          "created_at",
+          "updated_at",
+          "etag"
+        ],
+        "title": "ReportView",
+        "type": "object"
       },
       "RequestId": {
         "maxLength": 256,
@@ -7220,6 +8112,67 @@
           "started_at"
         ],
         "title": "RunReference",
+        "type": "object"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "description": "Output of one run. ``chart_plan`` has ``data.values`` filled from the VIEWER's records;\nit is ``None`` when the viewer's scope yields no rows (``status`` = ``no_data``).",
+        "properties": {
+          "chart_plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Plan"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/CitationView"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "ran_at": {
+            "format": "date-time",
+            "title": "Ran At",
+            "type": "string"
+          },
+          "report_id": {
+            "title": "Report Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "no_data"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "report_id",
+          "status",
+          "chart_plan",
+          "citations",
+          "truncated",
+          "ran_at",
+          "etag"
+        ],
+        "title": "RunView",
         "type": "object"
       },
       "SamplingRate": {
@@ -7716,11 +8669,70 @@
         "title": "Sha256Hash",
         "type": "string"
       },
+      "ShareBody": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 512,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9:._/=-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_id"
+        ],
+        "title": "ShareBody",
+        "type": "object"
+      },
       "Sku": {
         "maxLength": 128,
         "minLength": 1,
         "title": "Sku",
         "type": "string"
+      },
+      "SortKey": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdField"
+              },
+              {
+                "$ref": "#/components/schemas/KeywordField"
+              },
+              {
+                "$ref": "#/components/schemas/NumberField"
+              },
+              {
+                "$ref": "#/components/schemas/MoneyField"
+              },
+              {
+                "$ref": "#/components/schemas/TimeField"
+              },
+              {
+                "$ref": "#/components/schemas/Alias"
+              }
+            ],
+            "title": "Field"
+          }
+        },
+        "required": [
+          "field",
+          "direction"
+        ],
+        "title": "SortKey",
+        "type": "object"
       },
       "SourceLine": {
         "additionalProperties": false,
@@ -8142,6 +9154,163 @@
         "title": "StaleItemResult",
         "type": "object"
       },
+      "StructuredQuery": {
+        "additionalProperties": false,
+        "description": "Request-side structured query used by REST, copilot tools and MCP (PRP.md section 3, NS-06). It carries structured allowlisted filters only, never executable query text: there is no free-text field, every field name is an allowlisted enum, every operator is typed per field kind, and string values are charset-restricted keywords or canonical IDs that the server binds as parameters (never concatenated into SQL/Cypher/KQL). Budgets (timeout_ms, limit, max_depth) are mandatory. Authorization comes only from the server-derived IdentityScope, which this schema never references: a domain_id or customer filter can only narrow results inside that scope. Rules JSON Schema cannot express: field applicability per entity is checked by tests/contracts/validators.py::check_structured_query_field_applicability; time_range.start < time_range.end by tests/contracts/validators.py::check_time_range_order; between bounds lo <= hi by tests/contracts/validators.py::check_between_order.",
+        "properties": {
+          "aggregations": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Aggregation"
+                },
+                "maxItems": 8,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregations"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Budget"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Cursor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AnyField"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Filter"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "group_by": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GroupField"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group By"
+          },
+          "operation": {
+            "enum": [
+              "list",
+              "aggregate",
+              "neighbors",
+              "impact_paths"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "sort": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SortKey"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort"
+          },
+          "time_bucket": {
+            "anyOf": [
+              {
+                "enum": [
+                  "minute",
+                  "five_minutes",
+                  "hour",
+                  "day",
+                  "week"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Bucket"
+          },
+          "time_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__TimeRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "traversal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Traversal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "operation",
+          "entity",
+          "budget"
+        ],
+        "title": "StructuredQuery",
+        "type": "object"
+      },
       "Subject": {
         "additionalProperties": false,
         "properties": {
@@ -8263,7 +9432,71 @@
         "title": "TargetRef",
         "type": "object"
       },
-      "TimeRange": {
+      "TimeField": {
+        "enum": [
+          "event_time",
+          "ingestion_time",
+          "first_observed",
+          "last_observed",
+          "created_at",
+          "updated_at",
+          "completed_at"
+        ],
+        "title": "TimeField",
+        "type": "string"
+      },
+      "TimeFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/TimeField"
+          },
+          "op": {
+            "enum": [
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "between"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "values": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__Timestamp"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "TimeFilter",
+        "type": "object"
+      },
+      "TimeRange-Output": {
         "additionalProperties": false,
         "properties": {
           "end": {
@@ -8279,11 +9512,6 @@
         ],
         "title": "TimeRange",
         "type": "object"
-      },
-      "Timestamp-Input": {
-        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
-        "title": "Timestamp",
-        "type": "string"
       },
       "Token": {
         "maxLength": 128,
@@ -8589,6 +9817,57 @@
         "title": "TraceSummary",
         "type": "object"
       },
+      "Traversal": {
+        "additionalProperties": false,
+        "description": "Bounded traversal; depth and node/edge caps come from budget.",
+        "properties": {
+          "direction": {
+            "enum": [
+              "outgoing",
+              "incoming",
+              "both"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "relations": {
+            "items": {
+              "enum": [
+                "invokes",
+                "delegates_to",
+                "uses_model",
+                "reads",
+                "writes",
+                "grounded_by",
+                "owned_by",
+                "depends_on",
+                "supersedes"
+              ],
+              "type": "string"
+            },
+            "maxItems": 9,
+            "minItems": 1,
+            "title": "Relations",
+            "type": "array"
+          },
+          "start_ids": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalId"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Start Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "start_ids",
+          "relations",
+          "direction"
+        ],
+        "title": "Traversal",
+        "type": "object"
+      },
       "Trend": {
         "additionalProperties": false,
         "properties": {
@@ -8692,6 +9971,87 @@
         "title": "TrendPoint",
         "type": "object"
       },
+      "TurnView": {
+        "additionalProperties": false,
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/CitationView"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "retention_class": {
+            "title": "Retention Class",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "answered",
+                  "abstain",
+                  "denied",
+                  "error"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "role",
+          "text",
+          "status",
+          "reason_code",
+          "citations",
+          "created_at",
+          "retention_class",
+          "expires_at"
+        ],
+        "title": "TurnView",
+        "type": "object"
+      },
       "UnknownRemainder": {
         "additionalProperties": false,
         "description": "A count of ledger entries whose amount is unknown (their money value is unknowable).",
@@ -8788,31 +10148,7 @@
         "title": "ValidationError",
         "type": "object"
       },
-      "Validity-Input": {
-        "additionalProperties": false,
-        "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
-        "properties": {
-          "valid_from": {
-            "$ref": "#/components/schemas/Timestamp-Input"
-          },
-          "valid_to": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Timestamp-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "valid_from"
-        ],
-        "title": "Validity",
-        "type": "object"
-      },
-      "Validity-Output": {
+      "Validity": {
         "additionalProperties": false,
         "description": "Validity interval. valid_to null means open-ended. Python validator validate_validity_interval enforces valid_from < valid_to.",
         "properties": {
@@ -9012,6 +10348,59 @@
         "title": "ViewportResponse",
         "type": "object"
       },
+      "neurosphere_api__actions__models__DecisionBody": {
+        "additionalProperties": false,
+        "description": "``POST .../decisions`` (maker-checker). ``reason`` is the reviewer's justification.",
+        "properties": {
+          "confirmation_hash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Confirmation Hash",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "confirmation_hash"
+        ],
+        "title": "DecisionBody",
+        "type": "object"
+      },
+      "neurosphere_api__copilot__models__TimeRange": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "maxLength": 40,
+            "title": "From",
+            "type": "string"
+          },
+          "to": {
+            "maxLength": 40,
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "title": "TimeRange",
+        "type": "object"
+      },
       "neurosphere_api__dashboards__models__MetricValue": {
         "additionalProperties": false,
         "properties": {
@@ -9204,6 +10593,37 @@
           }
         },
         "title": "Sampling",
+        "type": "object"
+      },
+      "neurosphere_api__reports__models__DecisionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "pattern": "^[^\\x00-\\x1f]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "DecisionBody",
         "type": "object"
       },
       "neurosphere_contracts__actions__v1__action_intent__EvidenceId": {
@@ -9542,6 +10962,29 @@
         ],
         "title": "Window",
         "type": "object"
+      },
+      "neurosphere_contracts__query__v1__structured_query__TimeRange": {
+        "additionalProperties": false,
+        "description": "Half-open interval [start, end). start < end is checked by tests/contracts/validators.py::check_time_range_order.",
+        "properties": {
+          "end": {
+            "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__Timestamp"
+          },
+          "start": {
+            "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__Timestamp"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TimeRange",
+        "type": "object"
+      },
+      "neurosphere_contracts__query__v1__structured_query__Timestamp": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
       },
       "neurosphere_contracts__recommendations__v1__recommendation__Coverage": {
         "additionalProperties": false,
@@ -10061,7 +11504,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecisionBody"
+                "$ref": "#/components/schemas/neurosphere_api__actions__models__DecisionBody"
               }
             }
           },
@@ -10206,6 +11649,217 @@
         "summary": "Set Emergency Disable",
         "tags": [
           "actions"
+        ]
+      }
+    },
+    "/api/v1/copilot/conversations": {
+      "get": {
+        "operationId": "list_conversations_api_v1_copilot_conversations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Conversations",
+        "tags": [
+          "copilot"
+        ]
+      },
+      "post": {
+        "operationId": "create_conversation_api_v1_copilot_conversations_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Create Conversation",
+        "tags": [
+          "copilot"
+        ]
+      }
+    },
+    "/api/v1/copilot/conversations/{conversation_id}": {
+      "delete": {
+        "operationId": "delete_conversation_api_v1_copilot_conversations__conversation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Conversation",
+        "tags": [
+          "copilot"
+        ]
+      },
+      "get": {
+        "operationId": "get_conversation_api_v1_copilot_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation",
+        "tags": [
+          "copilot"
+        ]
+      }
+    },
+    "/api/v1/copilot/conversations/{conversation_id}/messages": {
+      "post": {
+        "operationId": "post_message_api_v1_copilot_conversations__conversation_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "minLength": 1,
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "SSE stream"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Message",
+        "tags": [
+          "copilot"
         ]
       }
     },
@@ -11054,6 +12708,703 @@
         "summary": "Get Trace",
         "tags": [
           "replay"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports": {
+      "get": {
+        "operationId": "list_reports_api_v1_reports_domains__domain_id__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "publication_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "none",
+                    "pending",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Publication State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Reports",
+        "tags": [
+          "reports"
+        ]
+      },
+      "post": {
+        "operationId": "create_report_api_v1_reports_domains__domain_id__reports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}": {
+      "delete": {
+        "operationId": "delete_report_api_v1_reports_domains__domain_id__reports__report_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Report",
+        "tags": [
+          "reports"
+        ]
+      },
+      "get": {
+        "operationId": "get_report_api_v1_reports_domains__domain_id__reports__report_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Report",
+        "tags": [
+          "reports"
+        ]
+      },
+      "put": {
+        "operationId": "update_report_api_v1_reports_domains__domain_id__reports__report_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}/publication": {
+      "post": {
+        "operationId": "request_publication_api_v1_reports_domains__domain_id__reports__report_id__publication_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Publication",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}/publication/decision": {
+      "post": {
+        "operationId": "decide_publication_api_v1_reports_domains__domain_id__reports__report_id__publication_decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/neurosphere_api__reports__models__DecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Publication",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}/run": {
+      "post": {
+        "operationId": "run_report_api_v1_reports_domains__domain_id__reports__report_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}/shares": {
+      "post": {
+        "operationId": "share_report_api_v1_reports_domains__domain_id__reports__report_id__shares_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Share Report",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/api/v1/reports/domains/{domain_id}/reports/{report_id}/shares/{principal_id}": {
+      "delete": {
+        "operationId": "unshare_report_api_v1_reports_domains__domain_id__reports__report_id__shares__principal_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Report Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9:._/=-]+$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unshare Report",
+        "tags": [
+          "reports"
         ]
       }
     },

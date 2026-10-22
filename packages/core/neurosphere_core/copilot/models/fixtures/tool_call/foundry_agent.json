@@ -1,0 +1,97 @@
+{
+  "request_body": {
+    "agent": {
+      "type": "agent_reference",
+      "name": "ns-copilot"
+    },
+    "instructions": "You are the NeuroSphere copilot. Use tools; never invent data.",
+    "input": [
+      {
+        "role": "user",
+        "content": "Find the summarizer model."
+      }
+    ],
+    "stream": true,
+    "max_output_tokens": 1024,
+    "tools": [
+      {
+        "type": "function",
+        "name": "catalog_search",
+        "description": "Search the authorized catalog for assets by name.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "type": "function",
+        "name": "suggest_action",
+        "description": "Draft an action for the user to confirm; it is never executed from chat.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action_type": {
+              "type": "string"
+            },
+            "target_ref": {
+              "type": "string"
+            },
+            "rationale": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "action_type",
+            "target_ref"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ]
+  },
+  "stream": [
+    {
+      "type": "response.created",
+      "response": {
+        "status": "in_progress"
+      }
+    },
+    {
+      "type": "response.output_text.delta",
+      "delta": "Searching the catalog."
+    },
+    {
+      "type": "response.output_item.done",
+      "item": {
+        "type": "function_call",
+        "call_id": "call_1",
+        "name": "catalog_search",
+        "arguments": "{\"query\": \"summarizer\", \"limit\": 5}"
+      }
+    },
+    {
+      "type": "response.completed",
+      "response": {
+        "status": "completed",
+        "usage": {
+          "input_tokens": 88,
+          "output_tokens": 21
+        }
+      }
+    }
+  ]
+}

@@ -151,6 +151,18 @@ def _register_replay(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_copilot(registry: RouterRegistry) -> None:
+    from neurosphere_api.copilot import register
+
+    register(registry)
+
+
+def _register_reports(registry: RouterRegistry) -> None:
+    from neurosphere_api.reports import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -168,6 +180,8 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_realtime,
     _register_map,
     _register_replay,
+    _register_copilot,
+    _register_reports,
 )
 
 

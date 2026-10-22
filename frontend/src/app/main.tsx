@@ -2,10 +2,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import type { IPublicClientApplication } from "@azure/msal-browser";
 import { actionsRoutes } from "../features/actions";
+import { copilotRoutes } from "../features/copilot";
 import { dashboardRoutes } from "../features/dashboards";
 import { mapRoutes } from "../features/map";
 import { mapTableRoutes } from "../features/map-table";
 import { replayRoutes } from "../features/replay";
+import { reportsRoutes } from "../features/reports";
 import { reviewRoutes } from "../features/review";
 import { reconciliationRoutes } from "../features/reconciliation";
 import { qualityRoutes } from "../features/quality";
@@ -35,6 +37,8 @@ const appRoutes = [
   ...mapRoutes,
   ...mapTableRoutes,
   ...replayRoutes,
+  ...reportsRoutes,
+  ...copilotRoutes,
 ];
 
 const container = document.getElementById("root");
