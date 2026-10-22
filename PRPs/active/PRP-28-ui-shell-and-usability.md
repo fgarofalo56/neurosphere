@@ -337,8 +337,8 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`.
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-22 |
-| 2 | todo | | sonnet | | 2026-10-22 |
+| 1 | review | worktree-agent-ad5aa5f746e8881fc | sonnet | 75867cc; orchestrator verify: 195 passed targeted, ruff/format clean; impl: 831 api passed, pyright 0 | 2026-10-22 |
+| 2 | in-progress | (agent worktree) | sonnet | dispatched wave A | 2026-10-22 |
 | 3 | todo | | sonnet | | 2026-10-22 |
 | 4 | todo | | sonnet | | 2026-10-22 |
 | 5 | todo | | sonnet | | 2026-10-22 |
