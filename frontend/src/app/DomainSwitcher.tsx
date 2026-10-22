@@ -30,7 +30,8 @@ export function DomainSwitcher(): ReactElement | null {
   const { domainId, domains, setDomain } = useSelectedDomain();
 
   if (data === null) return null;
-  if (data.status === "forbidden") {
+  // 403 and a 200 with no items both mean "nothing assigned"; no domain is invented.
+  if (data.status === "forbidden" || (data.status === "ready" && domains.length === 0)) {
     return (
       <span role="status" className={styles.message}>
         {NO_DOMAINS_MESSAGE}
