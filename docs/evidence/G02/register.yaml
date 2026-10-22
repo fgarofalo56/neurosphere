@@ -1,0 +1,1073 @@
+# Government evidence register. See header statement.
+schema_version: 1.0.0
+generated_note: Source of truth for the Government dependency evidence register (PRP-20 item 1). Written
+  from Microsoft Learn pages retrieved on the dates in each row; links to the capability matrix by row
+  id and does not duplicate it.
+statement: Availability is not authorization. NeuroSphere is not FedRAMP authorized; the authorizing official
+  decides.
+responsibility_matrix: docs/compliance/responsibility-matrix.md
+rows:
+- id: cosmos-db-base
+  dependency: Azure Cosmos DB
+  feature: base (NoSQL)
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - cosmos_db.base.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Government endpoint is documents.azure.us.
+- id: cosmos-db-hpk
+  dependency: Azure Cosmos DB
+  feature: hierarchical partition keys
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - cosmos_db.hierarchical_partition_keys.government.global.any
+  source_url: https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys
+  retrieved_on: '2026-10-08'
+  notes: Government support not verified (matrix row unverified). Page checked recorded in source_url.
+- id: cosmos-db-change-feed-avad
+  dependency: Azure Cosmos DB
+  feature: change feed all versions and deletes
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - cosmos_db.change_feed_all_versions_and_deletes.government.global.any
+  source_url: https://learn.microsoft.com/azure/cosmos-db/change-feed-modes
+  retrieved_on: '2026-10-08'
+  notes: Government support not verified (matrix row unverified). Page checked recorded in source_url.
+- id: event-hubs-base
+  dependency: Azure Event Hubs
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Government namespace suffix is servicebus.usgovcloudapi.net.
+- id: event-hubs-data-geo-replication-premium
+  dependency: Azure Event Hubs
+  feature: data geo-replication
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: Premium
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - event_hubs.data_geo_replication.government.global.premium
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  retrieved_on: '2026-07-11'
+  notes: GA on Premium and Dedicated only in the public documentation; Government support not verified.
+    Not used as a Government dependency until verified.
+- id: event-hubs-data-geo-replication-dedicated
+  dependency: Azure Event Hubs
+  feature: data geo-replication
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: Dedicated
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - event_hubs.data_geo_replication.government.global.dedicated
+  source_url: https://learn.microsoft.com/azure/event-hubs/geo-replication
+  retrieved_on: '2026-07-11'
+  notes: GA on Premium and Dedicated only in the public documentation; Government support not verified.
+    Not used as a Government dependency until verified.
+- id: event-hubs-metadata-geo-dr
+  dependency: Azure Event Hubs
+  feature: metadata geo-DR (alias failover)
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - event_hubs.metadata_geo_dr.government.global.any
+  source_url: https://learn.microsoft.com/azure/event-hubs/event-hubs-geo-dr
+  retrieved_on: '2026-07-11'
+  notes: Metadata geo-DR copies neither event payloads nor RBAC assignments; it is not data replication.
+    Government support not verified.
+- id: storage-blob
+  dependency: Azure Storage (Blobs incl. ADLS Gen2)
+  feature: blob storage
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: 'Availability inferred from the audit-scope listing; per-region and per-SKU availability not
+    captured (''Products available by region'' not fetched). GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). '
+- id: key-vault
+  dependency: Azure Key Vault
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: 'Availability inferred from the audit-scope listing; per-region and per-SKU availability not
+    captured (''Products available by region'' not fetched). GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). '
+- id: ai-search-base
+  dependency: Azure AI Search
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.base.government.global.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: 'Availability inferred from the audit-scope listing; per-region and per-SKU availability not
+    captured (''Products available by region'' not fetched). GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). '
+- id: ai-search-semantic-ranker-usgovvirginia
+  dependency: Azure AI Search
+  feature: semantic ranker
+  cloud: government
+  environment: azure_government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.semantic_ranker.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Listed available in this region by the region-support page; GA status not verified.
+- id: ai-search-agentic-retrieval-usgovvirginia
+  dependency: Azure AI Search
+  feature: agentic retrieval
+  cloud: government
+  environment: azure_government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.agentic_retrieval.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Listed available in this region by the region-support page; GA status not verified.
+- id: ai-search-semantic-ranker-usgovarizona
+  dependency: Azure AI Search
+  feature: semantic ranker
+  cloud: government
+  environment: azure_government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.semantic_ranker.government.usgovarizona.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Listed available in this region by the region-support page; GA status not verified.
+- id: ai-search-agentic-retrieval-usgovarizona
+  dependency: Azure AI Search
+  feature: agentic retrieval
+  cloud: government
+  environment: azure_government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.agentic_retrieval.government.usgovarizona.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Listed available in this region by the region-support page; GA status not verified.
+- id: ai-search-semantic-ranker-usgovtexas
+  dependency: Azure AI Search
+  feature: semantic ranker
+  cloud: government
+  environment: azure_government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.semantic_ranker.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Not available in US Gov Texas; Texas is Fabric-only in the default region set.
+- id: ai-search-agentic-retrieval-usgovtexas
+  dependency: Azure AI Search
+  feature: agentic retrieval
+  cloud: government
+  environment: azure_government
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.agentic_retrieval.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Not available in US Gov Texas; Texas is Fabric-only in the default region set.
+- id: ai-search-vector-search
+  dependency: Azure AI Search
+  feature: vector search
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - ai_search.vector_search.government.global.any
+  source_url: https://learn.microsoft.com/azure/search/search-region-support
+  retrieved_on: '2026-10-08'
+  notes: Government support not verified (matrix row unverified).
+- id: apim-base
+  dependency: Azure API Management
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - apim.base.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  retrieved_on: '2026-10-11'
+  notes: 'Government endpoints: management.usgovcloudapi.net, azure-api.us gateway/management/portal.
+    Audit-scope listing not captured in this register. Per-region and per-tier availability not captured.'
+- id: apim-b2c-integration
+  dependency: Azure API Management
+  feature: Azure AD B2C integration
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - apim.azure_ad_b2c_integration.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  retrieved_on: '2026-10-22'
+  notes: Not available in Azure Government; Azure AD B2C itself is also not available in Azure Government.
+- id: apim-regional-tier
+  dependency: Azure API Management
+  feature: regional tier availability
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - apim.regional_tier_availability.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  retrieved_on: '2026-10-11'
+  notes: Per-region and per-tier availability not verified.
+- id: aks-base
+  dependency: Azure Kubernetes Service
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - aks.base.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Live Government profile run is OPEN (no Government subscription, D7).
+- id: app-service-base
+  dependency: Azure App Service
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - app_service.base.government.any.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Deployment options limited to Local Git and External Repository. Live Government profile run is OPEN
+    (D7).
+- id: app-service-managed-cert
+  dependency: Azure App Service
+  feature: App Service Certificate and Managed Certificate
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  retrieved_on: '2026-10-22'
+  notes: Not available in Azure Government.
+- id: app-service-domain
+  dependency: Azure App Service
+  feature: App Service Domain
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+  retrieved_on: '2026-10-22'
+  notes: Not available in Azure Government.
+- id: container-registry
+  dependency: Azure Container Registry
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: 'Availability inferred from the audit-scope listing; per-region and per-SKU availability not
+    captured (''Products available by region'' not fetched). GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). '
+- id: azure-monitor
+  dependency: Azure Monitor, Log Analytics and Application Insights
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Same features as Azure; Application Insights SDKs need an endpoint override via connection string.
+- id: entra-id
+  dependency: Microsoft Entra ID (Free and P1/P2) and Entra MFA
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: true
+  capability_rows: []
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Trusted IPs MFA setting is not supported; use Conditional Access named locations. Azure AD B2C is
+    not available in Azure Government. Government sign-in host is login.microsoftonline.us.
+- id: resource-graph
+  dependency: Azure Resource Graph
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - resource_graph.base.government.global.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Government hosts portal.azure.us and management.usgovcloudapi.net.
+- id: foundry-portal
+  dependency: Microsoft Foundry
+  feature: portal (audit scope)
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Foundry portal listed in Azure Government audit scope for FedRAMP High and DoD IL2
+    only (not IL4, IL5WI or IL6). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.base.government.usgovvirginia.any
+  - foundry.base.government.usgovarizona.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Audit-scope listing of the portal does not establish feature availability or authorization of
+    model deployments or agents.
+- id: foundry-agent-prompt-agents
+  dependency: Microsoft Foundry Agent Service
+  feature: prompt agents
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_prompt_agents.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: 'CONFLICT, kept not_verified: the Foundry Government agents feature page lists this as available,
+    but the Foundry region-support page and the Government product roadmap conflict with it. The favorable
+    source is not chosen.'
+- id: foundry-agent-ai-search-tool
+  dependency: Microsoft Foundry Agent Service
+  feature: AI Search tool
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_ai_search_tool.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: 'CONFLICT, kept not_verified: the Foundry Government agents feature page lists this as available,
+    but the Foundry region-support page and the Government product roadmap conflict with it. The favorable
+    source is not chosen.'
+- id: foundry-agent-mcp-servers
+  dependency: Microsoft Foundry Agent Service
+  feature: MCP servers
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_mcp_servers.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: 'CONFLICT, kept not_verified: the Foundry Government agents feature page lists this as available,
+    but the Foundry region-support page and the Government product roadmap conflict with it. The favorable
+    source is not chosen.'
+- id: foundry-agent-function-calling
+  dependency: Microsoft Foundry Agent Service
+  feature: function calling
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_function_calling.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: 'CONFLICT, kept not_verified: the Foundry Government agents feature page lists this as available,
+    but the Foundry region-support page and the Government product roadmap conflict with it. The favorable
+    source is not chosen.'
+- id: foundry-agent-workflows
+  dependency: Microsoft Foundry Agent Service
+  feature: workflows
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: preview
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: true
+  is_saas: true
+  capability_rows:
+  - foundry.agent_workflows.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Preview per the Government agents feature page; also subject to the region-support/roadmap conflict.
+    Do not depend on it for a Government baseline.
+- id: foundry-agent-hosted-agents
+  dependency: Microsoft Foundry Agent Service
+  feature: hosted agents
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_hosted_agents.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Unavailable per the Government agents feature page. The disagreeing region-support/roadmap pages
+    are recorded in the conflict rows.
+- id: foundry-agent-web-search
+  dependency: Microsoft Foundry Agent Service
+  feature: web search
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_web_search.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Unavailable per the Government agents feature page. The disagreeing region-support/roadmap pages
+    are recorded in the conflict rows.
+- id: foundry-agent-bing-grounding
+  dependency: Microsoft Foundry Agent Service
+  feature: Bing grounding
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_bing_grounding.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Unavailable per the Government agents feature page. The disagreeing region-support/roadmap pages
+    are recorded in the conflict rows.
+- id: foundry-agent-fabric-tool
+  dependency: Microsoft Foundry Agent Service
+  feature: Fabric tool
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_fabric_tool.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Unavailable per the Government agents feature page. The disagreeing region-support/roadmap pages
+    are recorded in the conflict rows.
+- id: foundry-agent-agent-to-agent
+  dependency: Microsoft Foundry Agent Service
+  feature: agent-to-agent
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.agent_to_agent.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/agents/concepts/azure-government
+  retrieved_on: '2026-10-22'
+  notes: Unavailable per the Government agents feature page. The disagreeing region-support/roadmap pages
+    are recorded in the conflict rows.
+- id: foundry-region-support-page
+  dependency: Microsoft Foundry
+  feature: region-support page (conflict source)
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.availability_region_support_page.government.global.any
+  source_url: https://learn.microsoft.com/azure/foundry/reference/region-support
+  retrieved_on: '2026-10-08'
+  notes: CONFLICT with the Foundry Government feature pages; unresolved. Contents not transcribed.
+- id: foundry-government-roadmap
+  dependency: Microsoft Foundry
+  feature: Government product roadmap (conflict source)
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - foundry.availability_government_roadmap.government.global.any
+  source_url: https://learn.microsoft.com/azure/azure-government/documentation-government-product-roadmap
+  retrieved_on: '2026-10-08'
+  notes: CONFLICT with the Foundry Government feature pages; unresolved. Contents not transcribed.
+- id: fabric-gcc-high-virginia
+  dependency: Microsoft Fabric
+  feature: base (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: ga
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.base.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: 'Fabric in GCC High is GA from 2026-10-01 in US Gov Virginia and US Gov Texas only; FedRAMP High
+    assessment is in progress. Secondary source (retrieved 2026-10-08): https://www.microsoft.com/en-us/microsoft-cloud/blog/us-government/2026/09/02/microsoft-fabric-in-gcc-high-building-the-data-foundation-for-ai/'
+- id: fabric-gcc-high-customer-managed-keys-virginia
+  dependency: Microsoft Fabric
+  feature: customer-managed keys (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.customer_managed_keys.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc-high-workspace-identity-virginia
+  dependency: Microsoft Fabric
+  feature: workspace identity (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.workspace_identity.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc-high-fabric-iq-items-virginia
+  dependency: Microsoft Fabric
+  feature: Fabric IQ items (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovvirginia
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.fabric_iq_items.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc-high-texas
+  dependency: Microsoft Fabric
+  feature: base (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovtexas
+  sku: null
+  availability: available
+  ga_status: ga
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.base.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: 'Fabric in GCC High is GA from 2026-10-01 in US Gov Virginia and US Gov Texas only; FedRAMP High
+    assessment is in progress. Secondary source (retrieved 2026-10-08): https://www.microsoft.com/en-us/microsoft-cloud/blog/us-government/2026/09/02/microsoft-fabric-in-gcc-high-building-the-data-foundation-for-ai/'
+- id: fabric-gcc-high-customer-managed-keys-texas
+  dependency: Microsoft Fabric
+  feature: customer-managed keys (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.customer_managed_keys.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc-high-workspace-identity-texas
+  dependency: Microsoft Fabric
+  feature: workspace identity (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.workspace_identity.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc-high-fabric-iq-items-texas
+  dependency: Microsoft Fabric
+  feature: Fabric IQ items (GCC High)
+  cloud: government
+  environment: gcc_high
+  region: usgovtexas
+  sku: null
+  availability: unavailable
+  ga_status: not_verified
+  authorization: assessment_in_progress
+  authorization_note: FedRAMP High assessment in progress for Fabric in GCC High; not a completed assessment
+    and not an authorization.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.fabric_iq_items.government.usgovtexas.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: Unsupported in GCC High per the Microsoft Learn Fabric GCC High page.
+- id: fabric-gcc
+  dependency: Microsoft Fabric
+  feature: base (GCC)
+  cloud: government
+  environment: gcc
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.base_gcc.government.any.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: GCC availability is not verified and is not an alias of GCC High. Fabric GCC and DoD availability
+    remains OPEN.
+- id: fabric-dod
+  dependency: Microsoft Fabric
+  feature: base (DOD)
+  cloud: government
+  environment: dod
+  region: '*'
+  sku: null
+  availability: not_verified
+  ga_status: not_verified
+  authorization: not_verified
+  authorization_note: Not verified; no audit-scope or assessment status captured.
+  is_preview: false
+  is_saas: true
+  capability_rows:
+  - fabric.base_dod.government.any.any
+  source_url: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high
+  retrieved_on: '2026-10-22'
+  notes: DOD availability is not verified and is not an alias of GCC High. Fabric GCC and DoD availability
+    remains OPEN.
+- id: synapse-base
+  dependency: Azure Synapse Analytics
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: '*'
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4, IL5WI and
+    IL6 (table last updated February 2026). Audit-scope listing only, not an agency authorization of NeuroSphere
+    or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - synapse.base.government.global.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-22'
+  notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
+    ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
+    extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Deployment choice behind adapters, not a default.
+- id: databricks-usgovvirginia
+  dependency: Azure Databricks
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: usgovvirginia
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4 and IL5WI
+    (not IL6) (table last updated February 2026). Audit-scope listing only, not an agency authorization
+    of NeuroSphere or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - databricks.base.government.usgovvirginia.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-08'
+  notes: Availability per the matrix row for this region; GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Deployment choice behind adapters.
+- id: databricks-usgovarizona
+  dependency: Azure Databricks
+  feature: base
+  cloud: government
+  environment: azure_government
+  region: usgovarizona
+  sku: null
+  availability: available
+  ga_status: not_verified
+  authorization: audit_scope_listed
+  authorization_note: Listed in Azure Government audit scope for FedRAMP High, DoD IL2, IL4 and IL5WI
+    (not IL6) (table last updated February 2026). Audit-scope listing only, not an agency authorization
+    of NeuroSphere or this service.
+  is_preview: false
+  is_saas: false
+  capability_rows:
+  - databricks.base.government.usgovarizona.any
+  source_url: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope
+  retrieved_on: '2026-10-08'
+  notes: Availability per the matrix row for this region; GA status not verified. IL5WI in US Gov regions
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
+    Deployment choice behind adapters.
