@@ -123,7 +123,11 @@ describe("empty domain list", () => {
 
 describe("default domain in the URL", () => {
   it("replaces a missing domain_id with the default, keeping other params and the hash", async () => {
-    const { router } = renderShell({ account: newAccount(), respond: ok(), path: "/page?x=1#frag" });
+    const { router } = renderShell({
+      account: newAccount(),
+      respond: ok(),
+      path: "/page?x=1#frag",
+    });
     await waitFor(() => expect(router.state.location.search).toContain("domain_id="));
     const params = new URLSearchParams(router.state.location.search);
     expect(params.get("domain_id")).toBe(FINANCE);
