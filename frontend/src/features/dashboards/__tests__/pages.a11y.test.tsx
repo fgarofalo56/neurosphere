@@ -42,10 +42,7 @@ describe.each([
     setupPage(path, BODIES);
     await screen.findAllByTestId("lag-indicator");
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByLabelText("Domain"));
-    await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Apply" }));
-    await user.tab();
+    expect(screen.queryByLabelText("Domain")).toBeNull();
     expect(document.activeElement).toBe(screen.getByLabelText("Days"));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByLabelText("Grain"));

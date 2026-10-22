@@ -137,7 +137,7 @@ export function SeriesBlock({
   const unit = unitLabel(series);
   const headingId = `series-${series.key}`;
   return (
-    <section aria-labelledby={headingId} data-testid="series-block">
+    <section role="group" aria-labelledby={headingId} data-testid="series-block">
       <h3 id={headingId}>{series.label}</h3>
       <div>
         Total: <MetricText metric={series.total} unit={unit} />{" "}
