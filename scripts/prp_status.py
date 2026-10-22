@@ -45,6 +45,7 @@ class Prp:
     wave: str = ""
     model: str = ""
     review: str = ""
+    priority: str = ""
     frontmatter_status: str = ""
     depends: list[str] = field(default_factory=list)
     manual_gates: list[str] = field(default_factory=list)
@@ -92,6 +93,7 @@ def scan() -> dict[str, Prp]:
                 wave=fm.get("wave", ""),
                 model=fm.get("model", ""),
                 review=fm.get("review", ""),
+                priority=fm.get("priority", ""),
                 frontmatter_status=fm.get("status", ""),
                 depends=ids,
                 manual_gates=manual,
@@ -103,12 +105,18 @@ def scan() -> dict[str, Prp]:
     return prps
 
 
+def start_rank(prp: Prp) -> tuple[str, str, str]:
+    """Rank like `prp_index.py next`: an explicit priority (P0..P3) first, then wave, then id."""
+    priority = prp.priority.upper()
+    return (priority if re.fullmatch(r"P[0-3]", priority) else "P9", prp.wave, prp.pid)
+
+
 def render(prps: dict[str, Prp]) -> str:
     counts = {s: sum(1 for p in prps.values() if p.state == s) for s in STATES}
     start_here = next(
         (
             p
-            for p in sorted(prps.values(), key=lambda x: (x.wave, x.pid))
+            for p in sorted(prps.values(), key=start_rank)
             if p.state == "backlog"
             and all(prps.get(d, Prp("", "", "", Path())).state == "shipped" for d in p.depends)
         ),
