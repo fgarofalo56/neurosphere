@@ -1,6 +1,8 @@
 ---
 name: prp-28-ui-shell-and-usability
-status: backlog
+status: active
+started: 2026-10-22
+branch: prp-28-ui-shell-and-usability
 review: required
 priority: P1
 created: 2026-10-22

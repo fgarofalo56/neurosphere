@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-28-ui-shell-and-usability](active/PRP-28-ui-shell-and-usability.md) | P1 | 0/8 (0%) | todo 8 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-28-ui-shell-and-usability](backlog/PRP-28-ui-shell-and-usability.md) | P1 |  | - | - | ? / ? | required |
 | [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) |  |  | - | - | ? / ? | required |
 | [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) |  |  | - | - | ? / ? | none |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) |  |  | - | - | ? / ? | required |
