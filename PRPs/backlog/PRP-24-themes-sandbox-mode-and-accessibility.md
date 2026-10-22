@@ -6,7 +6,7 @@ created: 2026-10-08
 model: sonnet
 phase: 5
 ns: NS-10
-depends_on: PRP-03, PRP-04, PRP-18, PRP-19
+depends_on: PRP-03, PRP-04, PRP-18, PRP-19, PRP-28
 wave: W8
 absorbs: P5.2, G09
 ---
