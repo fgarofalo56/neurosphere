@@ -8,8 +8,10 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 import { ForbiddenError, useApiClient, type ApiError } from "../../api/index.js";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
 import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
@@ -36,7 +38,15 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     alignItems: "flex-start",
   },
-  main: { flex: "1 1 520px", minWidth: 0, display: "grid", rowGap: tokens.spacingVerticalS },
+  // minmax(0, 1fr): an implicit `auto` grid column sizes to its widest child's min-content and
+  // overflows its container (it overlapped the legend at 1280px). The column must shrink instead.
+  main: {
+    flex: "1 1 520px",
+    minWidth: 0,
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr)",
+    rowGap: tokens.spacingVerticalS,
+  },
   side: { display: "grid", rowGap: tokens.spacingVerticalM, flex: "0 0 auto" },
   toolbar: {
     display: "flex",
@@ -374,39 +384,15 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   );
 }
 
-function DomainForm(): ReactElement {
-  const [, setParams] = useSearchParams();
-  const [value, setValue] = useState("");
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (value.trim() !== "") setParams({ domain_id: value.trim() });
-      }}
-    >
-      <label>
-        {STRINGS.domainLabel} <input value={value} onChange={(e) => setValue(e.target.value)} />
-      </label>{" "}
-      <button type="submit">{STRINGS.domainSubmit}</button>
-    </form>
-  );
-}
-
 export function MapPage(): ReactElement {
-  const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   return (
-    <section aria-labelledby="map-heading">
-      <h1 id="map-heading">{STRINGS.title}</h1>
-      <p>{STRINGS.intro}</p>
+    <PageTemplate title={STRINGS.title} description={STRINGS.intro}>
       {domainId === "" ? (
-        <>
-          <p data-testid="domain-required">{STRINGS.domainRequired}</p>
-          <DomainForm />
-        </>
+        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
         <MapView key={domainId} domainId={domainId} />
       )}
-    </section>
+    </PageTemplate>
   );
 }

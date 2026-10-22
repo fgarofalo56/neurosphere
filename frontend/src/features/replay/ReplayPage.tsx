@@ -1,6 +1,8 @@
-import { MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
+import { Button, MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ForbiddenError, type ApiError } from "../../api/index.js";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useTrace, useTraceList } from "./hooks";
@@ -98,9 +100,7 @@ function TraceList({ domainId }: { readonly domainId: string }): ReactElement {
         })}
       </ul>
       {query.hasNextPage ? (
-        <button type="button" onClick={() => void query.fetchNextPage()}>
-          {STRINGS.loadMore}
-        </button>
+        <Button onClick={() => void query.fetchNextPage()}>{STRINGS.loadMore}</Button>
       ) : null}
     </section>
   );
@@ -108,12 +108,10 @@ function TraceList({ domainId }: { readonly domainId: string }): ReactElement {
 
 export function ReplayPage(): ReactElement {
   const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const traceId = params.get("trace_id") ?? "";
   return (
-    <section aria-label={STRINGS.title}>
-      <h1>{STRINGS.title}</h1>
-      <p>{STRINGS.readOnly}</p>
+    <PageTemplate title={STRINGS.title} description={STRINGS.readOnly}>
       {domainId === "" ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
@@ -122,6 +120,6 @@ export function ReplayPage(): ReactElement {
           {traceId !== "" ? <TraceDetailSection domainId={domainId} traceId={traceId} /> : null}
         </>
       )}
-    </section>
+    </PageTemplate>
   );
 }

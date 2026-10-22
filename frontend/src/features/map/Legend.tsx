@@ -1,4 +1,4 @@
-import { makeStyles, tokens } from "@fluentui/react-components";
+import { Select, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { NODE_TYPES, NodeTypeIcon } from "../../design-system";
 import { EDGE_COLOUR, HEALTH_COLOUR, UNKNOWN_OPACITY, type MetricRange } from "./appearance";
@@ -67,17 +67,17 @@ export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): 
 
       <fieldset className={styles.group}>
         <legend>{STRINGS.sizeBy}</legend>
-        <select
+        <Select
           aria-label={STRINGS.sizeBy}
           value={sizeBy}
-          onChange={(e) => onSizeBy(e.target.value as SizeMetric)}
+          onChange={(_, data) => onSizeBy(data.value as SizeMetric)}
         >
           {SIZE_METRICS.map((m) => (
             <option key={m} value={m}>
               {SIZE_METRIC_LABEL[m]}
             </option>
           ))}
-        </select>
+        </Select>
         <ul className={styles.list} data-testid="size-legend">
           <li>
             Smallest: <span data-testid="size-min">{formatMetric(range?.min ?? null)}</span>
