@@ -24,6 +24,9 @@
     "react-dom": "^19.2.0",
     "react-router": "^8.4.0",
     "sigma": "^4.0.3",
+    "vega": "^6.4.0",
+    "vega-interpreter": "^2.3.2",
+    "vega-lite": "^6.5.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
