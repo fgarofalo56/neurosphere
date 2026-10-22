@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-20-government-verification-and-sovereign-deployment](active/PRP-20-government-verification-and-sovereign-deployment.md) |  | 0/4 (0%) | todo 4 | ? / ? | required |
+| [prp-20-government-verification-and-sovereign-deployment](active/PRP-20-government-verification-and-sovereign-deployment.md) |  | 3/4 (75%) | in-progress 1, merged 3 | ? / ? | required |
 
 ## Backlog
 
