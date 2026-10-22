@@ -1,8 +1,10 @@
 import {
   Badge,
+  Field,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -10,9 +12,11 @@ import {
   TableHeaderCell,
   TableRow,
 } from "@fluentui/react-components";
-import { useId, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import { ForbiddenError } from "../../api/index.js";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useReconciliation } from "./hooks";
 import { STRINGS, lagText } from "./strings";
@@ -187,10 +191,9 @@ export function ReconciliationView({
 
 export function ReconciliationPage(): ReactElement {
   const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const rawDays = Number(params.get("days") ?? 30);
   const days = Number.isInteger(rawDays) && rawDays >= 1 && rawDays <= 90 ? rawDays : 30;
-  const ids = { domain: useId(), days: useId() };
   const query = useReconciliation({ domainId, days }, domainId !== "");
 
   const update = (key: string, value: string): void => {
@@ -223,29 +226,22 @@ export function ReconciliationPage(): ReactElement {
   }
 
   return (
-    <section aria-label={STRINGS.title}>
-      <h1>{STRINGS.title}</h1>
-      <form
-        aria-label={STRINGS.filtersLabel}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const value = new FormData(e.currentTarget).get("domain_id");
-          update("domain_id", typeof value === "string" ? value.trim() : "");
-        }}
-      >
-        <label htmlFor={ids.domain}>{STRINGS.domainLabel}</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <button type="submit">{STRINGS.apply}</button>{" "}
-        <label htmlFor={ids.days}>{STRINGS.daysLabel}</label>{" "}
-        <select id={ids.days} value={days} onChange={(e) => update("days", e.target.value)}>
-          {DAY_OPTIONS.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </form>
+    <PageTemplate
+      title={STRINGS.title}
+      toolbarLabel={STRINGS.filtersLabel}
+      toolbar={
+        <Field label={STRINGS.daysLabel}>
+          <Select value={String(days)} onChange={(_e, data) => update("days", data.value)}>
+            {DAY_OPTIONS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      }
+    >
       {body}
-    </section>
+    </PageTemplate>
   );
 }
