@@ -346,13 +346,13 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`.
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-ad5aa5f746e8881fc | sonnet | 75867cc, merge 1b99def; verify 195 passed targeted (pre+post merge), ruff/format clean; impl 831 api passed, pyright 0; review APPROVED (5 non-blocking follow-ups) | 2026-10-22 |
 | 2 | merged | worktree-agent-a5c2e30dee17dc54b | sonnet | 0a9125e, merge 1409e46; verify typecheck/lint clean, vitest 412/412, build ok, playwright 86/87 (quality.spec:38 flake, 30/30 on repeat-each=3); post-merge vitest 412/412 + shell/hidden-route/smoke 7/7; review APPROVED (4 non-blocking follow-ups) | 2026-10-22 |
-| 2b | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
-| 3 | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
-| 4 | merged | worktree-agent-a48d724ccc72020e0 | sonnet | 13bf1ab, merge 2762ef3; verify typecheck/lint clean, vitest 412/412, native grep clean; impl playwright 86/87 (actions.spec:160 load flake, 16/16 isolated); combined review (4-8) pending | 2026-10-22 |
-| 5 | merged | worktree-agent-a77c26df8cfe9ad92 | sonnet | 0e1743f, merge a88819b; verify typecheck/lint clean, vitest 412/412, native grep clean, actions.spec unchanged; impl playwright 87/87; combined review (4-8) pending | 2026-10-22 |
-| 6 | merged | worktree-agent-a1bdbc557df86ec5d | sonnet | fff7b30, merge 51a230e; verify typecheck/lint clean, vitest 413/413, native grep clean; impl playwright 86/87 (map-table-keyboard load flake, 2/2 isolated); combined review (4-8) pending | 2026-10-22 |
-| 7 | merged | worktree-agent-aa1530b1af330d322 | sonnet | 43925c7, merge ce0c94a; verify typecheck/lint clean, vitest 412/412 (1 unidentified flake on first run), grep only allowlisted MapGrid button; post-wave-B integration: vitest 413/413, build ok, playwright 87/87; combined review (4-8) pending | 2026-10-22 |
-| 8 | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
+| 2b | merged | worktree-agent-aeeb7f6c17b4303ca | sonnet | 56cb1fe, merge 6830bcd; verify typecheck/lint clean, vitest 419/419, shell/smoke/hidden-route/copilot e2e 14/14; impl playwright 88/88; combined review APPROVED | 2026-10-22 |
+| 3 | merged | worktree-agent-a0b86a1748c9e838d | sonnet | 06586cb, merge 9dde992; verify typecheck/lint clean, vitest 427/427 (reports.test sharing flake on 1st run), real prod dist grep: 0 demo/stub markers, validate_planning PASS; impl playwright 87/87, demo smoke ok; review APPROVED (4 follow-ups) | 2026-10-22 |
+| 4 | merged | worktree-agent-a48d724ccc72020e0 | sonnet | 13bf1ab, merge 2762ef3; verify typecheck/lint clean, vitest 412/412, native grep clean; impl playwright 86/87 (actions.spec:160 load flake, 16/16 isolated); combined review APPROVED | 2026-10-22 |
+| 5 | merged | worktree-agent-a77c26df8cfe9ad92 | sonnet | 0e1743f, merge a88819b; verify typecheck/lint clean, vitest 412/412, native grep clean, actions.spec unchanged; impl playwright 87/87; combined review APPROVED | 2026-10-22 |
+| 6 | merged | worktree-agent-a1bdbc557df86ec5d | sonnet | fff7b30, merge 51a230e; verify typecheck/lint clean, vitest 413/413, native grep clean; impl playwright 86/87 (map-table-keyboard load flake, 2/2 isolated); combined review APPROVED | 2026-10-22 |
+| 7 | merged | worktree-agent-aa1530b1af330d322 | sonnet | 43925c7, merge ce0c94a; verify typecheck/lint clean, vitest 412/412 (1 unidentified flake on first run), grep only allowlisted MapGrid button; post-wave-B integration: vitest 413/413, build ok, playwright 87/87; combined review APPROVED | 2026-10-22 |
+| 8 | merged | worktree-agent-a90a8d5854ab8a760 | sonnet | a59e23e, merge 9cc1cb4; verify typecheck/lint clean, vitest 431/431; post-merge vitest 451/451; impl playwright 90/90; combined review APPROVED | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:

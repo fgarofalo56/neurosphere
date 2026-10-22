@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-28-ui-shell-and-usability](active/PRP-28-ui-shell-and-usability.md) | P1 | 6/9 (66%) | in-progress 3, merged 6 | ? / ? | required |
+| [prp-28-ui-shell-and-usability](active/PRP-28-ui-shell-and-usability.md) | P1 | 9/9 (100%) | merged 9 | ? / ? | required |
 
 ## Backlog
 
