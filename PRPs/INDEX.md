@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-20-government-verification-and-sovereign-deployment](active/PRP-20-government-verification-and-sovereign-deployment.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) |  |  | - | - | ? / ? | required |
 | [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) |  |  | - | - | ? / ? | none |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) |  |  | - | - | ? / ? | required |
 | [prp-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) |  |  | - | - | ? / ? | required |

@@ -4,7 +4,11 @@
 // Government regions only. Government data never routes to Commercial.
 using '../../modules/main.bicep'
 
+// Host-level record (endpoints, audiences, private DNS zones, egress hosts, disabled options):
+// sovereign-profile.yaml in this folder.
 param namePrefix = 'nsphere'
+// Default region. The customer selects: usgovvirginia, usgovarizona or usgovtexas.
+// usgovtexas is Fabric-only (AI Search semantic ranker and agentic retrieval are not available there).
 param location = 'usgovvirginia'
 param tags = {
   workload: 'neurosphere'

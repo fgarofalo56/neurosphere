@@ -1,6 +1,8 @@
 ---
 name: prp-20-government-verification-and-sovereign-deployment
-status: backlog
+status: active
+started: 2026-10-22
+branch: prp-20-government-sovereign
 review: required
 created: 2026-10-08
 model: sonnet
@@ -197,6 +199,12 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Plan deltas (approved 2026-10-22)
+- Item 2: `modules/main.bicep` has no endpoint parameters and item 2 may not edit modules, so `main.bicepparam` keeps deriving hosts from `environment()`. Item 2 additionally owns `infra/bicep/params/government/sovereign-profile.yaml`: the host-level manifest (endpoints, audiences, Government private DNS zone names, egress host allowlist, allowed regions, disabled-with-reason options). `values-government.yaml` carries `env.NS_CLOUD=government`, CIDR egress entries and a mirrored `sovereignProfile` block. Tests assert against `neurosphere_core.cloud`.
+- Item 3: NetworkPolicy is CIDR-only (PRP-12), so the static test scans the full `helm template` output, the manifest host allowlist and DNS zone list, and the `az bicep build-params` output of the Government parameters.
+- Item 4 runs in wave A with items 1 and 2 (it references fixed paths only). Item 3 waits for item 2. Merge order 2, 1, 4, 3.
+- Item 2 ownership extended (user-approved 2026-10-22) to the two PRP-08 handoff markers in `tests/unit/infra/test_helm_render.py`: `test_extension_points_left_to_later_prps` now asserts `values-government.yaml` exists, and `test_no_literal_azure_endpoints` excludes that one file (covered by `tests/unit/government_profile/`).
+
 ## Completion note (filled at ship)
 - Date:
 - Merged commits:
@@ -204,3 +212,12 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 - Descoped items:
 - Live gates (G02 profile AKS / App Service): date and operator approval, or OPEN:
 - Follow-ups:
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-a4650021553086e92 | sonnet | 2e84afa, merge 8f5435e; verify ruff/format/pyright clean, evidence_register 44/44, validate_planning PASS, RESEARCH-AND-GATES diff = G02 row only; post-merge 44/44; review APPROVED (3 follow-ups) | 2026-10-22 |
+| 2 | merged | worktree-agent-ad2f171f638730ee5 | sonnet | 34d2deb + c5b567c (handoff-marker flip) + 3ddde6d (audience provenance fix), merge f2d2aaf; verify government_profile+infra+network 92/92, helm lint/template ok, bicep build-params ok; post-merge 92/92; review APPROVED (4 follow-ups) | 2026-10-22 |
+| 3 | merged | worktree-agent-af3ed6e509f2e314f | sonnet | de8c5cc, merge 4990f12; verify ruff/format/pyright clean, static 57/57, compose integration 41/41 (fresh stack, local only; integration marker does not run in CI); post-merge touched suites 313 passed; snyk 0; review APPROVED (4 follow-ups). In-cluster proof OPEN | 2026-10-22 |
+| 4 | merged | worktree-agent-a2d5b5afaff30879b | sonnet | b6b79a3, merge 083d5d2; verify ruff/format/pyright clean, gates 144/144, both scripts refuse exit 2 "OPEN", docs/ untouched; post-merge 144/144; review APPROVED (4 follow-ups) | 2026-10-22 |

@@ -1,0 +1,89 @@
+# Azure Government overrides for the NeuroSphere chart (PRP-20 item 2). Overrides only; use with
+#   helm template neurosphere infra/helm -f infra/helm/values-government.yaml
+# Hosts mirror infra/bicep/params/government/sovereign-profile.yaml (tests assert equality).
+# Government data never routes to another cloud.
+
+image:
+  # Placeholder Government ACR host. The operator mirrors the PRP-13 release images into the
+  # customer's Government ACR and replaces this value.
+  registry: nsphere.azurecr.us
+  tag: 0.1.0
+
+serviceAccount:
+  workloadIdentity:
+    # Placeholder zero GUID; the operator supplies the managed identity client id.
+    clientId: 00000000-0000-0000-0000-000000000000
+
+env:
+  NS_CLOUD: government
+  NS_ENV: prod
+
+networkPolicy:
+  # NetworkPolicy is CIDR-only (no FQDN support). Allow the private-endpoint subnet of the
+  # network Bicep module; every Government PaaS endpoint resolves into it via private DNS.
+  egressAllowlist:
+    - name: private-endpoints
+      cidr: 10.40.1.0/24
+      ports:
+        - port: 443
+          protocol: TCP
+
+# Reference block mirroring the sovereign manifest. Chart templates ignore it.
+sovereignProfile:
+  endpoints:
+    login: login.microsoftonline.us
+    resourceManager: management.usgovcloudapi.net
+    portal: portal.azure.us
+    graph: graph.microsoft.us
+    cosmosSuffix: .documents.azure.us
+    eventHubsSuffix: .servicebus.usgovcloudapi.net
+    searchSuffix: .search.azure.us
+    keyVaultSuffix: .vault.usgovcloudapi.net
+    storageBlobSuffix: .blob.core.usgovcloudapi.net
+    apimGatewaySuffix: .azure-api.us
+    appServiceSuffix: .azurewebsites.us
+    acrSuffix: .azurecr.us
+    logAnalytics: api.loganalytics.us
+    monitor: monitor.azure.us
+    openAiSuffix: .openai.azure.us
+    cognitiveServicesSuffix: .cognitiveservices.azure.us
+  privateDnsZones:
+    cosmosSql: privatelink.documents.azure.us
+    eventHubs: privatelink.servicebus.usgovcloudapi.net
+    search: privatelink.search.azure.us
+    keyVault: privatelink.vaultcore.usgovcloudapi.net
+    storageBlob: privatelink.blob.core.usgovcloudapi.net
+    storageQueue: privatelink.queue.core.usgovcloudapi.net
+    storageTable: privatelink.table.core.usgovcloudapi.net
+    storageFile: privatelink.file.core.usgovcloudapi.net
+    storageDfs: privatelink.dfs.core.usgovcloudapi.net
+    apimGateway: privatelink.azure-api.us
+    appService: privatelink.azurewebsites.us
+    acr: privatelink.azurecr.us
+    cognitiveServices: privatelink.cognitiveservices.azure.us
+    monitor: privatelink.monitor.azure.us
+    monitorAdx: privatelink.adx.monitor.azure.us
+    omsOpInsights: privatelink.oms.opinsights.azure.us
+    odsOpInsights: privatelink.ods.opinsights.azure.us
+    agentSvc: privatelink.agentsvc.azure-automation.us
+    synapseSql: privatelink.sql.azuresynapse.usgovcloudapi.net
+    synapseDev: privatelink.dev.azuresynapse.usgovcloudapi.net
+    databricks: privatelink.databricks.azure.us
+  egressHosts:
+    - login.microsoftonline.us
+    - management.usgovcloudapi.net
+    - graph.microsoft.us
+    - api.loganalytics.us
+    - monitor.azure.us
+    - "*.documents.azure.us"
+    - "*.servicebus.usgovcloudapi.net"
+    - "*.search.azure.us"
+    - "*.vault.usgovcloudapi.net"
+    - "*.blob.core.usgovcloudapi.net"
+    - "*.azure-api.us"
+    - "*.azurewebsites.us"
+    - "*.azurecr.us"
+    - "*.openai.azure.us"
+    - "*.cognitiveservices.azure.us"
+    - "*.ods.opinsights.azure.us"
+    - "*.oms.opinsights.azure.us"

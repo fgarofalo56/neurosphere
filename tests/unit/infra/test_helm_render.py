@@ -167,8 +167,10 @@ def test_app_service_security_posture() -> None:
 
 
 def test_no_literal_azure_endpoints() -> None:
+    # values-government.yaml (PRP-20) is the one cloud-specific values file: it must name
+    # Government hosts, and tests/unit/government_profile proves it names nothing else.
     files = [
-        *CHART.rglob("*.yaml"),
+        *(f for f in CHART.rglob("*.yaml") if f.name != "values-government.yaml"),
         *CHART.rglob("*.tpl"),
         APPSERVICE / "main.bicep",
         APPSERVICE / "main.bicepparam",
@@ -181,7 +183,7 @@ def test_no_literal_azure_endpoints() -> None:
 
 
 def test_extension_points_left_to_later_prps() -> None:
-    assert not (CHART / "values-government.yaml").exists()  # PRP-20
+    assert (CHART / "values-government.yaml").exists()  # PRP-20 shipped the Government values
     # PRP-12 shipped the NetworkPolicy template; it is on by default.
     assert (CHART / "templates" / "networkpolicy.yaml").exists()
     values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
