@@ -1,7 +1,9 @@
 ---
 name: prp-20-government-verification-and-sovereign-deployment
-status: active
+status: shipped
 started: 2026-10-22
+shipped: 2026-10-22
+pr: 97
 branch: prp-20-government-sovereign
 review: required
 created: 2026-10-08
@@ -206,12 +208,23 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 - Item 2 ownership extended (user-approved 2026-10-22) to the two PRP-08 handoff markers in `tests/unit/infra/test_helm_render.py`: `test_extension_points_left_to_later_prps` now asserts `values-government.yaml` exists, and `test_no_literal_azure_endpoints` excludes that one file (covered by `tests/unit/government_profile/`).
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-22
+- Merged commits: PR #97 (merge e00d606). Item 2: 34d2deb, c5b567c, 3ddde6d (merge f2d2aaf). Item 1: 2e84afa (merge 8f5435e). Item 4: b6b79a3 (merge 083d5d2). Item 3: de8c5cc (merge 4990f12). Local `verify-gates -Mode full` PASS (lint, typecheck, 6709 tests, build); CI on PR #97 all green.
 - Deviations from blueprint and why:
-- Descoped items:
-- Live gates (G02 profile AKS / App Service): date and operator approval, or OPEN:
-- Follow-ups:
+  - Item 2: `modules/main.bicep` has no endpoint parameters, so `main.bicepparam` still derives hosts from `environment()`. The host-level truth lives in the new `infra/bicep/params/government/sovereign-profile.yaml`, mirrored in `values-government.yaml` under `sovereignProfile`.
+  - Item 2 ownership was extended (user-approved) to flip the two PRP-08 handoff markers in `tests/unit/infra/test_helm_render.py`. The orchestrator corrected three audience source citations (commit 3ddde6d).
+  - Item 3: NetworkPolicy is CIDR-only, so the static test scans the full `helm template` output, the manifest hosts and DNS zones, and the compiled Bicep params (skipping `$schema`). It also asserts default-deny and RFC1918-only `ipBlock`s.
+  - Item 4 ran in wave A rather than after item 2, because it references fixed paths only. It adds a shared `_g02_profile_common.py`. It requires an existing operator AKS cluster (main.bicep creates none). It uses its own run-id-tag dry-run uninstall guard instead of `infra/scripts/uninstall.py`, which is ownership-register based.
+  - Item 1: the Foundry agent features (prompt agents, AI Search tool, MCP servers, function calling) are recorded `not_verified` with the source conflict noted, instead of available.
+- Descoped items: none.
+- Live gates (G02 profile AKS / App Service): OPEN. There is no Government subscription (D7), and neither script was run with approval.
+- Also OPEN:
+  - The in-cluster half of the item 3 egress proof. The compose half passed 41/41 locally only, because the `integration` marker does not run in CI.
+  - G02 agency ATO, which belongs to the customer's authorizing official.
+  - The Government data-plane audiences for Cosmos DB, AI Search and Event Hubs. No first-party page checked states them.
+  - Fabric availability in GCC and DoD.
+  - G01 Government integration evidence.
+- Follow-ups: #98 (compose egress positive-control dependency), #99 (G02 profile teardown robustness), #100 (fail rather than skip when helm is absent in CI; CIDR and GOV_SUFFIX tightening), #101 (pre-existing Snyk low findings in the g01 gate scripts).
 
 ## Execution state
 
