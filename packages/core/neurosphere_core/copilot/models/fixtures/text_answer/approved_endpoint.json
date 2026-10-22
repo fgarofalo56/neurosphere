@@ -1,0 +1,84 @@
+{
+  "request_body": {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are the NeuroSphere copilot. Use tools; never invent data."
+      },
+      {
+        "role": "user",
+        "content": "What does the catalog hold?"
+      }
+    ],
+    "stream": true,
+    "stream_options": {
+      "include_usage": true
+    },
+    "max_completion_tokens": 1024,
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "catalog_search",
+          "description": "Search the authorized catalog for assets by name.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              },
+              "limit": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "query"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    ]
+  },
+  "stream": [
+    {
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "The catalog "
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "choices": [
+        {
+          "index": 0,
+          "delta": {
+            "content": "holds 12 models."
+          },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "choices": [],
+      "usage": {
+        "prompt_tokens": 41,
+        "completion_tokens": 9
+      }
+    },
+    "[DONE]"
+  ]
+}

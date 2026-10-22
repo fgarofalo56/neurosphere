@@ -1,0 +1,51 @@
+{
+  "request": {
+    "system": "You are the NeuroSphere copilot. Use tools; never invent data.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "What does the catalog hold?"
+      }
+    ],
+    "tools": [
+      {
+        "name": "catalog_search",
+        "description": "Search the authorized catalog for assets by name.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "correlation_id": "rec-text_answer"
+  },
+  "events": [
+    {
+      "type": "text_delta",
+      "text": "The catalog "
+    },
+    {
+      "type": "text_delta",
+      "text": "holds 12 models."
+    },
+    {
+      "type": "completed",
+      "stop_reason": "end_turn",
+      "usage": {
+        "input_tokens": 41,
+        "output_tokens": 9
+      }
+    }
+  ]
+}

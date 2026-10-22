@@ -1,0 +1,82 @@
+{
+  "request": {
+    "system": "You are the NeuroSphere copilot. Use tools; never invent data.",
+    "turns": [
+      {
+        "role": "user",
+        "content": "Find the summarizer model."
+      }
+    ],
+    "tools": [
+      {
+        "name": "catalog_search",
+        "description": "Search the authorized catalog for assets by name.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "suggest_action",
+        "description": "Draft an action for the user to confirm; it is never executed from chat.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "action_type": {
+              "type": "string"
+            },
+            "target_ref": {
+              "type": "string"
+            },
+            "rationale": {
+              "type": "string"
+            },
+            "parameters": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "action_type",
+            "target_ref"
+          ],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "correlation_id": "rec-tool_call"
+  },
+  "events": [
+    {
+      "type": "text_delta",
+      "text": "Searching the catalog."
+    },
+    {
+      "type": "tool_call",
+      "call_id": "call_1",
+      "tool_name": "catalog_search",
+      "arguments": {
+        "query": "summarizer",
+        "limit": 5
+      }
+    },
+    {
+      "type": "completed",
+      "stop_reason": "tool_calls",
+      "usage": {
+        "input_tokens": 88,
+        "output_tokens": 21
+      }
+    }
+  ]
+}
