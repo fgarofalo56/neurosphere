@@ -1,5 +1,7 @@
-import { useId, useState, type ReactElement } from "react";
-import { useSearchParams } from "react-router";
+import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
+import { useState, type ReactElement } from "react";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ActionDetail } from "./ActionDetail";
 import { ActionError, EmergencyBanner } from "./components";
 import { useDraftIntent } from "./hooks";
@@ -7,29 +9,40 @@ import { buildDraftIntentRequest } from "./request";
 import { STRINGS } from "./strings";
 import type { ActionView } from "./types";
 
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalM,
+    maxWidth: "36rem",
+  },
+});
+
 /**
  * "Propose model swap": drafts a button-channel intent for a model_deployment target, then hands
  * the server's answer to the same workflow the detail page uses (validate -> confirmation ->
  * confirm). The idempotency key is fixed for the page's lifetime so a retried submit replays the
- * original draft instead of creating a second one.
+ * original draft instead of creating a second one. The domain is the one chosen in the header.
  */
 export function ProposeSwapPage(): ReactElement {
-  const [params] = useSearchParams();
-  const initialDomain = params.get("domain_id") ?? "";
-  const ids = { domain: useId(), target: useId(), version: useId(), name: useId(), mver: useId() };
+  const { domainId } = useSelectedDomain();
+  const styles = useStyles();
   const [idempotencyKey] = useState<string>(() => `button-${crypto.randomUUID()}`);
   const [view, setView] = useState<ActionView | null>(null);
-  const [domainId, setDomainId] = useState(initialDomain);
+  const [draftDomain, setDraftDomain] = useState("");
   const draft = useDraftIntent();
   const P = STRINGS.propose;
   return (
-    <section aria-label={STRINGS.proposeTitle}>
-      <h1>{STRINGS.proposeTitle}</h1>
+    <PageTemplate title={STRINGS.proposeTitle} description={P.help}>
       <EmergencyBanner />
-      <p>{P.help}</p>
-      {view === null ? (
+      {view !== null ? (
+        <ActionDetail domainId={draftDomain} view={view} onView={setView} />
+      ) : domainId === "" ? (
+        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+      ) : (
         <form
           aria-label={STRINGS.proposeTitle}
+          className={styles.form}
           onSubmit={(e) => {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
@@ -37,11 +50,9 @@ export function ProposeSwapPage(): ReactElement {
               const v = data.get(key);
               return typeof v === "string" ? v.trim() : "";
             };
-            const domain = text("domain");
-            setDomainId(domain);
             draft.mutate(
               {
-                domainId: domain,
+                domainId,
                 request: buildDraftIntentRequest({
                   canonicalId: text("target"),
                   targetVersion: text("target_version"),
@@ -50,38 +61,36 @@ export function ProposeSwapPage(): ReactElement {
                   idempotencyKey,
                 }),
               },
-              { onSuccess: setView },
+              {
+                onSuccess: (next) => {
+                  // The workflow keeps acting on the domain the draft was created in.
+                  setDraftDomain(domainId);
+                  setView(next);
+                },
+              },
             );
           }}
         >
-          <p>
-            <label htmlFor={ids.domain}>{P.domain}</label>{" "}
-            <input id={ids.domain} name="domain" required defaultValue={initialDomain} />
-          </p>
-          <p>
-            <label htmlFor={ids.target}>{P.target}</label>{" "}
-            <input id={ids.target} name="target" required />
-          </p>
-          <p>
-            <label htmlFor={ids.version}>{P.version}</label>{" "}
-            <input id={ids.version} name="target_version" required />
-          </p>
-          <p>
-            <label htmlFor={ids.name}>{P.modelName}</label>{" "}
-            <input id={ids.name} name="model_name" required />
-          </p>
-          <p>
-            <label htmlFor={ids.mver}>{P.modelVersion}</label>{" "}
-            <input id={ids.mver} name="model_version" />
-          </p>
-          <button type="submit" disabled={draft.isPending}>
-            {draft.isPending ? STRINGS.steps.working : P.submit}
-          </button>
+          <Field label={P.target}>
+            <Input name="target" required />
+          </Field>
+          <Field label={P.version}>
+            <Input name="target_version" required />
+          </Field>
+          <Field label={P.modelName}>
+            <Input name="model_name" required />
+          </Field>
+          <Field label={P.modelVersion}>
+            <Input name="model_version" />
+          </Field>
+          <div>
+            <Button appearance="primary" type="submit" disabled={draft.isPending}>
+              {draft.isPending ? STRINGS.steps.working : P.submit}
+            </Button>
+          </div>
           {draft.isError ? <ActionError error={draft.error} /> : null}
         </form>
-      ) : (
-        <ActionDetail domainId={domainId} view={view} onView={setView} />
       )}
-    </section>
+    </PageTemplate>
   );
 }
