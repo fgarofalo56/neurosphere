@@ -1,8 +1,10 @@
 ---
 name: prp-21-scale-federation-finops-and-dr
-status: backlog
+status: active
 review: none
 created: 2026-10-08
+started: 2026-10-22
+branch: prp-21-scale-federation-finops-dr
 model: sonnet
 phase: 4
 ns: NS-07, NS-08
@@ -169,6 +171,19 @@ Ship the load-test profiles (pilot, enterprise, stress), per-domain admission co
 - Pattern references: replay CLI and quarantine design from PRP-07; migrations runner from PRP-13.
 - Tests to write: `tests/integration/dr/test_restore_compose.py` (`pytest.mark.integration`), `tests/integration/dr/test_runbook_caveats.py` (asserts required caveat strings exist).
 
+### Item 6 - wiring  (added at plan approval, 2026-10-22)
+- Deliverable: register the item 3 federation router and the item 4 finops router in the API router registry and regenerate the OpenAPI document, so neither router ships unattached.
+- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`.
+- Must NOT touch: anything owned by items 1-5.
+- Depends on: items 3 and 4 merged.
+- Acceptance criteria: both routers attached through `REGISTERED` hooks; every new route declares a permission (`verify_route_permissions` passes); `services/api/tests/test_openapi_drift.py` passes after `python -m neurosphere_api.openapi_export`.
+
+### Execution plan deltas (approved 2026-10-22)
+- Item 6 added (above): no blueprint item owned `routers.py`/`openapi.json`; earlier PRPs used a sequenced wiring item.
+- Test directories renamed to avoid pytest top-level package clashes: `services/api/tests/federation_api/`, `services/workers/tests/federation_worker/`, `services/api/tests/finops_api/` (the finops unknown-not-zero test is `test_finops_unknown_not_zero.py`, because `test_unknown_not_zero.py` already exists under dashboards).
+- Locust stays out of `uv.lock`: pinned in `tests/load/profiles/requirements.txt` and run as an isolated subprocess (`uv run --isolated --no-project --with-requirements ...`), because importing locust gevent-monkeypatches the process. Profile definitions and the evidence writer are plain Python; the CI-collected definition test never imports locust.
+- Item 5 runs after item 1 (both use the single compose stack; concurrent drills collide on host ports and data).
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -203,6 +218,17 @@ Enterprise and stress profile runs are operator-run against a sized environment 
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-22 |
+| 2 | todo | | sonnet | | 2026-10-22 |
+| 3 | todo | | sonnet | | 2026-10-22 |
+| 4 | todo | | sonnet | | 2026-10-22 |
+| 5 | todo | | sonnet | | 2026-10-22 |
+| 6 | todo | | sonnet | | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:
