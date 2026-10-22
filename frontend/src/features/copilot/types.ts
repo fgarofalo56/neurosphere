@@ -77,7 +77,14 @@ export type CopilotEvent =
   | { readonly name: "tool"; readonly data: ToolEvent }
   | { readonly name: "token"; readonly data: { readonly text: string } }
   | { readonly name: "citation"; readonly data: CitationEvent }
-  | { readonly name: "chart"; readonly data: { readonly chart_plan: ChartPlan } }
+  | {
+      readonly name: "chart";
+      readonly data: {
+        readonly chart_plan: ChartPlan;
+        /** Absent on the current wire contract; "Save as report" renders only when present. */
+        readonly query_spec?: Readonly<Record<string, unknown>>;
+      };
+    }
   | { readonly name: "action_suggestion"; readonly data: ActionSuggestionEvent }
   | {
       readonly name: "done";
@@ -102,6 +109,8 @@ export interface AssistantTurn {
   readonly tools: readonly ToolEvent[];
   readonly citations: readonly CitationEvent[];
   readonly charts: readonly ChartPlan[];
+  /** Parallel to `charts`: the query that produced each chart's data, or null when not sent. */
+  readonly chartQuerySpecs: readonly (Readonly<Record<string, unknown>> | null)[];
   readonly suggestions: readonly ActionSuggestionEvent[];
   /** Set for `abstain` and `denied`. */
   readonly reason: TerminalReason | null;

@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 import { useNavigate } from "react-router";
 import { ChartFrame } from "../charts";
 import { SaveReportDialog, type StructuredQuery } from "../reports";
-import { defaultQuerySpec, singleDomain } from "./saveQuery";
 import { STRINGS } from "./strings";
 import type {
   ActionSuggestionEvent,
@@ -239,12 +238,15 @@ export function AssistantTurnView({
         {turn.charts.map((plan, i) => (
           <div key={`chart-${i}`} className={styles.block} data-testid="assistant-chart">
             <ChartFrame plan={plan} title={STRINGS.chart.title} height={240} />
-            <SaveReportDialog
-              chartPlan={plan}
-              querySpec={defaultQuerySpec(echo) as unknown as StructuredQuery}
-              domainId={singleDomain(echo)}
-              defaultTitle={plan.spec.title ?? ""}
-            />
+            {/* Offered only when the chart event carried the query that produced its data. */}
+            {turn.chartQuerySpecs[i] != null ? (
+              <SaveReportDialog
+                chartPlan={plan}
+                querySpec={turn.chartQuerySpecs[i] as unknown as StructuredQuery}
+                domainId={echo?.applied_domains.length === 1 ? (echo.applied_domains[0] ?? "") : ""}
+                defaultTitle={plan.spec.title ?? ""}
+              />
+            ) : null}
           </div>
         ))}
         {turn.suggestions.map((s) => (

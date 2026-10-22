@@ -269,6 +269,23 @@ describe("answered stream", () => {
 
     const chart = screen.getByTestId("assistant-chart");
     expect(within(chart).getByTestId("chart-frame")).toBeInTheDocument();
+    // The chart event carries no query_spec, so chat never offers to save it as a report.
+    expect(within(chart).queryByTestId("save-report-open")).not.toBeInTheDocument();
+  });
+
+  it("offers save-as-report only when the chart event carries a query_spec", async () => {
+    const withSpec: Ev[] = ANSWERED.map((e): Ev =>
+      e[0] === "chart"
+        ? [
+            "chart",
+            { chart_plan: PLAN, query_spec: { operation: "aggregate", entity: "cost_record" } },
+          ]
+        : e,
+    );
+    const { impl } = stubFetch(() => sse(withSpec));
+    mount(impl);
+    await ask();
+    const chart = await screen.findByTestId("assistant-chart");
     expect(within(chart).getByTestId("save-report-open")).toBeInTheDocument();
   });
 

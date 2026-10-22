@@ -69,7 +69,7 @@ test.describe("copilot dock", () => {
 
     const frame = page.frameLocator('iframe[title="Chart from the assistant"]');
     await expect(frame.locator("svg .mark-rect").first()).toBeAttached({ timeout: 30_000 });
-    await expect(page.getByTestId("save-report-open")).toBeVisible();
+    await expect(page.getByTestId("save-report-open")).toHaveCount(0);
 
     // First-token instrumentation is readable by tests (non-production builds only).
     const firstToken = Number(await turn.getAttribute("data-first-token-ms"));

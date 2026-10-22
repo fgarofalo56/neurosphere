@@ -228,7 +228,12 @@ export function parseEvent(raw: RawSseEvent): CopilotEvent | null {
     }
     case "chart": {
       const chart = asChart(payload);
-      return chart === null ? null : { name: "chart", data: { chart_plan: chart } };
+      if (chart === null) return null;
+      const spec = payload["query_spec"];
+      return {
+        name: "chart",
+        data: isRecord(spec) ? { chart_plan: chart, query_spec: spec } : { chart_plan: chart },
+      };
     }
     case "action_suggestion": {
       const data = asSuggestion(payload);

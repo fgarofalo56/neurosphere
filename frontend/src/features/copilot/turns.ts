@@ -9,6 +9,7 @@ export function newTurn(key: string, userText: string): AssistantTurn {
     tools: [],
     citations: [],
     charts: [],
+    chartQuerySpecs: [],
     suggestions: [],
     reason: null,
     failure: null,
@@ -46,7 +47,11 @@ export function applyEvent(
     case "citation":
       return { ...turn, citations: [...turn.citations, event.data] };
     case "chart":
-      return { ...turn, charts: [...turn.charts, event.data.chart_plan] };
+      return {
+        ...turn,
+        charts: [...turn.charts, event.data.chart_plan],
+        chartQuerySpecs: [...turn.chartQuerySpecs, event.data.query_spec ?? null],
+      };
     case "action_suggestion":
       return { ...turn, suggestions: [...turn.suggestions, event.data] };
     case "done":
@@ -71,6 +76,7 @@ function discard(
     text: "",
     citations: [],
     charts: [],
+    chartQuerySpecs: [],
     suggestions: [],
     reason,
   };
