@@ -1,0 +1,415 @@
+{
+  "as_of": "2026-10-18",
+  "currency": "USD",
+  "data": "sandbox generator seed 7, 9461 synthetic cost records, customer synthco, first domain of 2",
+  "domain_id": "commercial:synthco:sandbox:domain:dom-001",
+  "environment": "sandbox in-memory ledger, synthetic data",
+  "gate": "G07",
+  "generated_on": "2026-10-22",
+  "item": "PRP-21 item 4 finops-forecast",
+  "method": {
+    "confidence_level": "0.95",
+    "description": "Ordinary least squares line over complete daily totals; band is the normal approximation prediction interval (z=1.96) clamped at 0. Not a savings claim.",
+    "history_days": 17,
+    "horizon_days": 14,
+    "min_fit_points": 5,
+    "name": "linear_trend_ols",
+    "savings_claim": false,
+    "z": "1.96"
+  },
+  "note": "Forecast versus actual cost only. This is not a savings estimate, a recommendation or a claim that any cost would be avoided.",
+  "price_version_id": "sandbox-prices-2026-10",
+  "price_version_ids": [
+    "sandbox-prices-2026-10"
+  ],
+  "rows": [
+    {
+      "actual": "0.094355000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.076033715336",
+      "band_upper": "0.161856858193",
+      "day": "2026-10-18",
+      "forecast": "0.118945286765",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.068684000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.077346019119",
+      "band_upper": "0.164744029901",
+      "day": "2026-10-19",
+      "forecast": "0.121045024510",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.096484000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.078591623860",
+      "band_upper": "0.167697900650",
+      "day": "2026-10-20",
+      "forecast": "0.123144762255",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.081310000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.079774288120",
+      "band_upper": "0.170714711880",
+      "day": "2026-10-21",
+      "forecast": "0.125244500000",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.102804000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.080897739978",
+      "band_upper": "0.173790735512",
+      "day": "2026-10-22",
+      "forecast": "0.127344237745",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.064308000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.081965632003",
+      "band_upper": "0.176922318977",
+      "day": "2026-10-23",
+      "forecast": "0.129443975490",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.100721000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.082981505660",
+      "band_upper": "0.180105920810",
+      "day": "2026-10-24",
+      "forecast": "0.131543713235",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.094789000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.083948764466",
+      "band_upper": "0.183338137495",
+      "day": "2026-10-25",
+      "forecast": "0.133643450980",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.092936000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.084870654978",
+      "band_upper": "0.186615722473",
+      "day": "2026-10-26",
+      "forecast": "0.135743188725",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.076907000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.085750254520",
+      "band_upper": "0.189935598422",
+      "day": "2026-10-27",
+      "forecast": "0.137842926471",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.076096000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.086590464533",
+      "band_upper": "0.193294863898",
+      "day": "2026-10-28",
+      "forecast": "0.139942664216",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.098826000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.087394008481",
+      "band_upper": "0.196690795440",
+      "day": "2026-10-29",
+      "forecast": "0.142042401961",
+      "kind": "estimated",
+      "within_band": true
+    },
+    {
+      "actual": "0.075680000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.088163433328",
+      "band_upper": "0.200120846083",
+      "day": "2026-10-30",
+      "forecast": "0.144142139706",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.084011000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.088901113727",
+      "band_upper": "0.203582641175",
+      "day": "2026-10-31",
+      "forecast": "0.146241877451",
+      "kind": "estimated",
+      "within_band": false
+    },
+    {
+      "actual": "0.015268000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015581380474",
+      "band_upper": "0.055616075408",
+      "day": "2026-10-18",
+      "forecast": "0.035598727941",
+      "kind": "invoiced",
+      "within_band": false
+    },
+    {
+      "actual": "0.011533000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015642336018",
+      "band_upper": "0.056411673786",
+      "day": "2026-10-19",
+      "forecast": "0.036027004902",
+      "kind": "invoiced",
+      "within_band": false
+    },
+    {
+      "actual": "0.029624000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015672177858",
+      "band_upper": "0.057238385867",
+      "day": "2026-10-20",
+      "forecast": "0.036455281863",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.025343000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015672659285",
+      "band_upper": "0.058094458362",
+      "day": "2026-10-21",
+      "forecast": "0.036883558824",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.017563000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015645519369",
+      "band_upper": "0.058978152199",
+      "day": "2026-10-22",
+      "forecast": "0.037311835784",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.022938000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015592461958",
+      "band_upper": "0.059887763532",
+      "day": "2026-10-23",
+      "forecast": "0.037740112745",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.060020000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015515139069",
+      "band_upper": "0.060821640343",
+      "day": "2026-10-24",
+      "forecast": "0.038168389706",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.032950000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015415138372",
+      "band_upper": "0.061778194961",
+      "day": "2026-10-25",
+      "forecast": "0.038596666667",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.039917000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015293974319",
+      "band_upper": "0.062755912936",
+      "day": "2026-10-26",
+      "forecast": "0.039024943627",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.028749000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.015153082415",
+      "band_upper": "0.063753358761",
+      "day": "2026-10-27",
+      "forecast": "0.039453220588",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.020377000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.014993816124",
+      "band_upper": "0.064769178974",
+      "day": "2026-10-28",
+      "forecast": "0.039881497549",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.030013000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.014817445882",
+      "band_upper": "0.065802103138",
+      "day": "2026-10-29",
+      "forecast": "0.040309774510",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.023759000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.014625159796",
+      "band_upper": "0.066850943145",
+      "day": "2026-10-30",
+      "forecast": "0.040738051471",
+      "kind": "invoiced",
+      "within_band": true
+    },
+    {
+      "actual": "0.012296000000",
+      "actual_complete": true,
+      "actual_reason": null,
+      "actual_status": "known",
+      "band_lower": "0.014418065591",
+      "band_upper": "0.067914591272",
+      "day": "2026-10-31",
+      "forecast": "0.041166328431",
+      "kind": "invoiced",
+      "within_band": false
+    }
+  ],
+  "savings_claim": false,
+  "schema_version": "1",
+  "series": {
+    "estimated": {
+      "excluded_incomplete_days": 0,
+      "fit_points": 17,
+      "forecast_available": true,
+      "forecast_unavailable_reason": null,
+      "history_actual": {
+        "complete": true,
+        "reason": null,
+        "status": "known",
+        "value": "1.700810000000"
+      },
+      "horizon_actual": {
+        "complete": true,
+        "reason": null,
+        "status": "known",
+        "value": "1.207911000000"
+      },
+      "horizon_forecast": {
+        "lower": "1.163209218109",
+        "upper": "2.549411080909",
+        "value": "1.856310149510"
+      },
+      "residual_std": "0.019524941727"
+    },
+    "invoiced": {
+      "excluded_incomplete_days": 0,
+      "fit_points": 17,
+      "forecast_available": true,
+      "forecast_unavailable_reason": null,
+      "history_actual": {
+        "complete": true,
+        "reason": null,
+        "status": "known",
+        "value": "0.539652000000"
+      },
+      "horizon_actual": {
+        "complete": true,
+        "reason": null,
+        "status": "known",
+        "value": "0.370350000000"
+      },
+      "horizon_forecast": {
+        "lower": "0.214038356530",
+        "upper": "0.860672432684",
+        "value": "0.537355394608"
+      },
+      "residual_std": "0.009107975537"
+    }
+  }
+}
