@@ -1,0 +1,54 @@
+# Azure Commercial host patterns that must never appear in a Government deployment (PRP-20 item 3).
+# One pattern per line. "*." means one or more DNS labels. Matching is case-insensitive and
+# host-bounded: *.documents.azure.com is not satisfied by documents.azure.us.
+# This list is item 3's own; item 2 (tests/unit/government_profile/) keeps a separate one.
+
+# Identity and control plane
+login.microsoftonline.com
+login.windows.net
+login.live.com
+management.azure.com
+management.core.windows.net
+graph.microsoft.com
+portal.azure.com
+
+# Data plane
+*.documents.azure.com
+*.servicebus.windows.net
+*.search.windows.net
+*.vault.azure.net
+*.vaultcore.azure.net
+*.blob.core.windows.net
+*.queue.core.windows.net
+*.table.core.windows.net
+*.file.core.windows.net
+*.dfs.core.windows.net
+*.azure-api.net
+*.azurewebsites.net
+*.azurecr.io
+
+# Monitoring
+api.loganalytics.io
+*.ods.opinsights.azure.com
+*.oms.opinsights.azure.com
+monitor.azure.com
+*.monitor.azure.com
+
+# AI
+*.openai.azure.com
+*.cognitiveservices.azure.com
+*.services.ai.azure.com
+ai.azure.com
+
+# Commercial private-link zones
+privatelink.documents.azure.com
+privatelink.servicebus.windows.net
+privatelink.search.windows.net
+privatelink.vaultcore.azure.net
+privatelink.blob.core.windows.net
+privatelink.azure-api.net
+privatelink.azurewebsites.net
+privatelink.azurecr.io
+privatelink.monitor.azure.com
+privatelink.openai.azure.com
+privatelink.cognitiveservices.azure.com
