@@ -1,0 +1,7 @@
+# Load-generator pin for tests/load/profiles (PRP-21 item 1). Deliberately NOT in pyproject.toml or
+# uv.lock: importing locust gevent-monkeypatches the process, which would break the shared asyncio
+# pytest session. The suite runs it as an isolated subprocess:
+#   uv run --isolated --no-project --with-requirements tests/load/profiles/requirements.txt \
+#       locust -f tests/load/profiles/locustfile.py --headless ...
+# Licence: locust is MIT. An ADR-0002 row is a follow-up (see README.md).
+locust==2.47.0
