@@ -1,6 +1,8 @@
 ---
 name: prp-19-copilot-and-report-creation
-status: active
+status: shipped
+shipped: 2026-10-22
+pr: 87
 started: 2026-10-21
 branch: prp-19-copilot-and-report-creation
 review: required
@@ -262,10 +264,58 @@ Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D 
 | 7 | merged | worktree-agent-a218c4a7a119cb3bd | sonnet | dc95aba; orchestrator re-run: only item 7 owned files, ruff + pyright clean, core copilot + charts + copilot_api + reports + tests/integration/copilot + test_app + openapi drift + actions_api 416 passed 7 deselected; corpus with REAL chart validator 78/78, 0 overscoped (deny:chart_plan_rejected=7); Cosmos emulator `-m integration tests/integration/copilot` 3 passed; licences PASS (603); tsc + eslint clean, full vitest 34 files 361 passed, build ok, Playwright smoke + chart-sandbox + actions 26 passed; openapi +10 paths +46 components, NOT purely additive (7 module-qualified renames: DecisionBody, TimeRange, Lock-*, Timestamp-Input, Validity-*); no container provisioning precedent (stores create containers in code); httpx >=0.28,<0.29 declared in packages/core; mock fixtures answered/abstain/denied/action_suggestion/error via `?fixture=` > `fixture:<name>` text > keywords; CopilotDock mounted in Layout (routes.tsx) inside ErrorBoundary; open: production app.state bootstrap still absent (composition tests stand in); reviewer APPROVED (follow-ups: wrapper `exclude_unset=True` drops schema defaults from emitted plans, re-export `validate_chart_plan_mapping`, check mock SSE tool names vs contract when item 6 lands, call out the 7 OpenAPI renames in the PR); merge 8b71985; post-merge 416 passed 7 deselected, tsc clean, vitest app + reports + charts 67 passed | 2026-10-21 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-22
+- Merged commits: PR #87, merge `b9fe5c0` into main. Item merges on `prp-19-copilot-and-report-creation`: item 3 `817f683`, item 1 `52e2255`, item 4 `b705b42`, item 2 `d8b4914`, item 5 `6bc3efe` (rework `a8655d6`), item 7 `8b71985`, item 6 `83baac1` (rework `2731e1a`), orchestrator test-timeout fix `44b5fe7`, gate notes `f4b1a48`, CI fix-forward `ee60c94` (gitleaks fixture split + `.gitleaksignore` fingerprint, four CodeQL alert classes) and `891dede` (CodeQL match-capture false positive). CI on PR #87: 21 checks passed, 2 licence-register regeneration jobs skipped (nothing to regenerate). Local `verify-gates -Mode full`: PASS (6542 passed, 102 deselected).
 - Deviations from blueprint and why:
-- Descoped items:
-- Injection corpus result (cases run, overscoped retrievals):
-- Optional live model run: date, operator approval, evidence path (or OPEN):
-- Follow-ups:
+  - D1: new item 7 owned the shared hookup files (router hooks, `openapi.json`, frontend app wiring, mock API, `tests/integration/copilot`), because no item owned them. Item 7 also bound the real chart validator as the copilot default and declared `httpx` in `packages/core/pyproject.toml`. No container provisioning was added: there is no precedent, because stores create their containers in code.
+  - D2: item 4 owned the frontend deps (`vega`, `vega-lite`, `vega-interpreter`, BSD-3), the Vite sandbox entry, and the licence register and stack-pin appendix regeneration. The sandbox script is one inline bundle allowed by a sha256 CSP, not a separate module entry. An opaque-origin module script needs CORS, and dev HMR breaks `connect-src 'none'`.
+  - D3: API copilot tests live in `services/api/tests/copilot_api/`, because same-named test packages shadow each other.
+  - D4: the corpus run is `services/api/tests/copilot_api/test_orchestrator_injection.py`; the PRP's `tests/security/injection -k copilot` gate line was corrected.
+  - D5: no new permission constants.
+  - D6: model-supplied scope arguments are refused and logged rather than silently ignored, because the corpus expects `deny`.
+  - Item 2 was dispatched as soon as item 1 merged, its only dependency.
+  - Wire additions on top of the pinned contract:
+    - Citation handles `[cite:rN]`, because prompt redaction masks GUID record ids.
+    - `uncited_answer` and `tool_budget_exhausted` abstain reasons.
+    - ReportView `is_owner` and `can_decide_publication`, an optional `metric`, and a `?publication_state=` filter.
+    - An approved publication is runnable by `data.read` holders, each under their own scope.
+    - Stored report plans are templates with `data.values` emptied.
+  - Item 6 deliberately does not offer save-as-report from chat (review rework), because the `chart` event carries no query spec.
+  - `openapi.json` is NOT purely additive. It gained 10 paths and 46 components, and 7 components were renamed module-qualified (`DecisionBody`, `TimeRange`, `Lock-*`, `Timestamp-Input`, `Validity-*`).
+  - Orchestrator seam fix `44b5fe7`: Testing Library `asyncUtilTimeout` raised to 5 s. Fluent dialogs exceeded the 1 s default under parallel workers, and the full suite flaked about 1 run in 5.
+- Descoped items: none. Not built:
+  - A production `app.state` bootstrap, as in PRP-18; composition tests stand in.
+  - A core evidence store; `get_evidence` uses an empty reader, so evidence questions abstain.
+  - Save-from-chat; it needs `query_spec` on the `chart` event.
+- Injection corpus result (cases run, overscoped retrievals): 78 cases run, 78 passed, 0 complied, 0 overscoped retrievals, 0 drafted intents, with no case skipped or marked expected-fail. The run uses both the fail-closed and the real chart validator, through the real engine and item 1 registry. Outcomes come only from the engine's terminal event (denied 65, abstained 13). Reviewer confirmed the run is real and not skipped.
+- Optional live model run: OPEN (not run; `NS_LIVE_APPROVED=1` not set). Fixtures only, no paid calls. First token, measured against the 3 s planning target and not asserted: p50 119 ms, p95 140 ms, max 296 ms, n=30. This used the composed API with the recorded-fixture adapter, provider time excluded (`docs/evidence/G07/copilot/`). The engine releases tokens only after the output guard and persistence, so a live first token tracks full model-turn time. G01, G05, G07 and G12 stay OPEN, with PRP-19 notes on their rows in `docs/RESEARCH-AND-GATES.md`.
+- Follow-ups (non-blocking, from reviews):
+  - Tools and orchestrator:
+    - Empty `lifecycle_status in []` filter semantics.
+    - Existence-check model-supplied evidence refs on `propose_action`.
+    - Contract test that the real `get_entity` hides unreadable entities.
+    - Corpus-level forged-handle control.
+    - Document `get_evidence` context narrowing.
+    - The output guard's 40+ character opaque-run rule may flag long ids.
+  - Adapters:
+    - Redaction misses phones, addresses, names and "password is x" phrasing; `tool_call_id`/`tool_name` are unredacted.
+    - `oauth_scope` allow-list.
+    - Add Commercial `foundry.model_*` matrix rows.
+    - Verify the Foundry Responses wire shape against Learn before any live run.
+  - Charts:
+    - Mirror the server allowlists in the client `specViolations`.
+    - Playwright cases for sort, aggregate, filter, timeUnit and bin.
+    - Tighten the `data.values` scan skip.
+    - The `exclude_unset=True` wrapper drops schema defaults.
+  - Reports:
+    - Make `If-Match` required on share, unshare and request-publication.
+    - Principal-id normalization for the self-approval compare.
+    - RunCache scope-hash test.
+    - Directory lookup for share principals.
+    - Audit events for run, share and decision.
+  - Chat UI:
+    - Add `query_spec` to the `chart` event to re-enable save-from-chat.
+    - Discard streamed text on an `error` terminal.
+    - The client first-token clock includes conversation creation on the first message.
+    - `useCopilotSelection` module-level store.
+    - Axe excludes `[data-tabster-dummy]`.
