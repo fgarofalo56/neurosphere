@@ -1,0 +1,23 @@
+{
+  "gate": "G07",
+  "measurement": "copilot send -> first token SSE event",
+  "n": 30,
+  "warmup_messages_discarded": 3,
+  "p50_ms": 119.17,
+  "p95_ms": 140.08,
+  "max_ms": 296.04,
+  "planning_target_ms": 3000,
+  "target_is": "planning target on the sandbox, not an SLA; not asserted",
+  "within_planning_target": true,
+  "environment": {
+    "date": "2026-10-22",
+    "os": "Windows-11-10.0.26300-SP0",
+    "cpu": "AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD",
+    "cpu_count": 32,
+    "python": "3.12.13",
+    "server": "uvicorn 0.54.0 in-process thread, loopback socket",
+    "adapter": "recorded fixtures (FixtureAdapter; provider latency excluded)",
+    "store": "in-memory conversation store; in-memory catalog tools",
+    "provider": "excluded by construction; live provider number is OPEN"
+  }
+}

@@ -1,0 +1,72 @@
+/** Every user-visible string for the copilot lives here so tests assert exact text. */
+export const STRINGS = {
+  navLabel: "Assistant",
+  open: "Open assistant",
+  close: "Close assistant",
+  regionLabel: "Assistant",
+  title: "Assistant",
+  inputLabel: "Ask the assistant",
+  inputPlaceholder: "Ask about agents, cost or quality",
+  send: "Send",
+  logLabel: "Conversation",
+  empty: "Ask a question. Answers cite their sources and can propose actions for you to review.",
+  working: "Working on it...",
+  you: "You",
+  assistant: "Assistant",
+  cancelled: "Stopped because you sent a new message.",
+  tools: {
+    label: "Tools used",
+    started: "running",
+    ok: "done",
+    refused: "refused",
+  },
+  context: {
+    label: "Context the assistant received",
+    none: "Context appears here after you send a message.",
+    page: "Page",
+    route: "Route",
+    filters: "Filters",
+    timeRange: "Time range",
+    selection: "Selection",
+    domains: "Domains",
+    droppedOne: "1 selected item was not available to you and was left out",
+    droppedMany: (n: number) => `${n} selected items were not available to you and were left out`,
+    noFilters: "none",
+    noSelection: "none",
+  },
+  abstain: {
+    title: "No answer",
+    prefix: "The assistant did not answer:",
+  },
+  denied: {
+    title: "Request refused",
+    prefix: "This request was refused:",
+  },
+  errorTitle: "Something went wrong",
+  citations: {
+    label: "Sources",
+    freshness: { fresh: "Fresh", stale: "Stale", unknown: "Freshness unknown" },
+    asOf: "as of",
+    asOfUnknown: "date unknown",
+  },
+  chart: {
+    title: "Chart from the assistant",
+  },
+  suggestion: {
+    label: "Suggested action",
+    review: "Review action",
+    help: "This is a draft. Nothing changes until you review and confirm it.",
+  },
+  httpErrors: {
+    unauthorized: "Your session has expired. Sign in again to use the assistant.",
+    forbidden:
+      "You do not have access to the assistant. It needs read access to at least one domain.",
+    capability_unavailable: "The assistant is not available in this deployment.",
+    stale_version: "The conversation changed. Try again.",
+    rate_limited: "Too many requests. Wait a moment and try again.",
+    invalid_schema: "The assistant could not accept that request.",
+    dependency_transient:
+      "The assistant is unavailable right now. This is not an answer. Try again in a moment.",
+    unexpected_response: "The assistant could not be reached. Try again in a moment.",
+  } as Readonly<Record<string, string>>,
+} as const;
