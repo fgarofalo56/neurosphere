@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-20-government-verification-and-sovereign-deployment](active/PRP-20-government-verification-and-sovereign-deployment.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -29,6 +27,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
+| [prp-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-10-22 | #97 |
 | [prp-28-ui-shell-and-usability](shipped/PRP-28-ui-shell-and-usability.md) | 2026-10-22 | #90 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-10-21 | #83 |
 | [prp-18-live-map-and-session-replay](shipped/PRP-18-live-map-and-session-replay.md) | 2026-10-21 | #85 |

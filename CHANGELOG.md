@@ -135,6 +135,15 @@ All notable changes to this project are documented here. The format follows
   and never show 0 for unknown data. `pnpm demo` runs the UI against the mock API with stub
   sign-in and a demo banner; tests prove neither ships in production builds or deployment
   artifacts. The CI frontend job timeout is now 25 minutes.
+- Government verification and sovereign deployment (PRP-20): Azure Government profile
+  (`infra/bicep/params/government/sovereign-profile.yaml`, `infra/helm/values-government.yaml`)
+  with Government endpoints, audiences, private DNS zones, egress allowlist, allowed regions and
+  disabled-with-reason options; a dated per-dependency evidence register
+  (`docs/evidence/G02/register.yaml`) with availability, GA and authorization kept separate, and
+  a responsibility matrix (not FedRAMP authorized; the authorizing official decides); static
+  and compose no-Commercial-egress tests; gated G02 AKS and App Service profile scripts. Live
+  Government runs, in-cluster egress proof and agency ATO stay OPEN (no Government
+  subscription, D7).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
