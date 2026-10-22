@@ -10,6 +10,7 @@
     "build": "vite build",
     "format": "prettier --check .",
     "dev": "vite",
+    "demo": "node scripts/demo.mjs",
     "build:report": "node scripts/bundle-report.mjs",
     "test:e2e": "playwright test --reporter=line"
   },
