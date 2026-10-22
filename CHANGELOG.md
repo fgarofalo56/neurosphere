@@ -124,6 +124,17 @@ All notable changes to this project are documented here. The format follows
   charts. The PRP-12 injection corpus passes 78/78 with 0 overscoped retrievals. First token
   measured, not guaranteed: p95 about 140 ms with recorded fixtures (provider time excluded)
   against a 3 s planning target; live model run OPEN.
+- UI shell and usability (PRP-28): Fluent v9 app shell with header, user menu, skip link and
+  grouped permission-aware navigation (hiding is not authorization; the API still denies). A
+  domain switcher is fed by the new `GET /api/v1/me/domains`, which returns the caller's
+  `data.read` domains, derived server-side only. `?domain_id=` stays the source of truth, and
+  the last domain id is remembered under a pseudonymous key. Adds the real
+  `GET /api/v1/workspaces/{role}` with an explicit role map. Shared page template, and Fluent
+  controls on every feature page; a static test allows no native form controls beyond a
+  2-entry allowlist. Role-aware overview tiles never sum currencies, never invent counts ("N+"),
+  and never show 0 for unknown data. `pnpm demo` runs the UI against the mock API with stub
+  sign-in and a demo banner; tests prove neither ships in production builds or deployment
+  artifacts. The CI frontend job timeout is now 25 minutes.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
