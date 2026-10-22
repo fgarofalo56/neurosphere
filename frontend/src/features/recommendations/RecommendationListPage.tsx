@@ -1,5 +1,8 @@
-import { useId, useState, type ReactElement } from "react";
+import { Button, Field, Input, Select, makeStyles, tokens } from "@fluentui/react-components";
+import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { AdvisoryBadge, EvidenceStatus, QueryErrorState, ownerText } from "./components";
 import { useRecommendations } from "./hooks";
 import { KIND_LABELS, STRINGS } from "./strings";
@@ -72,72 +75,95 @@ function ListBody({
       )}
       <p>
         {cursors.length > 1 ? (
-          <button type="button" onClick={() => setCursors([""])}>
-            {STRINGS.firstPage}
-          </button>
+          <Button onClick={() => setCursors([""])}>{STRINGS.firstPage}</Button>
         ) : null}{" "}
         {next !== null ? (
-          <button type="button" onClick={() => setCursors([...cursors, next])}>
-            {STRINGS.nextPage}
-          </button>
+          <Button onClick={() => setCursors([...cursors, next])}>{STRINGS.nextPage}</Button>
         ) : null}
       </p>
     </>
   );
 }
 
-export function RecommendationListPage(): ReactElement {
-  const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
-  const rawKind = params.get("kind") ?? "";
-  const kind: RecommendationKind | "" = isKind(rawKind) ? rawKind : "";
-  const q = params.get("q") ?? "";
-  const ids = { domain: useId(), kind: useId(), q: useId() };
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+});
 
+function ListFilters({
+  kind,
+  q,
+}: {
+  readonly kind: RecommendationKind | "";
+  readonly q: string;
+}): ReactElement {
+  const styles = useStyles();
+  const [, setParams] = useSearchParams();
+  const [kindValue, setKindValue] = useState<string>(kind);
+  const [qValue, setQValue] = useState(q);
   return (
-    <section aria-label={STRINGS.listTitle}>
-      <h1>{STRINGS.listTitle}</h1>
-      <form
-        aria-label="Recommendation filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          const text = (key: string): string => {
-            const v = data.get(key);
-            return typeof v === "string" ? v.trim() : "";
-          };
-          const next = new URLSearchParams();
+    <form
+      aria-label="Recommendation filters"
+      className={styles.form}
+      onSubmit={(e) => {
+        e.preventDefault();
+        setParams((prev) => {
+          const next = new URLSearchParams(prev);
           for (const [key, value] of [
-            ["domain_id", text("domain_id")],
-            ["kind", text("kind")],
-            ["q", text("q")],
+            ["kind", kindValue.trim()],
+            ["q", qValue.trim()],
           ] as const) {
-            if (value !== "") next.set(key, value);
+            if (value === "") next.delete(key);
+            else next.set(key, value);
           }
-          setParams(next);
-        }}
-      >
-        <label htmlFor={ids.domain}>{STRINGS.domainLabel}</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <label htmlFor={ids.kind}>{STRINGS.kindLabel}</label>{" "}
-        <select id={ids.kind} name="kind" defaultValue={kind}>
+          return next;
+        });
+      }}
+    >
+      <Field label={STRINGS.kindLabel}>
+        <Select value={kindValue} onChange={(_e, data) => setKindValue(data.value)}>
           <option value="">{STRINGS.allKinds}</option>
           {RECOMMENDATION_KINDS.map((k) => (
             <option key={k} value={k}>
               {KIND_LABELS[k]}
             </option>
           ))}
-        </select>{" "}
-        <label htmlFor={ids.q}>{STRINGS.searchLabel}</label>{" "}
-        <input id={ids.q} name="q" defaultValue={q} maxLength={200} />{" "}
-        <button type="submit">{STRINGS.apply}</button>
-      </form>
+        </Select>
+      </Field>
+      <Field label={STRINGS.searchLabel}>
+        <Input value={qValue} maxLength={200} onChange={(_e, data) => setQValue(data.value)} />
+      </Field>
+      <Button type="submit" appearance="primary">
+        {STRINGS.apply}
+      </Button>
+    </form>
+  );
+}
+
+export function RecommendationListPage(): ReactElement {
+  const [params] = useSearchParams();
+  const { domainId } = useSelectedDomain();
+  const rawKind = params.get("kind") ?? "";
+  const kind: RecommendationKind | "" = isKind(rawKind) ? rawKind : "";
+  const q = params.get("q") ?? "";
+
+  return (
+    <PageTemplate
+      title={STRINGS.listTitle}
+      toolbar={<ListFilters key={`${kind}|${q}`} kind={kind} q={q} />}
+      toolbarLabel="Recommendation filters"
+    >
       {domainId === "" ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
         // Re-keyed so a new filter resets the cursor history.
         <ListBody key={`${domainId}|${kind}|${q}`} domainId={domainId} kind={kind} q={q} />
       )}
-    </section>
+    </PageTemplate>
   );
 }
