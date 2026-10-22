@@ -110,6 +110,20 @@ All notable changes to this project are documented here. The format follows
   guaranteed: freshness p95 about 2 s on emulators (poll-interval bound) against a 10 s target;
   38.6-41.8 fps mean at 2k nodes on one documented workstation, with p5 below 30 fps. G07 stays
   OPEN (no live run).
+- Copilot and report creation (PRP-19): allowlisted server tool registry that only ever sees the
+  server-derived `IdentityScope` (scope-shaped arguments refused and logged), with tool-produced
+  citations carrying data freshness. Copilot API at `/api/v1/copilot` streams SSE with
+  first-class `abstain` and `denied` terminals, an output guard, chat-only action drafting
+  through the PRP-17 executor, and redacted, owner-only conversations with retention.
+  `ModelAdapter` protocol with recorded-fixture, approved-endpoint and optional Foundry Agent
+  Service adapters behind one action contract, gated by the capability matrix (Government never
+  routed to Commercial). Server-validated Vega-Lite subset rendered by `vega-interpreter` in a
+  sandboxed iframe under a sha256 CSP. Saved reports at `/api/v1/reports` store plan and query
+  only, re-validate and re-authorize as the viewer on every run, and need a second
+  `config.manage` principal to publish. Chat dock UI with context chip, citations and inline
+  charts. The PRP-12 injection corpus passes 78/78 with 0 overscoped retrievals. First token
+  measured, not guaranteed: p95 about 140 ms with recorded fixtures (provider time excluded)
+  against a 3 s planning target; live model run OPEN.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

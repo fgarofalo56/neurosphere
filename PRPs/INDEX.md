@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-19-copilot-and-report-creation](active/PRP-19-copilot-and-report-creation.md) |  | 7/7 (100%) | merged 7 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -29,6 +27,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-10-21 | #83 |
 | [prp-18-live-map-and-session-replay](shipped/PRP-18-live-map-and-session-replay.md) | 2026-10-21 | #85 |
 | [prp-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-10-20 | #81 |
