@@ -2,9 +2,8 @@ import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
 
 /**
- * Placeholder from PRP-19 item 7 so the app shell can mount the copilot before the chat UI
- * exists. Item 6 replaces the contents of this module and keeps these export names, so it never
- * edits `frontend/src/app/`.
+ * The copilot is a dock mounted once in the app shell (`CopilotDock`), not a page, so it adds no
+ * routes. The names stay exported because the app shell registers them.
  */
 export const copilotRoutes: RouteObject[] = [];
 
@@ -13,14 +12,14 @@ export function copilotNavItems(): NavItem[] {
   return [];
 }
 
-/** The chat panel mounted once in the authenticated app shell. Renders nothing until item 6. */
-export function CopilotDock(): null {
-  return null;
-}
-
+export { CopilotDock } from "./CopilotDock";
+export { CopilotTransportProvider, useCopilotTransport } from "./transport";
+export { setCopilotSelection, useCopilotSelection } from "./selection";
+export { buildMessageContext } from "./requestContext";
 export {
   COPILOT_API_PREFIX,
   COPILOT_CONVERSATIONS_PATH,
   conversationMessagesPath,
   conversationPath,
 } from "./paths";
+export type * from "./types";
