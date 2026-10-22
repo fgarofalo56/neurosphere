@@ -1,5 +1,20 @@
-import { useId, useState, type ReactElement } from "react";
+import {
+  Button,
+  Field,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+  makeStyles,
+  tokens,
+} from "@fluentui/react-components";
+import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { ActionDetail } from "./ActionDetail";
 import { EmergencyBanner, QueryErrorState, StateBadge } from "./components";
 import { useAction, useActionList } from "./hooks";
@@ -7,6 +22,21 @@ import { STRINGS } from "./strings";
 import { ACTION_STATES, type ActionState, type ActionView } from "./types";
 
 const PAGE_SIZE = 25;
+
+const useStyles = makeStyles({
+  filters: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+  pager: {
+    display: "flex",
+    columnGap: tokens.spacingHorizontalS,
+    marginTop: tokens.spacingVerticalS,
+  },
+});
 
 function isState(value: string): value is ActionState {
   return (ACTION_STATES as readonly string[]).includes(value);
@@ -32,6 +62,7 @@ function ListBody({
 }): ReactElement {
   // Cursor history: the last entry is the current page; "" is the first page.
   const [cursors, setCursors] = useState<readonly string[]>([""]);
+  const styles = useStyles();
   const cursor = cursors[cursors.length - 1] ?? "";
   const query = useActionList({ domainId, state, cursor, limit: PAGE_SIZE });
   if (query.isError) {
@@ -52,51 +83,46 @@ function ListBody({
       {items.length === 0 ? (
         <p data-testid="empty-state">{STRINGS.empty}</p>
       ) : (
-        <table aria-label={STRINGS.title}>
-          <thead>
-            <tr>
-              <th scope="col">{H.kind}</th>
-              <th scope="col">{H.target}</th>
-              <th scope="col">{H.state}</th>
-              <th scope="col">{H.channel}</th>
-              <th scope="col">{H.created}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table aria-label={STRINGS.title}>
+          <TableHeader>
+            <TableRow>
+              <TableHeaderCell>{H.kind}</TableHeaderCell>
+              <TableHeaderCell>{H.target}</TableHeaderCell>
+              <TableHeaderCell>{H.state}</TableHeaderCell>
+              <TableHeaderCell>{H.channel}</TableHeaderCell>
+              <TableHeaderCell>{H.created}</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {items.map((v) => (
-              <tr key={v.intent.intent_id} data-testid="action-row">
-                <td>
+              <TableRow key={v.intent.intent_id} data-testid="action-row">
+                <TableCell>
                   <Link to={detailHref(domainId, v.intent.intent_id)}>{v.intent.action_kind}</Link>
                   {v.advisory ? " (advisory)" : ""}
-                </td>
-                <td>{v.intent.target.canonical_id}</td>
-                <td>
+                </TableCell>
+                <TableCell>{v.intent.target.canonical_id}</TableCell>
+                <TableCell>
                   <StateBadge state={v.intent.state} />
-                </td>
-                <td>{v.intent.channel}</td>
-                <td>{v.intent.created_at}</td>
-              </tr>
+                </TableCell>
+                <TableCell>{v.intent.channel}</TableCell>
+                <TableCell>{v.intent.created_at}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
-      <nav aria-label="Pagination">
-        <button
-          type="button"
-          disabled={cursors.length <= 1}
-          onClick={() => setCursors((c) => c.slice(0, -1))}
-        >
+      <nav aria-label="Pagination" className={styles.pager}>
+        <Button disabled={cursors.length <= 1} onClick={() => setCursors((c) => c.slice(0, -1))}>
           {STRINGS.previousPage}
-        </button>{" "}
-        <button
-          type="button"
+        </Button>
+        <Button
           disabled={next === null}
           onClick={() => {
             if (next !== null) setCursors((c) => [...c, next]);
           }}
         >
           {STRINGS.nextPage}
-        </button>
+        </Button>
       </nav>
     </>
   );
@@ -104,40 +130,43 @@ function ListBody({
 
 export function ActionsPage(): ReactElement {
   const [params, setParams] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
+  const styles = useStyles();
   const rawState = params.get("state") ?? "";
   const state: ActionState | "" = isState(rawState) ? rawState : "";
-  const ids = { domain: useId(), state: useId() };
   return (
-    <section aria-label={STRINGS.title}>
-      <h1>{STRINGS.title}</h1>
+    <PageTemplate
+      title={STRINGS.title}
+      toolbarLabel="Action filters"
+      toolbar={
+        <form
+          aria-label="Action filters"
+          className={styles.filters}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            const next = new URLSearchParams();
+            if (domainId !== "") next.set("domain_id", domainId);
+            const v = data.get("state");
+            if (typeof v === "string" && v.trim() !== "") next.set("state", v.trim());
+            setParams(next);
+          }}
+        >
+          <Field label={STRINGS.stateLabel}>
+            <Select name="state" defaultValue={state}>
+              <option value="">{STRINGS.allStates}</option>
+              {ACTION_STATES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Button type="submit">{STRINGS.apply}</Button>
+        </form>
+      }
+    >
       <EmergencyBanner />
-      <form
-        aria-label="Action filters"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = new FormData(e.currentTarget);
-          const next = new URLSearchParams();
-          for (const key of ["domain_id", "state"] as const) {
-            const v = data.get(key);
-            if (typeof v === "string" && v.trim() !== "") next.set(key, v.trim());
-          }
-          setParams(next);
-        }}
-      >
-        <label htmlFor={ids.domain}>{STRINGS.domainLabel}</label>{" "}
-        <input id={ids.domain} name="domain_id" defaultValue={domainId} />{" "}
-        <label htmlFor={ids.state}>{STRINGS.stateLabel}</label>{" "}
-        <select id={ids.state} name="state" defaultValue={state}>
-          <option value="">{STRINGS.allStates}</option>
-          {ACTION_STATES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>{" "}
-        <button type="submit">{STRINGS.apply}</button>
-      </form>
       <p>
         <Link to={proposeHref(domainId)}>{STRINGS.proposeLink}</Link>
       </p>
@@ -146,7 +175,7 @@ export function ActionsPage(): ReactElement {
       ) : (
         <ListBody key={`${domainId}|${state}`} domainId={domainId} state={state} />
       )}
-    </section>
+    </PageTemplate>
   );
 }
 
@@ -175,14 +204,13 @@ function DetailBody({
   return (
     <>
       <p>
-        <button
-          type="button"
+        <Button
           onClick={() => {
             void query.refetch().then(() => setOverride(null));
           }}
         >
           {STRINGS.refresh}
-        </button>
+        </Button>
       </p>
       <ActionDetail domainId={domainId} view={view} onView={setOverride} />
     </>
@@ -191,17 +219,16 @@ function DetailBody({
 
 export function ActionDetailPage(): ReactElement {
   const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const intentId = params.get("intent_id") ?? "";
   return (
-    <section aria-label={STRINGS.detailTitle}>
-      <h1>{STRINGS.detailTitle}</h1>
+    <PageTemplate title={STRINGS.detailTitle}>
       <EmergencyBanner />
       {domainId === "" || intentId === "" ? (
         <p data-testid="domain-required">{STRINGS.domainRequired}</p>
       ) : (
         <DetailBody key={`${domainId}|${intentId}`} domainId={domainId} intentId={intentId} />
       )}
-    </section>
+    </PageTemplate>
   );
 }

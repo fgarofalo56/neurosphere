@@ -1,7 +1,9 @@
-import { Button } from "@fluentui/react-components";
-import { useEffect, useId, useState, type ReactElement } from "react";
+import { Button, Field, Textarea } from "@fluentui/react-components";
+import { useEffect, useState, type ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import type { ApiError } from "../../api/index.js";
+import { useSelectedDomain } from "../../app/domain";
+import { PageTemplate } from "../../design-system";
 import { DecisionList, MutationError, QueryErrorState, StateBadge, slaText } from "./components";
 import { useClaimItem, useDecideItem, useReviewItem, useReviewedIntent } from "./hooks";
 import { STRINGS, orUnknown } from "./strings";
@@ -76,7 +78,6 @@ function ItemControls({
   readonly confirmationHash: string | null;
   readonly onItem: (item: ReviewItemView) => void;
 }): ReactElement {
-  const reasonId = useId();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<{ error: ApiError; action: Decision | "claim" } | null>(null);
   const claim = useClaimItem();
@@ -131,17 +132,14 @@ function ItemControls({
           </Button>
         </p>
       ) : null}
-      <p>
-        <label htmlFor={reasonId}>{F.reasonLabel}</label>
-        <br />
-        <textarea
-          id={reasonId}
+      <Field label={F.reasonLabel}>
+        <Textarea
           rows={3}
-          cols={60}
+          resize="vertical"
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(_e, data) => setReason(data.value)}
         />
-      </p>
+      </Field>
       {needsHash ? <p>{F.needsHash}</p> : null}
       <Button
         appearance="primary"
@@ -217,16 +215,15 @@ function ItemBody({
 
 export function ReviewItemPage(): ReactElement {
   const [params] = useSearchParams();
-  const domainId = params.get("domain_id") ?? "";
+  const { domainId } = useSelectedDomain();
   const itemId = params.get("item_id") ?? "";
   return (
-    <section aria-label={STRINGS.itemTitle}>
-      <h1>{STRINGS.itemTitle}</h1>
+    <PageTemplate title={STRINGS.itemTitle}>
       {domainId === "" || itemId === "" ? (
         <p data-testid="domain-required">{STRINGS.itemRequired}</p>
       ) : (
         <ItemBody key={`${domainId}|${itemId}`} domainId={domainId} itemId={itemId} />
       )}
-    </section>
+    </PageTemplate>
   );
 }
