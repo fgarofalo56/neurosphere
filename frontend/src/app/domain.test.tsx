@@ -109,6 +109,69 @@ describe("domain switcher", () => {
   });
 });
 
+describe("empty domain list", () => {
+  it("shows the no-domains message for a 200 with no items and invents no domain", async () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const { router } = renderShell({ account: newAccount(), respond: ok([]) });
+    expect(await screen.findByText(NO_DOMAINS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Domain" })).toBeNull();
+    expect(router.state.location.search).toBe("");
+    expect(setItem).not.toHaveBeenCalled();
+    expect(localStorage.length).toBe(0);
+  });
+});
+
+describe("default domain in the URL", () => {
+  it("replaces a missing domain_id with the default, keeping other params and the hash", async () => {
+    const { router } = renderShell({ account: newAccount(), respond: ok(), path: "/page?x=1#frag" });
+    await waitFor(() => expect(router.state.location.search).toContain("domain_id="));
+    const params = new URLSearchParams(router.state.location.search);
+    expect(params.get("domain_id")).toBe(FINANCE);
+    expect(params.get("x")).toBe("1");
+    expect(router.state.location.hash).toBe("#frag");
+    // A replace, not a push: the history action is REPLACE and the entry count did not grow.
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(localStorage.length).toBe(0);
+  });
+
+  it("uses the remembered domain as the default", async () => {
+    const account = newAccount();
+    const userKey = await pseudonymousUserKey(account.homeAccountId);
+    localStorage.setItem(lastDomainStorageKey(userKey ?? ""), OPS);
+    const { router } = renderShell({ account, respond: ok() });
+    await waitFor(() =>
+      expect(router.state.location.search).toBe(`?domain_id=${encodeURIComponent(OPS)}`),
+    );
+  });
+
+  it("never touches a domain_id that is present, readable or not", async () => {
+    const gone = "commercial:t:sandbox:domain:gone";
+    for (const id of [OPS, gone]) {
+      const path = `/page?domain_id=${encodeURIComponent(id)}`;
+      const { router } = renderShell({ account: newAccount(), respond: ok(), path });
+      await screen.findByRole("combobox", { name: "Domain" });
+      expect(router.state.location.search).toBe(`?domain_id=${encodeURIComponent(id)}`);
+      expect(router.state.historyAction).toBe("POP");
+      cleanup();
+    }
+  });
+
+  it("rewrites exactly once and does not loop", async () => {
+    const { router } = renderShell({ account: newAccount(), respond: ok() });
+    const navigate = vi.spyOn(router, "navigate");
+    await waitFor(() => expect(router.state.location.search).toContain("domain_id="));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(router.state.location.search).toBe(`?domain_id=${encodeURIComponent(FINANCE)}`);
+  });
+
+  it("does not rewrite when the list could not be loaded", async () => {
+    const { router } = renderShell({ account: newAccount(), respond: () => problemResponse(403) });
+    await screen.findByText(NO_DOMAINS_MESSAGE);
+    expect(router.state.location.search).toBe("");
+  });
+});
+
 describe("last selected domain in localStorage", () => {
   it("stores the domain id only, under a pseudonymous key, and nothing else", async () => {
     const setItem = vi.spyOn(Storage.prototype, "setItem");

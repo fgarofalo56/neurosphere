@@ -70,6 +70,17 @@ test("domain switcher lists domains, writes the URL and carries it into nav link
   expect(Object.values(stored)).toEqual([DOMAIN_OK]);
 });
 
+test("a landing without domain_id is rewritten to the default and Back skips the bare URL", async ({
+  page,
+}) => {
+  await page.goto("/quality");
+  await expect(page).toHaveURL(/domain_id=/);
+  expect(new URL(page.url()).pathname).toBe("/quality");
+  // Replaced, not pushed: going Back leaves the app instead of returning to the bare URL.
+  await page.goBack();
+  expect(page.url()).not.toContain("/quality");
+});
+
 test("skip link, navigation and menus work from the keyboard", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("main")).toBeVisible();

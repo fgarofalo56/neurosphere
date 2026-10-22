@@ -5,11 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
 } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { ForbiddenError, createQueryHook } from "../api/index.js";
 
 /**
@@ -111,6 +112,10 @@ interface DomainData {
   readonly remember: (domainId: string) => void;
   /** Removes the remembered domain (sign-out). */
   readonly forget: () => void;
+  /** False until the remembered selection has been read, so a default is not picked too early. */
+  readonly defaultResolved: boolean;
+  /** Last location key whose missing `domain_id` was rewritten; shared by every hook caller. */
+  readonly rewrittenFor: { current: string | null };
 }
 
 const DomainContext = createContext<DomainData | null>(null);
@@ -131,6 +136,8 @@ export function DomainProvider({ children }: { readonly children: ReactNode }): 
 
   const [userKey, setUserKey] = useState<string | null>(null);
   const [stored, setStored] = useState<string | null>(null);
+  const [storageRead, setStorageRead] = useState(false);
+  const rewrittenFor = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,9 +146,12 @@ export function DomainProvider({ children }: { readonly children: ReactNode }): 
         if (cancelled) return;
         setUserKey(key);
         setStored(key === null ? null : readStored(lastDomainStorageKey(key)));
+        setStorageRead(true);
       },
       () => {
-        if (!cancelled) setUserKey(null);
+        if (cancelled) return;
+        setUserKey(null);
+        setStorageRead(true);
       },
     );
     return () => {
@@ -184,8 +194,10 @@ export function DomainProvider({ children }: { readonly children: ReactNode }): 
       permissions,
       remember,
       forget,
+      defaultResolved: storageRead,
+      rewrittenFor,
     };
-  }, [status, domains, stored, remember, forget]);
+  }, [status, domains, stored, remember, forget, storageRead]);
 
   return <DomainContext.Provider value={value}>{children}</DomainContext.Provider>;
 }
@@ -215,6 +227,30 @@ export function useSelectedDomain(): SelectedDomain {
   const [params, setParams] = useSearchParams();
   const fromUrl = params.get(DOMAIN_PARAM)?.trim() ?? "";
   const remember = data?.remember;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const guard = data?.rewrittenFor;
+
+  // Inside the shell, a landing with no `domain_id` is rewritten (replace, no history entry) to
+  // the default domain so URL-only readers see it too. A present `domain_id` is never touched.
+  // Once the param exists this effect is inert; the ref also stops duplicate navigations from
+  // several callers in the same commit.
+  const defaultId =
+    data !== null && data.status === "ready" && data.defaultResolved
+      ? data.defaultDomainId
+      : undefined;
+  useEffect(() => {
+    if (defaultId === undefined || fromUrl !== "") return;
+    if (new URLSearchParams(location.search).has(DOMAIN_PARAM)) return;
+    if (guard === undefined || guard.current === location.key) return;
+    guard.current = location.key;
+    const next = new URLSearchParams(location.search);
+    next.set(DOMAIN_PARAM, defaultId);
+    void navigate(
+      { pathname: location.pathname, search: `?${next.toString()}`, hash: location.hash },
+      { replace: true, state: location.state },
+    );
+  }, [defaultId, fromUrl, guard, location, navigate]);
 
   const setDomain = useCallback(
     (domainId: string): void => {
