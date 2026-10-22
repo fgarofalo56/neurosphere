@@ -1,12 +1,11 @@
 import type { ReactElement } from "react";
-import { NavLink, Outlet, type RouteObject } from "react-router";
-import { CopilotDock } from "../features/copilot";
-import { ErrorBoundary } from "./ErrorBoundary";
+import type { RouteObject } from "react-router";
+import { overviewRoutes } from "../features/overview/routes";
+import { type NavItem } from "./navigation";
+import { Shell } from "./Shell";
 
-export interface NavItem {
-  readonly to: string;
-  readonly label: string;
-}
+// Features import `NavItem` from here; the definition lives in ./navigation.
+export type { NavItem } from "./navigation";
 
 export interface AppRoutesOptions {
   /** Route-registration seam: workspace routes (item 5) are appended as layout children. */
@@ -19,15 +18,6 @@ export interface AppRoutesOptions {
 
 const DEFAULT_NAV: readonly NavItem[] = [{ to: "/", label: "Home" }];
 
-function HomePage(): ReactElement {
-  return (
-    <section>
-      <h1>NeuroSphere</h1>
-      <p>AI governance workspace.</p>
-    </section>
-  );
-}
-
 function NotFoundPage(): ReactElement {
   return (
     <section>
@@ -37,60 +27,19 @@ function NotFoundPage(): ReactElement {
   );
 }
 
-function makeLayout(
-  staticItems: readonly NavItem[],
-  useNavItems: (() => readonly NavItem[]) | undefined,
-): () => ReactElement {
-  return function Layout(): ReactElement {
-    const navItems = useNavItems === undefined ? staticItems : useNavItems();
-    return (
-      <div>
-        <header>
-          {/* Logo slot: intentionally empty, filled by theme packs (PRP-24). */}
-          <div data-slot="logo" />
-        </header>
-        <nav aria-label="Primary" data-slot="navigation">
-          <ul>
-            {navItems.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.to === "/"}
-                  style={{
-                    display: "inline-block",
-                    minHeight: 24,
-                    minWidth: 24,
-                    padding: "4px 8px",
-                  }}
-                >
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <main id="main-content">
-          <ErrorBoundary>
-            <Outlet />
-          </ErrorBoundary>
-        </main>
-        {/* Copilot slot: mounted once in the authenticated shell (PRP-19; item 6 fills it). */}
-        <ErrorBoundary>
-          <CopilotDock />
-        </ErrorBoundary>
-      </div>
-    );
-  };
-}
-
 export function createAppRoutes(options: AppRoutesOptions = {}): RouteObject[] {
-  const Layout = makeLayout(options.navItems ?? DEFAULT_NAV, options.useNavItems);
+  const staticItems = options.navItems ?? DEFAULT_NAV;
+  const useNavItems = options.useNavItems;
+  function Layout(): ReactElement {
+    return <Shell staticItems={staticItems} useNavItems={useNavItems} />;
+  }
   return [
     {
       path: "/",
       Component: Layout,
       children: [
-        { index: true, Component: HomePage },
+        // The home route comes from the overview feature, so replacing it never edits the shell.
+        ...overviewRoutes,
         ...(options.extraRoutes ?? []),
         { path: "*", Component: NotFoundPage },
       ],
