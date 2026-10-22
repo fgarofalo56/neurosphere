@@ -1,6 +1,8 @@
 ---
 name: prp-19-copilot-and-report-creation
-status: backlog
+status: active
+started: 2026-10-21
+branch: prp-19-copilot-and-report-creation
 review: required
 created: 2026-10-08
 model: sonnet
@@ -199,7 +201,7 @@ Feature-specific:
 ```
 docker compose --profile app up -d --wait
 python -m pytest packages/core/tests/copilot packages/core/tests/charts services/api/tests/copilot services/api/tests/reports
-python -m pytest tests/security/injection -k copilot
+python -m pytest services/api/tests/copilot_api/test_orchestrator_injection.py   # D4: corpus consumed from the copilot suite
 python -m pytest -m integration tests/integration/copilot
 pnpm --filter frontend test
 pnpm --filter frontend exec playwright test frontend/tests/e2e/copilot.spec.ts frontend/tests/e2e/chart-sandbox.spec.ts
@@ -227,6 +229,28 @@ A live model run is optional: operator-approved, requires NS_LIVE_APPROVED=1, an
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-21 with five deltas signed off by the operator.
+
+- D1: new item 7 owns the shared hookup files: `services/api/neurosphere_api/routers.py`, `services/api/openapi.json` regeneration, app-state wiring (default fixture adapter, tool registry, conversation store), `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, the app-shell mount for the copilot panel, `frontend/tests/mock-api/`, `tests/integration/copilot/`. Items 2 and 5 ship a `register(registry)` hook and do not edit `routers.py`. Item 7 creates a placeholder `frontend/src/features/copilot/index.ts`; item 6 replaces its contents and keeps the export names.
+- D2: item 4 also owns `frontend/package.json`, `pnpm-lock.yaml` (vega-lite, vega, vega-interpreter only), `frontend/vite.config.ts` plus the chart-sandbox HTML entry, and `docs/licenses.md` if the licence gate needs regeneration.
+- D3: API copilot tests live in `services/api/tests/copilot_api/` (not `copilot/`) because `packages/core/tests/copilot/` exists and same-named test packages shadow each other.
+- D4: the injection corpus run is `services/api/tests/copilot_api/test_orchestrator_injection.py` (all cases via `run_corpus`); `tests/security/injection -k copilot` would collect 0 cases and PRP-12 owns that folder.
+- D5: no new permission constants (PRP-06 owns them). Ask = `data.read`; tools recheck `data.read` / `evidence.read` / `action.propose`; save/share report = `report.create`; add-to-UI approval = a different principal with `config.manage` in the same domain, self-approval refused.
+
+Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D = item 6. Models: all implementers sonnet; every item gets one reviewer pass; rework confirmation passes haiku.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | todo | | sonnet | | 2026-10-21 |
+| 2 | todo | | sonnet | | 2026-10-21 |
+| 3 | todo | | sonnet | | 2026-10-21 |
+| 4 | todo | | sonnet | | 2026-10-21 |
+| 5 | todo | | sonnet | | 2026-10-21 |
+| 6 | todo | | sonnet | | 2026-10-21 |
+| 7 | todo | | sonnet | | 2026-10-21 |
 
 ## Completion note (filled at ship)
 - Date:

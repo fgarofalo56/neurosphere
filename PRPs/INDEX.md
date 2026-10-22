@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-19-copilot-and-report-creation](active/PRP-19-copilot-and-report-creation.md) |  | 0/7 (0%) | todo 7 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) |  |  | - | - | ? / ? | required |
 | [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) |  |  | - | - | ? / ? | required |
 | [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) |  |  | - | - | ? / ? | none |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) |  |  | - | - | ? / ? | required |
