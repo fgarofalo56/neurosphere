@@ -92,9 +92,14 @@ export const useRequestPublication = createMutationHook<ReportParams, ReportView
 
 export const useDecidePublication = createMutationHook<DecideVars, ReportView>({
   mutate: (client, v) =>
-    client.post<ReportView>(reportDecisionPath(v.domainId, v.reportId), {
-      decision: v.decision,
-      ...(v.reason !== undefined && v.reason !== "" ? { reason: v.reason } : {}),
+    client.request<ReportView>({
+      method: "POST",
+      path: reportDecisionPath(v.domainId, v.reportId),
+      body: {
+        decision: v.decision,
+        ...(v.reason !== undefined && v.reason !== "" ? { reason: v.reason } : {}),
+      },
+      ifMatch: v.etag,
     }),
 });
 

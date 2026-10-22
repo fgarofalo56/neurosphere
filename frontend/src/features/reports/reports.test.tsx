@@ -439,6 +439,9 @@ describe("publication", () => {
       decision: "approve",
       reason: "looks good",
     });
+    // The decision carries the ETag of the definition the reviewer is looking at.
+    expect(calls.find((c) => c.path === DECISION_API)?.ifMatch).toBe(reviewerView.etag);
+    expect(reviewerView.etag).toBe(ETAG);
   });
 
   it("sends a rejection without an empty reason", async () => {

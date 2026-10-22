@@ -305,7 +305,13 @@ export function DecisionControls({ report }: { readonly report: ReportView }): R
   if (!report.can_decide_publication) return null;
   const send = (decision: "approve" | "reject"): void => {
     decide.mutate(
-      { domainId: report.domain_id, reportId: report.id, decision, reason: reason.trim() },
+      {
+        domainId: report.domain_id,
+        reportId: report.id,
+        etag: report.etag,
+        decision,
+        reason: reason.trim(),
+      },
       { onSuccess: () => void invalidate() },
     );
   };

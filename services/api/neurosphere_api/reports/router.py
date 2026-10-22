@@ -11,7 +11,7 @@
 | POST | ``.../reports/{report_id}/shares``                     | ``report.create`` + owner |
 | DELETE | ``.../reports/{report_id}/shares/{principal_id}``      | ``report.create`` + owner |
 | POST | ``.../reports/{report_id}/publication``                | ``report.create`` + owner |
-| POST | ``.../reports/{report_id}/publication/decision`` | ``config.manage`` (not owner) |
+| POST | ``.../{report_id}/publication/decision`` (``If-Match``) | ``config.manage`` (not owner) |
 
 The path ``domain_id`` is the authorization TARGET. A report the caller may not see is 404; a
 visible report the caller may not change is 403 ``not_owner``. Every mutation returns the new
@@ -192,7 +192,7 @@ def build_router() -> APIRouter:
         body: DecisionBody,
         scope: ConfigScope,
         service: Service,
-        if_match: OptionalIfMatch = None,
+        if_match: IfMatch,
     ) -> ReportView:
         report = await service.decide_publication(scope, domain_id, report_id, body, if_match)
         return _respond(service, response, scope, report)

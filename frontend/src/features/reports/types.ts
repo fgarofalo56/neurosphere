@@ -98,6 +98,8 @@ export interface ShareVars extends ReportParams {
 }
 
 export interface DecideVars extends ReportParams {
+  /** ETag of the ReportView the reviewer is looking at; the server refuses a stale one. */
+  readonly etag: string;
   readonly decision: "approve" | "reject";
   readonly reason?: string | undefined;
 }

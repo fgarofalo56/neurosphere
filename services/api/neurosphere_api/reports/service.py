@@ -324,8 +324,9 @@ class ReportService:
         domain_id: str,
         report_id: str,
         body: DecisionBody,
-        if_match: str | None,
+        if_match: str,
     ) -> StoredReport:
+        # The ETag is mandatory: a reviewer approves exactly the definition they viewed.
         report = await self._load(scope, domain_id, report_id)
         self._check_etag(report, if_match)
         decider = principal_of(scope)

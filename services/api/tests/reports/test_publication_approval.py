@@ -19,7 +19,19 @@ def _request(api: Api, who: str, report_id: str) -> Any:
     return api.call("POST", who, f"/{report_id}/publication")
 
 
+def _current_etag(api: Api, report_id: str) -> str:
+    """The ETag of the definition as the reviewer would have just read it (owner view)."""
+    for who in (ALICE, ERIN):
+        response = api.call("GET", who, f"/{report_id}")
+        if response.status_code == 200:
+            return str(response.json()["etag"])
+    raise AssertionError("report not readable by any owner")
+
+
 def _decide(api: Api, who: str, report_id: str, decision: str, **kwargs: Any) -> Any:
+    """Decide with the current ETag unless the caller passes its own ``headers``."""
+    if "headers" not in kwargs:
+        kwargs["headers"] = {"If-Match": _current_etag(api, report_id)}
     return api.call(
         "POST", who, f"/{report_id}/publication/decision", json={"decision": decision}, **kwargs
     )
@@ -82,6 +94,7 @@ def test_reject_records_the_decision_and_the_report_stays_private() -> None:
         DAVE,
         f"/{report['id']}/publication/decision",
         json={"decision": "reject", "reason": "needs a clearer title"},
+        headers={"If-Match": _current_etag(api, report["id"])},
     )
     assert response.status_code == 200
     assert response.json()["publication"]["state"] == "rejected"
@@ -139,6 +152,40 @@ def test_a_stale_if_match_on_the_decision_is_refused() -> None:
     response = _decide(api, DAVE, report["id"], "approve", headers={"If-Match": pending["etag"]})
     assert response.status_code == 409
     assert problem(response)["code"] == "stale_version"
+
+
+def test_a_decision_without_if_match_is_refused_and_the_report_stays_pending() -> None:
+    api = make_api()
+    report = api.create()
+    _request(api, ALICE, report["id"])
+    response = api.call(
+        "POST", DAVE, f"/{report['id']}/publication/decision", json={"decision": "approve"}
+    )
+    assert response.status_code == 422, response.text
+    state = api.call("GET", ALICE, f"/{report['id']}").json()["publication"]["state"]
+    assert state == "pending"
+    assert api.call("GET", CAROL, f"/{report['id']}").status_code == 404
+
+
+def test_a_decision_on_a_definition_edited_and_re_requested_since_viewing_is_refused() -> None:
+    api = make_api()
+    report = api.create()
+    viewed = _request(api, ALICE, report["id"]).json()
+    # The owner swaps the definition (publication resets to none) and asks again.
+    edited = api.call(
+        "PUT",
+        ALICE,
+        f"/{report['id']}",
+        json=report_body("Swapped after review began"),
+        headers={"If-Match": viewed["etag"]},
+    )
+    assert edited.status_code == 200, edited.text
+    assert _request(api, ALICE, report["id"]).json()["publication"]["state"] == "pending"
+    response = _decide(api, DAVE, report["id"], "approve", headers={"If-Match": viewed["etag"]})
+    assert response.status_code == 409
+    assert problem(response)["code"] == "stale_version"
+    state = api.call("GET", ALICE, f"/{report['id']}").json()["publication"]["state"]
+    assert state == "pending"
 
 
 def test_views_carry_ui_hints_for_ownership_and_who_may_decide() -> None:
