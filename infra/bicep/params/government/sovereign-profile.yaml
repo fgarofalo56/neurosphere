@@ -36,7 +36,7 @@ audiences:
   resourceManager:
     value: https://management.usgovcloudapi.net/
     verified: true
-    source: az cloud show --name AzureUSGovernment (endpoints.activeDirectoryResourceId), 2026-10-22
+    source: az cloud show --name AzureUSGovernment (endpoints.resourceManager), 2026-10-22
   managementLegacy:
     value: https://management.core.usgovcloudapi.net/
     verified: true
@@ -52,11 +52,11 @@ audiences:
   storage:
     value: https://storage.usgovcloudapi.net/.default
     verified: true
-    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+    source: https://learn.microsoft.com/azure/planetary-computer/us-government-cloud-support (endpoint mapping table), 2026-10-22
   monitor:
     value: https://monitor.azure.us
     verified: true
-    source: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+    source: https://learn.microsoft.com/azure/sentinel/isv/azure-government-publishing-guidelines (Azure Monitor scope), 2026-10-22
   cosmosDb:
     value: null
     verified: false
