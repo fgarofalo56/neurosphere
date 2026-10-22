@@ -13,6 +13,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 import type { ProblemDetails } from "@neurosphere/contracts";
+import {
+  COPILOT_PATH,
+  REPORTS_PATH,
+  copilotHandler,
+  freshCopilotState,
+  reportsHandler,
+  type CopilotMockContext,
+} from "./copilot.ts";
 
 export const DEFAULT_PORT = 4010;
 export const FAKE_TOKEN_PREFIX = "ns-e2e-fake-token.";
@@ -1865,16 +1873,36 @@ function readRequestBody(req: IncomingMessage): Promise<string> {
   });
 }
 
+/** The drafted PRP-17 intent the copilot `action_suggestion` fixture points at (seeded above in
+ * DOMAIN_OK, state `drafted`, so the confirmation dialog can load it). Chat never confirms it. */
+function copilotSuggestion(): {
+  intent_id: string;
+  domain_id: string;
+  action_type: string;
+  target: Record<string, unknown>;
+  intent_hash: string;
+} {
+  const intent = makeIntent(INTENT_FLOW);
+  return {
+    intent_id: INTENT_FLOW,
+    domain_id: DOMAIN_OK,
+    action_type: intent.action_kind as string,
+    target: intent.target as Record<string, unknown>,
+    intent_hash: confirmationHashFor(intent),
+  };
+}
+
 export function createMockApi(options: MockApiOptions): Server {
   const recommendationState = { routed: new Map<string, string>() };
   const actionsState = freshActionsState();
+  const copilotState = freshCopilotState(DOMAIN_OK);
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const correlationId = `e2e-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const cors: Record<string, string> = {
       "access-control-allow-origin": options.allowedOrigin,
       "access-control-allow-headers": "authorization, content-type, x-correlation-id, if-match",
-      "access-control-allow-methods": "GET, POST, OPTIONS",
-      "access-control-expose-headers": "x-correlation-id, retry-after",
+      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-expose-headers": "x-correlation-id, retry-after, etag",
       vary: "Origin",
       "x-correlation-id": correlationId,
     };
@@ -1907,6 +1935,43 @@ export function createMockApi(options: MockApiOptions): Server {
     const e2e = E2E_PATH.exec(url.pathname);
     if (e2e !== null && req.method === "POST") {
       e2eHandler(actionsCtx, e2e[1] ?? "");
+      return;
+    }
+    const copilotCtx: CopilotMockContext = {
+      req,
+      res,
+      url,
+      cors,
+      readBody: () => readRequestBody(req),
+      authorized: roleFromAuthorization(req.headers.authorization) !== undefined,
+      readableDomains: [DOMAIN_OK],
+      suggestion: copilotSuggestion(),
+      problem: (status, code, reason, detail) =>
+        send(
+          res,
+          status,
+          actionProblem(
+            status,
+            code as ProblemDetails["code"],
+            reason,
+            detail,
+            url.pathname,
+            correlationId,
+          ),
+          cors,
+          "application/problem+json",
+        ),
+      forbidden: () =>
+        send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json"),
+    };
+    const copilot = COPILOT_PATH.exec(url.pathname);
+    if (copilot !== null) {
+      copilotHandler(copilotCtx, copilotState, copilot[1] ?? "");
+      return;
+    }
+    const reports = REPORTS_PATH.exec(url.pathname);
+    if (reports !== null) {
+      reportsHandler(copilotCtx, copilotState, reports[1] ?? "");
       return;
     }
     const recommendation = RECOMMENDATION_BASE.exec(url.pathname);

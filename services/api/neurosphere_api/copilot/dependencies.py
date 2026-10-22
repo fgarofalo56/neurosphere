@@ -16,7 +16,9 @@ wrongly-typed REQUIRED collaborator fails closed with 503 (``dependency_transien
 ``copilot_evidence_reader``    optional ``EvidenceReader``; default reads nothing, so evidence
                                questions abstain until a real evidence store is bound
 ``copilot_settings``           optional ``CopilotSettings``
-``copilot_chart_validator``    optional ``ChartPlanValidator``; default rejects every chart plan
+``copilot_chart_validator``    optional ``ChartPlanValidator``; default is the real
+                               ``neurosphere_core.charts.validate_chart_plan`` (pass
+                               ``reject_all_chart_plans`` to fail closed explicitly)
 ``copilot_refusal_sink``       optional ``RefusalSink`` (audit hook for refused tool calls)
 ``copilot_clock``              optional ``() -> datetime`` (aware)
 =============================  =====================================================================
@@ -27,7 +29,7 @@ is not configured chat still answers read-only questions and drafting returns 50
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Final
@@ -35,6 +37,7 @@ from typing import Any, Final
 from fastapi import FastAPI, Request
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.catalog import CatalogRepository
+from neurosphere_core.charts import validate_chart_plan
 from neurosphere_core.copilot.models import ModelAdapter
 from neurosphere_core.copilot.tools import EvidenceRecord, RefusalSink
 from neurosphere_core.errors import DependencyTransientError
@@ -52,6 +55,7 @@ __all__ = [
     "configure_copilot",
     "get_copilot",
     "get_optional_action_plane",
+    "validate_chart_plan_mapping",
 ]
 
 _UNCONFIGURED: Final = "copilot_unconfigured"
@@ -65,6 +69,12 @@ class EmptyEvidenceReader:
         self, scope: IdentityScope, domain_ids: Sequence[str], evidence_ids: Sequence[str]
     ) -> Sequence[EvidenceRecord]:
         return ()
+
+
+def validate_chart_plan_mapping(plan: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The real chart-plan validator in the engine's ``ChartPlanValidator`` shape: returns the
+    validated plan as a JSON-able mapping (aliased, unset fields omitted) or raises."""
+    return validate_chart_plan(plan).model_dump(mode="json", by_alias=True, exclude_unset=True)
 
 
 def _utc_now() -> datetime:
@@ -146,6 +156,6 @@ def configure_copilot(
     state.copilot_conversation_store = conversation_store
     state.copilot_evidence_reader = evidence_reader
     state.copilot_settings = settings or CopilotSettings()
-    state.copilot_chart_validator = chart_validator
+    state.copilot_chart_validator = chart_validator or validate_chart_plan_mapping
     state.copilot_refusal_sink = refusal_sink
     state.copilot_clock = clock

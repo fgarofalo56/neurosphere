@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { NavLink, Outlet, type RouteObject } from "react-router";
+import { CopilotDock } from "../features/copilot";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 export interface NavItem {
@@ -73,6 +74,10 @@ function makeLayout(
             <Outlet />
           </ErrorBoundary>
         </main>
+        {/* Copilot slot: mounted once in the authenticated shell (PRP-19; item 6 fills it). */}
+        <ErrorBoundary>
+          <CopilotDock />
+        </ErrorBoundary>
       </div>
     );
   };
