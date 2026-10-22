@@ -234,6 +234,13 @@ Evidence for the gap, captured 2026-10-22 against the mock API (screenshots in `
 - Pattern references: `routes.tsx:40-84`; `workspaceNav.ts:21-39`; `map/paths.ts:1`; mock handler chain `server.ts:1995-2052`.
 - Tests to write: `frontend/src/app/shell.test.tsx`, `frontend/src/app/domain.test.tsx`, `frontend/tests/e2e/shell.spec.ts` (nav groups, switcher, skip link, axe).
 
+### Item 2b - domain empty state and URL default (delta, approved 2026-10-22)
+- Why: execution found two gaps. A caller whose only `data.read` is a resource grant passes `require(data.read)` and gets 200 `{items: []}` from `/me/domains`, not 403 (Clarification 12 assumed 403), and the switcher showed an empty dropdown with no message. With no `domain_id` in the URL, `useSelectedDomain()` fell back to a default without writing it to the URL, so URL-only readers (`copilot/requestContext.ts`) saw no domain.
+- Deliverable: a 200 with zero domains shows "No domains are assigned to you", the same as the 403 case. Once the default domain is known and the URL has no `domain_id`, the shell rewrites the URL with `replace` (no history entry), so `?domain_id=` is the real source of truth on every page.
+- Owned files: `frontend/src/app/domain.tsx`, `frontend/src/app/DomainSwitcher.tsx`, `frontend/src/app/domain.test.tsx`, `frontend/src/app/shell.test.tsx`, `frontend/tests/e2e/shell.spec.ts`.
+- Must NOT touch: `frontend/src/app/main.tsx` and `frontend/src/app/demo/**` (item 3), features, mock API.
+- Depends on: Item 2. Runs in wave C.
+
 ### Item 3 - local-demo-mode-and-ci-headroom
 - Deliverable: `pnpm demo` (root and frontend) that starts the mock API and Vite in `demo` mode with stub sign-in and config pointing at the mock, plus a persistent "Demo data, mock API" banner; the production-exclusion tests; docs; and the CI timeout headroom.
 - Owned files (may edit): `package.json` (root `demo` script), `frontend/package.json` (scripts only, no dependencies), `scripts/demo.mjs` (or `frontend/scripts/demo.mjs`), `frontend/src/app/main.tsx` (the `demo` MODE branch only, beside the existing `e2e` one), `frontend/src/app/demo/**` (new: banner, demo config), `frontend/tests/build/no-demo-in-prod.test.ts` (or equivalent, runnable in CI), `docs/dev/local-setup.md`, `.github/workflows/ci.yml` (frontend job `timeout-minutes` 15 -> 25 only).
@@ -292,7 +299,7 @@ Evidence for the gap, captured 2026-10-22 against the mock API (screenshots in `
 ### Waves
 - A = items 1 and 2 [P].
 - B = items 4, 5, 6 and 7 [P] (WIP 4).
-- C = items 3 and 8 [P] (they share no files).
+- C = items 2b, 3 and 8 [P] (they share no files).
 
 Items 1 and 2 own `routers.py`/`openapi.json` and `frontend/src/app/`/the mock respectively, so no shared file is edited in parallel.
 
@@ -339,12 +346,13 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`.
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-ad5aa5f746e8881fc | sonnet | 75867cc, merge 1b99def; verify 195 passed targeted (pre+post merge), ruff/format clean; impl 831 api passed, pyright 0; review APPROVED (5 non-blocking follow-ups) | 2026-10-22 |
 | 2 | merged | worktree-agent-a5c2e30dee17dc54b | sonnet | 0a9125e, merge 1409e46; verify typecheck/lint clean, vitest 412/412, build ok, playwright 86/87 (quality.spec:38 flake, 30/30 on repeat-each=3); post-merge vitest 412/412 + shell/hidden-route/smoke 7/7; review APPROVED (4 non-blocking follow-ups) | 2026-10-22 |
-| 3 | todo | | sonnet | | 2026-10-22 |
-| 4 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
-| 5 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
-| 6 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
-| 7 | in-progress | (agent worktree) | sonnet | dispatched wave B | 2026-10-22 |
-| 8 | todo | | sonnet | | 2026-10-22 |
+| 2b | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
+| 3 | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
+| 4 | merged | worktree-agent-a48d724ccc72020e0 | sonnet | 13bf1ab, merge 2762ef3; verify typecheck/lint clean, vitest 412/412, native grep clean; impl playwright 86/87 (actions.spec:160 load flake, 16/16 isolated); combined review (4-8) pending | 2026-10-22 |
+| 5 | merged | worktree-agent-a77c26df8cfe9ad92 | sonnet | 0e1743f, merge a88819b; verify typecheck/lint clean, vitest 412/412, native grep clean, actions.spec unchanged; impl playwright 87/87; combined review (4-8) pending | 2026-10-22 |
+| 6 | merged | worktree-agent-a1bdbc557df86ec5d | sonnet | fff7b30, merge 51a230e; verify typecheck/lint clean, vitest 413/413, native grep clean; impl playwright 86/87 (map-table-keyboard load flake, 2/2 isolated); combined review (4-8) pending | 2026-10-22 |
+| 7 | merged | worktree-agent-aa1530b1af330d322 | sonnet | 43925c7, merge ce0c94a; verify typecheck/lint clean, vitest 412/412 (1 unidentified flake on first run), grep only allowlisted MapGrid button; post-wave-B integration: vitest 413/413, build ok, playwright 87/87; combined review (4-8) pending | 2026-10-22 |
+| 8 | in-progress | (agent worktree) | sonnet | dispatched wave C | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:
