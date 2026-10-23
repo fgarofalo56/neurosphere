@@ -629,6 +629,51 @@
         "title": "Alias",
         "type": "string"
       },
+      "Amount": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "known",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "status",
+          "complete"
+        ],
+        "title": "Amount",
+        "type": "object"
+      },
       "AnalyticsInfo": {
         "additionalProperties": false,
         "properties": {
@@ -1182,6 +1227,95 @@
         "title": "CatalogEntity",
         "type": "string"
       },
+      "CellOutcome": {
+        "additionalProperties": false,
+        "description": "How one cell contributed. ``denied``: the cell derived no access for the caller;\n``unavailable``: the cell failed or timed out (the merged summary is then incomplete).",
+        "properties": {
+          "cell_id": {
+            "title": "Cell Id",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "denied",
+              "unavailable"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cell_id",
+          "state"
+        ],
+        "title": "CellOutcome",
+        "type": "object"
+      },
+      "CellSummary": {
+        "additionalProperties": false,
+        "description": "What a cell returns for the caller's derived scope.",
+        "properties": {
+          "boundary_id": {
+            "title": "Boundary Id",
+            "type": "string"
+          },
+          "cell_id": {
+            "title": "Cell Id",
+            "type": "string"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "domains": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DomainSummary"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "scope_hash": {
+            "title": "Scope Hash",
+            "type": "string"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cell_id",
+          "cloud",
+          "boundary_id",
+          "customer_id",
+          "scope_hash",
+          "window_start",
+          "window_end"
+        ],
+        "title": "CellSummary",
+        "type": "object"
+      },
       "ChainVerification": {
         "additionalProperties": false,
         "description": "Result of verifying one chain. ``first_invalid_index`` is a position in the input.",
@@ -1633,6 +1767,47 @@
           "price_version"
         ],
         "title": "CostImplication",
+        "type": "object"
+      },
+      "CostTotal": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "estimated",
+              "invoiced"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "currency",
+          "amount",
+          "complete"
+        ],
+        "title": "CostTotal",
         "type": "object"
       },
       "CoverageFraction": {
@@ -2323,6 +2498,67 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
         "title": "DomainId",
         "type": "string"
+      },
+      "DomainSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "default": false,
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "costs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CostTotal"
+            },
+            "title": "Costs",
+            "type": "array"
+          },
+          "domain_id": {
+            "minLength": 1,
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "error_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Count"
+          },
+          "request_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Count"
+          },
+          "unknown_outcome_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unknown Outcome Count"
+          }
+        },
+        "required": [
+          "domain_id"
+        ],
+        "title": "DomainSummary",
+        "type": "object"
       },
       "DomainView": {
         "additionalProperties": false,
@@ -3086,6 +3322,78 @@
         "title": "EstimatedCost",
         "type": "object"
       },
+      "EstimatedSeries": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "excluded_incomplete_days": {
+            "minimum": 0.0,
+            "title": "Excluded Incomplete Days",
+            "type": "integer"
+          },
+          "fit_points": {
+            "minimum": 0.0,
+            "title": "Fit Points",
+            "type": "integer"
+          },
+          "forecast_available": {
+            "title": "Forecast Available",
+            "type": "boolean"
+          },
+          "forecast_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Unavailable Reason"
+          },
+          "kind": {
+            "const": "estimated",
+            "default": "estimated",
+            "title": "Kind",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "residual_std": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Std"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SeriesSummary"
+          }
+        },
+        "required": [
+          "currency",
+          "points",
+          "summary",
+          "forecast_available",
+          "fit_points",
+          "excluded_incomplete_days"
+        ],
+        "title": "EstimatedSeries",
+        "type": "object"
+      },
       "Etag": {
         "maxLength": 256,
         "minLength": 1,
@@ -3588,6 +3896,130 @@
           }
         ],
         "title": "Filter"
+      },
+      "ForecastMethod": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence_level": {
+            "title": "Confidence Level",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "history_days": {
+            "title": "History Days",
+            "type": "integer"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "min_fit_points": {
+            "title": "Min Fit Points",
+            "type": "integer"
+          },
+          "name": {
+            "const": "linear_trend_ols",
+            "default": "linear_trend_ols",
+            "title": "Name",
+            "type": "string"
+          },
+          "savings_claim": {
+            "const": false,
+            "default": false,
+            "title": "Savings Claim",
+            "type": "boolean"
+          },
+          "z": {
+            "title": "Z",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "confidence_level",
+          "z",
+          "min_fit_points",
+          "history_days",
+          "horizon_days"
+        ],
+        "title": "ForecastMethod",
+        "type": "object"
+      },
+      "ForecastResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "estimated": {
+            "$ref": "#/components/schemas/EstimatedSeries"
+          },
+          "invoiced": {
+            "$ref": "#/components/schemas/InvoicedSeries"
+          },
+          "method": {
+            "$ref": "#/components/schemas/ForecastMethod"
+          },
+          "price_version_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Price Version Id",
+            "type": "string"
+          },
+          "price_version_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Price Version Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "domain_id",
+          "as_of",
+          "method",
+          "price_version_id",
+          "price_version_ids",
+          "estimated",
+          "invoiced"
+        ],
+        "title": "ForecastResponse",
+        "type": "object"
+      },
+      "ForecastValue": {
+        "additionalProperties": false,
+        "description": "Point forecast with its uncertainty band (lower <= value <= upper, all >= 0).",
+        "properties": {
+          "lower": {
+            "title": "Lower",
+            "type": "string"
+          },
+          "upper": {
+            "title": "Upper",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "lower",
+          "upper"
+        ],
+        "title": "ForecastValue",
+        "type": "object"
       },
       "Freshness": {
         "additionalProperties": false,
@@ -4274,6 +4706,78 @@
         "title": "IngestResult",
         "type": "object"
       },
+      "InvoicedSeries": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "excluded_incomplete_days": {
+            "minimum": 0.0,
+            "title": "Excluded Incomplete Days",
+            "type": "integer"
+          },
+          "fit_points": {
+            "minimum": 0.0,
+            "title": "Fit Points",
+            "type": "integer"
+          },
+          "forecast_available": {
+            "title": "Forecast Available",
+            "type": "boolean"
+          },
+          "forecast_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forecast Unavailable Reason"
+          },
+          "kind": {
+            "const": "invoiced",
+            "default": "invoiced",
+            "title": "Kind",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "residual_std": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Std"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/SeriesSummary"
+          }
+        },
+        "required": [
+          "currency",
+          "points",
+          "summary",
+          "forecast_available",
+          "fit_points",
+          "excluded_incomplete_days"
+        ],
+        "title": "InvoicedSeries",
+        "type": "object"
+      },
       "Judge": {
         "additionalProperties": false,
         "properties": {
@@ -4626,6 +5130,80 @@
           "items"
         ],
         "title": "MeDomains",
+        "type": "object"
+      },
+      "MergedSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "boundary_id": {
+            "title": "Boundary Id",
+            "type": "string"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/CellOutcome"
+            },
+            "title": "Cells",
+            "type": "array"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/DomainSummary"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "totals": {
+            "items": {
+              "$ref": "#/components/schemas/CostTotal"
+            },
+            "title": "Totals",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cloud",
+          "boundary_id",
+          "customer_id",
+          "window_start",
+          "window_end",
+          "cells",
+          "domains",
+          "totals",
+          "complete",
+          "truncated"
+        ],
+        "title": "MergedSummary",
         "type": "object"
       },
       "MessageBody": {
@@ -8465,6 +9043,83 @@
         "title": "Series",
         "type": "object"
       },
+      "SeriesPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "actual": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phase": {
+            "enum": [
+              "history",
+              "horizon"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "within_band": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Within Band"
+          }
+        },
+        "required": [
+          "day",
+          "phase",
+          "actual"
+        ],
+        "title": "SeriesPoint",
+        "type": "object"
+      },
+      "SeriesSummary": {
+        "additionalProperties": false,
+        "description": "Totals over the series' own days. ``complete`` is false when any day is unknown or\nincomplete; the number is then the sum of the known parts, never a silent smaller figure.",
+        "properties": {
+          "history_actual": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "horizon_actual": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "horizon_forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ForecastValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "history_actual",
+          "horizon_actual"
+        ],
+        "title": "SeriesSummary",
+        "type": "object"
+      },
       "Service": {
         "additionalProperties": false,
         "description": "Service an agent or tool depends on (Azure service, SaaS, internal API, gateway). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -12239,6 +12894,212 @@
         "summary": "List Results",
         "tags": [
           "evaluation"
+        ]
+      }
+    },
+    "/api/v1/federation/cell-summary": {
+      "get": {
+        "operationId": "cell_summary_api_v1_federation_cell_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CellSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cell Summary",
+        "tags": [
+          "federation"
+        ]
+      }
+    },
+    "/api/v1/federation/summary": {
+      "get": {
+        "operationId": "merged_summary_api_v1_federation_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cells",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cells"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergedSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merged Summary",
+        "tags": [
+          "federation"
+        ]
+      }
+    },
+    "/api/v1/finops/domains/{domain}/forecast": {
+      "get": {
+        "operationId": "get_forecast_api_v1_finops_domains__domain__forecast_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "history_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 7,
+              "title": "History Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "horizon_days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 31,
+              "minimum": 1,
+              "title": "Horizon Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "default": "USD",
+              "pattern": "^[A-Z]{3}$",
+              "title": "Currency",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForecastResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Forecast",
+        "tags": [
+          "finops"
         ]
       }
     },

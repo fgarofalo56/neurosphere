@@ -1,8 +1,10 @@
 ---
 name: prp-21-scale-federation-finops-and-dr
-status: backlog
+status: active
 review: none
 created: 2026-10-08
+started: 2026-10-22
+branch: prp-21-scale-federation-finops-dr
 model: sonnet
 phase: 4
 ns: NS-07, NS-08
@@ -169,6 +171,19 @@ Ship the load-test profiles (pilot, enterprise, stress), per-domain admission co
 - Pattern references: replay CLI and quarantine design from PRP-07; migrations runner from PRP-13.
 - Tests to write: `tests/integration/dr/test_restore_compose.py` (`pytest.mark.integration`), `tests/integration/dr/test_runbook_caveats.py` (asserts required caveat strings exist).
 
+### Item 6 - wiring  (added at plan approval, 2026-10-22)
+- Deliverable: register the item 3 federation router and the item 4 finops router in the API router registry and regenerate the OpenAPI document, so neither router ships unattached.
+- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`.
+- Must NOT touch: anything owned by items 1-5.
+- Depends on: items 3 and 4 merged.
+- Acceptance criteria: both routers attached through `REGISTERED` hooks; every new route declares a permission (`verify_route_permissions` passes); `services/api/tests/test_openapi_drift.py` passes after `python -m neurosphere_api.openapi_export`.
+
+### Execution plan deltas (approved 2026-10-22)
+- Item 6 added (above): no blueprint item owned `routers.py`/`openapi.json`; earlier PRPs used a sequenced wiring item.
+- Test directories renamed to avoid pytest top-level package clashes: `services/api/tests/federation_api/`, `services/workers/tests/federation_worker/`, `services/api/tests/finops_api/` (the finops unknown-not-zero test is `test_finops_unknown_not_zero.py`, because `test_unknown_not_zero.py` already exists under dashboards).
+- Locust stays out of `uv.lock`: pinned in `tests/load/profiles/requirements.txt` and run as an isolated subprocess (`uv run --isolated --no-project --with-requirements ...`), because importing locust gevent-monkeypatches the process. Profile definitions and the evidence writer are plain Python; the CI-collected definition test never imports locust.
+- Item 5 runs after item 1 (both use the single compose stack; concurrent drills collide on host ports and data).
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -203,6 +218,17 @@ Enterprise and stress profile runs are operator-run against a sized environment 
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 | merged | worktree-agent-af6fe6b9811307cdd | sonnet | 4337d5b + 06f95f9 (evidence), merge bf74d84; verify ruff/format/pyright clean, profiles 31/31, orchestrator re-ran integration pilot on compose 1/1 (local only), snyk 0, locust not in uv.lock; pilot FAILS 1k eps target: ~240 accepted eps, p95 30s at 100 users (compose, bounded feasibility) | 2026-10-22 |
+| 2 | merged | worktree-agent-a286d67fb3c859ccd | sonnet | 7b92eac, merge 13929dd; verify ruff/format/pyright clean, admission 31/31, snyk 0; post-merge admission+import-boundaries 32/32 | 2026-10-22 |
+| 3 | merged | worktree-agent-ab063dfdc8eb03e12 | sonnet | efec383; verify ruff/format/pyright clean, federation 31/31, snyk 0 new; author flagged scope-leak points; review APPROVED (5 follow-ups), merge c517691; post-merge admission+federation 62/62 | 2026-10-22 |
+| 4 | merged | worktree-agent-a1329db321d7733e7 | sonnet | c3d6962, merge 1a115d8; verify ruff/format/pyright clean, finops 32/32, snyk 0, evidence rerun byte-identical; post-merge touched suites green | 2026-10-22 |
+| 5 | merged | worktree-agent-a599e0179246ae9c9 | sonnet | 66a5c41 + 80324a2 (runbook, evidence, G07 row), merge 1f25d38; verify ruff/format/pyright clean, dr 56/56, orchestrator re-ran restore drill on compose 1/1 (local only), RESEARCH-AND-GATES diff = G07 row only, snyk 0; post-merge touched suites 198/198, gitleaks main..HEAD no leaks | 2026-10-22 |
+| 6 | merged | worktree-agent-a077ee7635c89fb38 | sonnet | 13df179, merge 530f804; verify ruff/pyright clean, openapi drift+app+authz+federation+finops 223/223, no component renames; routes 503 until app.state is populated (follow-up) | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:

@@ -1,0 +1,146 @@
+{
+  "schema_version": "1",
+  "gate": "G07",
+  "item": "PRP-21 item 5 backup-restore-and-failover",
+  "environment_label": "compose, not representative of production",
+  "date": "2026-10-22",
+  "git_sha": "66a5c41709f597cbb5f15063df17d951eeb3f855",
+  "command": "uv run python infra/dr/ns_dr.py drill --evidence-dir docs/evidence/G07/dr",
+  "method": "Seed drill-namespaced stores from the sandbox generator (seed 7, tiny profile), export each store, write extra data after the backup, delete the drill namespace, restore from the export, and compare live count and content-hash digests of the restored store with the digests taken before the backup.",
+  "dataset": "sandbox generator seed 7, tiny profile, synthetic only",
+  "provisional_targets": {
+    "rto": "4 h (provisional target)",
+    "rpo": "15 min (provisional target)"
+  },
+  "measured": {
+    "run_id": "64c75c0b",
+    "started_at": "2026-10-23T00:10:49.751+00:00",
+    "stores": [
+      {
+        "store": "cosmos:cost-ledger",
+        "method": "export documents to jsonl; restore by upsert",
+        "source_count": 400,
+        "source_sha256": "adfff3e6c1971665eb364b04ddec5b9882573b3f92f0a961c866fec1a8a8a10f",
+        "source_bytes": 355472,
+        "backup_seconds": 0.076,
+        "restore_seconds": 1.813,
+        "restored_count": 400,
+        "restored_sha256": "adfff3e6c1971665eb364b04ddec5b9882573b3f92f0a961c866fec1a8a8a10f",
+        "match": true,
+        "detail": ""
+      },
+      {
+        "store": "cosmos:outbox",
+        "method": "export documents to jsonl; restore by upsert",
+        "source_count": 400,
+        "source_sha256": "2cfccb61ff7cdac36bd289ab7fad4c11290aa50c3e8ee7a9024c45d33d570cbd",
+        "source_bytes": 58728,
+        "backup_seconds": 0.045,
+        "restore_seconds": 1.673,
+        "restored_count": 400,
+        "restored_sha256": "2cfccb61ff7cdac36bd289ab7fad4c11290aa50c3e8ee7a9024c45d33d570cbd",
+        "match": true,
+        "detail": ""
+      },
+      {
+        "store": "cosmos:catalog",
+        "method": "export documents to jsonl; restore by upsert",
+        "source_count": 57,
+        "source_sha256": "85aadba7b66a077f8cc50f0208cacb859f8ed786424c78df5cc85593c5d061ef",
+        "source_bytes": 32150,
+        "backup_seconds": 0.012,
+        "restore_seconds": 0.279,
+        "restored_count": 57,
+        "restored_sha256": "85aadba7b66a077f8cc50f0208cacb859f8ed786424c78df5cc85593c5d061ef",
+        "match": true,
+        "detail": ""
+      },
+      {
+        "store": "cosmos:aggregates",
+        "method": "export documents to jsonl; restore by upsert",
+        "source_count": 68,
+        "source_sha256": "67de451008cdaf56b868aa6c5f7a1a912ab6febf67e38de1f6b7ea0c06238a04",
+        "source_bytes": 7344,
+        "backup_seconds": 0.008,
+        "restore_seconds": 0.317,
+        "restored_count": 68,
+        "restored_sha256": "67de451008cdaf56b868aa6c5f7a1a912ab6febf67e38de1f6b7ea0c06238a04",
+        "match": true,
+        "detail": ""
+      },
+      {
+        "store": "blob:archive",
+        "method": "export blobs+metadata; re-upload",
+        "source_count": 40,
+        "source_sha256": "bb8615f098e68133faf25310a9f3c09a9290d0f7b0805158817290c0fcfc5b82",
+        "source_bytes": 15265,
+        "backup_seconds": 0.2,
+        "restore_seconds": 0.485,
+        "restored_count": 40,
+        "restored_sha256": "bb8615f098e68133faf25310a9f3c09a9290d0f7b0805158817290c0fcfc5b82",
+        "match": true,
+        "detail": ""
+      },
+      {
+        "store": "blob:quarantine",
+        "method": "export blobs+metadata; re-upload",
+        "source_count": 25,
+        "source_sha256": "599f64cecadae6d283ce7f2f47c03a2b27c640ee7f814000bf5aad317fa9fc7a",
+        "source_bytes": 8956,
+        "backup_seconds": 0.123,
+        "restore_seconds": 0.352,
+        "restored_count": 25,
+        "restored_sha256": "599f64cecadae6d283ce7f2f47c03a2b27c640ee7f814000bf5aad317fa9fc7a",
+        "match": true,
+        "detail": "reader listed 25 records"
+      },
+      {
+        "store": "blob:checkpoints",
+        "method": "export checkpoint blobs; re-upload",
+        "source_count": 8,
+        "source_sha256": "39af562e62b0f8cb1573ee6e0f565a3f483be4fe0ab995fe158b5877658445d1",
+        "source_bytes": 0,
+        "backup_seconds": 0.075,
+        "restore_seconds": 0.067,
+        "restored_count": 8,
+        "restored_sha256": "39af562e62b0f8cb1573ee6e0f565a3f483be4fe0ab995fe158b5877658445d1",
+        "match": true,
+        "detail": "checkpoints read through BlobCheckpointStore equal the snapshot; the post-backup checkpoint advance is gone, so consumers re-read from the restored offsets (dedupe makes the replay idempotent)"
+      },
+      {
+        "store": "search:index",
+        "method": "rebuild the in-process fixture index from the restored catalog container (no search emulator on compose); digest = hash of fixed query answers",
+        "source_count": 57,
+        "source_sha256": "bf2f518df0fbe1d5c2d9e056ab2f0d882fbbf592265e8ab057805b5cf1e11a5f",
+        "source_bytes": 0,
+        "backup_seconds": 0.0,
+        "restore_seconds": 0.01,
+        "restored_count": 57,
+        "restored_sha256": "bf2f518df0fbe1d5c2d9e056ab2f0d882fbbf592265e8ab057805b5cf1e11a5f",
+        "match": true,
+        "detail": ""
+      }
+    ],
+    "snapshot_completed_at": "2026-10-23T00:10:56.743+00:00",
+    "last_write_in_backup_at": "2026-10-23T00:10:55.624+00:00",
+    "loss_simulated_at": "2026-10-23T00:10:57.815+00:00",
+    "recovery_point_gap_seconds": 2.191,
+    "post_backup_writes_lost": 12,
+    "post_backup_writes_absent_after_restore": true,
+    "checkpoint_rewound": true,
+    "total_restore_seconds": 4.996,
+    "all_match": true
+  },
+  "notes": [
+    "A restore drill proves a restore, not a failover.",
+    "The recovery point gap here follows from the short, test-chosen interval between the last backed-up write and the simulated loss; it says nothing about a 15 min backup cadence.",
+    "Event Hubs emulator has no persistence: event-data recovery on compose is replay from the redacted archive (scripts/replay) plus source producers; not exercised here beyond archive blob restore.",
+    "Search is rebuilt from the restored catalog into the in-process fixture index."
+  ],
+  "open": [
+    "Real Event Hubs failover and failback (needs an approved environment).",
+    "Event Hubs data geo-replication (Premium/Dedicated; Government unverified).",
+    "Production-sized restore time and recovery point.",
+    "Azure AI Search index rebuild time."
+  ]
+}

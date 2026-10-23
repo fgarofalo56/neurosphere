@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-21-scale-federation-finops-and-dr](active/PRP-21-scale-federation-finops-and-dr.md) |  | 6/6 (100%) | merged 6 | ? / ? | none |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) |  |  | - | - | ? / ? | none |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) |  |  | - | - | ? / ? | required |
 | [prp-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) |  |  | - | - | ? / ? | required |
 | [prp-24-themes-sandbox-mode-and-accessibility](backlog/PRP-24-themes-sandbox-mode-and-accessibility.md) |  |  | - | - | ? / ? | none |

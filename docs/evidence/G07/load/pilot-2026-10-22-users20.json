@@ -1,0 +1,219 @@
+{
+  "schema_version": "1.0",
+  "profile": "pilot",
+  "evidence_for": "pilot",
+  "not_evidence_for": [
+    "enterprise",
+    "stress"
+  ],
+  "environment_label": "compose (emulators), bounded feasibility only - not capacity evidence (G12)",
+  "date": "2026-10-22",
+  "started_at": "2026-10-22T23:58:03Z",
+  "git_sha": "4337d5bcd1f93eb4e0c2222f32a7046bd901a8df",
+  "method": "locust headless (isolated uv env, locust pinned in requirements.txt); API = local uvicorn (1 worker) from neurosphere_api.main:create with the ingest edge; sink = Event Hubs emulator from docker compose; synthetic events only; latency is per POST (a batch of events)",
+  "target_host_name": "127.0.0.1",
+  "profile_definition": {
+    "source": "docs/PRD.md section 3 (scale profiles); PRP-21 item 1",
+    "note": "Provisional planning targets from the PRD, measured not guaranteed. The p95 bound has no ingest-specific PRD figure; it reuses the 2 s dashboard planning target as a placeholder.",
+    "agents": 1000,
+    "sustained_events_per_second": 1000.0,
+    "burst_events_per_second": null,
+    "entities": null,
+    "relationships": null,
+    "subject_to": null,
+    "catalog_scale_driven_by_this_suite": false
+  },
+  "run_parameters": {
+    "users": 20,
+    "duration_seconds_requested": 60,
+    "batch_size": 25,
+    "domains": 20,
+    "skew_multiple": 50.0,
+    "hot_domain_weight_over_median": 50.0,
+    "fan_out_width": 25,
+    "producers": 4,
+    "multi_domain_sources": 8,
+    "scenario_weights": {
+      "baseline_skew": 60,
+      "hot_key": 10,
+      "fan_out": 10,
+      "multi_domain": 10,
+      "otlp_traces": 10
+    },
+    "overrides_of_profile_defaults": [
+      "users"
+    ]
+  },
+  "measured": {
+    "duration_seconds": 59.698,
+    "requests": 442,
+    "events_sent": 11050,
+    "events_accepted": 11050,
+    "events_rejected_by_edge": 0,
+    "events_in_failed_requests": 0,
+    "achieved_events_per_second": 185.1,
+    "offered_events_per_second": 185.1,
+    "achieved_requests_per_second": 7.4,
+    "error_ratio": 0.0,
+    "error_counts_by_type": {},
+    "latency_ms": {
+      "p50": 710.0,
+      "p95": 11000.0,
+      "p99": 17000.0,
+      "max": 17220.941100036725
+    },
+    "distinct_agents_emitted": 1001
+  },
+  "thresholds": [
+    {
+      "name": "achieved_events_per_second",
+      "operator": ">=",
+      "threshold": 1000.0,
+      "measured": 185.1,
+      "passed": false,
+      "provisional": true
+    },
+    {
+      "name": "error_ratio",
+      "operator": "<=",
+      "threshold": 0.01,
+      "measured": 0.0,
+      "passed": true,
+      "provisional": true
+    },
+    {
+      "name": "request_latency_p95_ms",
+      "operator": "<=",
+      "threshold": 2000.0,
+      "measured": 11000.0,
+      "passed": false,
+      "provisional": true
+    }
+  ],
+  "thresholds_all_passed": false,
+  "scenarios": {
+    "baseline_skew": {
+      "requests": 260,
+      "events_accepted": 6500,
+      "latency_ms": {
+        "p50": 710.0,
+        "p95": 7000.0,
+        "p99": 8100.0,
+        "max": 8714.30930000497
+      }
+    },
+    "fan_out": {
+      "requests": 47,
+      "events_accepted": 1175,
+      "latency_ms": {
+        "p50": 720.0,
+        "p95": 6900.0,
+        "p99": 7800.0,
+        "max": 7753.404400020372
+      }
+    },
+    "hot_key": {
+      "requests": 44,
+      "events_accepted": 1100,
+      "latency_ms": {
+        "p50": 710.0,
+        "p95": 5900.0,
+        "p99": 6900.0,
+        "max": 6949.68429999426
+      }
+    },
+    "multi_domain": {
+      "requests": 40,
+      "events_accepted": 1000,
+      "latency_ms": {
+        "p50": 11000.0,
+        "p95": 17000.0,
+        "p99": 17000.0,
+        "max": 17220.941100036725
+      }
+    },
+    "otlp_traces": {
+      "requests": 51,
+      "events_accepted": 1275,
+      "latency_ms": {
+        "p50": 680.0,
+        "p95": 5900.0,
+        "p99": 7600.0,
+        "max": 7625.494899984915
+      }
+    }
+  },
+  "domains": {
+    "count": 20,
+    "unattributed_events": 1275,
+    "median_events_per_domain": 170.5,
+    "hottest_domain": "dom-0000",
+    "hottest_domain_events": 6555,
+    "hottest_over_median": 38.45,
+    "hottest_domain_accepted": 6555,
+    "hottest_domain_failed": 0,
+    "events_failed_all_other_domains": 0,
+    "top_domains": [
+      {
+        "domain": "dom-0000",
+        "sent": 6555,
+        "accepted": 6555,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0014",
+        "sent": 190,
+        "accepted": 190,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0013",
+        "sent": 187,
+        "accepted": 187,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0004",
+        "sent": 184,
+        "accepted": 184,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0009",
+        "sent": 181,
+        "accepted": 181,
+        "failed": 0
+      }
+    ]
+  },
+  "environment_notes": {
+    "api": "local uvicorn process, 1 worker, NS_ENV=local (not the compose api container: it has no ingest producers configured)",
+    "sink": "Event Hubs emulator (docker compose), hub 'telemetry', 4 partitions",
+    "edge_limiter": "product defaults (20 rps per producer, burst 40)",
+    "host": "Windows 11, 32 logical CPUs, Python 3.12.13",
+    "client_and_server_share_host": true,
+    "consumer_running": false,
+    "endpoints_exercised": [
+      "/v1/ingest/events",
+      "/v1/ingest/otlp/traces"
+    ],
+    "endpoints_not_exercised": [
+      "/v1/ingest/otlp/metrics"
+    ]
+  },
+  "emulator_limits": {
+    "documented": [
+      "Event Hubs emulator: one namespace, ten hubs, no persistence, SAS only (no Entra); partition and consumer-group scale cannot be inferred from it.",
+      "Cosmos DB vNext emulator: no RU accounting, so no request-unit capacity is measured."
+    ],
+    "observed_in_this_run": [
+      "Achieved 185.1 accepted events/s against a 1000.0 events/s target on one single-worker local API and one Event Hubs emulator (a ceiling of this setup, not of the product).",
+      "No request errors observed at this rate (no 429, 503 or connection failures).",
+      "Not observable on the emulator: persistence across restart, partition-count and consumer-group scale, RU accounting, Entra auth."
+    ]
+  },
+  "open": [
+    "G07 stays OPEN: this run is bounded feasibility on emulators, not capacity evidence.",
+    "Enterprise and stress profiles are operator-run at a sized environment (not run)."
+  ]
+}
