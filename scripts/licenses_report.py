@@ -20,7 +20,9 @@ with a reason. DENYLIST entries always fail (ADR-0002: @cosmograph is CC-BY-NC).
 Platform-gated packages that are not installed on this machine (for example rolldown
 bindings for another OS) cannot be read locally; their licence is carried forward from the
 committed docs/licenses.md for the SAME name and version, and is UNKNOWN if there is no such
-row. CI installs every architecture, so it never relies on the carry-forward.
+row. CI installs every architecture, so it never relies on the carry-forward. Python packages
+that no supported platform ever installs (emscripten-only markers) are resolved from
+PLATFORM_GATED, an exact-version map in which every entry cites its source.
 """
 
 from __future__ import annotations
@@ -67,6 +69,17 @@ ALLOWLIST: dict[str, str] = {
     "certifi": (
         "MPL-2.0 is file-level copyleft; certifi is used unmodified as the CA bundle for "
         "requests/azure-core/aiohttp TLS and is unavoidable in the Azure SDK path (PRP-05)"
+    ),
+}
+# (name, version) -> (licence, source). Python packages uv locks but never installs on any
+# supported platform, CI included, so neither local metadata nor the carry-forward resolves
+# them. Each entry cites where the licence was read. Exact version only: a bump is UNKNOWN
+# again until someone re-verifies it.
+PLATFORM_GATED: dict[tuple[str, str], tuple[str, str]] = {
+    ("httpx2-jsfetch", "1.0"): (
+        "BSD-3-Clause",
+        "PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved "
+        "2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22)",
     ),
 }
 # glob patterns that always fail, whatever licence metadata says.
@@ -316,13 +329,14 @@ def read_uv_lock(
             deps.append(Dep("python", name, version, FIRST_PARTY, False, "workspace member"))
             continue
         dist = installed.get(key)
+        note = version_note(name, version)
         if dist is not None and dist.version == version:
             lic = python_licence(dist)
+        elif (key, version) in PLATFORM_GATED:
+            lic, note = PLATFORM_GATED[(key, version)]
         else:
             lic = carried.get(("python", name, version), UNKNOWN)
-        deps.append(
-            Dep("python", name, version, lic, key not in runtime, version_note(name, version))
-        )
+        deps.append(Dep("python", name, version, lic, key not in runtime, note))
     return deps
 
 

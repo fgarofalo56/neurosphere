@@ -8,7 +8,8 @@ The audit router is mounted by default and fails closed (503) until ``configure_
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import AsyncIterator, Mapping
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -63,13 +64,30 @@ async def _on_unhandled(request: Request, exc: Exception) -> JSONResponse:
     return generic_problem_response(500, _cid(request), request.url.path, _GENERIC_500_DETAIL)
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Run the MCP session manager when (and only when) an MCP server was mounted.
+
+    ``create_mcp_server`` stores the mount on ``app.state.mcp_server``; the SDK refuses requests
+    until its session manager runs, and ``run()`` may be entered once per mount.
+    """
+    from neurosphere_api.mcp.server import STATE_ATTRIBUTE, McpServerMount
+
+    mount = getattr(app.state, STATE_ATTRIBUTE, None)
+    if isinstance(mount, McpServerMount):
+        async with mount.session_manager.run():
+            yield
+    else:
+        yield
+
+
 def create_app(
     settings: Settings,
     *,
     max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES,
     extra_routers: Mapping[str, APIRouter] | None = None,
 ) -> FastAPI:
-    app = FastAPI(title=API_TITLE, version=API_VERSION)
+    app = FastAPI(title=API_TITLE, version=API_VERSION, lifespan=_lifespan)
     app.state.settings = settings
 
     app.add_exception_handler(NeuroSphereError, _on_neurosphere_error)

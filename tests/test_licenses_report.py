@@ -170,6 +170,48 @@ def test_not_installed_package_uses_committed_register_for_same_version(tmp_path
     assert {d.name: d.licence for d in deps}["left-pad"] == "UNKNOWN"
 
 
+def _gated_lock(tmp: Path, version: str) -> Path:
+    lock = tmp / "uv.lock"
+    lock.write_text(
+        "\n".join(
+            [
+                "version = 1",
+                "",
+                "[[package]]",
+                'name = "fixture-app"',
+                'version = "0.0.0"',
+                'source = { virtual = "." }',
+                "dependencies = [",
+                '    { name = "httpx2-jsfetch", marker = "sys_platform == \'emscripten\'" },',
+                "]",
+                "",
+                "[[package]]",
+                'name = "httpx2-jsfetch"',
+                f'version = "{version}"',
+                'source = { registry = "https://pypi.org/simple" }',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return lock
+
+
+def test_platform_gated_package_uses_cited_exact_version_entry(tmp_path: Path) -> None:
+    deps = NS["read_uv_lock"](_gated_lock(tmp_path, "1.0"), [], {})
+    gated = {d.name: d for d in deps}["httpx2-jsfetch"]
+    assert gated.licence == "BSD-3-Clause"
+    assert "pypi.org/project/httpx2-jsfetch/1.0/" in gated.note
+    assert NS["violation"](gated) is None
+
+
+def test_platform_gated_entry_does_not_cover_another_version(tmp_path: Path) -> None:
+    deps = NS["read_uv_lock"](_gated_lock(tmp_path, "1.1"), [], {})
+    gated = {d.name: d for d in deps}["httpx2-jsfetch"]
+    assert gated.licence == "UNKNOWN"
+    assert NS["violation"](gated) is not None
+
+
 def test_adr_appendix_is_spliced_and_checked(tmp_path: Path) -> None:
     good_tree(tmp_path)
     adr = tmp_path / "adr.md"

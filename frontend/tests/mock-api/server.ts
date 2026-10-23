@@ -21,6 +21,7 @@ import {
   reportsHandler,
   type CopilotMockContext,
 } from "./copilot.ts";
+import { MCP_ADMIN_PATH, freshMcpAdminState, mcpAdminHandler } from "./mcpAdmin.ts";
 
 export const DEFAULT_PORT = 4010;
 export const FAKE_TOKEN_PREFIX = "ns-e2e-fake-token.";
@@ -1922,12 +1923,13 @@ export function createMockApi(options: MockApiOptions): Server {
   const recommendationState = { routed: new Map<string, string>() };
   const actionsState = freshActionsState();
   const copilotState = freshCopilotState(DOMAIN_OK);
+  const mcpAdminState = freshMcpAdminState();
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const correlationId = `e2e-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const cors: Record<string, string> = {
       "access-control-allow-origin": options.allowedOrigin,
       "access-control-allow-headers": "authorization, content-type, x-correlation-id, if-match",
-      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
       "access-control-expose-headers": "x-correlation-id, retry-after, etag",
       vary: "Origin",
       "x-correlation-id": correlationId,
@@ -1993,6 +1995,11 @@ export function createMockApi(options: MockApiOptions): Server {
     const copilot = COPILOT_PATH.exec(url.pathname);
     if (copilot !== null) {
       copilotHandler(copilotCtx, copilotState, copilot[1] ?? "");
+      return;
+    }
+    const mcpAdmin = MCP_ADMIN_PATH.exec(url.pathname);
+    if (mcpAdmin !== null) {
+      void mcpAdminHandler(copilotCtx, mcpAdminState, mcpAdmin[1] ?? "");
       return;
     }
     const reports = REPORTS_PATH.exec(url.pathname);

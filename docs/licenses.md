@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 132 packages
+## Python (uv.lock) - 141 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -57,7 +57,10 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | h11 | 0.16.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | httpcore | 1.0.9 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
+| httpcore2 | 2.16.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | httpx | 0.28.1 | BSD-3-Clause | runtime | 0.x: minor releases may break; no support window recorded |
+| httpx2 | 2.16.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
+| httpx2-jsfetch | 1.0 | BSD-3-Clause | runtime | PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved 2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22) |
 | hypothesis | 6.170.0 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -70,6 +73,8 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | license-expression | 30.4.4 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | markdown-it-py | 4.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | markupsafe | 3.0.4 | BSD-3-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
+| mcp | 2.3.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| mcp-types | 2.3.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | mdurl | 0.1.2 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | more-itertools | 11.1.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | msal | 1.39.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
@@ -132,7 +137,9 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | pytest | 9.1.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | pytest-asyncio | 1.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | python-dotenv | 1.2.4 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
+| python-multipart | 0.0.32 | Apache-2.0 | runtime | 0.x: minor releases may break; no support window recorded |
 | pytokens | 0.4.1 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| pywin32 | 312 | PSF-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | pyyaml | 6.0.3 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | referencing | 0.37.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | requests | 2.34.2 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
@@ -142,9 +149,11 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | rpds-py | 2026.9.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | ruff | 0.16.10 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | sortedcontainers | 2.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
+| sse-starlette | 3.5.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | starlette | 1.7.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | tomli | 2.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | tomli-w | 1.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| truststore | 0.10.5 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | typeguard | 4.6.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | typing-extensions | 4.16.0 | PSF-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | typing-inspection | 0.4.4 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
