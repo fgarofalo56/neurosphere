@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-22-mcp-server-and-client](active/PRP-22-mcp-server-and-client.md) |  | 2/5 (40%) | todo 2, review 1, merged 2 | ? / ? | required |
+| [prp-22-mcp-server-and-client](active/PRP-22-mcp-server-and-client.md) |  | 3/5 (60%) | todo 1, in-progress 1, merged 3 | ? / ? | required |
 
 ## Backlog
 
