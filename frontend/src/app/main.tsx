@@ -6,6 +6,7 @@ import { copilotRoutes } from "../features/copilot";
 import { dashboardRoutes } from "../features/dashboards";
 import { mapRoutes } from "../features/map";
 import { mapTableRoutes } from "../features/map-table";
+import { mcpAdminRoutes } from "../features/mcp-admin";
 import { replayRoutes } from "../features/replay";
 import { reportsRoutes } from "../features/reports";
 import { reviewRoutes } from "../features/review";
@@ -52,6 +53,7 @@ const appRoutes = [
   ...mapTableRoutes,
   ...replayRoutes,
   ...reportsRoutes,
+  ...mcpAdminRoutes,
   ...copilotRoutes,
 ];
 

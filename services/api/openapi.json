@@ -837,6 +837,22 @@
         "title": "ApprovalDecision",
         "type": "object"
       },
+      "ApproveToolBody": {
+        "additionalProperties": false,
+        "description": "The hash the administrator reviewed; approval succeeds only if it is still current.",
+        "properties": {
+          "expected_hash": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Expected Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_hash"
+        ],
+        "title": "ApproveToolBody",
+        "type": "object"
+      },
       "AssignmentBody": {
         "additionalProperties": false,
         "description": "``null`` claims the item for the caller; a principal id assigns another reviewer.",
@@ -8076,6 +8092,29 @@
         "title": "Region",
         "type": "string"
       },
+      "RegisterServerBody": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "display_name"
+        ],
+        "title": "RegisterServerBody",
+        "type": "object"
+      },
       "RejectedItem": {
         "additionalProperties": false,
         "properties": {
@@ -9120,6 +9159,142 @@
         "title": "SeriesSummary",
         "type": "object"
       },
+      "ServerPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ServerPage",
+        "type": "object"
+      },
+      "ServerView": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_count": {
+            "title": "Approved Count",
+            "type": "integer"
+          },
+          "cloud": {
+            "title": "Cloud",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "manifest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Hash"
+          },
+          "pending_count": {
+            "title": "Pending Count",
+            "type": "integer"
+          },
+          "registered_at": {
+            "format": "date-time",
+            "title": "Registered At",
+            "type": "string"
+          },
+          "registered_by": {
+            "title": "Registered By",
+            "type": "string"
+          },
+          "revoked_count": {
+            "title": "Revoked Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_count": {
+            "title": "Tool Count",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "host",
+          "display_name",
+          "cloud",
+          "status",
+          "registered_by",
+          "registered_at",
+          "tool_count",
+          "pending_count",
+          "approved_count",
+          "revoked_count"
+        ],
+        "title": "ServerView",
+        "type": "object"
+      },
       "Service": {
         "additionalProperties": false,
         "description": "Service an agent or tool depends on (Azure service, SaaS, internal API, gateway). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
@@ -10126,6 +10301,70 @@
         "title": "SubscriptionScan",
         "type": "object"
       },
+      "SyncView": {
+        "additionalProperties": false,
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "manifest_hash": {
+            "title": "Manifest Hash",
+            "type": "string"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed",
+            "type": "array"
+          },
+          "revoked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Revoked",
+            "type": "array"
+          },
+          "server": {
+            "$ref": "#/components/schemas/ServerView"
+          },
+          "synced_at": {
+            "format": "date-time",
+            "title": "Synced At",
+            "type": "string"
+          },
+          "unchanged": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unchanged",
+            "type": "array"
+          }
+        },
+        "required": [
+          "server",
+          "added",
+          "changed",
+          "revoked",
+          "removed",
+          "unchanged",
+          "manifest_hash",
+          "synced_at"
+        ],
+        "title": "SyncView",
+        "type": "object"
+      },
       "TargetRef": {
         "additionalProperties": false,
         "description": "Reference to the resource an action changes or an audit record concerns. `canonical_id` uses the catalog grammar `cloud:customer:source:type:id` (Clarification 7); the pattern here mirrors it and the catalog/v1 grammar is authoritative. Python validator `validate_target_ref_matches_catalog_grammar` in tests/contracts/test_canonical_ids.py checks this pattern against the catalog ID corpus so the two cannot drift. The version being acted on is carried beside this object (ActionIntent.target_version), not inside it, so it is hashed as its own field.",
@@ -10382,6 +10621,104 @@
         "title": "Tool",
         "type": "object"
       },
+      "ToolChangeView": {
+        "additionalProperties": false,
+        "description": "Approved content (before) against the latest advertised content (after).",
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/ToolEntryView"
+          },
+          "before": {
+            "$ref": "#/components/schemas/ToolEntryView"
+          },
+          "description_changed": {
+            "title": "Description Changed",
+            "type": "boolean"
+          },
+          "input_schema_changed": {
+            "title": "Input Schema Changed",
+            "type": "boolean"
+          },
+          "output_schema_changed": {
+            "title": "Output Schema Changed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "before",
+          "after",
+          "description_changed",
+          "input_schema_changed",
+          "output_schema_changed"
+        ],
+        "title": "ToolChangeView",
+        "type": "object"
+      },
+      "ToolEntryView": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annotations"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "title": "Input Schema",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "tool_hash": {
+            "title": "Tool Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "input_schema",
+          "tool_hash"
+        ],
+        "title": "ToolEntryView",
+        "type": "object"
+      },
       "ToolInfo": {
         "additionalProperties": false,
         "properties": {
@@ -10410,6 +10747,162 @@
           }
         },
         "title": "ToolInfo",
+        "type": "object"
+      },
+      "ToolList": {
+        "additionalProperties": false,
+        "properties": {
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ToolView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "server_id": {
+            "title": "Server Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_id",
+          "items"
+        ],
+        "title": "ToolList",
+        "type": "object"
+      },
+      "ToolView": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Hash"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolChangeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_hash": {
+            "title": "Current Hash",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "entry": {
+            "$ref": "#/components/schemas/ToolEntryView"
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked By"
+          },
+          "revoked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked Reason"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "approved",
+              "revoked",
+              "removed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "enabled",
+          "current_hash",
+          "first_seen_at",
+          "last_seen_at",
+          "updated_at",
+          "entry"
+        ],
+        "title": "ToolView",
         "type": "object"
       },
       "TraceDetail": {
@@ -10813,6 +11306,41 @@
           "complete"
         ],
         "title": "UnknownRemainder",
+        "type": "object"
+      },
+      "UpdateServerBody": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "disabled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "UpdateServerBody",
         "type": "object"
       },
       "UtcTimestamp-Input": {
@@ -13200,6 +13728,465 @@
         "summary": "Get Viewport",
         "tags": [
           "map"
+        ]
+      }
+    },
+    "/api/v1/mcp/admin/servers": {
+      "get": {
+        "operationId": "list_servers_api_v1_mcp_admin_servers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^mcp-[0-9a-f]{32}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Servers",
+        "tags": [
+          "mcp-admin"
+        ]
+      },
+      "post": {
+        "operationId": "register_server_api_v1_mcp_admin_servers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterServerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Server",
+        "tags": [
+          "mcp-admin"
+        ]
+      }
+    },
+    "/api/v1/mcp/admin/servers/{server_id}": {
+      "get": {
+        "operationId": "get_server_api_v1_mcp_admin_servers__server_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Server",
+        "tags": [
+          "mcp-admin"
+        ]
+      },
+      "patch": {
+        "operationId": "update_server_api_v1_mcp_admin_servers__server_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateServerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Server",
+        "tags": [
+          "mcp-admin"
+        ]
+      }
+    },
+    "/api/v1/mcp/admin/servers/{server_id}/sync": {
+      "post": {
+        "operationId": "sync_server_api_v1_mcp_admin_servers__server_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Server",
+        "tags": [
+          "mcp-admin"
+        ]
+      }
+    },
+    "/api/v1/mcp/admin/servers/{server_id}/tools": {
+      "get": {
+        "operationId": "list_tools_api_v1_mcp_admin_servers__server_id__tools_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tools",
+        "tags": [
+          "mcp-admin"
+        ]
+      }
+    },
+    "/api/v1/mcp/admin/servers/{server_id}/tools/{tool_name}/approval": {
+      "delete": {
+        "operationId": "revoke_tool_api_v1_mcp_admin_servers__server_id__tools__tool_name__approval_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool_name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_.-]{1,128}$",
+              "title": "Tool Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "revoked_by_administrator",
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "^[^\\x00-\\x1f\\x7f]+$",
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Tool",
+        "tags": [
+          "mcp-admin"
+        ]
+      },
+      "post": {
+        "operationId": "approve_tool_api_v1_mcp_admin_servers__server_id__tools__tool_name__approval_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "server_id",
+            "required": true,
+            "schema": {
+              "pattern": "^mcp-[0-9a-f]{32}$",
+              "title": "Server Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool_name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_.-]{1,128}$",
+              "title": "Tool Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveToolBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Tool",
+        "tags": [
+          "mcp-admin"
         ]
       }
     },

@@ -5,6 +5,7 @@ import { actionsNavItems } from "../features/actions/routes";
 import { dashboardNavItems } from "../features/dashboards/routes";
 import { MAP_PATH } from "../features/map/paths";
 import { MAP_TABLE_PATH } from "../features/map-table/paths";
+import { mcpAdminNavItems } from "../features/mcp-admin/routes";
 import { OVERVIEW_PATH } from "../features/overview/paths";
 import { qualityNavItems } from "../features/quality/routes";
 import { reconciliationNavItems } from "../features/reconciliation/routes";
@@ -40,7 +41,12 @@ export function buildAppNavItems(): readonly NavItem[] {
       ...replayNavItems(),
     ]),
     ...inGroup("Quality", [...qualityNavItems(), ...recommendationNavItems()]),
-    ...inGroup("Governance", [...reviewNavItems(), ...actionsNavItems()]),
+    ...inGroup("Governance", [
+      ...reviewNavItems(),
+      ...actionsNavItems(),
+      // Cosmetic: the API requires config.manage on every MCP admin route.
+      ...mcpAdminNavItems(),
+    ]),
     ...inGroup("Reports", [{ to: `/${REPORTS_LIST_ROUTE}`, label: "Reports" }]),
   ];
 }
