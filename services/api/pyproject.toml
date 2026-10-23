@@ -10,6 +10,7 @@ dependencies = [
   "pydantic>=2.14,<3",
   "uvicorn>=0.54,<0.55",
   "httpx>=0.28,<0.29",
+  "mcp>=2.3,<2.4",
 ]
 
 [tool.uv.sources]

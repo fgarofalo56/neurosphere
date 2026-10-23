@@ -1,6 +1,8 @@
 ---
 name: prp-22-mcp-server-and-client
-status: backlog
+status: active
+started: 2026-10-22
+branch: prp-22-mcp-server-and-client
 review: required
 created: 2026-10-08
 model: opus
@@ -195,6 +197,25 @@ python -m pytest -m integration tests/security/mcp/test_client_server_roundtrip.
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-22 with four deltas signed off by the operator.
+
+- D1: step 0 (orchestrator, before any lane) adds `mcp>=2.3,<2.4` to `services/api/pyproject.toml` only (not root, not `packages/core`; `neurosphere_core.mcp` stays SDK-free), regenerates `uv.lock`, and resolves the licence gate. `mcp` -> `httpx2` -> `httpx2-jsfetch` 1.0 (marker `sys_platform == 'emscripten'`, never installed, so its licence is UNKNOWN locally). Operator decision: a cited, exact-version override map for platform-gated packages in `scripts/licenses_report.py` (PyPI `license_expression` BSD-3-Clause, retrieved 2026-10-22), plus regenerated `docs/licenses.md` and the ADR-0002 appendix.
+- D2: test folders are `packages/core/tests/mcp_core/` and `services/api/tests/mcp_api/` (not `mcp/`): `packages/core/tests/` has no `__init__.py`, so pytest prepend import mode would import a `tests/mcp/` package as top-level `mcp` and shadow the SDK. Test file basenames are unique across the repo.
+- D3: item 3 also owns the shared hookup files: `services/api/neurosphere_api/routers.py`, the `services/api/neurosphere_api/app.py` lifespan (MCP session manager), `services/api/openapi.json` regeneration, `.env.example`, `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, `frontend/tests/mock-api/`. Items 1 and 2 ship a `register(registry)` hook and do not edit `routers.py`. Item 3 therefore depends on items 1 and 2.
+- D4: `tests/security/mcp/test_client_server_roundtrip.py` runs in-process (ASGI transport) and is unmarked so CI runs it; a compose-backed run is OPEN unless run locally. No new permission constants: server registration and tool approval require the existing `config.manage`, audited.
+
+Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = item 4. Models: items 1, 2, 4 opus; item 3 sonnet; every item gets one reviewer pass; rework confirmation passes haiku.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 0 | in-progress | prp-22-mcp-server-and-client | opus | | 2026-10-22 |
+| 1 | todo | | opus | | 2026-10-22 |
+| 2 | todo | | opus | | 2026-10-22 |
+| 3 | todo | | sonnet | | 2026-10-22 |
+| 4 | todo | | opus | | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:
