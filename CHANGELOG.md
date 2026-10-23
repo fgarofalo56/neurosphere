@@ -152,6 +152,18 @@ All notable changes to this project are documented here. The format follows
   restore drill (`infra/dr/`) with a failover/failback runbook (`docs/ops/dr-runbook.md`).
   Compose-only measurements are bounded feasibility: the pilot missed its 1k events/s target
   (~240 events/s). Enterprise/stress runs, real failover and production restore stay OPEN (G07).
+- MCP server and client (PRP-22): an OAuth 2.1 resource server on the Python `mcp` 2.3 SDK
+  (spec 2026-07-28) with RFC 9728 metadata, an explicit `validate_token_resource=True`, a
+  separate MCP audience, per-call scope derivation and no token passthrough, exposing read
+  tools over the copilot tool registry plus draft/validate/present-confirmation/status action
+  tools (no MCP confirm; a human confirms). Streamable HTTP only
+  (`neurosphere_api.mcp.server`). An MCP client for administrator-registered HTTPS servers with
+  SSRF checks on every resolved address, connections pinned to the vetted IP, bounded and hashed
+  tool manifests, approve-before-use with revocation on hash change, and untrusted bounded
+  results (`neurosphere_core.mcp`, `neurosphere_api.mcp.client`). Admin API
+  `/api/v1/mcp/admin` and UI (`config.manage`, audited). Security suite in
+  `tests/security/mcp/`. Government MCP use and live Entra audience behaviour stay OPEN
+  (G01/G02); G08 stays NARROWED.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
