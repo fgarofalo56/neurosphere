@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-22-mcp-server-and-client](active/PRP-22-mcp-server-and-client.md) |  | 5/5 (100%) | merged 5 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -26,6 +24,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-10-23 | #110 |
 | [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
 | [prp-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-10-22 | #97 |
 | [prp-21-scale-federation-finops-and-dr](shipped/PRP-21-scale-federation-finops-and-dr.md) | 2026-10-22 | #103 |

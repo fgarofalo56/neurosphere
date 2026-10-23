@@ -1,6 +1,8 @@
 ---
 name: prp-22-mcp-server-and-client
-status: active
+status: shipped
+shipped: 2026-10-23
+pr: 110
 started: 2026-10-22
 branch: prp-22-mcp-server-and-client
 review: required
@@ -222,10 +224,46 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
 | 4 | merged | worktree-agent-a8323def95bf1f844 | opus | b59c250; orchestrator re-run: only tests/security/mcp/ (6) + the G08 line of docs/RESEARCH-AND-GATES.md touched; ruff + format clean, pyright 0 errors, security/mcp + security/injection + mcp_api + mcp_core 508 passed, no skip/xfail/integration markers; validate_planning PASS; Snyk Code 0 issues; suites: confused deputy 27, intent-hash parity 9, injection 3, roundtrip 6; corpus via external tool output 78/78 (65 deny, 13 abstain, 0 comply), 77 delivered as `ExternalToolResult`, 0 overscoped, 0 intents from tool output; self-reported: 13 `follow_instruction` abstains vacuous, 40 denies only because the tool does not exist over MCP; negative control: drafting bridge makes 12 cases comply; no product defect found; noted: external-server 401 surfaces as `dependency_transient`; reviewer APPROVED (real REST route + real MCP draft tool for parity, four confused-deputy cases on real paths, outcomes from observed behaviour not `case.expected`, negative control 12/12 comply for the right reason, roundtrip keeps SSRF pinning; reasons: 10 narrowed_to_scope, 5 scope_argument_refused, 40 tool_not_registered, 7 invalid_arguments, 13 vacuous abstains); follow-ups: map external 401/403 to `forbidden`/`mcp_auth_rejected` (retry-storm risk for a future retrying caller), catalog fake over-counts by-id lookups (over-reports only); orchestrator added the reviewer's honesty clause to the G08 row (only 15 cases exercise scope filtering for real); merge fd09dd1 | 2026-10-22 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Reviewer verdict (token passthrough, SSRF, confused deputy):
+- Date: 2026-10-23
+- Merged commits: PR #110, merge commit 5ab8570. Step 0 b220b0f. Item merges into `prp-22-mcp-server-and-client`: item 1 e8f298b (3efbba1), item 2 981a84e (2bbb4b7), item 3 c52f668 (723cd31), item 4 fd09dd1 (b59c250). G08 honesty clause 3e09b3f. CodeQL fix ec5f392. That commit carries the wrong message ("docs(prp-22): G08 row states which corpus cases exercise scope; board: item 4 merged") because the commit-message file write failed; its content is only the `mcp/admin/service.py` module-TypeVar fix. It was pushed before this was noticed and is not rewritten (no force-push).
+- Deviations from blueprint and why: D1-D6 in Execution state.
+  - D1: the dependency was added in step 0, plus a cited `PLATFORM_GATED` licence map for emscripten-only `httpx2-jsfetch`.
+  - D2: test folders are `mcp_core`/`mcp_api` so they do not shadow the SDK.
+  - D3/D6: item 3 owned the shared hookup files, including `authz/routes.py`.
+  - D4: the roundtrip runs in-process and unmarked.
+  - D5: there is no MCP confirm tool.
+  - CI round: CodeQL `py/uninitialized-local-variable` false positive on a PEP 695 type parameter used in a nested def, fixed with a module TypeVar.
+- Descoped items: none from the blueprint.
+  - Not done: the `.env.example` `NS_MCP_*` placeholders (`NS_MCP_RESOURCE_SERVER_URL`, `NS_MCP_AUDIENCES`, `NS_MCP_REQUIRED_SCOPE`, `NS_MCP_ALLOWED_HOSTS`). The file is permission-blocked for agents, so this is an operator action the operator has taken on.
+  - Not built: production app-state wiring of `configure_authz`, the MCP mount and the admin plane (#104). Until then MCP and admin return 503.
+- Reviewer verdict (token passthrough, SSRF, confused deputy): every item APPROVED in one pass with no blockers.
+  - Token passthrough: none. The verifier stores a redacted token, `VerifiedClaims` carries no token material, and this is tested statically and at runtime.
+  - SSRF: every resolved address is checked, the socket is pinned to the vetted IP with origin SNI, `trust_env=False`, and only the exact registered URL is allowed. A reviewer probe confirmed parser-differential bypasses are refused.
+  - Confused deputy: scope is re-derived per call. The four PRP cases are denied on real paths. The injection corpus through external tool output gave 78/78 (65 deny, 13 abstain) with 0 overscoped retrievals and 0 intents. Only 15 of those cases exercise scope filtering for real; 40 deny because the tool does not exist over MCP and 13 are vacuous. The G08 row says so.
+- Gates: `verify-gates -Mode full` passed (lint, typecheck, tests 7333 passed / 145 deselected, build). Licences PASS (612), validate_planning PASS, gitleaks over 12 commits clean, Snyk Code 0 issues apart from one accepted Medium (CORS `*` on the public RFC 9728 metadata, same as the SDK). PR #110 CI is green (21 pass, 2 push-only skips).
 - Open gates (Government MCP, G08 spec drift):
-- Follow-ups (private-network MCP servers):
+  - Government MCP use and live Entra audience behaviour: OPEN (G01/G02, no live test).
+  - G08 stays NARROWED; the MCP spec revision will move.
+  - The compose-backed roundtrip did not run (in-process only).
+  - The Cosmos MCP registry store is tested only against a fake container, not the emulator.
+- Follow-ups (private-network MCP servers), filed as #111 (server), #112 (client), #113 (admin and tests), #114 (deployment-scoped admin role) and #115 (private-network MCP servers):
+  - Private-network MCP servers: a per-server SSRF override is not built.
+  - A deployment-scoped admin role. MCP admin uses `config.manage` held in any domain.
+  - Server:
+    - Derive scope on `tools/list` and `resources/list`.
+    - OPTIONS preflight on the metadata route.
+    - A time component in the derived idempotency key.
+  - Client:
+    - Block `::ffff:0:0:0/96` and `5f00::/16`.
+    - Replace the IDNA2003 host normalisation.
+    - Check credential header names for CR/LF.
+    - Record the list/call TOCTOU in the threat model.
+    - Test the GET SSE stream path.
+    - Map an upstream 401/403 to `forbidden`/`mcp_auth_rejected` instead of `dependency_transient`.
+  - Admin:
+    - Tie the `/mcp` exemption to the MCP endpoint, not just the path.
+    - A per-tool audit record (old/new hash) on sync revocation.
+    - Audit blocked-hostname registrations.
+    - Remove the silent `list(limit=500)` cap.
+    - Pin 403 in `test_admin.py`.
+  - Tests: the catalog fake over-counts by-id lookups.
