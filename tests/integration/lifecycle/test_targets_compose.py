@@ -48,6 +48,14 @@ class _CosmosDocs:
         out: list[Mapping[str, Any]] = [d async for d in items if after is None or d["id"] > after]
         return out[:limit]
 
+    async def page_by_subject(
+        self, subject_id: str, limit: int, after: str | None
+    ) -> list[Mapping[str, Any]]:
+        query = "SELECT * FROM c WHERE c.subject_id = @s ORDER BY c.id"
+        items = self._c.query_items(query, parameters=[{"name": "@s", "value": subject_id}])
+        out: list[Mapping[str, Any]] = [d async for d in items if after is None or d["id"] > after]
+        return out[:limit]
+
     async def redact_subject(self, record_id: str) -> None:
         doc = dict(await self._c.read_item(item=record_id, partition_key="p"))
         doc["subject_id"] = None

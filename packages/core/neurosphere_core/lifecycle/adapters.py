@@ -40,6 +40,12 @@ class DocumentBackend(Protocol):
         self, data_class: str, limit: int, after: str | None
     ) -> list[Mapping[str, Any]]: ...
 
+    async def page_by_subject(
+        self, subject_id: str, limit: int, after: str | None
+    ) -> list[Mapping[str, Any]]:
+        """Documents whose ``subject_id`` matches, ordered by id, after ``after``."""
+        ...
+
     async def redact_subject(self, record_id: str) -> None: ...
 
     async def project(self, record_id: str) -> Mapping[str, Any]: ...
@@ -76,6 +82,11 @@ class BackendTarget:
         self, *, data_class: str, limit: int, after: str | None
     ) -> list[TargetRecord]:
         return [_record(d) for d in await self._backend.page(data_class, limit, after)]
+
+    async def list_by_subject(
+        self, subject_id: str, *, limit: int, after: str | None
+    ) -> list[TargetRecord]:
+        return [_record(d) for d in await self._backend.page_by_subject(subject_id, limit, after)]
 
     async def delete(self, record_id: str) -> None:
         await self._backend.remove(record_id)
@@ -184,6 +195,13 @@ class ConversationTarget:
         self, *, data_class: str, limit: int, after: str | None
     ) -> list[TargetRecord]:
         return []
+
+    async def list_by_subject(
+        self, subject_id: str, *, limit: int, after: str | None
+    ) -> list[TargetRecord]:
+        # The store is owner-scoped and cannot be enumerated by subject. Never answer "none":
+        # the engine treats this as possibly-held and defers a subject erasure.
+        raise CapabilityUnavailableError("subject_enumeration_unsupported")
 
     async def delete(self, record_id: str) -> None:
         parts = self._split(record_id)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from neurosphere_core.errors import CapabilityUnavailableError
 from neurosphere_core.lifecycle.models import LegalHold, TargetRecord
 from neurosphere_core.lifecycle.targets import QueuedRequest
 
@@ -23,6 +24,8 @@ class InMemoryTarget:
         self.records: dict[str, TargetRecord] = {}
         self.content: dict[str, dict[str, Any]] = {}
         self.delete_calls = 0
+        #: Simulates a store that cannot enumerate its records by subject.
+        self.cannot_enumerate_subjects = False
 
     def put(self, record: TargetRecord, content: Mapping[str, Any] | None = None) -> None:
         self.records[record.record_id] = record
@@ -35,6 +38,16 @@ class InMemoryTarget:
         self, *, data_class: str, limit: int, after: str | None
     ) -> list[TargetRecord]:
         ids = sorted(i for i, r in self.records.items() if r.data_class == data_class)
+        if after is not None:
+            ids = [i for i in ids if i > after]
+        return [self.records[i] for i in ids[:limit]]
+
+    async def list_by_subject(
+        self, subject_id: str, *, limit: int, after: str | None
+    ) -> list[TargetRecord]:
+        if self.cannot_enumerate_subjects:
+            raise CapabilityUnavailableError("subject_enumeration_unsupported")
+        ids = sorted(i for i, r in self.records.items() if r.subject_id == subject_id)
         if after is not None:
             ids = [i for i in ids if i > after]
         return [self.records[i] for i in ids[:limit]]

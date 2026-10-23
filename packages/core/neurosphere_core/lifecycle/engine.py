@@ -25,7 +25,7 @@ from neurosphere_core.audit.builders import (
 )
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.audit.repository import AuditRepository, run_audited_mutation
-from neurosphere_core.errors import CapabilityUnavailableError
+from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
 from neurosphere_core.lifecycle.holds import matching_holds
 from neurosphere_core.lifecycle.models import (
     ActionKind,
@@ -55,6 +55,7 @@ from neurosphere_core.scope import IdentityScope
 
 Clock = Callable[[], datetime]
 Cloud = Literal["commercial", "government"]
+_PAGE: Final = 200
 _SLUG: Final = re.compile(r"[^a-z0-9._-]+")
 
 
@@ -196,6 +197,7 @@ class LifecycleEngine:
         reason: str,
         initial: bool,
         not_before: datetime | None = None,
+        hold_ids: list[str] | None = None,
     ) -> LifecycleOutcome:
         item = QueuedRequest(
             request=request,
@@ -207,6 +209,22 @@ class LifecycleEngine:
         )
         if initial and await self._queue.enqueue(item):
             await self._denied(ctx, request, record, reason)
+            # The denial reason is a short machine code, so each blocking hold is named by its own
+            # denied record whose subject is the hold.
+            for hold_id in hold_ids or ():
+                await self._audit.append(
+                    self._chain,
+                    build_denied(
+                        self._ctx(ctx, f"lifecycle.{request.action.value}"),
+                        code="forbidden",
+                        reason=reason,
+                        subject=make_subject(
+                            self._canonical("legal_hold", hold_id, hold_id),
+                            "legal_hold",
+                            state_digest=None,
+                        ),
+                    ),
+                )
         return self._outcome(
             request,
             JobStatus.QUEUED,
@@ -238,7 +256,32 @@ class LifecycleEngine:
                 return self._outcome(request, JobStatus.NOT_DUE, "target_absent")
         # Rule 2: legal hold.
         holds = await self._holds.active()
-        if matching_holds(holds, ref=ref, record=record, subject_id=request.subject_id):
+        direct = matching_holds(holds, ref=ref, record=record, subject_id=request.subject_id)
+        if request.action is ActionKind.ERASE_SUBJECT:
+            # Erasing the mapping destroys the means to re-identify held data, so any hold on any
+            # record of the subject blocks it (rule 2 outranks rule 4); fail closed if unknown.
+            held_ids, unenumerable = await self._erase_blockers(request.subject_id or "", holds)
+            ids = sorted({h.hold_id for h in direct} | set(held_ids))
+            if ids:
+                return await self._defer(
+                    request,
+                    ctx,
+                    record,
+                    rule=Rule.LEGAL_HOLD,
+                    reason="legal_hold",
+                    initial=initial,
+                    hold_ids=ids,
+                )
+            if unenumerable:
+                return await self._defer(
+                    request,
+                    ctx,
+                    record,
+                    rule=Rule.LEGAL_HOLD,
+                    reason="subject_records_unenumerable",
+                    initial=initial,
+                )
+        elif direct:
             return await self._defer(
                 request, ctx, record, rule=Rule.LEGAL_HOLD, reason="legal_hold", initial=initial
             )
@@ -251,7 +294,10 @@ class LifecycleEngine:
         now = self._clock()
         if request.action is ActionKind.ERASE_SUBJECT:
             return await self._execute_erase(request, ctx)
-        assert record is not None and target is not None and ref is not None
+        if record is None or target is None or ref is None:
+            raise InvalidSchemaError(
+                "lifecycle request has no resolvable target", reason="no_target"
+            )
         rule = policy.rule_for(record.data_class)
         if rule is None:
             return await self._defer(
@@ -280,6 +326,38 @@ class LifecycleEngine:
         if request.action is ActionKind.PSEUDONYMIZE:
             return await self._execute_pseudonymize(request, ctx, target, ref, record)
         return await self._execute_delete(request, ctx, target, ref, record, Rule.SUBJECT_REQUEST)
+
+    async def _erase_blockers(
+        self, subject_id: str, holds: list[LegalHold]
+    ) -> tuple[list[str], bool]:
+        """Ids of active holds covering any record of ``subject_id`` across registered targets.
+
+        The second value is True when some target could not enumerate the subject's records
+        (possibly held). With no active holds nothing can be held, so nothing is enumerated.
+        """
+        if not holds:
+            return [], False
+        found: set[str] = set()
+        unenumerable = False
+        for target in self._targets.targets():
+            after: str | None = None
+            try:
+                while True:
+                    page = await target.list_by_subject(subject_id, limit=_PAGE, after=after)
+                    for rec in page:
+                        ref = TargetRef(
+                            target_kind=target.target_kind,
+                            container=target.container,
+                            record_id=rec.record_id,
+                        )
+                        matched = matching_holds(holds, ref=ref, record=rec, subject_id=subject_id)
+                        found.update(h.hold_id for h in matched)
+                    if len(page) < _PAGE:
+                        break
+                    after = page[-1].record_id
+            except CapabilityUnavailableError:
+                unenumerable = True
+        return sorted(found), unenumerable
 
     async def _refuse(
         self, request: LifecycleRequest, ctx: AuditContext, record: TargetRecord | None, reason: str

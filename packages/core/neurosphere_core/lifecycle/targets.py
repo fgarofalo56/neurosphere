@@ -36,6 +36,16 @@ class LifecycleTarget(Protocol):
         """Bounded page of records of ``data_class`` ordered by record id, after ``after``."""
         ...
 
+    async def list_by_subject(
+        self, subject_id: str, *, limit: int, after: str | None
+    ) -> list[TargetRecord]:
+        """Bounded page of records belonging to ``subject_id`` ordered by record id.
+
+        Used to check legal holds before a subject erasure. A target that cannot enumerate by
+        subject raises ``CapabilityUnavailableError``; the engine then fails closed (defers).
+        """
+        ...
+
     async def delete(self, record_id: str) -> None: ...
 
     async def pseudonymize(self, record_id: str) -> None:
