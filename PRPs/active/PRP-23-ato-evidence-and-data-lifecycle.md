@@ -208,15 +208,16 @@ Plan approved 2026-10-23 with six deltas signed off by the operator.
 - D4: inventory source date is read from file content (a `retrieved`/`observed` field or a date in the path), else `undated`; never mtime or git history.
 - D5: `check_statements.py` also flags affirmative claims (authorization, ATO granted, parity, certification date, compliance percentage), allowing negated forms. This is the measurement for the PRP exit criterion.
 - D6: the orchestrator records G06 and G02 OPEN in `docs/RESEARCH-AND-GATES.md` at close-out, after all merges.
+- D7 (2026-10-23, operator decision after item 1 review): a legal hold on any record containing a subject's data also blocks erasing that subject's pseudonym mapping; the erase is queued and audited until no such hold remains, and a target that cannot enumerate a subject's records fails closed (deferred, distinct reason). One rework round on item 1; merge order becomes 2, 4, 3, 1.
 
 Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orchestrator reruns the collector twice and proves `git diff --exit-code docs/evidence/inventory.md`. Models: implementers sonnet; one sonnet reviewer per item; rework confirmation haiku.
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 retention-policy-engine | todo | | sonnet | | 2026-10-23 |
-| 2 control-narratives | todo | | sonnet | | 2026-10-23 |
-| 3 evidence-inventory-automation | todo | | sonnet | | 2026-10-23 |
-| 4 boundary-and-contingency | todo | | sonnet | | 2026-10-23 |
+| 1 retention-policy-engine | review | worktree-agent-a34c8294c39b9a2e1 | sonnet | da8360a + orchestrator fix d7794ea (pyright error in integration test the lane did not typecheck); re-ran ruff, pyright 0 errors, pytest 51 passed; integration pending compose | 2026-10-23 |
+| 2 control-narratives | merge-ready | worktree-agent-ad7723b24c20973c0 | sonnet | 094d904; orchestrator re-ran ruff, pyright, pytest 38 passed, sentence grep empty; reviewer APPROVED (no blockers) | 2026-10-23 |
+| 3 evidence-inventory-automation | merge-ready | worktree-agent-a6c368d9b1727037e | sonnet | 47ffba0; orchestrator re-ran ruff, pyright, pytest 40 passed 1 skipped (plans absent), collector idempotent, check_statements PASS on items 2 and 4 docs; reviewer APPROVED (no blockers) | 2026-10-23 |
+| 4 boundary-and-contingency | merge-ready | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) | 2026-10-23 |
 
 ## Completion note (filled at ship)
 - Date:

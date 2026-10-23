@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-23-ato-evidence-and-data-lifecycle](active/PRP-23-ato-evidence-and-data-lifecycle.md) |  | 0/4 (0%) | todo 4 | ? / ? | required |
+| [prp-23-ato-evidence-and-data-lifecycle](active/PRP-23-ato-evidence-and-data-lifecycle.md) |  | 0/4 (0%) | review 1 | ? / ? | required |
 
 ## Backlog
 
