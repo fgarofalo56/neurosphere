@@ -1,0 +1,68 @@
+flowchart TB
+  subgraph GOV["Azure Government boundary - customer-hosted deployment A"]
+    direction TB
+    GU["Users and operators"] --> GI["Entra ID Government endpoint"]
+    GI --> GE["Ingress and APIM"]
+    subgraph GAPP["NeuroSphere workloads: API, workers, action executor, MCP"]
+      GA["API with server-side IdentityScope"]
+      GW["Ingestion and projection workers"]
+      GX["Durable action executor"]
+    end
+    GE --> GA
+    GA --> GX
+    subgraph GDATA["Government data services"]
+      GEH["Event Hubs"]
+      GC["Cosmos DB catalog, outbox, ledger"]
+      GS["AI Search"]
+      GB["Blob: redacted archive, quarantine, checkpoints"]
+      GAU["Append-only audit store"]
+    end
+    GW --> GEH
+    GW --> GC
+    GW --> GB
+    GA --> GC
+    GA --> GS
+    GX --> GAU
+    GA --> GAU
+    GKV["Key Vault and managed identity"] -.-> GAPP
+    GAN["Analytics adapter: Fabric or Synapse or Databricks where available"]
+    GA --> GAN
+    GM["Approved Government model endpoint"]
+    GA --> GM
+  end
+
+  subgraph COM["Azure Commercial boundary - customer-hosted deployment B (separate)"]
+    direction TB
+    CU["Users and operators"] --> CI["Entra ID Commercial endpoint"]
+    CI --> CE["Ingress and APIM"]
+    subgraph CAPP["NeuroSphere workloads: API, workers, action executor, MCP"]
+      CA["API with server-side IdentityScope"]
+      CW["Ingestion and projection workers"]
+      CX["Durable action executor"]
+    end
+    CE --> CA
+    CA --> CX
+    subgraph CDATA["Commercial data services"]
+      CEH["Event Hubs"]
+      CC["Cosmos DB catalog, outbox, ledger"]
+      CS["AI Search"]
+      CB["Blob: redacted archive, quarantine, checkpoints"]
+      CAU["Append-only audit store"]
+    end
+    CW --> CEH
+    CW --> CC
+    CW --> CB
+    CA --> CC
+    CA --> CS
+    CX --> CAU
+    CA --> CAU
+    CKV["Key Vault and managed identity"] -.-> CAPP
+    CAN["Analytics adapter: Fabric or Synapse or Databricks where available"]
+    CA --> CAN
+    CM["Approved Commercial model endpoint"]
+    CA --> CM
+  end
+
+  subgraph SBX["Synthetic sandbox - isolated, synthetic data only"]
+    SG["Sandbox generator, seeded"] --> SS["Sandbox stores and fixtures"]
+  end

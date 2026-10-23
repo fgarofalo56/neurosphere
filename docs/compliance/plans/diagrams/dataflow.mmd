@@ -1,0 +1,32 @@
+flowchart LR
+  subgraph EXT["Outside the boundary: telemetry sources"]
+    SRC["OTel SDKs and authorized provider connectors"]
+  end
+  subgraph B["One cloud boundary (drawn once; instantiated separately per cloud)"]
+    direction LR
+    EDGE["Ingest edge: authenticate producer, redact"] --> EH["Event Hubs"]
+    EH --> NORM["Validate, normalize, deduplicate"]
+    NORM --> ARC["Redacted archive"]
+    NORM --> QUA["Quarantine container"]
+    NORM --> LED["Cost ledger and outbox in Cosmos"]
+    NORM --> CAT["Catalog evidence in Cosmos"]
+    NORM --> HOT["Bounded hot aggregates"]
+    CAT --> IDX["AI Search index, rebuildable"]
+    USR["User or MCP client"] --> AUTHN["Entra authentication"]
+    AUTHN --> API["API: IdentityScope derived server-side"]
+    API --> CAT
+    API --> IDX
+    API --> HOT
+    API --> LED
+    API --> EXEC["Durable action executor: confirm, recheck, approve, verify"]
+    EXEC --> TGT["Supported target connector"]
+    EXEC --> AUD["Append-only audit store"]
+    API --> AUD
+    NORM --> AUD
+    LC["Lifecycle engine: retention, hold, export, deletion"] --> ARC
+    LC --> CAT
+    LC --> LED
+    LC -. "refuses: audit is never targeted" .-> AUD
+    API --> MODEL["Approved model endpoint in same cloud"]
+  end
+  SRC --> EDGE
