@@ -1,6 +1,8 @@
 ---
 name: prp-23-ato-evidence-and-data-lifecycle
-status: backlog
+status: active
+started: 2026-10-23
+branch: prp-23-ato-evidence-and-data-lifecycle
 review: required
 created: 2026-10-08
 model: sonnet
@@ -195,6 +197,26 @@ The two collection runs followed by `git diff --exit-code` after staging the fir
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-23 with six deltas signed off by the operator.
+
+- D1: worker tests live in `services/workers/tests/lifecycle_worker/` (not `lifecycle/`) so they do not shadow `packages/core/tests/lifecycle/` in one pytest session.
+- D2: the conversation target adapter is written against a structural protocol inside the lifecycle package; `neurosphere_core` may not import `neurosphere_api`. Wiring the API `ConversationStore` into a running worker, and worker registration/deployment (runtime, Helm), are follow-ups.
+- D3: item 4 renders plan diagrams with `pnpm dlx @mermaid-js/mermaid-cli@12.0.0` directly; `scripts/render_mermaid.py` is fixed to the five `docs/ARCHITECTURE.md` blocks and is not owned here.
+- D4: inventory source date is read from file content (a `retrieved`/`observed` field or a date in the path), else `undated`; never mtime or git history.
+- D5: `check_statements.py` also flags affirmative claims (authorization, ATO granted, parity, certification date, compliance percentage), allowing negated forms. This is the measurement for the PRP exit criterion.
+- D6: the orchestrator records G06 and G02 OPEN in `docs/RESEARCH-AND-GATES.md` at close-out, after all merges.
+
+Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orchestrator reruns the collector twice and proves `git diff --exit-code docs/evidence/inventory.md`. Models: implementers sonnet; one sonnet reviewer per item; rework confirmation haiku.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 retention-policy-engine | todo | | sonnet | | 2026-10-23 |
+| 2 control-narratives | todo | | sonnet | | 2026-10-23 |
+| 3 evidence-inventory-automation | todo | | sonnet | | 2026-10-23 |
+| 4 boundary-and-contingency | todo | | sonnet | | 2026-10-23 |
 
 ## Completion note (filled at ship)
 - Date:

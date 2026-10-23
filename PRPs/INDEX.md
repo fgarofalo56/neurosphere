@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-23-ato-evidence-and-data-lifecycle](active/PRP-23-ato-evidence-and-data-lifecycle.md) |  | 0/4 (0%) | todo 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) |  |  | - | - | ? / ? | required |
 | [prp-24-themes-sandbox-mode-and-accessibility](backlog/PRP-24-themes-sandbox-mode-and-accessibility.md) |  |  | - | - | ? / ? | none |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
