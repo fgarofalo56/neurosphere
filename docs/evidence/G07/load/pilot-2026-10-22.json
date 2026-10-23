@@ -1,0 +1,220 @@
+{
+  "schema_version": "1.0",
+  "profile": "pilot",
+  "evidence_for": "pilot",
+  "not_evidence_for": [
+    "enterprise",
+    "stress"
+  ],
+  "environment_label": "compose (emulators), bounded feasibility only - not capacity evidence (G12)",
+  "date": "2026-10-22",
+  "started_at": "2026-10-22T23:56:58Z",
+  "git_sha": "4337d5bcd1f93eb4e0c2222f32a7046bd901a8df",
+  "method": "locust headless (isolated uv env, locust pinned in requirements.txt); API = local uvicorn (1 worker) from neurosphere_api.main:create with the ingest edge; sink = Event Hubs emulator from docker compose; synthetic events only; latency is per POST (a batch of events)",
+  "target_host_name": "127.0.0.1",
+  "profile_definition": {
+    "source": "docs/PRD.md section 3 (scale profiles); PRP-21 item 1",
+    "note": "Provisional planning targets from the PRD, measured not guaranteed. The p95 bound has no ingest-specific PRD figure; it reuses the 2 s dashboard planning target as a placeholder.",
+    "agents": 1000,
+    "sustained_events_per_second": 1000.0,
+    "burst_events_per_second": null,
+    "entities": null,
+    "relationships": null,
+    "subject_to": null,
+    "catalog_scale_driven_by_this_suite": false
+  },
+  "run_parameters": {
+    "users": 100,
+    "duration_seconds_requested": 60,
+    "batch_size": 25,
+    "domains": 20,
+    "skew_multiple": 50.0,
+    "hot_domain_weight_over_median": 50.0,
+    "fan_out_width": 25,
+    "producers": 4,
+    "multi_domain_sources": 8,
+    "scenario_weights": {
+      "baseline_skew": 60,
+      "hot_key": 10,
+      "fan_out": 10,
+      "multi_domain": 10,
+      "otlp_traces": 10
+    },
+    "overrides_of_profile_defaults": []
+  },
+  "measured": {
+    "duration_seconds": 59.712,
+    "requests": 618,
+    "events_sent": 15450,
+    "events_accepted": 14350,
+    "events_rejected_by_edge": 0,
+    "events_in_failed_requests": 1100,
+    "achieved_events_per_second": 240.32,
+    "offered_events_per_second": 258.74,
+    "achieved_requests_per_second": 10.35,
+    "error_ratio": 0.071197,
+    "error_counts_by_type": {
+      "no_response_connection_or_timeout": 44
+    },
+    "latency_ms": {
+      "p50": 8700.0,
+      "p95": 30000.0,
+      "p99": 30000.0,
+      "max": 30101.822900003754
+    },
+    "distinct_agents_emitted": 1001
+  },
+  "thresholds": [
+    {
+      "name": "achieved_events_per_second",
+      "operator": ">=",
+      "threshold": 1000.0,
+      "measured": 240.32,
+      "passed": false,
+      "provisional": true
+    },
+    {
+      "name": "error_ratio",
+      "operator": "<=",
+      "threshold": 0.01,
+      "measured": 0.071197,
+      "passed": false,
+      "provisional": true
+    },
+    {
+      "name": "request_latency_p95_ms",
+      "operator": "<=",
+      "threshold": 2000.0,
+      "measured": 30000.0,
+      "passed": false,
+      "provisional": true
+    }
+  ],
+  "thresholds_all_passed": false,
+  "scenarios": {
+    "baseline_skew": {
+      "requests": 369,
+      "events_accepted": 9225,
+      "latency_ms": {
+        "p50": 6800.0,
+        "p95": 9800.0,
+        "p99": 9800.0,
+        "max": 14132.070799998473
+      }
+    },
+    "fan_out": {
+      "requests": 71,
+      "events_accepted": 1775,
+      "latency_ms": {
+        "p50": 6800.0,
+        "p95": 9700.0,
+        "p99": 9800.0,
+        "max": 9827.766000002157
+      }
+    },
+    "hot_key": {
+      "requests": 66,
+      "events_accepted": 1650,
+      "latency_ms": {
+        "p50": 6800.0,
+        "p95": 9800.0,
+        "p99": 13000.0,
+        "max": 13153.843400010373
+      }
+    },
+    "multi_domain": {
+      "requests": 44,
+      "events_accepted": 0,
+      "latency_ms": {
+        "p50": 30000.0,
+        "p95": 30000.0,
+        "p99": 30000.0,
+        "max": 30101.822900003754
+      }
+    },
+    "otlp_traces": {
+      "requests": 68,
+      "events_accepted": 1700,
+      "latency_ms": {
+        "p50": 8300.0,
+        "p95": 9700.0,
+        "p99": 9800.0,
+        "max": 9826.963600004092
+      }
+    }
+  },
+  "domains": {
+    "count": 20,
+    "unattributed_events": 1700,
+    "median_events_per_domain": 237.5,
+    "hottest_domain": "dom-0000",
+    "hottest_domain_events": 9205,
+    "hottest_over_median": 38.76,
+    "hottest_domain_accepted": 8422,
+    "hottest_domain_failed": 783,
+    "events_failed_all_other_domains": 317,
+    "top_domains": [
+      {
+        "domain": "dom-0000",
+        "sent": 9205,
+        "accepted": 8422,
+        "failed": 783
+      },
+      {
+        "domain": "dom-0013",
+        "sent": 260,
+        "accepted": 244,
+        "failed": 16
+      },
+      {
+        "domain": "dom-0009",
+        "sent": 256,
+        "accepted": 240,
+        "failed": 16
+      },
+      {
+        "domain": "dom-0004",
+        "sent": 254,
+        "accepted": 233,
+        "failed": 21
+      },
+      {
+        "domain": "dom-0014",
+        "sent": 252,
+        "accepted": 239,
+        "failed": 13
+      }
+    ]
+  },
+  "environment_notes": {
+    "api": "local uvicorn process, 1 worker, NS_ENV=local (not the compose api container: it has no ingest producers configured)",
+    "sink": "Event Hubs emulator (docker compose), hub 'telemetry', 4 partitions",
+    "edge_limiter": "product defaults (20 rps per producer, burst 40)",
+    "host": "Windows 11, 32 logical CPUs, Python 3.12.13",
+    "client_and_server_share_host": true,
+    "consumer_running": false,
+    "endpoints_exercised": [
+      "/v1/ingest/events",
+      "/v1/ingest/otlp/traces"
+    ],
+    "endpoints_not_exercised": [
+      "/v1/ingest/otlp/metrics"
+    ]
+  },
+  "emulator_limits": {
+    "documented": [
+      "Event Hubs emulator: one namespace, ten hubs, no persistence, SAS only (no Entra); partition and consumer-group scale cannot be inferred from it.",
+      "Cosmos DB vNext emulator: no RU accounting, so no request-unit capacity is measured."
+    ],
+    "observed_in_this_run": [
+      "Achieved 240.32 accepted events/s against a 1000.0 events/s target on one single-worker local API and one Event Hubs emulator (a ceiling of this setup, not of the product).",
+      "Errors observed (count by type): no_response_connection_or_timeout=44. 503 is the edge's retryable dependency error (emulator publish failure); 429 is the per-producer edge limiter.",
+      "Not observable on the emulator: persistence across restart, partition-count and consumer-group scale, RU accounting, Entra auth.",
+      "API log error lines (top 3): 1x Exception in callback _ProactorBasePipeTransport._call_connection_lost(None); 1x ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host"
+    ]
+  },
+  "open": [
+    "G07 stays OPEN: this run is bounded feasibility on emulators, not capacity evidence.",
+    "Enterprise and stress profiles are operator-run at a sized environment (not run)."
+  ]
+}
