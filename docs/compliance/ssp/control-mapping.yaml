@@ -1,0 +1,637 @@
+# NIST SP 800-53 Rev 5 control mapping for NeuroSphere (PRP-23 item 2).
+#
+# Fixed header block
+#   scope: engineering mapping of NeuroSphere features to NIST SP 800-53 Rev 5 control families.
+#     Baseline (Low/Moderate/High) is NOT selected here; it is a customer/agency input (see scope.md).
+#     FedRAMP and DoD scope are tracked separately in scope.md and never merged into this mapping.
+#   status vocabulary: designed, implemented_tested, inherited, customer, planned, not_applicable
+#   statement: not FedRAMP authorized; the authorizing official decides
+#
+# Rules enforced by tests/compliance/test_control_mapping.py:
+#   - every entry has a status from the vocabulary and at least one implementing PRP id
+#   - designed / implemented_tested / inherited entries cite evidence paths that exist
+#   - planned / customer entries name an owner
+#   - inherited entries cite docs/compliance/responsibility-matrix.md and say inherited controls
+#     do not automatically authorize this application
+#   - no affirmative claim of compliance or authorization anywhere in the text
+
+statement: "not FedRAMP authorized; the authorizing official decides"
+scope: >-
+  Engineering mapping of NeuroSphere features to NIST SP 800-53 Rev 5 control families. The
+  control baseline is a customer/agency input and is not selected here.
+baseline: "customer input, OPEN (see docs/compliance/ssp/scope.md)"
+catalog: "NIST SP 800-53 Rev 5"
+status_vocabulary:
+  - designed
+  - implemented_tested
+  - inherited
+  - customer
+  - planned
+  - not_applicable
+status_meaning:
+  designed: "A design or configuration exists in the repository; no test proves the behaviour."
+  implemented_tested: "Implemented in the repository with automated tests that exercise it."
+  inherited: "Provided by the cloud platform; see the responsibility matrix. Not an authorization of this application."
+  customer: "The customer owns the control; NeuroSphere supplies inputs only."
+  planned: "Not yet built or documented; an owner is named."
+  not_applicable: "Does not apply to this application; rationale is recorded."
+inheritance_reference: docs/compliance/responsibility-matrix.md
+inheritance_caveat: >-
+  Inherited controls do not automatically authorize this application. A service in a FedRAMP or
+  DoD audit-scope listing is not an authorization of this workload.
+
+families:
+  AC: Access Control
+  AT: Awareness and Training
+  AU: Audit and Accountability
+  CA: Assessment, Authorization, and Monitoring
+  CM: Configuration Management
+  CP: Contingency Planning
+  IA: Identification and Authentication
+  IR: Incident Response
+  MA: Maintenance
+  PE: Physical and Environmental Protection
+  PL: Planning
+  PM: Program Management
+  PS: Personnel Security
+  PT: PII Processing and Transparency
+  RA: Risk Assessment
+  SA: System and Services Acquisition
+  SC: System and Communications Protection
+  SI: System and Information Integrity
+  SR: Supply Chain Risk Management
+
+controls:
+  # ---------------------------------------------------------------- AC
+  - id: AC-2
+    title: Account Management
+    status: customer
+    prps: [PRP-06]
+    owner: "Customer identity team (Entra tenant, role assignments, privileged-access process)"
+    narrative: >-
+      Accounts and role assignments live in the customer Entra tenant. NeuroSphere consumes
+      validated tokens and derives IdentityScope server-side; it does not create or manage
+      accounts. Privileged roles are scoped and time-bound, never an unrestricted bypass.
+    evidence: [packages/core/neurosphere_core/scope/identity_scope.py]
+  - id: AC-3
+    title: Access Enforcement
+    status: implemented_tested
+    prps: [PRP-06, PRP-22]
+    narrative: >-
+      Authorization is enforced at every query, tool, export, push and action path using a
+      server-derived IdentityScope. Caller- or model-supplied domain or customer identifiers are
+      ignored. Hidden navigation is not authorization; the API denies.
+    evidence:
+      - tests/security/authz/test_api_paths.py
+      - tests/security/authz/test_export_paths.py
+      - tests/security/authz/test_search_paths.py
+      - tests/security/mcp/test_confused_deputy.py
+  - id: AC-4
+    title: Information Flow Enforcement
+    status: implemented_tested
+    prps: [PRP-12, PRP-20]
+    narrative: >-
+      Government profiles carry an egress allowlist with no Commercial endpoint, and Government
+      data is never bridged to Commercial. Compose-level egress is tested; the in-cluster proof
+      of no Commercial egress is OPEN (see docs/RESEARCH-AND-GATES.md, G02).
+    evidence:
+      - tests/security/egress/test_allowlist_no_commercial.py
+      - tests/security/egress/test_compose_egress_blocked.py
+  - id: AC-5
+    title: Separation of Duties
+    status: designed
+    prps: [PRP-17]
+    narrative: >-
+      Governed actions pass a human-in-the-loop approval policy; the requester and approver
+      roles are distinct in the HITL authorization module.
+    evidence: [packages/core/neurosphere_core/hitl/authz.py]
+  - id: AC-6
+    title: Least Privilege
+    status: implemented_tested
+    prps: [PRP-06]
+    narrative: >-
+      Privileged users receive scoped permissions with an expiry. Tests assert that privileged
+      roles do not bypass domain scoping.
+    evidence: [tests/security/authz/test_privileged_roles.py]
+  - id: AC-17
+    title: Remote Access
+    status: customer
+    prps: [PRP-20]
+    owner: "Customer network and security team (connectivity to agency networks, VPN, firewall)"
+    narrative: >-
+      Remote access paths into the customer-hosted deployment are customer network design.
+      NeuroSphere ships private-endpoint network configuration and network policy only.
+    evidence: [infra/helm/templates/networkpolicy.yaml]
+  # ---------------------------------------------------------------- AT
+  - id: AT-2
+    title: Literacy Training and Awareness
+    status: customer
+    prps: [PRP-12]
+    owner: "Customer security awareness program"
+    narrative: >-
+      Training of operators and administrators is a customer program. Engineering runbooks
+      exist for secret handling and incident response.
+    evidence: [docs/security/runbooks/README.md]
+  # ---------------------------------------------------------------- AU
+  - id: AU-2
+    title: Event Logging
+    status: implemented_tested
+    prps: [PRP-06]
+    narrative: >-
+      Authorization decisions, actions and approvals emit structured audit records through a
+      single audit writer interface.
+    evidence:
+      - packages/core/neurosphere_core/audit/builders.py
+      - services/api/tests/audit/test_audit_routes.py
+      - services/workers/tests/action_executor/test_audit_phases.py
+  - id: AU-3
+    title: Content of Audit Records
+    status: implemented_tested
+    prps: [PRP-01, PRP-06]
+    narrative: >-
+      Audit records follow a versioned schema with principal (pseudonymous), action, target,
+      outcome and chain hash. Invalid shapes are rejected by contract examples.
+    evidence:
+      - packages/contracts/schemas/audit/v1/audit-record.schema.json
+      - packages/core/tests/audit/test_redaction_scan.py
+  - id: AU-6
+    title: Audit Record Review, Analysis, and Reporting
+    status: customer
+    prps: [PRP-06]
+    owner: "Customer security operations (SIEM, review cadence)"
+    narrative: >-
+      Review and alerting are customer SIEM processes. NeuroSphere provides an export hook.
+    evidence: [packages/core/neurosphere_core/audit/siem.py]
+  - id: AU-9
+    title: Protection of Audit Information
+    status: implemented_tested
+    prps: [PRP-06]
+    narrative: >-
+      Audit records are append-only and hash-chained. Tests assert immutability and chain
+      verification. The lifecycle engine (PRP-23 item 1) is specified to refuse any action on
+      audit data.
+    evidence:
+      - packages/core/tests/audit/test_chain.py
+      - packages/core/tests/audit/test_immutability.py
+  - id: AU-10
+    title: Non-repudiation
+    status: designed
+    prps: [PRP-06, PRP-17]
+    narrative: >-
+      Action intents are hashed and the same hash is carried across button, chat, REST and MCP
+      paths, so an approved action can be tied to the audited execution.
+    evidence:
+      - packages/core/neurosphere_core/actions/hashing.py
+      - tests/security/mcp/test_intent_hash_parity.py
+  - id: AU-11
+    title: Audit Record Retention
+    status: planned
+    prps: [PRP-23]
+    owner: "PRP-23 lifecycle engine (mechanism); customer records policy (retention periods, gate G06)"
+    narrative: >-
+      Retention periods are a customer input and no built-in values are shipped. The mechanism
+      that keeps audit records out of deletion scope is planned under PRP-23 item 1.
+    evidence: []
+  - id: AU-12
+    title: Audit Record Generation
+    status: implemented_tested
+    prps: [PRP-06, PRP-17]
+    narrative: >-
+      The API and the action executor write audit records for each phase of an action.
+    evidence:
+      - services/api/tests/authz/test_audit_mount.py
+      - services/workers/tests/action_executor/test_audit_phases.py
+  # ---------------------------------------------------------------- CA
+  - id: CA-2
+    title: Control Assessments
+    status: customer
+    prps: [PRP-12]
+    owner: "Customer assessor / security team"
+    narrative: >-
+      Assessment is performed by the customer or its assessor. NeuroSphere supplies the threat
+      model, scan output and test evidence as inputs.
+    evidence: [docs/security/threat-model.md]
+  - id: CA-3
+    title: Information Exchange
+    status: designed
+    prps: [PRP-12]
+    narrative: >-
+      Trust boundaries and data flows for each external exchange (model endpoint, connectors,
+      MCP, analytics adapters) are modelled with STRIDE per boundary.
+    evidence: [docs/security/threat-model.md, docs/ARCHITECTURE.md]
+  - id: CA-5
+    title: Plan of Action and Milestones
+    status: designed
+    prps: [PRP-23]
+    narrative: >-
+      A POA&M template is provided. It carries no pre-filled completion dates; entries are made
+      by the customer.
+    evidence: [docs/compliance/poam.md]
+  - id: CA-6
+    title: Authorization
+    status: customer
+    prps: [PRP-20, PRP-23]
+    owner: "Customer authorizing official"
+    narrative: >-
+      The authorization decision belongs to the customer authorizing official. NeuroSphere
+      makes no claim of authorization and promises no certification date.
+    evidence: [docs/compliance/responsibility-matrix.md]
+  - id: CA-7
+    title: Continuous Monitoring
+    status: planned
+    prps: [PRP-23]
+    owner: "PRP-23 item 4 (continuous monitoring plan); customer ISSO (execution)"
+    narrative: >-
+      The continuous monitoring plan is produced by PRP-23 item 4 and is not yet in the
+      repository. Scan workflows already run in CI (see RA-5).
+    evidence: []
+  - id: CA-8
+    title: Penetration Testing
+    status: customer
+    prps: [PRP-12]
+    owner: "Customer security team or independent assessor"
+    narrative: >-
+      Penetration testing of a deployed instance is customer-scheduled. Adversarial corpora
+      (injection, confused deputy, SSRF) run in CI.
+    evidence: [tests/security/injection/test_harness_negative_control.py]
+  # ---------------------------------------------------------------- CM
+  - id: CM-2
+    title: Baseline Configuration
+    status: designed
+    prps: [PRP-08, PRP-13]
+    narrative: >-
+      Helm values and Bicep parameters define the deployed baseline, with a separate Government
+      values file.
+    evidence: [infra/helm/values.yaml, infra/helm/values-government.yaml]
+  - id: CM-3
+    title: Configuration Change Control
+    status: implemented_tested
+    prps: [PRP-13, PRP-00]
+    narrative: >-
+      Changes land through reviewed pull requests with CI gates; releases are tag-driven and the
+      release workflow is tested.
+    evidence: [docs/release/release-process.md, tests/release/test_release_workflow.py]
+  - id: CM-6
+    title: Configuration Settings
+    status: designed
+    prps: [PRP-20]
+    narrative: >-
+      Government profiles disable options that the capability matrix cannot verify, with a
+      reason, instead of substituting Commercial services.
+    evidence: [infra/helm/values-government.yaml, packages/core/neurosphere_core/capabilities/validate.py]
+  - id: CM-7
+    title: Least Functionality
+    status: implemented_tested
+    prps: [PRP-19, PRP-12]
+    narrative: >-
+      The copilot has bounded structured tools only; arbitrary generated SQL, Cypher or
+      JavaScript is not executed, and charts are a sandboxed declarative subset.
+    evidence: [packages/core/neurosphere_core/charts/validator.py, tests/security/injection/test_corpus_schema.py]
+  - id: CM-8
+    title: System Component Inventory
+    status: designed
+    prps: [PRP-12, PRP-13]
+    narrative: >-
+      A CycloneDX SBOM is produced and attached to released images. The indexed evidence
+      inventory is planned under PRP-23 item 3.
+    evidence: [.github/workflows/security.yml, docs/evidence/PRP-13/release-v0.1.0-rc.1.md]
+  # ---------------------------------------------------------------- CP
+  - id: CP-2
+    title: Contingency Plan
+    status: planned
+    prps: [PRP-23]
+    owner: "PRP-23 item 4 (plan document); customer system owner (approval)"
+    narrative: >-
+      The contingency plan is produced by PRP-23 item 4 and is not yet in the repository. It
+      will cite measured DR results and will not restate targets as guarantees.
+    evidence: []
+  - id: CP-4
+    title: Contingency Plan Testing
+    status: designed
+    prps: [PRP-21]
+    narrative: >-
+      A restore drill ran against the local emulator only. Live Azure DR measurements remain
+      OPEN (gate G07).
+    evidence: [docs/evidence/G07/dr/README.md, docs/evidence/G07/dr/restore-drill-compose-2026-10-22.json]
+  - id: CP-9
+    title: System Backup
+    status: designed
+    prps: [PRP-21]
+    narrative: >-
+      The DR runbook documents backup and restore. Event Hubs metadata geo-DR copies neither
+      payloads nor RBAC.
+    evidence: [docs/ops/dr-runbook.md, infra/dr/README.md]
+  - id: CP-10
+    title: System Recovery and Reconstitution
+    status: designed
+    prps: [PRP-21]
+    narrative: >-
+      Recovery steps are in the DR runbook; recovery targets are measured per drill and are not
+      guarantees.
+    evidence: [docs/ops/dr-runbook.md, docs/ops/slo.md]
+  # ---------------------------------------------------------------- IA
+  - id: IA-2
+    title: Identification and Authentication (Organizational Users)
+    status: inherited
+    prps: [PRP-06, PRP-20]
+    narrative: >-
+      User authentication and MFA are operated by Microsoft Entra ID in the customer tenant, as
+      recorded in docs/compliance/responsibility-matrix.md. NeuroSphere validates tokens
+      (issuer, audience, signature). Inherited controls do not automatically authorize this
+      application.
+    evidence: [docs/compliance/responsibility-matrix.md, packages/core/neurosphere_core/auth/jwt/validator.py]
+  - id: IA-5
+    title: Authenticator Management
+    status: designed
+    prps: [PRP-12]
+    narrative: >-
+      No secrets in files, prompts or logs. Vault references and managed identity are used in
+      production; a rotation runbook exists. A dev issuer is allowed only when NS_ENV=local.
+    evidence: [docs/security/runbooks/secret-rotation.md, docs/security/runbooks/key-vault-references.md]
+  - id: IA-9
+    title: Service Identification and Authentication
+    status: designed
+    prps: [PRP-07, PRP-22]
+    narrative: >-
+      Service-to-service calls use managed identity; MCP tokens are audience-checked and are
+      not passed through to other services.
+    evidence: [tests/security/mcp/test_confused_deputy.py, docs/security/runbooks/key-vault-references.md]
+  # ---------------------------------------------------------------- IR
+  - id: IR-4
+    title: Incident Handling
+    status: designed
+    prps: [PRP-12]
+    narrative: >-
+      A credential-leak response runbook and an incident response plan cover the repository,
+      build pipeline and a customer-hosted instance.
+    evidence: [docs/security/runbooks/credential-leak-response.md]
+  - id: IR-6
+    title: Incident Reporting
+    status: customer
+    prps: [PRP-12]
+    owner: "Customer incident lead and reporting chain"
+    narrative: >-
+      External reporting obligations belong to the customer. The engineering plan names the
+      internal incident lead and severity levels only.
+    evidence: [docs/security/runbooks/incident-response-plan.md]
+  - id: IR-8
+    title: Incident Response Plan
+    status: designed
+    prps: [PRP-12, PRP-23]
+    narrative: >-
+      The engineering incident response plan exists; the customer-facing ATO plan set under
+      docs/compliance/plans/ is planned under PRP-23 item 4.
+    evidence: [docs/security/runbooks/incident-response-plan.md]
+  # ---------------------------------------------------------------- MA
+  - id: MA-2
+    title: Controlled Maintenance
+    status: inherited
+    prps: [PRP-20]
+    narrative: >-
+      Platform maintenance is performed by the cloud provider; see
+      docs/compliance/responsibility-matrix.md. Inherited controls do not automatically
+      authorize this application. Application maintenance follows CM-3.
+    evidence: [docs/compliance/responsibility-matrix.md]
+  # ---------------------------------------------------------------- PE
+  - id: PE-2
+    title: Physical Access Authorizations
+    status: inherited
+    prps: [PRP-20]
+    narrative: >-
+      Datacenter physical controls are the cloud provider's, per
+      docs/compliance/responsibility-matrix.md. Inherited controls do not automatically
+      authorize this application.
+    evidence: [docs/compliance/responsibility-matrix.md]
+  # ---------------------------------------------------------------- PL
+  - id: PL-2
+    title: System Security and Privacy Plans
+    status: customer
+    prps: [PRP-23]
+    owner: "Customer ISSO / system owner (owns the SSP)"
+    narrative: >-
+      The SSP is owned by the customer. These narratives are source material for it.
+    evidence: [docs/compliance/ssp/scope.md]
+  - id: PL-8
+    title: Security and Privacy Architectures
+    status: designed
+    prps: [PRP-01, PRP-12]
+    narrative: >-
+      The architecture document and diagrams show trust boundaries, and the threat model is
+      keyed to them.
+    evidence: [docs/ARCHITECTURE.md, docs/diagrams/01-component-trust-boundaries.svg]
+  - id: PL-10
+    title: Baseline Selection
+    status: customer
+    prps: [PRP-23]
+    owner: "Customer authorizing official and agency (Low/Moderate/High baseline)"
+    narrative: >-
+      Baseline selection is not made by NeuroSphere. It is recorded as an OPEN customer input.
+    evidence: [docs/compliance/ssp/scope.md]
+  # ---------------------------------------------------------------- PM
+  - id: PM-5
+    title: System Inventory
+    status: planned
+    prps: [PRP-23]
+    owner: "PRP-23 item 3 (evidence inventory automation)"
+    narrative: >-
+      The indexed evidence inventory is produced by PRP-23 item 3 and is not yet in the
+      repository.
+    evidence: []
+  # ---------------------------------------------------------------- PS
+  - id: PS-3
+    title: Personnel Screening
+    status: customer
+    prps: [PRP-20]
+    owner: "Customer personnel security office"
+    narrative: Screening of customer personnel is outside the application.
+    evidence: []
+  # ---------------------------------------------------------------- PT
+  - id: PT-2
+    title: Authority to Process Personally Identifiable Information
+    status: customer
+    prps: [PRP-07]
+    owner: "Customer privacy officer (privacy policy for real ingestion; gate G06)"
+    narrative: >-
+      Real ingestion is permitted only with authorized connectors and a customer privacy
+      policy. People are pseudonymized, and prompt and response bodies are off by default.
+    evidence: [packages/core/neurosphere_core/payload/guard.py]
+  - id: PT-3
+    title: Personally Identifiable Information Processing Purposes
+    status: planned
+    prps: [PRP-23]
+    owner: "Customer privacy officer (purposes and lawful basis); PRP-23 item 1 (export filtering)"
+    narrative: >-
+      Lawful-basis handling for export is specified under PRP-23 item 1 and not yet in the
+      repository.
+    evidence: []
+  # ---------------------------------------------------------------- RA
+  - id: RA-2
+    title: Security Categorization
+    status: customer
+    prps: [PRP-23]
+    owner: "Customer data owner / authorizing official (data classification, gate G06)"
+    narrative: >-
+      Classification is a customer input. A missing classification is treated as restricted.
+    evidence: [docs/compliance/ssp/scope.md]
+  - id: RA-3
+    title: Risk Assessment
+    status: designed
+    prps: [PRP-12]
+    narrative: >-
+      A STRIDE threat model covers each trust boundary and records open items.
+    evidence: [docs/security/threat-model.md]
+  - id: RA-5
+    title: Vulnerability Monitoring and Scanning
+    status: implemented_tested
+    prps: [PRP-12, PRP-13]
+    narrative: >-
+      Trivy, Grype, CodeQL and secret scanning run in CI, with images scanned on every pull
+      request. Local proof against a known-vulnerable image is recorded.
+    evidence:
+      - .github/workflows/security.yml
+      - .github/workflows/codeql.yml
+      - docs/evidence/prp-12-supply-chain/local-scan-evidence.md
+  # ---------------------------------------------------------------- SA
+  - id: SA-3
+    title: System Development Life Cycle
+    status: designed
+    prps: [PRP-00]
+    narrative: >-
+      Work follows PRPs with declared file ownership, gates and architecture decision records.
+    evidence: [docs/adr/0003-harness-orchestrated-prp-kit.md, docs/DECISIONS-LOG.md]
+  - id: SA-11
+    title: Developer Testing and Evaluation
+    status: implemented_tested
+    prps: [PRP-00, PRP-12]
+    narrative: >-
+      CI runs unit, contract, security and release tests; no failure is suppressed with
+      `|| true`, and the planning validator checks this.
+    evidence: [.github/workflows/ci.yml, scripts/validate_planning.py]
+  - id: SA-4
+    title: Acquisition Process
+    status: customer
+    prps: [PRP-20]
+    owner: "Customer acquisition and contracting office"
+    narrative: Procurement terms for the platform services in use are customer-owned.
+    evidence: [docs/evidence/G02/register.yaml]
+  # ---------------------------------------------------------------- SC
+  - id: SC-5
+    title: Denial-of-service Protection
+    status: planned
+    prps: [PRP-21]
+    owner: "Customer platform team (edge protection); PRP-21 follow-up (load limits)"
+    narrative: >-
+      Load tests exist, but edge denial-of-service protection is customer platform design and
+      is not asserted here.
+    evidence: []
+  - id: SC-7
+    title: Boundary Protection
+    status: implemented_tested
+    prps: [PRP-12, PRP-20]
+    narrative: >-
+      Bicep modules use private endpoints, and network policy is rendered and tested. Gaps
+      (in-cluster egress proof) are listed as OPEN.
+    evidence:
+      - tests/security/network/test_bicep_network.py
+      - tests/security/network/test_networkpolicy_render.py
+  - id: SC-8
+    title: Transmission Confidentiality and Integrity
+    status: designed
+    prps: [PRP-12]
+    narrative: >-
+      Transport protection is defined per boundary in the threat model; TLS termination is
+      configured through the ingress template.
+    evidence: [infra/helm/templates/ingress.yaml, docs/security/threat-model.md]
+  - id: SC-12
+    title: Cryptographic Key Establishment and Management
+    status: inherited
+    prps: [PRP-20]
+    narrative: >-
+      Key custody is the platform vault and the customer, per
+      docs/compliance/responsibility-matrix.md. Options that need customer-managed keys are
+      disabled where a service lacks them. Inherited controls do not automatically authorize
+      this application.
+    evidence: [docs/compliance/responsibility-matrix.md, docs/security/runbooks/key-vault-references.md]
+  - id: SC-18
+    title: Mobile Code
+    status: implemented_tested
+    prps: [PRP-19]
+    narrative: >-
+      Generated charts are a declarative subset (no expressions, signals or external data) and
+      render in a sandboxed iframe.
+    evidence: [packages/core/neurosphere_core/charts/validator.py, packages/core/tests/charts]
+  - id: SC-28
+    title: Protection of Information at Rest
+    status: inherited
+    prps: [PRP-20]
+    narrative: >-
+      Encryption at rest is a platform service capability, per
+      docs/compliance/responsibility-matrix.md. Inherited controls do not automatically
+      authorize this application.
+    evidence: [docs/compliance/responsibility-matrix.md, docs/evidence/G02/register.yaml]
+  # ---------------------------------------------------------------- SI
+  - id: SI-2
+    title: Flaw Remediation
+    status: designed
+    prps: [PRP-12, PRP-13]
+    narrative: >-
+      Dependency updates are automated and image scans gate pull requests.
+    evidence: [.github/dependabot.yml, .github/workflows/security.yml]
+  - id: SI-4
+    title: System Monitoring
+    status: designed
+    prps: [PRP-05, PRP-21]
+    narrative: >-
+      Self-observability and SLO dashboards are defined. Alert routing is customer-owned.
+    evidence: [infra/observability/grafana-slo-dashboard.json, docs/ops/slo.md]
+  - id: SI-7
+    title: Software, Firmware, and Information Integrity
+    status: implemented_tested
+    prps: [PRP-06, PRP-13]
+    narrative: >-
+      The audit chain detects tampering, and release images are signed with cosign with an SBOM
+      attestation.
+    evidence: [packages/core/tests/audit/test_chain.py, docs/evidence/PRP-13/release-v0.1.0-rc.1.md]
+  - id: SI-10
+    title: Information Input Validation
+    status: implemented_tested
+    prps: [PRP-01, PRP-12]
+    narrative: >-
+      Inputs are validated against versioned contracts, and an injection corpus is run against
+      the copilot tools.
+    evidence:
+      - packages/contracts/schemas/audit/v1/audit-record.schema.json
+      - tests/security/injection/test_corpus_schema.py
+  - id: SI-12
+    title: Information Management and Retention
+    status: planned
+    prps: [PRP-23]
+    owner: "PRP-23 item 1 (lifecycle engine); customer records officer (retention periods, gate G06)"
+    narrative: >-
+      Policy-driven retention, pseudonymization, deletion, export and legal hold are specified
+      under PRP-23 item 1 with fail-closed defaults. They are not cited as evidence until
+      merged and tested.
+    evidence: []
+  # ---------------------------------------------------------------- SR
+  - id: SR-3
+    title: Supply Chain Controls and Processes
+    status: implemented_tested
+    prps: [PRP-12, PRP-13]
+    narrative: >-
+      Scanner versions are pinned by checksum, base images by digest, and licences are gated.
+    evidence: [docs/adr/0002-stack-pins.md, .github/workflows/security.yml, docs/licenses.md]
+  - id: SR-4
+    title: Provenance
+    status: implemented_tested
+    prps: [PRP-13]
+    narrative: >-
+      Released images carry a cosign signature and a syft CycloneDX SBOM attestation, verified
+      in the release workflow.
+    evidence: [docs/evidence/PRP-13/release-v0.1.0-rc.1.md, tests/release/test_release_workflow.py]
+  - id: SR-11
+    title: Component Authenticity
+    status: designed
+    prps: [PRP-13]
+    narrative: >-
+      Consumers verify image signatures using the documented procedure.
+    evidence: [docs/release/verify.md]
