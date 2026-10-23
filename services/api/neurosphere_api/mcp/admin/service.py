@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, TypeVar
 
 from neurosphere_contracts.audit.v1.audit_record import Subject
 from neurosphere_core.audit import (
@@ -43,6 +43,10 @@ from pydantic import BaseModel
 from neurosphere_api.mcp.client import ExternalMcpClient
 
 __all__ = ["CHAIN_SUFFIX", "McpAdminPlane", "McpAdminService", "audit_chain_id"]
+
+# A module TypeVar, not a PEP 695 parameter: CodeQL reads a PEP 695 parameter used in a nested
+# function annotation as an uninitialized local (py/uninitialized-local-variable, PR #110).
+_T = TypeVar("_T")
 
 CHAIN_SUFFIX: Final = "mcp-admin"
 _DETAIL_OK: Final = re.compile(r"^[a-z][a-z0-9_.:=-]{0,127}$")
@@ -100,21 +104,21 @@ class McpAdminService:
         }
         return make_subject(canonical, entity, target_version=target.tool_hash, state=state)
 
-    async def _audited[T](
+    async def _audited(
         self,
         scope: IdentityScope,
         correlation_id: str,
         target: _Target,
-        mutate: Callable[[], Awaitable[T]],
+        mutate: Callable[[], Awaitable[_T]],
         *,
         success_detail: str,
-        result_hash: Callable[[T], str | None],
-    ) -> T:
+        result_hash: Callable[[_T], str | None],
+    ) -> _T:
         ctx = AuditContext.from_scope(
             scope, correlation_id=correlation_id, operation=target.operation, channel="rest"
         )
 
-        def after(result: T) -> AuditDraft:
+        def after(result: _T) -> AuditDraft:
             done = target.model_copy(update={"tool_hash": result_hash(result)})
             return build_after(
                 ctx,
