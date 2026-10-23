@@ -144,6 +144,14 @@ All notable changes to this project are documented here. The format follows
   and compose no-Commercial-egress tests; gated G02 AKS and App Service profile scripts. Live
   Government runs, in-cluster egress proof and agency ATO stay OPEN (no Government
   subscription, D7).
+- Scale, federation, FinOps and DR (PRP-21): locust pilot/enterprise/stress load profiles with
+  skew, hot-key and fan-out scenarios (`tests/load/profiles/`); per-domain admission control
+  library (`neurosphere_core.admission`); scope-filtered, same-cloud federation summaries
+  (`/api/v1/federation`); a trend cost forecast that cites its price version and keeps
+  estimated, invoiced and unknown apart (`/api/v1/finops`); per-store backup/restore and a
+  restore drill (`infra/dr/`) with a failover/failback runbook (`docs/ops/dr-runbook.md`).
+  Compose-only measurements are bounded feasibility: the pilot missed its 1k events/s target
+  (~240 events/s). Enterprise/stress runs, real failover and production restore stay OPEN (G07).
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

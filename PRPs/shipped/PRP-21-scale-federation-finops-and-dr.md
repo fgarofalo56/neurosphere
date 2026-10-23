@@ -1,10 +1,12 @@
 ---
 name: prp-21-scale-federation-finops-and-dr
-status: active
+status: shipped
 review: none
 created: 2026-10-08
 started: 2026-10-22
 branch: prp-21-scale-federation-finops-dr
+shipped: 2026-10-22
+pr: 103
 model: sonnet
 phase: 4
 ns: NS-07, NS-08
@@ -231,10 +233,43 @@ Enterprise and stress profile runs are operator-run against a sized environment 
 | 6 | merged | worktree-agent-a077ee7635c89fb38 | sonnet | 13df179, merge 530f804; verify ruff/pyright clean, openapi drift+app+authz+federation+finops 223/223, no component renames; routes 503 until app.state is populated (follow-up) | 2026-10-22 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-22
+- Merged commits: PR #103 (merge 6b43d63). Item 2: 7b92eac (merge 13929dd). Item 3: efec383 (merge c517691). Item 4: c3d6962 (merge 1a115d8). Item 6: 13df179 (merge 530f804). Item 1: 4337d5b + 06f95f9 (merge bf74d84). Item 5: 66a5c41 + 80324a2 (merge 1f25d38). Local `verify-gates -Mode full` PASS (lint, typecheck, 6890 tests, build); CI on PR #103 all 21 checks green.
 - Deviations from blueprint and why:
-- Descoped items:
-- Measured values (pilot rate and p95, restore time, recovery point gap) with environment label:
-- Enterprise/stress/failover runs: date and operator approval, or OPEN:
-- Follow-ups (admission wiring, ADR-0002 locust licence row):
+  - Item 6 (wiring of `routers.py` and `openapi.json`) was added at plan approval, because no blueprint item owned the router registry. The `openapi.json` regeneration was additive, with no component renames.
+  - Test dirs were renamed to `services/api/tests/federation_api/`, `services/workers/tests/federation_worker/` and `services/api/tests/finops_api/` (`test_finops_unknown_not_zero.py`). This avoids pytest top-level package clashes.
+  - Locust is kept out of `uv.lock`. It is pinned in `tests/load/profiles/requirements.txt` and run as an isolated `uv run` subprocess, because importing it gevent-monkeypatches the pytest process. `locustfile.py` carries a file-level pyright `reportMissingImports=false`.
+  - Item 5 ran after item 1 because both share the single compose stack, whose project name is fixed.
+  - Item 1:
+    - The pilot drives a local single-worker uvicorn with the ingest edge, because the compose `api` container has no ingest producers configured.
+    - The 2 s ingest p95 threshold is a placeholder borrowed from the dashboard target, because the PRD has no ingest figure.
+    - `/otlp/metrics` and the read side of permission-heavy users are not driven; the latter is modelled as a producer with 8 sources.
+  - Item 2: the core library mirrors the problem+json rendering, because core may not import services (import-boundary test).
+  - Item 3:
+    - The federation summary is a plain async function, not a `Worker` subclass, because the runtime base is a checkpointed batch loop.
+    - The author flagged scope-leak points, so it got one focused review (Clarification 1): APPROVED.
+  - Item 5:
+    - Search "restore" is a rebuild into the in-process `FixtureSearchIndex`, because compose has no search emulator.
+    - Archive blobs are synthetic gzip, not written through the archive sink.
+    - The event-data path is documented as archive replay; the drill does not replay through a live pipeline.
+- Descoped items: none.
+- Measured values (environment-labelled, never guarantees):
+  - Pilot load, compose (emulators), bounded feasibility only (G12). It FAILED the 1k events/s planning target:
+    - 100 users: ~240 accepted events/s, 7.1% errors (timeouts), request p95 ~30 s.
+    - 20 users: ~185 events/s, 0% errors, p95 ~11 s.
+    - The hot domain ran at ~38.5x the median (`docs/evidence/G07/load/`).
+  - Restore drill, "compose, not representative of production": all 8 stores restored with counts and hashes matching (`docs/evidence/G07/dr/`, `docs/ops/dr-runbook.md`).
+    - Total restore time ~5.0 s. Per store: cost-ledger 1.81 s, outbox 1.67 s, catalog 0.28 s, aggregates 0.32 s, archive 0.49 s, quarantine 0.35 s, checkpoints 0.07 s, search rebuild 0.01 s.
+    - Recovery point gap 2.2 s. This follows from the drill's chosen interval, not a backup cadence.
+    - RTO 4 h and RPO 15 min appear only as provisional targets.
+  - FinOps backtest: sandbox in-memory ledger, synthetic seed 7. OLS trend with a 95% band, price version cited, estimated and invoiced kept separate (`docs/evidence/G07/finops/`).
+- Enterprise/stress/failover runs: OPEN. No operator approval and no sized environment (`NS_LIVE_APPROVED=1` not set).
+  - Also OPEN: real Event Hubs failover/failback, data geo-replication (Government unverified, G01), production-sized restore, Azure AI Search rebuild, live-pipeline replay, and real invoiced-cost evidence.
+  - The `integration`-marked pilot and drill suites ran locally only; that marker does not run in CI. G07 status unchanged (OPEN).
+  - The G12 emulator ceilings observed in the pilot are recorded in the load evidence JSON. The G12 row itself was not edited, because it was outside ownership.
+- Follow-ups: #104, #105, #106, #107, #108.
+  - #104: populate `app.state` so the federation, finops and dashboards routes serve rather than 503 in the real app.
+  - #105: admission wiring into the ingest edge and query services, plus a policy source.
+  - #106: federation review follow-ups.
+  - #107: ADR-0002 locust row, ingest latency target, load coverage, forecast band, DR packaging.
+  - #108: G07 operator-run evidence.

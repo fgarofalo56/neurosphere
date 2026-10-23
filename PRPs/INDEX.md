@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-21-scale-federation-finops-and-dr](active/PRP-21-scale-federation-finops-and-dr.md) |  | 6/6 (100%) | merged 6 | ? / ? | none |
+_none_
 
 ## Backlog
 
@@ -29,6 +27,7 @@ _none_
 |---|---|---|
 | [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
 | [prp-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-10-22 | #97 |
+| [prp-21-scale-federation-finops-and-dr](shipped/PRP-21-scale-federation-finops-and-dr.md) | 2026-10-22 | #103 |
 | [prp-28-ui-shell-and-usability](shipped/PRP-28-ui-shell-and-usability.md) | 2026-10-22 | #90 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-10-21 | #83 |
 | [prp-18-live-map-and-session-replay](shipped/PRP-18-live-map-and-session-replay.md) | 2026-10-21 | #85 |
