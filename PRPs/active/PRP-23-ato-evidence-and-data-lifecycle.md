@@ -214,10 +214,10 @@ Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orche
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 retention-policy-engine | review | worktree-agent-a34c8294c39b9a2e1 | sonnet | da8360a + orchestrator fix d7794ea (pyright error in integration test the lane did not typecheck); re-ran ruff, pyright 0 errors, pytest 51 passed; integration pending compose | 2026-10-23 |
-| 2 control-narratives | merge-ready | worktree-agent-ad7723b24c20973c0 | sonnet | 094d904; orchestrator re-ran ruff, pyright, pytest 38 passed, sentence grep empty; reviewer APPROVED (no blockers) | 2026-10-23 |
-| 3 evidence-inventory-automation | merge-ready | worktree-agent-a6c368d9b1727037e | sonnet | 47ffba0; orchestrator re-ran ruff, pyright, pytest 40 passed 1 skipped (plans absent), collector idempotent, check_statements PASS on items 2 and 4 docs; reviewer APPROVED (no blockers) | 2026-10-23 |
-| 4 boundary-and-contingency | merge-ready | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) | 2026-10-23 |
+| 1 retention-policy-engine | merged | worktree-agent-a34c8294c39b9a2e1 + rework worktree-agent-ae16b1ae8efb4cd90 | sonnet | da8360a, orchestrator fix d7794ea, D7 rework 8341575; reviewer APPROVED, haiku confirmed D7 + assert fix RESOLVED; merged 4c863e8; post-merge 137 passed, integration 1 passed (compose), Snyk 0 | 2026-10-23 |
+| 2 control-narratives | merged | worktree-agent-ad7723b24c20973c0 | sonnet | 094d904; orchestrator re-ran ruff, pyright, pytest 38 passed, sentence grep empty; reviewer APPROVED (no blockers) ; merged 8f00239, tests/compliance green post-merge | 2026-10-23 |
+| 3 evidence-inventory-automation | merged | worktree-agent-a6c368d9b1727037e | sonnet | 47ffba0; orchestrator re-ran ruff, pyright, pytest 40 passed 1 skipped (plans absent), collector idempotent, check_statements PASS on items 2 and 4 docs; reviewer APPROVED (no blockers) ; merged 8c4e8bf, 79 passed 0 skipped post-merge, inventory regenerated missing 0 and idempotent | 2026-10-23 |
+| 4 boundary-and-contingency | merged | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) ; merged ea7f3f9, diagram test collects real plans post-merge | 2026-10-23 |
 
 ## Completion note (filled at ship)
 - Date:
