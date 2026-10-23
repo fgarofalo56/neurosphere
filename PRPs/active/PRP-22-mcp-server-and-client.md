@@ -207,13 +207,15 @@ Plan approved 2026-10-22 with four deltas signed off by the operator.
 - D3: item 3 also owns the shared hookup files: `services/api/neurosphere_api/routers.py`, the `services/api/neurosphere_api/app.py` lifespan (MCP session manager), `services/api/openapi.json` regeneration, `.env.example`, `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, `frontend/tests/mock-api/`. Items 1 and 2 ship a `register(registry)` hook and do not edit `routers.py`. Item 3 therefore depends on items 1 and 2.
 - D4: `tests/security/mcp/test_client_server_roundtrip.py` runs in-process (ASGI transport) and is unmarked so CI runs it; a compose-backed run is OPEN unless run locally. No new permission constants: server registration and tool approval require the existing `config.manage`, audited.
 
+- D5 (2026-10-22, orchestrator, security-narrowing reading of clarification 8): MCP action tools are draft (intent channel `mcp`), validate, present-confirmation and status. There is no MCP confirm tool: over MCP the caller is the agent, so "a model cannot confirm its own draft" means a human confirms in the UI or REST with the bound confirmation hash.
+
 Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = item 4. Models: items 1, 2, 4 opus; item 3 sonnet; every item gets one reviewer pass; rework confirmation passes haiku.
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 0 | in-progress | prp-22-mcp-server-and-client | opus | | 2026-10-22 |
-| 1 | todo | | opus | | 2026-10-22 |
-| 2 | todo | | opus | | 2026-10-22 |
+| 0 | merged | prp-22-mcp-server-and-client | opus | b220b0f; `mcp>=2.3,<2.4` in services/api only, 8 additive lock entries, no existing version moved; licences PASS (612) with PLATFORM_GATED httpx2-jsfetch 1.0 BSD-3-Clause cited; ruff + format + pyright clean; licence tests + test_app + import tests + import boundaries 41 passed; validate_planning PASS | 2026-10-22 |
+| 1 | in-progress | | opus | | 2026-10-22 |
+| 2 | in-progress | | opus | | 2026-10-22 |
 | 3 | todo | | sonnet | | 2026-10-22 |
 | 4 | todo | | opus | | 2026-10-22 |
 
