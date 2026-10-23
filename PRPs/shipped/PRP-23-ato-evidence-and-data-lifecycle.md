@@ -1,6 +1,8 @@
 ---
 name: prp-23-ato-evidence-and-data-lifecycle
-status: active
+status: shipped
+shipped: 2026-10-23
+pr: 118
 started: 2026-10-23
 branch: prp-23-ato-evidence-and-data-lifecycle
 review: required
@@ -220,10 +222,48 @@ Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orche
 | 4 boundary-and-contingency | merged | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) ; merged ea7f3f9, diagram test collects real plans post-merge | 2026-10-23 |
 
 ## Completion note (filled at ship)
-- Date:
+- Date: 2026-10-23
 - Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
+  - PR #118. Item merges into `prp-23-ato-evidence-and-data-lifecycle`:
+    - item 2 `8f00239` (094d904)
+    - item 4 `ea7f3f9` (578b3ba)
+    - item 3 `8c4e8bf` (47ffba0)
+    - item 1 `4c863e8` (da8360a, d7794ea, 8341575)
+  - Inventory regenerated in `f92a060`; gate register updated in `0a681ae`.
+  - Local `verify-gates -Mode full`: 4/4 PASS, 7469 passed, 146 deselected. Compose integration test: 1 passed. PR CI: all 21 checks green, including CodeQL and gitleaks full history.
+- Deviations from blueprint and why: D1-D7 in Execution state.
+  - D1: worker tests live in `lifecycle_worker/` to avoid a pytest package clash.
+  - D2: the conversation adapter is written against a structural protocol, because of core's import boundary.
+  - D3: item 4 calls the pinned mermaid-cli directly. Puppeteer could not find its headless shell, so the render used the installed Chrome.
+  - D4: inventory dates are read from file content.
+  - D5: `check_statements.py` also scans for affirmative claims.
+  - D6: the orchestrator recorded the gates.
+  - D7: by operator decision, a legal hold on any record containing a subject's data also defers erasing that subject's mapping. A target that cannot enumerate a subject's records fails closed.
+  - Merge order changed from 1, 2, 4, 3 to 2, 4, 3, 1 to accommodate the D7 rework.
+  - The orchestrator fixed one pyright error directly (`d7794ea`, an integration test the lane did not typecheck).
+- Descoped items: none.
 - Customer inputs still OPEN (G06, G02):
-- Reviewer verdict (conflict rules, disclaimer enforcement):
+  - G06: data classification, payload opt-in, retention periods, legal hold process.
+  - G02: agency baseline, authorizing official determination, assessment.
+  - The SSP scope inputs are listed in `docs/compliance/ssp/scope.md`.
+  - G07: the contingency plan cites the compose DR drill only and does not close the gate.
+- Reviewer verdict (conflict rules, disclaimer enforcement): one Sonnet reviewer per item, all APPROVED with no blockers.
+  - Item 1's reviewer confirmed the precedence order, audit immutability (including read-back `doc_type`), fail-closed policy, audited read-back deletes and scoped export.
+  - The reviewer's hold-vs-erase finding was escalated and fixed (D7); Haiku confirmed it RESOLVED.
+  - The item 3 reviewer confirmed the disclaimer is enforced in every `docs/compliance/**/*.md` and that credential paths are filtered before any read.
 - Follow-ups:
+  - Lifecycle wiring (shared files):
+    - durable legal hold and request-queue stores (in-memory only today)
+    - real delete backends for the catalog, archive and ledger stores
+    - lifecycle worker registration in the runtime entrypoint, plus Helm
+    - an API `ConversationStore` to `ConversationBackend` shim
+    - a retry policy for FAILED queue outcomes
+  - Compliance tooling:
+    - restrict the `check_statements.py` negation exemption to the same clause, with a regression test for "X is authorized, unlike Y which is not"
+    - add a resolved-path-under-root check in `collect_evidence.py` for symlinked parent directories
+  - Docs:
+    - add `hitl/policy.py` to the AC-5 evidence and cite a specific chart-sandbox test for SC-18
+    - add a test that diffs each mermaid block against its `.mmd` source
+    - align the DR drill size wording ("tens of kilobytes" vs about 478 KB) in the contingency plan and the G07 DR README
+    - move the Chrome render workaround to a contributor note
+  - Once those land, upgrade AU-11, CA-7, CP-2, PM-5 and SI-12 from `planned` to evidence-backed statuses.

@@ -164,6 +164,17 @@ All notable changes to this project are documented here. The format follows
   `/api/v1/mcp/admin` and UI (`config.manage`, audited). Security suite in
   `tests/security/mcp/`. Government MCP use and live Entra audience behaviour stay OPEN
   (G01/G02); G08 stays NARROWED.
+- ATO evidence and data lifecycle (PRP-23): a policy-driven lifecycle engine
+  (`neurosphere_core.lifecycle`, `neurosphere_workers.lifecycle`) for retention,
+  pseudonymization, deletion, export and legal hold, with a written conflict order (audit
+  immutability, legal hold, minimum retention, subject request, maximum retention), fail-closed
+  defaults, read-back-verified deletion and a legal hold that also defers subject erasure of
+  held data. ATO accelerator documents under `docs/compliance/`: NIST 800-53 Rev 5 mapping and
+  SSP narratives, SSP scope with customer inputs OPEN, POA&M template, rendered boundary and
+  data-flow diagrams, and IR, contingency, change and continuous-monitoring plans. An idempotent
+  evidence inventory (`scripts/compliance/collect_evidence.py`, `docs/evidence/inventory.md`)
+  and a disclaimer/claim checker (`scripts/compliance/check_statements.py`). Not FedRAMP
+  authorized; the authorizing official decides. G02 and G06 stay OPEN.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
