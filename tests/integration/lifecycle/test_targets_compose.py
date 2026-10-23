@@ -45,7 +45,7 @@ class _CosmosDocs:
     async def page(self, data_class: str, limit: int, after: str | None) -> list[Mapping[str, Any]]:
         query = "SELECT * FROM c WHERE c.data_class = @d ORDER BY c.id"
         items = self._c.query_items(query, parameters=[{"name": "@d", "value": data_class}])
-        out = [d async for d in items if after is None or d["id"] > after]
+        out: list[Mapping[str, Any]] = [d async for d in items if after is None or d["id"] > after]
         return out[:limit]
 
     async def redact_subject(self, record_id: str) -> None:
