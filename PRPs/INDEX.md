@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-21-scale-federation-finops-and-dr](active/PRP-21-scale-federation-finops-and-dr.md) |  | 0/6 (0%) | todo 6 | ? / ? | none |
+| [prp-21-scale-federation-finops-and-dr](active/PRP-21-scale-federation-finops-and-dr.md) |  | 6/6 (100%) | merged 6 | ? / ? | none |
 
 ## Backlog
 

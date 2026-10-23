@@ -223,12 +223,12 @@ Enterprise and stress profile runs are operator-run against a sized environment 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 | todo | | sonnet | | 2026-10-22 |
-| 2 | todo | | sonnet | | 2026-10-22 |
-| 3 | todo | | sonnet | | 2026-10-22 |
-| 4 | todo | | sonnet | | 2026-10-22 |
-| 5 | todo | | sonnet | | 2026-10-22 |
-| 6 | todo | | sonnet | | 2026-10-22 |
+| 1 | merged | worktree-agent-af6fe6b9811307cdd | sonnet | 4337d5b + 06f95f9 (evidence), merge bf74d84; verify ruff/format/pyright clean, profiles 31/31, orchestrator re-ran integration pilot on compose 1/1 (local only), snyk 0, locust not in uv.lock; pilot FAILS 1k eps target: ~240 accepted eps, p95 30s at 100 users (compose, bounded feasibility) | 2026-10-22 |
+| 2 | merged | worktree-agent-a286d67fb3c859ccd | sonnet | 7b92eac, merge 13929dd; verify ruff/format/pyright clean, admission 31/31, snyk 0; post-merge admission+import-boundaries 32/32 | 2026-10-22 |
+| 3 | merged | worktree-agent-ab063dfdc8eb03e12 | sonnet | efec383; verify ruff/format/pyright clean, federation 31/31, snyk 0 new; author flagged scope-leak points; review APPROVED (5 follow-ups), merge c517691; post-merge admission+federation 62/62 | 2026-10-22 |
+| 4 | merged | worktree-agent-a1329db321d7733e7 | sonnet | c3d6962, merge 1a115d8; verify ruff/format/pyright clean, finops 32/32, snyk 0, evidence rerun byte-identical; post-merge touched suites green | 2026-10-22 |
+| 5 | merged | worktree-agent-a599e0179246ae9c9 | sonnet | 66a5c41 + 80324a2 (runbook, evidence, G07 row), merge 1f25d38; verify ruff/format/pyright clean, dr 56/56, orchestrator re-ran restore drill on compose 1/1 (local only), RESEARCH-AND-GATES diff = G07 row only, snyk 0; post-merge touched suites 198/198, gitleaks main..HEAD no leaks | 2026-10-22 |
+| 6 | merged | worktree-agent-a077ee7635c89fb38 | sonnet | 13df179, merge 530f804; verify ruff/pyright clean, openapi drift+app+authz+federation+finops 223/223, no component renames; routes 503 until app.state is populated (follow-up) | 2026-10-22 |
 
 ## Completion note (filled at ship)
 - Date:
