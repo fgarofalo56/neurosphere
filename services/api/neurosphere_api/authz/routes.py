@@ -27,8 +27,10 @@ from neurosphere_api.authz.dependencies import PERMISSION_MARKER
 from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 
 __all__ = [
+    "MCP_METADATA_PATH",
     "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
+    "SELF_AUTHENTICATED_PATHS",
     "RouteEntry",
     "public_paths_for",
     "route_inventory",
@@ -36,8 +38,20 @@ __all__ = [
     "verify_route_permissions",
 ]
 
-#: Always-public probe paths (PRP-05 health router).
-PUBLIC_PATHS: Final = frozenset({"/healthz", "/readyz"})
+#: RFC 9728 protected-resource metadata of the MCP server (PRP-22 item 1): public by definition
+#: (clients read it before they hold a token). Equals ``neurosphere_api.mcp.server``'s
+#: ``PROTECTED_RESOURCE_METADATA_PATH`` (a test pins that); not imported to keep authz leaf-level.
+MCP_METADATA_PATH: Final = "/.well-known/oauth-protected-resource/mcp"
+
+#: Always-public probe paths (PRP-05 health router) and the MCP RFC 9728 metadata path.
+PUBLIC_PATHS: Final = frozenset({"/healthz", "/readyz", MCP_METADATA_PATH})
+
+#: Exact paths served by a mounted sub-application that authenticates every request itself
+#: (the MCP streamable HTTP endpoint validates the bearer token, audience, resource and scope
+#: and answers 401/403 with ``WWW-Authenticate``). Not public and not ``require``d: a separate
+#: category like :data:`PRODUCER_AUTHENTICATED_PATHS`, exact-path only, a plain route (never a
+#: ``Mount``). Equals ``neurosphere_api.mcp.server``'s ``MCP_PATH`` (a test pins that).
+SELF_AUTHENTICATED_PATHS: Final = frozenset({"/mcp"})
 
 #: Ingest-edge paths whose *producers* authenticate by registered credential inside the ingest
 #: service (``Authorization: Bearer <producer_id>.<secret>``). Not public and not ``require``d:
@@ -55,10 +69,16 @@ class RouteEntry:
     permissions: tuple[str, ...]
     public: bool
     producer_authenticated: bool = False
+    self_authenticated: bool = False
 
     @property
     def compliant(self) -> bool:
-        return self.public or bool(self.permissions) or self.producer_authenticated
+        return (
+            self.public
+            or bool(self.permissions)
+            or self.producer_authenticated
+            or self.self_authenticated
+        )
 
 
 def public_paths_for(app: FastAPI, *, extra: Iterable[str] = ()) -> frozenset[str]:
@@ -120,12 +140,14 @@ def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
         and path in PRODUCER_AUTHENTICATED_PATHS
         and methods == ("POST",)
     )
+    self_authenticated = not isinstance(original, Mount) and path in SELF_AUTHENTICATED_PATHS
     return RouteEntry(
         path=path,
         methods=methods,
         permissions=perms,
         public=public,
         producer_authenticated=producer,
+        self_authenticated=self_authenticated,
     )
 
 
