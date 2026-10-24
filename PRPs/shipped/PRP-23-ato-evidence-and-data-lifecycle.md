@@ -1,6 +1,10 @@
 ---
 name: prp-23-ato-evidence-and-data-lifecycle
-status: backlog
+status: shipped
+shipped: 2026-10-23
+pr: 118
+started: 2026-10-23
+branch: prp-23-ato-evidence-and-data-lifecycle
 review: required
 created: 2026-10-08
 model: sonnet
@@ -196,11 +200,70 @@ The two collection runs followed by `git diff --exit-code` after staging the fir
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+
+Plan approved 2026-10-23 with six deltas signed off by the operator.
+
+- D1: worker tests live in `services/workers/tests/lifecycle_worker/` (not `lifecycle/`) so they do not shadow `packages/core/tests/lifecycle/` in one pytest session.
+- D2: the conversation target adapter is written against a structural protocol inside the lifecycle package; `neurosphere_core` may not import `neurosphere_api`. Wiring the API `ConversationStore` into a running worker, and worker registration/deployment (runtime, Helm), are follow-ups.
+- D3: item 4 renders plan diagrams with `pnpm dlx @mermaid-js/mermaid-cli@12.0.0` directly; `scripts/render_mermaid.py` is fixed to the five `docs/ARCHITECTURE.md` blocks and is not owned here.
+- D4: inventory source date is read from file content (a `retrieved`/`observed` field or a date in the path), else `undated`; never mtime or git history.
+- D5: `check_statements.py` also flags affirmative claims (authorization, ATO granted, parity, certification date, compliance percentage), allowing negated forms. This is the measurement for the PRP exit criterion.
+- D6: the orchestrator records G06 and G02 OPEN in `docs/RESEARCH-AND-GATES.md` at close-out, after all merges.
+- D7 (2026-10-23, operator decision after item 1 review): a legal hold on any record containing a subject's data also blocks erasing that subject's pseudonym mapping; the erase is queued and audited until no such hold remains, and a target that cannot enumerate a subject's records fails closed (deferred, distinct reason). One rework round on item 1; merge order becomes 2, 4, 3, 1.
+
+Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orchestrator reruns the collector twice and proves `git diff --exit-code docs/evidence/inventory.md`. Models: implementers sonnet; one sonnet reviewer per item; rework confirmation haiku.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 retention-policy-engine | merged | worktree-agent-a34c8294c39b9a2e1 + rework worktree-agent-ae16b1ae8efb4cd90 | sonnet | da8360a, orchestrator fix d7794ea, D7 rework 8341575; reviewer APPROVED, haiku confirmed D7 + assert fix RESOLVED; merged 4c863e8; post-merge 137 passed, integration 1 passed (compose), Snyk 0 | 2026-10-23 |
+| 2 control-narratives | merged | worktree-agent-ad7723b24c20973c0 | sonnet | 094d904; orchestrator re-ran ruff, pyright, pytest 38 passed, sentence grep empty; reviewer APPROVED (no blockers) ; merged 8f00239, tests/compliance green post-merge | 2026-10-23 |
+| 3 evidence-inventory-automation | merged | worktree-agent-a6c368d9b1727037e | sonnet | 47ffba0; orchestrator re-ran ruff, pyright, pytest 40 passed 1 skipped (plans absent), collector idempotent, check_statements PASS on items 2 and 4 docs; reviewer APPROVED (no blockers) ; merged 8c4e8bf, 79 passed 0 skipped post-merge, inventory regenerated missing 0 and idempotent | 2026-10-23 |
+| 4 boundary-and-contingency | merged | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) ; merged ea7f3f9, diagram test collects real plans post-merge | 2026-10-23 |
+
 ## Completion note (filled at ship)
-- Date:
+- Date: 2026-10-23
 - Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
+  - PR #118. Item merges into `prp-23-ato-evidence-and-data-lifecycle`:
+    - item 2 `8f00239` (094d904)
+    - item 4 `ea7f3f9` (578b3ba)
+    - item 3 `8c4e8bf` (47ffba0)
+    - item 1 `4c863e8` (da8360a, d7794ea, 8341575)
+  - Inventory regenerated in `f92a060`; gate register updated in `0a681ae`.
+  - Local `verify-gates -Mode full`: 4/4 PASS, 7469 passed, 146 deselected. Compose integration test: 1 passed. PR CI: all 21 checks green, including CodeQL and gitleaks full history.
+- Deviations from blueprint and why: D1-D7 in Execution state.
+  - D1: worker tests live in `lifecycle_worker/` to avoid a pytest package clash.
+  - D2: the conversation adapter is written against a structural protocol, because of core's import boundary.
+  - D3: item 4 calls the pinned mermaid-cli directly. Puppeteer could not find its headless shell, so the render used the installed Chrome.
+  - D4: inventory dates are read from file content.
+  - D5: `check_statements.py` also scans for affirmative claims.
+  - D6: the orchestrator recorded the gates.
+  - D7: by operator decision, a legal hold on any record containing a subject's data also defers erasing that subject's mapping. A target that cannot enumerate a subject's records fails closed.
+  - Merge order changed from 1, 2, 4, 3 to 2, 4, 3, 1 to accommodate the D7 rework.
+  - The orchestrator fixed one pyright error directly (`d7794ea`, an integration test the lane did not typecheck).
+- Descoped items: none.
 - Customer inputs still OPEN (G06, G02):
-- Reviewer verdict (conflict rules, disclaimer enforcement):
+  - G06: data classification, payload opt-in, retention periods, legal hold process.
+  - G02: agency baseline, authorizing official determination, assessment.
+  - The SSP scope inputs are listed in `docs/compliance/ssp/scope.md`.
+  - G07: the contingency plan cites the compose DR drill only and does not close the gate.
+- Reviewer verdict (conflict rules, disclaimer enforcement): one Sonnet reviewer per item, all APPROVED with no blockers.
+  - Item 1's reviewer confirmed the precedence order, audit immutability (including read-back `doc_type`), fail-closed policy, audited read-back deletes and scoped export.
+  - The reviewer's hold-vs-erase finding was escalated and fixed (D7); Haiku confirmed it RESOLVED.
+  - The item 3 reviewer confirmed the disclaimer is enforced in every `docs/compliance/**/*.md` and that credential paths are filtered before any read.
 - Follow-ups:
+  - Lifecycle wiring (shared files):
+    - durable legal hold and request-queue stores (in-memory only today)
+    - real delete backends for the catalog, archive and ledger stores
+    - lifecycle worker registration in the runtime entrypoint, plus Helm
+    - an API `ConversationStore` to `ConversationBackend` shim
+    - a retry policy for FAILED queue outcomes
+  - Compliance tooling:
+    - restrict the `check_statements.py` negation exemption to the same clause, with a regression test for "X is authorized, unlike Y which is not"
+    - add a resolved-path-under-root check in `collect_evidence.py` for symlinked parent directories
+  - Docs:
+    - add `hitl/policy.py` to the AC-5 evidence and cite a specific chart-sandbox test for SC-18
+    - add a test that diffs each mermaid block against its `.mmd` source
+    - align the DR drill size wording ("tens of kilobytes" vs about 478 KB) in the contingency plan and the G07 DR README
+    - move the Chrome render workaround to a contributor note
+  - Once those land, upgrade AU-11, CA-7, CP-2, PM-5 and SI-12 from `planned` to evidence-backed statuses.

@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) |  |  | - | - | ? / ? | required |
 | [prp-24-themes-sandbox-mode-and-accessibility](backlog/PRP-24-themes-sandbox-mode-and-accessibility.md) |  |  | - | - | ? / ? | none |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
@@ -25,6 +24,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-10-23 | #110 |
+| [prp-23-ato-evidence-and-data-lifecycle](shipped/PRP-23-ato-evidence-and-data-lifecycle.md) | 2026-10-23 | #118 |
 | [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
 | [prp-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-10-22 | #97 |
 | [prp-21-scale-federation-finops-and-dr](shipped/PRP-21-scale-federation-finops-and-dr.md) | 2026-10-22 | #103 |
