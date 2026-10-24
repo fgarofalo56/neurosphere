@@ -191,6 +191,7 @@ Plan approved 2026-10-23 with five deltas signed off by the operator.
 - D5: if item 3 finds serious or critical axe violations in another PRP's component, a sequenced item 5 (fix-forward) owns exactly the offending files and fixes them here; the operator signs off its file list first.
 - D6 (2026-10-24, operator sign-off under D5): item 3 found 31 serious `color-contrast` violations, 0 critical, two root causes: bare react-router links render the browser default link colour in dark and high-contrast, and the high-contrast "invoiced" kind badge is 3.91:1. Item 5 (fix-forward) owns exactly `frontend/src/design-system/AppThemeProvider.tsx` (global link colour from `colorBrandForegroundLink`) and `frontend/src/features/dashboards/components.tsx` (badge), plus a Vitest test beside each. Item 3 merges together with item 5, never alone onto red.
 - D7 (2026-10-24, operator decision): the axe runs exclude Fluent focus sentinels `[data-tabster-dummy]`, matching the existing `overview`, `shell` and `copilot` specs; logged as A11Y-012 in `docs/accessibility/remediation-log.md`.
+- D8 (2026-10-24, operator: "whatever you can do, pick best options"): item 3b adds an automated keyboard and accessibility-tree pre-check covering every row of both manual checklists (owned files: `frontend/tests/e2e/a11y/**`, `docs/accessibility/**`). Results go to a dated pre-check report; the human Result, tester and sign-off fields stay blank (Clarification 6). Any product defect it finds is fixed forward under the D5 pattern.
 
 Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if needed. Merge one at a time, touched suites after each. Models: implementers sonnet; review none.
 
@@ -201,6 +202,7 @@ Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if nee
 | 4 integration-wiring | merged | worktree-agent-a6f02df2f9860d7d7 | sonnet | bf0292d; merged b729735; post-merge vitest 47 files 575 passed, typecheck, lint clean, e2e 94 passed (map-perf records SwiftShader fps, non-failing), openapi drift + test_app + sandbox_api 54 passed, ruff clean; Snyk 0; openapi diff additive (sandbox only) | 2026-10-23 |
 | 3 wcag-audit | merged | worktree-agent-aaf3d97bd0ce74aea | sonnet | bac1ab3; first run a11y 31 failed (serious color-contrast, product defects) 108 passed, held for item 5 (D6); merged 16a8942 together with item 5; post-merge e2e 233 passed (a11y included), Snyk 0; manual checklists OPEN (unsigned) | 2026-10-24 |
 | 5 contrast-fix-forward | merged | worktree-agent-ab89a7feec2cc0f06 | sonnet | f8ce9ee; a11y 139 passed 0 failed; merged 60f2f1c; post-merge e2e 233 passed, vitest 49 files 579 passed, typecheck, lint clean, Snyk 0; verify-gates full 4/4 PASS (7507 passed, 147 deselected); sandbox integration 1 passed (compose, 230s) | 2026-10-24 |
+| 3b keyboard-aria-precheck | in-progress | (worktree) | sonnet | dispatched (D8) | 2026-10-24 |
 
 ## Completion note (filled at ship)
 - Date:
