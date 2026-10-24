@@ -40,10 +40,18 @@ export function MetricText({
   );
 }
 
+/**
+ * Fluent's filled success badge puts colorNeutralForegroundOnBrand (black in the
+ * high-contrast pack) on colorPaletteGreenBackground3 (#107c10): 3.91:1, fails
+ * WCAG 1.4.3 (A11Y-003). The tint appearance uses the palette green foreground 1
+ * on green background 1 tokens instead.
+ */
+export const INVOICED_BADGE_APPEARANCE = "tint" as const;
+
 export function KindBadge({ kind }: { readonly kind: SeriesKind }): ReactElement {
   return (
     <Badge
-      appearance="filled"
+      appearance={kind === "invoiced" ? INVOICED_BADGE_APPEARANCE : "filled"}
       color={kind === "invoiced" ? "success" : "informative"}
       data-testid="kind-badge"
     >
