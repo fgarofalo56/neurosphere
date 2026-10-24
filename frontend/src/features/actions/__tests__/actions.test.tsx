@@ -214,6 +214,22 @@ describe("confirmation dialog", () => {
     expect(within(dialog).getByTestId("confirm-countdown").textContent).toMatch(/^\d+:\d{2}$/);
   });
 
+  it("returns focus to the Review and confirm trigger on Escape and on Cancel", async () => {
+    setup(DETAIL_PATH, { [`GET ${BASE}/${INTENT_ID}`]: { status: 200, body: view() } });
+    const user = userEvent.setup();
+    const trigger = await screen.findByRole("button", { name: "Review and confirm" });
+    await user.click(trigger);
+    await screen.findByRole("alertdialog");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+
+    await user.click(trigger);
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it("submits the server-issued hash and nothing recomputed", async () => {
     const after = view({}, { state: "executing" });
     const { calls } = setup(DETAIL_PATH, {

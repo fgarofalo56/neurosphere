@@ -13,6 +13,8 @@ import { recommendationNavItems } from "../features/recommendations/routes";
 import { replayNavItems } from "../features/replay/routes";
 import { REPORTS_LIST_ROUTE } from "../features/reports/paths";
 import { reviewNavItems } from "../features/review/routes";
+import { sandboxNavItems } from "../features/sandbox/routes";
+import { useSandboxStore } from "../features/sandbox/store";
 import { WORKSPACES } from "../features/workspaces/personas";
 import type { NavGroup, NavItem } from "./navigation";
 
@@ -51,7 +53,16 @@ export function buildAppNavItems(): readonly NavItem[] {
   ];
 }
 
-/** Hook form for `createAppRoutes({ useNavItems })`; the list is stable across renders. */
+/**
+ * Hook form for `createAppRoutes({ useNavItems })`; the list is stable across renders. The
+ * sandbox entry is listed only while sandbox mode is on. That is UX only: the route stays
+ * registered and the API enforces access and isolation.
+ */
 export function useAppNavItems(): readonly NavItem[] {
-  return useMemo(buildAppNavItems, []);
+  const base = useMemo(buildAppNavItems, []);
+  const sandbox = useSandboxStore((s) => s.enabled);
+  return useMemo(
+    () => (sandbox ? [...base, ...inGroup("Overview", sandboxNavItems())] : base),
+    [base, sandbox],
+  );
 }

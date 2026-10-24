@@ -53,6 +53,23 @@ function fromSandbox(data: unknown, source: Window | null, origin = "null"): voi
   });
 }
 
+describe("ChartFrame focus indicator", () => {
+  it("paints a ring while the iframe holds focus and clears it when focus returns", () => {
+    render(<ChartFrame plan={plan()} />);
+    const iframe = document.querySelector("iframe") as HTMLIFrameElement;
+    const before = iframe.className;
+    iframe.focus();
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    expect(iframe.className).not.toBe(before);
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(iframe.className).toBe(before);
+  });
+});
+
 describe("ChartFrame sandbox attributes", () => {
   it("sandboxes the iframe with allow-scripts only", () => {
     render(<ChartFrame plan={plan()} />);

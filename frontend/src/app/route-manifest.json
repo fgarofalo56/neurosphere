@@ -1,0 +1,30 @@
+{
+  "routes": [
+    "/",
+    "/actions",
+    "/actions/detail",
+    "/actions/propose",
+    "/dashboards/cost",
+    "/dashboards/coverage",
+    "/dashboards/latency",
+    "/map",
+    "/map/table",
+    "/mcp-admin",
+    "/mcp-admin/server",
+    "/quality",
+    "/recommendations",
+    "/recommendations/detail",
+    "/reconciliation",
+    "/replay/traces",
+    "/reports",
+    "/reports/view",
+    "/review",
+    "/review/item",
+    "/sandbox",
+    "/workspaces/admin",
+    "/workspaces/analyst",
+    "/workspaces/auditor",
+    "/workspaces/steward",
+    "/workspaces/viewer"
+  ]
+}

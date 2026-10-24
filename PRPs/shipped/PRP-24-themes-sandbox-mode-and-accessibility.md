@@ -1,6 +1,10 @@
 ---
 name: prp-24-themes-sandbox-mode-and-accessibility
-status: backlog
+status: shipped
+shipped: 2026-10-24
+pr: 121
+started: 2026-10-23
+branch: prp-24-themes-sandbox-mode-and-accessibility
 review: none
 created: 2026-10-08
 model: sonnet
@@ -178,11 +182,68 @@ There is no live script in this PRP. Human checklist signing is an operator step
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+
+Plan approved 2026-10-23 with five deltas signed off by the operator.
+
+- D1: new sequenced item 4 (integration wiring) owns the shared files no item declared: `frontend/src/app/main.tsx`, `frontend/src/app/Shell.tsx`, `frontend/src/app/UserMenu.tsx`, `frontend/src/app/config.ts` (deployment default theme pack), a new `frontend/src/app/appRoutes.ts` (exported route registry), `frontend/src/design-system/AppThemeProvider.tsx`, `frontend/src/design-system/theme-store.ts` (pack + mode, local storage), `frontend/src/design-system/index.ts`, `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `frontend/tests/mock-api/server.ts`. The app-level recorded-request comparison test (item 1 criterion 1) lands in item 4, because a pack cannot reach the request path before wiring.
+- D2: the a11y suite lives at `frontend/tests/e2e/a11y/` (Playwright `testDir` is `frontend/tests/e2e`; root `tests/e2e/` is a Python package). The feature gate command already resolves there.
+- D3: API unit tests live in `services/api/tests/sandbox_api/` (not `sandbox/`), so they cannot shadow the top-level PRP-03 `sandbox` generator package.
+- D4: sandbox reads use `data.read`, writes use `config.manage`; no new permission, PRP-06 authz files untouched. Container allowlist uses the `sandbox-` prefix rule of `scripts/sandbox/sbx_guard.py` plus a fixed name set.
+- D5: if item 3 finds serious or critical axe violations in another PRP's component, a sequenced item 5 (fix-forward) owns exactly the offending files and fixes them here; the operator signs off its file list first.
+- D6 (2026-10-24, operator sign-off under D5): item 3 found 31 serious `color-contrast` violations, 0 critical, two root causes: bare react-router links render the browser default link colour in dark and high-contrast, and the high-contrast "invoiced" kind badge is 3.91:1. Item 5 (fix-forward) owns exactly `frontend/src/design-system/AppThemeProvider.tsx` (global link colour from `colorBrandForegroundLink`) and `frontend/src/features/dashboards/components.tsx` (badge), plus a Vitest test beside each. Item 3 merges together with item 5, never alone onto red.
+- D7 (2026-10-24, operator decision): the axe runs exclude Fluent focus sentinels `[data-tabster-dummy]`, matching the existing `overview`, `shell` and `copilot` specs; logged as A11Y-012 in `docs/accessibility/remediation-log.md`.
+- D8 (2026-10-24, operator: "whatever you can do, pick best options"): item 3b adds an automated keyboard and accessibility-tree pre-check covering every row of both manual checklists (owned files: `frontend/tests/e2e/a11y/**`, `docs/accessibility/**`). Results go to a dated pre-check report; the human Result, tester and sign-off fields stay blank (Clarification 6). Any product defect it finds is fixed forward under the D5 pattern.
+
+Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if needed. Merge one at a time, touched suites after each. Models: implementers sonnet; review none.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 agency-theme-tokens | merged | worktree-agent-a6db6b22ab9287862 | sonnet | 771bb2c; merged 409f8aa; orchestrator fixed PRP-04 empty-themes placeholder in tokens.test.ts 9ee3ed7; post-merge vitest src/design-system 122 passed, typecheck, lint, prettier clean; Snyk 0 | 2026-10-23 |
+| 2 sandbox-mode | merged | worktree-agent-ab2efb5b948b84a68 | sonnet | ff022c7; implementer integration test 1 passed (compose, 232s); merged into integration branch; post-merge ruff, pyright 0, pytest sandbox_api+workspaces_api 55 passed, full collection 7507 OK, vitest 127 passed, typecheck, lint clean; Snyk 0 (api + frontend) | 2026-10-23 |
+| 4 integration-wiring | merged | worktree-agent-a6f02df2f9860d7d7 | sonnet | bf0292d; merged b729735; post-merge vitest 47 files 575 passed, typecheck, lint clean, e2e 94 passed (map-perf records SwiftShader fps, non-failing), openapi drift + test_app + sandbox_api 54 passed, ruff clean; Snyk 0; openapi diff additive (sandbox only) | 2026-10-23 |
+| 3 wcag-audit | merged | worktree-agent-aaf3d97bd0ce74aea | sonnet | bac1ab3; first run a11y 31 failed (serious color-contrast, product defects) 108 passed, held for item 5 (D6); merged 16a8942 together with item 5; post-merge e2e 233 passed (a11y included), Snyk 0; manual checklists OPEN (unsigned) | 2026-10-24 |
+| 5 contrast-fix-forward | merged | worktree-agent-ab89a7feec2cc0f06 | sonnet | f8ce9ee; a11y 139 passed 0 failed; merged 60f2f1c; post-merge e2e 233 passed, vitest 49 files 579 passed, typecheck, lint clean, Snyk 0; verify-gates full 4/4 PASS (7507 passed, 147 deselected); sandbox integration 1 passed (compose, 230s) | 2026-10-24 |
+| 3b keyboard-aria-precheck | merged | worktree-agent-ae14e7bd9c6a72496 | sonnet | 9cc3607; first run 505 checks, 497 pass, 3 fail (2 product defects: A11Y-013 actions dialog focus not restored, A11Y-014 chart iframe no focus indicator), held for 5b (D8); merged 20ee03b together with 5b; Snyk 0 | 2026-10-24 |
+| 5b focus-fix-forward | merged | worktree-agent-abc521ebbb7e16451 | sonnet | f04ffa7 (ActionWorkflow.tsx, ChartFrame.tsx + tests; components.tsx unchanged); merged 0d27749; post-merge e2e 334 passed twice, vitest 49 files 581 passed, typecheck, lint, validate_planning clean; Snyk: 2 pre-existing PRP-19 chart postMessage findings (opaque-origin iframe, by design), none new | 2026-10-24 |
+
 ## Completion note (filled at ship)
-- Date:
+- Date: 2026-10-24
 - Merged commits:
+  - PR #121. Item merges into `prp-24-themes-sandbox-mode-and-accessibility`:
+    - item 1 `409f8aa` (771bb2c), plus the orchestrator's PRP-04 placeholder fix `9ee3ed7`
+    - item 2 `8652d18` (ff022c7)
+    - item 4 `b729735` (bf0292d)
+    - item 3 `16a8942` (bac1ab3) and item 5 `60f2f1c` (f8ce9ee), merged together (D6)
+    - item 3b `20ee03b` (9cc3607) and item 5b `0d27749` (f04ffa7), merged together (D8)
+  - Gate register updated in `3b41e5d`. `main` merged in at `af0be41`, picking up the dependency-audit fix (PR #122: filelock 4.2.4, undici 8.12.3).
+  - Local evidence:
+    - `verify-gates -Mode full`: 4/4 PASS, 7507 passed, 147 deselected (before items 3b and 5b).
+    - After the final merge: e2e 334 passed on two runs, Vitest 49 files with 581 passed, typecheck and lint clean.
+    - Sandbox Cosmos emulator integration: 1 passed.
+    - Snyk: 0 new issues. The two existing PRP-19 chart `postMessage` findings are by design, because the iframe has an opaque origin.
+    - PR CI: all 21 checks green on `0d0eac8`.
 - Deviations from blueprint and why:
-- Descoped items:
+  - D1-D8 are in Execution state.
+  - D1: added item 4, integration wiring, because no item owned the shared shell, store, router and OpenAPI files. The recorded-request comparison test moved there.
+  - D2: the a11y suite lives at `frontend/tests/e2e/a11y/`.
+  - D3: the API tests directory is `sandbox_api`.
+  - D4: sandbox permissions are `data.read` for reads and `config.manage` for writes. The allowlist is a fixed name set.
+  - D5 and D6: item 5 fixed 31 serious color-contrast findings: a global theme-token link colour and a high-contrast badge.
+  - D7: Fluent tabster focus sentinels are excluded from axe.
+  - D8: item 3b added the automated keyboard and accessibility-tree pre-check. Item 5b fixed dialog focus restore and the chart iframe focus indicator.
+  - The allowlist refusal uses `InvalidSchemaError` (422, reason `sandbox_allowlist`).
+  - SVG logos are excluded from the allowlist.
+- Descoped items: none.
 - axe results (routes x modes) and manual checklist sign-off status:
-- G09 status after this PRP (expected OPEN):
+  - axe: 26 routes x 3 modes, both packs and sandbox mode, 0 serious or critical (`docs/accessibility/axe-results-2026-10-24.json`).
+  - Automated pre-check: 505 checks, all PASS after 5b (`docs/accessibility/automated-precheck-2026-10-24.md`).
+  - Keyboard and screen-reader checklists: OPEN (unsigned). A human tester must run NVDA plus one other reader. NVDA is not installed on the build machine; Narrator is.
+- G09 status after this PRP (expected OPEN): OPEN, recorded in `docs/RESEARCH-AND-GATES.md`. Unsigned manual checklists, unreviewed brand claims, and the deck and video still due from PRP-26 and PRP-27.
 - Follow-ups:
+  - The deployment default theme applies only once the shell mounts, so the pre-shell screens use the built-in theme. Fixing it needs `Providers.tsx` or `App.tsx`.
+  - `frontend/tests/mock-api/copilot.ts` fails prettier. It dates from PRP-19, and prettier is not in CI.
+  - React warning: `<p>` contains a `<div>` in `PublicationBadge` on `/reports/view`.
+  - Checklist expectations differ from product names in 5 places, listed in the pre-check doc. Reconcile them at human sign-off.
+  - One transient a11y failure (`/workspaces/auditor`, light) and one actions-spec flake were each seen once and did not reproduce.
+  - Hosted UI deployment (App Service, Limitlessdata) is the next session, by operator choice.

@@ -199,6 +199,12 @@ def _register_mcp_admin(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_sandbox(registry: RouterRegistry) -> None:
+    from neurosphere_api.sandbox import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -224,6 +230,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_finops,
     _register_mcp_server,
     _register_mcp_admin,
+    _register_sandbox,
 )
 
 
