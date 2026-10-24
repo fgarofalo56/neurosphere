@@ -199,8 +199,8 @@ Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if nee
 | 1 agency-theme-tokens | merged | worktree-agent-a6db6b22ab9287862 | sonnet | 771bb2c; merged 409f8aa; orchestrator fixed PRP-04 empty-themes placeholder in tokens.test.ts 9ee3ed7; post-merge vitest src/design-system 122 passed, typecheck, lint, prettier clean; Snyk 0 | 2026-10-23 |
 | 2 sandbox-mode | merged | worktree-agent-ab2efb5b948b84a68 | sonnet | ff022c7; implementer integration test 1 passed (compose, 232s); merged into integration branch; post-merge ruff, pyright 0, pytest sandbox_api+workspaces_api 55 passed, full collection 7507 OK, vitest 127 passed, typecheck, lint clean; Snyk 0 (api + frontend) | 2026-10-23 |
 | 4 integration-wiring | merged | worktree-agent-a6f02df2f9860d7d7 | sonnet | bf0292d; merged b729735; post-merge vitest 47 files 575 passed, typecheck, lint clean, e2e 94 passed (map-perf records SwiftShader fps, non-failing), openapi drift + test_app + sandbox_api 54 passed, ruff clean; Snyk 0; openapi diff additive (sandbox only) | 2026-10-23 |
-| 3 wcag-audit | verifying | worktree-agent-aaf3d97bd0ce74aea | sonnet | bac1ab3; a11y 31 failed (serious color-contrast, product defects) 108 passed; rest of e2e 202 passed; typecheck, lint, prettier, validate_planning clean; held for item 5 (D6) | 2026-10-24 |
-| 5 contrast-fix-forward | in-progress | (worktree) | sonnet | dispatched on top of item 3 (D6) | 2026-10-24 |
+| 3 wcag-audit | merged | worktree-agent-aaf3d97bd0ce74aea | sonnet | bac1ab3; first run a11y 31 failed (serious color-contrast, product defects) 108 passed, held for item 5 (D6); merged 16a8942 together with item 5; post-merge e2e 233 passed (a11y included), Snyk 0; manual checklists OPEN (unsigned) | 2026-10-24 |
+| 5 contrast-fix-forward | merged | worktree-agent-ab89a7feec2cc0f06 | sonnet | f8ce9ee; a11y 139 passed 0 failed; merged 60f2f1c; post-merge e2e 233 passed, vitest 49 files 579 passed, typecheck, lint clean, Snyk 0; verify-gates full 4/4 PASS (7507 passed, 147 deselected); sandbox integration 1 passed (compose, 230s) | 2026-10-24 |
 
 ## Completion note (filled at ship)
 - Date:

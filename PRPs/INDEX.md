@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-24-themes-sandbox-mode-and-accessibility](active/PRP-24-themes-sandbox-mode-and-accessibility.md) |  | 3/5 (60%) | in-progress 1, verifying 1, merged 3 | ? / ? | none |
+| [prp-24-themes-sandbox-mode-and-accessibility](active/PRP-24-themes-sandbox-mode-and-accessibility.md) |  | 5/5 (100%) | merged 5 | ? / ? | none |
 
 ## Backlog
 
