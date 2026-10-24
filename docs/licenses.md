@@ -52,7 +52,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | datamodel-code-generator | 0.83.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
 | fastapi | 0.143.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
-| filelock | 4.0.12 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| filelock | 4.2.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | h11 | 0.16.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
@@ -579,7 +579,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | type-fest | 5.10.0 | (MIT OR CC0-1.0) | dev-only | no EOL published locally; Dependabot tracks releases |
 | typescript | 6.0.3 | Apache-2.0 | dev-only | pinned 6.0.x; TS 7 incompatible with typescript-eslint (ADR-0002) |
 | typescript-eslint | 8.71.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
-| undici | 8.11.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| undici | 8.12.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | undici-types | 8.9.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | until-async | 3.0.2 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | uri-js | 4.4.1 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
