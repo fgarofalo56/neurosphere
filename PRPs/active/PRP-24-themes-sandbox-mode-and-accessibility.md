@@ -196,8 +196,8 @@ Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if nee
 |---|---|---|---|---|---|
 | 1 agency-theme-tokens | merged | worktree-agent-a6db6b22ab9287862 | sonnet | 771bb2c; merged 409f8aa; orchestrator fixed PRP-04 empty-themes placeholder in tokens.test.ts 9ee3ed7; post-merge vitest src/design-system 122 passed, typecheck, lint, prettier clean; Snyk 0 | 2026-10-23 |
 | 2 sandbox-mode | merged | worktree-agent-ab2efb5b948b84a68 | sonnet | ff022c7; implementer integration test 1 passed (compose, 232s); merged into integration branch; post-merge ruff, pyright 0, pytest sandbox_api+workspaces_api 55 passed, full collection 7507 OK, vitest 127 passed, typecheck, lint clean; Snyk 0 (api + frontend) | 2026-10-23 |
-| 4 integration-wiring | in-progress | (worktree) | sonnet | dispatched wave B | 2026-10-23 |
-| 3 wcag-audit | todo | | sonnet | | 2026-10-23 |
+| 4 integration-wiring | merged | worktree-agent-a6f02df2f9860d7d7 | sonnet | bf0292d; merged b729735; post-merge vitest 47 files 575 passed, typecheck, lint clean, e2e 94 passed (map-perf records SwiftShader fps, non-failing), openapi drift + test_app + sandbox_api 54 passed, ruff clean; Snyk 0; openapi diff additive (sandbox only) | 2026-10-23 |
+| 3 wcag-audit | in-progress | (worktree) | sonnet | dispatched wave C | 2026-10-23 |
 
 ## Completion note (filled at ship)
 - Date:
