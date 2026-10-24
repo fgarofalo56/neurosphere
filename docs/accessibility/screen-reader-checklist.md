@@ -2,6 +2,8 @@
 
 Manual screen reader test for NeuroSphere. Automated axe results prove nothing about how content is announced. Record AT name and version at test time.
 
+An automated pre-check of the accessibility tree behind these rows (not a human test, does not replace this checklist) is in [`automated-precheck-2026-10-24.md`](automated-precheck-2026-10-24.md).
+
 ## Assistive technology matrix
 
 Status: OPEN (unsigned)
