@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-24-themes-sandbox-mode-and-accessibility](active/PRP-24-themes-sandbox-mode-and-accessibility.md) |  | 0/4 (0%) | todo 4 | ? / ? | none |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-24-themes-sandbox-mode-and-accessibility](backlog/PRP-24-themes-sandbox-mode-and-accessibility.md) |  |  | - | - | ? / ? | none |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
 | [prp-27-explainer-video-render](backlog/PRP-27-explainer-video-render.md) |  |  | - | - | ? / ? | none |

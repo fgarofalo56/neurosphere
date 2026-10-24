@@ -1,6 +1,8 @@
 ---
 name: prp-24-themes-sandbox-mode-and-accessibility
-status: backlog
+status: active
+started: 2026-10-23
+branch: prp-24-themes-sandbox-mode-and-accessibility
 review: none
 created: 2026-10-08
 model: sonnet
@@ -177,6 +179,25 @@ There is no live script in this PRP. Human checklist signing is an operator step
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-10-23 with five deltas signed off by the operator.
+
+- D1: new sequenced item 4 (integration wiring) owns the shared files no item declared: `frontend/src/app/main.tsx`, `frontend/src/app/Shell.tsx`, `frontend/src/app/UserMenu.tsx`, `frontend/src/app/config.ts` (deployment default theme pack), a new `frontend/src/app/appRoutes.ts` (exported route registry), `frontend/src/design-system/AppThemeProvider.tsx`, `frontend/src/design-system/theme-store.ts` (pack + mode, local storage), `frontend/src/design-system/index.ts`, `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `frontend/tests/mock-api/server.ts`. The app-level recorded-request comparison test (item 1 criterion 1) lands in item 4, because a pack cannot reach the request path before wiring.
+- D2: the a11y suite lives at `frontend/tests/e2e/a11y/` (Playwright `testDir` is `frontend/tests/e2e`; root `tests/e2e/` is a Python package). The feature gate command already resolves there.
+- D3: API unit tests live in `services/api/tests/sandbox_api/` (not `sandbox/`), so they cannot shadow the top-level PRP-03 `sandbox` generator package.
+- D4: sandbox reads use `data.read`, writes use `config.manage`; no new permission, PRP-06 authz files untouched. Container allowlist uses the `sandbox-` prefix rule of `scripts/sandbox/sbx_guard.py` plus a fixed name set.
+- D5: if item 3 finds serious or critical axe violations in another PRP's component, a sequenced item 5 (fix-forward) owns exactly the offending files and fixes them here; the operator signs off its file list first.
+
+Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if needed. Merge one at a time, touched suites after each. Models: implementers sonnet; review none.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 agency-theme-tokens | todo | | sonnet | | 2026-10-23 |
+| 2 sandbox-mode | todo | | sonnet | | 2026-10-23 |
+| 4 integration-wiring | todo | | sonnet | | 2026-10-23 |
+| 3 wcag-audit | todo | | sonnet | | 2026-10-23 |
 
 ## Completion note (filled at ship)
 - Date:
