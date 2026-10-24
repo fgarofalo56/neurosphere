@@ -22,9 +22,10 @@ describe("hex literals", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("leaves design-system/themes/ to PRP-24 (nothing created here)", () => {
-    const themes = import.meta.glob("./themes/**", { eager: true });
-    expect(Object.keys(themes)).toEqual([]);
+  it("covers the PRP-24 theme packs in design-system/themes/", () => {
+    // Packs build ramps at runtime (rampFromHue), so the hex rule above applies to themes/ too.
+    const themes = import.meta.glob(["./themes/*.ts", "!./themes/*.test.ts"]);
+    expect(Object.keys(themes)).toContain("./themes/index.ts");
   });
 });
 
