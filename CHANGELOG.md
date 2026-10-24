@@ -175,6 +175,16 @@ All notable changes to this project are documented here. The format follows
   evidence inventory (`scripts/compliance/collect_evidence.py`, `docs/evidence/inventory.md`)
   and a disclaimer/claim checker (`scripts/compliance/check_statements.py`). Not FedRAMP
   authorized; the authorizing official decides. G02 and G06 stay OPEN.
+- Themes, sandbox mode and accessibility (PRP-24): agency theme packs
+  (`frontend/src/design-system/themes/`) for light, dark and high-contrast, with a guarded
+  high-contrast set, a logo-slot allowlist (PNG and WebP) and a test that themes never import API or
+  auth code; pack and mode persisted per browser with a deployment default. Sandbox mode: an API
+  module bound to a fixed allowlist of sandbox containers (`/api/v1/sandbox`), a persisted UI toggle and
+  an isolation banner on every route. Accessibility: an axe suite across all 26 registered routes, three
+  modes, both packs and sandbox mode, plus an automated keyboard and accessibility-tree pre-check,
+  with zero serious or critical findings after fixing link contrast, a high-contrast badge, dialog
+  focus restore and the chart frame focus indicator. Manual keyboard and screen-reader checklists
+  are prepared and unsigned. No conformance claim; G09 stays OPEN.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

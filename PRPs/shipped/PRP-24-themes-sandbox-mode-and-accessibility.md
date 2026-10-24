@@ -1,6 +1,8 @@
 ---
 name: prp-24-themes-sandbox-mode-and-accessibility
-status: active
+status: shipped
+shipped: 2026-10-24
+pr: 121
 started: 2026-10-23
 branch: prp-24-themes-sandbox-mode-and-accessibility
 review: none
@@ -206,10 +208,42 @@ Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if nee
 | 5b focus-fix-forward | merged | worktree-agent-abc521ebbb7e16451 | sonnet | f04ffa7 (ActionWorkflow.tsx, ChartFrame.tsx + tests; components.tsx unchanged); merged 0d27749; post-merge e2e 334 passed twice, vitest 49 files 581 passed, typecheck, lint, validate_planning clean; Snyk: 2 pre-existing PRP-19 chart postMessage findings (opaque-origin iframe, by design), none new | 2026-10-24 |
 
 ## Completion note (filled at ship)
-- Date:
+- Date: 2026-10-24
 - Merged commits:
+  - PR #121. Item merges into `prp-24-themes-sandbox-mode-and-accessibility`:
+    - item 1 `409f8aa` (771bb2c), plus the orchestrator's PRP-04 placeholder fix `9ee3ed7`
+    - item 2 `8652d18` (ff022c7)
+    - item 4 `b729735` (bf0292d)
+    - item 3 `16a8942` (bac1ab3) and item 5 `60f2f1c` (f8ce9ee), merged together (D6)
+    - item 3b `20ee03b` (9cc3607) and item 5b `0d27749` (f04ffa7), merged together (D8)
+  - Gate register updated in `3b41e5d`. `main` merged in at `af0be41`, picking up the dependency-audit fix (PR #122: filelock 4.2.4, undici 8.12.3).
+  - Local evidence:
+    - `verify-gates -Mode full`: 4/4 PASS, 7507 passed, 147 deselected (before items 3b and 5b).
+    - After the final merge: e2e 334 passed on two runs, Vitest 49 files with 581 passed, typecheck and lint clean.
+    - Sandbox Cosmos emulator integration: 1 passed.
+    - Snyk: 0 new issues. The two existing PRP-19 chart `postMessage` findings are by design, because the iframe has an opaque origin.
+    - PR CI: all 21 checks green on `0d0eac8`.
 - Deviations from blueprint and why:
-- Descoped items:
+  - D1-D8 are in Execution state.
+  - D1: added item 4, integration wiring, because no item owned the shared shell, store, router and OpenAPI files. The recorded-request comparison test moved there.
+  - D2: the a11y suite lives at `frontend/tests/e2e/a11y/`.
+  - D3: the API tests directory is `sandbox_api`.
+  - D4: sandbox permissions are `data.read` for reads and `config.manage` for writes. The allowlist is a fixed name set.
+  - D5 and D6: item 5 fixed 31 serious color-contrast findings: a global theme-token link colour and a high-contrast badge.
+  - D7: Fluent tabster focus sentinels are excluded from axe.
+  - D8: item 3b added the automated keyboard and accessibility-tree pre-check. Item 5b fixed dialog focus restore and the chart iframe focus indicator.
+  - The allowlist refusal uses `InvalidSchemaError` (422, reason `sandbox_allowlist`).
+  - SVG logos are excluded from the allowlist.
+- Descoped items: none.
 - axe results (routes x modes) and manual checklist sign-off status:
-- G09 status after this PRP (expected OPEN):
+  - axe: 26 routes x 3 modes, both packs and sandbox mode, 0 serious or critical (`docs/accessibility/axe-results-2026-10-24.json`).
+  - Automated pre-check: 505 checks, all PASS after 5b (`docs/accessibility/automated-precheck-2026-10-24.md`).
+  - Keyboard and screen-reader checklists: OPEN (unsigned). A human tester must run NVDA plus one other reader. NVDA is not installed on the build machine; Narrator is.
+- G09 status after this PRP (expected OPEN): OPEN, recorded in `docs/RESEARCH-AND-GATES.md`. Unsigned manual checklists, unreviewed brand claims, and the deck and video still due from PRP-26 and PRP-27.
 - Follow-ups:
+  - The deployment default theme applies only once the shell mounts, so the pre-shell screens use the built-in theme. Fixing it needs `Providers.tsx` or `App.tsx`.
+  - `frontend/tests/mock-api/copilot.ts` fails prettier. It dates from PRP-19, and prettier is not in CI.
+  - React warning: `<p>` contains a `<div>` in `PublicationBadge` on `/reports/view`.
+  - Checklist expectations differ from product names in 5 places, listed in the pre-check doc. Reconcile them at human sign-off.
+  - One transient a11y failure (`/workspaces/auditor`, light) and one actions-spec flake were each seen once and did not reproduce.
+  - Hosted UI deployment (App Service, Limitlessdata) is the next session, by operator choice.

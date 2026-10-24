@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-24-themes-sandbox-mode-and-accessibility](active/PRP-24-themes-sandbox-mode-and-accessibility.md) |  | 7/7 (100%) | merged 7 | ? / ? | none |
+_none_
 
 ## Backlog
 
@@ -24,6 +22,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-10-23 | #110 |
 | [prp-23-ato-evidence-and-data-lifecycle](shipped/PRP-23-ato-evidence-and-data-lifecycle.md) | 2026-10-23 | #118 |
 | [prp-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-10-22 | #87 |
