@@ -6,11 +6,13 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
+import { useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 import { Outlet, useHref, useLinkClickHandler, useLocation } from "react-router";
 import { useRoles } from "../auth";
-import { LogoSlot } from "../design-system";
+import { LogoSlot, getThemePack, useThemeStore } from "../design-system";
 import { CopilotDock } from "../features/copilot/CopilotDock";
+import { SandboxBanner } from "../features/sandbox/SandboxBanner";
+import { ConfigContext } from "./ConfigContext";
 import { DomainSwitcher } from "./DomainSwitcher";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { UserMenu } from "./UserMenu";
@@ -61,6 +63,7 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
   },
+  logo: { maxHeight: "32px", maxWidth: "160px" },
   product: {
     fontSize: tokens.fontSizeBase500,
     fontWeight: tokens.fontWeightSemibold,
@@ -192,6 +195,18 @@ function ShellNav({
   );
 }
 
+/** The active theme pack's header logo, or the neutral empty slot when the pack ships none. */
+function HeaderLogo(): ReactElement {
+  const styles = useStyles();
+  const packId = useThemeStore((s) => s.packId);
+  const { asset, altText } = getThemePack(packId).logos.header;
+  return (
+    <LogoSlot>
+      {asset === null ? null : <img src={asset.src} alt={altText} className={styles.logo} />}
+    </LogoSlot>
+  );
+}
+
 export interface ShellProps {
   readonly staticItems: readonly NavItem[];
   readonly useNavItems: (() => readonly NavItem[]) | undefined;
@@ -210,6 +225,18 @@ export function Shell({ staticItems, useNavItems }: ShellProps): ReactElement {
   const compact = useCompact();
   const [navOpen, setNavOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const config = useContext(ConfigContext);
+  const applyDeploymentDefault = useThemeStore((s) => s.applyDeploymentDefault);
+  const defaultThemePack = config?.defaultThemePack;
+  const defaultThemeMode = config?.defaultThemeMode;
+
+  // Deployment default theme from runtime config; a saved user choice wins inside the store.
+  useEffect(() => {
+    applyDeploymentDefault({
+      ...(defaultThemePack === undefined ? {} : { packId: defaultThemePack }),
+      ...(defaultThemeMode === undefined ? {} : { themeName: defaultThemeMode }),
+    });
+  }, [applyDeploymentDefault, defaultThemePack, defaultThemeMode]);
 
   // The browser's default 8px body margin would inset the shell; there is no global stylesheet.
   useEffect(() => {
@@ -242,12 +269,13 @@ export function Shell({ staticItems, useNavItems }: ShellProps): ReactElement {
         {compact ? (
           <Hamburger aria-label="Open navigation" onClick={() => setNavOpen(true)} />
         ) : null}
-        <LogoSlot />
+        <HeaderLogo />
         <span className={styles.product}>{PRODUCT_NAME}</span>
         <span className={styles.spacer} />
         <DomainSwitcher />
         <UserMenu />
       </header>
+      <SandboxBanner />
       <div className={styles.body}>
         <ShellNav
           sections={sections}

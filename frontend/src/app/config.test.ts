@@ -70,3 +70,26 @@ describe("loadConfig", () => {
     ).rejects.toThrow(/cloud/);
   });
 });
+
+describe("theme defaults", () => {
+  it("accepts a known default pack and mode", () => {
+    const config = parseConfig({
+      ...valid,
+      defaultThemePack: "sample-agency",
+      defaultThemeMode: "dark",
+    });
+    expect(config.defaultThemePack).toBe("sample-agency");
+    expect(config.defaultThemeMode).toBe("dark");
+  });
+
+  it("leaves them undefined when absent", () => {
+    const config = parseConfig(valid);
+    expect(config.defaultThemePack).toBeUndefined();
+    expect(config.defaultThemeMode).toBeUndefined();
+  });
+
+  it("rejects an unknown pack or mode", () => {
+    expect(() => parseConfig({ ...valid, defaultThemePack: "nope" })).toThrow(/defaultThemePack/);
+    expect(() => parseConfig({ ...valid, defaultThemeMode: "sepia" })).toThrow(/defaultThemeMode/);
+  });
+});

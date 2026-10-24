@@ -8,11 +8,16 @@ import {
   selectedNavTo,
   type NavItem,
 } from "./navigation";
+import { reloadStoredTheme, useThemeStore } from "../design-system";
 import { accountWith, domainEntry, renderShell, stubResizeObserver } from "./test-support";
 import { buildAppNavItems } from "./workspaceNav";
 
 beforeAll(stubResizeObserver);
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+  reloadStoredTheme();
+});
 
 const EXISTING_LINKS = [
   "Cost dashboard",
@@ -184,5 +189,24 @@ describe("navigation model", () => {
     });
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(within(nav).queryByRole("link", { name: "Gated" })).toBeNull();
+  });
+});
+
+describe("user menu theme pickers", () => {
+  it("offers labelled mode and pack radios and applies the choice", async () => {
+    const user = userEvent.setup();
+    renderRealNav(["Viewer"]);
+    await user.click(screen.getByRole("button", { name: /^Account:/ }));
+    const dark = await screen.findByRole("menuitemradio", { name: "Dark" });
+    expect(screen.getByRole("menuitemradio", { name: "Light" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await user.click(dark);
+    expect(useThemeStore.getState().themeName).toBe("dark");
+    await user.click(screen.getByRole("button", { name: /^Account:/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Sample Agency" }));
+    expect(useThemeStore.getState().packId).toBe("sample-agency");
+    expect(screen.getByRole("switch", { name: /sandbox/i })).toBeInTheDocument();
   });
 });
