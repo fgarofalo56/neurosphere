@@ -189,6 +189,8 @@ Plan approved 2026-10-23 with five deltas signed off by the operator.
 - D3: API unit tests live in `services/api/tests/sandbox_api/` (not `sandbox/`), so they cannot shadow the top-level PRP-03 `sandbox` generator package.
 - D4: sandbox reads use `data.read`, writes use `config.manage`; no new permission, PRP-06 authz files untouched. Container allowlist uses the `sandbox-` prefix rule of `scripts/sandbox/sbx_guard.py` plus a fixed name set.
 - D5: if item 3 finds serious or critical axe violations in another PRP's component, a sequenced item 5 (fix-forward) owns exactly the offending files and fixes them here; the operator signs off its file list first.
+- D6 (2026-10-24, operator sign-off under D5): item 3 found 31 serious `color-contrast` violations, 0 critical, two root causes: bare react-router links render the browser default link colour in dark and high-contrast, and the high-contrast "invoiced" kind badge is 3.91:1. Item 5 (fix-forward) owns exactly `frontend/src/design-system/AppThemeProvider.tsx` (global link colour from `colorBrandForegroundLink`) and `frontend/src/features/dashboards/components.tsx` (badge), plus a Vitest test beside each. Item 3 merges together with item 5, never alone onto red.
+- D7 (2026-10-24, operator decision): the axe runs exclude Fluent focus sentinels `[data-tabster-dummy]`, matching the existing `overview`, `shell` and `copilot` specs; logged as A11Y-012 in `docs/accessibility/remediation-log.md`.
 
 Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if needed. Merge one at a time, touched suites after each. Models: implementers sonnet; review none.
 
@@ -197,7 +199,8 @@ Waves: A = items 1 and 2 in parallel; B = item 4; C = item 3; item 5 only if nee
 | 1 agency-theme-tokens | merged | worktree-agent-a6db6b22ab9287862 | sonnet | 771bb2c; merged 409f8aa; orchestrator fixed PRP-04 empty-themes placeholder in tokens.test.ts 9ee3ed7; post-merge vitest src/design-system 122 passed, typecheck, lint, prettier clean; Snyk 0 | 2026-10-23 |
 | 2 sandbox-mode | merged | worktree-agent-ab2efb5b948b84a68 | sonnet | ff022c7; implementer integration test 1 passed (compose, 232s); merged into integration branch; post-merge ruff, pyright 0, pytest sandbox_api+workspaces_api 55 passed, full collection 7507 OK, vitest 127 passed, typecheck, lint clean; Snyk 0 (api + frontend) | 2026-10-23 |
 | 4 integration-wiring | merged | worktree-agent-a6f02df2f9860d7d7 | sonnet | bf0292d; merged b729735; post-merge vitest 47 files 575 passed, typecheck, lint clean, e2e 94 passed (map-perf records SwiftShader fps, non-failing), openapi drift + test_app + sandbox_api 54 passed, ruff clean; Snyk 0; openapi diff additive (sandbox only) | 2026-10-23 |
-| 3 wcag-audit | in-progress | (worktree) | sonnet | dispatched wave C | 2026-10-23 |
+| 3 wcag-audit | verifying | worktree-agent-aaf3d97bd0ce74aea | sonnet | bac1ab3; a11y 31 failed (serious color-contrast, product defects) 108 passed; rest of e2e 202 passed; typecheck, lint, prettier, validate_planning clean; held for item 5 (D6) | 2026-10-24 |
+| 5 contrast-fix-forward | in-progress | (worktree) | sonnet | dispatched on top of item 3 (D6) | 2026-10-24 |
 
 ## Completion note (filled at ship)
 - Date:
