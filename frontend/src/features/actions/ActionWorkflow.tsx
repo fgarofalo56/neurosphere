@@ -1,5 +1,5 @@
 import { Button, MessageBar, MessageBarBody } from "@fluentui/react-components";
-import { useState, type ReactElement } from "react";
+import { useRef, useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../../api/index.js";
 import { ActionError, ConfirmationDialog } from "./components";
@@ -27,11 +27,19 @@ export interface ActionWorkflowProps {
 export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps): ReactElement {
   const [error, setError] = useState<ApiError | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const validate = useValidateIntent();
   const present = usePresentConfirmation();
   const confirm = useConfirmIntent();
   const intentId = view.intent.intent_id;
   const busy = validate.isPending || present.isPending || confirm.isPending;
+
+  // The dialog unmounts on close, so Fluent cannot restore focus itself; hand it back to the
+  // "Review and confirm" trigger once the dialog's own focus handling has settled.
+  const closeDialog = (): void => {
+    setDialogOpen(false);
+    setTimeout(() => triggerRef.current?.focus(), 0);
+  };
 
   if (view.advisory) {
     return (
@@ -72,6 +80,7 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
       ) : null}
       {state === "awaiting_confirmation" ? (
         <Button
+          ref={triggerRef}
           appearance="primary"
           onClick={() => {
             setError(null);
@@ -98,7 +107,7 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
           requiresApproval={view.requires_approval}
           submitting={confirm.isPending}
           error={error}
-          onClose={() => setDialogOpen(false)}
+          onClose={closeDialog}
           onSubmit={(confirmationHash) => {
             setError(null);
             confirm.mutate(

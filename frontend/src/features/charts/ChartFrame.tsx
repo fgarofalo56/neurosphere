@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { makeStyles, tokens, Tab, TabList, Text } from "@fluentui/react-components";
+import { makeStyles, mergeClasses, tokens, Tab, TabList, Text } from "@fluentui/react-components";
 import type { ChartPlan } from "@neurosphere/contracts";
 import { ChartTable } from "./ChartTable";
 import {
@@ -35,6 +35,10 @@ export interface ChartFrameProps {
 const useStyles = makeStyles({
   root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
   frame: { width: "100%", border: "none", backgroundColor: tokens.colorNeutralBackground1 },
+  frameFocused: {
+    outline: `${tokens.strokeWidthThick} solid ${tokens.colorStrokeFocus2}`,
+    outlineOffset: "2px",
+  },
   sources: { color: tokens.colorNeutralForeground3 },
 });
 
@@ -53,6 +57,7 @@ export function ChartFrame({
   const requestRef = useRef<string | null>(null);
   const [view, setView] = useState<ChartView>(initialView);
   const [status, setStatus] = useState<ChartStatus>("loading");
+  const [frameFocused, setFrameFocused] = useState(false);
   const rejected = useMemo(() => specViolations(plan.spec).length > 0, [plan]);
 
   useEffect(() => {
@@ -95,6 +100,19 @@ export function ChartFrame({
     return () => window.removeEventListener("message", onMessage);
   }, [rejected, send]);
 
+  // Focus moving into the framed document blurs the host window while the iframe element becomes
+  // the host's active element; focus coming back to the host fires window focus.
+  useEffect(() => {
+    const sync = (): void => setFrameFocused(document.activeElement === iframeRef.current);
+    const clear = (): void => setFrameFocused(false);
+    window.addEventListener("blur", sync);
+    window.addEventListener("focus", clear);
+    return () => {
+      window.removeEventListener("blur", sync);
+      window.removeEventListener("focus", clear);
+    };
+  }, []);
+
   // Plan changed while the sandbox is already ready: render the new plan.
   useEffect(() => {
     send();
@@ -120,10 +138,14 @@ export function ChartFrame({
         <div hidden={shown !== "chart"}>
           <iframe
             ref={iframeRef}
-            className={styles.frame}
+            className={mergeClasses(styles.frame, frameFocused && styles.frameFocused)}
             title={title}
             src={sandboxSrc}
             sandbox="allow-scripts"
+            // Chromium matches neither :focus nor :focus-visible on an iframe whose document holds
+            // focus, so the ring is driven by the focus and blur events the iframe element gets.
+            onFocus={() => setFrameFocused(true)}
+            onBlur={() => setFrameFocused(false)}
             onLoad={() => {
               // The sandbox script has run before load; covers a missed ready message.
               readyRef.current = true;

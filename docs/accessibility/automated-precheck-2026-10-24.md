@@ -30,7 +30,7 @@ NS_E2E_APP_PORT=4341 NS_MOCK_API_PORT=4241 pnpm --filter @neurosphere/frontend e
 - Accessibility tree: `getByRole` with the exact product names and `toMatchAriaSnapshot`. The route rows check the page title, one main landmark with an h1, the banner and Primary navigation landmarks, and that no control in the body's aria snapshot lacks a name.
 - Focus order is not judged. Chromium headless does not drive NVDA, Narrator or VoiceOver.
 
-Run totals: 505 checks, 497 passed, 3 failed, 5 notes.
+Run totals (before the item 5b fixes): 505 checks, 497 passed, 3 failed, 5 notes; all pass after A11Y-013 and A11Y-014 were fixed.
 
 ## Keyboard checklist: key flows
 
@@ -47,7 +47,7 @@ Run totals: 505 checks, 497 passed, 3 failed, 5 notes.
 | Chart (sandboxed iframe) | Chart/Table tabs work with arrow keys; the table is reachable without entering the iframe; focus is never trapped in the frame. | PASS | 8 checks passed | Content inside the sandboxed frame; the Save as report dialog is NOT AUTOMATABLE here (the mock API never sends a query spec, so the dialog is not offered). |
 | Reports | List, view, run, save dialog and share controls are operable; dialog focus is trapped while open and restored on close. | PASS | 9 checks passed | Run, save and the other dialogs beyond Share; Save as report is NOT AUTOMATABLE here (see Chart row). |
 | Copilot panel | Panel opens and closes by keyboard; answers and citations are reachable; focus is managed when a turn arrives. | PASS | 9 checks passed | Whether the focus handling when a turn arrives suits a real user. |
-| Actions confirm dialogs | 'Review and confirm' opens the dialog; target, version and diff are reachable; Escape cancels; focus returns to the trigger. | FAIL (see A11Y-013) | 6 passed, 1 failed. Failed: focus returns to the 'Review and confirm' trigger | Whether target, version and diff read in a sensible order. |
+| Actions confirm dialogs | 'Review and confirm' opens the dialog; target, version and diff are reachable; Escape cancels; focus returns to the trigger. | PASS after fix (A11Y-013, PRP-24 item 5b) | 7 passed, 0 failed (previously failed: focus returns to the 'Review and confirm' trigger) | Whether target, version and diff read in a sensible order. |
 
 ## Keyboard checklist: routes
 
@@ -70,7 +70,7 @@ Run totals: 505 checks, 497 passed, 3 failed, 5 notes.
 | `/reconciliation` | PASS | 10 checks passed (light: 20 stops, high-contrast: 20 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
 | `/replay/traces` | PASS | 10 checks passed (light: 24 stops, high-contrast: 24 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
 | `/reports` | PASS | 10 checks passed (light: 24 stops, high-contrast: 24 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
-| `/reports/view` | FAIL (see A11Y-014) | 8 passed, 2 failed. Failed: every focused element shows a focus indicator | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
+| `/reports/view` | PASS after fix (A11Y-014, PRP-24 item 5b) | 10 passed, 0 failed (previously failed: every focused element shows a focus indicator) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
 | `/review` | PASS | 10 checks passed (light: 25 stops, high-contrast: 25 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
 | `/review/item` | PASS | 10 checks passed (light: 21 stops, high-contrast: 21 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
 | `/sandbox` | PASS | 10 checks passed (light: 20 stops, high-contrast: 20 stops) | Every control is operable and the focus order is logical (the sweep only visits the first 80 stops and does not activate controls). |
@@ -130,7 +130,7 @@ Run totals: 505 checks, 497 passed, 3 failed, 5 notes.
 
 ## Failures found by this pre-check
 
-Logged in `remediation-log.md` (A11Y-013 and A11Y-014). The tests keep failing until the product is fixed; they were not skipped or weakened.
+Logged in `remediation-log.md` (A11Y-013 and A11Y-014). Both were fixed in PRP-24 item 5b and the suite re-run passes (240 passed in two consecutive runs); the tests were not skipped or weakened.
 
 | ID | Flow or route | Expected | Actual | Owning file |
 |---|---|---|---|---|
