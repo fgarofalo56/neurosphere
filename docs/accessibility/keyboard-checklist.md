@@ -2,6 +2,8 @@
 
 Manual keyboard test for NeuroSphere. Automated axe results are in `axe-results-2026-10-23.json` and prove nothing about operability by themselves. Test in light, dark and high-contrast; record deviations in the Notes column and log defects in `remediation-log.md`.
 
+An automated pre-check of these rows (not a human test, does not replace this checklist) is in [`automated-precheck-2026-10-24.md`](automated-precheck-2026-10-24.md).
+
 ## Key flows
 
 Status: OPEN (unsigned)

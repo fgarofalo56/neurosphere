@@ -19,6 +19,12 @@ Location: `frontend/tests/e2e/a11y/`.
 | `routes.a11y.spec.ts` | First test fails if a manifest route has no sample (or a sample is not in the manifest). Then every sample in light, dark and high-contrast, every sample with sandbox mode on (banner role and name asserted), the map table keyboard traversal, the map under `prefers-reduced-motion: reduce`, and the sandboxed chart iframe. |
 | `themes.a11y.spec.ts` | Every theme pack in the three modes on home, a dashboard, the map table, a report view and the sandbox page, colour contrast included. |
 | `axe-support.ts` | Shared axe configuration, preference seeding and result recording. |
+| `keyboard-flows.a11y.spec.ts` | Automated keyboard pre-check: one test per key flow of `keyboard-checklist.md`, driven with real key presses. |
+| `routes-keyboard.a11y.spec.ts` | Tab sweep of every manifest route in light and high-contrast: visible focus, focus indicator, no trap, an h1. |
+| `aria-tree.a11y.spec.ts` | Accessibility-tree pre-check for the flows and routes of `screen-reader-checklist.md` (role, name, state). |
+| `precheck-support.ts` | Shared recorder; writes `frontend/test-results/a11y/precheck-results.json`. |
+
+The three pre-check specs are evidence for the human tester, not a substitute: see [`automated-precheck-2026-10-24.md`](automated-precheck-2026-10-24.md).
 
 Any `serious` or `critical` violation fails a test and prints rule id, impact and target selectors. Minor and moderate findings are recorded, not failed. One narrow exclusion exists: Fluent UI's `[data-tabster-dummy]` focus sentinels (logged in `remediation-log.md`).
 
