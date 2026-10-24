@@ -4,7 +4,7 @@ import { axe } from "vitest-axe";
 import { AppThemeProvider } from "./AppThemeProvider";
 import { LogoSlot } from "./LogoSlot";
 import { ThemeGallery } from "./ThemeGallery";
-import { useThemeStore } from "./theme-store";
+import { THEME_STORAGE_KEY, reloadStoredTheme, useThemeStore } from "./theme-store";
 import { THEME_NAMES } from "./tokens";
 import type { ThemeName } from "./tokens";
 
@@ -93,4 +93,80 @@ describe("ThemeGallery axe", () => {
       expect(blocking.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
     });
   }
+});
+
+describe("theme persistence", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    reloadStoredTheme();
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
+    reloadStoredTheme();
+  });
+
+  it("persists mode and pack under one key and restores them", () => {
+    act(() => {
+      useThemeStore.getState().setTheme("dark");
+      useThemeStore.getState().setPack("sample-agency");
+    });
+    expect(JSON.parse(window.localStorage.getItem(THEME_STORAGE_KEY) ?? "null")).toEqual({
+      themeName: "dark",
+      packId: "sample-agency",
+    });
+    useThemeStore.setState({ themeName: "light", packId: "default" });
+    reloadStoredTheme();
+    expect(useThemeStore.getState().themeName).toBe("dark");
+    expect(useThemeStore.getState().packId).toBe("sample-agency");
+  });
+
+  it("falls back to defaults for unknown or corrupt stored values", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ packId: "x", themeName: "y" }));
+    reloadStoredTheme();
+    expect(useThemeStore.getState().packId).toBe("default");
+    expect(useThemeStore.getState().themeName).toBe("light");
+    window.localStorage.setItem(THEME_STORAGE_KEY, "{not json");
+    reloadStoredTheme();
+    expect(useThemeStore.getState().packId).toBe("default");
+  });
+
+  it("ignores an unknown pack id and survives storage errors", () => {
+    useThemeStore.getState().setPack("not-a-pack");
+    expect(useThemeStore.getState().packId).toBe("default");
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota");
+    });
+    expect(() => {
+      useThemeStore.getState().setTheme("dark");
+    }).not.toThrow();
+    expect(useThemeStore.getState().themeName).toBe("dark");
+  });
+
+  it("deployment default applies only where the user has not chosen", () => {
+    useThemeStore.getState().applyDeploymentDefault({ packId: "sample-agency", themeName: "dark" });
+    expect(useThemeStore.getState().packId).toBe("sample-agency");
+    expect(useThemeStore.getState().themeName).toBe("dark");
+    window.localStorage.clear();
+    reloadStoredTheme();
+    act(() => {
+      useThemeStore.getState().setTheme("light");
+    });
+    useThemeStore.getState().applyDeploymentDefault({ themeName: "dark" });
+    expect(useThemeStore.getState().themeName).toBe("light");
+  });
+
+  it("sets data-theme-pack on the provider", () => {
+    act(() => {
+      useThemeStore.getState().setPack("sample-agency");
+    });
+    const { container } = render(
+      <AppThemeProvider>
+        <LogoSlot />
+      </AppThemeProvider>,
+    );
+    expect(container.querySelector("[data-theme]")?.getAttribute("data-theme-pack")).toBe(
+      "sample-agency",
+    );
+  });
 });

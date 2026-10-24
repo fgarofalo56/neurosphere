@@ -95,6 +95,57 @@ function meDomainItems(): readonly Record<string, unknown>[] {
   ];
 }
 
+// ---- PRP-24: GET /api/v1/sandbox/status and /entities. Shapes follow the API models
+// (SandboxSummary, EntityPage); every body is marked synthetic and sandbox, like the real API.
+export const SANDBOX_STATUS_PATH = "/api/v1/sandbox/status";
+export const SANDBOX_ENTITIES_PATH = "/api/v1/sandbox/entities";
+
+const SANDBOX_COUNTS: Readonly<Record<string, number>> = {
+  domain: 3,
+  owner: 4,
+  person: 6,
+  model_deployment: 5,
+  grounding_source: 2,
+  tool: 3,
+  agent: 4,
+  agent_version: 7,
+};
+const SANDBOX_RELATIONS = 12;
+
+function sandboxStatusBody(): Record<string, unknown> {
+  const total = Object.values(SANDBOX_COUNTS).reduce((a, b) => a + b, 0) + SANDBOX_RELATIONS;
+  return {
+    environment: "sandbox",
+    synthetic: true,
+    customer_id: "synthco",
+    database: "neurosphere-sandbox",
+    counts: SANDBOX_COUNTS,
+    relations: SANDBOX_RELATIONS,
+    total,
+  };
+}
+
+function sandboxEntitiesBody(url: URL): Record<string, unknown> {
+  const requested = url.searchParams.get("kind") ?? "domain";
+  const kind = requested in SANDBOX_COUNTS ? requested : "domain";
+  const limit = Math.max(1, Number(url.searchParams.get("limit") ?? 25) || 25);
+  const offset = Math.max(0, Number(url.searchParams.get("offset") ?? 0) || 0);
+  const count = SANDBOX_COUNTS[kind] ?? 0;
+  const items: Record<string, unknown>[] = [];
+  for (let i = offset; i < Math.min(count, offset + limit); i += 1) {
+    items.push({ id: `synthco-${kind}-${i + 1}`, kind, name: `Synthetic ${kind} ${i + 1}` });
+  }
+  return {
+    environment: "sandbox",
+    synthetic: true,
+    kind,
+    items,
+    limit,
+    offset,
+    next_offset: offset + limit < count ? offset + limit : null,
+  };
+}
+
 // ---- PRP-14 fixtures: GET /api/v1/dashboards/domains/{domain}/{metric} and
 // GET /api/v1/reconciliation/domains/{domain}. Shapes follow the contract (Wire contract plus
 // the item 4 per-currency references); the numbers are synthetic. The mock only imitates the
@@ -2044,6 +2095,19 @@ export function createMockApi(options: MockApiOptions): Server {
         return;
       }
       send(res, 200, { items: meDomainItems() }, cors);
+      return;
+    }
+    if (url.pathname === SANDBOX_STATUS_PATH || url.pathname === SANDBOX_ENTITIES_PATH) {
+      if (roleFromAuthorization(req.headers.authorization) === undefined) {
+        send(res, 401, { error: "missing or unrecognised token" }, cors);
+        return;
+      }
+      send(
+        res,
+        200,
+        url.pathname === SANDBOX_STATUS_PATH ? sandboxStatusBody() : sandboxEntitiesBody(url),
+        cors,
+      );
       return;
     }
     const dashboard = DASHBOARD_PATH.exec(url.pathname);

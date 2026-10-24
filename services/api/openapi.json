@@ -3310,6 +3310,64 @@
         "title": "EntityFilter",
         "type": "object"
       },
+      "EntityPage": {
+        "additionalProperties": false,
+        "properties": {
+          "environment": {
+            "const": "sandbox",
+            "default": "sandbox",
+            "title": "Environment",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SandboxKind"
+          },
+          "limit": {
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "items",
+          "limit",
+          "offset",
+          "next_offset"
+        ],
+        "title": "EntityPage",
+        "type": "object"
+      },
       "EntityVersion": {
         "minimum": 1.0,
         "title": "EntityVersion",
@@ -8311,6 +8369,35 @@
         "title": "RequestId",
         "type": "string"
       },
+      "ResetResult": {
+        "additionalProperties": false,
+        "properties": {
+          "deleted": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Deleted",
+            "type": "object"
+          },
+          "environment": {
+            "const": "sandbox",
+            "default": "sandbox",
+            "title": "Environment",
+            "type": "string"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "ResetResult",
+        "type": "object"
+      },
       "ResourceRef": {
         "maxLength": 1024,
         "minLength": 1,
@@ -8859,6 +8946,71 @@
         "maximum": 1.0,
         "title": "SamplingRate",
         "type": "number"
+      },
+      "SandboxKind": {
+        "description": "Closed set of entity kinds the PRP-03 generator writes to ``sandbox-entities``.",
+        "enum": [
+          "domain",
+          "owner",
+          "person",
+          "model_deployment",
+          "grounding_source",
+          "tool",
+          "agent",
+          "agent_version"
+        ],
+        "title": "SandboxKind",
+        "type": "string"
+      },
+      "SandboxSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "customer_id": {
+            "const": "synthco",
+            "default": "synthco",
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "environment": {
+            "const": "sandbox",
+            "default": "sandbox",
+            "title": "Environment",
+            "type": "string"
+          },
+          "relations": {
+            "title": "Relations",
+            "type": "integer"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "database",
+          "counts",
+          "relations",
+          "total"
+        ],
+        "title": "SandboxSummary",
+        "type": "object"
       },
       "Scale": {
         "additionalProperties": false,
@@ -15671,6 +15823,113 @@
         "summary": "Decide Item",
         "tags": [
           "review"
+        ]
+      }
+    },
+    "/api/v1/sandbox/entities": {
+      "get": {
+        "operationId": "entities_api_v1_sandbox_entities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SandboxKind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entities",
+        "tags": [
+          "sandbox"
+        ]
+      }
+    },
+    "/api/v1/sandbox/reset": {
+      "post": {
+        "operationId": "reset_api_v1_sandbox_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reset",
+        "tags": [
+          "sandbox"
+        ]
+      }
+    },
+    "/api/v1/sandbox/status": {
+      "get": {
+        "operationId": "status_api_v1_sandbox_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "sandbox"
         ]
       }
     },

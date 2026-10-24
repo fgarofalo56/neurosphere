@@ -1,5 +1,8 @@
 /** Runtime configuration (C7): fetched from /config.json at startup, validated by hand. */
 
+import { isThemeName, isThemePackId } from "../design-system/theme-store";
+import type { ThemeName } from "../design-system/tokens";
+
 export const CLOUDS = ["commercial", "government"] as const;
 export type Cloud = (typeof CLOUDS)[number];
 
@@ -9,6 +12,10 @@ export interface AppConfig {
   readonly clientId: string;
   readonly apiBaseUrl: string;
   readonly apiScope: string;
+  /** Deployment default theme pack id. Presentation only; a user's saved choice wins. */
+  readonly defaultThemePack?: string;
+  /** Deployment default theme mode. Presentation only; a user's saved choice wins. */
+  readonly defaultThemeMode?: ThemeName;
 }
 
 export class ConfigError extends Error {
@@ -52,6 +59,15 @@ export function parseConfig(raw: unknown): AppConfig {
     }
   }
 
+  const themePack = raw["defaultThemePack"];
+  if (themePack !== undefined && !isThemePackId(themePack)) {
+    problems.push('"defaultThemePack" must be the id of a known theme pack');
+  }
+  const themeMode = raw["defaultThemeMode"];
+  if (themeMode !== undefined && !isThemeName(themeMode)) {
+    problems.push('"defaultThemeMode" must be "light", "dark" or "high-contrast"');
+  }
+
   const cloud = raw["cloud"];
   if (problems.length > 0 || !isCloud(cloud)) throw new ConfigError(problems);
 
@@ -61,6 +77,8 @@ export function parseConfig(raw: unknown): AppConfig {
     clientId: strings["clientId"] ?? "",
     apiBaseUrl: strings["apiBaseUrl"] ?? "",
     apiScope: strings["apiScope"] ?? "",
+    ...(isThemePackId(themePack) ? { defaultThemePack: themePack } : {}),
+    ...(isThemeName(themeMode) ? { defaultThemeMode: themeMode } : {}),
   };
 }
 
