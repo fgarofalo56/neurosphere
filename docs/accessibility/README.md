@@ -50,6 +50,7 @@ Axe finds a subset of WCAG failures that a machine can detect, such as missing n
 
 - [`keyboard-checklist.md`](keyboard-checklist.md)
 - [`screen-reader-checklist.md`](screen-reader-checklist.md) (NVDA on Windows plus Narrator or VoiceOver)
+- [`tester-runbook.md`](tester-runbook.md): step-by-step instructions for the human tester
 - [`remediation-log.md`](remediation-log.md)
 
 Every manual section is marked `Status: OPEN (unsigned)`. Only a human tester fills in the sign-off blocks. No agent has signed or passed any row.

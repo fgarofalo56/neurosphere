@@ -23,17 +23,17 @@ Status: OPEN (unsigned)
 | Item | Expected behaviour | Result | Notes |
 |---|---|---|---|
 | Skip link | Announced as a link named 'Skip to main content'; activating it lands in the main landmark. | | |
-| Primary navigation | Navigation landmark named 'Primary'; groups announced; current page announced. | | |
+| Primary navigation | Navigation landmark named 'Primary' (an ARIA landmark, not a `nav` element; landmark navigation still finds it); groups announced; current page announced. | | |
 | User menu: theme picker | Menu button, menu items and the selected state are announced; selection changes are conveyed. | | |
 | User menu: theme pack picker | Pack names and the selected pack are announced; no logo is announced as meaningless text. | | |
-| Sandbox toggle | Announced as a switch with its on or off state ('On: synthetic data only' or 'Off'). | | |
+| Sandbox toggle | Announced as a switch named 'Sandbox mode' with its state ('on' / 'off', or 'checked' / 'not checked', depending on the reader). | | |
 | Sandbox banner | Region named 'Sandbox mode: synthetic data only' is announced and found by landmark navigation. | | |
 | Map table (treegrid) | Grid name, row labels, expanded state and level are announced; the detail live region (polite) announces the selection. | | |
-| Map page (WebGL) | Region named 'Agent topology map' plus coverage, truncation and live-status text are announced; the table link is found. | | |
-| Chart (sandboxed iframe) | Iframe has a meaningful title; the data table is announced with caption and headers; sources text is read. | | |
-| Reports | Table headers, status and approval states are announced; dialogs announce their title on open. | | |
+| Map page (WebGL) | Region named 'Agent topology map (WebGL graphic). The table view is the accessible equivalent.' plus coverage, truncation and live-status text are announced; the table link is found. | | |
+| Chart (sandboxed iframe) | Iframe has a meaningful title; the data table is announced with its name (an `aria-label`, not a caption) and headers; sources text is read. | | |
+| Reports | Table headers (Title, Publication, Updated; the owner is read inside the title cell), status and approval states are announced; dialogs announce their title on open. | | |
 | Copilot panel | Turns, citations, refusals and tool notices are announced in a sensible order. | | |
-| Actions confirm dialogs | Dialog title, target and version are announced on open; state badges are read as text. | | |
+| Actions confirm dialogs | Alert dialog titled 'Confirm this change' (opened by 'Review and confirm'); title, target and version are announced on open; state badges are read as text. | | |
 
 ## Routes (from `frontend/src/app/route-manifest.json`)
 

@@ -18,10 +18,10 @@ Status: OPEN (unsigned)
 | Sandbox banner | Banner is a labelled region reachable in reading order; it is not a focus trap. | | |
 | Map table (treegrid) | Tab enters the grid once (roving tabindex); arrow keys move rows; Enter expands; Home and End work; Tab leaves the grid. | | |
 | Map page (WebGL) | The canvas is not the only way to the data: 'View as table' is reachable; reduced-motion toggle works from the keyboard. | | |
-| Chart (sandboxed iframe) | Chart/Table tabs work with arrow keys; the table is reachable without entering the iframe; focus is never trapped in the frame. | | |
+| Chart (sandboxed iframe) | Chart/Table tabs use manual activation: arrow keys move between tabs, Enter or Space selects; the table is reachable without entering the iframe; focus is never trapped in the frame (Tab leaves it; Escape inside the frame does not reach the copilot panel, use Tab then Escape). | | |
 | Reports | List, view, run, save dialog and share controls are operable; dialog focus is trapped while open and restored on close. | | |
 | Copilot panel | Panel opens and closes by keyboard; answers and citations are reachable; focus is managed when a turn arrives. | | |
-| Actions confirm dialogs | 'Review and confirm' opens the dialog; target, version and diff are reachable; Escape cancels; focus returns to the trigger. | | |
+| Actions confirm dialogs | 'Review and confirm' opens the 'Confirm this change' dialog; target, version and diff are reachable; Escape cancels; focus returns to 'Review and confirm'. | | |
 
 ## Routes (from `frontend/src/app/route-manifest.json`)
 
