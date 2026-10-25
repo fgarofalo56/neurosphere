@@ -1,0 +1,84 @@
+# Rendered at container start by /docker-entrypoint.d/20-envsubst-on-templates.sh.
+# NGINX_ENVSUBST_FILTER=^NS_UI_ (set in the Dockerfile) limits substitution to NS_UI_* variables,
+# so nginx's own $variables below are left alone. Output goes to /tmp (read-only root fs).
+# No CORS headers anywhere: the browser talks to one origin (this server) for UI and /api.
+
+map $http_upgrade $ns_connection_upgrade {
+    default upgrade;
+    ""      close;
+}
+
+server {
+    listen 8080;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+
+    # Runtime config: a mounted file under the web root wins; otherwise the file rendered at
+    # start by render-config.sh. Never cached.
+    location = /config.json {
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri @ns_rendered_config;
+    }
+
+    location @ns_rendered_config {
+        root /tmp/ns-config;
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files /config.json =404;
+    }
+
+    # Same-origin API, including the realtime WebSocket (/api/v1/realtime/ws) and the copilot
+    # stream (fetch POST under /api/v1/copilot/): no buffering, long read timeout.
+    location /api/ {
+        proxy_pass ${NS_UI_API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $ns_connection_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    location = /readyz {
+        proxy_pass ${NS_UI_API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /healthz {
+        proxy_pass ${NS_UI_API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Vite emits content-hashed files under /assets.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    # SPA fallback.
+    location / {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri /index.html;
+    }
+}
