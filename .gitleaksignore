@@ -5,3 +5,6 @@ eb7998d77da18540b72ce82e75ad18ffd90436e3:tests/unit/gates/test_g01_analytics_evi
 9cd2870753e09cd393d1bd64f58af6adeaaaed2b:services/workers/tests/action_executor/test_success_path.py:generic-api-key:109
 # PRP-19: synthetic credential-shaped output-guard fixture in a copilot engine policy test.
 dd62b13e6b2165b09641b8337b5264d7cd853303:services/api/tests/copilot_api/test_engine_policy.py:generic-api-key:185
+# PRP-29 item 2: Cosmos SQL ORDER BY fragments `c.sort_key ASC` / `c.recorded_key DESC` in the evaluation store, not credentials.
+6042dc382d8bf07228b09566d4fd829aa11f2a44:packages/core/neurosphere_core/evaluation/cosmos_store.py:generic-api-key:469
+6042dc382d8bf07228b09566d4fd829aa11f2a44:packages/core/neurosphere_core/evaluation/cosmos_store.py:generic-api-key:503
