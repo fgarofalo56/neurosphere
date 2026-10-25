@@ -749,7 +749,7 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | 4 path-normalisation-aliases-and-curation-actor | merged | worktree-agent-af6d1108b708e36e6 | opus | rework 3cfa128 (helper actor); 1405 passed on integration; OpenAPI components unchanged (305), +23 paths; review APPROVED; merge 0201fbd | 2026-10-25 |
 | 5 same-origin-frontend-edge | merged | worktree-agent-a6e22c49f54f73ca9 | sonnet | 214669a: vitest 603, playwright 334, docker build+run OK (missing var fails named); WS/stream vs live upstream untested; on integration typecheck + edge 22 passed; merge 61968b3 | 2026-10-25 |
 | 6 entra-local-sign-in-and-operator-grant | merged | worktree-agent-aee9edfa34aa24239 | sonnet | 9aee7ab; 160 unit + operator-grant emulator passed; live --apply OPEN; merge 2b37022 | 2026-10-25 |
-| 7 data-plane-builders-and-replay-blob | in-progress | - | sonnet | - | 2026-10-25 |
+| 7 data-plane-builders-and-replay-blob | merged | worktree-agent-a112a65db205d6723 | sonnet | 0b9181d; item-1 readiness test fixed forward 437b6ab (placeholder codes); on integration 312 unit + runtime_api 71 + real_stack data/grant emulator passed; catalog search fails closed (no search backend); merge 06b6cc3 | 2026-10-25 |
 | 8 action-reports-copilot-and-mcp-builders | in-progress | - | opus | review: required | 2026-10-25 |
 | 9 workers-runtime-roles | in-progress | - | sonnet | - | 2026-10-25 |
 | 10 real-stack-synthetic-seed | todo | - | sonnet | - | 2026-10-24 |
