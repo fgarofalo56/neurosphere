@@ -106,13 +106,27 @@ function chartSandbox(): Plugin {
   };
 }
 
+const DEV_API_TARGET = process.env["NS_DEV_API_TARGET"] ?? "http://127.0.0.1:8000";
+
 // No `define` block on purpose: nothing from the environment is inlined except
 // the non-secret VITE_NS_* local-dev defaults Vite exposes via import.meta.env.
-export default defineConfig({
+export default defineConfig(({ command, mode }) => ({
   plugins: [react(), chartSandbox(), bundleReport()],
+  // Same-origin dev proxy (PRP-29 item 5): only for a plain `vite` dev server. The e2e/demo
+  // modes talk to the mock API and vitest (mode "test") never needs a proxy.
+  server:
+    command === "serve" && !["e2e", "demo", "test"].includes(mode)
+      ? {
+          proxy: {
+            "/api": { target: DEV_API_TARGET, changeOrigin: true, ws: true },
+            "/readyz": { target: DEV_API_TARGET, changeOrigin: true },
+            "/healthz": { target: DEV_API_TARGET, changeOrigin: true },
+          },
+        }
+      : {},
   test: {
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
   },
-});
+}));
