@@ -29,3 +29,12 @@ OPERATOR_ROLE ?= admin
 
 grant-operator: ## Grant OPERATOR_OID a role over the sandbox domains (needs NS_AUTH_TENANT_ID)
 	uv run python scripts/sandbox/sbx_grant_operator.py --object-id "$(OPERATOR_OID)" --role $(OPERATOR_ROLE)
+
+# Real-stack seed (PRP-29 item 10): synthetic data through the real paths into the local stack
+# (emulators + running workers). Usage: make seed-stack [SEED_PROFILE=demo] [OPERATOR_OID=<oid>]
+SEED_PROFILE ?= small
+
+.PHONY: seed-stack
+
+seed-stack: ## Seed the local real stack (idempotent; needs compose emulators + workers running)
+	uv run python scripts/sandbox/sbx_seed_stack.py --profile $(SEED_PROFILE) $(if $(OPERATOR_OID),--operator-object-id "$(OPERATOR_OID)")

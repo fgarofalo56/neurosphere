@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "notice": "Seed profiles for scripts/sandbox/sbx_seed_stack.py. 'small' is the generator's tiny profile; 'demo' is a custom, denser estate. Both use zero bad-event rates so every pushed event is well-formed and lands.",
+  "profiles": {
+    "small": {
+      "base": "tiny",
+      "overrides": {},
+      "review_limit": 4,
+      "evaluation_subjects": 2
+    },
+    "demo": {
+      "base": "custom",
+      "overrides": {
+        "domains": 4,
+        "agents": 40,
+        "days": 7,
+        "traces_per_agent_day": 6.0,
+        "cost_spikes": 2,
+        "latency_regressions": 2,
+        "unused_agents": 2,
+        "duplicate_pairs": 2
+      },
+      "review_limit": 8,
+      "evaluation_subjects": 4
+    }
+  }
+}

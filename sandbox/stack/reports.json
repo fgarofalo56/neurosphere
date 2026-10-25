@@ -1,0 +1,57 @@
+{
+  "synthetic": true,
+  "notice": "SYNTHETIC saved reports. Each is a chart plan template (no rows) plus a bounded structured query; rows are produced under the viewer's own scope on every run.",
+  "owner": "analyst",
+  "reports": [
+    {
+      "slug": "agents-by-version",
+      "title": "Agents by version",
+      "metric": "cost",
+      "domain_index": 0,
+      "chart_plan": {
+        "schema_version": "1.0.0",
+        "citations": [{"evidence_id": "ev:agents", "as_of": "2026-10-10T11:58:00Z"}],
+        "spec": {
+          "title": "Agents by version",
+          "data": {"values": [{"display_name": "sample", "version": 1.0}]},
+          "mark": "bar",
+          "encoding": {
+            "x": {"field": "display_name", "type": "nominal"},
+            "y": {"field": "version", "type": "quantitative"}
+          }
+        }
+      },
+      "query_spec": {
+        "schema_version": "1.0.0",
+        "operation": "list",
+        "entity": "agent",
+        "budget": {"timeout_ms": 2000, "limit": 20, "max_depth": 0}
+      }
+    },
+    {
+      "slug": "agent-inventory",
+      "title": "Agent inventory (latency view)",
+      "metric": "latency",
+      "domain_index": 1,
+      "chart_plan": {
+        "schema_version": "1.0.0",
+        "citations": [{"evidence_id": "ev:agents", "as_of": "2026-10-10T11:58:00Z"}],
+        "spec": {
+          "title": "Agent inventory",
+          "data": {"values": [{"display_name": "sample", "version": 1.0}]},
+          "mark": "line",
+          "encoding": {
+            "x": {"field": "display_name", "type": "nominal"},
+            "y": {"field": "version", "type": "quantitative"}
+          }
+        }
+      },
+      "query_spec": {
+        "schema_version": "1.0.0",
+        "operation": "list",
+        "entity": "agent",
+        "budget": {"timeout_ms": 2000, "limit": 20, "max_depth": 0}
+      }
+    }
+  ]
+}
