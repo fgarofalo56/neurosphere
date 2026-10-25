@@ -4,12 +4,17 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-29-platform-runtime-wiring](active/PRP-29-platform-runtime-wiring.md) | P0 | 0/11 (0%) | todo 7, in-progress 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
+| [prp-30-visual-redesign-and-switchable-ui-styles](backlog/PRP-30-visual-redesign-and-switchable-ui-styles.md) | P0 |  | - | - | ? / ? | required |
+| [prp-32-hosted-azure-environment](backlog/PRP-32-hosted-azure-environment.md) | P0 |  | - | - | ? / ? | required |
+| [prp-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 |  | - | - | ? / ? | required |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
 | [prp-27-explainer-video-render](backlog/PRP-27-explainer-video-render.md) |  |  | - | - | ? / ? | none |

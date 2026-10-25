@@ -1,6 +1,8 @@
 ---
 name: prp-29-platform-runtime-wiring
-status: backlog
+status: active
+started: 2026-10-24
+branch: prp-29-platform-runtime-wiring
 review: required
 priority: P0
 created: 2026-10-24
@@ -741,6 +743,17 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
+| 1 composition-root-authz-readiness-and-container-registry | in-progress | - | opus | review: required (plan approval) | 2026-10-24 |
+| 2 durable-stores-recommendations-evaluation-pricing | in-progress | - | sonnet | - | 2026-10-24 |
+| 3 durable-stores-hitl-review-queue-lifecycle | in-progress | - | sonnet | - | 2026-10-24 |
+| 4 path-normalisation-aliases-and-curation-actor | in-progress | - | opus | review: required (plan approval) | 2026-10-24 |
+| 5 same-origin-frontend-edge | todo | - | sonnet | - | 2026-10-24 |
+| 6 entra-local-sign-in-and-operator-grant | todo | - | sonnet | - | 2026-10-24 |
+| 7 data-plane-builders-and-replay-blob | todo | - | sonnet | - | 2026-10-24 |
+| 8 action-reports-copilot-and-mcp-builders | todo | - | opus | review: required (plan approval) | 2026-10-24 |
+| 9 workers-runtime-roles | todo | - | sonnet | - | 2026-10-24 |
+| 10 real-stack-synthetic-seed | todo | - | sonnet | - | 2026-10-24 |
+| 11 compose-app-profile-and-real-stack-smoke | todo | - | sonnet | - | 2026-10-24 |
 
 ## Completion note (filled at ship)
 - Date:
