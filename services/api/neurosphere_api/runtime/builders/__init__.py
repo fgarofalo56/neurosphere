@@ -90,7 +90,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from fastapi import FastAPI
 from neurosphere_core.cloud import Settings
@@ -115,6 +115,10 @@ if TYPE_CHECKING:
     from neurosphere_core.hitl import HitlService
 
     from neurosphere_api.authz import ScopeSource, TokenAuthenticator
+
+#: Module-level type variable: CodeQL reads a PEP 695 ``[T]`` used inside ``cast(T, ...)`` as
+#: an uninitialized local (py/uninitialized-local-variable, which fails the PR).
+_T = TypeVar("_T")
 
 __all__ = [
     "ACTION_SERVICE",
@@ -334,13 +338,13 @@ class BuildContext:
             raise ValueError(f"shared object already published: {key.name}")
         self._state.shared[key.name] = value
 
-    def shared[T](self, key: SharedKey[T]) -> T:
+    def shared(self, key: SharedKey[_T]) -> _T:
         if key.name not in self._state.shared:
             raise ComponentUnavailableError(f"{key.name}_unavailable")
-        return cast(T, self._state.shared[key.name])
+        return cast(_T, self._state.shared[key.name])
 
-    def maybe_shared[T](self, key: SharedKey[T]) -> T | None:
-        return cast(T | None, self._state.shared.get(key.name))
+    def maybe_shared(self, key: SharedKey[_T]) -> _T | None:
+        return cast(_T | None, self._state.shared.get(key.name))
 
     def on_startup(self, hook: StartupHook) -> None:
         self._state.startup.append((self._spec.name, hook))

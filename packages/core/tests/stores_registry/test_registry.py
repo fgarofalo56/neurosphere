@@ -146,9 +146,9 @@ class _FakeDatabase:
 
 
 class _FakeClient:
-    def __init__(self) -> None:
+    def __init__(self, database: _FakeDatabase | None = None) -> None:
         self.databases: list[str] = []
-        self.database = _FakeDatabase()
+        self.database = database or _FakeDatabase()
 
     async def create_database_if_not_exists(self, id: str) -> _FakeDatabase:
         self.databases.append(id)
@@ -192,8 +192,7 @@ class _RacingDatabase(_FakeDatabase):
 
 class _RacingClient(_FakeClient):
     def __init__(self) -> None:
-        super().__init__()
-        self.database = _RacingDatabase()
+        super().__init__(_RacingDatabase())
 
     async def create_database_if_not_exists(self, id: str) -> _FakeDatabase:
         self.databases.append(id)
