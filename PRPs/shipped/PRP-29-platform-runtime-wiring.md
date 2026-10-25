@@ -1,7 +1,9 @@
 ---
 name: prp-29-platform-runtime-wiring
-status: active
+status: shipped
 started: 2026-10-24
+shipped: 2026-10-25
+pr: 129
 branch: prp-29-platform-runtime-wiring
 review: required
 priority: P0
@@ -760,8 +762,57 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | E2 seed-data-fix-forward (recent dates, map entities, operator reports, hard route asserts) | merged | worktree-agent-abdb67e2c3ddf9a4b | sonnet | 99b373b: seed rebased to recent window (idempotent), 119 catalog entities, operator report, cost-ledger 409 fix; KNOWN_EMPTY = EXPECTED_STATUS = {}; real_stack 33 x2 + compose 13 passed; orchestrator fix bd52132 (SANDBOX_DIR bind path, drain 900s); merge 0563476 | 2026-10-25 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Follow-ups:
+- Date: 2026-10-25. PR #129 into `main`. CI is green: 27 checks pass, including CodeQL, and the 3 skipped jobs are release-only.
+- Merged commits, on the integration branch `prp-29-platform-runtime-wiring`:
+  - Items:
+    - item 1 `3754d76`
+    - item 3 `c84d145`
+    - item 4 `0201fbd`
+    - item 2 `d3a92bd`
+    - item 6 `2b37022`
+    - item 5 `61968b3`
+    - item 7 `06b6cc3`
+    - item 8 `5c60b54`
+    - item 9 `3a10c2b`
+    - item 10 `0b6da0c`
+    - item 9b `25db405`
+    - item 11 `c194e1d`
+    - E1 `0ce42c7`
+    - E2 `0563476`
+  - Orchestrator fix-forwards:
+    - `437b6ab` and the item 8 readiness expectation: placeholder readiness codes.
+    - `2dfd666`: Event Hubs emulator on `127.0.0.1`.
+    - `bd52132`: the `SANDBOX_DIR` bind path and the 900s seed drain.
+    - `e2811aa`: repo-wide pyright.
+    - `5b48c50`: the CodeQL false positives.
+  - gitleaks fingerprints: `f855aee` and `31f448b`.
+- Exit evidence, local on the integration branch:
+  - `verify-gates -Mode full`: PASS on all 4 gates (lint, typecheck, 8121 tests, build).
+  - Integration suites, run in sequence:
+    - `stores_cosmos`: 36 passed.
+    - `stores_hitl`: 36 passed.
+    - `workers_runtime`: 2 passed (hub and seeded).
+    - `real_stack`: 33 passed, with `KNOWN_EMPTY` and `EXPECTED_STATUS` both empty.
+    - `compose`: 13 passed.
+  - `make stack-up`: exit 0. `/readyz` through nginx is `ready`, and all 8 worker roles are ready with 0 restarts.
+  - Reviews: item 1, item 4, item 8 and the final PRP-level pass were all APPROVED.
+  - Snyk Code: 0 issues in PRP-29 code. gitleaks over the full branch is clean.
+- Deviations from blueprint and why (all user-approved, 2026-10-25):
+  - **HITL Cosmos store location.** It lives in `neurosphere_core.hitl_cosmos` rather than `hitl/`. The PRP-17 no-network-import guard on `hitl/` stays untouched.
+  - **Partition keys confirmed by item 1.** These are recorded in the wire contract:
+    - `price_snapshots` → `/snapshot_id`
+    - `hitl_decisions` → `/review_item_id`
+    - `catalog_review_queue` → `/customer_id,/domain_id`
+  - **Curation test helper.** `services/api/tests/catalog/curation_helpers.py` was extended to send the real principal as the actor. This follows from Clarification 20.
+  - **No compose seed job.** `sbx_guard` accepts loopback hosts only. `make stack-up` runs the sandbox seed and the stack seed from the host after `up --wait`.
+  - **Fix-forward lanes added after the real-stack run.**
+    - 9b: the aggregates role refreshes its price table.
+    - E1: a pre-existing missing api→workers dependency (since PRP-21) was crashing both API images; it also covers the container-create race, the worker data mounts and the sandbox database.
+    - E2: the seed is rebased to a recent window, writes catalog entities, saves an operator report, and handles the `cost-ledger` 409.
+  - **Compose fail-fast.** Compose uses `${NS_ENTRA_*:-}` plus a `make stack-up` precheck, not `${VAR:?}`. Compose v5.6.1 interpolates inactive profiles, so `:?` would break emulator-only `up`.
+- Descoped items: none.
+- OPEN gates, not run:
+  - `p29_entra_local.py --apply` against `neurosphere-api-dev`. This is a shared tenant change and needs operator approval.
+  - The headed real-Entra Playwright run (`frontend/playwright.real-stack.config.ts`).
+  - The live copilot call. This belongs to PRP-32, and Commercial copilot is also gated off by the capability matrix (#132).
+- Follow-ups: #130 (alias removal and headers), #131 (authz and composition hardening before hosting), #132 (write connectors, lifecycle targets, Commercial copilot matrix), #133 (concurrency and data correctness).

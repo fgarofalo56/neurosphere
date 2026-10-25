@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-29-platform-runtime-wiring](active/PRP-29-platform-runtime-wiring.md) | P0 | 14/14 (100%) | merged 14 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -27,6 +25,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |
 | [prp-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-10-23 | #110 |
 | [prp-23-ato-evidence-and-data-lifecycle](shipped/PRP-23-ato-evidence-and-data-lifecycle.md) | 2026-10-23 | #118 |
