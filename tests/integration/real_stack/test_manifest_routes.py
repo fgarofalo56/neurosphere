@@ -64,13 +64,7 @@ ROLES: Final = ("viewer", "analyst", "domain_steward", "security_auditor", "admi
 GENERATOR_PROFILE: Final = "tiny"
 
 #: Expected non-200 answers: call key -> (status, why). Nothing else may be non-200.
-EXPECTED_STATUS: Final[dict[str, tuple[int, str]]] = {
-    "/api/v1/sandbox/status": (
-        503,
-        "sandbox mode reads the isolated `sandbox-neurosphere` database, which only the separate "
-        "`make seed` (sandbox seed) creates; the real-stack seed does not",
-    ),
-}
+EXPECTED_STATUS: Final[dict[str, tuple[int, str]]] = {}
 
 #: 200 answers that are empty in every readable domain: call key -> why. OPEN findings, reported.
 KNOWN_EMPTY: Final[dict[str, str]] = {
@@ -274,3 +268,11 @@ def test_copilot_routes_answer_the_disabled_503(stack: Stack) -> None:
     response = stack.client.get("/api/v1/copilot/conversations", headers=stack.tokens["operator"])
     assert response.status_code == 503, response.text
     assert response.json()["reason"] == "copilot_unconfigured"
+
+
+def test_sandbox_status_is_200_with_data(stack: Stack) -> None:
+    """`make stack-up` runs the sandbox seed, so `sandbox-neurosphere` exists and has data."""
+    response = stack.client.get("/api/v1/sandbox/status", headers=stack.tokens["operator"])
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert isinstance(body, dict) and body, body

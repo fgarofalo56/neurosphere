@@ -115,70 +115,11 @@ services:
   # would break emulator-only `docker compose up`. Unset values fail fast elsewhere: `make
   # stack-up` prechecks them, the frontend renderer exits naming the missing NS_UI_* variable and
   # the api `/readyz` names `authz`.
-  # One-shot container bootstrap (NOT a seed): creates the database and every registry container
-  # once, before api and workers start. Each of them bootstraps on its own startup too, and on a
-  # fresh emulator the concurrent create calls collide (CosmosResourceExistsError): the workers'
-  # roles retry, but the api's startup step does not, leaving `/readyz` stuck on
-  # `composition.cosmos_containers`. With the containers already present every later call is a
-  # no-op. Same image as the workers, so no extra build content.
-  cosmos-init:
-    profiles: [app]
-    build:
-      context: .
-      dockerfile: services/workers/Dockerfile.dev
-    restart: "no"
-    command:
-      - sh
-      - -c
-      - *emulator_bootstrap
-      - python
-      - -c
-      - |
-        import asyncio
-        from neurosphere_core.clients import ClientLifetime, create_cosmos_client
-        from neurosphere_core.cloud import Settings
-        from neurosphere_core.stores import ensure_local_containers
-
-        async def main() -> None:
-            settings = Settings()
-            async with ClientLifetime() as lifetime:
-                client = create_cosmos_client(settings, lifetime=lifetime)
-                names = await ensure_local_containers(client, settings, database="neurosphere")
-                print(f"ensured {len(names)} containers")
-
-        asyncio.run(main())
-    environment:
-      NS_ENV: local
-      NS_CLOUD: commercial
-      NS_COSMOS_ENDPOINT: http://cosmos:8081
-    networks: [isolated]
-    depends_on:
-      cosmos:
-        condition: service_healthy
-      azurite:
-        condition: service_healthy
-
   api:
     profiles: [app]
-    # Inline copy of services/api/Dockerfile.dev plus `--package neurosphere-workers`: the api
-    # imports neurosphere_workers (federation, replay, runtime builders) but its pyproject does not
-    # declare it, so the stock dev image dies at import. Revert to `dockerfile:
-    # services/api/Dockerfile.dev` once that file (or the dependency) carries the package.
     build:
       context: .
-      dockerfile_inline: |
-        FROM python:3.12-slim
-        COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-        ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$$PATH"
-        WORKDIR /app
-        COPY pyproject.toml uv.lock README.md LICENSE ./
-        COPY packages ./packages
-        COPY services ./services
-        COPY connectors/sdk-python ./connectors/sdk-python
-        RUN uv sync --frozen --no-dev --package neurosphere-api --package neurosphere-workers
-        RUN useradd --system --create-home --uid 10001 ns
-        USER ns
-        EXPOSE 8000
+      dockerfile: services/api/Dockerfile.dev
     # Builds the emulator credentials at runtime (see x-emulator-bootstrap), then runs the server.
     command:
       - sh
@@ -222,8 +163,6 @@ services:
     # workers publish nothing and stay isolated-only.
     networks: [default, isolated]
     depends_on:
-      cosmos-init:
-        condition: service_completed_successfully
       cosmos:
         condition: service_healthy
       azurite:
@@ -258,6 +197,13 @@ services:
       NS_STORE_DATABASE: neurosphere
       NS_COSMOS_ENDPOINT: http://cosmos:8081
       NS_ARCHIVE_CONTAINER: ns-archive
+      # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
+      NS_WORKER_REC_DATA_DIR: /data/sandbox
+      NS_WORKER_EVAL_DATA_DIR: /data/evaluation
+    volumes:
+      # Generated sandbox output (`make sandbox-generate`, run first by `make stack-up`).
+      - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
+      - ./sandbox/evaluation/data:/data/evaluation:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=3)"]
       interval: 5s
@@ -266,8 +212,6 @@ services:
       start_period: 5s
     networks: [isolated]
     depends_on:
-      cosmos-init:
-        condition: service_completed_successfully
       cosmos:
         condition: service_healthy
       azurite:

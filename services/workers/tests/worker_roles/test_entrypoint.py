@@ -117,3 +117,25 @@ async def test_configured_roles_run_through_the_supervisor_and_report_readiness(
     stop.set()
     assert await asyncio.wait_for(task, 5) == 0
     assert all(role.stopped.is_set() for role in built.values())
+
+
+@pytest.mark.parametrize(
+    ("level", "expected"), [("", "WARNING"), ("INFO", "WARNING"), ("DEBUG", None)]
+)
+def test_azure_loggers_are_quiet_unless_debug(
+    monkeypatch: pytest.MonkeyPatch, level: str, expected: str | None
+) -> None:
+    import logging
+
+    azure_logger = logging.getLogger("azure")
+    previous = azure_logger.level
+    try:
+        azure_logger.setLevel(logging.NOTSET)
+        monkeypatch.setenv("NS_LOG_LEVEL", level)
+        monkeypatch.setattr(runtime_main, "_amain", lambda raw: asyncio.sleep(0, 0))
+        monkeypatch.setattr(runtime_main.asyncio, "run", lambda coro: (coro.close(), 0)[1])
+        runtime_main.main("")
+        want = logging.NOTSET if expected is None else logging.getLevelName(expected)
+        assert azure_logger.level == want
+    finally:
+        azure_logger.setLevel(previous)

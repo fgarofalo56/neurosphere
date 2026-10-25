@@ -8,7 +8,7 @@
 * :class:`ArchiveTraceReader` -- reads the PRP-07 redacted, pseudonymized archive blobs
   (``{customer}/{domain or _none}/{yyyy}/{mm}/{dd}/{doc_id}.json.gz``, each a gzip of one
   ``NormalizedEvent`` dump) through a minimal async container protocol. The layout is mirrored
-  here on purpose: the API never imports ``neurosphere_workers``.
+  here on purpose: replay stays independent of ``neurosphere_workers`` internals.
 
 The archive is partitioned by day, not by trace, so a lookup scans a bounded window of days and a
 bounded number of blobs; hitting a bound sets ``truncated`` and the trace is labelled partial.
