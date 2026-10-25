@@ -785,6 +785,7 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
     - `bd52132`: the `SANDBOX_DIR` bind path and the 900s seed drain.
     - `e2811aa`: repo-wide pyright.
     - `5b48c50`: the CodeQL false positives.
+    - Worker supervisor readiness: a crash-looping role, briefly `running` between restarts, no longer counts as ready. This was a real defect, caught by a flaky CI run of `test_supervisor.py`.
   - gitleaks fingerprints: `f855aee` and `31f448b`.
 - Exit evidence, local on the integration branch:
   - `verify-gates -Mode full`: PASS on all 4 gates (lint, typecheck, 8121 tests, build).

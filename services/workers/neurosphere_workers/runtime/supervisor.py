@@ -85,10 +85,14 @@ class RoleSupervisor:
     def status(self) -> HealthStatus:
         return "draining" if self._stop.is_set() else "ok"
 
+    def _role_ready(self, role: _Role) -> bool:
+        # A crash-looping role is briefly ``running`` between restarts; it is never ready.
+        return role.state == "running" and role.streak < self._threshold
+
     @property
     def ready(self) -> bool:
-        """Every configured role is started (``running``); vacuously true when idle."""
-        return all(r.state == "running" for r in self._roles.values())
+        """Every configured role is running and not crash-looping; vacuously true when idle."""
+        return all(self._role_ready(r) for r in self._roles.values())
 
     def snapshot(self) -> list[dict[str, Any]]:
         return [
@@ -96,7 +100,7 @@ class RoleSupervisor:
                 "name": r.name,
                 "state": r.state,
                 "live": r.state != "failed",
-                "ready": r.state == "running",
+                "ready": self._role_ready(r),
                 "restarts": r.restarts,
                 "crash_looping": r.streak >= self._threshold,
                 "reason": r.reason,
