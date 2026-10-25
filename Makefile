@@ -74,7 +74,7 @@ stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + sa
 	@test -n "$$NS_ENTRA_TENANT_ID" || { echo "stack-up: export NS_ENTRA_TENANT_ID first (docs/dev/local-setup.md, Real stack)" >&2; exit 1; }
 	@test -n "$$NS_ENTRA_CLIENT_ID" || { echo "stack-up: export NS_ENTRA_CLIENT_ID first (docs/dev/local-setup.md, Real stack)" >&2; exit 1; }
 	$(MAKE) sandbox-generate
-	NS_SANDBOX_DIR="$(SANDBOX_DIR)" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
+	NS_SANDBOX_DIR="$(if $(or $(filter /% ./% ../%,$(SANDBOX_DIR)),$(findstring :,$(SANDBOX_DIR))),$(SANDBOX_DIR),./$(SANDBOX_DIR))" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
 	NS_SANDBOX_COSMOS_ENDPOINT=http://127.0.0.1:8081 NS_SANDBOX_EVENTHUBS_CONNECTION_STRING="$$(python -c "print('Endpoint=sb://127.0.0.1;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + 'SAS_KEY' + '_VALUE;UseDevelopmentEmulator=true;')")" $(SANDBOX_CLI) seed --data-dir $(SANDBOX_DIR)
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack
 

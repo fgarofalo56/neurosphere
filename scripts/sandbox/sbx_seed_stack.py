@@ -42,7 +42,7 @@ never a ``sandbox-`` name), ``NS_AUTH_CUSTOMER_ID`` (default ``synthco``), ``NS_
 ``NS_WORKER_TENANT_ID`` (required GUID), ``NS_WORKER_OBJECT_ID`` (required GUID; the workers' own
 identity, granted here), ``NS_AUTH_PSEUDONYM_KEY[_REFERENCE]`` (optional locally),
 ``NS_ARCHIVE_CONTAINER`` (the workers' archive container), ``NS_INGESTION_EVENTHUB_NAME``,
-``NS_SEED_WAIT_SECONDS`` (default 300; landing), ``NS_SEED_DRAIN_SECONDS`` (default 300; then
+``NS_SEED_WAIT_SECONDS`` (default 300; landing), ``NS_SEED_DRAIN_SECONDS`` (default 900; then
 waiting for the aggregates role to reach the newest events, warning only) and
 ``NS_SEED_POLL_SECONDS`` (default 5).
 """
@@ -187,6 +187,8 @@ STACK_DIR: Final = REPO / "sandbox" / "stack"
 DEFAULT_COSMOS_ENDPOINT: Final = "http://127.0.0.1:8081"
 DEFAULT_BLOB_CONNECTION: Final = "UseDevelopmentStorage=true;"
 DEFAULT_WAIT_SECONDS: Final = 300.0
+#: The aggregates role needs about ten minutes to drain the small profile on a fresh stack.
+DEFAULT_DRAIN_SECONDS: Final = 900.0
 DEFAULT_POLL_SECONDS: Final = 5.0
 SEED_NUMBER: Final = 1
 #: Fixed stamp of every seeded record: the pipelines read no wall clock, so a re-run is identical.
@@ -385,7 +387,7 @@ def resolve_config(
         archive_container=environ.get("NS_ARCHIVE_CONTAINER") or "ns-archive",
         wait_seconds=_float_env(environ, "NS_SEED_WAIT_SECONDS", DEFAULT_WAIT_SECONDS),
         poll_seconds=_float_env(environ, "NS_SEED_POLL_SECONDS", DEFAULT_POLL_SECONDS),
-        drain_seconds=_float_env(environ, "NS_SEED_DRAIN_SECONDS", DEFAULT_WAIT_SECONDS),
+        drain_seconds=_float_env(environ, "NS_SEED_DRAIN_SECONDS", DEFAULT_DRAIN_SECONDS),
     )
 
 
