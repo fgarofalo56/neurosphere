@@ -750,9 +750,9 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | 5 same-origin-frontend-edge | merged | worktree-agent-a6e22c49f54f73ca9 | sonnet | 214669a: vitest 603, playwright 334, docker build+run OK (missing var fails named); WS/stream vs live upstream untested; on integration typecheck + edge 22 passed; merge 61968b3 | 2026-10-25 |
 | 6 entra-local-sign-in-and-operator-grant | merged | worktree-agent-aee9edfa34aa24239 | sonnet | 9aee7ab; 160 unit + operator-grant emulator passed; live --apply OPEN; merge 2b37022 | 2026-10-25 |
 | 7 data-plane-builders-and-replay-blob | merged | worktree-agent-a112a65db205d6723 | sonnet | 0b9181d; item-1 readiness test fixed forward 437b6ab (placeholder codes); on integration 312 unit + runtime_api 71 + real_stack data/grant emulator passed; catalog search fails closed (no search backend); merge 06b6cc3 | 2026-10-25 |
-| 8 action-reports-copilot-and-mcp-builders | in-progress | - | opus | review: required | 2026-10-25 |
-| 9 workers-runtime-roles | in-progress | - | sonnet | - | 2026-10-25 |
-| 10 real-stack-synthetic-seed | todo | - | sonnet | - | 2026-10-24 |
+| 8 action-reports-copilot-and-mcp-builders | merged | worktree-agent-a747f85cb9b49701e | opus | 4a520fa; review APPROVED; readiness expectations fixed forward; gitleaks FP fingerprinted 31f448b; on integration 1400 passed + real_stack 3 emulator; prod write targets empty (advisory); Commercial copilot gated off (no matrix rows); merge 5c60b54 | 2026-10-25 |
+| 9 workers-runtime-roles | merged | worktree-agent-a848c517ea8dd521c | sonnet | c9b45b7; 377 workers passed; hub endpoint fixed to 127.0.0.1 (2dfd666) -> workers_runtime 2 passed (hub + seeded); merge 3a10c2b | 2026-10-25 |
+| 10 real-stack-synthetic-seed | in-progress | - | sonnet | - | 2026-10-25 |
 | 11 compose-app-profile-and-real-stack-smoke | todo | - | sonnet | - | 2026-10-24 |
 
 ## Completion note (filled at ship)
