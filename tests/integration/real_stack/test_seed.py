@@ -100,6 +100,7 @@ def seed_env(
         "NS_WORKER_HEALTH_PORT": "0",
         "NS_SEED_POLL_SECONDS": "3",
         "NS_SEED_WAIT_SECONDS": "420",
+        "NS_SEED_DRAIN_SECONDS": "45",
     }
     for name, value in env.items():
         monkeypatch.setenv(name, value)

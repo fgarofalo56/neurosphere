@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from azure.core.exceptions import ResourceExistsError
-from azure.cosmos.exceptions import CosmosResourceNotFoundError
+from azure.cosmos.exceptions import CosmosResourceExistsError, CosmosResourceNotFoundError
 from neurosphere_core.clients import ClientLifetime
 from neurosphere_core.cloud import CloudName, Settings
 from neurosphere_core.errors import InvalidSchemaError
@@ -162,6 +162,23 @@ async def test_blob_container_created_locally_and_exists_is_fine() -> None:
     assert fresh.created == 1
     await ensure_blob_container(fresh, "ns-archive", create=True)  # ResourceExistsError swallowed
     assert fresh.created == 1
+
+
+class RacingDatabase(FakeDatabase):
+    """Another role creates ``cost-ledger`` between the existence check and the create."""
+
+    async def create_container_if_not_exists(self, id: str, partition_key: Any) -> None:
+        if id == "cost-ledger":
+            self.existing.add(id)
+            raise CosmosResourceExistsError(status_code=409, message="already exists")
+        await super().create_container_if_not_exists(id, partition_key)
+
+
+async def test_cosmos_create_race_409_is_success_locally() -> None:
+    database = RacingDatabase()
+    await ensure_cosmos_containers(database, ["cost-ledger", "outbox"], create=True)
+    assert "cost-ledger" in database.existing
+    assert database.created == ["outbox"], "the loop continued past the 409"
 
 
 async def test_blob_container_missing_outside_local_is_a_clear_error() -> None:

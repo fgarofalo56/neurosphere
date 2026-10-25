@@ -13,9 +13,10 @@ import importlib.util
 import json
 import sys
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from neurosphere_api.reports.store import InMemoryReportStore
@@ -28,6 +29,7 @@ from neurosphere_core.auth.scope import (
     PolicyHead,
     PrincipalPolicy,
 )
+from neurosphere_core.catalog.repo.memory import InMemoryCatalogRepository
 from neurosphere_core.cloud import CloudName
 from neurosphere_core.evaluation.store import InMemoryEvaluationStore
 from neurosphere_core.hitl.decisions import InMemoryDecisionStore
@@ -80,6 +82,14 @@ class FakeHub:
     def publish(self, lines: Iterator[bytes], rate: float = 0.0, chunk: int = 100) -> int:
         batch = list(lines)
         self.published.extend(batch)
+        messages = [json.loads(line) for line in batch]
+        recorded = [
+            seed._timestamp(m["data"]["recorded_at"])  # pyright: ignore[reportPrivateUsage]
+            for m in messages
+            if m["kind"] == "cost"
+        ]
+        self.landing.earliest = min(recorded)
+        self.landing.watermark = max(recorded)
         self.landing.land()
         return len(batch)
 
@@ -89,6 +99,14 @@ class FakeLanding:
         self._lands = lands
         self.state = dict.fromkeys(FAKE_LANDED, 0)
         self.reads = 0
+        self.earliest: datetime | None = None
+        self.watermark: datetime | None = None
+
+    async def ledger_earliest(self) -> datetime | None:
+        return self.earliest
+
+    async def aggregate_watermark(self) -> datetime | None:
+        return self.watermark
 
     def land(self) -> None:
         if self._lands:
@@ -113,6 +131,7 @@ class Stack:
         audit = AuditRepository(InMemoryAuditStore())
         key = resolve_pseudonym_key(AuthSettings(), env="local")
         self.reports = InMemoryReportStore()
+        self.catalog = InMemoryCatalogRepository()
         self.backends = seed.Backends(
             hub=self.hub,
             landing=self.landing,
@@ -120,6 +139,7 @@ class Stack:
             policy_writer=MemoryWriter(self.policy),
             revocation=NoRevocationCheck(),
             key=key,
+            catalog=self.catalog,
             prices=self.prices,
             recommendations=self.recommendations,
             hitl=seed.make_hitl(self.hitl_store, InMemoryDecisionStore(), audit),
@@ -173,7 +193,12 @@ class _Clock:
         self.now += seconds
 
 
-def _run(stack: Stack, tmp_path: Path, config: Any = None) -> dict[str, Any]:
+RUN_TIME = datetime(2026, 10, 25, 14, 0, 0, tzinfo=UTC)
+
+
+def _run(
+    stack: Stack, tmp_path: Path, config: Any = None, at: datetime = RUN_TIME
+) -> dict[str, Any]:
     clock = _Clock()
     return asyncio.run(
         seed.run_seed(
@@ -183,6 +208,7 @@ def _run(stack: Stack, tmp_path: Path, config: Any = None) -> dict[str, Any]:
             environ={},
             sleep=clock.sleep,
             clock=clock,
+            now=lambda: at,
         )
     )
 
@@ -276,10 +302,146 @@ def test_second_run_creates_nothing_and_reports_skipped_existing(tmp_path: Path)
     assert stack.landing.state == FAKE_LANDED
 
 
+def _published_times(stack: Stack) -> list[datetime]:
+    times: list[datetime] = []
+    for line in stack.hub.published:
+        data = json.loads(line)["data"]
+        stamp = data.get("event_time") or data["recorded_at"]
+        times.append(seed._timestamp(stamp))  # pyright: ignore[reportPrivateUsage]
+    return times
+
+
+def test_the_world_is_rebased_to_the_run_time(tmp_path: Path) -> None:
+    """The newest event is minutes old and everything is inside the 7-day archive look-back."""
+    stack = Stack()
+    _run(stack, tmp_path)
+    times = _published_times(stack)
+    assert RUN_TIME - max(times) <= timedelta(hours=2), "newest event within the last two hours"
+    assert max(times) <= RUN_TIME, "nothing is dated in the future"
+    assert RUN_TIME - min(times) <= timedelta(days=7)
+    day_ago = RUN_TIME - timedelta(days=1)
+    assert any(t >= day_ago for t in times), "the 1-day cost window has data"
+
+
+def test_rerun_on_a_later_day_is_identical_and_creates_nothing(tmp_path: Path) -> None:
+    """A re-run recovers the first run's shift from the ledger: the same ids and windows, nothing
+    published or created, and the data is NOT re-aged (it is just older)."""
+    stack = Stack()
+    _run(stack, tmp_path / "one")
+    first_times = _published_times(stack)
+    before = _snapshot(stack)
+    recommendation_ids = sorted(stack.recommendations._items)  # pyright: ignore[reportPrivateUsage]
+
+    later = RUN_TIME + timedelta(days=3, hours=5)
+    second = _run(stack, tmp_path / "two", at=later)
+
+    assert all(count == 0 for count in second["seeded"].values()), second
+    assert _snapshot(stack) == before
+    assert sorted(stack.recommendations._items) == recommendation_ids  # pyright: ignore[reportPrivateUsage]
+    assert _published_times(stack) == first_times, "nothing was re-published or re-aged"
+
+
+def test_entities_are_written_through_the_catalog_repository(tmp_path: Path) -> None:
+    stack = Stack()
+    summary = _run(stack, tmp_path)
+    assert summary["seeded"]["entities"] > 0
+    scope = asyncio.run(seed.worker_scope(stack.backends, _config()))
+    from neurosphere_core.catalog import EntityFilter
+    from neurosphere_core.paging.models import PageRequest
+
+    kinds: set[str] = set()
+    cursor: str | None = None
+    while True:
+        page = asyncio.run(
+            stack.catalog.list_entities(
+                scope, EntityFilter(), PageRequest(page_size=100, cursor=cursor)
+            )
+        )
+        kinds |= {item.entity_type for item in page.items}
+        cursor = page.next_cursor
+        if cursor is None:
+            break
+    assert {"agent", "grounding_source", "model_deployment", "person"} <= kinds
+
+
+def test_operator_gets_a_report_they_own_and_others_are_not_widened(tmp_path: Path) -> None:
+    stack = Stack()
+    _run(stack, tmp_path)
+    operator = seed.user_principal_id(_config(), OPERATOR_OID, {})
+    rows = list(stack.reports._rows.values())  # pyright: ignore[reportPrivateUsage]
+    mine = [r for r in rows if r.owner == operator]
+    assert mine and all(not r.shares for r in mine), "owned, not shared or published wider"
+    assert {r.owner for r in rows} - {operator}, "the analyst persona's reports are unchanged"
+
+    anonymous = Stack()
+    _run(anonymous, tmp_path / "none", _config(operator_object_id=None))
+    assert not [
+        r
+        for r in anonymous.reports._rows.values()  # pyright: ignore[reportPrivateUsage]
+        if r.owner == operator
+    ]
+
+
+def test_watermark_wait_is_bounded_and_reports_whether_it_caught_up() -> None:
+    target = RUN_TIME
+    landing = FakeLanding()
+    clock = _Clock()
+    landing.watermark = target - timedelta(hours=2)
+    assert not asyncio.run(
+        seed.wait_for_watermark(
+            landing, target, overall_seconds=20.0, poll=5.0, sleep=clock.sleep, clock=clock
+        )
+    )
+    assert clock.now <= 20.0, "bounded by the one overall timeout"
+    landing.watermark = target
+    assert asyncio.run(
+        seed.wait_for_watermark(
+            landing, target, overall_seconds=20.0, poll=5.0, sleep=clock.sleep, clock=clock
+        )
+    )
+
+
+def test_a_lagging_aggregates_role_warns_but_does_not_fail(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    stack = Stack()
+    stack.landing.watermark = None  # never advances
+    original = stack.hub.publish
+
+    def publish_without_watermark(
+        lines: Iterator[bytes], rate: float = 0.0, chunk: int = 100
+    ) -> int:
+        sent = original(lines, rate, chunk)
+        stack.landing.watermark = datetime(2026, 1, 1, tzinfo=UTC)
+        return sent
+
+    stack.hub.publish = publish_without_watermark  # type: ignore[method-assign]
+    summary = _run(stack, tmp_path)
+    assert summary["seeded"]["ledger"] > 0
+    assert "has not caught up" in capsys.readouterr().err
+
+
+def test_rebase_seconds_matches_ledger_on_rerun() -> None:
+    now = datetime(2026, 11, 2, 9, 0, tzinfo=UTC)
+    earliest = datetime(2026, 10, 1, 0, 0, 5, tzinfo=UTC)
+    newest = datetime(2026, 10, 4, 23, 0, tzinfo=UTC)
+    fresh = seed.rebase_seconds(now=now, earliest=earliest, newest=newest, existing_earliest=None)
+    age = now - (newest + timedelta(seconds=fresh))
+    assert seed.NEWEST_AGE <= age < seed.NEWEST_AGE + timedelta(hours=1)
+    assert fresh % 3600 == 0, "a whole number of hours"
+    # the ledger's earliest entry differs from the generated earliest by a few seconds
+    ledger = earliest + timedelta(seconds=fresh - 4)
+    again = seed.rebase_seconds(
+        now=now + timedelta(days=9), earliest=earliest, newest=newest, existing_earliest=ledger
+    )
+    assert again == fresh
+
+
 def _snapshot(stack: Stack) -> dict[str, Any]:
     reviews = len(stack.hitl_store._items)  # pyright: ignore[reportPrivateUsage]
     return {
         "published": len(stack.hub.published),
+        "entities": len(cast(Any, stack.catalog)._backend._docs),  # pyright: ignore
         "prices": len(stack.prices.list_snapshots()),
         "recommendations": len(stack.recommendations._items),  # pyright: ignore[reportPrivateUsage]
         "reviews": reviews,
