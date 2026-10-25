@@ -139,7 +139,7 @@
     {
       "default_ttl": null,
       "name": "hitl_decisions",
-      "owner": "neurosphere_core.hitl.cosmos_store",
+      "owner": "neurosphere_core.hitl_cosmos.store",
       "partition_key": {
         "kind": "Hash",
         "paths": [
@@ -150,7 +150,7 @@
     {
       "default_ttl": null,
       "name": "hitl_items",
-      "owner": "neurosphere_core.hitl.cosmos_store",
+      "owner": "neurosphere_core.hitl_cosmos.store",
       "partition_key": {
         "kind": "MultiHash",
         "paths": [

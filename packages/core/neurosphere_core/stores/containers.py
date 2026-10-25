@@ -153,11 +153,11 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
             "logical partition, so keying by snapshot id keeps the put-conflict rule exact"
         ),
     ),
-    ContainerSpec("hitl_items", _CUSTOMER_DOMAIN, "neurosphere_core.hitl.cosmos_store"),
+    ContainerSpec("hitl_items", _CUSTOMER_DOMAIN, "neurosphere_core.hitl_cosmos.store"),
     ContainerSpec(
         "hitl_decisions",
         ("/review_item_id",),
-        "neurosphere_core.hitl.cosmos_store",
+        "neurosphere_core.hitl_cosmos.store",
         notes=(
             "DecisionStore receives only (decision_id, document); the ApprovalDecision document "
             "carries review_item_id but no customer_id/domain_id, and list_for_item reads by it"
