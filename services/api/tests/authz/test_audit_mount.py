@@ -70,7 +70,8 @@ def test_register_hook_accepts_the_adapter() -> None:
     register(
         registry, require_permission=audit_require_permission(chain_domain=domain_from_chain_id)
     )
-    assert registry.prefixes == (ROUTE_PREFIX,)
+    # The successor prefix and its deprecated alias (PRP-29 item 4).
+    assert registry.prefixes == (ROUTE_PREFIX, "/audit")
 
 
 def test_unknown_audit_permission_fails_at_mount() -> None:

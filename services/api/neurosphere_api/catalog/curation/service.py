@@ -11,6 +11,8 @@ schema's conditional requirements are checked explicitly):
 * The decision time is the SERVER clock; a caller-supplied ``decided_at`` is replaced so a decision
   cannot be back-dated to reorder history. The target domain, customer and cloud must equal the
   stored edge.
+* The ``actor`` is the authenticated principal: it is stamped from the scope, and a different
+  client value is refused with ``forbidden`` (reason ``actor_mismatch``) and audited as a denial.
 * Evidence is append-only: ``add_evidence_ids`` can add, the model has no way to remove, and the
   presented union is computed by ``rules.present_edge``. Locks change presented lineage only;
   observations are always stored (``apply_inference``).
@@ -46,7 +48,12 @@ from neurosphere_core.catalog import (
     present_edge,
 )
 from neurosphere_core.catalog.rules import MergeOutcome
-from neurosphere_core.errors import InvalidSchemaError, NeuroSphereError, StaleVersionError
+from neurosphere_core.errors import (
+    ForbiddenError,
+    InvalidSchemaError,
+    NeuroSphereError,
+    StaleVersionError,
+)
 from neurosphere_core.scope import IdentityScope
 from pydantic import BaseModel, ConfigDict
 
@@ -93,6 +100,20 @@ def _refusal(exc: BaseException) -> str:
         reason = getattr(exc, "reason", None)
         return reason if isinstance(reason, str) and reason else exc.code
     return "error"
+
+
+def _stamp_actor(scope: IdentityScope, decision: EdgeOverride) -> EdgeOverride:
+    """Stamp ``actor`` from the authenticated principal (PRP-29 item 4, Clarification 20).
+
+    The contract requires the field, so a client still sends it; a value that is not the caller's
+    own principal id is refused (``ForbiddenError``, audited as a denial by ``decide``) rather
+    than silently replaced, so a steward cannot attribute a decision to someone else.
+    """
+    principal = scope.to_contract().principal.principal_id.root
+    if decision.actor.root != principal:
+        raise ForbiddenError("actor must be the authenticated principal", reason="actor_mismatch")
+    actor = type(decision.actor).model_validate(principal)
+    return decision.model_copy(update={"actor": actor})
 
 
 def _edge_changed(before: CatalogEdge, after: CatalogEdge) -> bool:
@@ -151,8 +172,8 @@ class CurationService:
             state=before.model_dump(mode="json"),
         )
         try:
-            stamped = self._validate(edge, decision, now)
-        except (StaleVersionError, InvalidSchemaError) as exc:
+            stamped = self._validate(edge, _stamp_actor(scope, decision), now)
+        except (ForbiddenError, StaleVersionError, InvalidSchemaError) as exc:
             await self._audit.append(
                 chain, build_denied(ctx, code=exc.code, reason=_refusal(exc), subject=subject)
             )

@@ -12,6 +12,7 @@ from fastapi import APIRouter, FastAPI, Request
 from neurosphere_core.cloud import Settings
 from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError
 
+from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.ingest.auth import (
     ProducerRegistration,
     RegisteredCredentialAuthenticator,
@@ -24,7 +25,9 @@ from neurosphere_api.ingest.service import IngestResult, IngestService
 from neurosphere_api.ingest.settings import IngestSettings
 from neurosphere_api.routers import RouterRegistry
 
-ROUTE_PREFIX = "/v1/ingest"
+ROUTE_PREFIX = "/api/v1/ingest"
+#: Deprecated alias for one release (PRP-29 item 4): external producers need the overlap.
+ALIAS_PREFIX = "/v1/ingest"
 _JSON = "application/json"
 
 
@@ -114,4 +117,4 @@ def build_router() -> APIRouter:
 
 def register(registry: RouterRegistry) -> None:
     """Router-registry hook (see ``neurosphere_api/routers.py``)."""
-    registry.register(ROUTE_PREFIX, build_router())
+    register_with_alias(registry, build_router(), prefix=ROUTE_PREFIX, alias_prefix=ALIAS_PREFIX)
