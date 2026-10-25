@@ -21,6 +21,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     Harness,
     harness,
     policy,
+    principal_id_for,
     role,
 )
 from neurosphere_api.catalog.curation import (
@@ -211,6 +212,12 @@ class Curation:
 
     def post(self, who: str | None, edge: CatalogEdge, body: dict[str, Any]) -> Any:
         headers = self.h.auth(who) if who else {}
+        if who and body.get("actor") == PERSON:
+            # The server verifies the actor against the authenticated principal.
+            me = principal_id_for(who)
+            body = {**body, "actor": me}
+            if isinstance(body.get("lock"), dict) and body["lock"].get("actor") == PERSON:
+                body["lock"] = {**body["lock"], "actor": me}
         return self.h.client.post(f"{PREFIX}/edges/{edge.id}/decisions", json=body, headers=headers)
 
     def get(self, who: str | None, path: str) -> Any:
