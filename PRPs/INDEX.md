@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-29-platform-runtime-wiring](active/PRP-29-platform-runtime-wiring.md) | P0 | 13/14 (92%) | in-progress 1, merged 13 | ? / ? | required |
+| [prp-29-platform-runtime-wiring](active/PRP-29-platform-runtime-wiring.md) | P0 | 14/14 (100%) | merged 14 | ? / ? | required |
 
 ## Backlog
 
