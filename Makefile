@@ -59,3 +59,22 @@ docs: ## Build the docs site (available after PRP-25)
 
 clean: ## Remove local build artefacts
 	rm -rf .pytest_cache .ruff_cache .venv node_modules frontend/dist temp/*
+
+# Real stack (PRP-29 item 11): api + workers + frontend on the compose emulators, then the host
+# seed. Needs NS_ENTRA_TENANT_ID / NS_ENTRA_CLIENT_ID exported (never committed; see
+# docs/dev/local-setup.md "Real stack"). The seed runs from the host against 127.0.0.1 because
+# sbx_guard accepts loopback hosts only; it must use the same tenant and worker object id as the
+# compose workers, so both get STACK_WORKER_OID (its default equals docker-compose.yml's; a test
+# pins it).
+STACK_WORKER_OID ?= 7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6
+
+.PHONY: stack-up stack-down
+
+stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + host seed
+	@test -n "$$NS_ENTRA_TENANT_ID" || { echo "stack-up: export NS_ENTRA_TENANT_ID first (docs/dev/local-setup.md, Real stack)" >&2; exit 1; }
+	@test -n "$$NS_ENTRA_CLIENT_ID" || { echo "stack-up: export NS_ENTRA_CLIENT_ID first (docs/dev/local-setup.md, Real stack)" >&2; exit 1; }
+	NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
+	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack
+
+stack-down: ## Stop the real stack and the emulators (run dev-up to bring the emulators back)
+	docker compose --profile app down --remove-orphans
