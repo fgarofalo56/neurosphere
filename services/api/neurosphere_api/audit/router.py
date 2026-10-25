@@ -1,8 +1,9 @@
 """Auditor read and chain-verify routes (PRP-06 item 4). Read-only: there is no write route.
 
-``GET /audit/chains/{chain_id}/records`` -- page through records by sequence (permission
-``audit.read``). ``GET /audit/chains/{chain_id}/verify`` -- verify the whole chain against its
-tail pointer (permission ``audit.verify``).
+``GET /api/v1/audit/chains/{chain_id}/records`` -- page through records by sequence (permission
+``audit.read``). ``GET /api/v1/audit/chains/{chain_id}/verify`` -- verify the whole chain against
+its tail pointer (permission ``audit.verify``). The old ``/audit`` prefix stays as a deprecated
+alias for one release (PRP-29 item 4).
 
 AUTHZ SEAM (until PRP-06 item 3 lands): every route depends on
 ``require_permission(<permission>)``. ``build_router`` takes that factory as a parameter and
@@ -30,11 +31,14 @@ from neurosphere_core.errors import DependencyTransientError, ForbiddenError
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE
 
+from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.routers import RouterRegistry
 
 PERMISSION_AUDIT_READ: Final = "audit.read"
 PERMISSION_AUDIT_VERIFY: Final = "audit.verify"
-ROUTE_PREFIX: Final = "/audit"
+ROUTE_PREFIX: Final = "/api/v1/audit"
+#: Deprecated alias for one release (PRP-29 item 4): same router, same permissions.
+ALIAS_PREFIX: Final = "/audit"
 
 PermissionDependency = Callable[..., Any]
 RequirePermission = Callable[[str], PermissionDependency]
@@ -105,4 +109,9 @@ def register(
     registry: RouterRegistry, *, require_permission: RequirePermission = deny_all_until_authz
 ) -> None:
     """Router-registry hook (see ``neurosphere_api/routers.py``)."""
-    registry.register(ROUTE_PREFIX, build_router(require_permission=require_permission))
+    register_with_alias(
+        registry,
+        build_router(require_permission=require_permission),
+        prefix=ROUTE_PREFIX,
+        alias_prefix=ALIAS_PREFIX,
+    )

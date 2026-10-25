@@ -1,4 +1,5 @@
-"""Catalog routes (PRP-10 item 5), mounted at ``/catalog``.
+"""Catalog routes (PRP-10 item 5), mounted at ``/api/v1/catalog`` (deprecated alias ``/catalog``
+for one release, PRP-29 item 4).
 
 | Method | Path                                        | Permission         |
 |--------|---------------------------------------------|--------------------|
@@ -18,9 +19,9 @@
 | POST   | ``/reconcile/stale-agents/confirm``         | ``catalog.curate`` |
 
 ``entity_id`` is a canonical ID (colons, possibly slashes) so it is a ``path`` parameter, and the
-suffix routes are declared before the bare one. Nothing here can match ``/catalog/curation/...``:
+suffix routes are declared before the bare one. Nothing here can match ``<prefix>/curation/...``:
 every path starts with a fixed segment other than ``curation``, and there is no catch-all
-directly under ``/catalog``.
+directly under the prefix.
 
 Authorization:
 
@@ -85,12 +86,23 @@ from neurosphere_api.catalog.models import (
     StaleAgentRequest,
 )
 from neurosphere_api.catalog.service import CatalogService
+from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
-__all__ = ["MAX_LIMIT", "MAX_TIMEOUT_MS", "PREFIX", "build_router", "clamp_budget", "register"]
+__all__ = [
+    "ALIAS_PREFIX",
+    "MAX_LIMIT",
+    "MAX_TIMEOUT_MS",
+    "PREFIX",
+    "build_router",
+    "clamp_budget",
+    "register",
+]
 
-PREFIX = "/catalog"
+PREFIX = "/api/v1/catalog"
+#: Deprecated alias for one release (PRP-29 item 4): same router, same permissions.
+ALIAS_PREFIX = "/catalog"
 MAX_TIMEOUT_MS: Final = 10_000
 MAX_LIMIT: Final = 500
 
@@ -336,4 +348,4 @@ def build_router() -> APIRouter:
 
 
 def register(registry: RouterRegistry) -> None:
-    registry.register(PREFIX, build_router())
+    register_with_alias(registry, build_router(), prefix=PREFIX, alias_prefix=ALIAS_PREFIX)

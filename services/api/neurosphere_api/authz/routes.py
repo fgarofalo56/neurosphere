@@ -56,9 +56,18 @@ SELF_AUTHENTICATED_PATHS: Final = frozenset({"/mcp"})
 #: Ingest-edge paths whose *producers* authenticate by registered credential inside the ingest
 #: service (``Authorization: Bearer <producer_id>.<secret>``). Not public and not ``require``d:
 #: a separate category, exact-path and ``POST``-only. ``tests/ingest`` asserts this set equals
-#: the ingest router's POST paths and that each returns 401 without a credential.
+#: the ingest router's POST paths and that each returns 401 without a credential. Both forms are
+#: listed: ``/api/v1/ingest/...`` and the deprecated ``/v1/ingest/...`` alias (PRP-29 item 4),
+#: which serves the same router for one release.
 PRODUCER_AUTHENTICATED_PATHS: Final = frozenset(
-    {"/v1/ingest/otlp/traces", "/v1/ingest/otlp/metrics", "/v1/ingest/events"}
+    {
+        "/api/v1/ingest/otlp/traces",
+        "/api/v1/ingest/otlp/metrics",
+        "/api/v1/ingest/events",
+        "/v1/ingest/otlp/traces",
+        "/v1/ingest/otlp/metrics",
+        "/v1/ingest/events",
+    }
 )
 
 

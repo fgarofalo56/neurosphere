@@ -461,7 +461,8 @@ def test_register_hook_uses_the_catalog_prefix() -> None:
 
     registry = RouterRegistry()
     register(registry)
-    assert registry.prefixes == (PREFIX,)
+    # The successor prefix and its deprecated alias PREFIX (PRP-29 item 4).
+    assert registry.prefixes == ("/api/v1/catalog", PREFIX)
 
 
 def test_budget_clamp_lowers_but_never_raises() -> None:

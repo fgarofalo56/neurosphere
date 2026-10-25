@@ -60,8 +60,9 @@ processors:
 exporters:
   otlphttp/neurosphere:
     # Explicit per-signal endpoints: the edge paths are not the collector's default /v1/traces.
-    traces_endpoint: https://INGEST_HOST/v1/ingest/otlp/traces
-    metrics_endpoint: https://INGEST_HOST/v1/ingest/otlp/metrics
+    # The old /v1/ingest/... paths are deprecated aliases until 2027-04-30 (PRP-29 item 4).
+    traces_endpoint: https://INGEST_HOST/api/v1/ingest/otlp/traces
+    metrics_endpoint: https://INGEST_HOST/api/v1/ingest/otlp/metrics
     # The edge accepts application/json only, uncompressed.
     encoding: json
     compression: none

@@ -160,7 +160,8 @@ def test_permission_dependency_can_deny_one_route() -> None:
 def test_register_hook_uses_deny_all_by_default() -> None:
     registry = RouterRegistry()
     register(registry)
-    assert registry.prefixes == (ROUTE_PREFIX,)
+    # The successor prefix and its deprecated alias (PRP-29 item 4).
+    assert registry.prefixes == (ROUTE_PREFIX, "/audit")
 
 
 # -- read --------------------------------------------------------------------------------------
