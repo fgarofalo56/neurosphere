@@ -90,6 +90,30 @@ It never ships: the demo branch sits behind `import.meta.env.MODE === "demo"` an
 
 Stop it with Ctrl+C; both child processes are stopped. If a port is busy, set the env vars above to free ones.
 
+## Real local sign-in
+
+Sign in to the locally running app with your own Entra account. Two things are needed, and they are different: the app registration (so Entra issues a token the API accepts) and a policy-store grant (so the API lets you do anything).
+
+**App roles only drive navigation display. Authority comes from the policy store.** Without step 3 the pages show but every API call answers 403.
+
+1. Get your object id: `az ad signed-in-user show --query id -o tsv`.
+2. Prepare the app registration. Dry-run first (Graph GETs only, prints a before/after diff of redirect URIs and role values), then apply with operator approval. Use your own `<app-id>` and `<tenant-id>`; they are never committed.
+
+   ```bash
+   python scripts/gates/p29_entra_local.py --app-id <app-id> --tenant-id <tenant-id>
+   NS_LIVE_APPROVED=1 python scripts/gates/p29_entra_local.py --app-id <app-id> --tenant-id <tenant-id> --apply --assign-self admin
+   ```
+
+   It adds the `spa` redirect URIs `http://localhost:5173` and `http://localhost:8080`, the five app roles, and sets `requestedAccessTokenVersion` to 2. It only merges and is safe to re-run.
+3. Grant yourself a role in the local policy store (emulator must be up and seeded, `NS_AUTH_TENANT_ID=<tenant-id>` exported):
+
+   ```bash
+   make grant-operator OPERATOR_OID=<object-id> OPERATOR_ROLE=admin
+   ```
+
+   or `python scripts/sandbox/sbx_grant_operator.py --object-id <object-id> --role admin`. It refuses a non-loopback Cosmos endpoint and uses the same pseudonym key resolver as the API.
+4. Sign in. The grant is time-bound for privileged roles (30 days); re-run step 3 to renew.
+
 ## Emulator limits
 
 Document and respect these. They are the known gaps between the emulators and the real services; the parity gate is [G12 in RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).

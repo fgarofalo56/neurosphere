@@ -7,7 +7,7 @@ SANDBOX_CLOUD   ?= commercial
 SANDBOX_DIR     ?= temp/sandbox
 SANDBOX_CLI     := uv run python scripts/sandbox/sbx_cli.py
 
-.PHONY: sandbox-generate seed replay seed-reset
+.PHONY: sandbox-generate seed replay seed-reset grant-operator
 
 sandbox-generate:
 	uv run python -m sandbox.generate --seed $(SANDBOX_SEED) --profile $(SANDBOX_PROFILE) --cloud $(SANDBOX_CLOUD) --out $(SANDBOX_DIR)
@@ -22,3 +22,10 @@ seed-reset: ## Drop sandbox Cosmos databases and restart the Event Hubs emulator
 	$(SANDBOX_CLI) reset
 	docker compose restart eventhubs
 	docker compose up -d --wait
+
+# Real local sign-in (PRP-29 item 6): give your Entra object id a role over the sandbox domains in
+# the local policy store. Usage: make grant-operator OPERATOR_OID=<oid> [OPERATOR_ROLE=admin]
+OPERATOR_ROLE ?= admin
+
+grant-operator: ## Grant OPERATOR_OID a role over the sandbox domains (needs NS_AUTH_TENANT_ID)
+	uv run python scripts/sandbox/sbx_grant_operator.py --object-id "$(OPERATOR_OID)" --role $(OPERATOR_ROLE)
