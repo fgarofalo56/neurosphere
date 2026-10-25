@@ -16,7 +16,11 @@ from neurosphere_core.evaluation.cosmos_store import (
     EVALUATION_PARTITION_KEY_PATHS,
     CosmosEvaluationStore,
 )
-from neurosphere_core.evaluation.store import EvaluationStore, InMemoryEvaluationStore
+from neurosphere_core.evaluation.store import (
+    EvaluationConflictError,
+    EvaluationStore,
+    InMemoryEvaluationStore,
+)
 
 from .conformance import (
     CHECKS,
@@ -71,6 +75,7 @@ async def test_every_query_is_single_partition_and_carries_the_scope_predicates(
     await store.put_calibration("commercial", "contoso", FINANCE, make_report())
     await store.put_drift_alert("commercial", "contoso", FINANCE, make_alert())
     await store.put_coverage(make_cov("run1", "agent-a", 1, T))
+    results.queries.clear()  # put_result's by-id lookup is deliberately cross-partition
     await store.list_results(scope, FINANCE, subject_id="s", dimension="safety", limit=3)
     await store.results(scope, FINANCE)
     await store.calibrations(scope, FINANCE)
@@ -92,6 +97,7 @@ async def test_a_domain_outside_the_scope_never_reaches_cosmos() -> None:
     results, runs, store = _pair()
     scope = make_scope()
     await store.put_result(make_result(1, domain_id=OPERATIONS))
+    results.queries.clear()  # put_result's by-id lookup is deliberately cross-partition
     await store.list_results(scope, OPERATIONS)
     await store.results(scope, OPERATIONS)
     await store.calibrations(scope, OPERATIONS)
@@ -101,10 +107,13 @@ async def test_a_domain_outside_the_scope_never_reaches_cosmos() -> None:
     assert runs.queries == []
 
 
-async def test_same_evaluation_id_in_two_customers_stays_separate_in_cosmos() -> None:
-    _, _, store = _pair()
+async def test_same_evaluation_id_under_another_customer_conflicts_and_adds_no_document() -> None:
+    # Matches the in-memory store (results keyed by id alone): no second copy in another partition.
+    results, _, store = _pair()
     await store.put_result(make_result(1))
-    await store.put_result(other_customer_result(1))  # same id, other partition: no conflict
+    with pytest.raises(EvaluationConflictError):
+        await store.put_result(other_customer_result(1))
+    assert len(results.items) == 1
     mine = await store.results(make_scope(), FINANCE)
     assert [r.customer_id for r in mine] == ["contoso"]
 

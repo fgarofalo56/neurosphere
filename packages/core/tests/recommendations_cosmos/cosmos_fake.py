@@ -15,6 +15,7 @@ def _q(doc: dict[str, Any], p: dict[str, Any]) -> bool:
 
 
 CLAUSES: dict[str, Predicate] = {
+    "c.id = @id": lambda d, p: d["id"] == p["@id"],
     "c.doc_type = @doc_type": lambda d, p: d["doc_type"] == p["@doc_type"],
     "c.customer_id = @customer": lambda d, p: d["customer_id"] == p["@customer"],
     "c.domain_id = @domain": lambda d, p: d["domain_id"] == p["@domain"],

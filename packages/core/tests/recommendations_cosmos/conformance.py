@@ -215,6 +215,22 @@ async def check_cloud_isolation(store: RecommendationStore) -> None:
     assert await store.get(commercial, FINANCE, rec(1).recommendation_id.root) is None
 
 
+async def check_same_id_under_another_domain_replaces_not_duplicates(
+    store: RecommendationStore,
+) -> None:
+    # recommendation_id is caller-supplied, not derived from the domain, so a cross-domain
+    # re-put is reachable; both backends key by id alone (the later put wins, no second copy).
+    both = make_scope([FINANCE, OPERATIONS])
+    await store.put(rec(1, domain=FINANCE))
+    await store.put(rec(1, domain=OPERATIONS))
+    assert ids(await store.list(both, FINANCE)) == []
+    assert ids(await store.list(both, OPERATIONS)) == ["rec-0001"]
+    assert await store.get(both, FINANCE, rec(1).recommendation_id.root) is None
+    moved = await store.get(both, OPERATIONS, rec(1).recommendation_id.root)
+    assert moved is not None
+    assert moved.domain_id.root == OPERATIONS
+
+
 CHECKS: dict[str, Check] = {
     name.removeprefix("check_"): fn
     for name, fn in sorted(globals().items())

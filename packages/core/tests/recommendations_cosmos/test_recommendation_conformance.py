@@ -43,6 +43,7 @@ async def test_every_query_is_single_partition_and_carries_the_scope_predicates(
     store = CosmosRecommendationStore(container)  # type: ignore[arg-type]
     scope = make_scope([FINANCE])
     await store.put(rec(1))
+    container.queries.clear()  # put's by-id lookup is deliberately cross-partition
     await store.list(scope, FINANCE)
     await store.list(scope, FINANCE, kind="cost_spike", q="spike", cursor=None, limit=3)
     assert len(container.queries) == 2
@@ -62,22 +63,24 @@ async def test_a_domain_outside_the_scope_never_reaches_cosmos() -> None:
     store = CosmosRecommendationStore(container)  # type: ignore[arg-type]
     scope = make_scope([FINANCE])
     await store.put(rec(1, domain=OPERATIONS))
+    container.queries.clear()  # put's by-id lookup is deliberately cross-partition
     assert (await store.list(scope, OPERATIONS)).items == ()
     assert await store.get(scope, OPERATIONS, rec(1).recommendation_id.root) is None
     assert container.queries == []
 
 
-async def test_same_id_in_two_customers_stays_separate_in_cosmos() -> None:
-    store = CosmosRecommendationStore(new_container())  # type: ignore[arg-type]
+async def test_same_id_under_another_customer_replaces_and_leaves_one_document() -> None:
+    # Matches the in-memory store (keyed by id alone): the stale partition copy is deleted.
+    container = new_container()
+    store = CosmosRecommendationStore(container)  # type: ignore[arg-type]
     await store.put(rec(1, customer="contoso"))
     await store.put(rec(1, customer="fabrikam"))
     rid = rec(1).recommendation_id.root
+    assert [key for key, _ in container.items] == [("fabrikam", FINANCE)]
+    assert await store.get(make_scope([FINANCE], customer="contoso"), FINANCE, rid) is None
     fabrikam = await store.get(make_scope([FINANCE], customer="fabrikam"), FINANCE, rid)
-    contoso = await store.get(make_scope([FINANCE], customer="contoso"), FINANCE, rid)
     assert fabrikam is not None
     assert fabrikam.customer_id == "fabrikam"
-    assert contoso is not None
-    assert contoso.customer_id == "contoso"
 
 
 async def test_a_tampered_document_fails_closed_as_upstream_invalid() -> None:

@@ -33,22 +33,19 @@ def test_conformance(backend: str, check: str) -> None:
 
 def test_container_constants_match_the_wire_contract() -> None:
     assert DEFAULT_PRICE_SNAPSHOT_CONTAINER == "price_snapshots"
-    assert PRICE_SNAPSHOT_PARTITION_KEY_PATH == "/source"
+    assert PRICE_SNAPSHOT_PARTITION_KEY_PATH == "/snapshot_id"
 
 
 # -- Cosmos-specific ----------------------------------------------------------------------------
 
 
-def test_documents_are_partitioned_by_source_and_snapshots_are_never_rewritten() -> None:
+def test_documents_are_partitioned_by_snapshot_id_and_snapshots_are_never_rewritten() -> None:
     container = new_container()
     store = CosmosPriceSnapshotStore(container)  # type: ignore[arg-type]
     retail = retail_fixture()
     store.put(retail)
     store.put(sheet("s-a", date(2026, 10, 1), "1"))
-    assert sorted(key for key, _ in container.items) == [
-        ("azure_retail_prices",),
-        ("provider_price_sheet",),
-    ]
+    assert sorted(key for key, _ in container.items) == sorted([(retail.snapshot_id,), ("s-a",)])
     before = {slot: doc["_etag"] for slot, doc in container.items.items()}
     assert store.put(retail) is False
     assert {slot: doc["_etag"] for slot, doc in container.items.items()} == before

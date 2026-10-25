@@ -173,11 +173,10 @@ class FakeContainer:
         query: str,
         parameters: Sequence[Mapping[str, Any]] | None = None,
         partition_key: Any = None,
-        enable_cross_partition_query: bool | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
-        for row in self._engine.query(
-            query, parameters, partition_key, enable_cross_partition_query
-        ):
+        # The aio SDK takes no enable_cross_partition_query (cross-partition is the default) and
+        # forwards unknown kwargs into the HTTP request, so this fake rejects it by omission.
+        for row in self._engine.query(query, parameters, partition_key, True):
             yield row
 
 

@@ -5,23 +5,23 @@ Unlike the other Cosmos stores this one uses the synchronous ``azure.cosmos`` cl
 awaitables) and its callers (the right-sizing projection) call it without ``await``. The protocol
 is not changed here; a caller on an event loop should run these calls in a thread.
 
-Container ``price_snapshots``: partition key ``/source`` (``Hash``). One document per snapshot:
-the ``PriceSnapshot`` JSON dump plus ``id`` = ``snapshot_id``. Snapshots are append-only:
+Container ``price_snapshots``: partition key ``/snapshot_id`` (``Hash``), the registry's choice
+(Cosmos ids are unique only within a logical partition, so keying by the id keeps the
+put-conflict rule exact). One document per snapshot: the ``PriceSnapshot`` JSON dump plus
+``id`` = ``snapshot_id``. Snapshots are append-only:
 
-* ``put``: look the id up in every source partition (``SnapshotSource`` has two values, so that is
-  two point reads, never a cross-partition scan); equal ``content_hash`` -> ``False``, differing
-  -> ``SnapshotConflictError``, absent -> create-only (a racing 409 re-checks the same way).
-* ``get``: point reads across the (two) source partitions.
+* ``put``: a point read; equal ``content_hash`` -> ``False``, differing ->
+  ``SnapshotConflictError``, absent -> create-only (a racing 409 re-checks the same way).
+* ``get``: a single point read.
 * ``list_snapshots`` / ``resolve``: one bounded cross-partition query (``TOP`` ``MAX_SNAPSHOTS``).
-  Snapshot counts are tiny (one per refresh), so the cross-partition fan-out is across two
-  partitions at most. A store holding more than ``MAX_SNAPSHOTS`` snapshots in the queried range
-  fails loudly rather than resolving against a truncated list.
+  Snapshot counts are tiny (one per refresh). A store holding more than ``MAX_SNAPSHOTS``
+  snapshots in the queried range fails loudly rather than resolving against a truncated list.
 """
 
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Final, NoReturn, get_args
+from typing import Any, Final, NoReturn
 
 from azure.cosmos import ContainerProxy, CosmosClient, DatabaseProxy, PartitionKey
 from azure.cosmos.exceptions import (
@@ -37,7 +37,7 @@ from neurosphere_core.errors import (
     RateLimitedError,
 )
 from neurosphere_core.ledger.prices import PriceVersion
-from neurosphere_core.pricing.models import PriceSnapshot, SnapshotSource
+from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.pricing.store import ResolvedTokenPrice, SnapshotConflictError
 
 __all__ = [
@@ -49,9 +49,8 @@ __all__ = [
 ]
 
 DEFAULT_PRICE_SNAPSHOT_CONTAINER: Final = "price_snapshots"
-PRICE_SNAPSHOT_PARTITION_KEY_PATH: Final = "/source"
+PRICE_SNAPSHOT_PARTITION_KEY_PATH: Final = "/snapshot_id"
 MAX_SNAPSHOTS: Final = 1_000
-_SOURCES: Final[tuple[str, ...]] = get_args(SnapshotSource)
 
 
 def create_price_snapshot_container(
@@ -131,15 +130,13 @@ class CosmosPriceSnapshotStore:
         )
 
     def get(self, snapshot_id: str) -> PriceSnapshot | None:
-        for source in _SOURCES:
-            try:
-                row = self._container.read_item(item=snapshot_id, partition_key=source)
-            except CosmosResourceNotFoundError:
-                continue
-            except Exception as exc:
-                _raise_mapped(exc)
-            return _from_row(dict(row))
-        return None
+        try:
+            row = self._container.read_item(item=snapshot_id, partition_key=snapshot_id)
+        except CosmosResourceNotFoundError:
+            return None
+        except Exception as exc:
+            _raise_mapped(exc)
+        return _from_row(dict(row))
 
     def _query(self, cloud: str | None, on: date | None) -> list[PriceSnapshot]:
         clauses: list[str] = []

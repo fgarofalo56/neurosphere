@@ -1,7 +1,7 @@
 """Emulator fixtures for the Cosmos store conformance suites.
 
 Run: ``pytest -m integration tests/integration/stores_cosmos`` against the compose Cosmos emulator
-(``http://localhost:8081``). Every test gets its OWN database (unique name, deleted afterwards), so
+(``http://127.0.0.1:8081``). Every test gets its OWN database (unique name, deleted afterwards), so
 nothing is shared and nothing is left behind. The key is a dummy built at runtime: the emulator
 ignores it (G12), and no key-shaped literal is committed.
 
@@ -23,7 +23,7 @@ from azure.cosmos.aio import DatabaseProxy
 from neurosphere_core.clients import ClientLifetime, create_cosmos_client
 from neurosphere_core.cloud import Settings
 
-ENDPOINT = "http://localhost:8081"
+ENDPOINT = "http://127.0.0.1:8081"
 
 
 def _dummy_key() -> str:

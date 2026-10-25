@@ -52,6 +52,7 @@ __all__ = [
 DEFAULT_RECOMMENDATION_CONTAINER: Final = "recommendations"
 RECOMMENDATION_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
 RECOMMENDATION_DOC_TYPE: Final = "recommendation"
+BY_ID_QUERY: Final = "SELECT * FROM c WHERE c.id = @id"
 RECOMMENDATION_STORE_UNAVAILABLE: Final = "recommendation_store_unavailable"
 _SAFE_ID: Final = re.compile(r"^[A-Za-z0-9._:=-]{1,200}$")
 _SYSTEM_FIELDS: Final = frozenset({"id", "doc_type", "sort_key"})
@@ -128,6 +129,15 @@ class CosmosRecommendationStore:
         body["sort_key"] = recommendation.recommendation_id.root
         try:
             await self._container.upsert_item(body=body)
+            # ``recommendation_id`` is caller-supplied (not derived from the domain), and the
+            # in-memory store replaces by id alone: drop any copy left in another partition.
+            async for row in self._container.query_items(
+                BY_ID_QUERY,
+                parameters=[{"name": "@id", "value": body["id"]}],
+            ):
+                key = [row["customer_id"], row["domain_id"]]
+                if key != [body["customer_id"], body["domain_id"]]:
+                    await self._container.delete_item(item=row["id"], partition_key=key)
         except Exception as exc:
             _raise_mapped(exc)
 

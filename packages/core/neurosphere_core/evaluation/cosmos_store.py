@@ -3,9 +3,10 @@
 Two containers, both with the hierarchical key ``/customer_id``, ``/domain_id`` (``MultiHash``):
 
 * ``evaluation_results``: one document per ``EvaluationResult`` (the contract document plus
-  ``id``, ``doc_type`` and ``sort_key`` = the raw ``evaluation_id``). Immutable: ``put_result`` is
-  create-only; a 409 reads the stored result and either no-ops (equal) or raises
-  ``EvaluationConflictError``.
+  ``id``, ``doc_type`` and ``sort_key`` = the raw ``evaluation_id``). Immutable: ``put_result``
+  first looks the id up across partitions (the id is caller-supplied, so it can recur under
+  another customer/domain; the in-memory store keys by id alone), then no-ops (equal) or raises
+  ``EvaluationConflictError``; otherwise create-only, a racing 409 re-checks the same way.
 * ``evaluation_runs``: the per-run records, discriminated by ``doc_type``: ``calibration``,
   ``drift_alert`` and ``coverage``. Each is ``{id, doc_type, cloud, customer_id, domain_id,
   body}`` where ``body`` is the model's JSON dump. Calibration is "newest wins", written with an
@@ -75,6 +76,7 @@ DEFAULT_RESULTS_CONTAINER: Final = "evaluation_results"
 DEFAULT_RUNS_CONTAINER: Final = "evaluation_runs"
 EVALUATION_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
 RESULT_DOC_TYPE: Final = "evaluation_result"
+RESULT_BY_ID_QUERY: Final = "SELECT * FROM c WHERE c.id = @id"
 CALIBRATION_DOC_TYPE: Final = "calibration"
 DRIFT_DOC_TYPE: Final = "drift_alert"
 COVERAGE_DOC_TYPE: Final = "coverage"
@@ -265,6 +267,26 @@ class CosmosEvaluationStore:
         body["id"] = _doc_id(raw_id)
         body["doc_type"] = RESULT_DOC_TYPE
         body["sort_key"] = raw_id
+        # ``evaluation_id`` is caller-supplied and not derived from the domain, so the same id can
+        # arrive under another customer/domain. The in-memory store keys results by id alone, so a
+        # differing re-put anywhere is a conflict: look the id up across partitions first.
+        try:
+            stored = [
+                row
+                async for row in self._results.query_items(
+                    RESULT_BY_ID_QUERY,
+                    parameters=[{"name": "@id", "value": body["id"]}],
+                )
+            ]
+        except Exception as exc:
+            _raise_mapped(exc)
+        if stored:
+            if any(_result_from_row(row) != result for row in stored):
+                raise EvaluationConflictError(
+                    "a different evaluation result already exists under this id",
+                    reason="evaluation_conflict",
+                )
+            return
         try:
             await self._results.create_item(body=body)
             return

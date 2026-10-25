@@ -106,6 +106,10 @@ class _Engine:
             raise CosmosResourceNotFoundError(status_code=404, message="nf")
         return copy.deepcopy(found)
 
+    def delete(self, item: str, partition_key: Any) -> None:
+        if self.items.pop((_normalise_key(partition_key), item), None) is None:
+            raise CosmosResourceNotFoundError(status_code=404, message="nf")
+
     def query(
         self,
         query: str,
@@ -168,16 +172,18 @@ class FakeContainer:
     async def read_item(self, item: str, partition_key: Any) -> dict[str, Any]:
         return self._engine.read(item, partition_key)
 
+    async def delete_item(self, item: str, partition_key: Any) -> None:
+        self._engine.delete(item, partition_key)
+
     async def query_items(
         self,
         query: str,
         parameters: Sequence[Mapping[str, Any]] | None = None,
         partition_key: Any = None,
-        enable_cross_partition_query: bool | None = None,
     ) -> AsyncIterator[dict[str, Any]]:
-        for row in self._engine.query(
-            query, parameters, partition_key, enable_cross_partition_query
-        ):
+        # The aio SDK takes no enable_cross_partition_query (cross-partition is the default) and
+        # forwards unknown kwargs into the HTTP request, so this fake rejects it by omission.
+        for row in self._engine.query(query, parameters, partition_key, True):
             yield row
 
 

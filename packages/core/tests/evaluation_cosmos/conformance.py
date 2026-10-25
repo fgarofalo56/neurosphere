@@ -340,6 +340,17 @@ async def check_coverage_keeps_unknown_as_none(store: EvaluationStore) -> None:
     ]
 
 
+async def check_same_id_under_another_domain_is_a_conflict(store: EvaluationStore) -> None:
+    # evaluation_id is caller-supplied, not derived from the domain, so this is reachable; both
+    # backends key results by id alone: a differing re-put anywhere conflicts, nothing is added.
+    await store.put_result(make_result(1))
+    with pytest.raises(EvaluationConflictError):
+        await store.put_result(make_result(1, domain_id=OPERATIONS))
+    scope = make_scope(domains=(FINANCE, OPERATIONS))
+    assert eval_ids(await store.results(scope, FINANCE)) == ["eval:r-0001"]
+    assert await store.results(scope, OPERATIONS) == ()
+
+
 CHECKS: dict[str, Check] = {
     name.removeprefix("check_"): fn
     for name, fn in sorted(globals().items())
