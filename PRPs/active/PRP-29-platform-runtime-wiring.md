@@ -754,7 +754,7 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | 8 action-reports-copilot-and-mcp-builders | merged | worktree-agent-a747f85cb9b49701e | opus | 4a520fa; review APPROVED; readiness expectations fixed forward; gitleaks FP fingerprinted 31f448b; on integration 1400 passed + real_stack 3 emulator; prod write targets empty (advisory); Commercial copilot gated off (no matrix rows); merge 5c60b54 | 2026-10-25 |
 | 9 workers-runtime-roles | merged | worktree-agent-a848c517ea8dd521c | sonnet | c9b45b7; 377 workers passed; hub endpoint fixed to 127.0.0.1 (2dfd666) -> workers_runtime 2 passed (hub + seeded); merge 3a10c2b | 2026-10-25 |
 | 10 real-stack-synthetic-seed | merged | worktree-agent-a64461014aaf78c41 | sonnet | 51ba6be; on integration 209 unit + test_seed emulator passed (12 categories >0; re-run skipped_existing 1041); worker/API pseudonym parity proven; merge 0b6da0c | 2026-10-25 |
-| 9b aggregates-price-refresh (fix-forward) | in-progress | - | sonnet | aggregates role loaded the price table once at start; refresh it periodically | 2026-10-25 |
+| 9b aggregates-price-refresh (fix-forward) | merged | worktree-agent-ab6f3c341b00ba8fa | sonnet | 30c8820: periodic PriceTableRefresher (NS_WORKER_PRICE_REFRESH_SECONDS, default 60); 381 workers passed on integration; merge 25db405 | 2026-10-25 |
 | 11 compose-app-profile-and-real-stack-smoke | in-progress | - | sonnet | delta (user): seed is a host step after up --wait, no compose seed job | 2026-10-25 |
 
 ## Completion note (filled at ship)
