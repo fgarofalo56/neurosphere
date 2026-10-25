@@ -25,8 +25,6 @@ import yaml
 from .conftest import REPO_ROOT, compose
 
 APP_SERVICES = {"api", "workers", "frontend"}
-#: One-shot that creates the Cosmos database and containers before api and workers start.
-APP_ONE_SHOTS = {"cosmos-init"}
 EMULATOR_SERVICES = {"cosmos", "azurite", "eventhubs", "eventhubs-health"}
 #: The synthetic, non-secret worker principal. The only GUID literal allowed in compose/Makefile.
 WORKER_OBJECT_ID: Final = "7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6"
@@ -48,18 +46,29 @@ def _services() -> dict[str, dict[str, Any]]:
 # --- static ----------------------------------------------------------------------------------
 
 
-def test_app_profile_services_are_exactly_api_workers_frontend_and_the_init_job() -> None:
+def test_app_profile_services_are_exactly_api_workers_and_frontend() -> None:
     in_app = {name for name, svc in _services().items() if svc.get("profiles") == ["app"]}
-    assert in_app == APP_SERVICES | APP_ONE_SHOTS
+    assert in_app == APP_SERVICES
 
 
-def test_cosmos_init_runs_to_completion_before_api_and_workers() -> None:
-    """Concurrent first-time container creation collides on a fresh emulator (see compose)."""
+def test_there_is_no_init_one_shot_and_api_builds_the_stock_dev_image() -> None:
+    """Container creation is idempotent in the stores (409 is success): no cosmos-init job."""
     services = _services()
-    assert services["cosmos-init"]["restart"] == "no"
+    assert "cosmos-init" not in services
     for name in ("api", "workers"):
-        init = services[name]["depends_on"]["cosmos-init"]
-        assert init == {"condition": "service_completed_successfully"}, name
+        assert "cosmos-init" not in services[name]["depends_on"], name
+    assert services["api"]["build"] == {"context": ".", "dockerfile": "services/api/Dockerfile.dev"}
+
+
+def test_workers_mount_sandbox_data_read_only_for_recommendations_and_evaluation() -> None:
+    workers = _services()["workers"]
+    env = workers["environment"]
+    assert env["NS_WORKER_REC_DATA_DIR"] == "/data/sandbox"
+    assert env["NS_WORKER_EVAL_DATA_DIR"] == "/data/evaluation"
+    mounts = {v.rsplit(":", 2)[-2]: v for v in workers["volumes"]}
+    assert set(mounts) == {"/data/sandbox", "/data/evaluation"}
+    assert all(v.endswith(":ro") for v in mounts.values())
+    assert mounts["/data/evaluation"].startswith("./sandbox/evaluation/data:")
 
 
 def test_there_is_no_seed_service() -> None:
@@ -146,8 +155,9 @@ def test_makefile_stack_targets_match_compose_worker_identity() -> None:
     assert "export NS_ENTRA_TENANT_ID first" in makefile
     assert "export NS_ENTRA_CLIENT_ID first" in makefile
     up = makefile.index("docker compose --profile app up -d --wait")
-    seed = makefile.index("seed-stack", up)
-    assert seed > up
+    sandbox_seed = makefile.index("$(SANDBOX_CLI) seed", up)
+    stack_seed = makefile.index("seed-stack", sandbox_seed)
+    assert makefile.index("sandbox-generate") < up < sandbox_seed < stack_seed
 
 
 # --- Docker ----------------------------------------------------------------------------------

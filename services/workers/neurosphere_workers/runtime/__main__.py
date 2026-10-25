@@ -76,6 +76,9 @@ async def _amain(raw_roles: str | None) -> int:
 def main(raw_roles: str | None = None) -> int:
     """Entry point. ``raw_roles`` overrides ``NS_WORKER_ROLES`` (the ingestion alias uses it)."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if os.environ.get("NS_LOG_LEVEL", "").strip().upper() != "DEBUG":
+        # The Azure SDK logs every HTTP request/response at INFO; keep it to warnings.
+        logging.getLogger("azure").setLevel(logging.WARNING)
     selected = raw_roles if raw_roles is not None else os.environ.get("NS_WORKER_ROLES")
     try:
         parse_roles(selected)

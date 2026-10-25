@@ -10,6 +10,7 @@ import inspect
 from typing import Any, Literal
 
 import pytest
+from azure.cosmos.exceptions import CosmosResourceExistsError
 from neurosphere_core.actions import cosmos_store as actions_store
 from neurosphere_core.aggregates import cosmos as aggregates_store
 from neurosphere_core.audit import cosmos_store as audit_store
@@ -178,3 +179,29 @@ async def test_ensure_local_containers_refuses_outside_local(
     assert caught.value.reason == "config"
     assert client.databases == []
     assert client.database.created == []
+
+
+class _RacingDatabase(_FakeDatabase):
+    async def create_container_if_not_exists(self, id: str, partition_key: Any, **kw: Any) -> Any:
+        self.created.append((id, partition_key, kw))
+        raise CosmosResourceExistsError(status_code=409, message="Conflict")
+
+
+class _RacingClient(_FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.database = _RacingDatabase()
+
+    async def create_database_if_not_exists(self, id: str) -> _FakeDatabase:
+        self.databases.append(id)
+        raise CosmosResourceExistsError(status_code=409, message="Conflict")
+
+    def get_database_client(self, database: str) -> _FakeDatabase:
+        return self.database
+
+
+async def test_ensure_local_containers_treats_409_as_success() -> None:
+    client = _RacingClient()
+    names = await ensure_local_containers(client, Settings(env="local"))
+    assert names == tuple(s.name for s in CONTAINERS)
+    assert len(client.database.created) == len(CONTAINERS)

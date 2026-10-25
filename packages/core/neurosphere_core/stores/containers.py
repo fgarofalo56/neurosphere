@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final, Literal, Protocol
 
 from azure.cosmos import PartitionKey
+from azure.cosmos.exceptions import CosmosResourceExistsError
 
 from neurosphere_core.cloud import Settings
 from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
@@ -215,6 +216,8 @@ class _Client(Protocol):
 
     async def create_database_if_not_exists(self, id: str) -> Any: ...
 
+    def get_database_client(self, database: str) -> Any: ...
+
 
 def _refuse_outside_local(settings: Settings) -> None:
     if settings.env != "local":
@@ -237,12 +240,19 @@ async def ensure_local_containers(
     _refuse_outside_local(settings)
     ordered = tuple(specs)
     _check_unique(ordered)
-    db = await client.create_database_if_not_exists(id=database)
+    try:
+        db = await client.create_database_if_not_exists(id=database)
+    except CosmosResourceExistsError:
+        # Concurrent first-time callers on a fresh emulator race; losing the race is success.
+        db = client.get_database_client(database)
     for spec in ordered:
         options: dict[str, Any] = {}
         if spec.default_ttl is not None:
             options["default_ttl"] = spec.default_ttl
-        await db.create_container_if_not_exists(
-            id=spec.name, partition_key=spec.partition_key(), **options
-        )
+        try:
+            await db.create_container_if_not_exists(
+                id=spec.name, partition_key=spec.partition_key(), **options
+            )
+        except CosmosResourceExistsError:
+            continue  # created concurrently by another caller: already exists is success
     return tuple(s.name for s in ordered)
