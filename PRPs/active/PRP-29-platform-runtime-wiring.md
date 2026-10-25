@@ -756,6 +756,8 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | 10 real-stack-synthetic-seed | merged | worktree-agent-a64461014aaf78c41 | sonnet | 51ba6be; on integration 209 unit + test_seed emulator passed (12 categories >0; re-run skipped_existing 1041); worker/API pseudonym parity proven; merge 0b6da0c | 2026-10-25 |
 | 9b aggregates-price-refresh (fix-forward) | merged | worktree-agent-ab6f3c341b00ba8fa | sonnet | 30c8820: periodic PriceTableRefresher (NS_WORKER_PRICE_REFRESH_SECONDS, default 60); 381 workers passed on integration; merge 25db405 | 2026-10-25 |
 | 11 compose-app-profile-and-real-stack-smoke | merged | worktree-agent-af183ac3682cc98c6 | sonnet | fc149d8: up --wait OK, /readyz 200 via nginx, host seed exit 0, real_stack+compose 45 passed, default Playwright 334 unchanged; strict expected-gap list (sandbox db, dated seed, map empty, reports persona-private); workarounds: inline api build (api pkg lacks workers dep since PRP-21), cosmos-init (ensure_local_containers race); manual real-Entra Playwright OPEN; merge c194e1d | 2026-10-25 |
+| E1 platform-fix-forward (api workers dep, container race, worker data mounts, sandbox db) | in-progress | - | sonnet | user approved 2026-10-25 | 2026-10-25 |
+| E2 seed-data-fix-forward (recent dates, map entities, operator reports, hard route asserts) | todo | - | sonnet | user approved 2026-10-25; after E1 | 2026-10-25 |
 
 ## Completion note (filled at ship)
 - Date:
