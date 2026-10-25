@@ -85,6 +85,7 @@ from neurosphere_core.lifecycle.cosmos import (
 )
 from neurosphere_core.pricing import InMemoryPriceSnapshotStore
 from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
+from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
 from neurosphere_core.stores import ensure_local_containers
 
@@ -117,6 +118,7 @@ from neurosphere_workers.runtime.archive_reader import (
     ArchiveTraceEventSource,
 )
 from neurosphere_workers.runtime.identity import build_identity, build_policy_stack
+from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
 from neurosphere_workers.runtime.roles import RoleConfigError
 from neurosphere_workers.runtime.settings import (
     AuthSettings,
@@ -257,6 +259,10 @@ async def _price_snapshots(cfg: RuntimeConfig) -> InMemoryPriceSnapshotStore:
     return await asyncio.to_thread(load)
 
 
+async def _list_price_snapshots(cfg: RuntimeConfig) -> list[PriceSnapshot]:
+    return (await _price_snapshots(cfg)).list_snapshots()
+
+
 def _config_error(pointer: str, detail: str) -> InvalidSchemaError:
     return InvalidSchemaError(detail, errors=[ValidationIssue(pointer, detail)], reason="config")
 
@@ -325,19 +331,31 @@ async def build_aggregates(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     db = _database(cfg, cosmos)
-    snapshots = await _price_snapshots(cfg)
-    prices = PriceTable([s.to_price_version() for s in snapshots.list_snapshots()])
-    projection = AggregateProjection(
-        store=CosmosAggregateStore(db.get_container_client(_AGGREGATES_CONTAINER)),
-        ledger=StoreLedgerSource(CosmosLedgerStore(db.get_container_client(_LEDGER_CONTAINER))),
-        events=ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime))),
-        prices=prices,
+    initial = await _list_price_snapshots(cfg)
+    refresher = PriceTableRefresher(
+        partial(_list_price_snapshots, cfg), initial, cfg.worker.price_refresh_seconds
     )
-    drain = _drain_tick(_outbox_reader(db), SINK_AGGREGATES, customer, projection.handle)
-    prune = PeriodicTick(partial(_prune, projection, customer), _PRUNE_INTERVAL_SECONDS)
+    reader = _outbox_reader(db)
+    store = CosmosAggregateStore(db.get_container_client(_AGGREGATES_CONTAINER))
+    ledger = StoreLedgerSource(CosmosLedgerStore(db.get_container_client(_LEDGER_CONTAINER)))
+    events = ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime)))
+
+    def make_projection(prices: PriceTable) -> AggregateProjection:
+        return AggregateProjection(store=store, ledger=ledger, events=events, prices=prices)
+
+    projection = make_projection(refresher.table)
+
+    async def prune_job() -> None:
+        await _prune(projection, customer)
+
+    prune = PeriodicTick(prune_job, _PRUNE_INTERVAL_SECONDS)
 
     async def tick() -> None:
-        await drain()
+        nonlocal projection
+        # Swap only here, between drains, so an entry never sees two price tables.
+        if await refresher.refresh_if_due():
+            projection = make_projection(refresher.table)
+        await _drain_tick(reader, SINK_AGGREGATES, customer, projection.handle)()
         await prune()
 
     return _tick_role("aggregates", tick, cfg)
