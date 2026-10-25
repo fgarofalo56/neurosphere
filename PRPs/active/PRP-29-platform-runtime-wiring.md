@@ -745,7 +745,7 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 |------|--------|--------|-------|----------|---------|
 | 1 composition-root-authz-readiness-and-container-registry | merged | worktree-agent-a3643f6b5a46538c7 | opus | 283 passed (runtime_api, stores_registry, authz, openapi drift, health, me_api); review APPROVED; merge 3754d76 | 2026-10-25 |
 | 2 durable-stores-recommendations-evaluation-pricing | in-progress | worktree-agent-ab6c69cd13f5640b5 | sonnet | 6042dc3: 240 unit + 34 emulator passed; rework: align price_snapshots key to registry | 2026-10-25 |
-| 3 durable-stores-hitl-review-queue-lifecycle | in-progress | worktree-agent-ac8c3d4244b7884c0 | sonnet | 9bedc0f: 310 pass/1 fail (hitl no-network guard); rework: move store to hitl_cosmos pkg (user), align keys | 2026-10-25 |
+| 3 durable-stores-hitl-review-queue-lifecycle | merged | worktree-agent-ab490c10a817e4b3b | sonnet | rework f5020a5 (store moved to hitl_cosmos per user; keys = registry); on integration: 424 unit + 36 emulator (stores_hitl) passed; merge c84d145 | 2026-10-25 |
 | 4 path-normalisation-aliases-and-curation-actor | in-progress | worktree-agent-a8069b383f9597e72 | opus | 8f32a0c+e98f7fa: 30 fail in test_curation (helper fake actor); rework: helper fix (user approved ownership ext) | 2026-10-25 |
 | 5 same-origin-frontend-edge | todo | - | sonnet | - | 2026-10-24 |
 | 6 entra-local-sign-in-and-operator-grant | todo | - | sonnet | - | 2026-10-24 |
