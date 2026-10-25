@@ -410,10 +410,10 @@ New containers:
 | `recommendations` | `/customer_id,/domain_id` |
 | `evaluation_runs` | `/customer_id,/domain_id` |
 | `evaluation_results` | `/customer_id,/domain_id` |
-| `price_snapshots` | `/source` |
+| `price_snapshots` | `/snapshot_id` (item 1 confirmed 2026-10-25: ids are unique only within a partition, `/source` breaks the put-conflict rule) |
 | `hitl_items` | `/customer_id,/domain_id` |
-| `hitl_decisions` | `/customer_id,/domain_id` |
-| `catalog_review_queue` | `/domain` |
+| `hitl_decisions` | `/review_item_id` (item 1 confirmed: decisions carry no customer or domain) |
+| `catalog_review_queue` | `/customer_id,/domain_id` (item 1 confirmed: `ReviewItem` has `domain_id`, no `domain`) |
 | `lifecycle_requests` | `/customer_id` |
 | `lifecycle_holds` | `/customer_id` |
 | `lifecycle_mappings` | `/customer_id` |
@@ -743,10 +743,10 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 composition-root-authz-readiness-and-container-registry | in-progress | - | opus | review: required (plan approval) | 2026-10-24 |
-| 2 durable-stores-recommendations-evaluation-pricing | in-progress | - | sonnet | - | 2026-10-24 |
-| 3 durable-stores-hitl-review-queue-lifecycle | in-progress | - | sonnet | - | 2026-10-24 |
-| 4 path-normalisation-aliases-and-curation-actor | in-progress | - | opus | review: required (plan approval) | 2026-10-24 |
+| 1 composition-root-authz-readiness-and-container-registry | merged | worktree-agent-a3643f6b5a46538c7 | opus | 283 passed (runtime_api, stores_registry, authz, openapi drift, health, me_api); review APPROVED; merge 3754d76 | 2026-10-25 |
+| 2 durable-stores-recommendations-evaluation-pricing | in-progress | worktree-agent-ab6c69cd13f5640b5 | sonnet | 6042dc3: 240 unit + 34 emulator passed; rework: align price_snapshots key to registry | 2026-10-25 |
+| 3 durable-stores-hitl-review-queue-lifecycle | in-progress | worktree-agent-ac8c3d4244b7884c0 | sonnet | 9bedc0f: 310 pass/1 fail (hitl no-network guard); rework: move store to hitl_cosmos pkg (user), align keys | 2026-10-25 |
+| 4 path-normalisation-aliases-and-curation-actor | in-progress | worktree-agent-a8069b383f9597e72 | opus | 8f32a0c+e98f7fa: 30 fail in test_curation (helper fake actor); rework: helper fix (user approved ownership ext) | 2026-10-25 |
 | 5 same-origin-frontend-edge | todo | - | sonnet | - | 2026-10-24 |
 | 6 entra-local-sign-in-and-operator-grant | todo | - | sonnet | - | 2026-10-24 |
 | 7 data-plane-builders-and-replay-blob | todo | - | sonnet | - | 2026-10-24 |
