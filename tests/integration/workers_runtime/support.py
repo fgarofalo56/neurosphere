@@ -25,7 +25,7 @@ if str(REPO_ROOT) not in sys.path:
 COSMOS_ENDPOINT = "http://127.0.0.1:8081"
 HUB = "telemetry"
 EVENTHUBS_CONNECTION = (
-    "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;"
+    "Endpoint=sb://127.0.0.1;SharedAccessKeyName=RootManageSharedAccessKey;"
     "SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
 )
 AZURITE_SHORTHAND = "UseDevelopmentStorage=true;"
