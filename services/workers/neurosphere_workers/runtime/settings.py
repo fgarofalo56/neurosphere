@@ -51,6 +51,8 @@ class WorkerSettings(BaseSettings):
     health_port: int = Field(default=8090, ge=0, le=65535)
     #: Seconds between outbox drains / queue polls.
     poll_seconds: float = Field(default=1.0, gt=0)
+    #: Seconds between price-snapshot reloads for roles that price at runtime (aggregates).
+    price_refresh_seconds: float = Field(default=60.0, ge=5.0, le=3600.0)
     #: Lease owner name of the action executor; defaults to a per-process name.
     worker_id: str | None = None
     #: The worker's workload identity (Entra service principal / managed identity object id).
