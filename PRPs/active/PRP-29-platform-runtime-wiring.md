@@ -744,14 +744,14 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 composition-root-authz-readiness-and-container-registry | merged | worktree-agent-a3643f6b5a46538c7 | opus | 283 passed (runtime_api, stores_registry, authz, openapi drift, health, me_api); review APPROVED; merge 3754d76 | 2026-10-25 |
-| 2 durable-stores-recommendations-evaluation-pricing | in-progress | worktree-agent-ab6c69cd13f5640b5 | sonnet | 6042dc3: 240 unit + 34 emulator passed; rework: align price_snapshots key to registry | 2026-10-25 |
+| 2 durable-stores-recommendations-evaluation-pricing | merged | worktree-agent-a5a5b2d2de54d8cb6 | sonnet | rework 15ed7b9 (price key=/snapshot_id, cross-domain id parity); on integration 269 unit + 36 emulator (stores_cosmos); gitleaks FP fingerprinted f855aee; merge d3a92bd | 2026-10-25 |
 | 3 durable-stores-hitl-review-queue-lifecycle | merged | worktree-agent-ab490c10a817e4b3b | sonnet | rework f5020a5 (store moved to hitl_cosmos per user; keys = registry); on integration: 424 unit + 36 emulator (stores_hitl) passed; merge c84d145 | 2026-10-25 |
-| 4 path-normalisation-aliases-and-curation-actor | in-progress | worktree-agent-a8069b383f9597e72 | opus | 8f32a0c+e98f7fa: 30 fail in test_curation (helper fake actor); rework: helper fix (user approved ownership ext) | 2026-10-25 |
-| 5 same-origin-frontend-edge | todo | - | sonnet | - | 2026-10-24 |
-| 6 entra-local-sign-in-and-operator-grant | todo | - | sonnet | - | 2026-10-24 |
-| 7 data-plane-builders-and-replay-blob | todo | - | sonnet | - | 2026-10-24 |
-| 8 action-reports-copilot-and-mcp-builders | todo | - | opus | review: required (plan approval) | 2026-10-24 |
-| 9 workers-runtime-roles | todo | - | sonnet | - | 2026-10-24 |
+| 4 path-normalisation-aliases-and-curation-actor | merged | worktree-agent-af6d1108b708e36e6 | opus | rework 3cfa128 (helper actor); 1405 passed on integration; OpenAPI components unchanged (305), +23 paths; review APPROVED; merge 0201fbd | 2026-10-25 |
+| 5 same-origin-frontend-edge | in-progress | - | sonnet | - | 2026-10-25 |
+| 6 entra-local-sign-in-and-operator-grant | merged | worktree-agent-aee9edfa34aa24239 | sonnet | 9aee7ab; 160 unit + operator-grant emulator passed; live --apply OPEN; merge 2b37022 | 2026-10-25 |
+| 7 data-plane-builders-and-replay-blob | in-progress | - | sonnet | - | 2026-10-25 |
+| 8 action-reports-copilot-and-mcp-builders | in-progress | - | opus | review: required | 2026-10-25 |
+| 9 workers-runtime-roles | in-progress | - | sonnet | - | 2026-10-25 |
 | 10 real-stack-synthetic-seed | todo | - | sonnet | - | 2026-10-24 |
 | 11 compose-app-profile-and-real-stack-smoke | todo | - | sonnet | - | 2026-10-24 |
 
