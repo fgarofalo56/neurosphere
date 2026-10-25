@@ -76,8 +76,8 @@ def test_fully_configured_app_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     assert body["status"] == "ready"
     assert body["dependencies"] == {
         "composition": "ok",
-        "composition.copilot.not_built": "ok",
-        "composition.mcp_server.not_built": "ok",
+        "composition.copilot.disabled": "ok",
+        "composition.mcp_server.disabled": "ok",
         "composition.ingest.disabled": "ok",
         "composition.scan.disabled": "ok",
     }
