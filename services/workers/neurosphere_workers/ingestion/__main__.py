@@ -1,53 +1,22 @@
-"""``python -m neurosphere_workers.ingestion``: run the normalizer consumer until SIGTERM/SIGINT.
+"""``python -m neurosphere_workers.ingestion``: alias for ``NS_WORKER_ROLES=ingestion``.
 
-Sinks and stores are built from settings by ``wiring.build_pipeline_deps`` (the same path the
-quarantine replay CLI uses). Infrastructure is auto-created only when NS_ENV=local; elsewhere a
-missing container is a startup error.
+The normalizer consumer now runs through the one runtime entrypoint (same supervised role, same
+health endpoints), so this module only selects the role. Sinks and stores are still built by
+``wiring.build_pipeline_deps`` (the path the quarantine replay CLI also uses); infrastructure is
+auto-created only when NS_ENV=local.
 """
 
 from __future__ import annotations
 
-import asyncio
-import logging
 import sys
 
-from neurosphere_core.clients import (
-    ClientLifetime,
-    create_checkpoint_store,
-    create_eventhub_consumer,
-)
-from neurosphere_core.cloud import load_settings
+from neurosphere_workers.runtime.__main__ import main as runtime_main
 
-from neurosphere_workers.ingestion.consumer import IngestionConsumer
-from neurosphere_workers.ingestion.settings import IngestionSettings
-from neurosphere_workers.ingestion.wiring import build_pipeline_deps
-
-
-async def _amain() -> int:
-    settings = load_settings()
-    ingestion = IngestionSettings()
-    async with ClientLifetime() as lifetime:
-        deps = await build_pipeline_deps(settings, lifetime=lifetime, ingestion=ingestion)
-        checkpoint_store = create_checkpoint_store(
-            settings,
-            lifetime=lifetime,
-            container=ingestion.checkpoint_container,
-            account=ingestion.storage_account,
-        )
-        client = create_eventhub_consumer(
-            settings,
-            lifetime=lifetime,
-            eventhub_name=ingestion.eventhub_name,
-            consumer_group=ingestion.consumer_group,
-            namespace=ingestion.eventhubs_namespace,
-            checkpoint_store=checkpoint_store,
-        )
-        return await IngestionConsumer(client, deps, ingestion).run()
+ROLE = "ingestion"
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    return asyncio.run(_amain())
+    return runtime_main(ROLE)
 
 
 if __name__ == "__main__":
