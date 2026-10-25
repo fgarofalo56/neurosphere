@@ -12,16 +12,16 @@ from hitl_cosmos.fake_container import FakeContainer, throttled
 from neurosphere_core.catalog import InMemoryReviewQueue, ReviewQueue
 from neurosphere_core.catalog.review_queue_cosmos import (
     DEFAULT_REVIEW_QUEUE_CONTAINER,
-    REVIEW_QUEUE_PARTITION_KEY_PATH,
+    REVIEW_QUEUE_PARTITION_KEY_PATHS,
     CosmosReviewQueue,
 )
 from neurosphere_core.errors import DependencyTransientError, RateLimitedError, StaleVersionError
 
-from .contract import FINANCE, STEWARD, ReviewQueueContract, make_item, make_scope
+from .contract import FINANCE, RETAIL, STEWARD, ReviewQueueContract, make_item, make_scope
 
 
 def cosmos_queue() -> tuple[CosmosReviewQueue, FakeContainer]:
-    container = FakeContainer((REVIEW_QUEUE_PARTITION_KEY_PATH,))
+    container = FakeContainer(REVIEW_QUEUE_PARTITION_KEY_PATHS)
     return CosmosReviewQueue(container), container  # type: ignore[arg-type]
 
 
@@ -38,14 +38,19 @@ class TestReviewQueueContract(ReviewQueueContract):
 
 def test_container_constants_match_the_wire_contract() -> None:
     assert DEFAULT_REVIEW_QUEUE_CONTAINER == "catalog_review_queue"
-    assert REVIEW_QUEUE_PARTITION_KEY_PATH == "/domain"
+    from neurosphere_core.stores import containers
+
+    spec = {c.name: c for c in containers.CONTAINERS}[DEFAULT_REVIEW_QUEUE_CONTAINER]
+    assert REVIEW_QUEUE_PARTITION_KEY_PATHS == ("/customer_id", "/domain_id")
+    assert spec.partition_key_paths == REVIEW_QUEUE_PARTITION_KEY_PATHS
 
 
-async def test_items_are_partitioned_by_domain() -> None:
+async def test_items_are_partitioned_by_customer_and_domain() -> None:
     queue, container = cosmos_queue()
     await queue.enqueue(make_scope([FINANCE]), make_item())
     ((partition, doc_id),) = container.docs
-    assert partition == (FINANCE,)
+    assert partition == ("contoso", FINANCE)
+    assert "domain" not in container.docs[(partition, doc_id)]
     assert doc_id == "review:one"
 
 
@@ -56,12 +61,31 @@ async def test_reads_are_bounded_by_the_scope_domains_cloud_and_customer() -> No
     await queue.list_open(scope, limit=5)
     sql, params, partition = container.queries[-1]
     assert partition is None
-    assert "ARRAY_CONTAINS(@domains, c.domain)" in sql
+    assert "ARRAY_CONTAINS(@domains, c.domain_id)" in sql
     assert "c.customer_id = @customer" in sql
     assert "TOP @limit" in sql
     assert params["@limit"] == 5
     assert params["@domains"] == [FINANCE]
     assert params["@customer"] == "contoso"
+
+
+async def test_get_with_one_allowed_domain_is_a_point_read() -> None:
+    queue, container = cosmos_queue()
+    scope = make_scope([FINANCE])
+    await queue.enqueue(scope, make_item())
+    assert (await queue.get(scope, "review:one")) is not None
+    assert await queue.get(scope, "review:missing") is None
+    assert container.queries == []
+
+
+async def test_get_with_several_allowed_domains_is_a_bounded_scoped_query() -> None:
+    queue, container = cosmos_queue()
+    scope = make_scope([FINANCE, RETAIL])
+    await queue.enqueue(scope, make_item())
+    assert (await queue.get(scope, "review:one")) is not None
+    sql, _, _ = container.queries[-1]
+    assert "TOP 1" in sql
+    assert "ARRAY_CONTAINS(@domains, c.domain_id)" in sql
 
 
 async def test_an_empty_scope_issues_no_query() -> None:

@@ -9,15 +9,21 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
-from neurosphere_core.errors import DependencyTransientError, RateLimitedError
+from neurosphere_core.errors import (
+    DependencyTransientError,
+    InvalidSchemaError,
+    RateLimitedError,
+)
 from neurosphere_core.hitl import (
     DecisionStore,
     HitlStore,
     InMemoryDecisionStore,
     InMemoryHitlStore,
 )
-from neurosphere_core.hitl.cosmos_store import (
+from neurosphere_core.hitl_cosmos.store import (
     DECISION_PARTITION_KEY_PATHS,
+    DEFAULT_DECISION_CONTAINER,
+    DEFAULT_ITEM_CONTAINER,
     ITEM_PARTITION_KEY_PATHS,
     CosmosDecisionStore,
     CosmosHitlStore,
@@ -47,8 +53,7 @@ def rig(request: pytest.FixtureRequest) -> tuple[HitlStore, DecisionStore]:
         return InMemoryHitlStore(), InMemoryDecisionStore()
     items = CosmosHitlStore(FakeContainer(ITEM_PARTITION_KEY_PATHS))  # type: ignore[arg-type]
     decisions = CosmosDecisionStore(
-        FakeContainer(DECISION_PARTITION_KEY_PATHS),  # type: ignore[arg-type]
-        items,
+        FakeContainer(DECISION_PARTITION_KEY_PATHS)  # type: ignore[arg-type]
     )
     return items, decisions
 
@@ -134,7 +139,7 @@ async def test_outage_is_dependency_transient_and_throttle_is_rate_limited() -> 
 async def test_decisions_are_append_only_at_the_container() -> None:
     items, _ = cosmos_items()
     container = FakeContainer(DECISION_PARTITION_KEY_PATHS)
-    decisions = CosmosDecisionStore(container, items)  # type: ignore[arg-type]
+    decisions = CosmosDecisionStore(container)  # type: ignore[arg-type]
     item = await items.create(make_item())
     doc = make_decision(item.item_id)
     await decisions.create(doc["decision_id"], doc)
@@ -145,16 +150,30 @@ async def test_decisions_are_append_only_at_the_container() -> None:
     assert "upsert_item" not in container.calls
     assert "delete_item" not in container.calls
     ((partition, _),) = container.docs
-    assert partition == ("contoso", DOMAIN)
+    assert partition == (item.item_id,)
 
 
-async def test_decision_for_an_unknown_review_item_is_refused() -> None:
-    items, _ = cosmos_items()
+def test_container_constants_match_the_registry() -> None:
+    from neurosphere_core.stores import containers
+
+    by_name = {spec.name: spec for spec in containers.CONTAINERS}
+    assert DEFAULT_ITEM_CONTAINER == "hitl_items"
+    assert DEFAULT_DECISION_CONTAINER == "hitl_decisions"
+    assert by_name[DEFAULT_ITEM_CONTAINER].partition_key_paths == ITEM_PARTITION_KEY_PATHS
+    assert by_name[DEFAULT_DECISION_CONTAINER].partition_key_paths == DECISION_PARTITION_KEY_PATHS
+
+
+async def test_decision_list_is_a_single_partition_query() -> None:
     container = FakeContainer(DECISION_PARTITION_KEY_PATHS)
-    decisions = CosmosDecisionStore(container, items)  # type: ignore[arg-type]
-    doc = make_decision(make_item().item_id)
-    with pytest.raises(DependencyTransientError) as refused:
-        await decisions.create(doc["decision_id"], doc)
-    assert refused.value.reason == "decision_item_unknown"
+    decisions = CosmosDecisionStore(container)  # type: ignore[arg-type]
+    await decisions.list_for_item("item-1")
+    _, _, partition = container.queries[-1]
+    assert partition == ("item-1",)
+
+
+async def test_decision_without_a_review_item_id_is_refused() -> None:
+    container = FakeContainer(DECISION_PARTITION_KEY_PATHS)
+    decisions = CosmosDecisionStore(container)  # type: ignore[arg-type]
+    with pytest.raises(InvalidSchemaError):
+        await decisions.create("d1", {"decision": "approved"})
     assert container.docs == {}
-    assert await decisions.list_for_item(doc["review_item_id"]) == []

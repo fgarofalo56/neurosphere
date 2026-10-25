@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from azure.cosmos.aio import DatabaseProxy
 from neurosphere_core.hitl import DecisionStore, HitlStore
-from neurosphere_core.hitl.cosmos_store import (
+from neurosphere_core.hitl_cosmos.store import (
     CosmosDecisionStore,
     CosmosHitlStore,
     create_decision_container,
@@ -28,7 +28,7 @@ async def store(database: DatabaseProxy) -> HitlStore:
 @pytest_asyncio.fixture
 async def rig(database: DatabaseProxy) -> tuple[HitlStore, DecisionStore]:
     items = CosmosHitlStore(await create_item_container(database))
-    return items, CosmosDecisionStore(await create_decision_container(database), items)
+    return items, CosmosDecisionStore(await create_decision_container(database))
 
 
 class TestHitlStoreEmulator(contract.HitlStoreContract):

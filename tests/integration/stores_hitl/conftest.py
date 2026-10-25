@@ -21,7 +21,7 @@ from neurosphere_core.cloud import Settings
 @pytest.fixture(autouse=True)
 def _emulator_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NS_ENV", "local")
-    monkeypatch.setenv("NS_COSMOS_ENDPOINT", "http://localhost:8081")
+    monkeypatch.setenv("NS_COSMOS_ENDPOINT", "http://127.0.0.1:8081")
     monkeypatch.setenv("NS_COSMOS_KEY", base64.b64encode(b"emulator-ignores-this").decode())
 
 

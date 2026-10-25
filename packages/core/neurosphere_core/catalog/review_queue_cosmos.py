@@ -1,14 +1,17 @@
 """Cosmos NoSQL catalog review queue (azure-cosmos aio).
 
-Container ``catalog_review_queue``, partition key ``/domain`` (Hash; the wire contract). Each
-document is :class:`ReviewItem` plus ``domain`` (= ``domain_id``, the partition value) and
-``sort_key`` (``<created_at>|<id>``). ``id`` is the item's deterministic id, so ``enqueue`` is a
+Container ``catalog_review_queue``, hierarchical partition key ``/customer_id``,
+``/domain_id`` (MultiHash; matches ``neurosphere_core.stores.containers``). Each document is
+:class:`ReviewItem` plus ``sort_key`` (``<created_at>|<id>``).
+``id`` is the item's deterministic id, so ``enqueue`` is a
 create-only ``create_item`` and a 409 is "already queued" (``False``).
 
-``get`` and ``list_open`` take only the caller's scope, so they are bounded queries over exactly
-the scope's allowed domains (``ARRAY_CONTAINS(@domains, c.domain)``) plus the cloud and customer;
-an item outside the scope is indistinguishable from a missing one. ``resolve`` reads the row,
-then replaces it ``IfNotModified`` on ``_etag`` (retried, so two stewards cannot lose a write).
+``list_open`` takes only the caller's scope, so it is a bounded query over exactly the scope's
+allowed domains (``ARRAY_CONTAINS(@domains, c.domain_id)``) plus the cloud and customer. ``get``
+is a single-partition point read when the scope allows exactly one domain, otherwise the same
+bounded query (``TOP 1``); an item outside the scope is indistinguishable from a missing one.
+``resolve`` reads the row, then replaces it ``IfNotModified`` on ``_etag`` (retried,
+so two stewards cannot lose a write).
 """
 
 from __future__ import annotations
@@ -40,26 +43,27 @@ from neurosphere_core.scope import IdentityScope
 
 __all__ = [
     "DEFAULT_REVIEW_QUEUE_CONTAINER",
-    "REVIEW_QUEUE_PARTITION_KEY_PATH",
+    "REVIEW_QUEUE_PARTITION_KEY_PATHS",
     "CosmosReviewQueue",
     "create_review_queue_container",
 ]
 
 DEFAULT_REVIEW_QUEUE_CONTAINER: Final = "catalog_review_queue"
-REVIEW_QUEUE_PARTITION_KEY_PATH: Final = "/domain"
-_QUERY_FIELDS: Final = frozenset({"domain", "sort_key"})
+REVIEW_QUEUE_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
+_QUERY_FIELDS: Final = frozenset({"sort_key"})
 _RESOLVE_ATTEMPTS: Final = 3
 _SCOPE_CLAUSES: Final = (
-    "c.cloud = @cloud AND c.customer_id = @customer AND ARRAY_CONTAINS(@domains, c.domain)"
+    "c.cloud = @cloud AND c.customer_id = @customer AND ARRAY_CONTAINS(@domains, c.domain_id)"
 )
 
 
 async def create_review_queue_container(
     database: DatabaseProxy, container_id: str = DEFAULT_REVIEW_QUEUE_CONTAINER
 ) -> ContainerProxy:
-    """Create (or open) the review-queue container (Hash on ``/domain``)."""
+    """Create (or open) the review-queue container (MultiHash on customer, domain)."""
     return await database.create_container_if_not_exists(
-        id=container_id, partition_key=PartitionKey(path=REVIEW_QUEUE_PARTITION_KEY_PATH)
+        id=container_id,
+        partition_key=PartitionKey(path=list(REVIEW_QUEUE_PARTITION_KEY_PATHS), kind="MultiHash"),
     )
 
 
@@ -83,7 +87,6 @@ def _raise_mapped(exc: Exception) -> NoReturn:
 
 def _body(item: ReviewItem) -> dict[str, Any]:
     body = item.model_dump(mode="json")
-    body["domain"] = item.domain_id
     body["sort_key"] = f"{item.created_at}|{item.id}"
     return body
 
@@ -183,9 +186,22 @@ class CosmosReviewQueue:
     async def _get_row(self, scope: IdentityScope, item_id: str) -> Mapping[str, Any] | None:
         if not scope.allowed_domains:
             return None
+        if len(scope.allowed_domains) == 1:
+            return await self._point_read(scope, item_id)
         sql = "SELECT TOP 1 * FROM c WHERE c.id = @id AND " + _SCOPE_CLAUSES  # noqa: S608
         rows = await self._query(sql, [{"name": "@id", "value": item_id}], scope)
         return rows[0] if rows else None
+
+    async def _point_read(self, scope: IdentityScope, item_id: str) -> Mapping[str, Any] | None:
+        try:
+            row = await self._container.read_item(
+                item=item_id, partition_key=[scope.customer_id, scope.allowed_domains[0]]
+            )
+        except CosmosResourceNotFoundError:
+            return None
+        except Exception as exc:
+            _raise_mapped(exc)
+        return row if row.get("cloud") == scope.cloud else None
 
     async def _query(
         self, sql: str, parameters: builtins.list[dict[str, Any]], scope: IdentityScope

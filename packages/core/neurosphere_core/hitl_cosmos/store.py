@@ -1,7 +1,9 @@
 """Cosmos NoSQL HITL review-item store and append-only decision store (azure-cosmos aio).
 
-Both containers use the hierarchical partition key ``/customer_id``, ``/domain_id``
-(``MultiHash``, delta D7), matching the wire contract.
+``hitl_items`` uses the hierarchical partition key ``/customer_id``, ``/domain_id``
+(``MultiHash``, delta D7); ``hitl_decisions`` uses ``/review_item_id`` (Hash), because an
+``ApprovalDecision`` carries no customer or domain. Both match
+``neurosphere_core.stores.containers``.
 
 ``hitl_items`` (``id = <item_id>``): :meth:`ReviewItem.model_dump` plus query fields
 ``state_name``, ``sort_key`` (``<created_at>|<item_id>``, fixed width) and, while the item still
@@ -19,10 +21,10 @@ Query shapes (all parameterized, field names fixed):
 * ``get`` is unscoped by protocol (the caller authorizes the item's domain), so it is a
   cross-partition ``id`` lookup bounded to one row.
 
-``hitl_decisions`` (``id = <decision_id>``): the decision document plus ``customer_id`` and
-``domain_id`` (resolved from the review item at create time, because an ``ApprovalDecision``
-carries neither) and ``recorded_ns`` (insertion order). The decision store is append-only: it only
-ever calls ``create_item``, ``read_item`` and ``query_items``; there is no update path.
+``hitl_decisions`` (``id = <decision_id>``): the decision document plus ``recorded_ns``
+(insertion order); the partition value is the document's own ``review_item_id``.
+The decision store is append-only: it only ever calls
+``create_item``, ``read_item`` and ``query_items``; there is no update path.
 
 Every backing-store failure is ``dependency_transient`` (``hitl_store_unavailable``) except 429,
 which is ``rate_limited``; messages never echo SDK text or documents.
@@ -55,7 +57,7 @@ from neurosphere_core.errors import (
     StaleVersionError,
 )
 from neurosphere_core.hitl.models import ReviewItem, format_timestamp
-from neurosphere_core.hitl.store import HitlStore, decode_cursor, encode_cursor
+from neurosphere_core.hitl.store import decode_cursor, encode_cursor
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -74,9 +76,9 @@ __all__ = [
 DEFAULT_ITEM_CONTAINER: Final = "hitl_items"
 DEFAULT_DECISION_CONTAINER: Final = "hitl_decisions"
 ITEM_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
-DECISION_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
+DECISION_PARTITION_KEY_PATHS: Final = ("/review_item_id",)
 _ITEM_QUERY_FIELDS: Final = frozenset({"id", "state_name", "sort_key", "due_ts", "due_key"})
-_DECISION_FIELDS: Final = frozenset({"id", "customer_id", "domain_id", "recorded_ns"})
+_DECISION_FIELDS: Final = frozenset({"id", "recorded_ns"})
 _MAX_DECISIONS_PER_ITEM: Final = 500
 
 
@@ -96,7 +98,7 @@ async def create_decision_container(
     """Create (or open) the decision container with the hierarchical key."""
     return await database.create_container_if_not_exists(
         id=container_id,
-        partition_key=PartitionKey(path=list(DECISION_PARTITION_KEY_PATHS), kind="MultiHash"),
+        partition_key=PartitionKey(path=DECISION_PARTITION_KEY_PATHS[0]),
     )
 
 
@@ -280,20 +282,17 @@ class CosmosHitlStore:
 class CosmosDecisionStore:
     """:class:`neurosphere_core.hitl.decisions.DecisionStore` on Cosmos. Append-only.
 
-    An ``ApprovalDecision`` carries no customer or domain, so ``create`` resolves both from the
-    review item (``items.get``) and stores them as the partition key. A decision whose review item
-    does not exist is refused (``dependency_transient``, reason ``decision_item_unknown``).
+    Partitioned by ``review_item_id`` (taken from the document), so ``list_for_item`` is a
+    single-partition query. Like the in-memory store, it does not check the review item exists.
     """
 
     def __init__(
         self,
         container: ContainerProxy,
-        items: HitlStore,
         *,
         clock_ns: Callable[[], int] = time.time_ns,
     ) -> None:
         self._container = container
-        self._items = items
         self._clock_ns = clock_ns
         self._last_ns = 0
 
@@ -301,12 +300,11 @@ class CosmosDecisionStore:
     def from_client(
         cls,
         client: CosmosClient,
-        items: HitlStore,
         *,
         database: str,
         container: str = DEFAULT_DECISION_CONTAINER,
     ) -> CosmosDecisionStore:
-        return cls(client.get_database_client(database).get_container_client(container), items)
+        return cls(client.get_database_client(database).get_container_client(container))
 
     def _next_ns(self) -> int:
         self._last_ns = max(self._clock_ns(), self._last_ns + 1)
@@ -314,18 +312,11 @@ class CosmosDecisionStore:
 
     async def create(self, decision_id: str, document: Mapping[str, Any]) -> None:
         review_item_id = document.get("review_item_id")
-        item = await self._items.get(review_item_id) if isinstance(review_item_id, str) else None
-        if item is None:
-            raise DependencyTransientError(
-                "decision references an unknown review item", reason="decision_item_unknown"
+        if not isinstance(review_item_id, str) or not review_item_id:
+            raise InvalidSchemaError(
+                "decision carries no review item id", reason="decision_item_missing"
             )
-        body = {
-            **dict(document),
-            "id": decision_id,
-            "customer_id": item.customer_id,
-            "domain_id": item.domain_id,
-            "recorded_ns": self._next_ns(),
-        }
+        body = {**dict(document), "id": decision_id, "recorded_ns": self._next_ns()}
         try:
             await self._container.create_item(body=body)
         except CosmosResourceExistsError as exc:
@@ -342,16 +333,13 @@ class CosmosDecisionStore:
         return _decision_document(rows[0]) if rows else None
 
     async def list_for_item(self, review_item_id: str) -> builtins.list[dict[str, Any]]:
-        item = await self._items.get(review_item_id)
-        if item is None:
-            return []
         rows = await self._query(
             "SELECT TOP @limit * FROM c WHERE c.review_item_id = @item ORDER BY c.recorded_ns ASC",
             [
                 {"name": "@limit", "value": _MAX_DECISIONS_PER_ITEM},
                 {"name": "@item", "value": review_item_id},
             ],
-            partition_key=[item.customer_id, item.domain_id],
+            partition_key=[review_item_id],
         )
         return [_decision_document(row) for row in rows]
 
