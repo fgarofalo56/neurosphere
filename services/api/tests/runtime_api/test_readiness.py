@@ -59,10 +59,12 @@ def test_missing_cosmos_is_503_naming_the_store_components(
     for name in STORE_COMPONENTS:
         assert deps[f"composition.{name}.cosmos_unconfigured"] == "unavailable"
     assert deps["composition.authz.policy_store_unavailable"] == "unavailable"
-    # Placeholder builders (items 7 and 8) leave every other required component unbuilt.
-    for name in REQUIRED_COMPONENTS:
-        if name not in ("authz", *STORE_COMPONENTS):
-            assert deps[f"composition.{name}.not_built"] == "unavailable"
+    # Any other required component that reports (a missing upstream, or not built yet) is
+    # unavailable; components that need no Cosmos (replay reads Blob) may build ok.
+    for key, value in deps.items():
+        name = key.split(".")[1] if key.startswith("composition.") else ""
+        if name in REQUIRED_COMPONENTS:
+            assert value == "unavailable", key
 
 
 def test_fully_configured_app_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
