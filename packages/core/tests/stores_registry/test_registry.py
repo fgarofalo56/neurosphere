@@ -154,6 +154,9 @@ class _FakeClient:
         self.databases.append(id)
         return self.database
 
+    def get_database_client(self, database: str) -> _FakeDatabase:
+        return self.database
+
 
 async def test_ensure_local_containers_creates_every_container_idempotently() -> None:
     client = _FakeClient()

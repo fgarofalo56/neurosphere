@@ -7,7 +7,10 @@ emulator run is ``tests/integration/stores_hitl`` (marked ``integration``; not r
 from __future__ import annotations
 
 import pytest
-from hitl_cosmos.fake_container import FakeContainer, throttled
+from hitl_cosmos.fake_container import (  # pyright: ignore[reportMissingImports]
+    FakeContainer,
+    throttled,
+)
 from neurosphere_core.errors import DependencyTransientError, RateLimitedError
 from neurosphere_core.lifecycle import HoldRegistry, RequestQueue
 from neurosphere_core.lifecycle.cosmos import (

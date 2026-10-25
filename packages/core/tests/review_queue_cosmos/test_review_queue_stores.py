@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import pytest
 from azure.cosmos.exceptions import CosmosAccessConditionFailedError
-from hitl_cosmos.fake_container import FakeContainer, throttled
+from hitl_cosmos.fake_container import (  # pyright: ignore[reportMissingImports]
+    FakeContainer,
+    throttled,
+)
 from neurosphere_core.catalog import InMemoryReviewQueue, ReviewQueue
 from neurosphere_core.catalog.review_queue_cosmos import (
     DEFAULT_REVIEW_QUEUE_CONTAINER,
