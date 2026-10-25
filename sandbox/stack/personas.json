@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "notice": "SYNTHETIC personas for the local real stack. Object ids are invented GUIDs of no real directory object; the policy store grants them roles over every generated sandbox domain.",
+  "personas": [
+    {"slug": "viewer", "object_id": "c1a5e0d2-7b34-4f6a-9a10-3d52b8e7f401", "role": "viewer"},
+    {"slug": "analyst", "object_id": "d2b6f1e3-8c45-4a7b-8b21-4e63c9f8a512", "role": "analyst"},
+    {"slug": "steward", "object_id": "e3c70af4-9d56-4b8c-9c32-5f74da09b623", "role": "domain_steward"},
+    {"slug": "admin", "object_id": "f4d81b05-ae67-4c9d-8d43-6085eb1ac734", "role": "admin"},
+    {"slug": "auditor", "object_id": "05e92c16-bf78-4dae-9e54-7196fc2bd845", "role": "security_auditor"}
+  ]
+}

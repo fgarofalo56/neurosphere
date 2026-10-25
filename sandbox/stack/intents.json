@@ -1,0 +1,39 @@
+{
+  "synthetic": true,
+  "notice": "SYNTHETIC action intents. They are drafted, validated or put in front of the maker for confirmation only; the seed never confirms, approves or executes one (no write connector is composed locally, so every intent is advisory).",
+  "maker": "analyst",
+  "intents": [
+    {
+      "slug": "swap-model-draft",
+      "action_kind": "model_deployment_swap",
+      "agent_index": 2,
+      "target_state": "drafted",
+      "path": "/model/version",
+      "value": "2026-06-15"
+    },
+    {
+      "slug": "swap-model-validated",
+      "action_kind": "model_deployment_swap",
+      "agent_index": 3,
+      "target_state": "validated",
+      "path": "/model/version",
+      "value": "2026-06-15"
+    },
+    {
+      "slug": "swap-model-awaiting",
+      "action_kind": "model_deployment_swap",
+      "agent_index": 4,
+      "target_state": "awaiting_confirmation",
+      "path": "/model/version",
+      "value": "2026-06-15"
+    },
+    {
+      "slug": "lower-token-cap-awaiting",
+      "action_kind": "agent_budget_change",
+      "agent_index": 5,
+      "target_state": "awaiting_confirmation",
+      "path": "/budget/max_tokens",
+      "value": 4000
+    }
+  ]
+}
