@@ -66,21 +66,10 @@ GENERATOR_PROFILE: Final = "tiny"
 #: Expected non-200 answers: call key -> (status, why). Nothing else may be non-200.
 EXPECTED_STATUS: Final[dict[str, tuple[int, str]]] = {}
 
-#: 200 answers that are empty in every readable domain: call key -> why. OPEN findings, reported.
-KNOWN_EMPTY: Final[dict[str, str]] = {
-    "/api/v1/dashboards/domains/{domain}/cost?days=1": (
-        "the seed's telemetry is dated 2026-10-01..04 and the 1-day window ends now"
-    ),
-    "/api/v1/map/domains/{domain}/viewport?node_budget=2000": (
-        "the seed creates no catalog entities (the catalog container holds edges only), and the "
-        "viewport lists agents, grounding sources, model deployments and people"
-    ),
-    "/api/v1/map/domains/{domain}/viewport": "same: no catalog entities to list",
-    "/api/v1/replay/domains/{domain}/traces?page_size=25": (
-        "the archive reader looks back 7 days from today and the seed's archive is dated "
-        "2026-10-01..04"
-    ),
-}
+#: 200 answers that are empty in every readable domain: call key -> why. Empty on purpose: the
+#: seed rebases its world to the run time (cost window, archive look-back) and writes the catalog
+#: entities (map viewport), PRP-29 fix-forward E2.
+KNOWN_EMPTY: Final[dict[str, str]] = {}
 
 
 def _seed_tenant() -> str:

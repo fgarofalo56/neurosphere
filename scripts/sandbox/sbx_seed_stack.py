@@ -12,6 +12,12 @@ Every category goes through the real path, never a raw document write:
 * telemetry and cost -> Event Hubs (``HubSeam``) -> the ingestion/projections/aggregates workers
   (which run separately: compose ``workers`` or in-process in tests) -> ledger, aggregates,
   catalog and archive blobs. The wait is bounded by ONE timeout and checks sparsely.
+  The generated world is rebased in time: its epoch is moved so the newest event is 30 minutes
+  before the run (everything within the profile's days of that). A re-run recovers the first
+  run's shift from the ledger, so ids, windows and keys are identical and nothing is duplicated;
+  on a later day the data stays where it was (older). Drop the volumes to re-age it.
+* catalog entities (domains, owners, models, grounding sources, tools, agents, people) ->
+  ``CatalogRepository.create_entity`` under the workers' scope, after the edges have landed.
 * grants (the worker principal, the synthetic personas and ``--operator-object-id``) ->
   ``sbx_grant_operator.grant_operator`` into the policy store.
 * price sheet -> ``CosmosPriceSnapshotStore`` (sync client, off the event loop).
@@ -36,7 +42,9 @@ never a ``sandbox-`` name), ``NS_AUTH_CUSTOMER_ID`` (default ``synthco``), ``NS_
 ``NS_WORKER_TENANT_ID`` (required GUID), ``NS_WORKER_OBJECT_ID`` (required GUID; the workers' own
 identity, granted here), ``NS_AUTH_PSEUDONYM_KEY[_REFERENCE]`` (optional locally),
 ``NS_ARCHIVE_CONTAINER`` (the workers' archive container), ``NS_INGESTION_EVENTHUB_NAME``,
-``NS_SEED_WAIT_SECONDS`` (default 300) and ``NS_SEED_POLL_SECONDS`` (default 5).
+``NS_SEED_WAIT_SECONDS`` (default 300; landing), ``NS_SEED_DRAIN_SECONDS`` (default 300; then
+waiting for the aggregates role to reach the newest events, warning only) and
+``NS_SEED_POLL_SECONDS`` (default 5).
 """
 
 from __future__ import annotations
@@ -48,6 +56,7 @@ import contextlib
 import hashlib
 import io
 import json
+import math
 import os
 import sys
 import tempfile
@@ -55,7 +64,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable, Iterator, Mapping, Sequence
 from contextlib import AsyncExitStack
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -99,6 +108,8 @@ from neurosphere_core.auth.scope import (  # noqa: E402
     RevocationChecker,
 )
 from neurosphere_core.capabilities import load_matrix  # noqa: E402
+from neurosphere_core.catalog import CatalogRepository  # noqa: E402
+from neurosphere_core.catalog.repo.documents import ENTITY_MODELS  # noqa: E402
 from neurosphere_core.charts import validate_chart_plan  # noqa: E402
 from neurosphere_core.cloud import CloudName, Settings, load_settings  # noqa: E402
 from neurosphere_core.errors import NeuroSphereError  # noqa: E402
@@ -149,6 +160,7 @@ from sbx_seam import HubSeam  # noqa: E402
 
 from sandbox.config import (  # noqa: E402
     CACHED_INPUT_FACTOR,
+    DEFAULT_EPOCH,
     MODELS,
     PRICE_EFFECTIVE_DATE,
     PRICE_VERSION,
@@ -183,6 +195,23 @@ CONFIRMATION_TTL: Final = timedelta(days=7)
 LEDGER_CONTAINER: Final = "cost-ledger"
 AGGREGATES_CONTAINER: Final = "aggregates"
 CATALOG_CONTAINER: Final = "catalog"
+#: The newest generated event is shifted to this long before the run (the manifest's 1-day cost
+#: window and 7-day archive look-back then both hold data).
+NEWEST_AGE: Final = timedelta(minutes=30)
+#: How far below the newest event the aggregates watermark may stop and still count as drained.
+SHIFT_GRID_SECONDS: Final = 3600
+DRAIN_SLACK: Final = timedelta(minutes=1)
+#: Entity files written into the catalog through the repository (relations are projected edges).
+ENTITY_FILES: Final = (
+    "domains.ndjson",
+    "owners.ndjson",
+    "model_deployments.ndjson",
+    "grounding_sources.ndjson",
+    "tools.ndjson",
+    "agents.ndjson",
+    "agent_versions.ndjson",
+    "persons.ndjson",
+)
 PRODUCER_ID: Final = "sbx-seed-stack"
 RUN_PREFIX: Final = "seed-offline-"
 #: States the seed is allowed to leave an intent in. ``executing`` is never reachable from here.
@@ -191,6 +220,7 @@ SAFE_INTENT_STATES: Final = ("drafted", "validated", "awaiting_confirmation")
 #: Summary categories, one per kind of data a manifest page reads.
 CATEGORIES: Final = (
     "catalog",
+    "entities",
     "aggregates",
     "ledger",
     "archives",
@@ -242,6 +272,7 @@ class SeedConfig:
     archive_container: str
     wait_seconds: float = DEFAULT_WAIT_SECONDS
     poll_seconds: float = DEFAULT_POLL_SECONDS
+    drain_seconds: float = DEFAULT_WAIT_SECONDS
     cloud: str = "commercial"
     seed: int = SEED_NUMBER
 
@@ -354,6 +385,7 @@ def resolve_config(
         archive_container=environ.get("NS_ARCHIVE_CONTAINER") or "ns-archive",
         wait_seconds=_float_env(environ, "NS_SEED_WAIT_SECONDS", DEFAULT_WAIT_SECONDS),
         poll_seconds=_float_env(environ, "NS_SEED_POLL_SECONDS", DEFAULT_POLL_SECONDS),
+        drain_seconds=_float_env(environ, "NS_SEED_DRAIN_SECONDS", DEFAULT_WAIT_SECONDS),
     )
 
 
@@ -385,13 +417,24 @@ def read_ndjson(path: Path) -> list[Doc]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
-def hub_lines(directory: Path) -> list[bytes]:
-    """Telemetry then cost, each wrapped in the ingestion envelope (``HubMessage``)."""
+def hub_lines(directory: Path, not_after: datetime | None = None) -> list[bytes]:
+    """Telemetry then cost, each wrapped in the ingestion envelope (``HubMessage``).
+
+    The generator dates its invoice records at the period end, after the last usage. Rebased onto
+    the run time that would be the future, so a record dated after ``not_after`` is stamped
+    ``not_after`` instead (only the published copy; the ids are untouched).
+    """
     received = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     lines: list[bytes] = []
     for name, kind in (("telemetry.ndjson", "telemetry"), ("cost.ndjson", "cost")):
         for doc in read_ndjson(directory / name):
             telemetry = kind == "telemetry"
+            if (
+                not telemetry
+                and not_after is not None
+                and _timestamp(doc["recorded_at"]) > not_after
+            ):
+                doc = {**doc, "recorded_at": not_after.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"}
             message = HubMessage(
                 kind=HubMessageKind(kind),
                 event_id=doc["event_id"] if telemetry else doc["cost_id"],
@@ -420,6 +463,14 @@ class Landing(Protocol):
         """Documents the workers landed, per ``LANDED`` category."""
         ...
 
+    async def ledger_earliest(self) -> datetime | None:
+        """The earliest ``occurred_at`` in the ledger (``None`` when it is empty)."""
+        ...
+
+    async def aggregate_watermark(self) -> datetime | None:
+        """How far the aggregates role has drained (``None`` before its first checkpoint)."""
+        ...
+
 
 class PolicyWriter(Protocol):
     async def upsert(self, document: dict[str, Any]) -> None: ...
@@ -435,6 +486,7 @@ class Backends:
     policy_writer: PolicyWriter
     revocation: RevocationChecker
     key: PseudonymKey
+    catalog: CatalogRepository
     prices: PriceSnapshotStore
     recommendations: RecommendationStore
     hitl: HitlService
@@ -563,9 +615,9 @@ async def seed_grants(
         principals[persona["slug"]] = principal
         wanted.append((persona["slug"], principal, persona["role"]))
     if config.operator_object_id is not None:
-        wanted.append(
-            ("operator", user_principal_id(config, config.operator_object_id, environ), "admin")
-        )
+        operator = user_principal_id(config, config.operator_object_id, environ)
+        principals["operator"] = operator
+        wanted.append(("operator", operator, "admin"))
     for slug, principal, role in wanted:
         outcome = await grants.grant_operator(
             backends.policy,
@@ -854,8 +906,12 @@ async def seed_reports(
     backends: Backends, world: World, principals: Mapping[str, str], tally: Tally
 ) -> None:
     fixture = _fixture("reports.json")
-    owner = principals[fixture["owner"]]
-    for spec in fixture["reports"]:
+    owned: list[tuple[str, Doc]] = [(principals[fixture["owner"]], s) for s in fixture["reports"]]
+    if "operator" in principals:
+        # Owned by the signed-in operator, so their own sign-in lists and runs it. No visibility
+        # rule is widened: the report store still shows it to its owner and share principals only.
+        owned += [(principals["operator"], s) for s in fixture["operator_reports"]]
+    for owner, spec in owned:
         domain = world.domain_id(spec["domain_index"] % len(world.domains))
         report_id = str(
             uuid.uuid5(uuid.NAMESPACE_URL, f"neurosphere:{world.customer}:{spec['slug']}")
@@ -895,6 +951,99 @@ async def seed_mcp_servers(
             continue
         await registry.register(spec["url"], display_name=spec["display_name"], actor=actor)
         tally.record("mcp_servers", created=1, existing=0)
+
+
+# -- catalog entities ------------------------------------------------------------------------
+
+
+async def seed_entities(
+    backends: Backends, scope: IdentityScope, directory: Path, tally: Tally
+) -> None:
+    """Write the generated entities (domains, owners, models, grounding sources, tools, agents,
+    people) through ``CatalogRepository.create_entity`` under the workers' own scope. The ingestion
+    projection only ever writes edges, so without this the map has no nodes. Entity ids are
+    canonical and independent of the time rebase, so a re-run finds them and creates nothing."""
+    allowed = frozenset(scope.allowed_domains)
+    for name in ENTITY_FILES:
+        path = directory / name
+        if not path.exists():
+            continue
+        for doc in read_ndjson(path):
+            kind = doc.get("entity_type")
+            if kind not in ENTITY_MODELS:
+                continue
+            domain = doc["id"] if kind == "domain" else doc.get("domain_id")
+            if (
+                doc.get("cloud") != scope.cloud
+                or doc.get("customer_id") != scope.customer_id
+                or domain not in allowed
+            ):
+                continue  # outside the workers' scope: fail closed, never widen
+            if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+                tally.record("entities", created=0, existing=1)
+                continue
+            entity = ENTITY_MODELS[kind].model_validate(doc)
+            await backends.catalog.create_entity(scope, cast(Any, entity))
+            tally.record("entities", created=1, existing=0)
+
+
+# -- time rebase -----------------------------------------------------------------------------
+
+
+def _timestamp(text: str) -> datetime:
+    return datetime.fromisoformat(text).astimezone(UTC)
+
+
+def observed_bounds(directory: Path) -> tuple[datetime, datetime]:
+    """``(earliest, newest)`` usage time of a generated world (telemetry and non-invoice costs).
+
+    The newest is what the rebase pins to the run time; the earliest is the reference a re-run
+    matches against the ledger's earliest ``occurred_at`` (to within seconds; the shift is a
+    whole number of hours, see ``rebase_seconds``). Invoice records are dated at the period end,
+    after the last usage, so they are left out here (``hub_lines`` clamps them).
+    """
+    costs = [
+        _timestamp(doc["recorded_at"])
+        for doc in read_ndjson(directory / "cost.ndjson")
+        if doc.get("observation_source") != "billing"
+    ]
+    events = [_timestamp(doc["event_time"]) for doc in read_ndjson(directory / "telemetry.ndjson")]
+    if not costs or not events:
+        raise SeedError("the generated world has no telemetry or no cost records")
+    both = costs + events
+    return min(both), max(both)
+
+
+def shifted_epoch(epoch: str, seconds: int) -> str:
+    """``epoch`` (RFC 3339 UTC, whole seconds) moved by ``seconds``."""
+    moved = datetime.strptime(epoch, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    return (moved + timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def rebase_seconds(
+    *,
+    now: datetime,
+    earliest: datetime,
+    newest: datetime,
+    existing_earliest: datetime | None,
+) -> int:
+    """Seconds (a whole number of hours) to move the generated world's epoch by.
+
+    First run (the ledger is empty): the newest usage lands between ``NEWEST_AGE`` and
+    ``NEWEST_AGE`` + 1h before ``now``, so the whole world sits in the last few days. Re-run (the
+    ledger holds events): the same shift the first run used, recovered from the ledger, so every
+    timestamp, window, recommendation id and aggregate key is regenerated exactly as before. The
+    hour grid absorbs the few seconds by which the ledger's earliest entry differs from the
+    generated earliest. A re-run on a later day therefore finds the data where it was, now older,
+    and creates nothing; it does not re-age it. To get fresh data drop the volumes
+    (``docker compose down -v``) and seed again.
+    """
+    if existing_earliest is not None:
+        return round((existing_earliest - earliest).total_seconds() / SHIFT_GRID_SECONDS) * (
+            SHIFT_GRID_SECONDS
+        )
+    wanted = ((now - NEWEST_AGE) - newest).total_seconds()
+    return math.floor(wanted / SHIFT_GRID_SECONDS) * SHIFT_GRID_SECONDS
 
 
 # -- landing ---------------------------------------------------------------------------------
@@ -938,6 +1087,30 @@ async def wait_for_landing(
         await sleep(poll)
 
 
+async def wait_for_watermark(
+    landing: Landing,
+    target: datetime,
+    *,
+    overall_seconds: float,
+    poll: float,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> bool:
+    """Wait (one overall timeout, sparse checks) until the aggregates watermark reaches ``target``.
+
+    Returns whether it did. Falling short is reported by the caller, never an error: the roles
+    keep draining after the seed exits.
+    """
+    deadline = clock() + overall_seconds
+    while True:
+        mark = await landing.aggregate_watermark()
+        if mark is not None and mark >= target:
+            return True
+        if clock() + poll > deadline:
+            return False
+        await sleep(poll)
+
+
 # -- orchestration ---------------------------------------------------------------------------
 
 
@@ -949,6 +1122,7 @@ async def run_seed(
     environ: Mapping[str, str] | None = None,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     clock: Callable[[], float] = time.monotonic,
+    now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> Doc:
     """Seed every category and return the summary document."""
     env = dict(os.environ) if environ is None else environ
@@ -957,15 +1131,25 @@ async def run_seed(
     gen = generate_config(config)
     log(f"generating the {config.profile} world (seed {config.seed})")
     await asyncio.to_thread(generate, gen, workdir)
+    before = await backends.landing.counts()
+    publishing = before["ledger"] == 0
+    earliest, newest = observed_bounds(workdir)
+    shift = rebase_seconds(
+        now=now(),
+        earliest=earliest,
+        newest=newest,
+        existing_earliest=None if publishing else await backends.landing.ledger_earliest(),
+    )
+    gen = replace(gen, epoch=shifted_epoch(DEFAULT_EPOCH, shift))
+    log(f"rebasing the world to epoch {gen.epoch} (newest event {NEWEST_AGE} before now)")
+    await asyncio.to_thread(generate, gen, workdir)
     world = World(gen)
 
     principals = await seed_grants(backends, config, world, tally, env)
     await seed_prices(backends, tally)
 
-    before = await backends.landing.counts()
-    publishing = before["ledger"] == 0
     if publishing:
-        lines = await asyncio.to_thread(hub_lines, workdir)
+        lines = await asyncio.to_thread(hub_lines, workdir, now() - NEWEST_AGE)
         sent = await asyncio.to_thread(backends.hub.publish, iter(lines))
         log(f"pushed {sent} telemetry and cost events to Event Hubs")
     else:
@@ -991,6 +1175,25 @@ async def run_seed(
         sleep=sleep,
         clock=clock,
     )
+    # After the wait: the entities would otherwise make the catalog look landed before the
+    # projection's edges are there.
+    await seed_entities(backends, scope, workdir, tally)
+    # The aggregates role drains in event order, so the newest (today) buckets land last and are
+    # the ones the 1-day cost window reads. Wait for them, but never fail on it.
+    _, newest_rebased = observed_bounds(workdir)
+    drained = await wait_for_watermark(
+        backends.landing,
+        newest_rebased - DRAIN_SLACK,
+        overall_seconds=config.drain_seconds,
+        poll=config.poll_seconds,
+        sleep=sleep,
+        clock=clock,
+    )
+    if not drained:
+        log(
+            "warning: the aggregates role has not caught up with the newest events yet; "
+            "recent-window views fill in as it drains (re-run the seed to wait again)"
+        )
     for name in LANDED:
         # A re-run that did not publish only finds what an earlier run's events produced (the
         # workers may still be draining them); none of that is new seeding.
@@ -1025,6 +1228,18 @@ class CosmosLanding:
         rows: list[Any] = [row async for row in proxy.query_items(query=query)]
         return int(rows[0]) if rows else 0
 
+    async def ledger_earliest(self) -> datetime | None:
+        proxy = self._db.get_container_client(LEDGER_CONTAINER)
+        query = "SELECT VALUE MIN(c.occurred_at) FROM c WHERE c.doc_type = 'entry'"
+        rows: list[Any] = [row async for row in proxy.query_items(query=query)]
+        return _timestamp(rows[0]) if rows and isinstance(rows[0], str) else None
+
+    async def aggregate_watermark(self) -> datetime | None:
+        proxy = self._db.get_container_client(AGGREGATES_CONTAINER)
+        query = "SELECT VALUE MAX(c.watermark) FROM c WHERE c.doc_type = 'status'"
+        rows: list[Any] = [row async for row in proxy.query_items(query=query)]
+        return _timestamp(rows[0]) if rows and isinstance(rows[0], str) else None
+
     def _blobs(self) -> int:
         from azure.core.exceptions import ResourceNotFoundError
         from azure.storage.blob import ContainerClient
@@ -1050,6 +1265,7 @@ async def open_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
     """Cosmos-backed stores (database bootstrap on the emulator included)."""
     from neurosphere_api.reports import CosmosReportStore
     from neurosphere_core.actions.cosmos_store import CosmosExecutionControl as Control
+    from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
     from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
     from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
     from neurosphere_core.mcp.cosmos_store import CosmosMcpServerStore
@@ -1091,6 +1307,7 @@ async def open_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
         policy_writer=_CosmosPolicyWriter(database.get_container_client(auth.policy_container)),
         revocation=policy.revocation,
         key=policy.key,
+        catalog=CosmosCatalogRepository(database.get_container_client(CATALOG_CONTAINER)),
         prices=CosmosPriceSnapshotStore.from_client(sync, database=config.database),
         recommendations=CosmosRecommendationStore.from_client(cosmos, database=config.database),
         hitl=make_hitl(
