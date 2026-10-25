@@ -1,0 +1,311 @@
+{
+  "containers": [
+    {
+      "default_ttl": null,
+      "name": "action_execution_control",
+      "owner": "neurosphere_core.actions.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "action_intents",
+      "owner": "neurosphere_core.actions.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "aggregates",
+      "owner": "neurosphere_core.aggregates.cosmos",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "audit",
+      "owner": "neurosphere_core.audit.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/chain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "audit_tail",
+      "owner": "neurosphere_core.audit.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/chain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "catalog",
+      "owner": "neurosphere_core.catalog.repo.cosmos",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/domain"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "catalog_review_queue",
+      "owner": "neurosphere_core.catalog.review_queue_cosmos",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": -1,
+      "name": "copilot_conversations",
+      "owner": "neurosphere_api.copilot.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/owner"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "cost-ledger",
+      "owner": "neurosphere_workers.ingestion.wiring",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "deploy_register",
+      "owner": "neurosphere_core.deploy.register.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/deployment_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "evaluation_results",
+      "owner": "neurosphere_core.evaluation.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "evaluation_runs",
+      "owner": "neurosphere_core.evaluation.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "hitl_decisions",
+      "owner": "neurosphere_core.hitl.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/review_item_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "hitl_items",
+      "owner": "neurosphere_core.hitl.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "ingestion-accepted",
+      "owner": "neurosphere_workers.ingestion.cosmos_stores",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "ingestion-watermarks",
+      "owner": "neurosphere_workers.ingestion.cosmos_stores",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "lifecycle_holds",
+      "owner": "neurosphere_core.lifecycle.cosmos",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "lifecycle_mappings",
+      "owner": "neurosphere_core.lifecycle.cosmos",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "lifecycle_requests",
+      "owner": "neurosphere_core.lifecycle.cosmos",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "mcp_servers",
+      "owner": "neurosphere_core.mcp.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "outbox",
+      "owner": "neurosphere_workers.ingestion.wiring",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "outbox-checkpoints",
+      "owner": "neurosphere_workers.ingestion.wiring",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "policy",
+      "owner": "neurosphere_core.auth.scope.cosmos_repository",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "price_snapshots",
+      "owner": "neurosphere_core.pricing.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/snapshot_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "recommendations",
+      "owner": "neurosphere_core.recommendations.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
+      "name": "reports",
+      "owner": "neurosphere_api.reports.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": -1,
+      "name": "revocations",
+      "owner": "neurosphere_core.auth.revocation.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/principal_id"
+        ]
+      }
+    }
+  ],
+  "database": "neurosphere",
+  "generated_from": "neurosphere_core.stores.containers",
+  "schema_version": "1.0.0"
+}
