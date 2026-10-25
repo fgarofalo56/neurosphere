@@ -117,9 +117,10 @@ Evidence for the gap (audit 2026-10-24, verified against `main` at `ec8903d`):
   - policy grants for the synthetic personas.
 
   It prints a JSON count summary per page category and keeps the `sbx_guard` loopback rule.
-- [ ] Item 11: compose `--profile app` adds a `frontend` service (real mode, same-origin, port 8080) and a one-shot `seed` job.
+- [ ] Item 11: compose `--profile app` adds a `frontend` service (real mode, same-origin, port 8080).
+  - **Delta (user, 2026-10-25):** there is no compose `seed` job. `sbx_guard` accepts loopback hosts only, and a container reaches the emulators by service name. `make stack-up` runs `docker compose --profile app up -d --wait` and then `sbx_seed_stack.py` from the host against `127.0.0.1`.
   - `api` and `workers` get the emulator, auth and roles env.
-  - `docker compose --profile app up -d --wait` completes with every service healthy and the seed completed.
+  - `docker compose --profile app up -d --wait` completes with every service healthy, and the host seed step then exits 0.
   - `tests/integration/compose/test_app_profile.py` and a new `tests/integration/real_stack/` suite (integration marker) assert that every manifest route's API calls return 200 with non-empty data, using an operator-minted stand-in token routed through the composed deriver in-process, not through the container.
 - [ ] Item 11: a CI-safe route-coverage test builds the composed app with `CompositionOverrides` and asserts that no route backing a `route-manifest.json` page returns a `*_unconfigured` 503.
   - The overrides are in-memory backends plus test-only dev-issuer authz, supplied from test code only.
@@ -752,8 +753,9 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 | 7 data-plane-builders-and-replay-blob | merged | worktree-agent-a112a65db205d6723 | sonnet | 0b9181d; item-1 readiness test fixed forward 437b6ab (placeholder codes); on integration 312 unit + runtime_api 71 + real_stack data/grant emulator passed; catalog search fails closed (no search backend); merge 06b6cc3 | 2026-10-25 |
 | 8 action-reports-copilot-and-mcp-builders | merged | worktree-agent-a747f85cb9b49701e | opus | 4a520fa; review APPROVED; readiness expectations fixed forward; gitleaks FP fingerprinted 31f448b; on integration 1400 passed + real_stack 3 emulator; prod write targets empty (advisory); Commercial copilot gated off (no matrix rows); merge 5c60b54 | 2026-10-25 |
 | 9 workers-runtime-roles | merged | worktree-agent-a848c517ea8dd521c | sonnet | c9b45b7; 377 workers passed; hub endpoint fixed to 127.0.0.1 (2dfd666) -> workers_runtime 2 passed (hub + seeded); merge 3a10c2b | 2026-10-25 |
-| 10 real-stack-synthetic-seed | in-progress | - | sonnet | - | 2026-10-25 |
-| 11 compose-app-profile-and-real-stack-smoke | todo | - | sonnet | - | 2026-10-24 |
+| 10 real-stack-synthetic-seed | merged | worktree-agent-a64461014aaf78c41 | sonnet | 51ba6be; on integration 209 unit + test_seed emulator passed (12 categories >0; re-run skipped_existing 1041); worker/API pseudonym parity proven; merge 0b6da0c | 2026-10-25 |
+| 9b aggregates-price-refresh (fix-forward) | in-progress | - | sonnet | aggregates role loaded the price table once at start; refresh it periodically | 2026-10-25 |
+| 11 compose-app-profile-and-real-stack-smoke | in-progress | - | sonnet | delta (user): seed is a host step after up --wait, no compose seed job | 2026-10-25 |
 
 ## Completion note (filled at ship)
 - Date:
