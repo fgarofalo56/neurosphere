@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import type { ReactElement, RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactElement } from "react";
 import { tokens } from "@fluentui/react-components";
 import { ErrorState } from "../components";
 import type { ChartSeriesTheme, ChartTheme } from "../styles";
@@ -224,23 +224,26 @@ export function useMotionAllowed(): boolean {
  * charts always lay out in real pixels and never scale their text or strokes with the container.
  */
 export function useContainerWidth(fallback: number): {
-  ref: RefObject<HTMLDivElement | null>;
+  ref: (el: HTMLDivElement | null) => void;
   width: number;
 } {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const observer = useRef<ResizeObserver | null>(null);
   const [measured, setMeasured] = useState<number | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver((entries) => {
+  // A callback ref, not an effect: the measured div can mount later (a chart that first
+  // renders its error state), and the observer must attach whenever it does.
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    observer.current = new ResizeObserver((entries) => {
       const entry = entries[entries.length - 1];
       if (!entry) return;
       const next = Math.floor(entry.contentRect.width);
       setMeasured(Number.isFinite(next) && next > 0 ? next : null);
     });
-    observer.observe(el);
-    return () => observer.disconnect();
+    observer.current.observe(el);
   }, []);
+  useEffect(() => () => observer.current?.disconnect(), []);
   return { ref, width: measured ?? fallback };
 }
 

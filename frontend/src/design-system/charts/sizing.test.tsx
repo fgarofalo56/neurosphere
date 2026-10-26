@@ -103,4 +103,35 @@ describe("chart pixel sizing", () => {
     );
     expect(container.querySelector("svg")?.getAttribute("width")).toBe("480");
   });
+
+  it("measures a chart that first rendered its error state and later gets valid series", () => {
+    stubObserver(900);
+    const eur: ChartSeries = { ...series, key: "eur", currency: "EUR" };
+    const ui = (s: ChartSeries[]) => (
+      <AppThemeProvider>
+        <TimeSeriesChart series={s} />
+      </AppThemeProvider>
+    );
+    const { container, rerender } = render(ui([series, eur]));
+    expect(container.querySelector("svg")).toBeNull();
+    rerender(ui([series]));
+    expect(container.querySelector("svg")?.getAttribute("width")).toBe("900");
+  });
+
+  it("disconnects the observer on unmount", () => {
+    const disconnect = vi.fn();
+    class FakeObserver {
+      observe(): void {}
+      disconnect = disconnect;
+      unobserve(): void {}
+    }
+    vi.stubGlobal("ResizeObserver", FakeObserver);
+    const { unmount } = render(
+      <AppThemeProvider>
+        <TimeSeriesChart series={[series]} />
+      </AppThemeProvider>,
+    );
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+  });
 });
