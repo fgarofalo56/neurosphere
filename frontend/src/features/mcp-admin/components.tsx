@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Checkbox,
   Dialog,
@@ -11,13 +10,12 @@ import {
   DialogTrigger,
   Field,
   Input,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
+import { StatusPill, type StatusTone } from "../../design-system";
+import { StatePanel } from "../workspaces/StatePanel";
 import {
   DependencyTransientError,
   ForbiddenError,
@@ -47,31 +45,28 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.forbidden}</MessageBarTitle>
-          {STRINGS.forbiddenDetail}
-          {ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <StatePanel tone="warning" title={STRINGS.forbidden} data-testid="forbidden-state">
+        {STRINGS.forbiddenDetail}
+        {ref}.
+      </StatePanel>
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-        {onRetry !== undefined ? (
-          <>
-            {" "}
-            <Button size="small" onClick={onRetry}>
-              {STRINGS.retry}
-            </Button>
-          </>
-        ) : null}
-      </MessageBarBody>
-    </MessageBar>
+    <StatePanel
+      tone="danger"
+      title={STRINGS.unavailable}
+      data-testid="unavailable-state"
+      action={
+        onRetry !== undefined ? (
+          <Button size="small" onClick={onRetry}>
+            {STRINGS.retry}
+          </Button>
+        ) : undefined
+      }
+    >
+      {STRINGS.unavailableDetail}
+      {ref}
+    </StatePanel>
   );
 }
 
@@ -86,28 +81,26 @@ export function mutationErrorText(error: ApiError): string {
 
 export function MutationError({ error }: { readonly error: ApiError }): ReactElement {
   return (
-    <MessageBar intent="error" role="alert" data-testid="mutation-error">
-      <MessageBarBody>
-        {mutationErrorText(error)}
-        {referenceOf(error)}
-      </MessageBarBody>
-    </MessageBar>
+    <StatePanel tone="danger" title={STRINGS.errors.title} data-testid="mutation-error">
+      {mutationErrorText(error)}
+      {referenceOf(error)}
+    </StatePanel>
   );
 }
 
 export function ToolStateBadge({ state }: { readonly state: ToolState }): ReactElement {
-  const color =
+  const tone: StatusTone =
     state === "approved"
       ? "success"
       : state === "revoked"
         ? "danger"
         : state === "pending"
           ? "warning"
-          : "informative";
+          : "neutral";
   return (
-    <Badge appearance="tint" color={color} data-testid="tool-state">
-      {STRINGS.toolState[state]}
-    </Badge>
+    <span data-testid="tool-state">
+      <StatusPill label={STRINGS.toolState[state]} tone={tone} />
+    </span>
   );
 }
 
@@ -156,9 +149,10 @@ function DiffRow({
     >
       <h4>
         {label}{" "}
-        <Badge color={changed ? "danger" : "informative"} appearance="outline">
-          {changed ? STRINGS.review.changed : STRINGS.review.unchanged}
-        </Badge>
+        <StatusPill
+          label={changed ? STRINGS.review.changed : STRINGS.review.unchanged}
+          tone={changed ? "danger" : "neutral"}
+        />
       </h4>
       <div className={styles.columns}>
         <div>

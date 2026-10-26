@@ -411,6 +411,48 @@ describe("status views", () => {
     expect(banner.textContent).toContain("incident_response");
   });
 
+  it("shows a Timestamp, not the raw ISO string, for the created time", async () => {
+    setup(`/actions?domain_id=${encodeURIComponent(DOMAIN)}`, {
+      [`GET ${BASE}`]: { status: 200, body: { items: [view()], next_cursor: null } },
+    });
+    const row = await screen.findByTestId("action-row");
+    expect(row.querySelector("time")?.getAttribute("datetime")).toBe("2026-10-20T10:00:00.000Z");
+    expect(row.textContent).not.toContain("2026-10-20T10:00:00Z");
+  });
+
+  it("shows an explicit empty state when the domain has no actions", async () => {
+    setup(`/actions?domain_id=${encodeURIComponent(DOMAIN)}`, {
+      [`GET ${BASE}`]: { status: 200, body: { items: [], next_cursor: null } },
+    });
+    const empty = await screen.findByTestId("empty-state");
+    expect(empty.textContent).toContain("No actions in this domain.");
+    expect(screen.queryByTestId("action-row")).toBeNull();
+  });
+
+  it("shows a loading state while the list is fetched", () => {
+    const fetchImpl = vi.fn<typeof fetch>((input) =>
+      new URL(String(input)).pathname === "/api/v1/actions/emergency-disable"
+        ? Promise.resolve(new Response(JSON.stringify(NOT_DISABLED), { status: 200 }))
+        : new Promise<Response>(() => undefined),
+    );
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(actionsRoutes, {
+      initialEntries: [`/actions?domain_id=${encodeURIComponent(DOMAIN)}`],
+    });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByTestId("loading-state").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
   it("shows a retryable state on 503, never an empty list", async () => {
     setup(`/actions?domain_id=${encodeURIComponent(DOMAIN)}`, {
       [`GET ${BASE}`]: problem(503, "dependency_transient"),

@@ -77,6 +77,36 @@ describe("workspace routes", () => {
     expect(screen.queryByText(/Placeholder/)).toBeNull();
   });
 
+  it("shows a loading state while the probe is in flight", () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(
+      createAppRoutes({ extraRoutes: workspaceRoutes, navItems: workspaceNavItems(NS_ROLES) }),
+      { initialEntries: ["/workspaces/viewer"] },
+    );
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByLabelText("Loading the Viewer workspace")).toBeTruthy();
+    expect(screen.queryByText(/Placeholder/)).toBeNull();
+  });
+
+  it("renders the persona page as cards with a status indicator", async () => {
+    setup("/workspaces/steward", 200, NS_ROLES);
+    await screen.findByText(/Placeholder/);
+    expect(document.querySelectorAll('[data-slot="panel"]').length).toBe(2);
+    expect(document.querySelector('[data-slot="health-indicator"]')?.textContent).toBe(
+      "Service answered",
+    );
+  });
+
   it("503 shows an error state, not empty data", async () => {
     setup("/workspaces/steward", 503, NS_ROLES);
     await waitFor(() => expect(screen.getByTestId("error-state")).toBeTruthy());

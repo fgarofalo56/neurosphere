@@ -1,7 +1,8 @@
 import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import { EmptyState, PageTemplate } from "../../design-system";
+import { Panel } from "../workspaces/Panel";
 import { ActionDetail } from "./ActionDetail";
 import { ActionError, EmergencyBanner } from "./components";
 import { useDraftIntent } from "./hooks";
@@ -38,58 +39,62 @@ export function ProposeSwapPage(): ReactElement {
       {view !== null ? (
         <ActionDetail domainId={draftDomain} view={view} onView={setView} />
       ) : domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
-        <form
-          aria-label={STRINGS.proposeTitle}
-          className={styles.form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            const data = new FormData(e.currentTarget);
-            const text = (key: string): string => {
-              const v = data.get(key);
-              return typeof v === "string" ? v.trim() : "";
-            };
-            draft.mutate(
-              {
-                domainId,
-                request: buildDraftIntentRequest({
-                  canonicalId: text("target"),
-                  targetVersion: text("target_version"),
-                  newModelName: text("model_name"),
-                  newModelVersion: text("model_version"),
-                  idempotencyKey,
-                }),
-              },
-              {
-                onSuccess: (next) => {
-                  // The workflow keeps acting on the domain the draft was created in.
-                  setDraftDomain(domainId);
-                  setView(next);
+        <Panel>
+          <form
+            aria-label={STRINGS.proposeTitle}
+            className={styles.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              const data = new FormData(e.currentTarget);
+              const text = (key: string): string => {
+                const v = data.get(key);
+                return typeof v === "string" ? v.trim() : "";
+              };
+              draft.mutate(
+                {
+                  domainId,
+                  request: buildDraftIntentRequest({
+                    canonicalId: text("target"),
+                    targetVersion: text("target_version"),
+                    newModelName: text("model_name"),
+                    newModelVersion: text("model_version"),
+                    idempotencyKey,
+                  }),
                 },
-              },
-            );
-          }}
-        >
-          <Field label={P.target}>
-            <Input name="target" required />
-          </Field>
-          <Field label={P.version}>
-            <Input name="target_version" required />
-          </Field>
-          <Field label={P.modelName}>
-            <Input name="model_name" required />
-          </Field>
-          <Field label={P.modelVersion}>
-            <Input name="model_version" />
-          </Field>
-          <div>
-            <Button appearance="primary" type="submit" disabled={draft.isPending}>
-              {draft.isPending ? STRINGS.steps.working : P.submit}
-            </Button>
-          </div>
-          {draft.isError ? <ActionError error={draft.error} /> : null}
-        </form>
+                {
+                  onSuccess: (next) => {
+                    // The workflow keeps acting on the domain the draft was created in.
+                    setDraftDomain(domainId);
+                    setView(next);
+                  },
+                },
+              );
+            }}
+          >
+            <Field label={P.target}>
+              <Input name="target" required />
+            </Field>
+            <Field label={P.version}>
+              <Input name="target_version" required />
+            </Field>
+            <Field label={P.modelName}>
+              <Input name="model_name" required />
+            </Field>
+            <Field label={P.modelVersion}>
+              <Input name="model_version" />
+            </Field>
+            <div>
+              <Button appearance="primary" type="submit" disabled={draft.isPending}>
+                {draft.isPending ? STRINGS.steps.working : P.submit}
+              </Button>
+            </div>
+            {draft.isError ? <ActionError error={draft.error} /> : null}
+          </form>
+        </Panel>
       )}
     </PageTemplate>
   );

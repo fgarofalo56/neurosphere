@@ -226,6 +226,35 @@ describe("server list", () => {
     expect(await screen.findByTestId("empty-state")).toBeTruthy();
   });
 
+  it("shows a loading state while the registry is fetched", () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(mcpAdminRoutes, { initialEntries: ["/mcp-admin"] });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByTestId("loading-state").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("shows the last sync as a Timestamp, not the raw ISO string", async () => {
+    setup("/mcp-admin", {
+      [LIST_API]: { status: 200, body: { items: [server()], next_cursor: null } },
+    });
+    const rows = await screen.findAllByTestId("server-row");
+    expect(rows[0]?.querySelector("time")?.getAttribute("datetime")).toBe(
+      "2026-10-22T12:00:00.000Z",
+    );
+    expect(rows[0]?.textContent).not.toContain(NOW);
+  });
+
   it("renders access denied on 403 and no list", async () => {
     setup("/mcp-admin", { [LIST_API]: problem(403, "forbidden") });
     expect(await screen.findByTestId("forbidden-state")).toBeTruthy();

@@ -24,6 +24,13 @@ describe("ForbiddenState", () => {
     expect(el.textContent).toContain("abc-1");
   });
 
+  it("is an alert carrying the forbidden-state test id on the same element", () => {
+    render(<ForbiddenState workspace="Admin" />);
+    const el = screen.getByRole("alert");
+    expect(el.getAttribute("data-testid")).toBe("forbidden-state");
+    expect(el.textContent).toContain("Access denied");
+  });
+
   it("does not claim the UI enforces access", () => {
     render(<ForbiddenState workspace="Admin" />);
     const text = (screen.getByTestId("forbidden-state").textContent ?? "").toLowerCase();

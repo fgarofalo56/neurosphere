@@ -123,6 +123,42 @@ describe("sandbox page", () => {
     expect(screen.getByRole("heading", { level: 1, name: STRINGS.pageTitle })).toBeTruthy();
   });
 
+  it("shows an explicit empty state when the sandbox holds no documents", async () => {
+    setup({
+      status: 200,
+      body: {
+        environment: "sandbox",
+        synthetic: true,
+        customer_id: "synthco",
+        database: "sandbox-neurosphere",
+        counts: {},
+        relations: 0,
+        total: 0,
+      },
+    });
+    await screen.findByTestId("sandbox-total");
+    expect(screen.getByText("The sandbox holds no documents")).toBeTruthy();
+    expect(screen.queryAllByTestId("sandbox-row")).toHaveLength(0);
+  });
+
+  it("shows a loading state until the status arrives", () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(sandboxRoutes, { initialEntries: ["/sandbox"] });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByLabelText(STRINGS.loading)).toBeTruthy();
+    expect(screen.queryByTestId("sandbox-total")).toBeNull();
+  });
+
   it("shows an access-denied state on 403, not an empty summary", async () => {
     setup({ status: 403, body: { status: 403, code: "forbidden" } });
     const alert = await screen.findByTestId("sandbox-error");
