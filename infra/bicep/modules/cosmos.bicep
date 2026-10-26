@@ -17,27 +17,34 @@ param tags object = {}
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
+@description('Capacity mode of the created account. Serverless forbids throughput and is single-region; the property is emitted only when Serverless.')
+@allowed(['Provisioned', 'Serverless'])
+param capacityMode string = 'Provisioned'
+
 resource account 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = if (empty(reuse)) {
   name: name
   location: location
   kind: 'GlobalDocumentDB'
   tags: tags
-  properties: {
-    databaseAccountOfferType: 'Standard'
-    disableLocalAuth: true
-    minimalTlsVersion: 'Tls12'
-    publicNetworkAccess: publicNetworkAccess
-    locations: [
-      {
-        locationName: location
-        failoverPriority: 0
-        isZoneRedundant: false
+  properties: union(
+    {
+      databaseAccountOfferType: 'Standard'
+      disableLocalAuth: true
+      minimalTlsVersion: 'Tls12'
+      publicNetworkAccess: publicNetworkAccess
+      locations: [
+        {
+          locationName: location
+          failoverPriority: 0
+          isZoneRedundant: false
+        }
+      ]
+      consistencyPolicy: {
+        defaultConsistencyLevel: 'Session'
       }
-    ]
-    consistencyPolicy: {
-      defaultConsistencyLevel: 'Session'
-    }
-  }
+    },
+    capacityMode == 'Serverless' ? { capacityMode: 'Serverless' } : {}
+  )
 }
 
 @description('Resource id of the Cosmos DB account in use (reused or newly created).')
