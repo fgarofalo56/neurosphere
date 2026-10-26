@@ -195,6 +195,7 @@ jobs:
             az bicep build-params --file "$p" --stdout > /dev/null || rc=1
           done < <(find infra -name '*.bicepparam' | sort)
           az bicep lint --file infra/bicep/modules/main.bicep || rc=1
+          az bicep lint --file infra/demo/main.bicep || rc=1
           exit $rc
 
   helm:
