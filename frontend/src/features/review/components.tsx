@@ -1,7 +1,6 @@
 import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
-import { StatusPill, Timestamp, type StatusTone } from "../../design-system";
-import { StatePanel } from "../workspaces/StatePanel";
+import { ErrorState, StatusPill, Timestamp, type StatusTone } from "../../design-system";
 import {
   DependencyTransientError,
   ForbiddenError,
@@ -33,21 +32,23 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <StatePanel
+      <ErrorState
         tone="warning"
         title={item ? STRINGS.forbiddenItem : STRINGS.forbidden}
-        data-testid="forbidden-state"
-      >
-        {item ? STRINGS.forbiddenItemDetail : STRINGS.forbiddenDetail}
-        {ref}.
-      </StatePanel>
+        testId="forbidden-state"
+        message={
+          <>
+            {item ? STRINGS.forbiddenItemDetail : STRINGS.forbiddenDetail}
+            {ref}.
+          </>
+        }
+      />
     );
   }
   return (
-    <StatePanel
-      tone="danger"
+    <ErrorState
       title={STRINGS.unavailable}
-      data-testid="unavailable-state"
+      testId="unavailable-state"
       action={
         onRetry !== undefined ? (
           <Button size="small" onClick={onRetry}>
@@ -55,10 +56,13 @@ export function QueryErrorState({
           </Button>
         ) : undefined
       }
-    >
-      {STRINGS.unavailableDetail}
-      {ref}
-    </StatePanel>
+      message={
+        <>
+          {STRINGS.unavailableDetail}
+          {ref}
+        </>
+      }
+    />
   );
 }
 
@@ -86,10 +90,16 @@ export function MutationError({
     text = STRINGS.errors.unavailable;
   }
   return (
-    <StatePanel tone="danger" title={STRINGS.errors.title} data-testid="mutation-error">
-      {text}
-      {referenceOf(error)}
-    </StatePanel>
+    <ErrorState
+      title={STRINGS.errors.title}
+      testId="mutation-error"
+      message={
+        <>
+          {text}
+          {referenceOf(error)}
+        </>
+      }
+    />
   );
 }
 

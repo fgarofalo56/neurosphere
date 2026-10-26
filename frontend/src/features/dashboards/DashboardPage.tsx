@@ -6,21 +6,21 @@ import { useSelectedDomain } from "../../app/domain";
 import {
   EmptyState,
   ErrorState,
-  KpiCard,
-  LoadingState,
-  PageTemplate,
-  StatusPill,
-  TimeSeriesChart,
   formatCurrency,
   formatDuration,
   formatNumber,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+  TimeSeriesChart,
   useUiStyle,
 } from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { groupSeries, groupTitle, toChartSeries, type ChartGroup } from "./chartData";
 import { AnalyticsChip, LagIndicator, SeriesBlock } from "./components";
 import { useDashboard } from "./hooks";
-import { Panel } from "./Panel";
 import { STRINGS } from "./strings";
 import type { DashboardMetric, Grain, Series } from "./types";
 
@@ -91,7 +91,7 @@ function ChartPanel({
   const chartSeries = group.series.map(toChartSeries);
   const hasPoints = chartSeries.some((s) => s.points.length > 0);
   return (
-    <Panel title={groupTitle(group, metric)} data-testid="chart-panel">
+    <Panel title={groupTitle(group, metric)} level={3} testId="chart-panel">
       {hasPoints ? (
         <TimeSeriesChart series={chartSeries} grain={grain} variant="line" height={260} />
       ) : (

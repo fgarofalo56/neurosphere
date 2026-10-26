@@ -2,8 +2,7 @@ import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-compo
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, LoadingState, PageTemplate, StatusPill } from "../../design-system";
-import { RowTable } from "../workspaces/RowTable";
+import { DataTable, EmptyState, LoadingState, PageTemplate, StatusPill } from "../../design-system";
 import { QueryErrorState, SlaDue, StateBadge } from "./components";
 import { useReviewItems } from "./hooks";
 import { STRINGS, orUnknown } from "./strings";
@@ -79,11 +78,11 @@ function QueueBody({
           <EmptyState title={STRINGS.empty} />
         </div>
       ) : (
-        <RowTable
+        <DataTable
           label={STRINGS.title}
           rows={items}
           getRowId={(item) => item.item_id}
-          rowTestId="review-row"
+          getRowProps={() => ({ "data-testid": "review-row" })}
           columns={[
             {
               key: "kind",

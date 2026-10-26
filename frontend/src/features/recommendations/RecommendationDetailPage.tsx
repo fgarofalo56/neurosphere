@@ -2,8 +2,14 @@ import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, KpiCard, LoadingState, PageTemplate, Timestamp } from "../../design-system";
-import { Panel } from "./Panel";
+import {
+  EmptyState,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  Timestamp,
+} from "../../design-system";
 import {
   AdvisoryBadge,
   EstimateBlock,
@@ -79,30 +85,30 @@ function Detail({
       {insufficient ? (
         <p data-testid="insufficient-history">{STRINGS.insufficientHistory}</p>
       ) : (
-        <Panel id="score-heading" title={S.score}>
+        <Panel landmark="region" title={S.score}>
           <p data-testid="score">{orUnknown(rec.score)}</p>
         </Panel>
       )}
-      <Panel id="subjects-heading" title={S.subjects}>
+      <Panel landmark="region" title={S.subjects}>
         <ul>
           {rec.subject_ids.map((id) => (
             <li key={id}>{id}</li>
           ))}
         </ul>
       </Panel>
-      <Panel id="window-heading" title={S.evidenceWindow}>
+      <Panel landmark="region" title={S.evidenceWindow}>
         <p data-testid="evidence-window">
           <Timestamp value={rec.evidence_window?.start} /> to{" "}
           <Timestamp value={rec.evidence_window?.end} />
         </p>
       </Panel>
-      <Panel id="coverage-heading" title={S.coverage}>
+      <Panel landmark="region" title={S.coverage}>
         <p data-testid="coverage">{coverageText(rec.coverage)}</p>
       </Panel>
-      <Panel id="uncertainty-heading" title={S.uncertainty}>
+      <Panel landmark="region" title={S.uncertainty}>
         <p data-testid="uncertainty">{uncertaintyText(rec.uncertainty)}</p>
       </Panel>
-      <Panel id="prereq-heading" title={S.prerequisites}>
+      <Panel landmark="region" title={S.prerequisites}>
         {rec.prerequisites.length === 0 ? (
           <p data-testid="prerequisites-empty">{STRINGS.unknown}</p>
         ) : (
@@ -115,20 +121,20 @@ function Detail({
           </ul>
         )}
       </Panel>
-      <Panel id="estimate-heading" title={S.estimate}>
+      <Panel landmark="region" title={S.estimate}>
         <EstimateBlock estimate={rec.projected_estimate} />
       </Panel>
-      <Panel id="owner-heading" title={S.owner}>
+      <Panel landmark="region" title={S.owner}>
         <p data-testid="owner">{ownerText(rec.owner)}</p>
       </Panel>
-      <Panel id="generator-heading" title={S.generator}>
+      <Panel landmark="region" title={S.generator}>
         <p data-testid="generator">
           {rec.generator == null
             ? STRINGS.unknown
             : `${orUnknown(rec.generator.generator_id)} ${orUnknown(rec.generator.generator_version)}`}
         </p>
       </Panel>
-      <Panel id="evidence-ids-heading" title={S.evidenceIds}>
+      <Panel landmark="region" title={S.evidenceIds}>
         {rec.evidence_ids.length === 0 ? (
           <p data-testid="evidence-ids-empty">{STRINGS.unknown}</p>
         ) : (

@@ -20,7 +20,7 @@ export function AdvisoryBadge({
   return (
     <span>
       <span data-testid="advisory-badge">
-        <StatusPill label={STRINGS.advisory} tone="neutral" />
+        <StatusPill label={STRINGS.advisory} tone="info" />
       </span>
       {executable ? null : <small data-testid="advisory-reason"> {STRINGS.advisoryReason}</small>}
     </span>

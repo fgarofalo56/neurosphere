@@ -8,11 +8,11 @@ import {
   KpiCard,
   LoadingState,
   PageTemplate,
+  Panel,
   Timestamp,
   type ChartSeries,
   type HealthState,
 } from "../../design-system";
-import { Panel, useTableClasses } from "./Panel";
 import {
   CalibrationBadge,
   PilotRate,
@@ -23,6 +23,7 @@ import {
 import { useQuality } from "./hooks";
 import { STRINGS, fractionText, numberText, orUnknown } from "./strings";
 import type { QualityResponse, Trend } from "./types";
+import { useTableClasses } from "./tableClasses";
 
 /** One bar series per judge configuration, so differently judged scores are never merged. */
 function trendSeries(trend: Trend): readonly ChartSeries[] {
@@ -47,7 +48,7 @@ function Trends({ data }: { readonly data: QualityResponse }): ReactElement {
   const H = STRINGS.trendHeaders;
   const t = useTableClasses();
   return (
-    <Panel id="trends-heading" title={STRINGS.sections.trends}>
+    <Panel landmark="region" title={STRINGS.sections.trends}>
       {data.trends.length === 0 ? (
         <div data-testid="trends-empty">
           <EmptyState title={STRINGS.noTrends} />
@@ -150,7 +151,7 @@ function Body({ data }: { readonly data: QualityResponse }): ReactElement {
     <>
       <PilotRate rate={data.pilot_grounded_rate} />
       <Trends data={data} />
-      <Panel id="coverage-heading" title={STRINGS.sections.coverage}>
+      <Panel landmark="region" title={STRINGS.sections.coverage}>
         {data.coverage.length === 0 ? (
           <EmptyState title={STRINGS.noCoverage} />
         ) : (
@@ -190,7 +191,7 @@ function Body({ data }: { readonly data: QualityResponse }): ReactElement {
           </div>
         )}
       </Panel>
-      <Panel id="labels-heading" title={STRINGS.sections.labels}>
+      <Panel landmark="region" title={STRINGS.sections.labels}>
         <div className={t.wrap}>
           <table className={t.table} aria-label={STRINGS.sections.labels}>
             <thead>
@@ -218,7 +219,7 @@ function Body({ data }: { readonly data: QualityResponse }): ReactElement {
           </table>
         </div>
       </Panel>
-      <Panel id="drift-heading" title={STRINGS.sections.drift}>
+      <Panel landmark="region" title={STRINGS.sections.drift}>
         {data.drift_alerts.length === 0 ? (
           <div data-testid="drift-empty">
             <EmptyState title={STRINGS.noDrift} />

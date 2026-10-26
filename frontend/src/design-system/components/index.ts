@@ -8,3 +8,5 @@ export { HEALTH_LABELS, HealthIndicator, StatusPill } from "./status";
 export type { HealthIndicatorProps, StatusPillProps, StatusTone } from "./status";
 export { Timestamp } from "./Timestamp";
 export type { TimestampProps } from "./Timestamp";
+export { Panel } from "./Panel";
+export type { PanelProps } from "./Panel";

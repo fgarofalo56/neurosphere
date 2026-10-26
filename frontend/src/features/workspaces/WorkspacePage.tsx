@@ -1,10 +1,15 @@
 import type { ReactElement } from "react";
 import { ForbiddenError, createQueryHook } from "../../api/index.js";
-import { HealthIndicator, LoadingState, PageTemplate, StatusPill } from "../../design-system";
+import {
+  ErrorState,
+  HealthIndicator,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+} from "../../design-system";
 import { ForbiddenState } from "./ForbiddenState";
-import { Panel } from "./Panel";
 import { probePath, type WorkspaceDef } from "./personas";
-import { StatePanel } from "./StatePanel";
 
 const useWorkspaceProbe = createQueryHook<{ path: string }, unknown>({
   key: "workspace-probe",
@@ -27,11 +32,17 @@ export function WorkspacePage({ def }: { readonly def: WorkspaceDef }): ReactEle
     }
     return (
       <PageTemplate title={label}>
-        <StatePanel tone="danger" title="Could not load this workspace" data-testid="error-state">
-          The request failed
-          {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}. This is not an
-          empty result. Try again later.
-        </StatePanel>
+        <ErrorState
+          title="Could not load this workspace"
+          testId="error-state"
+          message={
+            <>
+              The request failed
+              {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}. This is not
+              an empty result. Try again later.
+            </>
+          }
+        />
       </PageTemplate>
     );
   }

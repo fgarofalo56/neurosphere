@@ -1,10 +1,10 @@
 import { makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
-import { Panel } from "../workspaces/Panel";
 import { ActionWorkflow } from "./ActionWorkflow";
 import { DiffView, ExecutionPanel, Prerequisites, StateBadge } from "./components";
 import { STRINGS, orUnknown } from "./strings";
 import type { ActionView } from "./types";
+import { Panel } from "../../design-system";
 
 const useStyles = makeStyles({
   article: {

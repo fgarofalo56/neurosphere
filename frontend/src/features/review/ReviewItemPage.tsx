@@ -3,8 +3,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import type { ApiError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, LoadingState, PageTemplate, Timestamp } from "../../design-system";
-import { Panel } from "../workspaces/Panel";
+import { EmptyState, LoadingState, PageTemplate, Panel, Timestamp } from "../../design-system";
 import { DecisionList, MutationError, QueryErrorState, SlaDue, StateBadge } from "./components";
 import { useClaimItem, useDecideItem, useReviewItem, useReviewedIntent } from "./hooks";
 import { STRINGS } from "./strings";
@@ -59,7 +58,7 @@ function IntentUnderReview({
   }
   const { intent, advisory } = query.data;
   return (
-    <Panel title={D.change} data-testid="intent-under-review">
+    <Panel title={D.change} testId="intent-under-review">
       {advisory ? <p>{D.advisory}</p> : null}
       <dl>
         <dt>{D.target}</dt>
@@ -115,7 +114,7 @@ function ItemControls({
 
   if (!OPEN_STATES.includes(item.state)) {
     return (
-      <Panel data-testid="item-final">
+      <Panel testId="item-final">
         <p>{STRINGS.detail.final}</p>
       </Panel>
     );
@@ -142,7 +141,7 @@ function ItemControls({
   };
 
   return (
-    <Panel title={F.title} data-testid="item-controls">
+    <Panel title={F.title} testId="item-controls">
       {item.assignee_pseudonym === null ? (
         <div>
           <Button
