@@ -17,7 +17,7 @@ param tags object = {}
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Capacity mode of the created account. Serverless forbids throughput and is single-region; the property is emitted only when Serverless.')
+@description('Capacity mode of the created account. Serverless forbids throughput and is single-region; the EnableServerless capability is emitted only when Serverless.')
 @allowed(['Provisioned', 'Serverless'])
 param capacityMode string = 'Provisioned'
 
@@ -43,7 +43,8 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = if (empty(
         defaultConsistencyLevel: 'Session'
       }
     },
-    capacityMode == 'Serverless' ? { capacityMode: 'Serverless' } : {}
+    // 2024-11-15 has no properties.capacityMode; serverless is the EnableServerless capability.
+    capacityMode == 'Serverless' ? { capabilities: [{ name: 'EnableServerless' }] } : {}
   )
 }
 

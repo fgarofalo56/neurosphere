@@ -250,12 +250,15 @@ def test_core_main_resource_set_unchanged_and_defaults_inert() -> None:
     cosmos = nested["ns-cosmos"]
     assert cosmos["parameters"]["capacityMode"]["defaultValue"] == "Provisioned"
     (account,) = [r for r in resource_list(cosmos) if r["type"].endswith("/databaseAccounts")]
-    # The guard yields an empty object for the default, so no capacityMode is emitted.
+    # The guard yields an empty object for the default, so no capability is emitted. On
+    # 2024-11-15 serverless is the EnableServerless capability (no properties.capacityMode).
+    props = json.dumps(account["properties"])
     assert (
         "if(equals(parameters('capacityMode'), 'Serverless'), "
-        "createObject('capacityMode', 'Serverless'), createObject())"
-        in json.dumps(account["properties"])
+        "createObject('capabilities', createArray(createObject('name', 'EnableServerless'))), "
+        "createObject())" in props
     )
+    assert "createObject('capacityMode'" not in props
 
     law = nested["ns-loganalytics"]
     assert law["parameters"]["dailyQuotaGb"]["defaultValue"] == -1
