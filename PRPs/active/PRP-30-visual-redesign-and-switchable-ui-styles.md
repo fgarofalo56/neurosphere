@@ -583,9 +583,9 @@ Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 style-foundation | merged | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0; review APPROVED; on integration design-system+theme-requests 179 passed; merge ae9550e | 2026-10-26 |
-| 2 brand-and-component-primitives | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
-| 3 chart-primitives | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
-| 4 mockups-and-approval-checkpoint | todo | | sonnet | | 2026-10-26 |
+| 2 brand-and-component-primitives | merged | worktree-agent-abfe8d48212d2230b | sonnet | 5361ad0: typecheck/lint clean, vitest 679/679, build OK, Snyk 0; review APPROVED; merge 42d3e57 | 2026-10-26 |
+| 3 chart-primitives | merged | worktree-agent-ad516ea5d3efa1e6d | sonnet | bcea132: typecheck/lint clean, vitest 686/687 (reports sharing flake, 3/3 isolated), build OK, Snyk 0; review APPROVED; merge 929abae; on integration typecheck/lint/build OK, vitest 717/717 x7 after 2 contention flakes (reports.test sharing, follow-up to item 8) | 2026-10-26 |
+| 4 mockups-and-approval-checkpoint | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
 | CHECKPOINT mockup approval | todo | | operator | | 2026-10-26 |
 | 5 shell-chrome-demo-and-fixtures | todo | | sonnet | | 2026-10-26 |
 | 6 lane-overview-dashboards-reconciliation | todo | | sonnet | | 2026-10-26 |
