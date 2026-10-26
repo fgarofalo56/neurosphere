@@ -164,7 +164,7 @@ export function TimeSeriesChart({
           const transition = motion ? "opacity 200ms ease-out" : undefined;
           return (
             <g key={s.key} data-series={s.key} data-basis={basisWord(s)}>
-              {variant === "area" && (
+              {variant === "area" && !(s.kind === "estimated" && series.length > 1) && (
                 <path
                   d={areaPath(xy, y(Math.max(yMin, Math.min(0, yMax))))}
                   fill={style.fill}

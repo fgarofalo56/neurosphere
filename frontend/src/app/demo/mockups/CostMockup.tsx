@@ -66,31 +66,32 @@ export function CostMockup({
     <MockupFrame styleId={styleId} mode={mode} active="Cost dashboard">
       <PageTemplate
         title="Cost dashboard"
-        description="Estimated and invoiced cost per currency. Currencies are never summed or converted."
+        description="Estimated and invoiced cost per currency, last 14 days. Currencies are never summed or converted."
         actions={<Button appearance="secondary">Export CSV</Button>}
         kpis={
           <>
             <KpiCard
-              label="USD estimated, 14 days"
+              label="USD estimated"
               value={formatCurrency(total(USD_SERIES, 0), "USD", { maximumFractionDigits: 0 })}
             />
             <KpiCard
-              label="USD invoiced, 14 days (partial)"
+              label="USD invoiced, partial"
               value={formatCurrency(total(USD_SERIES, 1), "USD", { maximumFractionDigits: 0 })}
               status="degraded"
             />
             <KpiCard
-              label="EUR estimated, 14 days"
+              label="EUR estimated"
               value={formatCurrency(total(EUR_SERIES, 0), "EUR", { maximumFractionDigits: 0 })}
             />
             <KpiCard
-              label="EUR invoiced, 14 days (partial)"
+              label="EUR invoiced, partial"
               value={formatCurrency(total(EUR_SERIES, 1), "EUR", { maximumFractionDigits: 0 })}
               status="degraded"
             />
             <KpiCard
               label="Data freshness"
               value={<Timestamp value="2026-10-24T09:10:00Z" now={MOCKUP_NOW} />}
+              accent="ok"
             />
             <KpiCard
               label="Analytics state"
@@ -103,10 +104,10 @@ export function CostMockup({
       >
         <div className={styles.charts}>
           <Panel title="Cost in USD" note={<HealthIndicator state="degraded" label="2 gaps" />}>
-            <TimeSeriesChart series={USD_SERIES} variant="area" width={640} height={260} />
+            <TimeSeriesChart series={USD_SERIES} variant="line" width={640} height={260} />
           </Panel>
           <Panel title="Cost in EUR" note={<HealthIndicator state="degraded" label="3 gaps" />}>
-            <TimeSeriesChart series={EUR_SERIES} variant="area" width={640} height={260} />
+            <TimeSeriesChart series={EUR_SERIES} variant="line" width={640} height={260} />
           </Panel>
         </div>
         <Panel title="Daily detail, last 4 billing days" note="Absolute UTC dates">

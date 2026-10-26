@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { tokens } from "@fluentui/react-components";
+import { ErrorState } from "../components";
 import type { ChartSeriesTheme, ChartTheme } from "../styles";
 import type { ChartPoint, ChartSeries, ChartUnit } from "./types";
 import type { MixedSeriesError } from "./validate";
@@ -106,7 +107,12 @@ export interface Plotted {
 
 export function plotPoints(points: readonly ChartPoint[]): Plotted[] {
   return points
-    .map((p) => ({ ms: Date.parse(p.t), value: p.value, complete: p.complete !== false }))
+    .map((p) => ({
+      ms: Date.parse(p.t),
+      // NaN and Infinity are unknown, exactly like null (see knownValues).
+      value: p.value !== null && Number.isFinite(p.value) ? p.value : null,
+      complete: p.complete !== false,
+    }))
     .filter((p) => Number.isFinite(p.ms))
     .sort((a, b) => a.ms - b.ms);
 }
@@ -207,21 +213,13 @@ export function useMotionAllowed(): boolean {
   return allowed;
 }
 
-/** Minimal, accessible error presentation for invalid chart input. */
+/** Accessible error presentation for invalid chart input (the design-system ErrorState). */
 export function ChartError({ error }: { error: MixedSeriesError }): ReactElement {
   return (
-    <div
-      role="alert"
-      style={{
-        padding: tokens.spacingVerticalM,
-        border: `1px solid ${tokens.colorPaletteRedBorder2}`,
-        color: tokens.colorPaletteRedForeground1,
-        background: tokens.colorPaletteRedBackground1,
-        borderRadius: tokens.borderRadiusMedium,
-      }}
-    >
-      Chart cannot be drawn: {error.message}. Split the series into one chart per unit and currency.
-    </div>
+    <ErrorState
+      title="Chart cannot be drawn"
+      message={`${error.message}. Split the series into one chart per unit and currency.`}
+    />
   );
 }
 

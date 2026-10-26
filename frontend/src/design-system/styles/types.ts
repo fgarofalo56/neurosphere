@@ -32,10 +32,25 @@ export interface ComponentTreatment {
   border: "subtle" | "strong";
   /** Zebra striping in dense tables. */
   tableStripes: boolean;
-  /** Small caps style uppercase labels (KPI captions, table headers). */
+  /**
+   * Uppercase applies ONLY to short labels: KPI captions, table column headers and card section
+   * titles. Never to sentences, status pills or health indicators.
+   */
   uppercaseLabels: boolean;
   /** Corner radius step used by custom cards. */
   radius: "small" | "medium";
+  /** "lifted" cards sit on colorNeutralBackground2 over a darker canvas; "base" uses Background1. */
+  panelSurface: "base" | "lifted";
+  /** "edge" draws a slim status-coloured strip on the leading edge of each KPI card. */
+  kpiAccent: "edge" | "none";
+  /** "tabular" sets tabular numerals on KPI values and numeric table cells. */
+  numerals: "tabular" | "proportional";
+  /** Use the monospace font token for KPI values. */
+  monoNumerals: boolean;
+  /** Most KPI cards laid out on one row before the grid wraps into even rows. */
+  kpiMaxAcross: number;
+  /** Show a "live" freshness indicator in the app header area. */
+  liveIndicator: boolean;
 }
 
 export type StyleOverrides = Readonly<Partial<Record<StyleColourMode, Partial<Theme>>>>;

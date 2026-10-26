@@ -45,7 +45,6 @@ const usePillStyles = makeStyles({
     color: tokens.colorStatusDangerForeground1,
     ...shorthands.borderColor(tokens.colorStatusDangerBorder1),
   },
-  upper: { textTransform: "uppercase", letterSpacing: "0.04em" },
 });
 
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
@@ -59,10 +58,10 @@ export interface StatusPillProps {
 /** Wrapping status label. Meaning is carried by the text; tone is only reinforcement. */
 export function StatusPill({ label, tone = "neutral" }: StatusPillProps): ReactElement {
   const styles = usePillStyles();
-  const { treatment } = useUiStyle();
+  // Never uppercased: pills carry words and sentences, and case is part of their meaning.
   return (
     <span
-      className={mergeClasses(styles.pill, styles[tone], treatment.uppercaseLabels && styles.upper)}
+      className={mergeClasses(styles.pill, styles[tone])}
       data-slot="status-pill"
       data-tone={tone}
     >
