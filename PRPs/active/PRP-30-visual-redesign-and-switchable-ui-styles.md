@@ -585,8 +585,8 @@ Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; 
 | 1 style-foundation | merged | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0; review APPROVED; on integration design-system+theme-requests 179 passed; merge ae9550e | 2026-10-26 |
 | 2 brand-and-component-primitives | merged | worktree-agent-abfe8d48212d2230b | sonnet | 5361ad0: typecheck/lint clean, vitest 679/679, build OK, Snyk 0; review APPROVED; merge 42d3e57 | 2026-10-26 |
 | 3 chart-primitives | merged | worktree-agent-ad516ea5d3efa1e6d | sonnet | bcea132: typecheck/lint clean, vitest 686/687 (reports sharing flake, 3/3 isolated), build OK, Snyk 0; review APPROVED; merge 929abae; on integration typecheck/lint/build OK, vitest 717/717 x7 after 2 contention flakes (reports.test sharing, follow-up to item 8) | 2026-10-26 |
-| 4 mockups-and-approval-checkpoint | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
-| CHECKPOINT mockup approval | todo | | operator | | 2026-10-26 |
+| 4 mockups-and-approval-checkpoint | merged | worktree-agent-abf5489aec670eb83 | sonnet | c20a4d3: typecheck/lint clean, vitest 734/734, build OK, Snyk 0 (demo + script), manifest unchanged, 12 PNGs viewed by orchestrator; review APPROVED; merge d0101bc; on integration touched suites 338 passed | 2026-10-26 |
+| CHECKPOINT mockup approval | blocked | | operator | awaiting operator decision on 12 PNGs in docs/design/prp-30/mockups/ | 2026-10-26 |
 | 5 shell-chrome-demo-and-fixtures | todo | | sonnet | | 2026-10-26 |
 | 6 lane-overview-dashboards-reconciliation | todo | | sonnet | | 2026-10-26 |
 | 7 lane-actions-review-workspaces-sandbox-mcp | todo | | sonnet | | 2026-10-26 |
