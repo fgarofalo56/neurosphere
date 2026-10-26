@@ -250,12 +250,16 @@ def test_write_preserves_existing_bytes(tmp_path: Path) -> None:
     assert code == 0
     updated = target.read_bytes()
     heading = b"## [Unreleased]"
-    split = original.index(heading)
-    # The Unreleased block of the real file is the whole file (no released versions yet), so
-    # the new section lands at end of file; every original byte is a prefix of the result.
-    assert updated.startswith(original)
-    assert b"\n## [0.2.0] - 2026-10-18\n" in updated[len(original) :]
-    assert updated[:split] == original[:split]
+    start = original.index(heading)
+    # The new section is spliced in where the Unreleased block ends: at the next release
+    # heading, or at end of file when the real file has no released version yet.
+    nxt = original.find(b"\n## [", start + len(heading))
+    cut = len(original) if nxt == -1 else nxt + 1
+    assert updated.startswith(original[:cut])
+    assert updated.endswith(original[cut:])
+    assert len(updated) > len(original)
+    middle = updated[cut : len(updated) - (len(original) - cut)]
+    assert b"## [0.2.0] - 2026-10-18\n" in middle
 
 
 def test_insert_before_older_release_keeps_both_sides() -> None:
