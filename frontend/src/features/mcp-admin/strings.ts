@@ -56,6 +56,7 @@ export const STRINGS = {
   },
   enabledYes: "Yes",
   enabledNo: "No",
+  toolsTitle: "Tools",
   noTools: "This server has not advertised any tools. Sync to fetch them.",
   review: {
     open: (tool: string): string => `Review ${tool}`,
@@ -87,6 +88,7 @@ export const STRINGS = {
     cancel: "Cancel",
   },
   errors: {
+    title: "That change was not made",
     forbidden: "You do not have permission to do that.",
     stale: "The server record or the tool changed since you loaded it. Reload and review it again.",
     invalid: "The request was refused as invalid. Check the URL and the values you entered.",

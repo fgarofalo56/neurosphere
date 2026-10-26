@@ -1,11 +1,7 @@
-import {
-  Badge,
-  Button,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
-} from "@fluentui/react-components";
+import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
+import { StatusPill, Timestamp, type StatusTone } from "../../design-system";
+import { StatePanel } from "../workspaces/StatePanel";
 import {
   DependencyTransientError,
   ForbiddenError,
@@ -37,31 +33,32 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{item ? STRINGS.forbiddenItem : STRINGS.forbidden}</MessageBarTitle>
-          {item ? STRINGS.forbiddenItemDetail : STRINGS.forbiddenDetail}
-          {ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <StatePanel
+        tone="warning"
+        title={item ? STRINGS.forbiddenItem : STRINGS.forbidden}
+        data-testid="forbidden-state"
+      >
+        {item ? STRINGS.forbiddenItemDetail : STRINGS.forbiddenDetail}
+        {ref}.
+      </StatePanel>
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-        {onRetry !== undefined ? (
-          <>
-            {" "}
-            <Button size="small" onClick={onRetry}>
-              {STRINGS.retry}
-            </Button>
-          </>
-        ) : null}
-      </MessageBarBody>
-    </MessageBar>
+    <StatePanel
+      tone="danger"
+      title={STRINGS.unavailable}
+      data-testid="unavailable-state"
+      action={
+        onRetry !== undefined ? (
+          <Button size="small" onClick={onRetry}>
+            {STRINGS.retry}
+          </Button>
+        ) : undefined
+      }
+    >
+      {STRINGS.unavailableDetail}
+      {ref}
+    </StatePanel>
   );
 }
 
@@ -89,33 +86,49 @@ export function MutationError({
     text = STRINGS.errors.unavailable;
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="mutation-error">
-      <MessageBarBody>
-        {text}
-        {referenceOf(error)}
-      </MessageBarBody>
-    </MessageBar>
+    <StatePanel tone="danger" title={STRINGS.errors.title} data-testid="mutation-error">
+      {text}
+      {referenceOf(error)}
+    </StatePanel>
   );
 }
 
-export function slaText(slaDueAt: string, now: number = Date.now()): string {
+/** SLA due time as a `Timestamp`, with an "overdue" pill once it has passed. */
+export function SlaDue({
+  slaDueAt,
+  now = Date.now(),
+}: {
+  readonly slaDueAt: string;
+  readonly now?: number;
+}): ReactElement {
   const at = Date.parse(slaDueAt);
-  return !Number.isNaN(at) && at < now ? `${slaDueAt} (${STRINGS.overdue})` : slaDueAt;
+  const overdue = !Number.isNaN(at) && at < now;
+  return (
+    <>
+      <Timestamp value={slaDueAt} now={now} />
+      {overdue ? (
+        <>
+          {" "}
+          <StatusPill label={STRINGS.overdue} tone="danger" />
+        </>
+      ) : null}
+    </>
+  );
 }
 
 export function StateBadge({ state }: { readonly state: string }): ReactElement {
-  const color =
+  const tone: StatusTone =
     state === "approved" || state === "executed"
       ? "success"
       : state === "rejected" || state === "failed" || state === "expired"
         ? "danger"
         : state === "escalated"
           ? "warning"
-          : "informative";
+          : "neutral";
   return (
-    <Badge appearance="tint" color={color} data-testid="state-badge">
-      {state}
-    </Badge>
+    <span data-testid="state-badge">
+      <StatusPill label={state} tone={tone} />
+    </span>
   );
 }
 
@@ -137,18 +150,18 @@ export function DecisionList({ item }: { readonly item: ReviewItemView }): React
             <li key={d.decision_id} data-testid="decision" data-superseded={isSuperseded}>
               <strong>{d.decision}</strong>{" "}
               {isEffective ? (
-                <Badge appearance="filled" color="success" data-testid="decision-effective">
-                  {D.effective}
-                </Badge>
+                <span data-testid="decision-effective">
+                  <StatusPill label={D.effective} tone="success" />
+                </span>
               ) : null}
               {isSuperseded ? (
-                <Badge appearance="outline" color="subtle" data-testid="decision-superseded">
-                  {D.superseded}
-                </Badge>
+                <span data-testid="decision-superseded">
+                  <StatusPill label={D.superseded} />
+                </span>
               ) : null}
               <br />
               {D.reviewer}: {orUnknown(d.reviewer.principal_pseudonym)}; {D.decidedAt}:{" "}
-              {d.decided_at}; {D.reason}: {d.reason}
+              <Timestamp value={d.decided_at} />; {D.reason}: {d.reason}
             </li>
           );
         })}

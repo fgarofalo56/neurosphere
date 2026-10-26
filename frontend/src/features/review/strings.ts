@@ -35,6 +35,7 @@ export const STRINGS = {
     "The service could not be reached. This is not an empty queue. Try again in a moment.",
   reference: "reference",
   detail: {
+    facts: "Details",
     kind: "Kind",
     state: "State",
     subject: "Subject",
@@ -59,6 +60,7 @@ export const STRINGS = {
     final: "This item is closed; no further decisions can be made.",
   },
   form: {
+    title: "Your decision",
     reasonLabel: "Reason for your decision",
     approve: "Approve",
     reject: "Reject",
@@ -67,6 +69,7 @@ export const STRINGS = {
     needsHash: "The confirmation for this change is not available yet.",
   },
   errors: {
+    title: "The decision was not recorded",
     forbiddenDecision: (decision: string): string =>
       `You don't have permission to ${decision} this item`,
     forbiddenClaim: "You don't have permission to claim this item",

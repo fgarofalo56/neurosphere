@@ -1,7 +1,9 @@
-import { Button } from "@fluentui/react-components";
+import { Button, makeStyles, tokens } from "@fluentui/react-components";
 import { type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
-import { PageTemplate } from "../../design-system";
+import { EmptyState, LoadingState, PageTemplate, StatusPill, Timestamp } from "../../design-system";
+import { Panel } from "../workspaces/Panel";
+import { RowTable } from "../workspaces/RowTable";
 import {
   MutationError,
   QueryErrorState,
@@ -20,6 +22,11 @@ import { MCP_ADMIN_LIST_ROUTE } from "./paths";
 import { STRINGS } from "./strings";
 import type { ServerView, ToolList } from "./types";
 
+const useStyles = makeStyles({
+  stack: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
+  buttons: { display: "flex", flexWrap: "wrap", columnGap: tokens.spacingHorizontalS },
+});
+
 function ToolsTable({
   serverId,
   tools,
@@ -27,46 +34,53 @@ function ToolsTable({
   readonly serverId: string;
   readonly tools: ToolList;
 }): ReactElement {
-  if (tools.items.length === 0) return <p data-testid="no-tools">{STRINGS.noTools}</p>;
+  if (tools.items.length === 0) {
+    return (
+      <div data-testid="no-tools">
+        <EmptyState title={STRINGS.noTools} />
+      </div>
+    );
+  }
   return (
-    <table aria-label={STRINGS.headers.tool}>
-      <thead>
-        <tr>
-          <th scope="col">{STRINGS.headers.tool}</th>
-          <th scope="col">{STRINGS.headers.state}</th>
-          <th scope="col">{STRINGS.headers.enabled}</th>
-          <th scope="col">{STRINGS.headers.hash}</th>
-          <th scope="col">{STRINGS.headers.actions}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {tools.items.map((tool) => (
-          <tr key={tool.name} data-testid="tool-row" data-tool={tool.name}>
-            <td>{tool.name}</td>
-            <td>
-              <ToolStateBadge state={tool.state} />
-            </td>
-            <td data-testid="tool-enabled">
+    <RowTable
+      label={STRINGS.headers.tool}
+      rows={tools.items}
+      getRowId={(tool) => tool.name}
+      rowTestId="tool-row"
+      rowAttrs={(tool) => ({ "data-tool": tool.name })}
+      columns={[
+        { key: "tool", header: STRINGS.headers.tool, render: (tool) => tool.name },
+        {
+          key: "state",
+          header: STRINGS.headers.state,
+          render: (tool) => <ToolStateBadge state={tool.state} />,
+        },
+        {
+          key: "enabled",
+          header: STRINGS.headers.enabled,
+          render: (tool) => (
+            <span data-testid="tool-enabled">
               {tool.enabled ? STRINGS.enabledYes : STRINGS.enabledNo}
-            </td>
-            <td>
-              <code>{tool.current_hash.slice(0, 19)}</code>
-            </td>
-            <td>
-              {tool.state === "removed" ? null : (
-                <>
-                  {tool.state !== "approved" ? (
-                    <ToolReviewDialog serverId={serverId} etag={tools.etag} tool={tool} />
-                  ) : (
-                    <RevokeToolDialog serverId={serverId} etag={tools.etag} tool={tool} />
-                  )}
-                </>
-              )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            </span>
+          ),
+        },
+        {
+          key: "hash",
+          header: STRINGS.headers.hash,
+          render: (tool) => <code>{tool.current_hash.slice(0, 19)}</code>,
+        },
+        {
+          key: "actions",
+          header: STRINGS.headers.actions,
+          render: (tool) =>
+            tool.state === "removed" ? null : tool.state !== "approved" ? (
+              <ToolReviewDialog serverId={serverId} etag={tools.etag} tool={tool} />
+            ) : (
+              <RevokeToolDialog serverId={serverId} etag={tools.etag} tool={tool} />
+            ),
+        },
+      ]}
+    />
   );
 }
 
@@ -77,13 +91,14 @@ function ServerActions({
   readonly server: ServerView;
   readonly etag: string | null;
 }): ReactElement {
+  const styles = useStyles();
   const invalidate = useInvalidateMcpAdmin();
   const sync = useSyncServer();
   const update = useUpdateServer();
   const error = sync.error ?? update.error;
   return (
     <>
-      <p>
+      <div className={styles.buttons}>
         <Button
           appearance="primary"
           data-testid="sync-server"
@@ -93,7 +108,7 @@ function ServerActions({
           }
         >
           {STRINGS.sync.action}
-        </Button>{" "}
+        </Button>
         <Button
           data-testid="toggle-server"
           disabled={etag === null || update.isPending}
@@ -111,7 +126,7 @@ function ServerActions({
         >
           {server.status === "active" ? STRINGS.toggle.disable : STRINGS.toggle.enable}
         </Button>
-      </p>
+      </div>
       {sync.isSuccess ? (
         <p role="status" data-testid="sync-result">
           {STRINGS.sync.done(
@@ -127,6 +142,7 @@ function ServerActions({
 }
 
 function DetailBody({ serverId }: { readonly serverId: string }): ReactElement {
+  const styles = useStyles();
   const server = useMcpServer({ serverId });
   const tools = useMcpTools({ serverId });
   const failure = server.error ?? tools.error;
@@ -142,21 +158,41 @@ function DetailBody({ serverId }: { readonly serverId: string }): ReactElement {
     );
   const serverData = server.data;
   const toolData = tools.data;
-  if (serverData === undefined || toolData === undefined)
-    return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (serverData === undefined || toolData === undefined) {
+    return (
+      <div aria-busy="true" data-testid="loading-state">
+        <LoadingState label={STRINGS.loading} rows={5} />
+      </div>
+    );
+  }
   return (
-    <>
-      <dl>
-        <dt>{STRINGS.headers.url}</dt>
-        <dd data-testid="server-url">{serverData.url}</dd>
-        <dt>{STRINGS.headers.status}</dt>
-        <dd data-testid="server-status">{STRINGS.status[serverData.status]}</dd>
-        <dt>{STRINGS.headers.lastSynced}</dt>
-        <dd>{serverData.last_synced_at ?? STRINGS.neverSynced}</dd>
-      </dl>
-      <ServerActions server={serverData} etag={toolData.etag} />
-      <ToolsTable serverId={serverId} tools={toolData} />
-    </>
+    <div className={styles.stack}>
+      <Panel compact title={serverData.display_name}>
+        <dl>
+          <dt>{STRINGS.headers.url}</dt>
+          <dd data-testid="server-url">{serverData.url}</dd>
+          <dt>{STRINGS.headers.status}</dt>
+          <dd data-testid="server-status">
+            <StatusPill
+              label={STRINGS.status[serverData.status]}
+              tone={serverData.status === "active" ? "success" : "neutral"}
+            />
+          </dd>
+          <dt>{STRINGS.headers.lastSynced}</dt>
+          <dd>
+            {serverData.last_synced_at === null ? (
+              STRINGS.neverSynced
+            ) : (
+              <Timestamp value={serverData.last_synced_at} />
+            )}
+          </dd>
+        </dl>
+        <ServerActions server={serverData} etag={toolData.etag} />
+      </Panel>
+      <Panel title={STRINGS.toolsTitle}>
+        <ToolsTable serverId={serverId} tools={toolData} />
+      </Panel>
+    </div>
   );
 }
 
@@ -169,7 +205,9 @@ export function McpServerDetailPage(): ReactElement {
       actions={<Link to={`/${MCP_ADMIN_LIST_ROUTE}`}>{STRINGS.backToList}</Link>}
     >
       {serverId === "" ? (
-        <p data-testid="server-required">{STRINGS.serverIdRequired}</p>
+        <div data-testid="server-required">
+          <EmptyState title={STRINGS.serverIdRequired} />
+        </div>
       ) : (
         <DetailBody key={serverId} serverId={serverId} />
       )}

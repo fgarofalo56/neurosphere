@@ -1,21 +1,10 @@
-import {
-  Button,
-  Field,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  makeStyles,
-  tokens,
-} from "@fluentui/react-components";
+import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
-import { QueryErrorState, StateBadge, slaText } from "./components";
+import { EmptyState, LoadingState, PageTemplate, StatusPill } from "../../design-system";
+import { RowTable } from "../workspaces/RowTable";
+import { QueryErrorState, SlaDue, StateBadge } from "./components";
 import { useReviewItems } from "./hooks";
 import { STRINGS, orUnknown } from "./strings";
 import { REVIEW_KINDS, REVIEW_STATES, type ReviewItemState, type ReviewKind } from "./types";
@@ -74,44 +63,63 @@ function QueueBody({
       />
     );
   }
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="loading-state">
+        <LoadingState label={STRINGS.loading} rows={5} />
+      </div>
+    );
+  }
   const { items, next_cursor: next } = query.data;
   const H = STRINGS.headers;
   return (
     <>
       {items.length === 0 ? (
-        <p data-testid="empty-state">{STRINGS.empty}</p>
+        <div data-testid="empty-state">
+          <EmptyState title={STRINGS.empty} />
+        </div>
       ) : (
-        <Table aria-label={STRINGS.title}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{H.kind}</TableHeaderCell>
-              <TableHeaderCell>{H.subject}</TableHeaderCell>
-              <TableHeaderCell>{H.state}</TableHeaderCell>
-              <TableHeaderCell>{H.assignee}</TableHeaderCell>
-              <TableHeaderCell>{H.sla}</TableHeaderCell>
-              <TableHeaderCell>{H.escalation}</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.item_id} data-testid="review-row">
-                <TableCell>
-                  <Link to={itemHref(domainId, item.item_id)}>{item.kind}</Link>
-                </TableCell>
-                <TableCell>{item.subject_ref}</TableCell>
-                <TableCell>
-                  <StateBadge state={item.state} />
-                </TableCell>
-                <TableCell>{item.assignee_pseudonym ?? STRINGS.unassigned}</TableCell>
-                <TableCell data-testid="sla-due">{slaText(item.sla_due_at)}</TableCell>
-                <TableCell data-testid="escalation-level">
-                  {orUnknown(item.escalation_level)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <RowTable
+          label={STRINGS.title}
+          rows={items}
+          getRowId={(item) => item.item_id}
+          rowTestId="review-row"
+          columns={[
+            {
+              key: "kind",
+              header: H.kind,
+              render: (item) => <Link to={itemHref(domainId, item.item_id)}>{item.kind}</Link>,
+            },
+            { key: "subject", header: H.subject, render: (item) => item.subject_ref },
+            { key: "state", header: H.state, render: (item) => <StateBadge state={item.state} /> },
+            {
+              key: "assignee",
+              header: H.assignee,
+              render: (item) => item.assignee_pseudonym ?? STRINGS.unassigned,
+            },
+            {
+              key: "sla",
+              header: H.sla,
+              render: (item) => (
+                <span data-testid="sla-due">
+                  <SlaDue slaDueAt={item.sla_due_at} />
+                </span>
+              ),
+            },
+            {
+              key: "escalation",
+              header: H.escalation,
+              render: (item) => (
+                <span data-testid="escalation-level">
+                  <StatusPill
+                    label={orUnknown(item.escalation_level)}
+                    tone={item.escalation_level > 0 ? "warning" : "neutral"}
+                  />
+                </span>
+              ),
+            },
+          ]}
+        />
       )}
       <nav aria-label="Pagination" className={styles.pager}>
         <Button disabled={cursors.length <= 1} onClick={() => setCursors((c) => c.slice(0, -1))}>
@@ -183,7 +191,9 @@ export function ReviewQueuePage(): ReactElement {
       }
     >
       {domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         <QueueBody
           key={`${domainId}|${kind}|${state}`}

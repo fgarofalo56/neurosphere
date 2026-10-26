@@ -2,6 +2,7 @@ import { Button, MessageBar, MessageBarBody } from "@fluentui/react-components";
 import { useRef, useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../../api/index.js";
+import { Panel } from "../workspaces/Panel";
 import { ActionError, ConfirmationDialog } from "./components";
 import { useConfirmIntent, usePresentConfirmation, useValidateIntent } from "./hooks";
 import { STRINGS } from "./strings";
@@ -65,7 +66,7 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
 
   const state = view.intent.state;
   return (
-    <div data-testid="workflow">
+    <Panel compact data-testid="workflow">
       {view.requires_approval ? <p>{STRINGS.detail.requiresApproval}</p> : null}
       {view.self_approval_forbidden ? <p>{STRINGS.detail.selfApprovalForbidden}</p> : null}
       {state === "drafted" ? (
@@ -123,6 +124,6 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
           }}
         />
       ) : null}
-    </div>
+    </Panel>
   );
 }

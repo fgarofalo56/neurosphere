@@ -183,9 +183,12 @@ describe("reviewer queue", () => {
     const rendered = await screen.findAllByTestId("review-row");
     expect(rendered).toHaveLength(2);
     const first = rendered[0];
-    expect(first && within(first).getByTestId("sla-due").textContent).toBe(
-      "2020-01-01T00:00:00Z (overdue)",
-    );
+    const sla = first && within(first).getByTestId("sla-due");
+    // A Timestamp (relative text plus the absolute UTC value), never the raw ISO string.
+    expect(sla?.textContent).not.toContain("2020-01-01T00:00:00Z");
+    expect(sla?.textContent).toContain("2020-01-01 00:00 UTC");
+    expect(sla?.querySelector("time")?.getAttribute("datetime")).toBe("2020-01-01T00:00:00.000Z");
+    expect(sla?.textContent).toContain("overdue");
     expect(first && within(first).getByTestId("escalation-level").textContent).toBe("2");
     expect(first?.textContent).toContain("rev-1");
     expect(rendered[1]?.textContent).toContain("unassigned");
@@ -212,6 +215,34 @@ describe("reviewer queue", () => {
     expect(q.get("kind")).toBe("relationship");
     expect(q.get("state")).toBe("pending");
     expect(q.has("domain_id")).toBe(false);
+  });
+
+  it("shows an explicit empty state for an empty queue", async () => {
+    setup(QUEUE_PATH, {
+      [`GET ${ITEMS}`]: { status: 200, body: { items: [], next_cursor: null } },
+    });
+    const empty = await screen.findByTestId("empty-state");
+    expect(empty.textContent).toContain("No review items match these filters.");
+    expect(screen.queryByTestId("review-row")).toBeNull();
+    expect(screen.queryByTestId("unavailable-state")).toBeNull();
+  });
+
+  it("shows a loading state while the queue is fetched", () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(reviewRoutes, { initialEntries: [QUEUE_PATH] });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByTestId("loading-state").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByTestId("empty-state")).toBeNull();
   });
 
   it("shows a retryable service-unavailable state on 503, not an empty queue", async () => {
