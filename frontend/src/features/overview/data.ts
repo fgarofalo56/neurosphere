@@ -105,7 +105,7 @@ export const useCostTile = createQueryHook<{ domainId: string }, CostResponse>({
   fetcher: (client, p, signal) =>
     client.get<CostResponse>(
       `/api/v1/dashboards/domains/${enc(p.domainId)}/cost`,
-      { days: 1 },
+      { days: 7 },
       signal,
     ),
 });

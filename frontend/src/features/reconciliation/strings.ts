@@ -20,6 +20,13 @@ export const STRINGS = {
   billingFreshnessLabel: "Billing source freshness",
   noData: "No reconciliation data in this window.",
   domainRequired: "Choose a domain to view reconciliation.",
+  domainRequiredTitle: "Choose a domain",
+  freshnessTitle: "Data freshness",
+  kpiReference: "Reference",
+  coverageChartLabel: "Coverage by source",
+  coverageUnknownTitle: "Coverage is unknown for every source",
+  coverageUnknownBody:
+    "No source reported a coverage figure, so there is nothing to chart. This is not 0%.",
   domainLabel: "Domain",
   daysLabel: "Days",
   apply: "Apply",

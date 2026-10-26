@@ -4,16 +4,16 @@ export const STRINGS = {
   // pin it); the description says what the page is.
   title: "NeuroSphere",
   description: "Overview of the selected domain. Counts with + have more on the next page.",
-  gridLabel: "Domain summary",
   loading: "Loading...",
   loadingDomains: "Loading your domains...",
   pickDomain: "Choose a domain in the header domain switcher to see its summary.",
   unknown: "unknown",
   notLoaded: "not loaded",
+  moreOnNextPage: "more on the next page",
   forbidden: "You do not have access to this data.",
   failed: "This summary could not be loaded.",
   cost: {
-    title: "Cost, last day",
+    label: "Cost, last 7 days",
     link: "Open cost dashboard",
     window: "Per currency, not summed",
   },
@@ -25,5 +25,11 @@ export const STRINGS = {
     approval: "Awaiting approval",
   },
   map: { title: "Map coverage", link: "Open map", asOf: "as of" },
-  reports: { title: "Recent reports", link: "Open reports" },
+  reports: {
+    title: "Reports",
+    link: "Open reports",
+    recent: "Recent reports",
+    emptyTitle: "No reports yet",
+    emptyBody: "Reports created in this domain will be listed here.",
+  },
 } as const;

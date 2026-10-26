@@ -141,7 +141,10 @@ describe("reconciliation view", () => {
     expect(screen.getByTestId("unknown-remainder").textContent).toContain(
       `${STRINGS.unknownRemainderLabel}: 1`,
     );
-    expect(screen.getByTestId("watermark").textContent).toBe("2026-10-19T10:00:00Z");
+    // A Timestamp: the raw ISO rides in `datetime`, never as visible text.
+    const watermark = screen.getByTestId("watermark").querySelector("time");
+    expect(watermark?.getAttribute("datetime")).toBe("2026-10-19T10:00:00.000Z");
+    expect(screen.getByTestId("watermark").textContent).not.toContain("2026-10-19T10:00:00");
     expect(screen.getByTestId("lag").textContent).toBe("90 s");
     expect(screen.getByTestId("billing-freshness").textContent).toBe("unknown");
     expect(screen.getByTestId("incomplete-data")).toBeTruthy();
@@ -201,5 +204,39 @@ describe("reconciliation view", () => {
     const { fetchImpl } = setup("/reconciliation", body());
     expect(screen.getByTestId("domain-required")).toBeTruthy();
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("shows a loading state first, then an error state (not empty data) on 503", async () => {
+    setup(PATH, 503);
+    expect(screen.getByLabelText(STRINGS.loading)).toBeTruthy();
+    expect(await screen.findByTestId("error-state")).toBeTruthy();
+    expect(screen.queryByTestId("reconciliation-view")).toBeNull();
+  });
+
+  it("shows an empty state when there are no references", async () => {
+    setup(PATH, body({ references: [], sources: [] }));
+    expect(await screen.findByTestId("no-data")).toBeTruthy();
+    expect(screen.queryAllByTestId("currency-section")).toHaveLength(0);
+  });
+
+  it("charts coverage per source with unknown as a gap, never a zero-height bar", async () => {
+    setup(PATH, body());
+    const card = within(await screen.findByTestId("currency-section"));
+    // Gateway is known (100%); app and billing are unknown.
+    expect(card.getByRole("img").getAttribute("aria-label")).toContain(STRINGS.coverageChartLabel);
+    expect(card.getAllByTestId("gap-marker")).toHaveLength(2);
+  });
+
+  it("says coverage is unknown, instead of charting zeros, when no source reports it", async () => {
+    const unknownCoverage = (source: SourceLine["source"]) => line({ source, coverage: unknown() });
+    setup(
+      PATH,
+      body({
+        sources: [unknownCoverage("gateway"), unknownCoverage("app"), unknownCoverage("billing")],
+      }),
+    );
+    const card = within(await screen.findByTestId("currency-section"));
+    expect(card.getByTestId("coverage-empty")).toBeTruthy();
+    expect(card.queryByRole("img")).toBeNull();
   });
 });

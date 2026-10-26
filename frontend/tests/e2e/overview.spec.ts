@@ -33,6 +33,19 @@ test("tiles render for the Viewer with per-currency cost and domain-scoped links
   await expect(cost.getByRole("link")).toHaveAttribute("href", `/dashboards/cost?domain_id=${d}`);
 });
 
+test("the cost KPI covers the last 7 days in one call and draws a sparkline per currency series", async ({
+  page,
+}) => {
+  const api = page.waitForResponse(
+    (r) => r.url().includes("/dashboards/domains/") && r.status() === 200,
+  );
+  await page.goto(HOME);
+  expect(new URL((await api).url()).searchParams.get("days")).toBe("7");
+  const row = page.getByTestId("tile-cost").getByTestId("cost-row").first();
+  await expect(row.getByRole("img")).toBeVisible();
+  await expect(page.getByTestId("tile-cost")).toContainText("Cost, last 7 days");
+});
+
 test("a tile link opens its feature on the same domain", async ({ page }) => {
   await page.goto(HOME);
   await page.getByTestId("tile-reports").getByRole("link").click();
