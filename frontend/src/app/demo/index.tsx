@@ -5,6 +5,7 @@
 import { Suspense, lazy, type ReactElement, type ReactNode } from "react";
 import type { AppConfig } from "../config";
 import { DemoBanner } from "./DemoBanner";
+import { MOCKUP_PATH_PREFIX } from "./mockups/paths";
 
 const DEFAULT_API_PORT = "5181";
 
@@ -26,7 +27,6 @@ export const demoConfigLoader = (): Promise<AppConfig> => Promise.resolve(demoCo
 // Static mockup gallery (PRP-30 item 4): rendered instead of the app under /__mockups/...
 // Lazy so the gallery loads only when asked for, and only ever through this demo-only module.
 const MockupGallery = lazy(() => import("./mockups"));
-const MOCKUP_PATH_PREFIX = "/__mockups/";
 
 export function withDemoBanner(app: ReactNode): ReactElement {
   const pathname = window.location.pathname;

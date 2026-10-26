@@ -65,7 +65,8 @@ function NodeGlyph({
   readonly node: MapNode;
   readonly selected: boolean;
 }): ReactElement {
-  const { health } = useUiStyle();
+  const { health, id } = useUiStyle();
+  const glow = id === "ops-console";
   const colours = health[node.health];
   const halo: CSSProperties = { fill: colours.bg, stroke: colours.icon, strokeOpacity: 0.7 };
   const body: CSSProperties = {
@@ -75,6 +76,9 @@ function NodeGlyph({
   const label: CSSProperties = { fill: tokens.colorNeutralForeground1 };
   return (
     <g transform={`translate(${node.x} ${node.y})`} data-node={node.id}>
+      {glow ? (
+        <circle r={27} filter="url(#ops-glow)" opacity={0.75} style={{ fill: colours.icon }} />
+      ) : null}
       <circle r={25} style={halo} strokeWidth={1.5} />
       {selected ? (
         <circle r={31} fill="none" style={{ stroke: tokens.colorBrandStroke1 }} strokeWidth={2} />
@@ -96,6 +100,8 @@ function NodeGlyph({
 function MapSvg(): ReactElement {
   const styles = useStyles();
   const byId = new Map(MAP_NODES.map((n) => [n.id, n]));
+  const { id } = useUiStyle();
+  const ops = id === "ops-console";
   return (
     <svg
       className={styles.svg}
@@ -103,6 +109,25 @@ function MapSvg(): ReactElement {
       role="img"
       aria-label={`Static mockup of the agent map: ${MAP_NODES.length} nodes with health halos and provenance edges`}
     >
+      {ops ? (
+        <>
+          <defs>
+            <filter id="ops-glow" x="-100%" y="-100%" width="300%" height="300%">
+              <feGaussianBlur stdDeviation="7" />
+            </filter>
+            <pattern id="ops-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path
+                d="M40 0H0V40"
+                fill="none"
+                strokeWidth="1"
+                style={{ stroke: tokens.colorNeutralStroke2 }}
+              />
+            </pattern>
+          </defs>
+          <rect width="1000" height="600" style={{ fill: tokens.colorNeutralBackground3 }} />
+          <rect width="1000" height="600" fill="url(#ops-grid)" opacity={0.55} />
+        </>
+      ) : null}
       <g>
         {MAP_EDGES.map(([from, to], i) => {
           const a = byId.get(from);

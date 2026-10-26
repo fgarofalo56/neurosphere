@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { useUiStyle } from "../styles";
-import { linePath } from "./internal";
+import { formatNumber, linePath } from "./internal";
 import { linearScale, niceTicks } from "./scale";
-import type { ChartBasis } from "./types";
+import type { ChartBasis, ChartUnit } from "./types";
 
 export interface SparklineProps {
   /** Ordered values; null is unknown (the line breaks, never 0). */
@@ -10,6 +10,9 @@ export interface SparklineProps {
   /** Accessible name, e.g. "Cost, last 14 days". A short min/max/unknown summary is appended. */
   readonly label: string;
   readonly kind?: ChartBasis | null;
+  /** Unit and currency used to format min/max/latest in the text alternative. */
+  readonly unit?: ChartUnit;
+  readonly currency?: string | null;
   readonly width?: number;
   readonly height?: number;
 }
@@ -18,6 +21,8 @@ export function Sparkline({
   values,
   label,
   kind = null,
+  unit = "count",
+  currency = null,
   width = 96,
   height = 28,
 }: SparklineProps): ReactElement {
@@ -37,10 +42,11 @@ export function Sparkline({
   const xy = values.map((v, i) =>
     v === null || !Number.isFinite(v) ? null : ([x(i), y(v)] as const),
   );
+  const fmt = (v: number): string => formatNumber(v, unit, currency);
   const summary =
     known.length === 0
       ? `${label}: no known values, ${unknown} unknown`
-      : `${label}: min ${Math.min(...known)}, max ${Math.max(...known)}, latest ${known[known.length - 1]}, ${unknown} unknown`;
+      : `${label}: min ${fmt(Math.min(...known))}, max ${fmt(Math.max(...known))}, latest ${fmt(known[known.length - 1] as number)}, ${unknown} unknown`;
   return (
     <svg
       role="img"

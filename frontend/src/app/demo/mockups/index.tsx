@@ -9,10 +9,11 @@ import { CostMockup } from "./CostMockup";
 import { HomeMockup } from "./HomeMockup";
 import { MapMockup } from "./MapMockup";
 import type { MockupMode } from "./MockupFrame";
+import { MOCKUP_PATH_PREFIX } from "./paths";
 
 /** Distinctive marker; the production-exclusion test asserts it never reaches a prod build. */
 export const MOCKUP_MARKER = "__ns_mockups__";
-export const MOCKUP_PATH_PREFIX = "/__mockups/";
+export { MOCKUP_PATH_PREFIX };
 
 export const MOCKUP_PAGES = ["home", "cost-dashboard", "map"] as const;
 export type MockupPage = (typeof MOCKUP_PAGES)[number];

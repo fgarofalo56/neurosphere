@@ -1,5 +1,13 @@
 import { makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
-import { useId, type ReactElement, type ReactNode } from "react";
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useId,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useUiStyle } from "../styles";
 import { PageHeader } from "./PageHeader";
 import { PageToolbar } from "./PageToolbar";
@@ -20,6 +28,7 @@ const useStyles = makeStyles({
   contentCompact: { rowGap: tokens.spacingVerticalS },
   kpis: {
     display: "grid",
+    // Fallback when the card count is unknown; normally overridden inline by kpiGridColumns().
     gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     columnGap: tokens.spacingHorizontalM,
     rowGap: tokens.spacingVerticalM,
@@ -38,6 +47,40 @@ const useStyles = makeStyles({
     rowGap: tokens.spacingVerticalM,
   },
 });
+
+/** Counts KPI children, looking through fragments and arrays; null/false children do not count. */
+export function countKpis(node: ReactNode): number {
+  let n = 0;
+  for (const child of Children.toArray(node)) {
+    if (isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment) {
+      n += countKpis(child.props.children);
+    } else {
+      n += 1;
+    }
+  }
+  return n;
+}
+
+/**
+ * Columns for N KPI cards so rows fill evenly (never one orphan card on the last row): all N across
+ * when they fit under `maxAcross`, otherwise the largest divisor of N not above it (6 cards become
+ * 3x2), otherwise the fewest balanced rows.
+ */
+export function kpiColumns(count: number, maxAcross: number): number {
+  if (count <= 1) return 1;
+  const max = Math.max(1, Math.floor(maxAcross));
+  if (count <= max) return count;
+  for (let c = max; c >= 2; c -= 1) {
+    if (count % c === 0) return c;
+  }
+  return Math.ceil(count / Math.ceil(count / max));
+}
+
+/** Grid track list: `cols` equal columns on wide containers, fewer (never uneven) on narrow ones. */
+function kpiGridStyle(cols: number, gap: string): CSSProperties {
+  const min = `max(150px, calc((100% - ${cols - 1} * ${gap}) / ${cols} - 1px))`;
+  return { gridTemplateColumns: `repeat(auto-fit, minmax(${min}, 1fr))` };
+}
 
 /** Content arrangement: "stack" (default, v1 behaviour), "grid" (auto-fit cards) or "split". */
 export type PageLayout = "stack" | "grid" | "split";
@@ -88,8 +131,9 @@ export function PageTemplate({
 }: PageTemplateProps): ReactElement {
   const styles = useStyles();
   const titleId = useId();
-  const { density } = useUiStyle();
+  const { density, treatment } = useUiStyle();
   const compact = density === "compact";
+  const kpiCols = kpis === undefined ? 1 : kpiColumns(countKpis(kpis), treatment.kpiMaxAcross);
   return (
     <section
       className={mergeClasses(styles.root, compact && styles.rootCompact)}
@@ -112,7 +156,12 @@ export function PageTemplate({
       {kpis === undefined ? null : (
         <div
           className={mergeClasses(styles.kpis, compact && styles.kpisCompact)}
+          style={kpiGridStyle(
+            kpiCols,
+            compact ? tokens.spacingHorizontalS : tokens.spacingHorizontalM,
+          )}
           data-slot="page-kpis"
+          data-kpi-columns={kpiCols}
         >
           {kpis}
         </div>

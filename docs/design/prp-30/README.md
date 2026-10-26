@@ -50,3 +50,39 @@ To look at one live, run `pnpm demo` and open
 `/__mockups/home/ops-console/dark`. Pages are `home`, `cost-dashboard`, `map`; styles are
 `ops-console`, `enterprise-fluent`; modes are `light`, `dark`. The route exists only in demo mode
 and is not in the route manifest or any production build.
+
+## Rework round 1
+
+The operator reviewed the first twelve mockups and asked for five changes. All twelve PNGs were
+re-rendered.
+
+1. **Ops console is a different personality.** It is now a NOC console: near-black canvas
+   (`#080a0d`) with panels lifted one step (`#12161b`) and 1px hairline borders instead of
+   shadows, a slim 40px header with a "LIVE, data 38s old" freshness indicator, a compact
+   184px nav, KPI values in tabular monospace numerals, and a slim status edge strip on each KPI
+   card coloured by health. Charts use a cyan, teal and violet family with a subtle grid; the
+   map canvas is darker with a faint grid and glowing health halos. Light mode keeps the same
+   density and hairlines on a cool grey canvas. Composition differs too: Ops home is one dense
+   6-across KPI row plus a 2/3 - 1/3 split; Enterprise home is a 3x2 KPI card grid, a full
+   width table and two panels. Enterprise Fluent keeps its light-first, soft-elevation,
+   sentence-case direction. New additive treatment fields: `panelSurface`, `kpiAccent`,
+   `numerals`, `monoNumerals`, `kpiMaxAcross`, `liveIndicator`.
+2. **No orphan KPI card.** `PageTemplate` now picks the KPI column count from the card count
+   and the style (`kpiColumns`): 6 across in Ops console, 3x2 in Enterprise Fluent. Odd counts
+   fall back to the fewest balanced rows.
+3. **Uppercase only for short labels.** `StatusPill` is never uppercased. Uppercase remains only
+   for KPI captions, table column headers and card section titles (Ops console).
+4. **Lighter cost charts.** The mockups use the line variant. Invoiced fill opacity dropped to
+   about 0.12 and estimated to about 0.03; estimated is now a dashed, clearly different colour
+   (violet in Ops console, magenta in Enterprise Fluent) from the solid invoiced line, with the
+   legend and the gap and incomplete markers kept. Fixture estimates sit about 12% above invoiced
+   so the lines separate. In the area variant, an estimated series next to another series no
+   longer gets a fill.
+5. **Polish.** The activity table's Item column has a width (`DataTable` columns gained optional
+   `width` and `minWidth`) so it no longer wraps to three lines. The "flat" KPI delta is a thin
+   dash icon instead of a solid block.
+
+Smaller fixes folded in: `UiStyleContext` and `StyleOverrides` are exported from the design
+system root; charts treat NaN and Infinity as unknown; `Sparkline` formats its text alternative
+with optional `unit` and `currency`; the mockup path prefix has a single definition
+(`mockups/paths.ts`); chart input errors use the design-system `ErrorState`.

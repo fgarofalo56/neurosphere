@@ -80,7 +80,7 @@ describe("override guard", () => {
     const theme = resolveStyledTheme(pack, "light", base);
     expect(theme.borderRadiusLarge).toBe("8px");
     const ops = resolveStyledTheme(pack, "dark", UI_STYLES["ops-console"]);
-    expect(ops.colorNeutralBackground3).toBe("#0f1216");
+    expect(ops.colorNeutralBackground3).toBe("#080a0d");
   });
 
   it("drops a deliberately failing override as a whole", () => {

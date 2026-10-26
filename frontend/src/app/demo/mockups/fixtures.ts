@@ -35,7 +35,7 @@ function points(
   }));
 }
 
-const USD_ESTIMATED = [
+const USD_BASE = [
   6120, 6480, 6310, 5990, 6720, 7010, 6850, 6540, 6930, 7280, 7150, 6890, 7420, 7060,
 ];
 const USD_INVOICED = [
@@ -54,7 +54,7 @@ const USD_INVOICED = [
   null,
   null,
 ];
-const EUR_ESTIMATED = [
+const EUR_BASE = [
   1710, 1780, 1690, 1640, 1820, 1900, 1860, 1790, 1850, 1930, 1880, 1840, 1960, 1910,
 ];
 const EUR_INVOICED = [
@@ -73,6 +73,10 @@ const EUR_INVOICED = [
   null,
   null,
 ];
+
+/** Estimates run about 12% above the invoiced series so the two lines read as separate. */
+const USD_ESTIMATED = USD_BASE.map((v) => Math.round(v * 1.12));
+const EUR_ESTIMATED = EUR_BASE.map((v) => Math.round(v * 1.12));
 
 export const USD_SERIES: readonly ChartSeries[] = [
   {

@@ -11,9 +11,9 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useMemo, type ReactElement, type ReactNode } from "react";
-import { UiStyleContext } from "../../../design-system/styles";
 import {
   NeuroSphereWordmark,
+  UiStyleContext,
   getThemePack,
   getUiStyle,
   resolveStyledTheme,
@@ -48,10 +48,28 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground1,
   },
   headerOps: {
-    height: "44px",
+    height: "40px",
     paddingInline: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: tokens.colorNeutralBackground2,
     borderBottom: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+  },
+  live: {
+    display: "inline-flex",
+    alignItems: "center",
+    columnGap: "6px",
+    fontFamily: tokens.fontFamilyMonospace,
+    fontSize: "11px",
+    color: tokens.colorNeutralForeground2,
+    paddingInline: tokens.spacingHorizontalS,
+    paddingBlock: "2px",
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusSmall,
+  },
+  liveDot: {
+    width: "7px",
+    height: "7px",
+    borderRadius: "50%",
+    flexShrink: 0,
   },
   headerEnterprise: {
     height: "56px",
@@ -74,7 +92,7 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
   },
-  search: { width: "280px" },
+  search: { width: "260px" },
   nav: {
     gridArea: "nav",
     boxSizing: "border-box",
@@ -82,7 +100,12 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground2,
     borderRight: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
   },
-  navOps: { width: "208px", paddingBlock: tokens.spacingVerticalS, paddingInline: "6px" },
+  navOps: {
+    width: "184px",
+    paddingBlock: tokens.spacingVerticalS,
+    paddingInline: "6px",
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
   navEnterprise: {
     width: "248px",
     paddingBlock: tokens.spacingVerticalL,
@@ -95,11 +118,11 @@ const useStyles = makeStyles({
     fontWeight: tokens.fontWeightSemibold,
   },
   groupLabelOps: {
-    paddingBlock: "8px 2px",
+    paddingBlock: "10px 2px",
     paddingInline: tokens.spacingHorizontalS,
-    fontSize: "11px",
+    fontSize: "10px",
     textTransform: "uppercase",
-    letterSpacing: "0.08em",
+    letterSpacing: "0.1em",
   },
   groupLabelEnterprise: {
     paddingBlock: "14px 4px",
@@ -112,7 +135,7 @@ const useStyles = makeStyles({
     textAlign: "start",
     borderRadius: tokens.borderRadiusMedium,
   },
-  navButtonOps: { minHeight: "28px", fontSize: tokens.fontSizeBase200 },
+  navButtonOps: { minHeight: "26px", fontSize: tokens.fontSizeBase200 },
   navButtonEnterprise: { minHeight: "36px" },
   navActiveOps: {
     backgroundColor: tokens.colorNeutralBackground3,
@@ -131,7 +154,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground1,
   },
   mainOps: {
-    padding: tokens.spacingHorizontalL,
+    padding: "14px 16px 24px",
     backgroundColor: tokens.colorNeutralBackground3,
   },
   mainEnterprise: {
@@ -146,7 +169,8 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
   },
-  panelCompact: { padding: tokens.spacingHorizontalM, rowGap: tokens.spacingVerticalS },
+  panelCompact: { padding: "12px", rowGap: tokens.spacingVerticalS },
+  panelLifted: { backgroundColor: tokens.colorNeutralBackground2 },
   panelComfortable: { padding: tokens.spacingHorizontalL, rowGap: tokens.spacingVerticalM },
   panelRaised: { boxShadow: tokens.shadow4 },
   panelStrong: { ...shorthands.borderColor(tokens.colorNeutralStroke1) },
@@ -217,7 +241,7 @@ export function MockupFrame({ styleId, mode, active, children }: MockupFrameProp
 
 function Header(): ReactElement {
   const styles = useStyles();
-  const { id } = useUiStyle();
+  const { id, treatment, health } = useUiStyle();
   const ops = id === "ops-console";
   return (
     <header
@@ -229,6 +253,19 @@ function Header(): ReactElement {
         <span className={styles.context}>Domain: contoso-prod (Azure Commercial)</span>
       </div>
       <div className={styles.headerRight}>
+        {treatment.liveIndicator ? (
+          <span className={styles.live} data-slot="live-indicator">
+            <span
+              className={styles.liveDot}
+              style={{
+                backgroundColor: health.ok.icon,
+                boxShadow: `0 0 6px 2px ${health.ok.icon}`,
+              }}
+              aria-hidden="true"
+            />
+            LIVE &middot; data 38s old
+          </span>
+        ) : null}
         <Input
           className={styles.search}
           size={ops ? "small" : "medium"}
@@ -305,6 +342,7 @@ export function Panel({ title, note, children }: PanelProps): ReactElement {
         styles.panel,
         density === "compact" ? styles.panelCompact : styles.panelComfortable,
         treatment.surface === "raised" && styles.panelRaised,
+        treatment.panelSurface === "lifted" && styles.panelLifted,
         treatment.border === "strong" && styles.panelStrong,
         treatment.radius === "small" ? styles.panelSmall : styles.panelMedium,
       )}

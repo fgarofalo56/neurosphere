@@ -9,7 +9,7 @@ import {
   mergeClasses,
   tokens,
 } from "@fluentui/react-components";
-import type { ReactElement, ReactNode } from "react";
+import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { useUiStyle } from "../styles";
 
 const useStyles = makeStyles({
@@ -17,14 +17,30 @@ const useStyles = makeStyles({
   stripe: {
     ":nth-child(even)": { backgroundColor: tokens.colorNeutralBackground2 },
   },
-  upper: { textTransform: "uppercase", letterSpacing: "0.04em" },
+  upper: { textTransform: "uppercase", letterSpacing: "0.06em", fontSize: tokens.fontSizeBase200 },
   cell: { overflowWrap: "anywhere" },
+  tabular: { fontVariantNumeric: "tabular-nums" },
 });
 
 export interface DataTableColumn<T> {
   readonly key: string;
   readonly header: string;
   readonly render: (row: T) => ReactNode;
+  /** Optional column width (any CSS length or percentage), e.g. "40%". */
+  readonly width?: string;
+  /** Optional minimum column width, e.g. "220px". */
+  readonly minWidth?: string;
+}
+
+function widthStyle(c: {
+  readonly width?: string;
+  readonly minWidth?: string;
+}): CSSProperties | undefined {
+  if (c.width === undefined && c.minWidth === undefined) return undefined;
+  return {
+    ...(c.width === undefined ? {} : { width: c.width }),
+    ...(c.minWidth === undefined ? {} : { minWidth: c.minWidth }),
+  };
 }
 
 export interface DataTableProps<T> {
@@ -52,6 +68,7 @@ export function DataTable<T>({ label, columns, rows, getRowId }: DataTableProps<
             <TableHeaderCell
               key={c.key}
               className={mergeClasses(treatment.uppercaseLabels && styles.upper)}
+              style={widthStyle(c)}
             >
               {c.header}
             </TableHeaderCell>
@@ -65,7 +82,14 @@ export function DataTable<T>({ label, columns, rows, getRowId }: DataTableProps<
             className={treatment.tableStripes ? styles.stripe : undefined}
           >
             {columns.map((c) => (
-              <TableCell key={c.key} className={styles.cell}>
+              <TableCell
+                key={c.key}
+                className={mergeClasses(
+                  styles.cell,
+                  treatment.numerals === "tabular" && styles.tabular,
+                )}
+                style={widthStyle(c)}
+              >
                 {c.render(row)}
               </TableCell>
             ))}
