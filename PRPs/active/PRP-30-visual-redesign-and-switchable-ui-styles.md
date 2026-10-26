@@ -582,7 +582,7 @@ Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 style-foundation | todo | | sonnet | | 2026-10-26 |
+| 1 style-foundation | review | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0 | 2026-10-26 |
 | 2 brand-and-component-primitives | todo | | sonnet | | 2026-10-26 |
 | 3 chart-primitives | todo | | sonnet | | 2026-10-26 |
 | 4 mockups-and-approval-checkpoint | todo | | sonnet | | 2026-10-26 |
