@@ -197,7 +197,10 @@ class FakeAz:
     def __call__(self, args: Sequence[str]) -> R:
         a = list(args)
         self.calls.append(a)
-        ok = lambda body="": R(0, json.dumps(body) if body != "" else "", "")  # noqa: E731
+
+        def ok(body: object = "") -> R:
+            return R(0, json.dumps(body) if body != "" else "", "")
+
         h2, h3 = " ".join(a[:2]), " ".join(a[:3])
         if h2 == "cloud show":
             return ok(self.cloud)
