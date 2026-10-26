@@ -812,8 +812,13 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
     - E2: the seed is rebased to a recent window, writes catalog entities, saves an operator report, and handles the `cost-ledger` 409.
   - **Compose fail-fast.** Compose uses `${NS_ENTRA_*:-}` plus a `make stack-up` precheck, not `${VAR:?}`. Compose v5.6.1 interpolates inactive profiles, so `:?` would break emulator-only `up`.
 - Descoped items: none.
-- OPEN gates, not run:
-  - `p29_entra_local.py --apply` against `neurosphere-api-dev`. This is a shared tenant change and needs operator approval.
-  - The headed real-Entra Playwright run (`frontend/playwright.real-stack.config.ts`).
-  - The live copilot call. This belongs to PRP-32, and Commercial copilot is also gated off by the capability matrix (#132).
+- Live gates closed 2026-10-25, with operator approval:
+  - **Entra.** `az ad sp create` created the missing service principal for `neurosphere-api-dev`. Then `NS_LIVE_APPROVED=1 p29_entra_local.py --apply --assign-self admin` added SPA redirect URIs `http://localhost:5173` and `:8080`, plus the five app roles, and assigned `admin`. Token v2 was already set. A re-run reported "no change".
+  - **Headed real-Entra Playwright run** (`frontend/playwright.real-stack.config.ts`, port 8082): **27 passed**. The operator held policy grants `admin` + `domain_steward`; review queues need a reviewer role, by design.
+  - The run first surfaced and fixed four defects:
+    - `az.cmd` and `cmd.exe` mangled the Graph URL, so `p29_entra_local` now calls the CLI's bundled Python.
+    - Chromium hung on `localhost`, which resolves to `::1` first. The config now maps `localhost` to 127.0.0.1 while keeping the origin.
+    - The recommendations detail page crashed on contract `null`s (`projected_estimate: null`). The mock API omits nulls, so the mock suite could not catch it. Now null-safe, with a test.
+    - The real-stack spec counted click-through links before the list loaded.
+- OPEN: the live copilot call. It belongs to PRP-32, and Commercial copilot is also gated off by the capability matrix (#132).
 - Follow-ups: #130 (alias removal and headers), #131 (authz and composition hardening before hosting), #132 (write connectors, lifecycle targets, Commercial copilot matrix), #133 (concurrency and data correctness).

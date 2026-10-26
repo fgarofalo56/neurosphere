@@ -11,11 +11,13 @@ import { defineConfig, devices } from "@playwright/test";
  *   NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec \
  *     playwright test -c playwright.real-stack.config.ts --headed
  *
- * The origin is `localhost`, not `127.0.0.1`: the SPA redirect URIs registered on the Entra app
- * are `http://localhost:<port>` and Entra matches them exactly.
+ * The origin is `localhost`, not `127.0.0.1`: Entra allows `http://` SPA redirect URIs only on
+ * `localhost`. Chromium still resolves `localhost` to 127.0.0.1 (`LOCALHOST_IPV4`), because
+ * `localhost` resolves to `::1` first on Windows and Docker's IPv6 port forward can hang the load.
  */
 const port = Number(process.env["NS_REAL_STACK_PORT"] ?? 8080);
 const origin = `http://localhost:${port}`;
+export const LOCALHOST_IPV4 = ["--host-resolver-rules=MAP localhost 127.0.0.1"];
 
 export default defineConfig({
   testDir: "./tests/real-stack",
@@ -34,5 +36,14 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], headless: false } }],
+  projects: [
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        headless: false,
+        launchOptions: { args: LOCALHOST_IPV4 },
+      },
+    },
+  ],
 });

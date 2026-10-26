@@ -34,37 +34,40 @@ export function EvidenceStatus({ rec }: { readonly rec: Recommendation }): React
   );
 }
 
-export function ownerText(owner: Owner | undefined): string {
-  if (owner === undefined || owner.owner_id === null) return STRINGS.unknown;
+// The contract sends unknown values as `null`, never 0 (and the real API serialises absent
+// optionals as `null`), so every guard below is `== null`: it covers both `null` and `undefined`.
+
+export function ownerText(owner: Owner | null | undefined): string {
+  if (owner == null || owner.owner_id == null) return STRINGS.unknown;
   return `${owner.owner_id} (${owner.resolution})`;
 }
 
-export function coverageText(c: Coverage | undefined): string {
-  if (c === undefined) return STRINGS.unknown;
+export function coverageText(c: Coverage | null | undefined): string {
+  if (c == null) return STRINGS.unknown;
   return `${orUnknown(c.method)}, observed ${fractionText(c.observed_fraction)}`;
 }
 
-export function uncertaintyText(u: Uncertainty | undefined): string {
-  if (u === undefined) return STRINGS.unknown;
+export function uncertaintyText(u: Uncertainty | null | undefined): string {
+  if (u == null) return STRINGS.unknown;
   if (u.method === "not_estimable") return "not estimable";
-  const level = u.level === undefined ? "" : `, level ${u.level}`;
+  const level = u.level == null ? "" : `, level ${u.level}`;
   return `${u.method}: lower ${orUnknown(u.lower)}, upper ${orUnknown(u.upper)}${level}`;
 }
 
 export function EstimateBlock({
   estimate,
 }: {
-  readonly estimate: ProjectedEstimate | undefined;
+  readonly estimate: ProjectedEstimate | null | undefined;
 }): ReactElement {
-  if (estimate === undefined) {
+  if (estimate == null) {
     return (
       <p data-testid="estimate-unknown">
         {STRINGS.estimate}: {STRINGS.unknown}
       </p>
     );
   }
-  const money = (v: string | undefined): string =>
-    v === undefined ? STRINGS.unknown : `${v} ${orUnknown(estimate.currency)}`;
+  const money = (v: string | null | undefined): string =>
+    v == null ? STRINGS.unknown : `${v} ${orUnknown(estimate.currency)}`;
   return (
     <dl data-testid="estimate">
       <dt>Period</dt>

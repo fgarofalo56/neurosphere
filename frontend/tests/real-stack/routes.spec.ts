@@ -98,14 +98,12 @@ const ENTRIES: readonly Entry[] = [
   workspace("viewer"),
 ];
 
-/** Routes whose seeded data is known to be absent for the operator: the reason, as reported. */
-const NO_DATA: Readonly<Record<string, string>> = {
-  "/map": "the seed creates no catalog entities (viewport lists none)",
-  "/map/table": "the seed creates no catalog entities (viewport lists none)",
-  "/replay/traces": "the archive reader looks back 7 days and the seed is dated 2026-10-01..04",
-  "/reports": "seeded reports are private to the analyst persona; a human operator lists none",
-  "/reports/view": "no report is visible to a human operator, so there is nothing to open",
-};
+/**
+ * Routes whose seeded data is known to be absent for the operator: the reason, as reported.
+ * Empty since PRP-29 E2 (recent-dated seed, catalog entities, an operator report). The review
+ * queue needs a reviewer role: grant the operator `domain_steward` as well as `admin`.
+ */
+const NO_DATA: Readonly<Record<string, string>> = {};
 
 const manifest = JSON.parse(
   readFileSync(resolve(process.cwd(), "src/app/route-manifest.json"), "utf8"),
@@ -149,6 +147,9 @@ for (const entry of ENTRIES) {
     for (const domain of domains) {
       if (entry.via !== undefined) {
         await page.goto(withDomain(entry.via.list, domain));
+        await page.locator("main h1").first().waitFor();
+        // The list loads after the heading: settle on a link or the empty state before counting.
+        await page.locator(`${entry.via.link}, [data-testid='empty-state']`).first().waitFor();
         const link = page.locator(entry.via.link).first();
         if ((await link.count()) === 0) continue;
         await link.click();

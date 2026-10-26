@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
+import { LOCALHOST_IPV4 } from "../../playwright.real-stack.config";
 
 /**
  * Waits for a HUMAN to complete the real Entra sign-in in a headed browser window, then saves
@@ -18,7 +19,7 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   const baseURL = config.projects[0]?.use.baseURL;
   if (baseURL === undefined) throw new Error("real-stack config has no baseURL");
 
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: false, args: LOCALHOST_IPV4 });
   try {
     const page = await (await browser.newContext()).newPage();
     // Registered before the first navigation: the answer arrives only after the redirect round
