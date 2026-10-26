@@ -2,7 +2,7 @@ import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, LoadingState, PageTemplate, Timestamp } from "../../design-system";
+import { EmptyState, LoadingState, PageTemplate, Panel, Timestamp } from "../../design-system";
 import { ChartFrame } from "../charts";
 import {
   Citations,
@@ -14,7 +14,6 @@ import {
   ShareDialog,
 } from "./components";
 import { useDeleteReport, useInvalidateReports, useReport, useReportRun } from "./hooks";
-import { Panel } from "./Panel";
 import { REPORTS_LIST_ROUTE } from "./paths";
 import { STRINGS } from "./strings";
 import type { ReportView } from "./types";

@@ -4,6 +4,7 @@ import {
   SkeletonItem,
   Text,
   makeStyles,
+  mergeClasses,
   shorthands,
   tokens,
 } from "@fluentui/react-components";
@@ -24,6 +25,11 @@ const useStyles = makeStyles({
     ...shorthands.borderStyle("solid"),
     ...shorthands.borderColor(tokens.colorStatusDangerBorder1),
     backgroundColor: tokens.colorStatusDangerBackground1,
+  },
+  warning: {
+    ...shorthands.borderStyle("solid"),
+    ...shorthands.borderColor(tokens.colorStatusWarningBorder1),
+    backgroundColor: tokens.colorStatusWarningBackground1,
   },
   title: { fontWeight: tokens.fontWeightSemibold, overflowWrap: "anywhere" },
   skeleton: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
@@ -85,16 +91,27 @@ export interface ErrorStateProps {
   readonly message?: ReactNode;
   /** When set, a "Try again" button calls it. */
   readonly onRetry?: () => void;
+  /** Optional control row (e.g. a Fluent Button with its own label), shown after the message. */
+  readonly action?: ReactNode;
+  /** "warning" for a refused request (403) instead of the default failure look. */
+  readonly tone?: "danger" | "warning";
   /** Rendered as `data-testid` on the root element. */
   readonly testId?: string;
 }
 
 /** Error panel announced to assistive tech (`role="alert"`). */
-export function ErrorState({ title, message, onRetry, testId }: ErrorStateProps): ReactElement {
+export function ErrorState({
+  title,
+  message,
+  onRetry,
+  action,
+  tone = "danger",
+  testId,
+}: ErrorStateProps): ReactElement {
   const styles = useStyles();
   return (
     <div
-      className={`${styles.box} ${styles.error}`}
+      className={mergeClasses(styles.box, tone === "warning" ? styles.warning : styles.error)}
       role="alert"
       data-slot="error-state"
       data-testid={testId}
@@ -102,6 +119,7 @@ export function ErrorState({ title, message, onRetry, testId }: ErrorStateProps)
       <Text className={styles.title}>{title}</Text>
       {message === undefined ? null : <Text>{message}</Text>}
       {onRetry === undefined ? null : <Button onClick={onRetry}>Try again</Button>}
+      {action}
     </div>
   );
 }

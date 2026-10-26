@@ -135,10 +135,9 @@ const useStyles = makeStyles({
   mainEnterprise: {
     paddingBlock: tokens.spacingVerticalXXL,
     paddingInline: tokens.spacingHorizontalXXXL,
-    // Background1, not the mockups' Background2 canvas: pages not yet restyled (PRP-30 items 6-8)
-    // carry brand-tint text that is 4.34:1 on #fafafa. Move to Background2 once they use the
-    // primitives.
-    backgroundColor: tokens.colorNeutralBackground1,
+    // The mockups' canvas: cards (Background1) sit on a Background2 page. Pages use StatusPill
+    // rather than brand-tint text, so contrast holds on it (verified by the a11y suite).
+    backgroundColor: tokens.colorNeutralBackground2,
   },
 });
 

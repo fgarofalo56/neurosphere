@@ -3,15 +3,15 @@ import type { ReactElement } from "react";
 import {
   DataTable,
   EmptyState,
+  formatAbsoluteTime,
   HealthIndicator,
+  Panel,
   StatusPill,
   Timestamp,
-  formatAbsoluteTime,
-  useUiStyle,
   type DataTableColumn,
   type HealthState,
+  useUiStyle,
 } from "../../design-system";
-import { Panel } from "./Panel";
 import { STRINGS, lagText, priceVersionText } from "./strings";
 import type {
   AnalyticsState,
@@ -285,7 +285,7 @@ export function SeriesBlock({
       : []),
   ];
   return (
-    <Panel title={series.label} group data-testid="series-block">
+    <Panel title={series.label} level={3} landmark="group" testId="series-block">
       <div className={styles.total}>
         <span>{STRINGS.totalLabel}:</span>
         <MetricText metric={series.total} unit={unit} />

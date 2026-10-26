@@ -1,20 +1,8 @@
-import {
-  Button,
-  Field,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  makeStyles,
-  tokens,
-} from "@fluentui/react-components";
+import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, LoadingState, PageTemplate, Timestamp, useUiStyle } from "../../design-system";
+import { DataTable, EmptyState, LoadingState, PageTemplate, Timestamp } from "../../design-system";
 import { PublicationBadge, QueryErrorState } from "./components";
 import { useReportList } from "./hooks";
 import { reportViewHref } from "./paths";
@@ -31,61 +19,44 @@ const useStyles = makeStyles({
     columnGap: tokens.spacingHorizontalM,
     rowGap: tokens.spacingVerticalS,
   },
-  stripe: { ":nth-child(even)": { backgroundColor: tokens.colorNeutralBackground2 } },
-  strong: { borderTop: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke1}` },
-  upper: { textTransform: "uppercase", letterSpacing: "0.06em", fontSize: tokens.fontSizeBase200 },
   title: { fontWeight: tokens.fontWeightSemibold, overflowWrap: "anywhere" },
 });
 
-/**
- * The list stays a real table named "Saved reports" (pinned by the a11y specs), with the same
- * density, stripe and border treatment the shared `DataTable` applies, plus a test id per row.
- */
+/** A real table named "Saved reports" (pinned by the a11y specs) with a test id per row. */
 function ReportTable({ items }: { readonly items: readonly ReportView[] }): ReactElement {
   const styles = useStyles();
-  const { density, treatment } = useUiStyle();
   const H = STRINGS.headers;
   return (
-    <Table
-      aria-label={STRINGS.listTitle}
-      size={density === "compact" ? "small" : "medium"}
-      className={treatment.border === "strong" ? styles.strong : undefined}
-    >
-      <TableHeader>
-        <TableRow>
-          {[H.title, H.publication, H.updated].map((h) => (
-            <TableHeaderCell
-              key={h}
-              className={treatment.uppercaseLabels ? styles.upper : undefined}
-            >
-              {h}
-            </TableHeaderCell>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((report) => (
-          <TableRow
-            key={report.id}
-            data-testid="report-row"
-            className={treatment.tableStripes ? styles.stripe : undefined}
-          >
-            <TableCell>
+    <DataTable
+      label={STRINGS.listTitle}
+      rows={items}
+      getRowId={(report) => report.id}
+      getRowProps={() => ({ "data-testid": "report-row" })}
+      columns={[
+        {
+          key: "title",
+          header: H.title,
+          render: (report) => (
+            <>
               <Link className={styles.title} to={reportViewHref(report.domain_id, report.id)}>
                 {report.title}
               </Link>
               {report.is_owner ? <span> ({STRINGS.youAreOwner})</span> : null}
-            </TableCell>
-            <TableCell>
-              <PublicationBadge state={report.publication.state} />
-            </TableCell>
-            <TableCell>
-              <Timestamp value={report.updated_at} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </>
+          ),
+        },
+        {
+          key: "publication",
+          header: H.publication,
+          render: (report) => <PublicationBadge state={report.publication.state} />,
+        },
+        {
+          key: "updated",
+          header: H.updated,
+          render: (report) => <Timestamp value={report.updated_at} />,
+        },
+      ]}
+    />
   );
 }
 

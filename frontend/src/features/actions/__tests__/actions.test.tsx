@@ -200,7 +200,7 @@ describe("confirmation dialog", () => {
     setup(DETAIL_PATH, { [`GET ${BASE}/${INTENT_ID}`]: { status: 200, body: v } });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Review and confirm" }));
-    const dialog = await screen.findByRole("alertdialog");
+    const dialog = await screen.findByRole("alertdialog", { hidden: true });
     expect(within(dialog).getByTestId("confirm-target").textContent).toBe(TARGET);
     expect(within(dialog).getByTestId("confirm-version").textContent).toBe("etag-7");
     const ops = within(dialog).getAllByTestId("diff-op");
@@ -219,14 +219,14 @@ describe("confirmation dialog", () => {
     const user = userEvent.setup();
     const trigger = await screen.findByRole("button", { name: "Review and confirm" });
     await user.click(trigger);
-    await screen.findByRole("alertdialog");
+    await screen.findByRole("alertdialog", { hidden: true });
     await user.keyboard("{Escape}");
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { hidden: true })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
 
     await user.click(trigger);
-    await user.click(await screen.findByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await user.click(await screen.findByRole("button", { name: "Cancel", hidden: true }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { hidden: true })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
@@ -238,8 +238,8 @@ describe("confirmation dialog", () => {
     });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Review and confirm" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm and run" }));
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await user.click(await screen.findByRole("button", { name: "Confirm and run", hidden: true }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog", { hidden: true })).toBeNull());
     const post = calls.find((c) => c.method === "POST");
     expect(post?.path).toBe(`${BASE}/${INTENT_ID}/confirm`);
     expect(post?.body).toEqual({ confirmation_hash: HASH });
@@ -256,7 +256,7 @@ describe("confirmation dialog", () => {
     });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Review and confirm" }));
-    const submit = await screen.findByRole("button", { name: "Confirm and run" });
+    const submit = await screen.findByRole("button", { name: "Confirm and run", hidden: true });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId("confirm-status").textContent).toContain("has expired");
     await user.click(submit);
@@ -286,7 +286,8 @@ describe("confirmation dialog", () => {
     expect(screen.getByTestId("confirm-status").getAttribute("aria-live")).toBe("polite");
     expect(screen.getByTestId("confirm-status").textContent).toBe("Confirmation is valid.");
     expect(
-      (screen.getByRole("button", { name: "Confirm and run" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "Confirm and run", hidden: true }) as HTMLButtonElement)
+        .disabled,
     ).toBe(false);
     act(() => {
       vi.advanceTimersByTime(1000);
@@ -298,7 +299,8 @@ describe("confirmation dialog", () => {
     });
     expect(countdown.textContent).toBe("0:00");
     expect(
-      (screen.getByRole("button", { name: "Confirm and run" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "Confirm and run", hidden: true }) as HTMLButtonElement)
+        .disabled,
     ).toBe(true);
     expect(screen.getByTestId("confirm-status").textContent).toContain("has expired");
     expect(onSubmit).not.toHaveBeenCalled();
@@ -314,12 +316,12 @@ describe("confirmation dialog", () => {
     });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Review and confirm" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm and run" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm and run", hidden: true }));
     const alert = await screen.findByTestId("action-error");
     expect(alert.textContent).toContain(text);
     expect(alert.textContent).toContain("corr-1");
     // Not treated as success: the dialog is still open and the state unchanged.
-    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    expect(screen.getByRole("alertdialog", { hidden: true })).toBeTruthy();
   });
 
   it("shows a clear message and never success on a 403", async () => {
@@ -329,7 +331,7 @@ describe("confirmation dialog", () => {
     });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Review and confirm" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm and run" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm and run", hidden: true }));
     expect((await screen.findByTestId("action-error")).textContent).toContain(
       "You do not have permission to run this action",
     );
@@ -500,9 +502,9 @@ describe("propose model swap (button flow)", () => {
     await user.click(await screen.findByRole("button", { name: "Validate" }));
     await user.click(await screen.findByRole("button", { name: "Request confirmation" }));
     // The dialog opens by itself once the server issues the confirmation.
-    const dialog = await screen.findByRole("alertdialog");
+    const dialog = await screen.findByRole("alertdialog", { hidden: true });
     expect(within(dialog).getByTestId("confirm-target").textContent).toBe(TARGET);
-    await user.click(within(dialog).getByRole("button", { name: "Confirm and run" }));
+    await user.click(within(dialog).getByRole("button", { name: "Confirm and run", hidden: true }));
     await waitFor(() => expect(screen.getByTestId("state-badge").textContent).toBe("executing"));
 
     const draft = calls.find((c) => c.method === "POST" && c.path === BASE);

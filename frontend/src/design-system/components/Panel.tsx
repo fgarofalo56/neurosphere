@@ -1,6 +1,6 @@
 import { makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 import { useId, type ReactElement, type ReactNode } from "react";
-import { useUiStyle } from "../../design-system";
+import { useUiStyle } from "../styles";
 
 const useStyles = makeStyles({
   panel: {
@@ -15,6 +15,7 @@ const useStyles = makeStyles({
     border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
   },
   compact: { padding: tokens.spacingHorizontalM, rowGap: tokens.spacingVerticalXS },
+  natural: { alignItems: "flex-start" },
   lifted: { backgroundColor: tokens.colorNeutralBackground2 },
   raised: { boxShadow: tokens.shadow4 },
   strong: { border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke1}` },
@@ -45,53 +46,84 @@ const useStyles = makeStyles({
 });
 
 export interface PanelProps {
-  readonly title: string;
-  /** Heading level of the title (h2 for a page section, h3 inside one). */
+  /** Section title, rendered as a heading of `level`. Omit for an untitled card. */
+  readonly title?: string;
+  /** Heading level of the title: 2 for a page section (default), 3 inside one. */
   readonly level?: 2 | 3;
-  /** Right-aligned note, e.g. a health indicator or a unit. */
+  /** Accessible name for an untitled card; the card becomes a named `region`. */
+  readonly label?: string;
+  /**
+   * Makes a titled card a named landmark whose name is its title: a `region`, or a `group`
+   * (the role used by series blocks). Without it a titled card exposes no role.
+   */
+  readonly landmark?: "region" | "group";
+  /** Small secondary text on the right of the title row, e.g. a unit. */
   readonly note?: ReactNode;
-  /** Makes the panel a named `group` whose name is its title (used by series blocks). */
-  readonly group?: boolean;
-  readonly "data-testid"?: string;
-  readonly children: ReactNode;
+  /** Controls on the right of the title row, e.g. a Fluent Button. */
+  readonly actions?: ReactNode;
+  /** Tighter padding, and children keep their natural width (buttons, pills). */
+  readonly compact?: boolean;
+  /** Rendered as `data-testid` on the root element. */
+  readonly testId?: string;
+  readonly children?: ReactNode;
 }
 
-/** Card section that follows the active style (surface, border, radius, density). */
+/**
+ * Card section that follows the active UI style: surface, border, radius, label case and density
+ * come from `useUiStyle()`, so both styles look native without per-feature copies.
+ */
 export function Panel({
   title,
-  level = 3,
+  level = 2,
+  label,
+  landmark,
   note,
-  group = false,
-  "data-testid": testId,
+  actions,
+  compact = false,
+  testId,
   children,
 }: PanelProps): ReactElement {
   const styles = useStyles();
   const headingId = useId();
   const { density, treatment } = useUiStyle();
   const Heading = level === 2 ? "h2" : "h3";
+  const named: Record<string, string> = {};
+  if (title !== undefined && landmark !== undefined) {
+    named["aria-labelledby"] = headingId;
+    if (landmark === "group") named["role"] = "group";
+  } else if (label !== undefined) {
+    named["aria-label"] = label;
+  }
+  const hasHead = title !== undefined || note !== undefined || actions !== undefined;
   return (
     <section
       className={mergeClasses(
         styles.panel,
-        density === "compact" && styles.compact,
+        (compact || density === "compact") && styles.compact,
+        compact && styles.natural,
         treatment.surface === "raised" && styles.raised,
         treatment.panelSurface === "lifted" && styles.lifted,
         treatment.border === "strong" && styles.strong,
         treatment.radius === "small" ? styles.radiusSmall : styles.radiusMedium,
       )}
-      {...(group ? { role: "group", "aria-labelledby": headingId } : {})}
+      {...named}
       data-slot="panel"
       data-testid={testId}
     >
-      <div className={styles.head}>
-        <Heading
-          id={headingId}
-          className={mergeClasses(styles.title, treatment.uppercaseLabels && styles.upper)}
-        >
-          {title}
-        </Heading>
-        {note === undefined ? null : <span className={styles.note}>{note}</span>}
-      </div>
+      {hasHead ? (
+        <div className={styles.head}>
+          {title === undefined ? null : (
+            <Heading
+              id={headingId}
+              className={mergeClasses(styles.title, treatment.uppercaseLabels && styles.upper)}
+            >
+              {title}
+            </Heading>
+          )}
+          {note === undefined ? null : <span className={styles.note}>{note}</span>}
+          {actions}
+        </div>
+      ) : null}
       {children}
     </section>
   );

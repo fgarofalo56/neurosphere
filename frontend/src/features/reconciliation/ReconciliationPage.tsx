@@ -22,12 +22,12 @@ import {
   KpiCard,
   LoadingState,
   PageTemplate,
+  Panel,
   StatusPill,
-  useUiStyle,
   type ChartSeries,
+  useUiStyle,
 } from "../../design-system";
 import { FreshTime } from "../dashboards/components";
-import { Panel } from "../dashboards/Panel";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useReconciliation } from "./hooks";
 import { STRINGS, lagText } from "./strings";

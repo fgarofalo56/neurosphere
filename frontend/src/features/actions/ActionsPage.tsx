@@ -2,8 +2,14 @@ import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-compo
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, LoadingState, PageTemplate, StatusPill, Timestamp } from "../../design-system";
-import { RowTable } from "../workspaces/RowTable";
+import {
+  DataTable,
+  EmptyState,
+  LoadingState,
+  PageTemplate,
+  StatusPill,
+  Timestamp,
+} from "../../design-system";
 import { ActionDetail } from "./ActionDetail";
 import { EmergencyBanner, QueryErrorState, StateBadge } from "./components";
 import { useAction, useActionList } from "./hooks";
@@ -81,11 +87,11 @@ function ListBody({
           <EmptyState title={STRINGS.empty} />
         </div>
       ) : (
-        <RowTable
+        <DataTable
           label={STRINGS.title}
           rows={items}
           getRowId={(v) => v.intent.intent_id}
-          rowTestId="action-row"
+          getRowProps={() => ({ "data-testid": "action-row" })}
           columns={[
             {
               key: "kind",
@@ -93,7 +99,7 @@ function ListBody({
               render: (v) => (
                 <span className={styles.kind}>
                   <Link to={detailHref(domainId, v.intent.intent_id)}>{v.intent.action_kind}</Link>
-                  {v.advisory ? <StatusPill label="Advisory" tone="neutral" /> : null}
+                  {v.advisory ? <StatusPill label="Advisory" tone="info" /> : null}
                 </span>
               ),
             },

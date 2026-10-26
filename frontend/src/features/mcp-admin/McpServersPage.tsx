@@ -1,8 +1,14 @@
 import { Button, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
-import { EmptyState, LoadingState, PageTemplate, StatusPill, Timestamp } from "../../design-system";
-import { RowTable } from "../workspaces/RowTable";
+import {
+  DataTable,
+  EmptyState,
+  LoadingState,
+  PageTemplate,
+  StatusPill,
+  Timestamp,
+} from "../../design-system";
 import { QueryErrorState, RegisterServerDialog } from "./components";
 import { useMcpServers } from "./hooks";
 import { mcpServerHref } from "./paths";
@@ -43,11 +49,11 @@ function ListBody(): ReactElement {
           <EmptyState title={STRINGS.empty} />
         </div>
       ) : (
-        <RowTable
+        <DataTable
           label={STRINGS.listTitle}
           rows={items}
           getRowId={(server) => server.id}
-          rowTestId="server-row"
+          getRowProps={() => ({ "data-testid": "server-row" })}
           columns={[
             {
               key: "name",

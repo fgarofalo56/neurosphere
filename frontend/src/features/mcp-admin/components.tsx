@@ -14,8 +14,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
-import { StatusPill, type StatusTone } from "../../design-system";
-import { StatePanel } from "../workspaces/StatePanel";
+import { ErrorState, StatusPill, type StatusTone } from "../../design-system";
 import {
   DependencyTransientError,
   ForbiddenError,
@@ -45,17 +44,23 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <StatePanel tone="warning" title={STRINGS.forbidden} data-testid="forbidden-state">
-        {STRINGS.forbiddenDetail}
-        {ref}.
-      </StatePanel>
+      <ErrorState
+        tone="warning"
+        title={STRINGS.forbidden}
+        testId="forbidden-state"
+        message={
+          <>
+            {STRINGS.forbiddenDetail}
+            {ref}.
+          </>
+        }
+      />
     );
   }
   return (
-    <StatePanel
-      tone="danger"
+    <ErrorState
       title={STRINGS.unavailable}
-      data-testid="unavailable-state"
+      testId="unavailable-state"
       action={
         onRetry !== undefined ? (
           <Button size="small" onClick={onRetry}>
@@ -63,10 +68,13 @@ export function QueryErrorState({
           </Button>
         ) : undefined
       }
-    >
-      {STRINGS.unavailableDetail}
-      {ref}
-    </StatePanel>
+      message={
+        <>
+          {STRINGS.unavailableDetail}
+          {ref}
+        </>
+      }
+    />
   );
 }
 
@@ -81,10 +89,16 @@ export function mutationErrorText(error: ApiError): string {
 
 export function MutationError({ error }: { readonly error: ApiError }): ReactElement {
   return (
-    <StatePanel tone="danger" title={STRINGS.errors.title} data-testid="mutation-error">
-      {mutationErrorText(error)}
-      {referenceOf(error)}
-    </StatePanel>
+    <ErrorState
+      title={STRINGS.errors.title}
+      testId="mutation-error"
+      message={
+        <>
+          {mutationErrorText(error)}
+          {referenceOf(error)}
+        </>
+      }
+    />
   );
 }
 

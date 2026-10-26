@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { StatePanel } from "./StatePanel";
+import { ErrorState } from "../../design-system";
 
 export interface ForbiddenStateProps {
   readonly workspace: string;
@@ -12,10 +12,19 @@ export interface ForbiddenStateProps {
  */
 export function ForbiddenState({ workspace, correlationId }: ForbiddenStateProps): ReactElement {
   return (
-    <StatePanel tone="warning" title="Access denied" data-testid="forbidden-state">
-      The service declined the request for the {workspace} workspace. If you need access, contact
-      your administrator.
-      {correlationId !== undefined && correlationId !== "" ? ` Reference: ${correlationId}.` : ""}
-    </StatePanel>
+    <ErrorState
+      tone="warning"
+      title="Access denied"
+      testId="forbidden-state"
+      message={
+        <>
+          The service declined the request for the {workspace} workspace. If you need access,
+          contact your administrator.
+          {correlationId !== undefined && correlationId !== ""
+            ? ` Reference: ${correlationId}.`
+            : ""}
+        </>
+      }
+    />
   );
 }

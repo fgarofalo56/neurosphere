@@ -1,8 +1,7 @@
 import { makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { ForbiddenError, type ApiError } from "../../api/index.js";
-import { ErrorState, StatusPill } from "../../design-system";
-import { Panel } from "./Panel";
+import { ErrorState, Panel, StatusPill } from "../../design-system";
 import { STRINGS, fractionText, levelText, numberText, orUnknown } from "./strings";
 import type { CalibrationState, Judge, PilotGroundedRate } from "./types";
 
@@ -81,7 +80,7 @@ export function PilotRate({ rate }: { readonly rate: PilotGroundedRate }): React
   const styles = useStyles();
   const estimable = rate.method === "wilson_score" && rate.value !== null;
   return (
-    <Panel id="pilot-heading" title={STRINGS.pilot.title} testId="pilot-rate">
+    <Panel landmark="region" title={STRINGS.pilot.title} testId="pilot-rate">
       <p data-testid="pilot-target">{rate.target_label}</p>
       <dl className={styles.list}>
         <dt className={styles.term}>{STRINGS.pilot.estimate}</dt>

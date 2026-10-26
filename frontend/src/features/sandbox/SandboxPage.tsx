@@ -2,16 +2,16 @@ import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { ForbiddenError } from "../../api/index.js";
 import {
+  DataTable,
   EmptyState,
+  ErrorState,
+  formatNumber,
   KpiCard,
   LoadingState,
   PageTemplate,
+  Panel,
   StatusPill,
-  formatNumber,
 } from "../../design-system";
-import { Panel } from "../workspaces/Panel";
-import { RowTable } from "../workspaces/RowTable";
-import { StatePanel } from "../workspaces/StatePanel";
 import { useSandboxStatus } from "./hooks";
 import { SandboxToggle } from "./SandboxToggle";
 import { STRINGS } from "./strings";
@@ -33,18 +33,17 @@ export function SandboxPage(): ReactElement {
         description={STRINGS.pageDescription}
         actions={<SandboxToggle />}
       >
-        <StatePanel
+        <ErrorState
           tone="warning"
           title={forbidden ? STRINGS.forbidden : STRINGS.unavailable}
-          data-testid="sandbox-error"
+          testId="sandbox-error"
           action={
             forbidden ? undefined : (
               <Button onClick={() => void query.refetch()}>{STRINGS.retry}</Button>
             )
           }
-        >
-          {forbidden ? STRINGS.forbiddenDetail : STRINGS.unavailableDetail}
-        </StatePanel>
+          message={forbidden ? STRINGS.forbiddenDetail : STRINGS.unavailableDetail}
+        />
       </PageTemplate>
     );
   }
@@ -92,11 +91,11 @@ export function SandboxPage(): ReactElement {
         {entries.length === 0 ? (
           <EmptyState title="The sandbox holds no documents" />
         ) : (
-          <RowTable
+          <DataTable
             label={STRINGS.pageTitle}
             rows={entries}
             getRowId={([kind]) => kind}
-            rowTestId="sandbox-row"
+            getRowProps={() => ({ "data-testid": "sandbox-row" })}
             columns={[
               { key: "kind", header: STRINGS.headers.kind, render: ([kind]) => kindLabel(kind) },
               {

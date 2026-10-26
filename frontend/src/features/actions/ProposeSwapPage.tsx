@@ -1,8 +1,7 @@
 import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { useSelectedDomain } from "../../app/domain";
-import { EmptyState, PageTemplate } from "../../design-system";
-import { Panel } from "../workspaces/Panel";
+import { EmptyState, PageTemplate, Panel } from "../../design-system";
 import { ActionDetail } from "./ActionDetail";
 import { ActionError, EmergencyBanner } from "./components";
 import { useDraftIntent } from "./hooks";

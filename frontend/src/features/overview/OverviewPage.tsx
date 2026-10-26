@@ -7,18 +7,18 @@ import { useRoles } from "../../auth/useRoles";
 import {
   EmptyState,
   ErrorState,
+  formatCurrency,
+  formatNumber,
   KpiCard,
   LoadingState,
   PageTemplate,
+  Panel,
   Sparkline,
   Timestamp,
-  formatCurrency,
-  formatNumber,
-  useUiStyle,
   type HealthState,
+  useUiStyle,
 } from "../../design-system";
 import { MetricText } from "../dashboards/components";
-import { Panel } from "../dashboards/Panel";
 import type { Series } from "../dashboards/types";
 import {
   AWAITING_STATES,
@@ -324,7 +324,7 @@ function RecentReports({ domainId }: { readonly domainId: string }): ReactElemen
   const styles = useStyles();
   const q = useReportsTile({ domainId });
   return (
-    <Panel title={STRINGS.reports.recent} level={2} data-testid="recent-reports">
+    <Panel title={STRINGS.reports.recent} level={2} testId="recent-reports">
       {q.isError || q.isPending ? <Problem label={STRINGS.reports.recent} q={q} /> : null}
       {q.data !== undefined && q.data.items.length === 0 ? (
         <EmptyState title={STRINGS.reports.emptyTitle} description={STRINGS.reports.emptyBody} />

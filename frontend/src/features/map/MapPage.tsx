@@ -88,7 +88,7 @@ const useStyles = makeStyles({
 });
 
 const LIVE_TONE: Readonly<Record<LiveStatus, StatusTone>> = {
-  connecting: "neutral",
+  connecting: "info",
   live: "success",
   reconnecting: "warning",
   disconnected: "warning",

@@ -19,8 +19,7 @@ import {
   StaleVersionError,
   type ApiError,
 } from "../../api/index.js";
-import { HealthIndicator, StatusPill, type StatusTone } from "../../design-system";
-import { StatePanel } from "../workspaces/StatePanel";
+import { ErrorState, HealthIndicator, StatusPill, type StatusTone } from "../../design-system";
 import { useEmergencyDisable } from "./hooks";
 import { STRINGS, orUnknown } from "./strings";
 import type { ActionIntent, ActionState, ExecutionView, ProposedDiff } from "./types";
@@ -40,17 +39,23 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <StatePanel tone="warning" title={STRINGS.forbidden} data-testid="forbidden-state">
-        {STRINGS.forbiddenDetail}
-        {ref}.
-      </StatePanel>
+      <ErrorState
+        tone="warning"
+        title={STRINGS.forbidden}
+        testId="forbidden-state"
+        message={
+          <>
+            {STRINGS.forbiddenDetail}
+            {ref}.
+          </>
+        }
+      />
     );
   }
   return (
-    <StatePanel
-      tone="danger"
+    <ErrorState
       title={STRINGS.unavailable}
-      data-testid="unavailable-state"
+      testId="unavailable-state"
       action={
         onRetry !== undefined ? (
           <Button size="small" onClick={onRetry}>
@@ -58,10 +63,13 @@ export function QueryErrorState({
           </Button>
         ) : undefined
       }
-    >
-      {STRINGS.unavailableDetail}
-      {ref}
-    </StatePanel>
+      message={
+        <>
+          {STRINGS.unavailableDetail}
+          {ref}
+        </>
+      }
+    />
   );
 }
 
@@ -90,10 +98,16 @@ export function actionErrorText(error: ApiError): string {
 
 export function ActionError({ error }: { readonly error: ApiError }): ReactElement {
   return (
-    <StatePanel tone="danger" title={STRINGS.errors.title} data-testid="action-error">
-      {actionErrorText(error)}
-      {referenceOf(error)}
-    </StatePanel>
+    <ErrorState
+      title={STRINGS.errors.title}
+      testId="action-error"
+      message={
+        <>
+          {actionErrorText(error)}
+          {referenceOf(error)}
+        </>
+      }
+    />
   );
 }
 

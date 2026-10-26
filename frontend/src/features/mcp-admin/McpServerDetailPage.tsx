@@ -1,9 +1,15 @@
 import { Button, makeStyles, tokens } from "@fluentui/react-components";
 import { type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
-import { EmptyState, LoadingState, PageTemplate, StatusPill, Timestamp } from "../../design-system";
-import { Panel } from "../workspaces/Panel";
-import { RowTable } from "../workspaces/RowTable";
+import {
+  DataTable,
+  EmptyState,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+  Timestamp,
+} from "../../design-system";
 import {
   MutationError,
   QueryErrorState,
@@ -42,12 +48,11 @@ function ToolsTable({
     );
   }
   return (
-    <RowTable
+    <DataTable
       label={STRINGS.headers.tool}
       rows={tools.items}
       getRowId={(tool) => tool.name}
-      rowTestId="tool-row"
-      rowAttrs={(tool) => ({ "data-tool": tool.name })}
+      getRowProps={(tool) => ({ "data-testid": "tool-row", "data-tool": tool.name })}
       columns={[
         { key: "tool", header: STRINGS.headers.tool, render: (tool) => tool.name },
         {
