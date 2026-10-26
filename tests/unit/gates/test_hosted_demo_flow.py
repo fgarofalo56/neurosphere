@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+import httpx
 import pytest
 
 
@@ -257,23 +258,140 @@ def test_seed_access_refuses_without_a_readable_register(env: Any) -> None:
 # --------------------------------------------------------------------------- smoke wiring
 
 
-def test_smoke_delegates_to_the_smoke_module(env: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: dict[str, Any] = {}
-    fake_mod = ModuleType("_hosted_demo_smoke")
+def _smoke_transport(readyz_status: int = 404) -> httpx.MockTransport:
+    config = {
+        "cloud": "AzureCloud",
+        "tenantId": F.TENANT,
+        "clientId": F.APP_ID,
+        "apiBaseUrl": "/",
+        "apiScope": "api://x/access",
+    }
 
-    def run_smoke(**kwargs: Any) -> int:
-        seen.update(kwargs)
-        return 0
+    def handler(request: httpx.Request) -> httpx.Response:
+        host, path = request.url.host, request.url.path
+        if host == "nsdemo-api.azurewebsites.net":
+            raise httpx.ConnectError("private", request=request)
+        if path == "/":
+            return httpx.Response(200, text="<html></html>")
+        if path == "/config.json":
+            return httpx.Response(200, json=config, headers={"cache-control": "no-store"})
+        if path == "/api/v1/me/domains":
+            return httpx.Response(401)
+        if path == "/readyz":
+            return httpx.Response(readyz_status)
+        return httpx.Response(404)
 
-    fake_mod.run_smoke = run_smoke  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "_hosted_demo_smoke", fake_mod)
-    assert env.run("smoke", infra=False) == 0
-    assert seen["frontend_host"] == "nsdemo-web.azurewebsites.net"
-    assert seen["resource_group"] == F.RG
+    return httpx.MockTransport(handler)
 
 
-def test_smoke_failure_is_exit_1(env: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_mod = ModuleType("_hosted_demo_smoke")
-    fake_mod.run_smoke = lambda **_: 1  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "_hosted_demo_smoke", fake_mod)
-    assert env.run("smoke", infra=False) == 1
+def _smoke(env: Any, transport: httpx.MockTransport) -> int:
+    argv = ["smoke", *env.common()]
+    return env.mod.main(
+        argv,
+        runner=env.fake,
+        work_dir=env.tmp / "work",
+        backend_factory=lambda endpoint, database: env.backend,
+        smoke_transport=transport,
+    )
+
+
+def test_smoke_runs_the_smoke_module_and_maps_pass_to_exit_0(env: Any) -> None:
+    assert env.deploy() == 0
+    env.fake.calls.clear()
+    assert _smoke(env, _smoke_transport()) == 0
+    ev = env.evidence("smoke")
+    assert ev["result"] == "PASS"
+    assert ev["details"]["smoke"]["ok"] is True
+    names = {c["name"] for c in ev["details"]["smoke"]["checks"]}
+    assert {"frontend-root", "frontend-config-json", "api-host-refuses-direct"} <= names
+    assert {"site-running:nsdemo-web", "site-health:nsdemo-workers"} <= names
+    assert env.fake.count("monitor", "metrics", "list") == 3
+    webapp_shows = [c for c in env.fake.calls if c[:2] == ["webapp", "show"]]
+    assert {c[c.index("-n") + 1] for c in webapp_shows} == {
+        "nsdemo-web", "nsdemo-api", "nsdemo-workers",
+    }  # fmt: skip
+    assert all(c[c.index("-g") + 1] == F.RG for c in webapp_shows)
+
+
+def test_smoke_failure_is_exit_1_and_names_the_failed_check(env: Any) -> None:
+    assert env.deploy() == 0
+    assert _smoke(env, _smoke_transport(readyz_status=200)) == 1
+    ev = env.evidence("smoke")
+    assert ev["result"] == "FAIL"
+    assert any("readyz-not-proxied" in e for e in ev["errors"])
+    failed = [c for c in ev["details"]["smoke"]["checks"] if not c["passed"]]
+    assert [c["name"] for c in failed] == ["readyz-not-proxied"]
+
+
+def test_smoke_evidence_goes_through_the_scrubber(env: Any) -> None:
+    assert env.deploy() == 0
+    assert _smoke(env, _smoke_transport()) == 0
+    text = next((env.tmp / "ev").glob("*-smoke.json")).read_text(encoding="utf-8")
+    assert F.TENANT not in text and F.APP_ID not in text
+    assert not env.mod.cm.GUID_RE.search(text)
+
+
+# --------------------------------------------------------------------------- ownership
+
+
+def test_pre_existing_group_and_resources_are_not_registered_as_created(env: Any) -> None:
+    foreign = {"id": F._rid("Microsoft.Storage/storageAccounts", "theirs"), "type": "x/y"}
+    env.fake.group_exists = True
+    env.fake.rg_tags = {"owner": "someone-else"}
+    env.fake.live = [foreign]
+    assert env.deploy() == 0
+    assert env.fake.index("group", "create") == -1
+    rows = json.loads(
+        (env.tmp / "state" / "register-hosted-rg-ns-demo-test.json").read_text(encoding="utf-8")
+    )["rows"]
+    by_id = {r["resource_id"].lower(): r for r in rows}
+    assert by_id[foreign["id"].lower()]["ownership"] == "reused"
+    assert by_id[f"/subscriptions/{F.SUB}/resourcegroups/{F.RG}"]["ownership"] == "reused"
+    assert all(by_id[r["id"].lower()]["ownership"] == "created" for r in F.RESOURCES)
+    assert env.evidence("deploy")["details"]["register_not_ours_count"] == 2
+
+
+def test_snapshot_is_taken_before_the_deployment_is_created(env: Any) -> None:
+    assert env.deploy() == 0
+    assert 0 <= env.fake.index("resource", "list") < env.fake.index("deployment", "group", "create")
+
+
+def test_a_new_resource_outside_the_approved_changes_is_not_ours(env: Any) -> None:
+    sneaky = {"id": F._rid("Microsoft.Storage/storageAccounts", "sneaky"), "type": "x/y"}
+    env.fake.appear_on_deploy = [sneaky]
+    assert env.deploy() == 0
+    rows = json.loads(
+        (env.tmp / "state" / "register-hosted-rg-ns-demo-test.json").read_text(encoding="utf-8")
+    )["rows"]
+    by_id = {r["resource_id"].lower(): r for r in rows}
+    assert by_id[sneaky["id"].lower()]["ownership"] == "reused"
+
+
+# --------------------------------------------------------------------------- blank assignment id
+
+
+def test_grant_model_access_fails_loudly_on_a_blank_assignment_id(env: Any) -> None:
+    assert env.deploy() == 0
+    env.fake.blank_assignment_id = True
+    rc = env.run(
+        "grant-model-access", "--foundry-account-id", F.FOUNDRY,
+        "--approve-shared", "foundry-role", infra=False,
+    )  # fmt: skip
+    assert rc == 1
+    rows = json.loads(
+        (env.tmp / "state" / "register-hosted-rg-ns-demo-test.json").read_text(encoding="utf-8")
+    )["rows"]
+    assert all(r["resource_id"].startswith("/") for r in rows)
+    assert not any(r["service"] == "foundry-role" for r in rows)
+    assert env.evidence("grant-model-access")["result"] == "FAIL"
+
+
+def test_seed_access_fails_loudly_on_a_blank_assignment_id(env: Any) -> None:
+    assert env.deploy() == 0
+    env.fake.blank_assignment_id = True
+    assert _seed(env, "--grant") == 1
+    rows = json.loads(
+        (env.tmp / "state" / "register-hosted-rg-ns-demo-test.json").read_text(encoding="utf-8")
+    )["rows"]
+    assert all(r["resource_id"].startswith("/") for r in rows)
+    assert not any(r["service"] == "seed-access" for r in rows)

@@ -172,6 +172,38 @@ def summarize_changes(changes: Sequence[Mapping[str, str]]) -> dict[str, int]:
     return counts
 
 
+def bind_hash(changes_digest: str, shared: Mapping[str, str]) -> str:
+    """Plan hash bound to the shared-resource parameters (normalized, lowercased values).
+
+    Swapping a subnet, DNS zone, Foundry account or Entra client between ``plan`` and ``deploy``
+    changes this hash even when the what-if change list is identical.
+    """
+    material = {k: str(v).strip().lower() for k, v in sorted(shared.items())}
+    blob = json.dumps(
+        {"changes": changes_digest, "shared": material}, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+_ARM_SEGMENT = r"[A-Za-z0-9_.()-]+"
+ARM_ID_RE: Final = re.compile(
+    rf"/subscriptions/{GUID_RE.pattern}/resourceGroups/{_ARM_SEGMENT}"
+    rf"/providers/{_ARM_SEGMENT}(?:/{_ARM_SEGMENT})+",
+    re.IGNORECASE,
+)
+
+
+def is_guid(value: str) -> bool:
+    return GUID_RE.fullmatch(value) is not None
+
+
+def is_arm_id(value: str) -> bool:
+    """A subscription-scoped ARM resource id with plain path segments (no ``..``, no query)."""
+    if ARM_ID_RE.fullmatch(value) is None:
+        return False
+    return not any(seg in (".", "..") for seg in value.split("/"))
+
+
 def parse_shared(value: str) -> list[str]:
     tokens = [t.strip() for t in value.split(",") if t.strip()]
     unknown = [t for t in tokens if t not in SHARED_TOKENS]

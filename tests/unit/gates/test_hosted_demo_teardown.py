@@ -128,6 +128,56 @@ def test_teardown_restores_the_entra_redirect_list(env: Any) -> None:
     assert env.fake.patches[-1] == {"spa": {"redirectUris": ["http://localhost:5173"]}}
 
 
+def test_teardown_keeps_uris_other_people_added_to_the_app_after_deploy(env: Any) -> None:
+    _full_environment(env)
+    other = "https://someone-else.example.invalid/"
+    env.fake.app_spa.append(other)
+    env.fake.patches.clear()
+    assert _teardown(env, "--confirm", DEPLOYMENT_ID) == 0
+    assert env.fake.patches == [{"spa": {"redirectUris": ["http://localhost:5173", other]}}]
+    patch = next(c for c in env.fake.calls if c[:1] == ["rest"] and "patch" in c)
+    assert patch[patch.index("--body") + 1].startswith("@")
+
+
+def test_teardown_sends_nothing_when_the_added_uri_is_already_gone(env: Any) -> None:
+    _full_environment(env)
+    env.fake.app_spa = ["http://localhost:5173"]
+    env.fake.patches.clear()
+    assert _teardown(env, "--confirm", DEPLOYMENT_ID) == 0
+    assert env.fake.patches == []
+
+
+def _foreign_group(env: Any) -> dict[str, str]:
+    foreign = {"id": F._rid("Microsoft.Storage/storageAccounts", "theirs"), "type": "x/y"}
+    env.fake.group_exists = True
+    env.fake.rg_tags = {"owner": "someone-else"}
+    env.fake.live = [foreign]
+    return foreign
+
+
+def test_teardown_refuses_to_touch_a_pre_existing_group_with_foreign_resources(env: Any) -> None:
+    foreign = _foreign_group(env)
+    assert env.deploy() == 0
+    env.fake.calls.clear()
+    assert _teardown(env, "--confirm", DEPLOYMENT_ID) == 2
+    deleters = [c for c in env.fake.calls if "delete" in c[:4] or "remove" in c[:4]]
+    assert deleters == []
+    assert not any(foreign["id"] in arg for call in env.fake.calls for arg in call)
+    assert env.fake.index("group", "delete") == -1
+
+
+def test_teardown_never_deletes_a_pre_existing_group_even_without_foreign_resources(
+    env: Any,
+) -> None:
+    env.fake.group_exists = True
+    env.fake.rg_tags = {"owner": "someone-else"}
+    assert env.deploy() == 0
+    env.fake.calls.clear()
+    assert _teardown(env, "--confirm", DEPLOYMENT_ID) == 0
+    assert env.fake.index("group", "delete") == -1
+    assert env.fake.count("webapp", "delete") == 3
+
+
 def test_teardown_never_deletes_shared_resources_and_never_purges(env: Any) -> None:
     _full_environment(env)
     assert _teardown(env, "--confirm", DEPLOYMENT_ID) == 0

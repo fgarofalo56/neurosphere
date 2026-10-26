@@ -137,12 +137,16 @@ class FakeAz:
         self.calls: list[list[str]] = []
         self.cloud = "AzureCloud"
         self.account = SUB
-        self.group_exists: Any = True
+        self.group_exists: Any = False
+        self.rg_tags: dict[str, str] = {"delete-after": "2026-11-25", "owner": "x"}
+        self.blank_assignment_id = False
+        self.appear_on_deploy: list[dict[str, str]] = []
+        self.budgets: list[str] = []
         self.changes: list[dict[str, Any]] = [
             {"changeType": "Create", "resourceId": r["id"]} for r in RESOURCES
         ]
         self.deploy_state = "Succeeded"
-        self.live: list[dict[str, str]] = [dict(r) for r in RESOURCES]
+        self.live: list[dict[str, str]] = []  # fills when the deployment is created
         self.kv_names: list[str] = []
         self.kv_set_rc = 0
         self.kv_set_files: list[str] = []
@@ -200,10 +204,15 @@ class FakeAz:
             return ok(self.account)
         if h2 == "group exists":
             return ok(self.group_exists)
-        if h2 in ("group create", "group delete"):
+        if h2 == "group create":
+            self.group_exists = True
+            tags = a[a.index("--tags") + 1 : a.index("--output")] if "--tags" in a else []
+            self.rg_tags = dict(t.split("=", 1) for t in tags)
+            return ok({})
+        if h2 == "group delete":
             return ok({})
         if h2 == "group show":
-            return ok({"delete-after": "2026-11-25", "owner": "x"})
+            return ok(self.rg_tags)
         if h3 == "deployment group what-if":
             path = _opt(a, "--parameters").lstrip("@")
             try:
@@ -214,6 +223,10 @@ class FakeAz:
         if h3 == "deployment group create":
             outs = {k: {"type": "String", "value": v} for k, v in OUTPUTS.items()}
             body = {"properties": {"provisioningState": self.deploy_state, "outputs": outs}}
+            have = {r["id"].lower() for r in self.live}
+            self.live += [dict(r) for r in RESOURCES if r["id"].lower() not in have]
+            self.live += [dict(r) for r in self.appear_on_deploy]
+            self.budgets = [BUDGET_ID]
             return ok(body)
         if h3 == "deployment group show":
             return ok({k: {"type": "String", "value": v} for k, v in OUTPUTS.items()})
@@ -237,12 +250,18 @@ class FakeAz:
             self.secret_seen = Path(path).read_text(encoding="utf-8")
             return R(self.kv_set_rc, "", "Forbidden" if self.kv_set_rc else "")
         if h2 == "webapp show":
-            return ok(self.sites[_opt(a, "--name")])
+            name = _opt(a, "--name") or _opt(a, "-n")
+            extra = {"state": "Running", "id": f"{BASE}/Microsoft.Web/sites/{name}"}
+            return ok({**self.sites[name], **extra})
+        if h3 == "monitor metrics list":
+            return ok({"value": [{"timeseries": [{"data": [{"average": 100.0}]}]}]})
         if a[0] == "rest":
             return self._rest(a)
         if h3 == "role assignment list":
             return ok(["/x/existing"] if self.role_present else [])
         if h3 == "role assignment create":
+            if self.blank_assignment_id:
+                return ok({"id": ""})
             rid = f"{_opt(a, '--scope')}/providers/Microsoft.Authorization/roleAssignments/"
             return ok({"id": rid + "dddddddd-0000-0000-0000-" + str(len(self.calls)).zfill(12)})
         if h3 == "role assignment delete":
@@ -261,7 +280,7 @@ class FakeAz:
                 "scope": _opt(a, "--scope"),
             }
             self.cosmos_assignments.append(made)
-            return ok(made)
+            return ok({**made, "id": ""} if self.blank_assignment_id else made)
         if a[:5] == ["cosmosdb", "sql", "role", "assignment", "delete"]:
             self.cosmos_assignments.clear()
             return ok()
@@ -276,7 +295,7 @@ class FakeAz:
     def _rest(self, a: list[str]) -> R:
         method, url = _opt(a, "--method"), _opt(a, "--url")
         if method == "get" and "Consumption/budgets" in url:
-            return R(0, json.dumps([BUDGET_ID]), "")
+            return R(0, json.dumps(self.budgets), "")
         if method == "get":
             return R(0, json.dumps({"id": APP_OBJECT, "spa": {"redirectUris": self.app_spa}}), "")
         if method == "patch":
@@ -313,7 +332,16 @@ class Env:
             "--evidence-dir", str(self.tmp / "ev"), "--state-dir", str(self.tmp / "state"),
         ]  # fmt: skip
 
-    def infra(self) -> list[str]:
+    def infra(self, overrides: dict[str, str] | None = None) -> list[str]:
+        argv = self._infra_base()
+        for flag, value in (overrides or {}).items():
+            if flag in argv:
+                argv[argv.index(flag) + 1] = value
+            else:
+                argv += [flag, value]
+        return argv
+
+    def _infra_base(self) -> list[str]:
         return [
             "--image-tag", "0.1.0-rc.2",
             "--integration-subnet-id", INTEG_SUBNET,
@@ -330,8 +358,14 @@ class Env:
             "--tag-owner", "frank",
         ]  # fmt: skip
 
-    def run(self, command: str, *extra: str, infra: bool = True) -> int:
-        argv = [command, *self.common(), *(self.infra() if infra else []), *extra]
+    def run(
+        self,
+        command: str,
+        *extra: str,
+        infra: bool = True,
+        overrides: dict[str, str] | None = None,
+    ) -> int:
+        argv = [command, *self.common(), *(self.infra(overrides) if infra else []), *extra]
         return self.mod.main(
             argv,
             runner=self.fake,
@@ -452,6 +486,7 @@ def test_deploy_refuses_unknown_shared_token(env: Env) -> None:
 
 
 def test_deploy_without_plan_hash_refuses_after_what_if_with_no_create(env: Env) -> None:
+    env.fake.group_exists = True
     rc = env.run("deploy", "--approve-shared", "hub-subnet,hub-pe,hub-dns,budget")
     assert rc == 2
     assert env.fake.index("deployment", "group", "what-if") != -1
@@ -477,6 +512,70 @@ def test_deploy_never_creates_the_resource_group(env: Env) -> None:
     )
     assert rc == 2
     assert env.fake.index("group", "create") == -1
+
+
+SHARED_SWAPS = [
+    ("--integration-subnet-id", INTEG_SUBNET.replace("rg-hub", "rg-other")),
+    ("--private-endpoint-subnet-id", PE_SUBNET.replace("rg-hub", "rg-other")),
+    ("--cosmos-zone-id", ZONE_IDS["cosmos"].replace("rg-hub", "rg-other")),
+    ("--eventhubs-zone-id", ZONE_IDS["eventhubs"].replace("rg-hub", "rg-other")),
+    ("--blob-zone-id", ZONE_IDS["blob"].replace("rg-hub", "rg-other")),
+    ("--webapps-zone-id", ZONE_IDS["webapps"].replace("rg-hub", "rg-other")),
+    ("--keyvault-zone-id", ZONE_IDS["keyvault"].replace("rg-hub", "rg-other")),
+    ("--foundry-account-id", FOUNDRY),
+    ("--entra-client-id", "bbbbbbbb-0000-0000-0000-0000000000ff"),
+]
+
+
+@pytest.mark.parametrize(("flag", "value"), SHARED_SWAPS)
+def test_swapping_a_shared_resource_after_plan_changes_the_hash_and_refuses(
+    env: Env, flag: str, value: str
+) -> None:
+    digest = env.plan_hash()
+    env.fake.calls.clear()
+    rc = env.run(
+        "deploy", "--approve-plan", digest, "--approve-shared",
+        "hub-subnet,hub-pe,hub-dns,budget", overrides={flag: value},
+    )  # fmt: skip
+    assert rc == 2
+    assert env.fake.index("deployment", "group", "what-if") != -1
+    assert env.fake.index("deployment", "group", "create") == -1
+
+
+def test_shared_values_are_normalized_before_hashing(env: Env) -> None:
+    first = env.plan_hash()
+    for f in (env.tmp / "ev").iterdir():
+        f.unlink()
+    assert env.run("plan", overrides={"--entra-client-id": APP_ID.upper()}) == 0
+    data = json.loads(next((env.tmp / "ev").glob("*-plan.json")).read_text(encoding="utf-8"))
+    assert data["details"]["plan_sha256"] == first
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        ("--entra-client-id", "not-a-guid"),
+        ("--entra-client-id", "bbbbbbbb-0000-0000-0000-000000000001/../x"),
+        ("--entra-tenant-id", "cccccccc-0000-0000-0000-00000000000g"),
+        ("--integration-subnet-id", "/subscriptions/x/y"),
+        ("--private-endpoint-subnet-id", "subnet"),
+        ("--cosmos-zone-id", f"{HUB}/privateDnsZones/../../x"),
+        ("--keyvault-zone-id", f"{HUB}/privateDnsZones/a b"),
+        ("--foundry-account-id", "https://example.invalid/accounts/x"),
+    ],
+)
+def test_malformed_guid_and_resource_id_args_are_refused_with_zero_calls(
+    env: Env, bad: tuple[str, str]
+) -> None:
+    assert env.run("plan", overrides={bad[0]: bad[1]}) == 2
+    assert env.fake.calls == []
+
+
+def test_entra_redirect_and_seed_access_refuse_malformed_guids(env: Env) -> None:
+    argv = ["--entra-client-id", "x'; drop", "--approve-shared", "entra-app"]
+    assert env.run("entra-redirect", *argv, infra=False) == 2
+    assert env.run("seed-access", "--grant", "--principal", "not-a-guid", infra=False) == 2
+    assert env.fake.calls == []
 
 
 def test_grant_model_access_refuses_without_token(env: Env) -> None:

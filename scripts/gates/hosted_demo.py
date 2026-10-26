@@ -39,7 +39,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import importlib
-import inspect
 import json
 import os
 import re
@@ -50,8 +49,11 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlsplit
+
+if TYPE_CHECKING:
+    import httpx
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # pyright: ignore[reportAttributeAccessIssue]
@@ -68,6 +70,17 @@ MUTATING = frozenset(
 )
 _GOV_PREFIXES = ("usgov", "usdod")
 _GUID = re.compile(r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
+_GUID_ARGS = ("entra_tenant_id", "entra_client_id", "principal")
+_ARM_ID_ARGS = (
+    "integration_subnet_id",
+    "pe_subnet_id",
+    "cosmos_zone_id",
+    "eventhubs_zone_id",
+    "blob_zone_id",
+    "webapps_zone_id",
+    "keyvault_zone_id",
+    "foundry_account_id",
+)
 _NOT_FOUND = ("notfound", "not found", "could not be found", "does not exist", "was not found")
 _ARM_API = "https://management.azure.com"
 _BUDGET_API = "2023-05-01"
@@ -232,10 +245,14 @@ def build_parser() -> argparse.ArgumentParser:
         for flag, dest, default, help_text in INFRA_ARGS:
             p.add_argument(flag, dest=dest, default=default, help=help_text)
         p.add_argument("--no-key-vault", action="store_true", help="deployKeyVault=false")
+        p.add_argument(
+            "--foundry-account-id",
+            default="",
+            help="Foundry account ARM id (bound into the plan hash when given)",
+        )
 
     p = sub.add_parser("preflight", parents=[common], help="read-only checks")
     infra(p)
-    p.add_argument("--foundry-account-id", default="", help="Foundry account ARM id")
     p = sub.add_parser("plan", parents=[common], help="create the group, run what-if")
     infra(p)
     p = sub.add_parser("deploy", parents=[common], help="what-if again, then deploy")
@@ -277,6 +294,7 @@ class Ctx:
     approvals: list[dict[str, str]] = field(default_factory=lambda: [])
     errors: list[str] = field(default_factory=lambda: [])
     details: dict[str, Any] = field(default_factory=lambda: {})
+    smoke_transport: httpx.BaseTransport | None = None
 
     @property
     def sub(self) -> str:
@@ -348,6 +366,17 @@ def validate_static(args: argparse.Namespace) -> None:
         )
     if args.command in MUTATING and not cm.OPERATOR_RE.fullmatch(args.operator or ""):
         raise RefusedError("--operator is required (a name or handle, not an email address)")
+    for attr in _GUID_ARGS:
+        value = str(getattr(args, attr, "") or "")
+        if value and not cm.is_guid(value):
+            raise RefusedError(f"--{attr.replace('_', '-')} must be a guid. No changes made.")
+    for attr in _ARM_ID_ARGS:
+        value = str(getattr(args, attr, "") or "")
+        if value and not cm.is_arm_id(value):
+            raise RefusedError(
+                f"--{attr.replace('_', '-')} must be a /subscriptions/... resource id. "
+                "No changes made."
+            )
 
 
 def guard_cloud(ctx: Ctx) -> None:
@@ -413,11 +442,61 @@ def rg_tags(ctx: Ctx, values: dict[str, Any]) -> list[str]:
     ]
 
 
+def plan_state_path(ctx: Ctx) -> Path:
+    return ctx.state_dir / f"plan-{ctx.deployment_id}.json"
+
+
+def read_plan_state(ctx: Ctx) -> dict[str, Any]:
+    try:
+        data = json.loads(plan_state_path(ctx).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}  # pyright: ignore[reportUnknownVariableType]
+
+
+def write_plan_state(ctx: Ctx, digest: str, rg_created: bool) -> None:
+    ctx.state_dir.mkdir(parents=True, exist_ok=True)
+    body = {
+        "deployment_id": ctx.deployment_id,
+        "plan_sha256": digest,
+        "created_rg": rg_created,
+    }
+    plan_state_path(ctx).write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+
+
+def rg_tag_matches(ctx: Ctx) -> bool:
+    tags = ctx.az(
+        "group",
+        "show",
+        "--name",
+        ctx.rg,
+        "--subscription",
+        ctx.sub,
+        "--query",
+        "tags",
+        "-o",
+        "json",
+    )
+    return isinstance(tags, dict) and tags.get("neurosphere:deployment-id") == ctx.deployment_id
+
+
+def rg_is_ours(ctx: Ctx) -> bool:
+    """True only if an earlier ``plan`` created this group and its tag still names us."""
+    return read_plan_state(ctx).get("created_rg") is True and rg_tag_matches(ctx)
+
+
 def ensure_resource_group(ctx: Ctx, values: dict[str, Any]) -> bool:
+    """Create the group if absent. Returns True only when this deployment owns the group."""
     exists = ctx.az("group", "exists", "--name", ctx.rg, "--subscription", ctx.sub, "-o", "json")
     if exists is True:
-        ctx.step("resource-group", "ok", f"{ctx.rg} already exists")
-        return False
+        ours = rg_is_ours(ctx)
+        ctx.step(
+            "resource-group",
+            "ok",
+            f"{ctx.rg} already exists; "
+            + ("created by this deployment" if ours else "pre-existing, will not be registered"),
+        )
+        return ours
     ctx.az(
         "group",
         "create",
@@ -464,10 +543,26 @@ def _deployment_args(ctx: Ctx, verb: str, params: Path) -> list[str]:
     ]
 
 
+def shared_material(ctx: Ctx) -> dict[str, str]:
+    """Shared-resource parameters bound into the plan hash."""
+    a = ctx.args
+    return {
+        "integrationSubnetId": a.integration_subnet_id,
+        "privateEndpointSubnetId": a.pe_subnet_id,
+        "cosmosDnsZoneId": a.cosmos_zone_id,
+        "eventHubsDnsZoneId": a.eventhubs_zone_id,
+        "blobDnsZoneId": a.blob_zone_id,
+        "webAppsDnsZoneId": a.webapps_zone_id,
+        "keyVaultDnsZoneId": a.keyvault_zone_id,
+        "foundryAccountId": a.foundry_account_id,
+        "entraClientId": a.entra_client_id,
+    }
+
+
 def run_what_if(ctx: Ctx, params: Path) -> tuple[list[dict[str, str]], str]:
     out = ctx.az(*_deployment_args(ctx, "what-if", params), "--no-pretty-print")
     changes = cm.normalize_changes(out)
-    digest = cm.changes_hash(changes)
+    digest = cm.bind_hash(cm.changes_hash(changes), shared_material(ctx))
     counts = cm.summarize_changes(changes)
     ctx.step("what-if", "ok", f"{len(changes)} change(s) {counts}")
     return changes, digest
@@ -560,6 +655,43 @@ def list_rg_resources(ctx: Ctx) -> list[dict[str, str]]:
             rid = str(item.get("id", ""))
             found.append({"id": rid, "type": str(item.get("type") or cm.resource_type(rid))})
     return found
+
+
+#: Types ARM creates implicitly (never in a what-if change list) when a Create'd parent needs them.
+_IMPLICIT_CHILD_TYPES = {
+    "microsoft.network/networkinterfaces": "microsoft.network/privateendpoints"
+}
+
+
+def classify_resources(
+    resources: Sequence[dict[str, str]],
+    *,
+    pre_ids: set[str],
+    create_ids: set[str],
+    earlier_created: set[str],
+) -> tuple[set[str], set[str]]:
+    """Split live ids into (ours, not ours).
+
+    Ours = already registered as created by an earlier run of this deployment, or new since the
+    pre-deploy snapshot AND listed as Create in the approved what-if (or an implicit private
+    endpoint NIC while a private endpoint was Create'd). Everything else is not ours.
+    """
+    create_types = {cm.resource_type(i) for i in create_ids}
+    ours: set[str] = set()
+    other: set[str] = set()
+    for r in resources:
+        key = r["id"].lower().rstrip("/")
+        rtype = cm.resource_type(key)
+        implicit = _IMPLICIT_CHILD_TYPES.get(rtype)
+        if key in earlier_created:
+            ours.add(key)
+        elif key not in pre_ids and (
+            key in create_ids or (implicit is not None and implicit in create_types)
+        ):
+            ours.add(key)
+        else:
+            other.add(key)
+    return ours, other
 
 
 # --------------------------------------------------------------------------- preflight
@@ -665,12 +797,14 @@ def cmd_preflight(ctx: Ctx) -> None:
 
 def cmd_plan(ctx: Ctx) -> None:
     values = infra_values(ctx)
-    ensure_resource_group(ctx, values)
+    rg_created = ensure_resource_group(ctx, values)
     params = write_params_file(ctx, values)
     try:
         changes, digest = run_what_if(ctx, params)
     finally:
         params.unlink(missing_ok=True)
+    write_plan_state(ctx, digest, rg_created)
+    ctx.details["resource_group_created_by_plan"] = rg_created
     ctx.details.update(
         plan_sha256=digest, change_counts=cm.summarize_changes(changes), changes=changes
     )
@@ -849,6 +983,12 @@ def cmd_deploy(ctx: Ctx) -> None:
         ctx.approvals.append(
             {"token": "plan-hash", "operator": str(a.operator), "utc": cm.iso(cm.utcnow())}
         )
+        # Ownership evidence is taken BEFORE anything is created: only what is new afterwards
+        # (and was in the approved change list) can be registered as ours.
+        rg_owned = rg_is_ours(ctx)
+        pre_ids = {r["id"].lower().rstrip("/") for r in list_rg_resources(ctx)}
+        pre_budgets = {i.lower().rstrip("/") for i in budget_ids(ctx)}
+        create_ids = {c["resourceId"] for c in changes if c["changeType"] == "Create"}
         result = ctx.az(*_deployment_args(ctx, "create", params))
     finally:
         params.unlink(missing_ok=True)
@@ -861,11 +1001,60 @@ def cmd_deploy(ctx: Ctx) -> None:
         return
     ctx.details["output_names"] = sorted(out)
 
+    endpoint = str(out.get("cosmosEndpoint") or "")
+    book = open_book(ctx, endpoint, str(out.get("cosmosDatabaseName") or ""))
+    book.load()
+    earlier_created = {
+        r.resource_id.lower().rstrip("/") for r in book.rows if r.created_by == "neurosphere"
+    }
     resources = list_rg_resources(ctx)
-    rows = [make_row(ctx, ctx.rg_id, "Microsoft.Resources/resourceGroups", created=True)]
-    rows += [make_row(ctx, r["id"], r["type"], created=True) for r in resources]
+    created_ids, foreign_ids = classify_resources(
+        resources, pre_ids=pre_ids, create_ids=create_ids, earlier_created=earlier_created
+    )
+    if rg_owned:
+        rows = [make_row(ctx, ctx.rg_id, "Microsoft.Resources/resourceGroups", created=True)]
+    else:
+        rows = [
+            make_row(
+                ctx,
+                ctx.rg_id,
+                "Microsoft.Resources/resourceGroups",
+                created=False,
+                consent="pre-existing-resource-group",
+            )
+        ]
+    for r in resources:
+        key = r["id"].lower().rstrip("/")
+        if key in created_ids:
+            rows.append(make_row(ctx, r["id"], r["type"], created=True))
+        else:
+            rows.append(
+                make_row(ctx, r["id"], r["type"], created=False, consent="pre-existing-at-deploy")
+            )
     for rid in budget_ids(ctx):
-        rows.append(make_row(ctx, rid, "Microsoft.Consumption/budgets", created=True))
+        key = rid.lower().rstrip("/")
+        if key not in pre_budgets or key in earlier_created:
+            rows.append(make_row(ctx, rid, "Microsoft.Consumption/budgets", created=True))
+        else:
+            rows.append(
+                make_row(
+                    ctx,
+                    rid,
+                    "Microsoft.Consumption/budgets",
+                    created=False,
+                    consent="pre-existing-at-deploy",
+                )
+            )
+    ctx.details["register_created_count"] = sum(1 for r in rows if r.created_by == "neurosphere")
+    ctx.details["register_not_ours_count"] = len(foreign_ids) + (0 if rg_owned else 1)
+    if foreign_ids or not rg_owned:
+        ctx.step(
+            "ownership",
+            "ok",
+            f"{len(foreign_ids)} pre-existing resource(s) recorded as not ours; "
+            f"resource group {'created by this deployment' if rg_owned else 'pre-existing'}; "
+            "teardown will refuse while foreign resources remain",
+        )
     for rid, token in (
         (a.integration_subnet_id, "hub-subnet"),
         (a.pe_subnet_id, "hub-pe"),
@@ -885,8 +1074,6 @@ def cmd_deploy(ctx: Ctx) -> None:
                 consent=f"approve-shared:{token}",
             )
         )
-    endpoint = str(out.get("cosmosEndpoint") or "")
-    book = open_book(ctx, endpoint, str(out.get("cosmosDatabaseName") or ""))
     book.add(rows)
     problems = book.save()
     ctx.step(
@@ -919,6 +1106,8 @@ def cmd_grant_model_access(ctx: Ctx) -> None:
     principal = str(out.get("apiPrincipalId") or "")
     if not principal:
         raise RefusedError("deployment has no apiPrincipalId output")
+    if not cm.is_guid(principal):
+        raise RefusedError("apiPrincipalId output is not a guid")
     scope = a.foundry_account_id
     existing = ctx.az(
         "role",
@@ -953,7 +1142,7 @@ def cmd_grant_model_access(ctx: Ctx) -> None:
         "-o",
         "json",
     )
-    rid = str((created or {}).get("id", ""))
+    rid = assignment_id(created, "foundry-role")
     ctx.step("foundry-role", "ok", "Cognitive Services OpenAI User assigned")
     book = _book_for_update(ctx)
     book.add(
@@ -970,6 +1159,17 @@ def cmd_grant_model_access(ctx: Ctx) -> None:
         ]
     )
     ctx.errors.extend(book.save())
+
+
+def assignment_id(made: Any, what: str) -> str:
+    """The id of a just-created role assignment; empty means it cannot be registered or removed."""
+    rid = str(made.get("id", "")) if isinstance(made, dict) else ""  # pyright: ignore[reportUnknownMemberType]
+    if not rid.startswith("/"):
+        raise AzError(
+            f"{what}: az returned no assignment id, so the assignment cannot be registered; "
+            "it may exist in Azure and must be checked and removed by the operator"
+        )
+    return rid
 
 
 def _book_for_update(ctx: Ctx) -> cm.RegisterBook:
@@ -990,13 +1190,22 @@ def cmd_entra_redirect(ctx: Ctx) -> None:
     query = f"/applications(appId='{a.entra_client_id}')?$select=id,spa"
     app = ctx.az("rest", "--method", "get", "--url", f"{_GRAPH}{query}", "-o", "json") or {}
     object_id = str(app.get("id", ""))
+    if not cm.is_guid(object_id):
+        raise AzError("Graph returned an application object id that is not a guid")
     prior = [str(u) for u in (app.get("spa") or {}).get("redirectUris") or []]
     state_file = ctx.state_dir / f"entra-prior-{ctx.deployment_id}.json"
     added = redirect not in prior
     if added and not state_file.exists():
         ctx.state_dir.mkdir(parents=True, exist_ok=True)
         state_file.write_text(
-            json.dumps({"app_object_id": object_id, "prior_spa_redirect_uris": prior}, indent=2),
+            json.dumps(
+                {
+                    "app_object_id": object_id,
+                    "prior_spa_redirect_uris": prior,
+                    "added_redirect_uri": redirect,
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
     if not added:
@@ -1007,6 +1216,8 @@ def cmd_entra_redirect(ctx: Ctx) -> None:
 
 
 def _patch_spa(ctx: Ctx, object_id: str, uris: list[str]) -> None:
+    if not cm.is_guid(object_id):
+        raise AzError("application object id is not a guid; refusing to build a Graph URL")
     ctx.work_dir.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix="entra-", suffix=".json", dir=ctx.work_dir)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -1074,13 +1285,20 @@ def cmd_seed_access(ctx: Ctx) -> None:
             "seed grants are limited to NeuroSphere-created resources in the register"
         )
     ids: list[str] = []
-    for kind, role, scope in _seed_scopes(ctx, out):
-        if a.grant:
-            created = _grant_one(ctx, kind, role, scope, account, a.principal)
-            if created:
-                ids.append(created)
-        else:
-            _revoke_one(ctx, kind, role, scope, account, a.principal)
+    try:
+        for kind, role, scope in _seed_scopes(ctx, out):
+            if a.grant:
+                created = _grant_one(ctx, kind, role, scope, account, a.principal)
+                if created:
+                    ids.append(created)
+            else:
+                _revoke_one(ctx, kind, role, scope, account, a.principal)
+    except AzError:
+        # Grants made before the failure are real: register them so teardown can remove them.
+        if ids:
+            book.add([make_row(ctx, rid, "seed-access", created=True) for rid in ids])
+            ctx.errors.extend(book.save())
+        raise
     if a.grant:
         ctx.details["expires_hint_hours"] = a.expires_hours
         ctx.step("seed-access", "ok", f"granted; revoke within {a.expires_hours}h with --revoke")
@@ -1145,7 +1363,7 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
             "json",
         )
         ctx.step("grant:cosmos", "ok", "Data Contributor at database scope")
-        return str((made or {}).get("id", ""))
+        return assignment_id(made, "seed-access cosmos")
     existing = ctx.az(
         "role",
         "assignment",
@@ -1180,7 +1398,7 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
         "json",
     )
     ctx.step("grant:rbac", "ok", f"role {role[:8]} granted")
-    return str((made or {}).get("id", ""))
+    return assignment_id(made, "seed-access rbac")
 
 
 def _revoke_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, principal: str) -> None:
@@ -1232,29 +1450,36 @@ def delete_cosmos_assignment(ctx: Ctx, assignment_id: str, account: str) -> None
 # --------------------------------------------------------------------------- smoke
 
 
-def cmd_smoke(ctx: Ctx, smoke_module: Any) -> None:
+def cmd_smoke(ctx: Ctx) -> None:
+    # Imported here (not at module top) so that a missing smoke module is a clean refusal in
+    # `run`, before any az call.
+    import _hosted_demo_smoke as sm
+
     out = get_outputs(ctx)
-    kwargs: dict[str, Any] = {
-        "runner": ctx.run_az,
-        "subscription": ctx.sub,
-        "resource_group": ctx.rg,
-        "frontend_host": str(out.get("frontendHostName") or ""),
-        "api_host": str(out.get("apiHostName") or ""),
-        "frontend_site": str(out.get("frontendSiteName") or ""),
-        "api_site": str(out.get("apiSiteName") or ""),
-        "workers_site": str(out.get("workersSiteName") or ""),
-        "evidence_dir": Path(ctx.args.evidence_dir),
-        "operator": str(ctx.args.operator),
-    }
-    func = smoke_module.run_smoke
-    params = inspect.signature(func).parameters
-    if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
-        kwargs = {k: v for k, v in kwargs.items() if k in params}
-    result = func(**kwargs)
-    ok = result is None or result is True or result == 0
-    ctx.step("smoke", "ok" if ok else "failed", "delegated to _hosted_demo_smoke")
-    if not ok:
-        ctx.errors.append("smoke checks failed")
+    frontend_host = str(out.get("frontendHostName") or "")
+    api_host = str(out.get("apiHostName") or "")
+    if not frontend_host or not api_host:
+        raise RefusedError("deployment outputs lack frontendHostName/apiHostName")
+    names = [str(out.get(k) or "") for k in ("frontendSiteName", "apiSiteName", "workersSiteName")]
+    sites = [sm.SiteTarget(name=n, resource_group=ctx.rg) for n in names if n]
+
+    def az_runner(args: Sequence[str]) -> sm.AzResult:
+        res = ctx.run_az(args)
+        return sm.AzResult(res.rc, res.stdout, res.stderr)
+
+    result = sm.run_smoke(
+        frontend_url=f"https://{frontend_host}",
+        api_host=api_host,
+        sites=sites,
+        az_runner=az_runner,
+        transport=ctx.smoke_transport,
+    )
+    for check in result.checks:
+        ctx.step(f"smoke:{check.name}", "ok" if check.passed else "failed", check.detail)
+    ctx.details["smoke"] = result.to_dict()
+    if not result.ok:
+        names_failed = [c.name for c in result.failures] or ["no checks ran"]
+        ctx.errors.append("smoke checks failed: " + ", ".join(names_failed))
 
 
 # --------------------------------------------------------------------------- teardown
@@ -1319,8 +1544,30 @@ def cmd_teardown(ctx: Ctx) -> None:
     state_file = ctx.state_dir / f"entra-prior-{ctx.deployment_id}.json"
     if state_file.exists():
         saved = json.loads(state_file.read_text(encoding="utf-8"))
-        _patch_spa(ctx, str(saved["app_object_id"]), list(saved["prior_spa_redirect_uris"]))
-        ctx.step("entra-restore", "ok", "prior spa redirect list restored")
+        object_id = str(saved["app_object_id"])
+        added = str(saved["added_redirect_uri"])
+        if not cm.is_guid(object_id):
+            raise AzError("recorded application object id is not a guid")
+        # Remove only the URI this deployment added; keep whatever else is there now.
+        current_app = (
+            ctx.az(
+                "rest",
+                "--method",
+                "get",
+                "--url",
+                f"{_GRAPH}/applications/{object_id}?$select=id,spa",
+                "-o",
+                "json",
+            )
+            or {}
+        )
+        current = [str(u) for u in (current_app.get("spa") or {}).get("redirectUris") or []]
+        remaining = [u for u in current if u != added]
+        if len(remaining) == len(current):
+            ctx.step("entra-restore", "ok", "added redirect already absent; nothing sent")
+        else:
+            _patch_spa(ctx, object_id, remaining)
+            ctx.step("entra-restore", "ok", "removed the one redirect this deployment added")
     else:
         ctx.step("entra-restore", "skipped", "no recorded Entra change")
     # 2. Foundry role, 3. seeder roles (assignments we created).
@@ -1461,16 +1708,25 @@ def _emit(ctx: Ctx, started: str, result: str) -> str:
 
 
 def run(
-    args: argparse.Namespace, runner: AzRunner, work_dir: Path, backend_factory: BackendFactory
+    args: argparse.Namespace,
+    runner: AzRunner,
+    work_dir: Path,
+    backend_factory: BackendFactory,
+    smoke_transport: httpx.BaseTransport | None = None,
 ) -> int:
     started = cm.iso(cm.utcnow())
-    ctx = Ctx(run_az=runner, args=args, work_dir=work_dir, backend_factory=backend_factory)
-    smoke_module: Any = None
+    ctx = Ctx(
+        run_az=runner,
+        args=args,
+        work_dir=work_dir,
+        backend_factory=backend_factory,
+        smoke_transport=smoke_transport,
+    )
     try:
         validate_static(args)
         if args.command == "smoke":
             try:
-                smoke_module = importlib.import_module("_hosted_demo_smoke")
+                importlib.import_module("_hosted_demo_smoke")
             except ImportError as exc:
                 raise RefusedError(
                     "scripts/gates/_hosted_demo_smoke.py is not available (item 6 has not "
@@ -1478,7 +1734,7 @@ def run(
                 ) from exc
         guard_cloud(ctx)
         if args.command == "smoke":
-            cmd_smoke(ctx, smoke_module)
+            cmd_smoke(ctx)
         else:
             COMMANDS[args.command](ctx)
     except RefusedError as exc:
@@ -1500,6 +1756,7 @@ def main(
     runner: AzRunner | None = None,
     work_dir: Path | None = None,
     backend_factory: BackendFactory | None = None,
+    smoke_transport: httpx.BaseTransport | None = None,
 ) -> int:
     if os.environ.get("NS_LIVE_APPROVED") != "1":
         print(
@@ -1527,9 +1784,9 @@ def main(
         runner = SubprocessAzRunner(az_path)
     factory = backend_factory or _default_backend
     if work_dir is not None:
-        return run(args, runner, work_dir, factory)
+        return run(args, runner, work_dir, factory, smoke_transport)
     with tempfile.TemporaryDirectory(prefix="hosted-demo-") as tmp:
-        return run(args, runner, Path(tmp), factory)
+        return run(args, runner, Path(tmp), factory, smoke_transport)
 
 
 if __name__ == "__main__":
