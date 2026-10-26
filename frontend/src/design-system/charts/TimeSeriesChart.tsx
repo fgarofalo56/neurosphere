@@ -17,6 +17,7 @@ import {
   plotPoints,
   seriesStyle,
   summarize,
+  useContainerWidth,
   useMotionAllowed,
 } from "./internal";
 import type { TooltipRow } from "./internal";
@@ -42,13 +43,14 @@ export function TimeSeriesChart({
   series,
   grain = "day",
   variant = "line",
-  width = 640,
+  width: widthProp = 640,
   height = 240,
   ariaLabel,
   legend = true,
 }: TimeSeriesChartProps): ReactElement {
   const { chart } = useUiStyle();
   const motion = useMotionAllowed();
+  const { ref, width } = useContainerWidth(widthProp);
   const [hover, setHover] = useState<number | null>(null);
   const error = checkSeries(series);
 
@@ -112,12 +114,17 @@ export function TimeSeriesChart({
         });
 
   return (
-    <div style={{ position: "relative", width: "100%" }} data-chart="time-series">
+    <div
+      ref={ref}
+      style={{ position: "relative", width: "100%", minWidth: 0 }}
+      data-chart="time-series"
+    >
       <svg
         role="img"
         aria-label={label}
         viewBox={`0 0 ${width} ${height}`}
-        width="100%"
+        width={width}
+        height={height}
         data-motion={motion ? "on" : "off"}
         style={{ display: "block", maxWidth: "100%" }}
         onPointerMove={onMove}
