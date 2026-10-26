@@ -1,0 +1,92 @@
+{
+ "_comment": "Pre-PRP-32 compiled ARM for infra/appservice/main.bicep (plan and sites only). Default params must keep this profile.",
+ "resources": [
+  {
+   "type": "Microsoft.Web/serverfarms",
+   "apiVersion": "2023-12-01",
+   "name": "[format('{0}-plan', parameters('namePrefix'))]",
+   "location": "[parameters('location')]",
+   "tags": "[parameters('tags')]",
+   "kind": "linux",
+   "sku": {
+    "name": "[parameters('skuName')]",
+    "capacity": "[parameters('capacity')]"
+   },
+   "properties": {
+    "reserved": true
+   }
+  },
+  {
+   "type": "Microsoft.Web/sites",
+   "apiVersion": "2023-12-01",
+   "name": "[format('{0}-api', parameters('namePrefix'))]",
+   "location": "[parameters('location')]",
+   "tags": "[parameters('tags')]",
+   "kind": "app,linux,container",
+   "identity": "[variables('identity')]",
+   "properties": {
+    "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('namePrefix')))]",
+    "httpsOnly": true,
+    "keyVaultReferenceIdentity": "[if(variables('useUserAssigned'), parameters('userAssignedIdentityId'), null())]",
+    "siteConfig": {
+     "linuxFxVersion": "[format('DOCKER|{0}', variables('apiImage'))]",
+     "minTlsVersion": "1.2",
+     "ftpsState": "Disabled",
+     "alwaysOn": true,
+     "healthCheckPath": "/readyz",
+     "acrUseManagedIdentityCreds": true,
+     "acrUserManagedIdentityID": "[if(variables('useUserAssigned'), parameters('userAssignedIdentityId'), null())]",
+     "appSettings": "[concat(createArray(createObject('name', 'WEBSITES_PORT', 'value', '8000'), createObject('name', 'WEBSITES_ENABLE_APP_SERVICE_STORAGE', 'value', 'false')), variables('plainSettings'), variables('kvSettings'))]"
+    }
+   },
+   "dependsOn": [
+    "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('namePrefix')))]"
+   ]
+  },
+  {
+   "type": "Microsoft.Web/sites",
+   "apiVersion": "2023-12-01",
+   "name": "[format('{0}-workers', parameters('namePrefix'))]",
+   "location": "[parameters('location')]",
+   "tags": "[parameters('tags')]",
+   "kind": "app,linux,container",
+   "identity": "[variables('identity')]",
+   "properties": {
+    "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('namePrefix')))]",
+    "httpsOnly": true,
+    "keyVaultReferenceIdentity": "[if(variables('useUserAssigned'), parameters('userAssignedIdentityId'), null())]",
+    "siteConfig": {
+     "linuxFxVersion": "[format('DOCKER|{0}', variables('workersImage'))]",
+     "minTlsVersion": "1.2",
+     "ftpsState": "Disabled",
+     "alwaysOn": true,
+     "healthCheckPath": "/healthz",
+     "acrUseManagedIdentityCreds": true,
+     "acrUserManagedIdentityID": "[if(variables('useUserAssigned'), parameters('userAssignedIdentityId'), null())]",
+     "appSettings": "[concat(createArray(createObject('name', 'WEBSITES_PORT', 'value', '8090'), createObject('name', 'WEBSITES_ENABLE_APP_SERVICE_STORAGE', 'value', 'false')), variables('plainSettings'), variables('kvSettings'))]"
+    }
+   },
+   "dependsOn": [
+    "[resourceId('Microsoft.Web/serverfarms', format('{0}-plan', parameters('namePrefix')))]"
+   ]
+  }
+ ],
+ "variables": {
+  "useUserAssigned": "[not(empty(parameters('userAssignedIdentityId')))]",
+  "identity": "[if(variables('useUserAssigned'), createObject('type', 'UserAssigned', 'userAssignedIdentities', createObject(format('{0}', parameters('userAssignedIdentityId')), createObject())), createObject('type', 'SystemAssigned'))]"
+ },
+ "parameters": {
+  "location": "[resourceGroup().location]",
+  "namePrefix": null,
+  "imageRegistry": null,
+  "imageTag": null,
+  "apiRepository": "neurosphere/api",
+  "workersRepository": "neurosphere/workers",
+  "skuName": "P1v3",
+  "capacity": 2,
+  "commonAppSettings": {},
+  "keyVaultSecretUris": {},
+  "userAssignedIdentityId": "",
+  "tags": {}
+ }
+}
