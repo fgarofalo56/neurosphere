@@ -45,6 +45,16 @@ identity, granted here), ``NS_AUTH_PSEUDONYM_KEY[_REFERENCE]`` (optional locally
 ``NS_SEED_WAIT_SECONDS`` (default 300; landing), ``NS_SEED_DRAIN_SECONDS`` (default 900; then
 waiting for the aggregates role to reach the newest events, warning only) and
 ``NS_SEED_POLL_SECONDS`` (default 5).
+
+Hosted mode (PRP-32 D7): ``--hosted <registration.json>`` with ``NS_ENV`` set to the hosted
+environment (not ``local``) and ``NS_LIVE_APPROVED=1``. The registered demo deployment is the only
+target: every endpoint passes ``sbx_guard.require_hosted_endpoint``; Cosmos, Event Hubs and Blob
+authenticate with ``DefaultAzureCredential`` (no key or connection string is accepted, any such
+variable refuses); no database, container or hub is ever created (Bicep owns them); the database,
+hub, archive container, customer and the workers' object id come from the registration. The
+pseudonym key is read from Key Vault with the operator's credential, held in process memory only
+and never logged. ``--input-dir`` makes the generator write there instead of a temporary folder.
+The local path above is unchanged.
 """
 
 from __future__ import annotations
@@ -153,6 +163,8 @@ from sbx_guard import (  # noqa: E402
     PREFIX,
     GuardError,
     is_local_host,
+    load_registration,
+    require_hosted_endpoint,
     require_local_connection_string,
     require_local_endpoint,
 )
@@ -259,6 +271,17 @@ def log(message: str) -> None:
 
 
 @dataclass(frozen=True)
+class HostedTarget:
+    """The guard-approved endpoints of the registered hosted deployment (no secrets)."""
+
+    eventhubs_fqdn: str
+    blob_account_url: str
+    key_vault_url: str
+    pseudonym_secret_uri: str
+    registration: Mapping[str, Any] = field(repr=False)
+
+
+@dataclass(frozen=True)
 class SeedConfig:
     profile: str
     cosmos_endpoint: str
@@ -277,9 +300,23 @@ class SeedConfig:
     drain_seconds: float = DEFAULT_WAIT_SECONDS
     cloud: str = "commercial"
     seed: int = SEED_NUMBER
+    hosted: HostedTarget | None = None
+    env_name: str = "local"
 
     def environ(self) -> dict[str, str]:
         """The variables the worker settings classes and core factories read."""
+        if self.hosted is not None:
+            # Entra only: no key or connection string variable is ever produced.
+            return {
+                "NS_ENV": self.env_name,
+                "NS_CLOUD": self.cloud,
+                "NS_COSMOS_ENDPOINT": self.cosmos_endpoint,
+                "NS_STORE_DATABASE": self.database,
+                "NS_AUTH_CUSTOMER_ID": self.customer,
+                "NS_AUTH_TENANT_ID": self.tenant_id,
+                "NS_WORKER_OBJECT_ID": self.worker_object_id,
+                "NS_ARCHIVE_CONTAINER": self.archive_container,
+            }
         return {
             "NS_ENV": "local",
             "NS_COSMOS_ENDPOINT": self.cosmos_endpoint,
@@ -388,6 +425,78 @@ def resolve_config(
         wait_seconds=_float_env(environ, "NS_SEED_WAIT_SECONDS", DEFAULT_WAIT_SECONDS),
         poll_seconds=_float_env(environ, "NS_SEED_POLL_SECONDS", DEFAULT_POLL_SECONDS),
         drain_seconds=_float_env(environ, "NS_SEED_DRAIN_SECONDS", DEFAULT_DRAIN_SECONDS),
+    )
+
+
+def resolve_hosted_config(
+    profile: str,
+    operator_object_id: str | None,
+    environ: Mapping[str, str],
+    registration_path: Path,
+) -> SeedConfig:
+    """Hosted counterpart of :func:`resolve_config`. Raises ``GuardError``/``ConfigError``."""
+    env_name = environ.get("NS_ENV", "local")
+    if env_name == "local":
+        raise ConfigError("hosted seeding needs NS_ENV set to the hosted environment, not local")
+    if environ.get("NS_CLOUD", "commercial") != "commercial":
+        raise ConfigError("hosted seeding supports NS_CLOUD=commercial only")
+    registration = load_registration(registration_path)
+    urls: dict[str, str] = {}
+    for kind, name in (
+        ("cosmos", "cosmos_host"),
+        ("eventhubs", "eventhubs_host"),
+        ("blob", "blob_host"),
+        ("keyvault", "key_vault_host"),
+    ):
+        urls[kind] = require_hosted_endpoint(
+            f"https://{registration.get(name)}",
+            kind=kind,
+            env=dict(environ),
+            registration_path=registration_path,
+        )
+    tenant = environ.get("NS_WORKER_TENANT_ID") or environ.get("NS_AUTH_TENANT_ID") or ""
+    if grants.GUID_RE.fullmatch(tenant) is None:
+        raise ConfigError("NS_AUTH_TENANT_ID (or NS_WORKER_TENANT_ID) must be a GUID")
+    worker_oid = str(registration.get("workers_object_id") or "")
+    if grants.GUID_RE.fullmatch(worker_oid) is None:
+        raise ConfigError("the registration's workers_object_id must be a GUID")
+    if operator_object_id is not None and grants.GUID_RE.fullmatch(operator_object_id) is None:
+        raise ConfigError("--operator-object-id must be a GUID")
+    if profile not in load_profiles():
+        raise ConfigError(f"unknown profile {profile!r}")
+    database = str(registration.get("database") or "")
+    customer = str(registration.get("customer_id") or "")
+    hub = str(registration.get("event_hub") or "")
+    archive = str(registration.get("archive_container") or "")
+    secret_uri = str(registration.get("pseudonym_secret_uri") or "")
+    if not (database and customer and hub and archive and secret_uri):
+        raise ConfigError("the registration is missing database, customer, hub, archive or secret")
+    if database.startswith(PREFIX):
+        raise ConfigError("the registered database must not be a sandbox- database")
+    return SeedConfig(
+        profile=profile,
+        cosmos_endpoint=urls["cosmos"],
+        cosmos_key="",
+        eventhubs_connection="",
+        blob_connection="",
+        database=database,
+        customer=customer,
+        tenant_id=tenant,
+        worker_object_id=worker_oid,
+        operator_object_id=operator_object_id,
+        hub_name=hub,
+        archive_container=archive,
+        wait_seconds=_float_env(environ, "NS_SEED_WAIT_SECONDS", DEFAULT_WAIT_SECONDS),
+        poll_seconds=_float_env(environ, "NS_SEED_POLL_SECONDS", DEFAULT_POLL_SECONDS),
+        drain_seconds=_float_env(environ, "NS_SEED_DRAIN_SECONDS", DEFAULT_DRAIN_SECONDS),
+        hosted=HostedTarget(
+            eventhubs_fqdn=urls["eventhubs"].removeprefix("https://").rstrip("/"),
+            blob_account_url=urls["blob"],
+            key_vault_url=urls["keyvault"],
+            pseudonym_secret_uri=secret_uri,
+            registration=registration,
+        ),
+        env_name=env_name,
     )
 
 
@@ -1218,10 +1327,16 @@ class _CosmosPolicyWriter:
 class CosmosLanding:
     """Counts what the workers landed: Cosmos documents and archive blobs."""
 
-    def __init__(self, cosmos: CosmosClient, config: SeedConfig) -> None:
+    def __init__(
+        self,
+        cosmos: CosmosClient,
+        config: SeedConfig,
+        archive_client: Callable[[], Any] | None = None,
+    ) -> None:
         self._db = cosmos.get_database_client(config.database)
         self._blob_connection = config.blob_connection
         self._archive = config.archive_container
+        self._archive_client = archive_client
 
     async def _count(self, container: str, where: str) -> int:
         proxy = self._db.get_container_client(container)
@@ -1246,7 +1361,11 @@ class CosmosLanding:
         from azure.core.exceptions import ResourceNotFoundError
         from azure.storage.blob import ContainerClient
 
-        client = ContainerClient.from_connection_string(self._blob_connection, self._archive)
+        client = (
+            self._archive_client()
+            if self._archive_client is not None
+            else ContainerClient.from_connection_string(self._blob_connection, self._archive)
+        )
         try:
             return sum(1 for _ in client.list_blobs())
         except ResourceNotFoundError:
@@ -1265,6 +1384,35 @@ class CosmosLanding:
 
 async def open_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
     """Cosmos-backed stores (database bootstrap on the emulator included)."""
+    cosmos = await stack.enter_async_context(
+        CosmosClient(config.cosmos_endpoint, config.cosmos_key, enable_endpoint_discovery=False)
+    )
+    await ensure_local_containers(cosmos, Settings(env="local"), database=config.database)
+    sync = SyncCosmosClient(
+        config.cosmos_endpoint, config.cosmos_key, enable_endpoint_discovery=False
+    )
+    stack.callback(sync.close)
+    return assemble_backends(
+        config,
+        cosmos,
+        sync,
+        hub=HubSeam(
+            {"NS_SANDBOX_EVENTHUBS_CONNECTION_STRING": config.eventhubs_connection},
+            hub=config.hub_name,
+        ),
+        landing=CosmosLanding(cosmos, config),
+    )
+
+
+def assemble_backends(
+    config: SeedConfig,
+    cosmos: Any,
+    sync: Any,
+    *,
+    hub: Publisher,
+    landing: Landing,
+) -> Backends:
+    """The Cosmos-backed stores over already-built clients (local and hosted share this)."""
     from neurosphere_api.reports import CosmosReportStore
     from neurosphere_core.actions.cosmos_store import CosmosExecutionControl as Control
     from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
@@ -1276,15 +1424,6 @@ async def open_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
     from neurosphere_workers.runtime.identity import build_policy_stack
 
     settings = load_settings()
-    cosmos = await stack.enter_async_context(
-        CosmosClient(config.cosmos_endpoint, config.cosmos_key, enable_endpoint_discovery=False)
-    )
-    await ensure_local_containers(cosmos, Settings(env="local"), database=config.database)
-    sync = SyncCosmosClient(
-        config.cosmos_endpoint, config.cosmos_key, enable_endpoint_discovery=False
-    )
-    stack.callback(sync.close)
-
     auth = AuthSettings()
     policy = build_policy_stack(
         settings,
@@ -1300,11 +1439,8 @@ async def open_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
         )
     )
     return Backends(
-        hub=HubSeam(
-            {"NS_SANDBOX_EVENTHUBS_CONNECTION_STRING": config.eventhubs_connection},
-            hub=config.hub_name,
-        ),
-        landing=CosmosLanding(cosmos, config),
+        hub=hub,
+        landing=landing,
         policy=policy.policy,
         policy_writer=_CosmosPolicyWriter(database.get_container_client(auth.policy_container)),
         revocation=policy.revocation,
@@ -1338,6 +1474,93 @@ async def _seed(config: SeedConfig) -> Doc:
             return await run_seed(config, backends, Path(tmp))
 
 
+# -- hosted backends (Entra only; PRP-32 D7) -------------------------------------------------
+
+
+class HostedHubSeam(HubSeam):
+    """``HubSeam`` publishing with an Entra credential to the registered namespace and hub."""
+
+    def __init__(self, namespace: str, hub: str, credential: Any) -> None:
+        self._namespace = namespace
+        self._hub = hub
+        self._credential = credential
+
+    def _producer(self) -> Any:
+        return new_producer(self._namespace, self._hub, self._credential)
+
+
+# Client factories: module-level so tests can substitute fakes. None accepts a key.
+def new_credential() -> Any:
+    from azure.identity import DefaultAzureCredential
+
+    return DefaultAzureCredential()
+
+
+def new_async_credential() -> Any:
+    from azure.identity.aio import DefaultAzureCredential
+
+    return DefaultAzureCredential()
+
+
+def new_cosmos(endpoint: str, credential: Any) -> Any:
+    return CosmosClient(endpoint, credential=credential, enable_endpoint_discovery=False)
+
+
+def new_sync_cosmos(endpoint: str, credential: Any) -> Any:
+    return SyncCosmosClient(endpoint, credential=credential, enable_endpoint_discovery=False)
+
+
+def new_producer(namespace: str, hub: str, credential: Any) -> Any:
+    from azure.eventhub import EventHubProducerClient
+
+    return EventHubProducerClient(
+        fully_qualified_namespace=namespace, eventhub_name=hub, credential=credential
+    )
+
+
+def new_archive_container(account_url: str, container: str, credential: Any) -> Any:
+    from azure.storage.blob import ContainerClient
+
+    return ContainerClient(account_url, container, credential=credential)
+
+
+async def open_hosted_backends(config: SeedConfig, stack: AsyncExitStack) -> Backends:
+    """Cosmos-backed stores over Entra clients. Nothing is created: the database, containers,
+    hub and archive container exist (Bicep) or the seed fails."""
+    target = config.hosted
+    if target is None:
+        raise ConfigError("open_hosted_backends needs a hosted configuration")
+    async_credential = new_async_credential()
+    stack.push_async_callback(async_credential.close)
+    credential = new_credential()
+    stack.callback(credential.close)
+    cosmos = await stack.enter_async_context(new_cosmos(config.cosmos_endpoint, async_credential))
+    sync = new_sync_cosmos(config.cosmos_endpoint, credential)
+    stack.callback(sync.close)
+    return assemble_backends(
+        config,
+        cosmos,
+        sync,
+        hub=HostedHubSeam(target.eventhubs_fqdn, config.hub_name, credential),
+        landing=CosmosLanding(
+            cosmos,
+            config,
+            archive_client=lambda: new_archive_container(
+                target.blob_account_url, config.archive_container, credential
+            ),
+        ),
+    )
+
+
+async def _seed_hosted(config: SeedConfig, input_dir: Path | None) -> Doc:
+    async with AsyncExitStack() as stack:
+        backends = await open_hosted_backends(config, stack)
+        if input_dir is not None:
+            return await run_seed(config, backends, input_dir)
+        with tempfile.TemporaryDirectory(prefix="ns-seed-") as tmp:
+            return await run_seed(config, backends, Path(tmp))
+
+
 @contextlib.contextmanager
 def scoped_environ(updates: Mapping[str, str]) -> Iterator[None]:
     saved = {name: os.environ.get(name) for name in updates}
@@ -1360,12 +1583,62 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--operator-object-id", help="also grant this Entra object id admin (your sign-in)"
     )
+    parser.add_argument(
+        "--hosted",
+        type=Path,
+        metavar="REGISTRATION",
+        help="seed the registered hosted demo (Entra only; needs NS_ENV not local)",
+    )
+    parser.add_argument(
+        "--input-dir", type=Path, help="hosted only: the generator writes its world here"
+    )
     return parser
+
+
+def _main_hosted(args: argparse.Namespace, environ: dict[str, str]) -> int:
+    from azure.core.exceptions import AzureError
+    from httpx import HTTPError
+
+    try:
+        config = resolve_hosted_config(args.profile, args.operator_object_id, environ, args.hosted)
+    except (GuardError, ConfigError) as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return EXIT_REFUSED
+    target = config.hosted
+    if target is None:
+        return EXIT_REFUSED
+    try:
+        credential = new_credential()
+        try:
+            pseudonym = grants.hosted_pseudonym_env(
+                target.registration, target.key_vault_url, credential
+            )
+        finally:
+            credential.close()
+    except GuardError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return EXIT_REFUSED
+    except (AzureError, HTTPError, OSError) as exc:
+        print(f"FAILED: {type(exc).__name__} reading the pseudonym key", file=sys.stderr)
+        return EXIT_FAILED
+    try:
+        with scoped_environ({**environ, **config.environ(), **pseudonym}):
+            summary = asyncio.run(_seed_hosted(config, args.input_dir))
+    except GuardError as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return EXIT_REFUSED
+    except (SeedError, NeuroSphereError, ValidationError, AzureError, HTTPError, OSError) as exc:
+        print(f"FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return EXIT_FAILED
+    print(json.dumps(summary, sort_keys=True))
+    return 0
 
 
 def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None) -> int:
     args = _parser().parse_args(argv)
     environ = dict(os.environ) if env is None else dict(env)
+    if args.hosted is not None:
+        return _main_hosted(args, environ)
     try:
         config = resolve_config(args.profile, args.operator_object_id, environ)
     except (GuardError, ConfigError) as exc:
