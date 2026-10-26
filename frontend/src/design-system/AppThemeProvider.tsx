@@ -1,7 +1,8 @@
 import { FluentProvider, makeStaticStyles, tokens } from "@fluentui/react-components";
 import { useMemo, type ReactNode } from "react";
 import { useThemeStore } from "./theme-store";
-import { getThemePack, resolveTheme } from "./themes";
+import { UiStyleContext, getUiStyle, resolveStyledTheme, resolveUiStyle } from "./styles";
+import { getThemePack } from "./themes";
 
 /** Class on the provider root that scopes the anchor rule below. */
 export const LINK_SCOPE_CLASS = "ns-theme-root";
@@ -31,7 +32,13 @@ export interface AppThemeProviderProps {
 export function AppThemeProvider({ children }: AppThemeProviderProps) {
   const themeName = useThemeStore((s) => s.themeName);
   const packId = useThemeStore((s) => s.packId);
-  const theme = useMemo(() => resolveTheme(getThemePack(packId), themeName), [packId, themeName]);
+  const styleId = useThemeStore((s) => s.styleId);
+  const style = getUiStyle(styleId);
+  const theme = useMemo(
+    () => resolveStyledTheme(getThemePack(packId), themeName, style),
+    [packId, themeName, style],
+  );
+  const uiStyle = useMemo(() => resolveUiStyle(style, themeName), [style, themeName]);
   useLinkStyles();
   return (
     <FluentProvider
@@ -39,8 +46,9 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       theme={theme}
       data-theme={themeName}
       data-theme-pack={getThemePack(packId).id}
+      data-ui-style={style.id}
     >
-      {children}
+      <UiStyleContext.Provider value={uiStyle}>{children}</UiStyleContext.Provider>
     </FluentProvider>
   );
 }

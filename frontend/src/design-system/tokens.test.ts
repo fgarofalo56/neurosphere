@@ -29,6 +29,16 @@ describe("hex literals", () => {
   });
 });
 
+describe("hex rule covers PRP-30 styles", () => {
+  it("scans design-system/styles/ and keeps style palettes in tokens/", () => {
+    const styles = import.meta.glob(["./styles/*.ts", "./styles/*.tsx", "!./styles/*.test.*"]);
+    expect(Object.keys(styles)).toContain("./styles/index.ts");
+    expect(Object.keys(styles)).toContain("./styles/registry.ts");
+    const tokenFiles = import.meta.glob(["./tokens/*.ts"]);
+    expect(Object.keys(tokenFiles)).toContain("./tokens/styles.ts");
+  });
+});
+
 function channel(hex: string, start: number): number {
   const c = parseInt(hex.slice(start, start + 2), 16) / 255;
   return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);

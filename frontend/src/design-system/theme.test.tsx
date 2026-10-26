@@ -4,6 +4,7 @@ import { axe } from "vitest-axe";
 import { AppThemeProvider } from "./AppThemeProvider";
 import { LogoSlot } from "./LogoSlot";
 import { ThemeGallery } from "./ThemeGallery";
+import { useUiStyle } from "./styles";
 import { THEME_STORAGE_KEY, reloadStoredTheme, useThemeStore } from "./theme-store";
 import { THEME_NAMES } from "./tokens";
 import type { ThemeName } from "./tokens";
@@ -154,6 +155,109 @@ describe("theme persistence", () => {
     });
     useThemeStore.getState().applyDeploymentDefault({ themeName: "dark" });
     expect(useThemeStore.getState().themeName).toBe("light");
+  });
+
+  it("validates styleId on read and drops unknown values", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ styleId: "neon" }));
+    reloadStoredTheme();
+    expect(useThemeStore.getState().styleId).toBe("enterprise-fluent");
+    window.localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify({ styleId: "ops-console" }));
+    reloadStoredTheme();
+    expect(useThemeStore.getState().styleId).toBe("ops-console");
+    // No explicit mode stored: the style's preferred mode applies.
+    expect(useThemeStore.getState().themeName).toBe("dark");
+  });
+
+  it("never rewrites a stored record that has no styleId", () => {
+    const raw = JSON.stringify({ packId: "sample-agency", themeName: "dark" });
+    window.localStorage.setItem(THEME_STORAGE_KEY, raw);
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    reloadStoredTheme();
+    render(
+      <AppThemeProvider>
+        <LogoSlot />
+      </AppThemeProvider>,
+    );
+    useThemeStore.getState().applyDeploymentDefault({ styleId: "ops-console" });
+    expect(setItem).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe(raw);
+    expect(useThemeStore.getState().themeName).toBe("dark");
+  });
+
+  it("setStyle persists styleId only when the user picks a style", () => {
+    act(() => {
+      useThemeStore.getState().setTheme("light");
+    });
+    expect(JSON.parse(window.localStorage.getItem(THEME_STORAGE_KEY) ?? "null")).toEqual({
+      themeName: "light",
+    });
+    act(() => {
+      useThemeStore.getState().setStyle("ops-console");
+    });
+    expect(JSON.parse(window.localStorage.getItem(THEME_STORAGE_KEY) ?? "null")).toEqual({
+      themeName: "light",
+      styleId: "ops-console",
+    });
+    // The user chose a mode explicitly, so picking a style keeps it.
+    expect(useThemeStore.getState().themeName).toBe("light");
+    useThemeStore.getState().setStyle("nope" as never);
+    expect(useThemeStore.getState().styleId).toBe("ops-console");
+  });
+
+  it("picking a style switches to its preferred mode only if the user never chose a mode", () => {
+    act(() => {
+      useThemeStore.getState().setStyle("ops-console");
+    });
+    expect(useThemeStore.getState().themeName).toBe("dark");
+    act(() => {
+      useThemeStore.getState().setStyle("enterprise-fluent");
+    });
+    expect(useThemeStore.getState().themeName).toBe("light");
+  });
+
+  it("style precedence is user, then deployment default, then built-in", () => {
+    expect(useThemeStore.getState().styleId).toBe("enterprise-fluent");
+    useThemeStore.getState().applyDeploymentDefault({ styleId: "ops-console" });
+    expect(useThemeStore.getState().styleId).toBe("ops-console");
+    // Deployment style supplies the mode when nobody chose one.
+    expect(useThemeStore.getState().themeName).toBe("dark");
+    useThemeStore.getState().applyDeploymentDefault({ styleId: "bogus" });
+    expect(useThemeStore.getState().styleId).toBe("ops-console");
+    act(() => {
+      useThemeStore.getState().setStyle("enterprise-fluent");
+    });
+    useThemeStore.getState().applyDeploymentDefault({ styleId: "ops-console" });
+    expect(useThemeStore.getState().styleId).toBe("enterprise-fluent");
+  });
+
+  it("mode precedence is user, then deployment default, then the style preferred mode", () => {
+    useThemeStore.getState().applyDeploymentDefault({ styleId: "ops-console", themeName: "light" });
+    expect(useThemeStore.getState().themeName).toBe("light");
+    act(() => {
+      useThemeStore.getState().setTheme("high-contrast");
+    });
+    useThemeStore.getState().applyDeploymentDefault({ themeName: "dark" });
+    expect(useThemeStore.getState().themeName).toBe("high-contrast");
+  });
+
+  it("renders data-ui-style and the style context on the provider", () => {
+    function Probe() {
+      const s = useUiStyle();
+      return <span data-testid="probe">{`${s.id}:${s.density}`}</span>;
+    }
+    const { container } = render(
+      <AppThemeProvider>
+        <Probe />
+      </AppThemeProvider>,
+    );
+    const root = (): Element | null => container.querySelector("[data-theme]");
+    expect(root()?.getAttribute("data-ui-style")).toBe("enterprise-fluent");
+    expect(screen.getByTestId("probe").textContent).toBe("enterprise-fluent:comfortable");
+    act(() => {
+      useThemeStore.getState().setStyle("ops-console");
+    });
+    expect(root()?.getAttribute("data-ui-style")).toBe("ops-console");
+    expect(screen.getByTestId("probe").textContent).toBe("ops-console:compact");
   });
 
   it("sets data-theme-pack on the provider", () => {
