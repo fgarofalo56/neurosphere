@@ -43,16 +43,29 @@ function widthStyle(c: {
   };
 }
 
+/** Extra attributes for a body row: `data-testid` and other `data-*` attributes only. */
+export type DataTableRowProps = { readonly "data-testid"?: string } & {
+  readonly [K in `data-${string}`]?: string | undefined;
+};
+
 export interface DataTableProps<T> {
   /** Accessible name of the table. */
   readonly label: string;
   readonly columns: readonly DataTableColumn<T>[];
   readonly rows: readonly T[];
   readonly getRowId: (row: T) => string;
+  /** Optional `data-*` attributes (e.g. `data-testid`) applied to each body row. */
+  readonly getRowProps?: (row: T) => DataTableRowProps;
 }
 
 /** Fluent `Table` sized by the active style's density, with optional stripes. */
-export function DataTable<T>({ label, columns, rows, getRowId }: DataTableProps<T>): ReactElement {
+export function DataTable<T>({
+  label,
+  columns,
+  rows,
+  getRowId,
+  getRowProps,
+}: DataTableProps<T>): ReactElement {
   const styles = useStyles();
   const { density, treatment } = useUiStyle();
   return (
@@ -80,6 +93,7 @@ export function DataTable<T>({ label, columns, rows, getRowId }: DataTableProps<
           <TableRow
             key={getRowId(row)}
             className={treatment.tableStripes ? styles.stripe : undefined}
+            {...(getRowProps?.(row) ?? {})}
           >
             {columns.map((c) => (
               <TableCell

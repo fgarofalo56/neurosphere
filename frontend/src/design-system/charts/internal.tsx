@@ -79,6 +79,11 @@ export function formatFullDate(ms: number, grain: DateGrain): string {
   return grain === "hour" ? `${hourFormat.format(ms)} UTC` : dayLongFormat.format(ms);
 }
 
+/** Legend text: the label alone for an unclassified (null-kind) series, else "label (basis)". */
+export function legendLabel(series: ChartSeries): string {
+  return series.kind === null ? series.label : `${series.label} (${series.kind})`;
+}
+
 export function basisWord(series: ChartSeries): string {
   return series.kind ?? "unclassified";
 }
@@ -130,7 +135,7 @@ export function summarize(series: readonly ChartSeries[], grain: DateGrain): str
     const pts = plotPoints(s.points);
     const known = pts.filter((p) => p.value !== null && Number.isFinite(p.value));
     const unknown = pts.length - known.length;
-    const head = `${s.label} (${basisWord(s)})`;
+    const head = legendLabel(s);
     if (known.length === 0) return `${head}: no known values, ${unknown} unknown`;
     const values = known.map((p) => p.value as number);
     const last = known[known.length - 1] as Plotted;
@@ -269,7 +274,7 @@ export function ChartTooltip({
       <div style={{ fontWeight: tokens.fontWeightSemibold }}>{date}</div>
       {rows.map((row) => (
         <div key={row.key}>
-          {row.label} ({row.basis}): {row.value}
+          {row.basis === "unclassified" ? row.label : `${row.label} (${row.basis})`}: {row.value}
           {row.complete ? "" : " (incomplete)"}
         </div>
       ))}
