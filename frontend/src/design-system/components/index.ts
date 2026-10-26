@@ -1,5 +1,5 @@
 export { DataTable } from "./DataTable";
-export type { DataTableColumn, DataTableProps } from "./DataTable";
+export type { DataTableColumn, DataTableProps, DataTableRowProps } from "./DataTable";
 export { KpiCard } from "./KpiCard";
 export type { KpiCardProps, KpiDelta } from "./KpiCard";
 export { EmptyState, ErrorState, LoadingState } from "./states";

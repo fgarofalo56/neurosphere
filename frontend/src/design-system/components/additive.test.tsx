@@ -4,6 +4,7 @@ import { AppThemeProvider } from "../AppThemeProvider";
 import { ChartLegend, TimeSeriesChart, BarChart } from "../charts";
 import type { ChartSeries } from "../charts";
 import { DataTable, EmptyState, ErrorState, KpiCard, LoadingState, StatusPill } from "./index";
+import type { DataTableRowProps } from "./index";
 
 afterEach(cleanup);
 
@@ -49,6 +50,20 @@ describe("DataTable getRowProps", () => {
     );
     expect(screen.getByTestId("row-a").getAttribute("data-kind")).toBe("x");
     expect(screen.getAllByTestId(/^row-/)).toHaveLength(2);
+  });
+
+  it("drops anything that is not a data-* attribute", () => {
+    const rogue = { "data-testid": "row-r", title: "x", onClick: () => undefined };
+    wrap(
+      <DataTable
+        label="T"
+        columns={[{ key: "id", header: "Id", render: (r: { id: string }) => r.id }]}
+        rows={[{ id: "r" }]}
+        getRowId={(r) => r.id}
+        getRowProps={() => rogue as unknown as DataTableRowProps}
+      />,
+    );
+    expect(screen.getByTestId("row-r").hasAttribute("title")).toBe(false);
   });
 });
 

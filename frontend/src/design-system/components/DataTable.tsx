@@ -48,6 +48,16 @@ export type DataTableRowProps = { readonly "data-testid"?: string } & {
   readonly [K in `data-${string}`]?: string | undefined;
 };
 
+/** Keeps only `data-*` keys, so an untyped caller cannot pass handlers or raw HTML. */
+function dataAttributes(props: DataTableRowProps | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (props === undefined) return out;
+  for (const [key, value] of Object.entries(props)) {
+    if (key.startsWith("data-") && typeof value === "string") out[key] = value;
+  }
+  return out;
+}
+
 export interface DataTableProps<T> {
   /** Accessible name of the table. */
   readonly label: string;
@@ -93,7 +103,7 @@ export function DataTable<T>({
           <TableRow
             key={getRowId(row)}
             className={treatment.tableStripes ? styles.stripe : undefined}
-            {...(getRowProps?.(row) ?? {})}
+            {...dataAttributes(getRowProps?.(row))}
           >
             {columns.map((c) => (
               <TableCell
