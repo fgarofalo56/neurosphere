@@ -1,8 +1,8 @@
 import {
   makeStyles,
+  mergeClasses,
   MessageBar,
   MessageBarBody,
-  MessageBarTitle,
   tokens,
 } from "@fluentui/react-components";
 import {
@@ -15,7 +15,17 @@ import {
 } from "react";
 import { Link } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState as StyledErrorState,
+  LoadingState,
+  PageTemplate,
+  StatusPill,
+  useUiStyle,
+  type DataTableColumn,
+  type StatusTone,
+} from "../../design-system";
 import { ForbiddenError, UnauthorizedError, type ApiError } from "../../api/index.js";
 import { MAP_PATH } from "../map/paths";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
@@ -45,15 +55,26 @@ const useStyles = makeStyles({
     textAlign: "left",
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
     borderBottom: `2px solid ${tokens.colorNeutralStroke1}`,
+    color: tokens.colorNeutralForeground2,
+    fontWeight: tokens.fontWeightSemibold,
   },
+  upper: { textTransform: "uppercase", letterSpacing: "0.06em", fontSize: tokens.fontSizeBase200 },
   cell: {
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   detail: {
     marginTop: tokens.spacingVerticalM,
-    padding: tokens.spacingVerticalS,
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    padding: tokens.spacingVerticalM,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  link: {
+    color: tokens.colorBrandForegroundLink,
+    textDecorationLine: "none",
+    fontWeight: tokens.fontWeightSemibold,
+    ":hover": { textDecorationLine: "underline" },
   },
   gap: { marginTop: tokens.spacingVerticalL },
 });
@@ -68,13 +89,9 @@ function ErrorState({ error }: { readonly error: ApiError }): ReactElement {
       ? "Your session is not signed in or has expired. Sign in again to view the map."
       : "The request failed or the service is unavailable. This is not an empty result.";
   return (
-    <MessageBar intent="error" role="alert" data-testid="error-state">
-      <MessageBarBody>
-        <MessageBarTitle>Could not load the map</MessageBarTitle>
-        {text}
-        {ref}
-      </MessageBarBody>
-    </MessageBar>
+    <div data-testid="error-state">
+      <StyledErrorState title="Could not load the map" message={`${text}${ref}`} />
+    </div>
   );
 }
 
@@ -93,6 +110,12 @@ function nodeSummary(node: ViewportNode, connections: number): string {
   return parts.join(", ");
 }
 
+const PROVENANCE_TONE: Readonly<Record<ViewportEdge["provenance"], StatusTone>> = {
+  observed: "neutral",
+  declared: "neutral",
+  inferred: "warning",
+};
+
 function ConnectionsTable({
   edges,
   labels,
@@ -100,41 +123,49 @@ function ConnectionsTable({
   readonly edges: readonly ViewportEdge[];
   readonly labels: ReadonlyMap<string, string>;
 }): ReactElement {
-  const styles = useStyles();
-  if (edges.length === 0) return <p data-testid="no-connections">{STRINGS.noConnections}</p>;
+  if (edges.length === 0) {
+    return (
+      <div data-testid="no-connections">
+        <EmptyState title={STRINGS.noConnections} />
+      </div>
+    );
+  }
+  const columns: readonly DataTableColumn<ViewportEdge>[] = [
+    {
+      key: "source",
+      header: STRINGS.connections.source,
+      render: (e) => labels.get(e.source) ?? e.source,
+    },
+    {
+      key: "target",
+      header: STRINGS.connections.target,
+      render: (e) => labels.get(e.target) ?? e.target,
+    },
+    {
+      key: "provenance",
+      header: STRINGS.connections.provenance,
+      render: (e) => (
+        <span data-provenance={e.provenance}>
+          <StatusPill label={PROVENANCE_LABEL[e.provenance]} tone={PROVENANCE_TONE[e.provenance]} />
+        </span>
+      ),
+    },
+  ];
   return (
-    <table className={styles.table} data-testid="connections-table">
-      <caption className={styles.caption}>{STRINGS.connectionsCaption}</caption>
-      <thead>
-        <tr>
-          <th scope="col" className={styles.th}>
-            {STRINGS.connections.source}
-          </th>
-          <th scope="col" className={styles.th}>
-            {STRINGS.connections.target}
-          </th>
-          <th scope="col" className={styles.th}>
-            {STRINGS.connections.provenance}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {edges.map((e) => (
-          <tr key={e.id} data-testid="edge-row">
-            <td className={styles.cell}>{labels.get(e.source) ?? e.source}</td>
-            <td className={styles.cell}>{labels.get(e.target) ?? e.target}</td>
-            <td className={styles.cell} data-provenance={e.provenance}>
-              {PROVENANCE_LABEL[e.provenance]}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div data-testid="connections-table">
+      <DataTable
+        label={STRINGS.connectionsCaption}
+        columns={columns}
+        rows={edges}
+        getRowId={(e) => e.id}
+      />
+    </div>
   );
 }
 
 function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
   const styles = useStyles();
+  const { treatment } = useUiStyle();
   const query = useViewport(domainId, null);
   const gridRef = useRef<HTMLTableSectionElement>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
@@ -208,12 +239,24 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
   }, [sections]);
 
   if (query.isError) return <ErrorState error={query.error} />;
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="map-table-loading">
+        <LoadingState label={STRINGS.loading} rows={6} />
+      </div>
+    );
+  }
 
   const pages = query.data.pages;
   const last = pages[pages.length - 1];
   const hasNodes = pages.some((p) => p.nodes.length > 0);
-  if (last === undefined || !hasNodes) return <p data-testid="empty-state">{STRINGS.empty}</p>;
+  if (last === undefined || !hasNodes) {
+    return (
+      <div data-testid="empty-state">
+        <EmptyState title={STRINGS.empty} />
+      </div>
+    );
+  }
 
   const onGridKeyDown = (e: KeyboardEvent<HTMLTableSectionElement>): void => {
     const row = (e.target as HTMLElement).closest<HTMLElement>("tr[data-row-key]");
@@ -260,7 +303,11 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
           <thead>
             <tr>
               {Object.values(STRINGS.columns).map((c) => (
-                <th key={c} scope="col" className={styles.th}>
+                <th
+                  key={c}
+                  scope="col"
+                  className={mergeClasses(styles.th, treatment.uppercaseLabels && styles.upper)}
+                >
                   {c}
                 </th>
               ))}
@@ -304,16 +351,21 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
 }
 
 export function MapTablePage(): ReactElement {
+  const styles = useStyles();
   const { domainId } = useSelectedDomain();
   const mapHref =
     domainId === "" ? MAP_PATH : `${MAP_PATH}?domain_id=${encodeURIComponent(domainId)}`;
   return (
     <PageTemplate title={STRINGS.title} description={STRINGS.intro}>
       <p>
-        <Link to={mapHref}>{STRINGS.viewAsMap}</Link>
+        <Link to={mapHref} className={styles.link}>
+          {STRINGS.viewAsMap}
+        </Link>
       </p>
       {domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         <MapTable key={domainId} domainId={domainId} />
       )}

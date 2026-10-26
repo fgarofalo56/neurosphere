@@ -13,6 +13,7 @@ import {
   type SDFShape,
 } from "sigma/rendering";
 import type { MapEdgeAttributes, MapNodeAttributes } from "./mapGraph";
+import { DEFAULT_MAP_THEME, type MapTheme } from "./mapTheme";
 import type Graph from "graphology";
 
 export interface RendererCallbacks {
@@ -28,6 +29,8 @@ export interface MapRenderer {
   /** Apply a new dash offset to the given edges and redraw only them. */
   setEdgeOffset(edgeIds: readonly string[], offset: number): void;
   select(id: string | null): void;
+  /** Zoom-to-fit: reset the camera so the whole graph is in view. */
+  fit(): void;
   /** Reduced motion: no camera inertia or animated zoom. */
   setReducedMotion(reduced: boolean): void;
   kill(): void;
@@ -53,19 +56,28 @@ float sdf_hexagon(vec2 uv, float size) {
 }
 
 const SOURCE_ASPECT_RATIO = 1.6;
-
-function readLabelColour(container: HTMLElement): string {
-  const colour = getComputedStyle(container).color;
-  return colour !== "" ? colour : "#242424";
-}
+/** Up to this many nodes every label is shown; beyond it sigma thins labels by density. */
+const LABEL_ALL_NODES_MAX = 200;
+/** Opacity of everything outside the hovered node's neighbourhood. */
+const DIM_NODE_OPACITY = 0.35;
+const DIM_EDGE_OPACITY = 0.12;
 
 export function createMapRenderer(
   container: HTMLElement,
   graph: Graph<MapNodeAttributes, MapEdgeAttributes>,
   callbacks: RendererCallbacks,
+  theme: MapTheme = DEFAULT_MAP_THEME,
 ): MapRenderer {
-  const labelColor = readLabelColour(container);
   let selected: string | null = null;
+  let reduced = false;
+  /** Neighbourhood highlighted by hover (nodes and edges), cleared on leave. */
+  let hoverNodes: string[] = [];
+  let hoverEdges: string[] = [];
+
+  const labelStyle = (n: number): { threshold: number; density: number } =>
+    n <= LABEL_ALL_NODES_MAX ? { threshold: 0, density: 3 } : { threshold: 8, density: 0.35 };
+  const initialLabels = labelStyle(graph.order);
+  let appliedLabels = initialLabels;
 
   const sigma = new Sigma(graph, container, {
     primitives: {
@@ -95,41 +107,80 @@ export function createMapRenderer(
         x: { attribute: "x" },
         y: { attribute: "y" },
         size: { attribute: "size", defaultValue: 4 },
-        color: { attribute: "color", defaultValue: "#8a8886" },
-        opacity: { attribute: "opacity", defaultValue: 1 },
+        color: { attribute: "color", defaultValue: theme.health.unknown.icon },
+        // Everything outside the hovered neighbourhood dims while a node is hovered.
+        opacity: (attrs, state, graphState) => {
+          const own = typeof attrs["opacity"] === "number" ? attrs["opacity"] : 1;
+          return graphState.hasHovered && !state.isHovered && !state.isHighlighted
+            ? own * DIM_NODE_OPACITY
+            : own;
+        },
         shape: { attribute: "shape", defaultValue: "circle" },
         label: { attribute: "label" },
-        labelColor,
+        labelColor: theme.label.color,
+        labelFont: theme.label.font,
+        labelSize: theme.label.size,
+        labelPosition: "below",
+        labelBackgroundColor: theme.label.background,
+        labelBackgroundPadding: 2,
         visibility: { whenState: "isHidden", then: "hidden", else: "visible" },
         labelVisibility: {
           whenState: ["isHovered", "isHighlighted"],
           then: "visible",
           else: "auto",
         },
+        // The health halo: always on for small graphs (the halo attribute), emphasised on
+        // hover and selection.
         backdropVisibility: {
           whenState: ["isHovered", "isHighlighted"],
           then: "visible",
-          else: "hidden",
+          else: { attribute: "halo", defaultValue: "hidden" },
         },
-        backdropColor: "#c7e0f4",
-        backdropShadowColor: "rgba(15, 108, 189, 0.6)",
-        backdropShadowBlur: 10,
-        backdropPadding: 5,
+        backdropColor: { attribute: "haloColor", defaultValue: theme.health.unknown.bg },
+        backdropShadowColor: { attribute: "glowColor", defaultValue: "transparent" },
+        backdropShadowBlur: theme.glow ? 14 : 0,
+        backdropPadding: 6,
+        backdropArea: "node",
+        backdropBorderColor: theme.edge.observed,
+        backdropBorderWidth: { whenState: ["isHovered", "isHighlighted"], then: 2, else: 0 },
       },
       edges: {
         size: { attribute: "size", defaultValue: 1 },
-        color: { attribute: "color", defaultValue: "#a19f9d" },
+        color: { attribute: "color", defaultValue: theme.edge.inferred },
+        opacity: (_attrs, state, graphState) =>
+          graphState.hasHovered && !state.isHighlighted ? DIM_EDGE_OPACITY : 1,
         visibility: { whenState: "isHidden", then: "hidden", else: "visible" },
       },
     },
     settings: {
       renderEdgeLabels: false,
       enableEdgeEvents: false,
-      labelRenderedSizeThreshold: 8,
-      labelDensity: 0.35,
+      stagePadding: 64,
+      // Small graphs label every node; large ones keep sigma's density-based thinning.
+      labelRenderedSizeThreshold: initialLabels.threshold,
+      labelDensity: initialLabels.density,
     },
   });
 
+  const clearHover = (): void => {
+    for (const id of hoverNodes) {
+      if (graph.hasNode(id) && id !== selected) sigma.setNodeState(id, { isHighlighted: false });
+    }
+    for (const id of hoverEdges) {
+      if (graph.hasEdge(id)) sigma.setEdgeState(id, { isHighlighted: false });
+    }
+    hoverNodes = [];
+    hoverEdges = [];
+  };
+
+  sigma.on("enterNode", ({ node }) => {
+    clearHover();
+    hoverNodes = graph.neighbors(node);
+    hoverEdges = graph.edges(node);
+    for (const id of hoverNodes) sigma.setNodeState(id, { isHighlighted: true });
+    for (const id of hoverEdges) sigma.setEdgeState(id, { isHighlighted: true });
+  });
+  sigma.on("leaveNode", clearHover);
   sigma.on("clickNode", ({ node }) => callbacks.onSelect(node));
   sigma.on("clickStage", () => callbacks.onSelect(null));
   sigma.on("doubleClickNode", ({ node, preventSigmaDefault }) => {
@@ -149,6 +200,14 @@ export function createMapRenderer(
 
   return {
     update() {
+      const labels = labelStyle(graph.order);
+      if (labels.density !== appliedLabels.density) {
+        appliedLabels = labels;
+        sigma.setSettings({
+          labelRenderedSizeThreshold: labels.threshold,
+          labelDensity: labels.density,
+        });
+      }
       sigma.refresh();
     },
     setEdgeOffset(edgeIds, offset) {
@@ -162,11 +221,15 @@ export function createMapRenderer(
       selected = id;
       if (id !== null && graph.hasNode(id)) sigma.setNodeState(id, { isHighlighted: true });
     },
-    setReducedMotion(reduced) {
+    fit() {
+      void sigma.getCamera().reset({ duration: reduced ? 0 : 300 });
+    },
+    setReducedMotion(next) {
+      reduced = next;
       sigma.setSettings({
-        inertiaDuration: reduced ? 0 : 3000,
-        zoomDuration: reduced ? 0 : 250,
-        doubleClickZoomingDuration: reduced ? 0 : 200,
+        inertiaDuration: next ? 0 : 3000,
+        zoomDuration: next ? 0 : 250,
+        doubleClickZoomingDuration: next ? 0 : 200,
       });
     },
     kill() {

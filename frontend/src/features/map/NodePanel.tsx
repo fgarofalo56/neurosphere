@@ -1,7 +1,8 @@
 import { Button, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { Link } from "react-router";
-import { NodeTypeIcon } from "../../design-system";
+import { HealthIndicator, NodeTypeIcon } from "../../design-system";
+import { useCardClasses } from "./card";
 import { kindToNodeType } from "./appearance";
 import { formatMetric } from "./Legend";
 import type { MapNodeAttributes } from "./mapGraph";
@@ -9,18 +10,18 @@ import { HEALTH_LABEL, KIND_LABEL, SIZE_METRIC_LABEL, STRINGS } from "./strings"
 import { SIZE_METRICS } from "./types";
 
 const useStyles = makeStyles({
-  root: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: tokens.spacingVerticalS,
-    padding: tokens.spacingHorizontalM,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    maxWidth: "320px",
+  heading: { margin: 0, fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
+  name: { margin: 0, fontSize: tokens.fontSizeBase400, fontWeight: tokens.fontWeightSemibold },
+  muted: { margin: 0, color: tokens.colorNeutralForeground2, overflowWrap: "anywhere" },
+  metrics: {
+    display: "grid",
+    gridTemplateColumns: "auto 1fr",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalXXS,
+    margin: 0,
   },
-  heading: { margin: 0, fontSize: tokens.fontSizeBase300 },
-  metrics: { display: "grid", gridTemplateColumns: "auto 1fr", columnGap: "12px", margin: 0 },
+  term: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
+  value: { margin: 0 },
   links: { listStyle: "none", margin: 0, padding: 0, display: "grid", rowGap: "4px" },
 });
 
@@ -56,12 +57,13 @@ export function NodePanel({
   onClose,
 }: NodePanelProps): ReactElement {
   const styles = useStyles();
+  const card = useCardClasses();
   const isCluster = attrs.kind === "cluster";
   const started = expansion?.nextCursor !== undefined;
   const hasMore = expansion?.nextCursor !== undefined && expansion.nextCursor !== null;
   return (
-    <aside className={styles.root} aria-label={STRINGS.panelHeading} data-testid="node-panel">
-      <h2 className={styles.heading}>{STRINGS.panelHeading}</h2>
+    <aside className={card.card} aria-label={STRINGS.panelHeading} data-testid="node-panel">
+      <h2 className={card.title}>{STRINGS.panelHeading}</h2>
       <div>
         {isCluster ? (
           <strong>{KIND_LABEL.cluster}</strong>
@@ -72,8 +74,10 @@ export function NodePanel({
           />
         )}
       </div>
-      <p data-testid="panel-label">{attrs.label}</p>
-      <p>
+      <p className={styles.name} data-testid="panel-label">
+        {attrs.label}
+      </p>
+      <p className={styles.muted}>
         <small>{nodeId}</small>
       </p>
       {isCluster ? (
@@ -84,12 +88,19 @@ export function NodePanel({
       <dl className={styles.metrics} data-testid="panel-metrics">
         {SIZE_METRICS.map((m) => (
           <div key={m} style={{ display: "contents" }}>
-            <dt>{SIZE_METRIC_LABEL[m]}</dt>
-            <dd data-testid={`metric-${m}`}>{formatMetric(attrs.metrics[m])}</dd>
+            <dt className={styles.term}>{SIZE_METRIC_LABEL[m]}</dt>
+            <dd className={styles.value} data-testid={`metric-${m}`}>
+              {formatMetric(attrs.metrics[m])}
+            </dd>
           </div>
         ))}
-        <dt>Health</dt>
-        <dd data-testid="metric-health">{HEALTH_LABEL[attrs.metrics.health]}</dd>
+        <dt className={styles.term}>Health</dt>
+        <dd className={styles.value} data-testid="metric-health">
+          <HealthIndicator
+            state={attrs.metrics.health}
+            label={HEALTH_LABEL[attrs.metrics.health]}
+          />
+        </dd>
       </dl>
 
       {isCluster ? (

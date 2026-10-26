@@ -5,19 +5,37 @@ import {
   MessageBarTitle,
   Switch,
   makeStyles,
+  mergeClasses,
   tokens,
 } from "@fluentui/react-components";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from "react";
 import { Link } from "react-router";
 import { ForbiddenError, useApiClient, type ApiError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  EmptyState,
+  ErrorState as StyledErrorState,
+  LoadingState,
+  PageTemplate,
+  StatusPill,
+  useUiStyle,
+  type StatusTone,
+} from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
 import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
 import { Legend } from "./Legend";
 import { MapCanvas } from "./MapCanvas";
 import { MapGraph, worstCoverage } from "./mapGraph";
+import { buildMapTheme, createDomResolver, type MapTheme } from "./mapTheme";
 import { animationGate, useReducedMotion, type AnimationGate } from "./motion";
 import { NodePanel, type ClusterExpansion } from "./NodePanel";
 import type { Scheduler } from "./animator";
@@ -53,8 +71,31 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
     gap: tokens.spacingHorizontalM,
     alignItems: "center",
+    paddingBlock: tokens.spacingVerticalXS,
+    paddingInline: tokens.spacingHorizontalM,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
   },
+  toolbarLifted: { backgroundColor: tokens.colorNeutralBackground2 },
+  link: {
+    color: tokens.colorBrandForegroundLink,
+    textDecorationLine: "none",
+    fontWeight: tokens.fontWeightSemibold,
+    ":hover": { textDecorationLine: "underline" },
+  },
+  muted: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
 });
+
+const LIVE_TONE: Readonly<Record<LiveStatus, StatusTone>> = {
+  connecting: "neutral",
+  live: "success",
+  reconnecting: "warning",
+  disconnected: "warning",
+  unavailable: "warning",
+  unauthenticated: "danger",
+  revoked: "danger",
+};
 
 const LIVE_TEXT: Readonly<Record<LiveStatus, string>> = {
   connecting: STRINGS.liveConnecting,
@@ -79,13 +120,12 @@ function ErrorState({ error }: { readonly error: ApiError }): ReactElement {
     return <ForbiddenState workspace="Live map" correlationId={error.correlationId} />;
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="error-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.errorTitle}</MessageBarTitle>
-        {STRINGS.errorBody}
-        {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}
-      </MessageBarBody>
-    </MessageBar>
+    <div data-testid="error-state">
+      <StyledErrorState
+        title={STRINGS.errorTitle}
+        message={`${STRINGS.errorBody}${error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}`}
+      />
+    </div>
   );
 }
 
@@ -107,6 +147,19 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const client = useApiClient();
   const motion = useReducedMotion();
   const initial = useViewport({ domainId });
+  const uiStyle = useUiStyle();
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const [theme, setTheme] = useState<MapTheme>(() => buildMapTheme(uiStyle, null));
+  const [fitRequest, setFitRequest] = useState(0);
+  const loaded = initial.isSuccess;
+
+  // The canvas needs concrete colours: resolve the Fluent tokens against the live DOM (inside
+  // the provider) whenever the style or colour mode changes. The key keeps the theme stable.
+  useLayoutEffect(() => {
+    const host = layoutRef.current;
+    const next = buildMapTheme(uiStyle, host === null ? null : createDomResolver(host));
+    setTheme((prev) => (prev.key === next.key ? prev : next));
+  }, [uiStyle, loaded]);
 
   const mapGraph = useMemo(() => new MapGraph(), []);
   const [version, setVersion] = useState(0);
@@ -180,9 +233,9 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   // Legend and animation gate drive the derived render attributes.
   useEffect(() => {
     if (revokedRef.current) return;
-    mapGraph.restyle({ sizeBy, animateEdges });
+    mapGraph.restyle({ sizeBy, animateEdges, theme });
     bump();
-  }, [mapGraph, sizeBy, animateEdges, bump]);
+  }, [mapGraph, sizeBy, animateEdges, theme, bump]);
 
   // Access revoked: remove the data from the view instead of leaving the last frame drawn.
   useEffect(() => {
@@ -264,7 +317,13 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   );
 
   if (initial.isError) return <ErrorState error={initial.error} />;
-  if (initial.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (initial.isPending) {
+    return (
+      <div aria-busy="true" data-testid="map-loading">
+        <LoadingState label={STRINGS.loading} rows={4} />
+      </div>
+    );
+  }
 
   const incomplete = Object.values(sources).filter((s) => s.truncated);
   const truncatedReason = incomplete[0]?.reason ?? null;
@@ -277,10 +336,15 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
   const tableHref = `${MAP_TABLE_PATH}?${new URLSearchParams({ domain_id: domainId }).toString()}`;
 
   return (
-    <div className={styles.layout}>
+    <div className={styles.layout} ref={layoutRef}>
       <div className={styles.main}>
-        <div className={styles.toolbar}>
-          <Link to={tableHref} data-testid="view-as-table">
+        <div
+          className={mergeClasses(
+            styles.toolbar,
+            uiStyle.treatment.panelSurface === "lifted" && styles.toolbarLifted,
+          )}
+        >
+          <Link to={tableHref} className={styles.link} data-testid="view-as-table">
             {STRINGS.viewAsTable}
           </Link>
           <Switch
@@ -289,15 +353,28 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
             disabled={motion.systemPrefers}
             onChange={(_, data) => motion.setAppToggle(data.checked)}
           />
-          <span data-testid="animation-status">{ANIMATION_TEXT[animation]}</span>
-          <span data-testid="node-count">
+          {/* After the switch: the pinned Tab order is "View as table", then the motion switch. */}
+          <Button
+            appearance="secondary"
+            size="small"
+            onClick={() => setFitRequest((n) => n + 1)}
+            data-testid="fit-view"
+          >
+            {STRINGS.fitView}
+          </Button>
+          <span className={styles.muted} data-testid="animation-status">
+            {ANIMATION_TEXT[animation]}
+          </span>
+          <span className={styles.muted} data-testid="node-count">
             {STRINGS.nodeCount(mapGraph.nodeCount, mapGraph.edgeCount)}
           </span>
         </div>
 
         <div role="status" data-testid="live-status" data-live-status={live.status}>
-          {LIVE_TEXT[live.status]}
-          {live.lastErrorCode !== null ? ` (${live.lastErrorCode})` : ""}
+          <StatusPill
+            label={`${LIVE_TEXT[live.status]}${live.lastErrorCode !== null ? ` (${live.lastErrorCode})` : ""}`}
+            tone={LIVE_TONE[live.status]}
+          />
         </div>
 
         {revoked ? (
@@ -346,7 +423,9 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
         ) : null}
 
         {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 && !revoked ? (
-          <p data-testid="empty-state">{STRINGS.empty}</p>
+          <div data-testid="empty-state">
+            <EmptyState title={STRINGS.empty} />
+          </div>
         ) : null}
 
         <MapCanvas
@@ -355,6 +434,8 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
           reducedMotion={motion.reduced}
           animateEdges={animateEdges}
           selectedId={selectedId}
+          theme={theme}
+          fitRequest={fitRequest}
           onSelect={setSelectedId}
           onActivate={onActivate}
           {...(scheduler !== undefined && { scheduler })}

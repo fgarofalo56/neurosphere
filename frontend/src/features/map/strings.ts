@@ -1,4 +1,5 @@
 /** Every label for the map lives here so tests assert exact text. */
+import { formatAbsoluteTime } from "../../design-system";
 import type {
   CoverageState,
   Health,
@@ -18,6 +19,7 @@ export const STRINGS = {
   loading: "Loading map...",
   mapRegionName: "Agent topology map (WebGL graphic). The table view is the accessible equivalent.",
   viewAsTable: "View as table",
+  fitView: "Fit view",
   webglUnavailable:
     "This browser could not start the WebGL map. Use the table view, which shows the same data.",
   errorTitle: "Could not load the map",
@@ -89,10 +91,10 @@ export const SIZE_METRIC_LABEL: Readonly<Record<SizeMetric, string>> = {
 };
 
 export const HEALTH_LABEL: Readonly<Record<Health, string>> = {
-  ok: "ok",
-  degraded: "degraded",
-  failing: "failing",
-  unknown: "unknown",
+  ok: "Healthy",
+  degraded: "Degraded",
+  failing: "Failing",
+  unknown: "Unknown",
 };
 
 export const PROVENANCE_LABEL: Readonly<Record<Provenance, string>> = {
@@ -114,7 +116,7 @@ export function coverageText(
   lagSeconds: number | null,
   asOf: string | null,
 ): string {
-  const asOfText = asOf !== null ? ` (as of ${asOf})` : "";
+  const asOfText = asOf !== null ? ` (as of ${formatAbsoluteTime(asOf)})` : "";
   switch (state) {
     case "complete":
       return `Coverage complete${asOfText}`;

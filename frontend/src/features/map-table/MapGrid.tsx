@@ -10,8 +10,9 @@ import {
   type ReactElement,
 } from "react";
 import type { ApiError } from "../../api/index.js";
+import { HealthIndicator, LoadingState } from "../../design-system";
 import { useViewport } from "./hooks";
-import { HealthIcon, KindIcon } from "./icons";
+import { KindIcon } from "./icons";
 import {
   coverageText,
   HEALTH_LABEL,
@@ -137,9 +138,8 @@ function NodeRow({ node, rowKey, depth, isFirst }: NodeRowProps): ReactElement {
       <td className={styles.cell}>{metricText(m.frequency)}</td>
       <td className={styles.cell}>{metricText(m.latency_p95_ms, " ms")}</td>
       <td className={styles.cell}>
-        <span className={styles.inline} data-testid="health" data-health={m.health}>
-          <HealthIcon health={m.health} />
-          <span>{HEALTH_LABEL[m.health]}</span>
+        <span data-testid="health" data-health={m.health}>
+          <HealthIndicator state={m.health} label={HEALTH_LABEL[m.health]} />
         </span>
       </td>
     </tr>
@@ -170,7 +170,7 @@ function ClusterSection({
     return (
       <tr>
         <td colSpan={COLUMN_COUNT} aria-busy="true">
-          {STRINGS.loading}
+          <LoadingState label={STRINGS.loading} rows={1} />
         </td>
       </tr>
     );
