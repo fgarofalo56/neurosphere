@@ -17,6 +17,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { DEMO_REPORT_TITLES } from "./demoProfile.ts";
 
 export const COPILOT_PATH = /^\/api\/v1\/copilot\/(.*)$/;
 export const REPORTS_PATH = /^\/api\/v1\/reports\/(.*)$/;
@@ -180,7 +181,7 @@ function seedReport(
   };
 }
 
-export function freshCopilotState(domain: string): CopilotMockState {
+export function freshCopilotState(domain: string, demo = false): CopilotMockState {
   const reports = new Map<string, ReportDoc>();
   const seeds: ReportDoc[] = [
     seedReport(REPORT_SEED_OWN, domain, { title: "Cost by agent" }),
@@ -214,6 +215,16 @@ export function freshCopilotState(domain: string): CopilotMockState {
       },
     }),
   ];
+  if (demo) {
+    DEMO_REPORT_TITLES.forEach((extra, i) => {
+      seeds.push(
+        seedReport(`rpt-demo-${i + 1}`, domain, {
+          title: extra.title,
+          metric: extra.metric,
+        }),
+      );
+    });
+  }
   for (const r of seeds) reports.set(r.id, r);
   return { conversations: new Map(), reports, etagCounter: 1 };
 }
@@ -553,9 +564,7 @@ function checkIfMatch(ctx: CopilotMockContext, report: ReportDoc, required: bool
   return true;
 }
 
-function readBodyFields(
-  body: Record<string, unknown> | undefined,
-):
+function readBodyFields(body: Record<string, unknown> | undefined):
   | {
       title: string;
       chart_plan: Record<string, unknown>;

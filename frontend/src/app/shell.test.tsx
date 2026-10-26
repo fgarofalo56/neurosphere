@@ -8,7 +8,13 @@ import {
   selectedNavTo,
   type NavItem,
 } from "./navigation";
-import { reloadStoredTheme, useThemeStore } from "../design-system";
+import {
+  THEME_PACKS,
+  defaultPack,
+  reloadStoredTheme,
+  useThemeStore,
+  type ThemePack,
+} from "../design-system";
 import { accountWith, domainEntry, renderShell, stubResizeObserver } from "./test-support";
 import { buildAppNavItems } from "./workspaceNav";
 
@@ -84,12 +90,57 @@ describe("app shell", () => {
     expect(headings).toEqual(["NeuroSphere"]);
   });
 
-  it("shows the product name, a logo slot and the role in the header", () => {
+  it("shows the wordmark (mark plus real text) and the role in the header, with no empty logo box", () => {
     renderRealNav(["Viewer"]);
     const banner = screen.getByRole("banner");
     expect(within(banner).getByText("NeuroSphere")).toBeInTheDocument();
-    expect(banner.querySelector("[data-slot='logo']")).not.toBeNull();
+    expect(banner.querySelector("[data-slot='neurosphere-mark']")).not.toBeNull();
+    // The default pack ships no logo: nothing (not a dashed placeholder) renders.
+    expect(banner.querySelector("[data-slot='logo']")).toBeNull();
     expect(within(banner).getByRole("button", { name: "Account: Viewer" })).toBeInTheDocument();
+  });
+
+  it("shows an agency pack logo beside the mark", () => {
+    const packs = THEME_PACKS as unknown as Record<string, ThemePack>;
+    packs["logo-test"] = {
+      ...defaultPack,
+      id: "logo-test",
+      logos: {
+        ...defaultPack.logos,
+        header: {
+          asset: {
+            src: "/agency.svg",
+            mimeType: "image/svg+xml",
+            byteSize: 100,
+            width: 40,
+            height: 40,
+          },
+          altText: "Agency seal",
+        },
+      },
+    } as ThemePack;
+    try {
+      useThemeStore.setState({ packId: "logo-test" });
+      renderRealNav(["Viewer"]);
+      const banner = screen.getByRole("banner");
+      expect(banner.querySelector("[data-slot='logo']")).not.toBeNull();
+      expect(within(banner).getByRole("img", { name: "Agency seal" })).toBeInTheDocument();
+      expect(within(banner).getByText("NeuroSphere")).toBeInTheDocument();
+    } finally {
+      delete packs["logo-test"];
+    }
+  });
+
+  it("offers a UI style radio group that switches the style without a request", async () => {
+    const { fetchImpl } = renderRealNav(["Viewer"]);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Account: Viewer" }));
+    const ops = await screen.findByRole("menuitemradio", { name: "Ops console" });
+    expect(screen.getByRole("menuitemradio", { name: "Enterprise Fluent" })).toBeInTheDocument();
+    const before = fetchImpl.mock.calls.length;
+    await user.click(ops);
+    expect(useThemeStore.getState().styleId).toBe("ops-console");
+    expect(fetchImpl.mock.calls.length).toBe(before);
   });
 
   it("hides workspace entries the roles do not suggest, and keeps the rest", () => {
