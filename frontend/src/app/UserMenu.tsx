@@ -15,8 +15,11 @@ import { signOut, useRoles } from "../auth";
 import {
   THEME_NAMES,
   THEME_PACKS,
+  UI_STYLES,
+  UI_STYLE_IDS,
   isThemeName,
   isThemePackId,
+  isUiStyleId,
   useThemeStore,
   type ThemeName,
 } from "../design-system";
@@ -30,7 +33,7 @@ const MODE_LABELS: Readonly<Record<ThemeName, string>> = {
 };
 
 /**
- * Shows the display role(s), the theme mode and pack pickers and the sandbox switch, and offers
+ * Shows the display role(s), the theme mode, UI style and pack pickers and the sandbox switch, and offers
  * sign out (which also clears the remembered domain). Theme and sandbox choices are UI
  * preferences only; they never change what the API allows.
  */
@@ -41,15 +44,18 @@ export function UserMenu(): ReactElement {
   const packId = useThemeStore((s) => s.packId);
   const setTheme = useThemeStore((s) => s.setTheme);
   const setPack = useThemeStore((s) => s.setPack);
+  const styleId = useThemeStore((s) => s.styleId);
+  const setStyle = useThemeStore((s) => s.setStyle);
   return (
     <>
       <SandboxToggle />
       <Menu
-        checkedValues={{ mode: [themeName], pack: [packId] }}
+        checkedValues={{ mode: [themeName], pack: [packId], style: [styleId] }}
         onCheckedValueChange={(_event, { name, checkedItems }) => {
           const value = checkedItems[0];
           if (name === "mode" && isThemeName(value)) setTheme(value);
           if (name === "pack" && isThemePackId(value)) setPack(value);
+          if (name === "style" && isUiStyleId(value)) setStyle(value);
         }}
       >
         <MenuTrigger disableButtonEnhancement>
@@ -62,6 +68,15 @@ export function UserMenu(): ReactElement {
               {THEME_NAMES.map((name) => (
                 <MenuItemRadio key={name} name="mode" value={name}>
                   {MODE_LABELS[name]}
+                </MenuItemRadio>
+              ))}
+            </MenuGroup>
+            <MenuDivider />
+            <MenuGroup>
+              <MenuGroupHeader>UI style</MenuGroupHeader>
+              {UI_STYLE_IDS.map((id) => (
+                <MenuItemRadio key={id} name="style" value={id}>
+                  {UI_STYLES[id].displayName}
                 </MenuItemRadio>
               ))}
             </MenuGroup>

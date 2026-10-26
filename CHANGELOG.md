@@ -185,6 +185,20 @@ All notable changes to this project are documented here. The format follows
   with zero serious or critical findings after fixing link contrast, a high-contrast badge, dialog
   focus restore and the chart frame focus indicator. Manual keyboard and screen-reader checklists
   are prepared and unsigned. No conformance claim; G09 stays OPEN.
+- Visual redesign and switchable UI styles (PRP-30): two runtime-switchable styles, Enterprise
+  Fluent (default) and Ops console, picked from the user menu or the `defaultUiStyle` runtime
+  key and composed with the existing modes and packs. A style may only override allowlisted
+  neutral tokens, and only while every PRP-24 contrast guard passes; high-contrast ignores style
+  colours. Styles are presentation only, and a test proves both send identical requests. New
+  design-system primitives: NeuroSphere mark and wordmark, KPI cards, status pills that wrap,
+  health indicators (colour, icon and text), empty/loading/error states, relative timestamps,
+  data table, panel, and in-house SVG charts with one chart per currency, estimated dashed vs
+  invoiced solid, and unknown drawn as gaps, never 0 (no new dependency). Mockups were approved
+  before every page was restyled. The demo banner no longer covers the assistant, the first
+  visit lands on a populated domain, and `pnpm demo` runs a richer fixture profile whose mock
+  authorizes exactly like the real API. Accessibility: 257 axe checks across styles, modes,
+  packs and routes with zero findings; 26 Linux visual baselines compared in the pinned
+  Playwright image; CI e2e sharded across two jobs. G09 stays OPEN.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

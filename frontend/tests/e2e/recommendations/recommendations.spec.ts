@@ -44,9 +44,9 @@ test.describe("list", () => {
     await expect(rows).toHaveCount(3);
     await expect(rows.first().getByTestId("advisory-badge")).toHaveText("Advisory");
     // Unresolved owner renders "unknown", not an empty cell.
-    await expect(
-      rows.filter({ hasText: "Unused agent" }).getByText("unknown", { exact: true }),
-    ).toBeVisible();
+    await expect(rows.filter({ hasText: "Unused agent" }).getByTestId("card-owner")).toHaveText(
+      "unknown",
+    );
 
     const next = page.waitForResponse((r) =>
       r.url().includes(`cursor=${RECOMMENDATION_NEXT_CURSOR}`),
@@ -97,8 +97,8 @@ test.describe("detail", () => {
     await page.goto(detailUrl(DOMAIN_OK, REC_RIGHT_SIZING));
     await expect(page.getByTestId("advisory-badge")).toHaveText("Advisory");
     await expect(page.getByTestId("advisory-reason")).toContainText("action gates not passed");
-    await expect(page.getByTestId("evidence-window")).toContainText("2026-10-03T00:00:00Z");
-    await expect(page.getByTestId("evidence-window")).toContainText("2026-10-10T00:00:00Z");
+    await expect(page.getByTestId("evidence-window")).toContainText("2026-10-03 00:00 UTC");
+    await expect(page.getByTestId("evidence-window")).toContainText("2026-10-10 00:00 UTC");
     await expect(page.getByTestId("coverage")).toContainText("observed 60%");
     await expect(page.getByTestId("uncertainty")).toHaveText("not estimable");
     await expect(page.getByTestId("prerequisites")).toContainText("quality_regression_test: unmet");

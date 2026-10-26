@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-30-visual-redesign-and-switchable-ui-styles](backlog/PRP-30-visual-redesign-and-switchable-ui-styles.md) | P0 |  | - | - | ? / ? | required |
 | [prp-32-hosted-azure-environment](backlog/PRP-32-hosted-azure-environment.md) | P0 |  | - | - | ? / ? | required |
 | [prp-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 |  | - | - | ? / ? | required |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
@@ -25,6 +24,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-30-visual-redesign-and-switchable-ui-styles](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) | 2026-10-26 | #134 |
 | [prp-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |
 | [prp-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-10-23 | #110 |

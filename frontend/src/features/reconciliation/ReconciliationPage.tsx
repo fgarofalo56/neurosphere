@@ -1,9 +1,6 @@
 import {
   Badge,
   Field,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
   Select,
   Table,
   TableBody,
@@ -11,12 +8,26 @@ import {
   TableHeader,
   TableHeaderCell,
   TableRow,
+  makeStyles,
+  tokens,
 } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import { ForbiddenError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  BarChart,
+  EmptyState,
+  ErrorState,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+  type ChartSeries,
+  useUiStyle,
+} from "../../design-system";
+import { FreshTime } from "../dashboards/components";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useReconciliation } from "./hooks";
 import { STRINGS, lagText } from "./strings";
@@ -30,6 +41,37 @@ import type {
 
 const DAY_OPTIONS = [1, 7, 14, 30, 60, 90] as const;
 const amountFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
+
+const useStyles = makeStyles({
+  view: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
+  note: {
+    margin: 0,
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: tokens.colorNeutralBackground3,
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    color: tokens.colorNeutralForeground1,
+  },
+  muted: { margin: 0, color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
+  fresh: {
+    display: "flex",
+    flexWrap: "wrap",
+    columnGap: tokens.spacingHorizontalXL,
+    rowGap: tokens.spacingVerticalXS,
+    margin: 0,
+  },
+  pair: { display: "flex", columnGap: tokens.spacingHorizontalS },
+  term: { color: tokens.colorNeutralForeground2 },
+  def: { margin: 0 },
+  cards: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 520px), 1fr))",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalM,
+    alignItems: "start",
+  },
+  pills: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalS },
+});
 
 function isKnown(m: MetricValue): m is MetricValue & { readonly value: number } {
   return m.status === "known" && m.value !== null;
@@ -96,67 +138,150 @@ function SourceRow({ line }: { readonly line: SourceLine }): ReactElement {
   );
 }
 
-function CurrencyTable({
+/** Coverage per source for one currency: unknown coverage is a gap, never a zero-height bar. */
+export function coverageSeries(
+  sources: readonly SourceLine[],
+  windowEnd: string,
+): readonly ChartSeries[] {
+  return sources.map((line) => ({
+    key: line.source,
+    label: STRINGS.sources[line.source],
+    kind: null,
+    unit: "ratio",
+    currency: null,
+    points: [
+      {
+        t: windowEnd,
+        value: isKnown(line.coverage) ? line.coverage.value : null,
+        complete: line.coverage.complete,
+      },
+    ],
+  }));
+}
+
+function CoverageChart({
+  sources,
+  windowEnd,
+  currencyName,
+}: {
+  readonly sources: readonly SourceLine[];
+  readonly windowEnd: string;
+  readonly currencyName: string;
+}): ReactElement {
+  const series = coverageSeries(sources, windowEnd);
+  const anyKnown = series.some((s) => s.points.some((p) => p.value !== null));
+  if (Number.isNaN(Date.parse(windowEnd)) || !anyKnown) {
+    return (
+      <div data-testid="coverage-empty">
+        <EmptyState
+          title={STRINGS.coverageUnknownTitle}
+          description={STRINGS.coverageUnknownBody}
+        />
+      </div>
+    );
+  }
+  return (
+    <BarChart
+      series={series}
+      height={200}
+      ariaLabel={`${STRINGS.coverageChartLabel} in ${currencyName}`}
+    />
+  );
+}
+
+function CurrencyCard({
   reference,
   sources,
+  windowEnd,
 }: {
   readonly reference: ReferenceLine;
   readonly sources: readonly SourceLine[];
+  readonly windowEnd: string;
 }): ReactElement {
+  const styles = useStyles();
+  const { density } = useUiStyle();
   const currencyName = reference.currency ?? STRINGS.undeterminedCurrency;
   return (
-    <section aria-label={`Reconciliation in ${currencyName}`} data-testid="currency-section">
-      <h2>{currencyName}</h2>
-      <Table aria-label={`Reconciliation table, ${currencyName}`}>
-        <TableHeader>
-          <TableRow>
-            <TableHeaderCell>{STRINGS.columns.source}</TableHeaderCell>
-            <TableHeaderCell>{STRINGS.columns.granularity}</TableHeaderCell>
-            <TableHeaderCell>{STRINGS.columns.amount}</TableHeaderCell>
-            <TableHeaderCell>{STRINGS.columns.coverage}</TableHeaderCell>
-            <TableHeaderCell>{STRINGS.columns.variance}</TableHeaderCell>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow data-testid="reference-row">
-            <TableCell>{STRINGS.referenceLabel}</TableCell>
-            <TableCell>{STRINGS.granularity.request}</TableCell>
-            <TableCell>
-              <Value
-                text={amountText(reference.amount, reference.currency)}
-                metric={reference.amount}
-                testId="reference-amount"
-              />
-            </TableCell>
-            <TableCell>{STRINGS.notApplicable}</TableCell>
-            <TableCell>{STRINGS.notApplicable}</TableCell>
-          </TableRow>
-          {sources.map((line) => (
-            <SourceRow key={line.source} line={line} />
-          ))}
-        </TableBody>
-      </Table>
-      <p data-testid="unknown-entries">
-        {STRINGS.unknownRemainderLabel}: {reference.unknown_entry_count}
-      </p>
-    </section>
+    <div
+      role="group"
+      aria-label={`Reconciliation in ${currencyName}`}
+      data-testid="currency-section"
+    >
+      <Panel title={currencyName} level={2}>
+        <CoverageChart sources={sources} windowEnd={windowEnd} currencyName={currencyName} />
+        <Table
+          aria-label={`Reconciliation table, ${currencyName}`}
+          size={density === "compact" ? "small" : "medium"}
+        >
+          <TableHeader>
+            <TableRow>
+              <TableHeaderCell>{STRINGS.columns.source}</TableHeaderCell>
+              <TableHeaderCell>{STRINGS.columns.granularity}</TableHeaderCell>
+              <TableHeaderCell>{STRINGS.columns.amount}</TableHeaderCell>
+              <TableHeaderCell>{STRINGS.columns.coverage}</TableHeaderCell>
+              <TableHeaderCell>{STRINGS.columns.variance}</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow data-testid="reference-row">
+              <TableCell>{STRINGS.referenceLabel}</TableCell>
+              <TableCell>{STRINGS.granularity.request}</TableCell>
+              <TableCell>
+                <Value
+                  text={amountText(reference.amount, reference.currency)}
+                  metric={reference.amount}
+                  testId="reference-amount"
+                />
+              </TableCell>
+              <TableCell>{STRINGS.notApplicable}</TableCell>
+              <TableCell>{STRINGS.notApplicable}</TableCell>
+            </TableRow>
+            {sources.map((line) => (
+              <SourceRow key={line.source} line={line} />
+            ))}
+          </TableBody>
+        </Table>
+        <p className={styles.muted} data-testid="unknown-entries">
+          {STRINGS.unknownRemainderLabel}: {reference.unknown_entry_count}
+        </p>
+      </Panel>
+    </div>
   );
 }
 
 function FreshnessList({ freshness }: { readonly freshness: Freshness }): ReactElement {
+  const styles = useStyles();
   return (
-    <dl data-testid="freshness" aria-label="Data freshness">
-      <dt>{STRINGS.watermarkLabel}</dt>
-      <dd data-testid="watermark">{freshness.watermark ?? STRINGS.unknown}</dd>
-      <dt>{STRINGS.lagLabel}</dt>
-      <dd data-testid="lag">
-        {freshness.lag_seconds === null ? STRINGS.unknown : lagText(freshness.lag_seconds)}
-      </dd>
-      <dt>{STRINGS.billingFreshnessLabel}</dt>
-      <dd data-testid="billing-freshness">
-        {freshness.billing_source_freshness ?? STRINGS.unknown}
-      </dd>
-    </dl>
+    <Panel title={STRINGS.freshnessTitle} level={2}>
+      <dl className={styles.fresh} data-testid="freshness" aria-label="Data freshness">
+        <div className={styles.pair}>
+          <dt className={styles.term}>{STRINGS.watermarkLabel}</dt>
+          <dd className={styles.def} data-testid="watermark">
+            {freshness.watermark === null ? (
+              STRINGS.unknown
+            ) : (
+              <FreshTime value={freshness.watermark} />
+            )}
+          </dd>
+        </div>
+        <div className={styles.pair}>
+          <dt className={styles.term}>{STRINGS.lagLabel}</dt>
+          <dd className={styles.def} data-testid="lag">
+            {freshness.lag_seconds === null ? STRINGS.unknown : lagText(freshness.lag_seconds)}
+          </dd>
+        </div>
+        <div className={styles.pair}>
+          <dt className={styles.term}>{STRINGS.billingFreshnessLabel}</dt>
+          <dd className={styles.def} data-testid="billing-freshness">
+            {freshness.billing_source_freshness === null ? (
+              STRINGS.unknown
+            ) : (
+              <FreshTime value={freshness.billing_source_freshness} />
+            )}
+          </dd>
+        </div>
+      </dl>
+    </Panel>
   );
 }
 
@@ -165,28 +290,68 @@ export function ReconciliationView({
 }: {
   readonly data: ReconciliationResponse;
 }): ReactElement {
+  const styles = useStyles();
   return (
-    <div data-testid="reconciliation-view">
-      <p role="note" data-testid="disclaimer">
+    <div className={styles.view} data-testid="reconciliation-view">
+      <p className={styles.note} role="note" data-testid="disclaimer">
         {STRINGS.disclaimer}
       </p>
       <FreshnessList freshness={data.freshness} />
-      {!data.complete ? <p data-testid="incomplete-data">{STRINGS.incompleteData}</p> : null}
-      {data.truncated ? <p data-testid="truncated">{STRINGS.truncated}</p> : null}
-      {data.references.length === 0 ? <p data-testid="no-data">{STRINGS.noData}</p> : null}
-      {data.references.map((reference) => (
-        <CurrencyTable
-          key={reference.currency ?? "undetermined"}
-          reference={reference}
-          sources={data.sources.filter((s) => s.currency === reference.currency)}
-        />
-      ))}
-      <p data-testid="unknown-remainder">
+      <div className={styles.pills}>
+        {!data.complete ? (
+          <span data-testid="incomplete-data">
+            <StatusPill tone="warning" label={STRINGS.incompleteData} />
+          </span>
+        ) : null}
+        {data.truncated ? (
+          <span data-testid="truncated">
+            <StatusPill tone="warning" label={STRINGS.truncated} />
+          </span>
+        ) : null}
+      </div>
+      {data.references.length === 0 ? (
+        <div data-testid="no-data">
+          <EmptyState title={STRINGS.noData} />
+        </div>
+      ) : null}
+      <div className={styles.cards}>
+        {data.references.map((reference) => (
+          <CurrencyCard
+            key={reference.currency ?? "undetermined"}
+            reference={reference}
+            sources={data.sources.filter((s) => s.currency === reference.currency)}
+            windowEnd={data.window.end}
+          />
+        ))}
+      </div>
+      <p className={styles.muted} data-testid="unknown-remainder">
         {STRINGS.unknownRemainderLabel}: {valueText(data.unknown_remainder, (n) => String(n))}.{" "}
         {STRINGS.unknownRemainderNote}
       </p>
     </div>
   );
+}
+
+function referenceKpis(data: ReconciliationResponse): ReactElement[] {
+  const cards = data.references.map((r) => (
+    <KpiCard
+      key={r.currency ?? "undetermined"}
+      label={`${STRINGS.kpiReference}, ${r.currency ?? STRINGS.undeterminedCurrency}`}
+      value={amountText(r.amount, r.currency)}
+      accent={!isKnown(r.amount) ? "unknown" : r.amount.complete ? "ok" : "degraded"}
+    />
+  ));
+  cards.push(
+    <KpiCard
+      key="unknown-remainder"
+      label={STRINGS.unknownRemainderLabel}
+      value={valueText(data.unknown_remainder, (n) => String(n))}
+      accent={
+        isKnown(data.unknown_remainder) && data.unknown_remainder.value === 0 ? "ok" : "degraded"
+      }
+    />,
+  );
+  return cards;
 }
 
 export function ReconciliationPage(): ReactElement {
@@ -204,23 +369,33 @@ export function ReconciliationPage(): ReactElement {
 
   let body: ReactElement;
   if (domainId === "") {
-    body = <p data-testid="domain-required">{STRINGS.domainRequired}</p>;
+    body = (
+      <div data-testid="domain-required">
+        <EmptyState title={STRINGS.domainRequiredTitle} description={STRINGS.domainRequired} />
+      </div>
+    );
   } else if (query.isError) {
     const error = query.error;
     body =
       error instanceof ForbiddenError ? (
         <ForbiddenState workspace={STRINGS.title} correlationId={error.correlationId} />
       ) : (
-        <MessageBar intent="error" role="alert" data-testid="error-state">
-          <MessageBarBody>
-            <MessageBarTitle>{STRINGS.errorTitle}</MessageBarTitle>
-            {STRINGS.errorBody}
-            {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}
-          </MessageBarBody>
-        </MessageBar>
+        <div data-testid="error-state">
+          <ErrorState
+            title={STRINGS.errorTitle}
+            message={`${STRINGS.errorBody}${
+              error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""
+            }`}
+            onRetry={() => void query.refetch()}
+          />
+        </div>
       );
   } else if (query.isPending) {
-    body = <p aria-busy="true">{STRINGS.loading}</p>;
+    body = (
+      <div aria-busy="true">
+        <LoadingState label={STRINGS.loading} rows={4} />
+      </div>
+    );
   } else {
     body = <ReconciliationView data={query.data} />;
   }
@@ -229,6 +404,7 @@ export function ReconciliationPage(): ReactElement {
     <PageTemplate
       title={STRINGS.title}
       toolbarLabel={STRINGS.filtersLabel}
+      {...(query.data !== undefined && !query.isError ? { kpis: referenceKpis(query.data) } : {})}
       toolbar={
         <Field label={STRINGS.daysLabel}>
           <Select value={String(days)} onChange={(_e, data) => update("days", data.value)}>

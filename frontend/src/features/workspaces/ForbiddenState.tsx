@@ -1,5 +1,5 @@
-import { MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
 import type { ReactElement } from "react";
+import { ErrorState } from "../../design-system";
 
 export interface ForbiddenStateProps {
   readonly workspace: string;
@@ -12,13 +12,19 @@ export interface ForbiddenStateProps {
  */
 export function ForbiddenState({ workspace, correlationId }: ForbiddenStateProps): ReactElement {
   return (
-    <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-      <MessageBarBody>
-        <MessageBarTitle>Access denied</MessageBarTitle>
-        The service declined the request for the {workspace} workspace. If you need access, contact
-        your administrator.
-        {correlationId !== undefined && correlationId !== "" ? ` Reference: ${correlationId}.` : ""}
-      </MessageBarBody>
-    </MessageBar>
+    <ErrorState
+      tone="warning"
+      title="Access denied"
+      testId="forbidden-state"
+      message={
+        <>
+          The service declined the request for the {workspace} workspace. If you need access,
+          contact your administrator.
+          {correlationId !== undefined && correlationId !== ""
+            ? ` Reference: ${correlationId}.`
+            : ""}
+        </>
+      }
+    />
   );
 }

@@ -1,20 +1,15 @@
-import {
-  Button,
-  Field,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableHeaderCell,
-  TableRow,
-  makeStyles,
-  tokens,
-} from "@fluentui/react-components";
+import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  DataTable,
+  EmptyState,
+  LoadingState,
+  PageTemplate,
+  StatusPill,
+  Timestamp,
+} from "../../design-system";
 import { ActionDetail } from "./ActionDetail";
 import { EmergencyBanner, QueryErrorState, StateBadge } from "./components";
 import { useAction, useActionList } from "./hooks";
@@ -36,6 +31,7 @@ const useStyles = makeStyles({
     columnGap: tokens.spacingHorizontalS,
     marginTop: tokens.spacingVerticalS,
   },
+  kind: { display: "inline-flex", flexWrap: "wrap", alignItems: "center", columnGap: "8px" },
 });
 
 function isState(value: string): value is ActionState {
@@ -75,41 +71,48 @@ function ListBody({
       />
     );
   }
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="loading-state">
+        <LoadingState label={STRINGS.loading} rows={5} />
+      </div>
+    );
+  }
   const { items, next_cursor: next } = query.data;
   const H = STRINGS.headers;
   return (
     <>
       {items.length === 0 ? (
-        <p data-testid="empty-state">{STRINGS.empty}</p>
+        <div data-testid="empty-state">
+          <EmptyState title={STRINGS.empty} />
+        </div>
       ) : (
-        <Table aria-label={STRINGS.title}>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>{H.kind}</TableHeaderCell>
-              <TableHeaderCell>{H.target}</TableHeaderCell>
-              <TableHeaderCell>{H.state}</TableHeaderCell>
-              <TableHeaderCell>{H.channel}</TableHeaderCell>
-              <TableHeaderCell>{H.created}</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map((v) => (
-              <TableRow key={v.intent.intent_id} data-testid="action-row">
-                <TableCell>
+        <DataTable
+          label={STRINGS.title}
+          rows={items}
+          getRowId={(v) => v.intent.intent_id}
+          getRowProps={() => ({ "data-testid": "action-row" })}
+          columns={[
+            {
+              key: "kind",
+              header: H.kind,
+              render: (v) => (
+                <span className={styles.kind}>
                   <Link to={detailHref(domainId, v.intent.intent_id)}>{v.intent.action_kind}</Link>
-                  {v.advisory ? " (advisory)" : ""}
-                </TableCell>
-                <TableCell>{v.intent.target.canonical_id}</TableCell>
-                <TableCell>
-                  <StateBadge state={v.intent.state} />
-                </TableCell>
-                <TableCell>{v.intent.channel}</TableCell>
-                <TableCell>{v.intent.created_at}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  {v.advisory ? <StatusPill label="Advisory" tone="info" /> : null}
+                </span>
+              ),
+            },
+            { key: "target", header: H.target, render: (v) => v.intent.target.canonical_id },
+            { key: "state", header: H.state, render: (v) => <StateBadge state={v.intent.state} /> },
+            { key: "channel", header: H.channel, render: (v) => v.intent.channel },
+            {
+              key: "created",
+              header: H.created,
+              render: (v) => <Timestamp value={v.intent.created_at} />,
+            },
+          ]}
+        />
       )}
       <nav aria-label="Pagination" className={styles.pager}>
         <Button disabled={cursors.length <= 1} onClick={() => setCursors((c) => c.slice(0, -1))}>
@@ -137,6 +140,7 @@ export function ActionsPage(): ReactElement {
   return (
     <PageTemplate
       title={STRINGS.title}
+      actions={<Link to={proposeHref(domainId)}>{STRINGS.proposeLink}</Link>}
       toolbarLabel="Action filters"
       toolbar={
         <form
@@ -167,11 +171,10 @@ export function ActionsPage(): ReactElement {
       }
     >
       <EmergencyBanner />
-      <p>
-        <Link to={proposeHref(domainId)}>{STRINGS.proposeLink}</Link>
-      </p>
       {domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         <ListBody key={`${domainId}|${state}`} domainId={domainId} state={state} />
       )}
@@ -199,11 +202,17 @@ function DetailBody({
       />
     );
   }
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="loading-state">
+        <LoadingState label={STRINGS.loading} rows={5} />
+      </div>
+    );
+  }
   const view = override ?? query.data;
   return (
     <>
-      <p>
+      <div>
         <Button
           onClick={() => {
             void query.refetch().then(() => setOverride(null));
@@ -211,7 +220,7 @@ function DetailBody({
         >
           {STRINGS.refresh}
         </Button>
-      </p>
+      </div>
       <ActionDetail domainId={domainId} view={view} onView={setOverride} />
     </>
   );
@@ -225,7 +234,9 @@ export function ActionDetailPage(): ReactElement {
     <PageTemplate title={STRINGS.detailTitle}>
       <EmergencyBanner />
       {domainId === "" || intentId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         <DetailBody key={`${domainId}|${intentId}`} domainId={domainId} intentId={intentId} />
       )}

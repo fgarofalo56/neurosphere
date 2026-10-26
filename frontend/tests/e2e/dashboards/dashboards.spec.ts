@@ -69,10 +69,26 @@ test.describe("cost dashboard", () => {
     await page.goto(dashboardUrl("cost", DOMAIN_OK));
     const indicator = page.getByTestId("lag-indicator");
     await expect(indicator).toBeVisible();
-    await expect(indicator.getByTestId("watermark")).toHaveText(FIXTURE_WATERMARK);
+    // A Timestamp: the raw ISO value rides in the `datetime` attribute, not as visible text.
+    await expect(indicator.getByTestId("watermark").locator("time")).toHaveAttribute(
+      "datetime",
+      new Date(FIXTURE_WATERMARK).toISOString(),
+    );
     await expect(indicator.getByTestId("lag")).toHaveText(`${FIXTURE_LAG_SECONDS} s`);
     await expect(indicator.getByTestId("billing-freshness")).toBeVisible();
     await expect(page.getByTestId("analytics-chip")).toContainText("analytics: available");
+  });
+
+  test("draws estimated and invoiced of one currency together in one chart", async ({ page }) => {
+    await page.goto(dashboardUrl("cost", DOMAIN_OK));
+    const usd = page.getByTestId("chart-panel").filter({ hasText: "Cost in USD" });
+    await expect(usd).toBeVisible();
+    await expect(usd.getByRole("img").first()).toBeVisible();
+    await expect(usd.locator("[data-series]")).toHaveCount(2);
+    // The accessible data table stays beside the chart.
+    await expect(
+      page.getByRole("region", { name: "Cost (estimated, USD) data table" }),
+    ).toBeVisible();
   });
 
   test("has no axe violations", async ({ page }) => {

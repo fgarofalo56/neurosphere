@@ -78,13 +78,25 @@ const value = (v: number | null, complete = true) => ({
   price_version: null,
 });
 
-function costSeries(key: string, currency: string, kind: string, total: unknown) {
-  return { key, label: key, kind, unit: "currency", currency, total, points: [] };
+function costSeries(
+  key: string,
+  currency: string,
+  kind: string,
+  total: unknown,
+  points: unknown[] = [],
+) {
+  return { key, label: key, kind, unit: "currency", currency, total, points };
 }
+
+const day = (t: string, v: number | null) => ({ t, value: value(v) });
 
 const COST_BODY = {
   series: [
-    costSeries("estimated:USD", "USD", "estimated", value(12.5, false)),
+    costSeries("estimated:USD", "USD", "estimated", value(12.5, false), [
+      day("2026-10-18", 5),
+      day("2026-10-19", null),
+      day("2026-10-20", 7.5),
+    ]),
     costSeries("invoiced:USD", "USD", "invoiced", value(9.25)),
     costSeries("estimated:EUR", "EUR", "estimated", value(100)),
     costSeries("estimated:CAD", "CAD", "estimated", value(null)),
@@ -208,7 +220,7 @@ describe("OverviewPage", () => {
     }
     const query = (suffix: string) =>
       calls.urls.filter((u) => u.pathname.endsWith(suffix)).map((u) => u.searchParams.toString());
-    expect(query("/cost")).toEqual(["days=1"]);
+    expect(query("/cost")).toEqual(["days=7"]);
     expect(query("/items")).toEqual(["state=pending"]);
     expect(query("/viewport")).toEqual(["node_budget=1"]);
     expect(query("/intents").sort()).toEqual([
@@ -223,19 +235,44 @@ describe("OverviewPage", () => {
     const rows = await screen.findAllByTestId("cost-row");
     const text = rows.map((r) => r.textContent ?? "");
     expect(text[0]).toContain("USD");
-    expect(text[0]).toContain("12.5");
+    expect(text[0]).toContain("$12.50");
     expect(text[0]).toContain("estimated");
     expect(within(rows[0] as HTMLElement).getByTestId("incomplete-marker")).toBeInTheDocument();
-    expect(text[1]).toContain("9.25");
+    expect(text[1]).toContain("$9.25");
     expect(text[1]).toContain("invoiced");
     expect(text[2]).toContain("EUR");
-    expect(text[2]).toContain("100");
+    expect(text[2]).toContain("100.00");
     // Unknown stays "unknown", never 0, and nothing adds the series (21.75, 121.75 ...).
     expect(text[3]).toContain("CAD");
     expect(text[3]).toContain("unknown");
     expect(text[3]).not.toMatch(/\b0\b/);
     expect(tile("cost").textContent).not.toMatch(/21\.75|121\.75|131\.0/);
     expect(tile("cost")).toHaveTextContent(STRINGS.cost.window);
+  });
+
+  it("draws one sparkline per series with the unknown day as a gap, never a zero", async () => {
+    useApi();
+    renderOverview(["Viewer"]);
+    const rows = await screen.findAllByTestId("cost-row");
+    const first = within(rows[0] as HTMLElement);
+    expect(first.getAllByTestId("sparkline-gap")).toHaveLength(1);
+    expect(first.getByRole("img").getAttribute("aria-label")).toContain("1 unknown");
+    // A series with no points has nothing to plot, so it gets no sparkline at all.
+    expect(within(rows[1] as HTMLElement).queryByRole("img")).toBeNull();
+    expect(within(rows[3] as HTMLElement).queryByRole("img")).toBeNull();
+  });
+
+  it("shows an empty state for reports and a count of 0 when there are none", async () => {
+    useApi({ reports: () => json({ items: [], next_cursor: null }) });
+    renderOverview(["Viewer"]);
+    expect(await screen.findByText(STRINGS.reports.emptyTitle)).toBeInTheDocument();
+    expect(screen.getByTestId("reports-count")).toHaveTextContent("0");
+  });
+
+  it("shows a loading state before the tiles resolve", () => {
+    useApi();
+    renderOverview(["Viewer"]);
+    expect(screen.getAllByLabelText(/^Loading\.\.\./).length).toBeGreaterThan(0);
   });
 
   it("shows N+ on a paged list and the exact page size otherwise", async () => {

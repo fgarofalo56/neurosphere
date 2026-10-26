@@ -154,7 +154,11 @@ describe("table view", () => {
         .map((h) => h.textContent),
     ).toEqual(["agent", "amount"]);
     expect(within(table).getAllByRole("row")).toHaveLength(3);
-    expect(screen.getByText(/Invoiced cost \(as of 2026-10-10T11:58:00Z\)/)).toBeInTheDocument();
+    // The citation time goes through Timestamp: absolute UTC value, no raw ISO string.
+    const sources = screen.getByTestId("chart-sources");
+    expect(sources.textContent).toContain("Invoiced cost (as of");
+    expect(sources.textContent).toContain("2026-10-10 11:58 UTC");
+    expect(sources.textContent).not.toContain("2026-10-10T11:58:00Z");
     const results = await axe(container);
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });

@@ -264,4 +264,27 @@ describe("quality page", () => {
     expect(screen.getByText("Quality results are unavailable")).toBeTruthy();
     expect(screen.queryByTestId("pilot-rate")).toBeNull();
   });
+
+  it("shows empty states when there is no trend, coverage or drift data", async () => {
+    setup(PATH, { body: quality({ trends: [], coverage: [], drift_alerts: [] }) });
+    await screen.findByTestId("pilot-rate");
+    expect(screen.getByTestId("trends-empty").textContent).toContain("No quality trend data.");
+    expect(screen.getByText("No coverage data.")).toBeTruthy();
+    expect(screen.getByTestId("drift-empty").textContent).toContain("No drift alerts.");
+  });
+
+  it("shows a loading state before the data arrives", () => {
+    setup(PATH, { body: quality() });
+    expect(screen.getByLabelText("Loading...")).toBeTruthy();
+  });
+
+  it("shows score cards and a chart, with no raw ISO time visible", async () => {
+    setup(PATH, { body: quality() });
+    await screen.findByTestId("pilot-rate");
+    expect(screen.getAllByRole("group").length).toBeGreaterThanOrEqual(4);
+    expect(document.querySelector("svg[role='img']")).not.toBeNull();
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:/);
+    expect(screen.getByTestId("drift-row").textContent).toContain("2026-10-05 00:00 UTC");
+  });
 });

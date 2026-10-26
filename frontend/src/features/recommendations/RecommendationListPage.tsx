@@ -1,9 +1,10 @@
 import { Button, Field, Input, Select, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
-import { AdvisoryBadge, EvidenceStatus, QueryErrorState, ownerText } from "./components";
+import { EmptyState, LoadingState, PageTemplate } from "../../design-system";
+import { QueryErrorState } from "./components";
+import { RecommendationCard } from "./RecommendationCard";
 import { useRecommendations } from "./hooks";
 import { KIND_LABELS, STRINGS } from "./strings";
 import { RECOMMENDATION_KINDS, type RecommendationKind } from "./types";
@@ -19,6 +20,24 @@ export function detailHref(domainId: string, recommendationId: string): string {
   return `/recommendations/detail?${p.toString()}`;
 }
 
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+    columnGap: tokens.spacingHorizontalL,
+    rowGap: tokens.spacingVerticalL,
+    margin: 0,
+    padding: 0,
+  },
+});
+
 function ListBody({
   domainId,
   kind,
@@ -28,50 +47,38 @@ function ListBody({
   readonly kind: RecommendationKind | "";
   readonly q: string;
 }): ReactElement {
+  const styles = useStyles();
   // Cursor history: the last entry is the current page; "" is the first page.
   const [cursors, setCursors] = useState<readonly string[]>([""]);
   const cursor = cursors[cursors.length - 1] ?? "";
   const query = useRecommendations({ domainId, kind, q, cursor, limit: PAGE_SIZE });
 
   if (query.isError) return <QueryErrorState error={query.error} />;
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true">
+        <LoadingState label={STRINGS.loading} />
+      </div>
+    );
+  }
   const { items, next_cursor: next } = query.data;
 
   return (
     <>
       {items.length === 0 ? (
-        <p data-testid="empty-state">{STRINGS.empty}</p>
+        <div data-testid="empty-state">
+          <EmptyState title={STRINGS.empty} />
+        </div>
       ) : (
-        <table aria-label={STRINGS.listTitle}>
-          <thead>
-            <tr>
-              <th scope="col">{STRINGS.kindLabel}</th>
-              <th scope="col">{STRINGS.sections.subjects}</th>
-              <th scope="col">{STRINGS.sections.owner}</th>
-              <th scope="col">Evidence</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((rec) => (
-              <tr key={rec.recommendation_id} data-testid="recommendation-row">
-                <td>
-                  <Link to={detailHref(domainId, rec.recommendation_id)}>
-                    {KIND_LABELS[rec.kind]}
-                  </Link>
-                </td>
-                <td>{rec.subject_ids.join(", ")}</td>
-                <td>{ownerText(rec.owner)}</td>
-                <td>
-                  <EvidenceStatus rec={rec} />
-                </td>
-                <td>
-                  <AdvisoryBadge advisory={rec.advisory} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ul aria-label={STRINGS.listTitle} className={styles.grid}>
+          {items.map((rec) => (
+            <RecommendationCard
+              key={rec.recommendation_id}
+              rec={rec}
+              href={detailHref(domainId, rec.recommendation_id)}
+            />
+          ))}
+        </ul>
       )}
       <p>
         {cursors.length > 1 ? (
@@ -84,16 +91,6 @@ function ListBody({
     </>
   );
 }
-
-const useStyles = makeStyles({
-  form: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-    columnGap: tokens.spacingHorizontalM,
-    rowGap: tokens.spacingVerticalS,
-  },
-});
 
 function ListFilters({
   kind,
@@ -159,7 +156,9 @@ export function RecommendationListPage(): ReactElement {
       toolbarLabel="Recommendation filters"
     >
       {domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         // Re-keyed so a new filter resets the cursor history.
         <ListBody key={`${domainId}|${kind}|${q}`} domainId={domainId} kind={kind} q={q} />

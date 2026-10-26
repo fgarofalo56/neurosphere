@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Dialog,
   DialogActions,
@@ -12,8 +11,8 @@ import {
   Input,
   MessageBar,
   MessageBarBody,
-  MessageBarTitle,
 } from "@fluentui/react-components";
+import { ErrorState, StatusPill, Timestamp } from "../../design-system";
 import { useState, type ReactElement } from "react";
 import {
   DependencyTransientError,
@@ -50,53 +49,45 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.forbidden}</MessageBarTitle>
-          {STRINGS.forbiddenDetail}
-          {ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="forbidden-state">
+        <ErrorState title={STRINGS.forbidden} message={`${STRINGS.forbiddenDetail}${ref}.`} />
+      </div>
     );
   }
   if (error.status === 404) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="not-found-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.notFound}</MessageBarTitle>
-          {STRINGS.notFoundDetail}
-          {ref}
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="not-found-state">
+        <ErrorState title={STRINGS.notFound} message={`${STRINGS.notFoundDetail}${ref}`} />
+      </div>
     );
   }
   if (error instanceof InvalidSchemaError) {
     return (
-      <MessageBar intent="error" role="alert" data-testid="invalid-plan-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.invalidPlan}</MessageBarTitle>
-          {STRINGS.invalidPlanDetail}
-          {ref}
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="invalid-plan-state">
+        <ErrorState title={STRINGS.invalidPlan} message={`${STRINGS.invalidPlanDetail}${ref}`} />
+      </div>
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-        {onRetry !== undefined ? (
+    <div data-testid="unavailable-state">
+      <ErrorState
+        title={STRINGS.unavailable}
+        message={
           <>
-            {" "}
-            <Button size="small" onClick={onRetry}>
-              {STRINGS.retry}
-            </Button>
+            {STRINGS.unavailableDetail}
+            {ref}
+            {onRetry !== undefined ? (
+              <>
+                {" "}
+                <Button size="small" onClick={onRetry}>
+                  {STRINGS.retry}
+                </Button>
+              </>
+            ) : null}
           </>
-        ) : null}
-      </MessageBarBody>
-    </MessageBar>
+        }
+      />
+    </div>
   );
 }
 
@@ -128,18 +119,18 @@ export function MutationError({ error }: { readonly error: ApiError }): ReactEle
 }
 
 export function PublicationBadge({ state }: { readonly state: PublicationState }): ReactElement {
-  const color =
+  const tone =
     state === "approved"
       ? "success"
       : state === "rejected"
         ? "danger"
         : state === "pending"
           ? "warning"
-          : "informative";
+          : "neutral";
   return (
-    <Badge appearance="tint" color={color} data-testid="publication-badge">
-      {STRINGS.publication[state]}
-    </Badge>
+    <span data-testid="publication-badge">
+      <StatusPill label={STRINGS.publication[state]} tone={tone} />
+    </span>
   );
 }
 
@@ -160,7 +151,11 @@ export function Citations({
         {citations.map((c) => (
           <li key={c.record_id} data-testid="citation">
             {c.record_id} ({c.source}){" "}
-            {c.as_of !== null ? `${STRINGS.citationAsOf} ${c.as_of}, ` : ""}
+            {c.as_of !== null ? (
+              <>
+                {STRINGS.citationAsOf} <Timestamp value={c.as_of} />,{" "}
+              </>
+            ) : null}
             {freshnessText(c.freshness)}
           </li>
         ))}

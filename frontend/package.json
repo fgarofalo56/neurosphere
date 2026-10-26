@@ -12,7 +12,10 @@
     "dev": "vite",
     "demo": "node scripts/demo.mjs",
     "build:report": "node scripts/bundle-report.mjs",
-    "test:e2e": "playwright test --reporter=line"
+    "test:e2e": "playwright test --project=chromium --reporter=line",
+    "test:visual": "playwright test --project=visual --reporter=line",
+    "visual:update": "node scripts/update-visual-baselines.mjs",
+    "visual:check": "node scripts/update-visual-baselines.mjs --check"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.25.0",

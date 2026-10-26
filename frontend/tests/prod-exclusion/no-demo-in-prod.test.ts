@@ -34,6 +34,9 @@ const FORBIDDEN_BUILD_MARKERS = [
   "e2e.user@example.invalid", // stubMsal account
   "e2e-home-account", // stubMsal account id
   '"demo"', // the demo mode branch comparison
+  "__ns_mockups__", // PRP-30 mockup gallery marker
+  "ns-mockup-gallery", // PRP-30 mockup gallery test id
+  "/__mockups/", // PRP-30 mockup route prefix
 ] as const;
 
 const DEMO_FLAGS = [

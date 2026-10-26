@@ -12,6 +12,7 @@ import {
   nodeAppearance,
   type MetricRange,
 } from "./appearance";
+import { DEFAULT_MAP_THEME, type MapTheme } from "./mapTheme";
 import {
   HEALTHS,
   NODE_BUDGET,
@@ -31,6 +32,11 @@ export interface MapNodeAttributes {
   y: number;
   size: number;
   color: string;
+  /** Halo behind the node (tinted health background) and its glow colour. */
+  haloColor: string;
+  glowColor: string;
+  /** "visible" while the graph is small enough for halos to be affordable. */
+  halo: "visible" | "hidden";
   opacity: number;
   shape: string;
   label: string;
@@ -58,27 +64,47 @@ export interface MapSettings {
   readonly sizeBy: SizeMetric;
   /** True when observed edges may animate (motion allowed, live, coverage complete/partial). */
   readonly animateEdges: boolean;
+  /** Colours for nodes and edges, from the active UI style. */
+  readonly theme: MapTheme;
 }
 
-export const DEFAULT_SETTINGS: MapSettings = { sizeBy: "tokens", animateEdges: true };
+export const DEFAULT_SETTINGS: MapSettings = {
+  sizeBy: "tokens",
+  animateEdges: true,
+  theme: DEFAULT_MAP_THEME,
+};
 
-const ISLAND_RADIUS = 520;
-const POINT_SPACING = 10;
+/** World units between neighbouring nodes. sigma fits the graph to the viewport, so only ratios matter. */
+export const POINT_SPACING = 70;
+/** The disc is stretched horizontally: labels are wide and the map frame is landscape. */
+export const LAYOUT_ASPECT = 1.6;
+/** Cluster members sit closer to their cluster than top-level nodes sit to each other. */
+export const MEMBER_SPACING = 0.6 * POINT_SPACING;
+/** Members start this many slots out so the first one never lands on the cluster itself. */
+const MEMBER_INNER_SLOTS = 3;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+/** Halos (backdrop + glow) are drawn only up to this many nodes: they cost fill rate. */
+export const HALO_MAX_NODES = 150;
 
-/** Deterministic island layout: one phyllotaxis disc per kind, so positions never jump. */
-export function layoutPosition(kind: NodeKind, indexInKind: number): { x: number; y: number } {
-  const slot = NODE_KINDS.indexOf(kind);
-  const centreAngle = (slot / NODE_KINDS.length) * Math.PI * 2;
-  const cx = Math.cos(centreAngle) * ISLAND_RADIUS;
-  const cy = Math.sin(centreAngle) * ISLAND_RADIUS;
-  return spiralPosition(cx, cy, indexInKind);
+/**
+ * Deterministic layout: a phyllotaxis (sunflower) disc, stretched to the landscape frame. The
+ * position depends only on the arrival index, so the same input gives the same positions and
+ * existing nodes never move when more arrive. Neighbours are at least ~POINT_SPACING apart at
+ * any size, so a handful of nodes is as legible as a few hundred.
+ */
+export function layoutPosition(index: number): { x: number; y: number } {
+  return spiralPosition(0, 0, index, POINT_SPACING);
 }
 
-function spiralPosition(cx: number, cy: number, index: number): { x: number; y: number } {
-  const r = POINT_SPACING * Math.sqrt(index + 1);
+function spiralPosition(
+  cx: number,
+  cy: number,
+  index: number,
+  spacing: number,
+): { x: number; y: number } {
+  const r = spacing * Math.sqrt(index);
   const a = index * GOLDEN_ANGLE;
-  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  return { x: cx + r * Math.cos(a) * LAYOUT_ASPECT, y: cy + r * Math.sin(a) };
 }
 
 /** Worst state wins; a gap is never smoothed over by a later complete page. */
@@ -163,7 +189,8 @@ export class MapGraph {
     multi: true,
     allowSelfLoops: true,
   });
-  private readonly kindCounts = new Map<NodeKind, number>();
+  /** Top-level nodes placed so far: the next arrival takes this slot on the disc. */
+  private placed = 0;
   private readonly clusterCounts = new Map<string, number>();
   /** Edges whose endpoints have not been loaded yet (a later page may supply them). */
   private readonly pendingEdges = new Map<string, ViewportEdge>();
@@ -216,7 +243,10 @@ export class MapGraph {
           x,
           y,
           size: 4,
-          color: "#8a8886",
+          color: this.settings.theme.health.unknown.icon,
+          haloColor: this.settings.theme.health.unknown.bg,
+          glowColor: "transparent",
+          halo: "hidden",
           opacity: 1,
           sizeUnknown: true,
         });
@@ -232,11 +262,11 @@ export class MapGraph {
       const centre = this.graph.getNodeAttributes(clusterId);
       const index = this.clusterCounts.get(clusterId) ?? 0;
       this.clusterCounts.set(clusterId, index + 1);
-      return spiralPosition(centre.x, centre.y, index + 3);
+      return spiralPosition(centre.x, centre.y, index + MEMBER_INNER_SLOTS, MEMBER_SPACING);
     }
-    const index = this.kindCounts.get(node.kind) ?? 0;
-    this.kindCounts.set(node.kind, index + 1);
-    return layoutPosition(node.kind, index);
+    const index = this.placed;
+    this.placed += 1;
+    return layoutPosition(index);
   }
 
   upsertEdges(edges: readonly ViewportEdge[]): void {
@@ -249,7 +279,7 @@ export class MapGraph {
     for (const [id, edge] of this.pendingEdges) {
       if (!this.graph.hasNode(edge.source) || !this.graph.hasNode(edge.target)) continue;
       this.pendingEdges.delete(id);
-      const look = edgeAppearance(edge.provenance, this.settings.animateEdges);
+      const look = edgeAppearance(edge.provenance, this.settings.animateEdges, this.settings.theme);
       const attrs: MapEdgeAttributes = {
         size: look.size,
         color: look.color,
@@ -279,6 +309,7 @@ export class MapGraph {
     const memberRange: MetricRange | null = metricRange(
       g.mapNodes((_, a) => (a.kind === "cluster" ? a.memberCount : null)),
     );
+    const halo = g.order <= HALO_MAX_NODES ? "visible" : "hidden";
     g.forEachNode((id, a) => {
       const look = nodeAppearance(
         a.kind,
@@ -287,16 +318,20 @@ export class MapGraph {
         settings.sizeBy,
         range,
         memberRange,
+        settings.theme,
       );
       g.mergeNodeAttributes(id, {
         size: look.size,
         color: look.color,
+        haloColor: look.haloColor,
+        glowColor: look.glowColor,
+        halo,
         opacity: look.opacity,
         sizeUnknown: look.sizeUnknown,
       });
     });
     g.forEachEdge((id, a) => {
-      const look = edgeAppearance(a.provenance, settings.animateEdges);
+      const look = edgeAppearance(a.provenance, settings.animateEdges, settings.theme);
       g.mergeEdgeAttributes(id, {
         color: look.color,
         size: look.size,
@@ -318,7 +353,7 @@ export class MapGraph {
   /** Drops every node and edge (access revoked: stale data must not stay drawn). */
   clear(): void {
     this.graph.clear();
-    this.kindCounts.clear();
+    this.placed = 0;
     this.clusterCounts.clear();
     this.pendingEdges.clear();
     this.animatedCache = null;

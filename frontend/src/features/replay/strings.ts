@@ -8,6 +8,13 @@ export const STRINGS = {
   noTraces: "No traces found for this domain.",
   traceList: "Traces",
   openTrace: "Inspect trace",
+  columns: {
+    trace: "Trace",
+    root: "Root span",
+    spans: "Spans",
+    errors: "Errors",
+    started: "Started",
+  },
   loadMore: "Show more traces",
   loading: "Loading...",
   treeLabel: "Trace spans",

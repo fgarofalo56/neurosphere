@@ -47,6 +47,26 @@ test.describe("copilot dock", () => {
     await expect(page.getByRole("button", { name: "Open assistant" })).toBeFocused();
   });
 
+  test("the launcher is not covered by the sandbox banner or anything else", async ({ page }) => {
+    // Sandbox mode on (persisted zustand state) so the in-flow banner is present.
+    await page.addInitScript(() => {
+      window.localStorage.setItem(
+        "ns.sandbox-mode",
+        JSON.stringify({ state: { enabled: true }, version: 0 }),
+      );
+    });
+    await page.goto("/");
+    await expect(page.getByTestId("sandbox-banner")).toBeVisible();
+    const launcher = page.getByRole("button", { name: "Open assistant" });
+    await expect(launcher).toBeVisible();
+    const hit = await launcher.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return top !== null && (top === el || el.contains(top));
+    });
+    expect(hit).toBe(true);
+  });
+
   test("an answered turn streams text, shows citations with freshness words and a chart", async ({
     page,
   }) => {

@@ -21,6 +21,19 @@ import {
   reportsHandler,
   type CopilotMockContext,
 } from "./copilot.ts";
+import {
+  DEMO_EXTRA_INTENTS,
+  DEMO_EXTRA_ITEMS,
+  DEMO_FRESHNESS,
+  DEMO_PROFILE,
+  demoDashboardSeries,
+  demoDays,
+  demoIntentId,
+  demoItemId,
+  demoRecommendations,
+  demoTopology,
+  demoWindow,
+} from "./demoProfile.ts";
 import { MCP_ADMIN_PATH, freshMcpAdminState, mcpAdminHandler } from "./mcpAdmin.ts";
 
 export const DEFAULT_PORT = 4010;
@@ -33,6 +46,8 @@ export interface MockApiOptions {
   readonly allowedOrigin: string;
   /** Base URL the mock tells the app to use (config.json apiBaseUrl). */
   readonly apiBaseUrl: string;
+  /** "demo" serves the richer local-demo fixtures; anything else is the e2e profile. */
+  readonly profile?: string;
 }
 
 function problem(correlationId: string, instance: string): ProblemDetails {
@@ -88,11 +103,13 @@ function meDomainItems(): readonly Record<string, unknown>[] {
     cloud: "commercial",
     permissions: ["data.read"],
   });
+  // Sorted by display_name like the real API, so "Finance" (the populated domain) is first and a
+  // first visit lands on data. The analytics-down fixture is named to sort after it.
   return [
-    entry(DOMAIN_ANALYTICS_DOWN, "Analytics (batch down)", "catalog"),
+    entry(DOMAIN_ANALYTICS_DOWN, "Telemetry (batch down)", "catalog"),
     entry(DOMAIN_OK, "Finance", "catalog"),
     entry(DOMAIN_VIEWER, "Viewer Only", "derived"),
-  ];
+  ].sort((a, b) => String(a["display_name"]).localeCompare(String(b["display_name"])));
 }
 
 // ---- PRP-24: GET /api/v1/sandbox/status and /entities. Shapes follow the API models
@@ -289,8 +306,25 @@ function dashboardSeries(metric: string): Record<string, unknown>[] {
   }
 }
 
-function dashboardBody(domain: string, metric: string): Record<string, unknown> {
+function dashboardBody(domain: string, metric: string, demoUrl?: URL): Record<string, unknown> {
   const analyticsDown = domain === DOMAIN_ANALYTICS_DOWN;
+  if (demoUrl !== undefined) {
+    const days = demoDays(demoUrl.searchParams.get("days"));
+    return {
+      metric,
+      domain_id: domain,
+      grain: "day",
+      window: demoWindow(days),
+      freshness: DEMO_FRESHNESS,
+      analytics: analyticsDown
+        ? { state: "disabled", reason: ANALYTICS_DISABLED_REASON }
+        : { state: "available", reason: null },
+      complete: false,
+      truncated: false,
+      series: demoDashboardSeries(metric, days, ESTIMATED_PRICE_VERSION, INVOICED_PRICE_VERSION),
+      price_versions: metric === "cost" ? [ESTIMATED_PRICE_VERSION, INVOICED_PRICE_VERSION] : [],
+    };
+  }
   return {
     metric,
     domain_id: domain,
@@ -494,6 +528,7 @@ function recommendationHandler(
   cors: Record<string, string>,
   correlationId: string,
   readBody: () => Promise<string>,
+  demo = false,
 ): void {
   if (roleFromAuthorization(req.headers.authorization) === undefined) {
     send(res, 401, { error: "missing or unrecognised token" }, cors);
@@ -505,6 +540,13 @@ function recommendationHandler(
   }
   const fixtures = recommendationFixtures();
   const order = [REC_RIGHT_SIZING, REC_UNUSED, REC_COST_SPIKE, REC_DUPLICATE];
+  if (demo) {
+    for (const extra of demoRecommendations(DOMAIN_OK)) {
+      fixtures[extra.id] = extra.record;
+      order.push(extra.id);
+    }
+  }
+  const pageSize = demo ? 8 : 3;
   const { rest } = parts;
   if (req.method === "GET" && rest === "") {
     const kind = url.searchParams.get("kind");
@@ -519,9 +561,12 @@ function recommendationHandler(
     const items = !paged
       ? matching
       : cursor === RECOMMENDATION_NEXT_CURSOR
-        ? matching.slice(3)
-        : matching.slice(0, 3);
-    const next = paged && cursor !== RECOMMENDATION_NEXT_CURSOR ? RECOMMENDATION_NEXT_CURSOR : null;
+        ? matching.slice(pageSize)
+        : matching.slice(0, pageSize);
+    const next =
+      paged && cursor !== RECOMMENDATION_NEXT_CURSOR && matching.length > pageSize
+        ? RECOMMENDATION_NEXT_CURSOR
+        : null;
     send(res, 200, { items, next_cursor: next }, { ...cors, "server-timing": "app;dur=1.0" });
     return;
   }
@@ -982,7 +1027,28 @@ function clusterViewport(
   });
 }
 
-function viewportBody(domain: string, url: URL): Record<string, unknown> {
+/** Demo profile: one flat 30-node topology, nothing truncated, every kind and provenance. */
+function demoViewport(domain: string): Record<string, unknown> {
+  const { nodes, edges } = demoTopology();
+  return viewportResponse(domain, {
+    nodes: nodes.map((n) =>
+      mapNode(n.id, n.kind, n.label, {
+        metrics: {
+          tokens: n.tokens,
+          context_size: n.tokens === null ? null : 8192,
+          frequency: n.tokens === null ? null : 3.5,
+          latency_p95_ms: n.latency,
+          health: n.health,
+        },
+      }),
+    ),
+    edges: edges.map((e) => mapEdge(e.id, e.source, e.target, e.provenance)),
+    truncated: false,
+    coverage: { state: "complete", lag_seconds: 38, as_of: MAP_AS_OF },
+  });
+}
+
+function viewportBody(domain: string, url: URL, demo: boolean): Record<string, unknown> {
   if (domain === DOMAIN_MAP_PERF || url.searchParams.get("fixture") === "perf") {
     return perfViewport(domain, url);
   }
@@ -990,7 +1056,7 @@ function viewportBody(domain: string, url: URL): Record<string, unknown> {
   if (clusterId !== null && clusterId !== "") {
     return clusterViewport(domain, clusterId, url.searchParams.get("cursor") ?? "");
   }
-  return topLevelViewport(domain);
+  return demo ? demoViewport(domain) : topLevelViewport(domain);
 }
 
 function admitReadDomain(
@@ -1205,6 +1271,7 @@ function mapReplayHandler(
   url: URL,
   cors: Record<string, string>,
   correlationId: string,
+  demo = false,
 ): boolean {
   const viewport = MAP_VIEWPORT.exec(url.pathname);
   const detail = REPLAY_TRACE.exec(url.pathname);
@@ -1215,7 +1282,7 @@ function mapReplayHandler(
   if (domain === undefined) return true;
   const headers = { ...cors, "server-timing": "app;dur=1.0" };
   if (viewport !== null) {
-    send(res, 200, viewportBody(domain, url), headers);
+    send(res, 200, viewportBody(domain, url, demo), headers);
   } else if (detail !== null) {
     const body = traceDetail(decodeURIComponent(detail[2] ?? ""));
     if (body === undefined) send(res, 404, { error: "trace not found" }, cors);
@@ -1544,10 +1611,57 @@ function seedItems(): ActionsState["items"] {
   return new Map(entries.map(([id, domain, item]) => [id, { domain, item }]));
 }
 
-function freshActionsState(): ActionsState {
+/** Demo profile: more intents and review items in the readable domain (all SYNTHETIC). */
+function addDemoActions(intents: ActionsState["intents"], items: ActionsState["items"]): void {
+  const states = ["validated", "awaiting_approval", "succeeded", "failed", "rolled_back"];
+  const kinds = ["model_deployment_swap", "agent_instruction_update", "model_deployment_swap"];
+  for (let n = 1; n <= DEMO_EXTRA_INTENTS; n += 1) {
+    const id = demoIntentId(n);
+    const state = states[(n - 1) % states.length] ?? "validated";
+    const base = makeIntent(id, {
+      action_kind: kinds[(n - 1) % kinds.length] ?? "model_deployment_swap",
+      state,
+      created_at: `2026-10-${String(18 + n).padStart(2, "0")}T10:00:00Z`,
+      state_changed_at: `2026-10-${String(18 + n).padStart(2, "0")}T10:30:00Z`,
+    });
+    const intent =
+      state === "awaiting_approval"
+        ? { ...withConfirmation(base, minutesFromNow(60)), state }
+        : base;
+    intents.set(id, { domain: DOMAIN_OK, view: makeView(intent) });
+  }
+  const itemKinds = [
+    "maker_checker",
+    "recommendation",
+    "relationship",
+    "policy_exception",
+    "maker_checker",
+  ];
+  const itemStates = ["pending", "assigned", "escalated", "pending", "approved"];
+  for (let n = 1; n <= DEMO_EXTRA_ITEMS; n += 1) {
+    const id = demoItemId(n);
+    items.set(id, {
+      domain: DOMAIN_OK,
+      item: makeItem(id, DOMAIN_OK, {
+        kind: itemKinds[(n - 1) % itemKinds.length] ?? "maker_checker",
+        state: itemStates[(n - 1) % itemStates.length] ?? "pending",
+        subject_ref: n % 2 === 0 ? "commercial:e2e:sandbox:agent:sales-assist" : ACTION_TARGET,
+        intent_id: n === 1 ? demoIntentId(2) : null,
+        assignee_pseudonym: n === 2 ? "rev-0007" : null,
+        sla_due_at: `2026-10-${String(26 + (n % 3)).padStart(2, "0")}T17:00:00Z`,
+        created_at: `2026-10-${String(18 + n).padStart(2, "0")}T09:00:00Z`,
+      }),
+    });
+  }
+}
+
+function freshActionsState(demo = false): ActionsState {
+  const intents = seedIntents();
+  const items = seedItems();
+  if (demo) addDemoActions(intents, items);
   return {
-    intents: seedIntents(),
-    items: seedItems(),
+    intents,
+    items,
     drafts: new Map(),
     stale: new Set([INTENT_STALE]),
   };
@@ -1971,10 +2085,11 @@ function copilotSuggestion(): {
 }
 
 export function createMockApi(options: MockApiOptions): Server {
+  const demo = options.profile === DEMO_PROFILE;
   const recommendationState = { routed: new Map<string, string>() };
-  const actionsState = freshActionsState();
-  const copilotState = freshCopilotState(DOMAIN_OK);
-  const mcpAdminState = freshMcpAdminState();
+  const actionsState = freshActionsState(demo);
+  const copilotState = freshCopilotState(DOMAIN_OK, demo);
+  const mcpAdminState = freshMcpAdminState(demo);
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const correlationId = `e2e-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const cors: Record<string, string> = {
@@ -2069,6 +2184,7 @@ export function createMockApi(options: MockApiOptions): Server {
         cors,
         correlationId,
         () => readRequestBody(req),
+        demo,
       );
       return;
     }
@@ -2117,13 +2233,13 @@ export function createMockApi(options: MockApiOptions): Server {
         req,
         url,
         dashboard[1] ?? "",
-        (domain) => dashboardBody(domain, dashboard[2] ?? "cost"),
+        (domain) => dashboardBody(domain, dashboard[2] ?? "cost", demo ? url : undefined),
         cors,
         correlationId,
       );
       return;
     }
-    if (mapReplayHandler(res, req, url, cors, correlationId)) return;
+    if (mapReplayHandler(res, req, url, cors, correlationId, demo)) return;
     const quality = EVALUATION_QUALITY.exec(url.pathname);
     if (quality !== null) {
       qualityHandler(res, req, url, quality[1] ?? "", cors, correlationId);
@@ -2172,6 +2288,7 @@ if (isMain) {
   const server = createMockApi({
     allowedOrigin: appOrigin,
     apiBaseUrl: `http://127.0.0.1:${port}`,
+    profile: process.env["NS_MOCK_PROFILE"] ?? "e2e",
   });
   server.listen(port, "127.0.0.1", () => {
     console.log(`mock api listening on http://127.0.0.1:${port}`);

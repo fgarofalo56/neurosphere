@@ -10,15 +10,23 @@ import { ConfigContext } from "../../app/ConfigContext";
 import type { AppConfig } from "../../app/config";
 import { createEdgeAnimator, type Scheduler } from "./animator";
 import {
-  EDGE_COLOUR,
-  HEALTH_COLOUR,
   UNKNOWN_OPACITY,
   edgeAppearance,
   kindShape,
   kindSigmaShape,
   nodeAppearance,
 } from "./appearance";
-import { MapGraph, parseNode, worstCoverage } from "./mapGraph";
+import {
+  HALO_MAX_NODES,
+  LAYOUT_ASPECT,
+  MapGraph,
+  POINT_SPACING,
+  layoutPosition,
+  parseNode,
+  worstCoverage,
+} from "./mapGraph";
+import { DEFAULT_MAP_THEME, buildMapTheme, createDomResolver } from "./mapTheme";
+import { getUiStyle, resolveUiStyle } from "../../design-system";
 import { MapView } from "./MapPage";
 import { animationGate, effectiveReducedMotion } from "./motion";
 import {
@@ -45,15 +53,24 @@ interface FakeRenderer {
   update: ReturnType<typeof vi.fn>;
   setEdgeOffset: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
+  fit: ReturnType<typeof vi.fn>;
+  theme: unknown;
   setReducedMotion: ReturnType<typeof vi.fn>;
   kill: ReturnType<typeof vi.fn>;
 }
 const rendererRecorder = vi.hoisted(() => ({ created: [] as unknown[] }));
 vi.mock("./renderer", () => ({
   createMapRenderer: vi.fn(
-    (_container: unknown, _graph: unknown, callbacks: FakeRenderer["callbacks"]) => {
+    (
+      _container: unknown,
+      _graph: unknown,
+      callbacks: FakeRenderer["callbacks"],
+      theme: unknown,
+    ) => {
       const r = {
         callbacks,
+        theme,
+        fit: vi.fn(),
         update: vi.fn(),
         setEdgeOffset: vi.fn(),
         select: vi.fn(),
@@ -309,6 +326,7 @@ describe("appearance", () => {
       "tokens",
       { min: 0, max: 2000 },
       null,
+      DEFAULT_MAP_THEME,
     );
     const unknown = nodeAppearance(
       "agent",
@@ -317,6 +335,7 @@ describe("appearance", () => {
       "tokens",
       { min: 0, max: 2000 },
       null,
+      DEFAULT_MAP_THEME,
     );
     expect(known.sizeUnknown).toBe(false);
     expect(unknown.sizeUnknown).toBe(true);
@@ -325,12 +344,13 @@ describe("appearance", () => {
     // Unknown is not the "smallest known" value.
     expect(unknown.opacity).toBeLessThan(known.opacity);
     // No known values anywhere: everything is unknown, not zero-sized.
-    expect(nodeAppearance("agent", GOOD_METRICS, null, "tokens", null, null).sizeUnknown).toBe(
-      true,
-    );
+    expect(
+      nodeAppearance("agent", GOOD_METRICS, null, "tokens", null, null, DEFAULT_MAP_THEME)
+        .sizeUnknown,
+    ).toBe(true);
   });
 
-  it("colours by health and keeps unknown grey", () => {
+  it("colours by the active style's health tokens and keeps unknown grey", () => {
     const failing = nodeAppearance(
       "agent",
       { ...GOOD_METRICS, health: "failing" },
@@ -338,27 +358,120 @@ describe("appearance", () => {
       "tokens",
       null,
       null,
+      DEFAULT_MAP_THEME,
     );
-    expect(failing.color).toBe(HEALTH_COLOUR.failing);
-    expect(unknownColour()).toBe(HEALTH_COLOUR.unknown);
+    expect(failing.color).toBe(DEFAULT_MAP_THEME.health.failing.icon);
+    expect(failing.haloColor).toBe(DEFAULT_MAP_THEME.health.failing.bg);
+    expect(unknownColour()).toBe(DEFAULT_MAP_THEME.health.unknown.icon);
+    expect(failing.color).not.toBe(unknownColour());
+  });
+
+  it("takes health colours from whichever style and mode is active, with glow only in ops", () => {
+    const ops = buildMapTheme(resolveUiStyle(getUiStyle("ops-console"), "dark"), null);
+    const fluent = buildMapTheme(resolveUiStyle(getUiStyle("enterprise-fluent"), "light"), null);
+    const look = (theme: typeof ops) =>
+      nodeAppearance("agent", { ...GOOD_METRICS, health: "ok" }, null, "tokens", null, null, theme);
+    expect(look(ops).color).toBe(ops.health.ok.icon);
+    expect(look(fluent).color).toBe(fluent.health.ok.icon);
+    expect(look(ops).glowColor).toBe(ops.health.ok.icon);
+    expect(look(fluent).glowColor).toBe("transparent");
+    expect(ops.key).not.toBe(fluent.key);
+    expect(ops.label.font).toBe("monospace");
   });
 
   it("animates observed edges only, and only when motion is allowed", () => {
-    expect(edgeAppearance("observed", true).animated).toBe(true);
-    expect(edgeAppearance("observed", false).animated).toBe(false);
-    expect(edgeAppearance("declared", true).animated).toBe(false);
-    expect(edgeAppearance("inferred", true).animated).toBe(false);
+    expect(edgeAppearance("observed", true, DEFAULT_MAP_THEME).animated).toBe(true);
+    expect(edgeAppearance("observed", false, DEFAULT_MAP_THEME).animated).toBe(false);
+    expect(edgeAppearance("declared", true, DEFAULT_MAP_THEME).animated).toBe(false);
+    expect(edgeAppearance("inferred", true, DEFAULT_MAP_THEME).animated).toBe(false);
     // Declared and inferred are visually distinct from observed and from each other.
     const looks = (["observed", "declared", "inferred"] as const).map((p) =>
-      edgeAppearance(p, false),
+      edgeAppearance(p, false, DEFAULT_MAP_THEME),
     );
     expect(new Set(looks.map((l) => `${l.dashSize}/${l.gapSize}`)).size).toBe(3);
-    expect(EDGE_COLOUR.observed).not.toBe(EDGE_COLOUR.declared);
+    expect(DEFAULT_MAP_THEME.edge.observed).not.toBe(DEFAULT_MAP_THEME.edge.declared);
+    expect(looks.map((l) => l.color)).toEqual([
+      DEFAULT_MAP_THEME.edge.observed,
+      DEFAULT_MAP_THEME.edge.declared,
+      DEFAULT_MAP_THEME.edge.inferred,
+    ]);
+  });
+
+  it("resolves colours through the DOM resolver and falls back when it has no answer", () => {
+    const style = resolveUiStyle(getUiStyle("enterprise-fluent"), "light");
+    const resolved = buildMapTheme(style, (_property, value) => `resolved(${value})`);
+    expect(resolved.label.color.startsWith("resolved(")).toBe(true);
+    expect(resolved.edge.observed.startsWith("resolved(")).toBe(true);
+    const empty = buildMapTheme(style, () => "");
+    expect(empty.edge.observed).toBe(style.chart.categorical[0]);
+    // jsdom cannot resolve var(): the DOM resolver answers "" and the theme falls back.
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const answer = createDomResolver(host)("color", "var(--colorBrandStroke1)");
+    expect(answer === "" || !answer.includes("var(")).toBe(true);
+    expect(host.childElementCount).toBe(0);
+    host.remove();
+  });
+});
+
+describe("layout", () => {
+  function place(n: number): { id: string; x: number; y: number }[] {
+    const g = new MapGraph();
+    g.upsertNodes(
+      Array.from({ length: n }, (_, i) => node(`n${i}`, NODE_KINDS[i % 5] ?? "agent", `n${i}`)),
+    );
+    return g.graph.mapNodes((id, a) => ({ id, x: a.x, y: a.y }));
+  }
+  const minDistance = (pts: { x: number; y: number }[]): number => {
+    let min = Infinity;
+    for (let i = 0; i < pts.length; i += 1) {
+      for (let j = i + 1; j < pts.length; j += 1) {
+        const a = pts[i];
+        const b = pts[j];
+        if (a === undefined || b === undefined) continue;
+        min = Math.min(min, Math.hypot(a.x - b.x, a.y - b.y));
+      }
+    }
+    return min;
+  };
+
+  it("is deterministic: the same input gives the same positions", () => {
+    expect(place(60)).toEqual(place(60));
+    expect(layoutPosition(7)).toEqual(layoutPosition(7));
+    expect(layoutPosition(0)).toEqual({ x: 0, y: 0 });
+  });
+
+  it("keeps every node centre well apart at demo and budget sizes", () => {
+    for (const n of [7, 40, 400, 2000]) {
+      // Neighbours stay at least ~0.7 spacing apart whatever the size, so labels do not stack.
+      expect(minDistance(place(n))).toBeGreaterThanOrEqual(0.7 * POINT_SPACING);
+    }
+  });
+
+  it("is a landscape layout: wider than tall, matching the map frame", () => {
+    const pts = place(40);
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+    expect(w / h).toBeGreaterThan(LAYOUT_ASPECT * 0.8);
+  });
+
+  it("shows halos only while the graph is small enough to afford them", () => {
+    const g = new MapGraph();
+    g.upsertNodes(
+      Array.from({ length: HALO_MAX_NODES }, (_, i) => node(`s${i}`, "agent", `s${i}`)),
+    );
+    g.restyle();
+    expect(g.graph.getNodeAttribute("s0", "halo")).toBe("visible");
+    g.upsertNodes([node("extra", "agent", "extra")]);
+    g.restyle();
+    expect(g.graph.getNodeAttribute("s0", "halo")).toBe("hidden");
   });
 });
 
 function unknownColour(): string {
-  return nodeAppearance("model", NULL_METRICS, null, "tokens", null, null).color;
+  return nodeAppearance("model", NULL_METRICS, null, "tokens", null, null, DEFAULT_MAP_THEME).color;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -390,10 +503,10 @@ describe("MapGraph", () => {
 
   it("stops animating every edge when reduced motion is on", () => {
     const g = build();
-    g.restyle({ sizeBy: "tokens", animateEdges: false });
+    g.restyle({ sizeBy: "tokens", animateEdges: false, theme: DEFAULT_MAP_THEME });
     expect(g.animatedEdgeIds()).toEqual([]);
     expect(g.graph.getEdgeAttribute("e1", "animated")).toBe(false);
-    g.restyle({ sizeBy: "tokens", animateEdges: true });
+    g.restyle({ sizeBy: "tokens", animateEdges: true, theme: DEFAULT_MAP_THEME });
     expect(g.animatedEdgeIds()).toEqual(["e1"]);
   });
 
@@ -673,6 +786,27 @@ describe("MapView", () => {
     expect(first.searchParams.has("domain_id")).toBe(false);
   });
 
+  it("hands the renderer a theme built from the active style, and zoom-to-fit on request", async () => {
+    const user = userEvent.setup();
+    await mount();
+    await screen.findByTestId("map-canvas");
+    const theme = lastRenderer().theme as typeof DEFAULT_MAP_THEME;
+    expect(theme.health.ok.icon).toBeTruthy();
+    expect(theme.edge.observed).toBeTruthy();
+    expect(lastRenderer().fit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Fit view" }));
+    expect(lastRenderer().fit).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows an empty state for a domain with no nodes", async () => {
+    const empty: ViewportResponse = { ...TOP, nodes: [], edges: [], next_cursor: null };
+    const { requested } = await mount({ top: empty });
+    expect(await screen.findByTestId("empty-state")).toHaveTextContent(
+      "No nodes in this domain yet.",
+    );
+    expect(requested.length).toBeGreaterThan(0);
+  });
+
   it("keeps the WebGL view in a named region next to a visible 'View as table' link", async () => {
     await mount();
     const region = await screen.findByRole("region", { name: /Agent topology map/ });
@@ -700,7 +834,7 @@ describe("MapView", () => {
         .map((o) => o.textContent),
     ).toEqual(["Tokens", "Context size", "Frequency", "Latency (p95 ms)"]);
     const health = within(within(legend).getByTestId("health-legend"));
-    for (const word of ["ok", "degraded", "failing", "unknown"]) health.getByText(word);
+    for (const word of ["Healthy", "Degraded", "Failing", "Unknown"]) health.getByText(word);
     const kinds = within(within(legend).getByTestId("kind-legend"));
     for (const label of ["Person", "Agent", "Sub-agent", "Model", "Source", "Cluster"]) {
       kinds.getByText(label);
@@ -736,7 +870,7 @@ describe("MapView", () => {
     const panel = await screen.findByTestId("node-panel");
     expect(within(panel).getByTestId("panel-label")).toHaveTextContent("support-gpt");
     expect(within(panel).getByTestId("metric-tokens")).toHaveTextContent("unknown");
-    expect(within(panel).getByTestId("metric-health")).toHaveTextContent("unknown");
+    expect(within(panel).getByTestId("metric-health")).toHaveTextContent("Unknown");
     expect(within(panel).queryByText("0")).toBeNull();
     const links = within(panel).getAllByRole("link");
     expect(links.map((l) => l.getAttribute("href"))).toEqual([
@@ -937,7 +1071,7 @@ describe("MapView", () => {
     expect(g.animatedEdgeIds()).toBe(first);
     expect(g.animatedEdgeIds()).toBe(first);
     expect(spy).toHaveBeenCalledTimes(1);
-    g.restyle({ sizeBy: "tokens", animateEdges: true });
+    g.restyle({ sizeBy: "tokens", animateEdges: true, theme: DEFAULT_MAP_THEME });
     g.animatedEdgeIds();
     expect(spy).toHaveBeenCalledTimes(2);
   });

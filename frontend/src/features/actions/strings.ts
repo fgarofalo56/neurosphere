@@ -36,6 +36,7 @@ export const STRINGS = {
     changedBy: "Changed by",
   },
   detail: {
+    summary: "Summary",
     target: "Target",
     targetVersion: "Target version",
     diff: "Proposed change",
@@ -79,6 +80,7 @@ export const STRINGS = {
     hashLabel: "Confirmation hash",
   },
   errors: {
+    title: "The action was not completed",
     staleExpired:
       "This confirmation expired. Re-validate: propose the change again to get a fresh confirmation.",
     staleVersion:

@@ -6,6 +6,7 @@ import { ActionError, ConfirmationDialog } from "./components";
 import { useConfirmIntent, usePresentConfirmation, useValidateIntent } from "./hooks";
 import { STRINGS } from "./strings";
 import type { ActionView } from "./types";
+import { Panel } from "../../design-system";
 
 export function reviewItemHref(domainId: string, itemId: string): string {
   const p = new URLSearchParams({ domain_id: domainId, item_id: itemId });
@@ -65,7 +66,7 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
 
   const state = view.intent.state;
   return (
-    <div data-testid="workflow">
+    <Panel compact testId="workflow">
       {view.requires_approval ? <p>{STRINGS.detail.requiresApproval}</p> : null}
       {view.self_approval_forbidden ? <p>{STRINGS.detail.selfApprovalForbidden}</p> : null}
       {state === "drafted" ? (
@@ -123,6 +124,6 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
           }}
         />
       ) : null}
-    </div>
+    </Panel>
   );
 }

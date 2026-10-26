@@ -1,8 +1,19 @@
-import { Badge, Tree, TreeItem, TreeItemLayout } from "@fluentui/react-components";
+import { Tree, TreeItem, TreeItemLayout, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
+import { StatusPill } from "../../design-system";
 import { buildTree } from "./buildTree";
 import { STRINGS, durationText, samplingText, spanLabel } from "./strings";
 import type { Gap, Span, TraceNode } from "./types";
+
+const useStyles = makeStyles({
+  badges: {
+    display: "inline-flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalXS,
+    marginInlineStart: tokens.spacingHorizontalS,
+    verticalAlign: "middle",
+  },
+});
 
 function allBranchIds(nodes: readonly TraceNode[], out: string[] = []): string[] {
   for (const n of nodes) {
@@ -21,34 +32,43 @@ function SpanBadges({
   readonly span: Span;
   readonly gaps: readonly Gap[];
 }): ReactElement {
+  const styles = useStyles();
+  // StatusPill wraps long text; a fixed-size Badge would clip the error and tool details.
   return (
-    <span data-testid="span-badges">
+    <span className={styles.badges} data-testid="span-badges">
       {span.status === "error" ? (
-        <Badge appearance="filled" color="danger" data-testid="error-badge">
-          {STRINGS.error}
-          {span.error !== null ? `: ${span.error}` : ""}
-        </Badge>
+        <span data-testid="error-badge">
+          <StatusPill
+            label={`${STRINGS.error}${span.error !== null ? `: ${span.error}` : ""}`}
+            tone="danger"
+          />
+        </span>
       ) : null}
       {span.kind === "tool" ? (
-        <Badge appearance="outline" color="informative" data-testid="tool-badge">
-          {STRINGS.tool}: {span.tool?.name ?? "unreported"} ({span.tool?.outcome ?? "unknown"})
-        </Badge>
+        <span data-testid="tool-badge">
+          <StatusPill
+            label={`${STRINGS.tool}: ${span.tool?.name ?? "unreported"} (${span.tool?.outcome ?? "unknown"})`}
+            tone="neutral"
+          />
+        </span>
       ) : null}
       {span.late ? (
-        <Badge appearance="outline" color="warning" data-testid="late-badge">
-          {STRINGS.late}
-          {span.late_reason !== null ? `: ${span.late_reason}` : ""}
-        </Badge>
+        <span data-testid="late-badge">
+          <StatusPill
+            label={`${STRINGS.late}${span.late_reason !== null ? `: ${span.late_reason}` : ""}`}
+            tone="warning"
+          />
+        </span>
       ) : null}
       {span.sampled ? (
-        <Badge appearance="outline" color="warning" data-testid="sampling-badge">
-          {samplingText(span.sampling_rate)}
-        </Badge>
+        <span data-testid="sampling-badge">
+          <StatusPill label={samplingText(span.sampling_rate)} tone="neutral" />
+        </span>
       ) : null}
       {gaps.map((g) => (
-        <Badge key={g.reason} appearance="outline" color="danger" data-testid="gap-badge">
-          {STRINGS.gapReason[g.reason]}
-        </Badge>
+        <span key={g.reason} data-testid="gap-badge">
+          <StatusPill label={STRINGS.gapReason[g.reason]} tone="danger" />
+        </span>
       ))}
     </span>
   );

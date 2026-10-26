@@ -1,6 +1,10 @@
 ---
 name: prp-30-visual-redesign-and-switchable-ui-styles
-status: backlog
+status: shipped
+started: 2026-10-26
+shipped: 2026-10-26
+pr: 134
+branch: prp-30-visual-redesign
 review: required
 priority: P0
 created: 2026-10-24
@@ -576,13 +580,85 @@ Snyk code scan on new first-party code before each merge (0 new issues). There i
 
 ## Execution state
 
+Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; D-c in-house SVG charts; D-b, D-d to D-h accepted as written; D-i moot (PRP-29 shipped).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 style-foundation | merged | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0; review APPROVED; on integration design-system+theme-requests 179 passed; merge ae9550e | 2026-10-26 |
+| 2 brand-and-component-primitives | merged | worktree-agent-abfe8d48212d2230b | sonnet | 5361ad0: typecheck/lint clean, vitest 679/679, build OK, Snyk 0; review APPROVED; merge 42d3e57 | 2026-10-26 |
+| 3 chart-primitives | merged | worktree-agent-ad516ea5d3efa1e6d | sonnet | bcea132: typecheck/lint clean, vitest 686/687 (reports sharing flake, 3/3 isolated), build OK, Snyk 0; review APPROVED; merge 929abae; on integration typecheck/lint/build OK, vitest 717/717 x7 after 2 contention flakes (reports.test sharing, follow-up to item 8) | 2026-10-26 |
+| 4 mockups-and-approval-checkpoint | merged | worktree-agent-abf5489aec670eb83 | sonnet | c20a4d3: typecheck/lint clean, vitest 734/734, build OK, Snyk 0 (demo + script), manifest unchanged, 12 PNGs viewed by orchestrator; review APPROVED; merge d0101bc; on integration touched suites 338 passed | 2026-10-26 |
+| CHECKPOINT mockup approval | merged | | operator | **mockups approved 2026-10-26 after one rework round (R1, merge 282dda1); default style `enterprise-fluent` confirmed; primitive signatures frozen at 282dda1 (additive only after this), incl. R1 additions: ComponentTreatment panelSurface/kpiAccent/numerals/monoNumerals/kpiMaxAcross/liveIndicator, KpiCard accent, DataTable column width/minWidth, Sparkline unit/currency, countKpis/kpiColumns, UiStyleContext/StyleOverrides root exports.** Original rework notes: (1) Ops console not distinct enough from Enterprise Fluent, (2) orphan 6th KPI card on a 5-col grid, (3) Ops console uppercases sentences and status pills, (4) cost area charts too heavy, estimated/invoiced overlap, (5) home table Item column wraps, flat delta glyph. Default style confirmed `enterprise-fluent`. Rework item R1 dispatched | 2026-10-26 |
+| R1 mockup-rework (items 1-4 owned files) | merged | worktree-agent-a4a702f5d9c694dc6 | sonnet | caf6dcd: scope = items 1-4 files only; typecheck/lint clean, vitest 750/750 x2, build OK, Snyk 0 new (4 pre-existing in untouched auth test + chart sandbox); 12 PNGs re-rendered and viewed by orchestrator; review APPROVED; merge 282dda1; on integration touched suites 354 passed | 2026-10-26 |
+| 5 shell-chrome-demo-and-fixtures | merged | worktree-agent-a363d72dd2daaf9ac (+5b worktree-agent-acddc4c63d226c60b) | sonnet | 7d6b64d: typecheck/lint/build OK, vitest targeted 262/262, e2e shell/smoke/hidden/copilot/demo-audit 17/17 (lane: full 337/337), prod dist no demo markers. **PRP delta signed off 2026-10-26:** lane relaxed demo mock authz (Steward into MCP admin, any persona workspace) to meet "every route shows data"; operator chose faithful mock: revert relaxations, demo-audit expects forbidden-state on an explicit allowlist (admin-only and other-persona routes). 5b 3900f2d reverted both relaxations, EXPECTED_FORBIDDEN = /mcp-admin, /mcp-admin/server, /workspaces/{admin,analyst,auditor,viewer}; lane full Playwright 339/339; Snyk 0 new (3 tests/ findings identical fingerprints on integration baseline); review APPROVED (5+5b); merge 9bc52dc | 2026-10-26 |
+| 6 lane-overview-dashboards-reconciliation | merged | worktree-agent-acdafa8e5f17673cc | sonnet | 11073d1: home 6 calls (days=7 one call); typecheck/lint/build OK, vitest targeted 516/516, e2e overview+dashboards 19/19 (lane: 259 incl a11y), Snyk 0 new; watermark asserts normalised datetime (same instant, reviewer OK); review APPROVED; merge 23795a4; post-merge 402 passed | 2026-10-26 |
+| 7 lane-actions-review-workspaces-sandbox-mcp | merged | worktree-agent-ac3e01a09b51aa067 | sonnet | 0a9877e: actions e2e unchanged, PRP-17 semantics intact; typecheck/lint/build OK, vitest targeted 270/270, e2e actions+mcp-admin 19/19 (lane: 259 incl a11y), Snyk 0; confirm expiry stays raw ISO (pinned, exact confirmed value); local RowTable/StatePanel stand-ins until F1; review APPROVED; merge f540fad; post-merge 206 passed | 2026-10-26 |
+| F1 primitive-fix-forward (StatusPill info contrast, DataTable getRowProps, testId props, legend unclassified) | merged | worktree-agent-a4df5d056169ba155 | sonnet | e6268aa: info tone 4.25 -> 14.54 (default light), all tones >= 4.5:1 across pack x style x mode (61 tests); vitest 709/709 (design-system+app+features), build OK, Snyk 0; review APPROVED (haiku); merge 990cd63; orchestrator hardening 082a078 (runtime data-* filter on getRowProps, DataTableRowProps root export), 396 passed | 2026-10-26 |
+| 8 lane-quality-recommendations-reports-chartframe | merged | worktree-agent-aa5acb33df5133af5 | sonnet | 524c3f6: typecheck/lint/build OK, vitest targeted 208/208, e2e quality+recs+chart-sandbox 33/33 (lane: 279 incl a11y), Snyk 0; reports flake root cause = Tabster modalizer aria-hidden on dialog surface in jsdom, fixed with hidden:true (same pattern needed in mcp-admin: F2); review APPROVED; merge 774c954; post-merge 459 passed | 2026-10-26 |
+| 9 lane-map-maptable-replay | merged | worktree-agent-a2a6d4c151a08242b | sonnet | 6b93aaa: typecheck/lint/build OK, lane Playwright 251/251, vitest map/map-table/replay+static 159 passed (full suite 4 timeouts in other lanes' dialog tests: F2), Snyk 0; review APPROVED; merge 8feda4f; post-merge 501 passed + map specs/demo-audit 13/13 | 2026-10-26 |
+| INT wave-D integration check | merged | prp-30-visual-redesign @ 9bc52dc | orchestrator | before item 9: vitest 866/866, build OK, Playwright 338/339 (actions.spec:120 advisory-note 5s timeout under load; actions e2e rerun 16/16 x2 = flake, watch) | 2026-10-26 |
+| F2 dialog-test-hardening + enterprise canvas + primitive stand-ins | merged | worktree-agent-ad93b3914c1d96ffa | sonnet | 8c73c6b/94c2ee5/93c7c7b: hidden:true in actions+mcp-admin dialog tests (vitest 882/882 x3), Enterprise canvas Background2, design-system Panel (additive) replaces 5 duplicates, RowTable/StatePanel folded into DataTable/ErrorState (ErrorState +tone/+action additive), info tone restored; net -270 lines; lane Playwright 339/339; Snyk 0 new; review APPROVED; merge 27b4203; on integration vitest 882/882, a11y 240/240 | 2026-10-26 |
+| 10 visual-regression-and-a11y-matrix | merged | worktree-agent-af64bdaea1d0c2ffa | sonnet | aa9195e/9456dd1/4415db6: a11y themes 72 + routes 156 (257 checks, 0 critical/serious/moderate/minor, tabster exclusion only); default Playwright 463 passed (4.5m); 26 Linux baselines via playwright v1.64.0-noble; visual:check 26/26 no diff (agent) + 26/26 (orchestrator, 3rd run); CI: test:e2e pinned --project=chromium + visual:check step in the same image (deviation: frontend job change beyond sharding, needed for pixel determinism); est. CI job 16-17 min (not measured), no sharding; G09 OPEN, sign-offs blank; review APPROVED; merge 239aacd; validate_planning PASS | 2026-10-26 |
+| F3 chart-pixel-sizing (charts scaled via viewBox: axis text ~2x at wide containers) | merged | worktree-agent-a7f591be4abac7551 | sonnet | 3c3b9e6/2d82e9b: ResizeObserver container width, pixel layout, constant font px; 4 cost-dashboard baselines regenerated + viewed; vitest 887/887, Playwright targeted 210/210, visual:check 26/26, Snyk 0; review APPROVED (haiku); merge 90740e7; orchestrator follow-up 260522f (callback ref so error->valid charts measure, disconnect on unmount, 2 tests) | 2026-10-26 |
+| CI-SHARD frontend e2e sharding (clarification 15) | merged | prp-30-visual-redesign @ cf2234c | orchestrator | PR #134 run 1: single frontend job 20m36s (e2e 955 s) > 20 min line; split into frontend-checks + 2-shard frontend-e2e behind a required-name gate job (fails unless both succeed; skipped/cancelled fails); actionlint OK, validate_planning PASS; run 2: checks 3m56s (visual 26/26 = 2nd consecutive green), shard 1 17m38s, shard 2 5m10s, gate 3s; all 23 checks green. Shard imbalance (a11y matrix files on shard 1) = follow-up | 2026-10-26 |
+| FINAL integration gates | merged | prp-30-visual-redesign @ 260522f | orchestrator | typecheck/lint clean, vitest 889/889, build OK, test:e2e 462/463 (hidden-route waitForResponse timeout alongside one Vite "can't detect preamble" dev-server error; spec 3/3 isolated; earlier full runs clean = intermittent dev-server flake, watch in CI), visual:check 26/26 in Docker, validate_planning PASS. PR pending operator OK to push | 2026-10-26 |
+
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Mockup approval (date, rework notes, default style chosen):
+- Date: 2026-10-26. PR #134 into `main` (branch `prp-30-visual-redesign`). CI is green: all 23 checks pass, including CodeQL, gitleaks, both e2e shards and the Docker visual check.
+- Merged commits (into the integration branch):
+
+  | Item | Merge commit |
+  |---|---|
+  | 1 | ae9550e |
+  | 2 | 42d3e57 |
+  | 3 | 929abae |
+  | 4 | d0101bc |
+  | R1 | 282dda1 |
+  | 6 | 23795a4 |
+  | 7 | f540fad |
+  | F1 | 990cd63 (+082a078) |
+  | 8 | 774c954 |
+  | 5 + 5b | 9bc52dc |
+  | 9 | 8feda4f |
+  | F2 | 27b4203 |
+  | 10 | 239aacd |
+  | F3 | 90740e7 (+260522f) |
+  | CI sharding | cf2234c |
+- Mockup approval: the operator requested one rework round on 2026-10-26 with five points:
+  - Ops console was not distinct enough from Enterprise Fluent.
+  - An orphan KPI card.
+  - Uppercased sentences and pills.
+  - Heavy area charts.
+  - Table/glyph polish.
+
+  The operator approved the reworked set (R1) the same day, confirmed `enterprise-fluent` as the default, and the primitive signatures were frozen at 282dda1 (additive only after that).
 - Deviations from blueprint and why:
-- Descoped items:
-- axe results (routes × styles × modes, themes × packs) and keyboard pre-check:
-- Visual baselines (count, CI runs without diff) and frontend CI job duration:
-- G09 status after this PRP (expected OPEN):
+  - **Demo authorization (operator decision).** Item 5 had relaxed the demo mock's authz (Steward into MCP admin, any persona workspace) to meet "every route shows data". It was reverted in 5b so that the demo authorizes exactly like the real API. `demo-audit.spec.ts` asserts forbidden-state on an explicit `EXPECTED_FORBIDDEN` list: `/mcp-admin`, `/mcp-admin/server` and `/workspaces/{admin,analyst,auditor,viewer}`. Rationale: the demo must never show permissions the product would not grant.
+  - **CI frontend job.**
+    - Changed beyond "sharding only": `test:e2e` is pinned to `--project=chromium`, and `visual:check` runs inside the pinned `mcr.microsoft.com/playwright:v1.64.0-noble` image, because pixel baselines need an identical renderer.
+    - The first CI run took 20m36s (e2e 955 s), which crossed the clarification 15 line. E2E was sharded into 2 jobs, and the required check name moved to a gate job that fails unless the checks and both shards succeed.
+  - **Fix-forward items.** None are in the blueprint; each came from verification:
+    - F1: `StatusPill` info tone failed axe contrast (4.25 to 14.54:1); `DataTable` `getRowProps`; `testId` props; null-kind legend.
+    - F2: the Tabster modalizer `aria-hidden` dialog-test flake (root cause of the "load" flakes); the Enterprise canvas `Background2`; a shared `Panel` primitive replacing 5 duplicates, with the `RowTable`/`StatePanel` stand-ins folded in.
+    - F3: charts scaled via `viewBox` (about 2x axis text on wide pages), now laid out in real pixels, with a callback-ref observer.
+  - **Timestamp pins.** The `watermark` e2e assertion reads the normalised `<time datetime>` (same instant). The action confirm dialog keeps its raw ISO expiry, because `actions.spec:76` pins it and it is the exact confirmed value.
+- Descoped items: none.
+- axe results and keyboard pre-check:
+  - Themes: 72 tests (6 routes x 2 styles x 3 modes x 2 packs).
+  - Routes: 156 tests (26 routes x 2 styles x 3 modes).
+  - 257 checks in total: 0 critical, serious, moderate or minor, with the tabster exclusion only (`docs/accessibility/axe-results-2026-10-26.json`).
+  - The keyboard, routes-keyboard and aria-tree pre-checks are green.
+- Visual baselines: 26 Linux baselines. `visual:check` passed with no diff three times locally in Docker and on 2 consecutive CI runs (PR #134 runs 1 and 2). Frontend CI times:
+  - Run 1: single job, 20m36s.
+  - Run 2 (sharded): checks 3m56s, e2e shard 1 17m38s, shard 2 5m10s, gate 3s.
+- G09 status after this PRP: **OPEN**. The manual keyboard and screen-reader checklists are unsigned, and the runbook now needs to cover both UI styles.
 - Follow-ups:
+  - Rebalance the e2e shards: Playwright shards by file and the a11y matrix files all land on shard 1, at 17m38s, close to the 20 min line.
+  - Fix the legend double basis ("Cost (estimated, USD) (estimated)").
+  - `confidenceText` shows the raw method enum.
+  - Warn when a `Panel` has a landmark but no title.
+  - Mount the visual-check volume read-only.
+  - `Number()` loses precision on very large amounts in reports and recommendations.
+  - Intermittent Vite "can't detect preamble" dev-server error, seen once with a `hidden-route.spec` timeout; the spec passes 3/3 in isolation.
+  - An `actions.spec:120` advisory-note timeout once under full-suite load; it passed 16/16 twice in isolation.
+  - Mockup PNGs predate F1-F3, so they show the pre-fix info tone and chart sizing; they remain the approval record.

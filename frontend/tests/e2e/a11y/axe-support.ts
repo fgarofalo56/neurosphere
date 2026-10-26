@@ -29,6 +29,9 @@ export const TABSTER_SENTINEL = "[data-tabster-dummy]";
 export const MODES = ["light", "dark", "high-contrast"] as const;
 export type Mode = (typeof MODES)[number];
 export const PACKS = ["default", "sample-agency"] as const;
+/** PRP-30 UI styles; enterprise-fluent is the built-in default. */
+export const STYLES = ["enterprise-fluent", "ops-console"] as const;
+export type StyleId = (typeof STYLES)[number];
 
 export type Impact = "critical" | "serious" | "moderate" | "minor";
 
@@ -47,6 +50,8 @@ export interface AxeRecord {
   readonly url: string;
   readonly mode: string;
   readonly packId: string;
+  /** UI style seeded for this check; absent when none was seeded (built-in default). */
+  readonly styleId?: string;
   readonly sandboxMode: boolean;
   readonly counts: Record<Impact, number>;
   readonly violations: readonly ViolationRecord[];
@@ -62,14 +67,14 @@ export const ALL_IMPACTS: readonly Impact[] = ["critical", "serious", "moderate"
 /** Seeds the persisted theme and sandbox preferences before any page script runs. */
 export async function seedPreferences(
   page: Page,
-  opts: { mode: Mode; packId?: string; sandbox?: boolean },
+  opts: { mode: Mode; packId?: string; styleId?: StyleId; sandbox?: boolean },
 ): Promise<void> {
   await page.addInitScript(
     (p) => {
-      window.localStorage.setItem(
-        "ns.theme",
-        JSON.stringify({ packId: p.packId, themeName: p.mode }),
-      );
+      // styleId is written only when a style is given, exactly as the store does.
+      const stored: Record<string, string> = { packId: p.packId, themeName: p.mode };
+      if (p.styleId) stored["styleId"] = p.styleId;
+      window.localStorage.setItem("ns.theme", JSON.stringify(stored));
       if (p.sandbox) {
         window.localStorage.setItem(
           "ns.sandbox-mode",
@@ -77,7 +82,12 @@ export async function seedPreferences(
         );
       }
     },
-    { mode: opts.mode, packId: opts.packId ?? "default", sandbox: opts.sandbox ?? false },
+    {
+      mode: opts.mode,
+      packId: opts.packId ?? "default",
+      styleId: opts.styleId ?? "",
+      sandbox: opts.sandbox ?? false,
+    },
   );
 }
 
@@ -120,7 +130,15 @@ export async function analyze(page: Page): Promise<AnalyzeOutcome> {
 
 export function record(rec: AxeRecord): void {
   mkdirSync(RECORD_DIR, { recursive: true });
-  const key = [rec.kind, rec.pattern, rec.name, rec.mode, rec.packId, rec.sandboxMode]
+  const key = [
+    rec.kind,
+    rec.pattern,
+    rec.name,
+    rec.mode,
+    rec.packId,
+    rec.styleId ?? "",
+    rec.sandboxMode,
+  ]
     .join("__")
     .replace(/[^A-Za-z0-9_.-]+/g, "-");
   writeFileSync(join(RECORD_DIR, `${key}.json`), JSON.stringify(rec));
@@ -137,8 +155,8 @@ export function writeAggregate(): void {
   const records = files
     .map((f) => JSON.parse(readFileSync(join(RECORD_DIR, f), "utf8")) as AxeRecord)
     .sort((a, b) =>
-      `${a.kind}${a.pattern}${a.mode}${a.packId}${a.sandboxMode}`.localeCompare(
-        `${b.kind}${b.pattern}${b.mode}${b.packId}${b.sandboxMode}`,
+      `${a.kind}${a.pattern}${a.mode}${a.packId}${a.styleId ?? ""}${a.sandboxMode}`.localeCompare(
+        `${b.kind}${b.pattern}${b.mode}${b.packId}${b.styleId ?? ""}${b.sandboxMode}`,
       ),
     );
   const byImpact: Record<Impact, number> = { critical: 0, serious: 0, moderate: 0, minor: 0 };
@@ -152,6 +170,7 @@ export function writeAggregate(): void {
     tags: A11Y_TAGS,
     modes: MODES,
     packs: PACKS,
+    styles: STYLES,
     totals: {
       checks: records.length,
       routes: new Set(records.filter((r) => r.kind === "route").map((r) => r.pattern)).size,

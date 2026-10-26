@@ -226,6 +226,35 @@ describe("server list", () => {
     expect(await screen.findByTestId("empty-state")).toBeTruthy();
   });
 
+  it("shows a loading state while the registry is fetched", () => {
+    const fetchImpl = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(mcpAdminRoutes, { initialEntries: ["/mcp-admin"] });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByTestId("loading-state").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("shows the last sync as a Timestamp, not the raw ISO string", async () => {
+    setup("/mcp-admin", {
+      [LIST_API]: { status: 200, body: { items: [server()], next_cursor: null } },
+    });
+    const rows = await screen.findAllByTestId("server-row");
+    expect(rows[0]?.querySelector("time")?.getAttribute("datetime")).toBe(
+      "2026-10-22T12:00:00.000Z",
+    );
+    expect(rows[0]?.textContent).not.toContain(NOW);
+  });
+
   it("renders access denied on 403 and no list", async () => {
     setup("/mcp-admin", { [LIST_API]: problem(403, "forbidden") });
     expect(await screen.findByTestId("forbidden-state")).toBeTruthy();
@@ -313,7 +342,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("stats")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     expect(within(dialog).getByTestId("review-hash").textContent).toBe(STATS_HASH);
     expect(within(dialog).getByTestId("entry-description").textContent).toBe(
       "Counts for a region.",
@@ -339,7 +368,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("lookup")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     expect(within(dialog).getByTestId("tool-diff")).toBeTruthy();
     expect(within(dialog).getByTestId("diff-description-before").textContent).toBe(
       "Look up a record by id.",
@@ -375,7 +404,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("stats")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     await user.click(within(dialog).getByTestId("approve-tool"));
     expect((await within(dialog).findByTestId("mutation-error")).textContent).toContain(
       STRINGS.errors.stale,
@@ -395,11 +424,13 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("ping")).getByTestId("revoke-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     const reason = within(dialog).getByLabelText(STRINGS.revoke.reasonLabel);
     await user.clear(reason);
     await user.type(reason, "no longer needed");
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.revoke.submit }));
+    await user.click(
+      within(dialog).getByRole("button", { name: STRINGS.revoke.submit, hidden: true }),
+    );
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
     const del = calls.find((c) => c.method === "DELETE");
     expect(new URLSearchParams(del?.search).get("reason")).toBe("no longer needed");

@@ -2,19 +2,28 @@ import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  EmptyState,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  Timestamp,
+} from "../../design-system";
 import {
   AdvisoryBadge,
   EstimateBlock,
   EvidenceStatus,
   QueryErrorState,
+  confidenceText,
   coverageText,
+  impactText,
   ownerText,
   uncertaintyText,
 } from "./components";
 import { useRecommendation, useRouteToReview } from "./hooks";
 import { KIND_LABELS, STRINGS, orUnknown } from "./strings";
-import type { RecommendationDetailResponse } from "./types";
+import type { Recommendation, RecommendationDetailResponse } from "./types";
 
 function ReviewControl({
   domainId,
@@ -76,58 +85,77 @@ function Detail({
       {insufficient ? (
         <p data-testid="insufficient-history">{STRINGS.insufficientHistory}</p>
       ) : (
-        <>
-          <h2>{S.score}</h2>
+        <Panel landmark="region" title={S.score}>
           <p data-testid="score">{orUnknown(rec.score)}</p>
-        </>
+        </Panel>
       )}
-      <h2>{S.subjects}</h2>
-      <ul>
-        {rec.subject_ids.map((id) => (
-          <li key={id}>{id}</li>
-        ))}
-      </ul>
-      <h2>{S.evidenceWindow}</h2>
-      <p data-testid="evidence-window">
-        {orUnknown(rec.evidence_window?.start)} to {orUnknown(rec.evidence_window?.end)}
-      </p>
-      <h2>{S.coverage}</h2>
-      <p data-testid="coverage">{coverageText(rec.coverage)}</p>
-      <h2>{S.uncertainty}</h2>
-      <p data-testid="uncertainty">{uncertaintyText(rec.uncertainty)}</p>
-      <h2>{S.prerequisites}</h2>
-      {rec.prerequisites.length === 0 ? (
-        <p data-testid="prerequisites-empty">{STRINGS.unknown}</p>
-      ) : (
-        <ul data-testid="prerequisites">
-          {rec.prerequisites.map((p) => (
-            <li key={p.kind}>
-              {p.kind}: {orUnknown(p.status)}
-            </li>
-          ))}
-        </ul>
-      )}
-      <h2>{S.estimate}</h2>
-      <EstimateBlock estimate={rec.projected_estimate} />
-      <h2>{S.owner}</h2>
-      <p data-testid="owner">{ownerText(rec.owner)}</p>
-      <h2>{S.generator}</h2>
-      <p data-testid="generator">
-        {rec.generator === undefined
-          ? STRINGS.unknown
-          : `${orUnknown(rec.generator.generator_id)} ${orUnknown(rec.generator.generator_version)}`}
-      </p>
-      <h2>{S.evidenceIds}</h2>
-      {rec.evidence_ids.length === 0 ? (
-        <p data-testid="evidence-ids-empty">{STRINGS.unknown}</p>
-      ) : (
-        <ul data-testid="evidence-ids">
-          {rec.evidence_ids.map((id) => (
+      <Panel landmark="region" title={S.subjects}>
+        <ul>
+          {rec.subject_ids.map((id) => (
             <li key={id}>{id}</li>
           ))}
         </ul>
-      )}
+      </Panel>
+      <Panel landmark="region" title={S.evidenceWindow}>
+        <p data-testid="evidence-window">
+          <Timestamp value={rec.evidence_window?.start} /> to{" "}
+          <Timestamp value={rec.evidence_window?.end} />
+        </p>
+      </Panel>
+      <Panel landmark="region" title={S.coverage}>
+        <p data-testid="coverage">{coverageText(rec.coverage)}</p>
+      </Panel>
+      <Panel landmark="region" title={S.uncertainty}>
+        <p data-testid="uncertainty">{uncertaintyText(rec.uncertainty)}</p>
+      </Panel>
+      <Panel landmark="region" title={S.prerequisites}>
+        {rec.prerequisites.length === 0 ? (
+          <p data-testid="prerequisites-empty">{STRINGS.unknown}</p>
+        ) : (
+          <ul data-testid="prerequisites">
+            {rec.prerequisites.map((p) => (
+              <li key={p.kind}>
+                {p.kind}: {orUnknown(p.status)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+      <Panel landmark="region" title={S.estimate}>
+        <EstimateBlock estimate={rec.projected_estimate} />
+      </Panel>
+      <Panel landmark="region" title={S.owner}>
+        <p data-testid="owner">{ownerText(rec.owner)}</p>
+      </Panel>
+      <Panel landmark="region" title={S.generator}>
+        <p data-testid="generator">
+          {rec.generator == null
+            ? STRINGS.unknown
+            : `${orUnknown(rec.generator.generator_id)} ${orUnknown(rec.generator.generator_version)}`}
+        </p>
+      </Panel>
+      <Panel landmark="region" title={S.evidenceIds}>
+        {rec.evidence_ids.length === 0 ? (
+          <p data-testid="evidence-ids-empty">{STRINGS.unknown}</p>
+        ) : (
+          <ul data-testid="evidence-ids">
+            {rec.evidence_ids.map((id) => (
+              <li key={id}>{id}</li>
+            ))}
+          </ul>
+        )}
+      </Panel>
       <ReviewControl domainId={domainId} data={data} />
+    </>
+  );
+}
+
+function DetailKpis({ rec }: { readonly rec: Recommendation }): ReactElement {
+  return (
+    <>
+      <KpiCard label="Projected change" value={impactText(rec.projected_estimate)} />
+      <KpiCard label="Confidence" value={confidenceText(rec)} />
+      <KpiCard label={STRINGS.sections.score} value={orUnknown(rec.score)} />
     </>
   );
 }
@@ -147,13 +175,18 @@ export function RecommendationDetailPage(): ReactElement {
       title={title}
       busy={ready && query.isPending}
       description={<Link to={back}>{STRINGS.back}</Link>}
+      kpis={ready && query.isSuccess ? <DetailKpis rec={query.data.recommendation} /> : undefined}
     >
       {!ready ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : query.isError ? (
         <QueryErrorState error={query.error} />
       ) : query.isPending ? (
-        <p aria-busy="true">{STRINGS.loading}</p>
+        <div aria-busy="true">
+          <LoadingState label={STRINGS.loading} />
+        </div>
       ) : (
         <Detail domainId={domainId} data={query.data} />
       )}

@@ -20,3 +20,19 @@ The run found no minor or moderate violations. Every finding was serious. A11Y-0
 | A11Y-012 | aria-hidden-focus (WCAG 4.1.2 name, role, value) | `/mcp-admin`, `/reports/view`, chart harness | serious | light, dark, high-contrast | Fluent UI Tabster (library) | EXCLUDED in harness | 2026-10-23 | Fluent focus sentinels `[data-tabster-dummy]` (aria-hidden, 1px, tabindex 0) appear intermittently; excluded narrowly as overview.spec.ts, shell.spec.ts and copilot.spec.ts already do. Re-check manually with a screen reader: sentinels must not be announced. |
 | A11Y-013 | focus not returned after a dialog closes (WCAG 2.4.3 focus order) | `/actions/detail` | not rated (keyboard pre-check) | light | PRP-24 follow-up (unassigned); `frontend/src/features/actions/components.tsx` (ConfirmationDialog) and `frontend/src/features/actions/ActionWorkflow.tsx` | FIXED 2026-10-24 (PRP-24 item 5b): `ActionWorkflow` keeps a ref to the 'Review and confirm' trigger and refocuses it after the dialog closes (Escape, Cancel, close) | 2026-10-24 | found by `keyboard-flows.a11y.spec.ts` (actions-confirm-dialog): after 'Review and confirm' opens the confirmation dialog, Escape closes it but focus lands on `body`, not the trigger. The dialog is controlled (`open`) with no `DialogTrigger`, so Fluent cannot restore focus; the opener must restore it. Reports and copilot dialogs restore focus correctly. |
 | A11Y-014 | focus indicator not visible on a Tab stop (WCAG 2.4.7 focus visible) | `/reports/view` | not rated (keyboard pre-check) | light, high-contrast | PRP-24 follow-up (unassigned); `frontend/src/features/charts/ChartFrame.tsx` | FIXED 2026-10-24 (PRP-24 item 5b): `ChartFrame` paints a theme-token outline (`colorStrokeFocus2`) on the iframe while it holds focus, driven by host window blur/focus because Chromium matches neither `:focus` nor `:focus-visible` on a focused iframe; sandbox attributes unchanged | 2026-10-24 | found by `routes-keyboard.a11y.spec.ts`: the sandboxed chart `<iframe>` is a Tab stop but is not `:focus-visible` and has no outline, so a keyboard user cannot see where focus is. The frame holds no interactive content. Options: give the iframe a visible focus style, or take it out of the tab order (`tabIndex={-1}`) and keep the table view as the keyboard path. Human decision. |
+
+## 2026-10-26 run: UI style dimension (PRP-30 item 10)
+
+Automated axe re-run after the PRP-30 redesign, now across both UI styles (`enterprise-fluent`, `ops-console`). Evidence: `axe-results-2026-10-26.json` (257 checks, 0 critical, 0 serious, 0 moderate, 0 minor, no rule ids). Rules and the one exclusion (`[data-tabster-dummy]`, A11Y-012) are unchanged.
+
+| Spec | Matrix | Checks |
+|---|---|---|
+| `themes.a11y.spec.ts` | 6 routes (home, cost dashboard, map table, report view, sandbox, map) x 2 styles x 3 modes x 2 packs | 72 |
+| `routes.a11y.spec.ts` | 26 manifest routes x 2 styles x 3 modes | 156 |
+| `routes.a11y.spec.ts` | sandbox banner per route (default style), map table keyboard, reduced-motion map, chart iframe | 29 |
+
+No new findings: nothing was added to the table above for this run. `layout.spec.ts` additionally asserts that no `StatusPill` overflows its parent on home and the cost dashboard in either style.
+
+Still open and unchanged: the human keyboard and screen-reader checklists are unsigned and G09 stays OPEN. An agent has signed nothing.
+
+Manual tester runbook: the human pass in `tester-runbook.md` must now be repeated in both UI styles (switch style in the user menu, then repeat the keyboard and screen reader rows in `ops-console` as well as `enterprise-fluent`). The checklist sign-off blocks stay blank until a human completes both.

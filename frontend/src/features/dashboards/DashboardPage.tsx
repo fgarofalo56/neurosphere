@@ -1,20 +1,28 @@
-import {
-  Field,
-  MessageBar,
-  MessageBarBody,
-  MessageBarTitle,
-  Select,
-} from "@fluentui/react-components";
+import { Field, Select, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import { ForbiddenError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import {
+  EmptyState,
+  ErrorState,
+  formatCurrency,
+  formatDuration,
+  formatNumber,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+  TimeSeriesChart,
+  useUiStyle,
+} from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
+import { groupSeries, groupTitle, toChartSeries, type ChartGroup } from "./chartData";
 import { AnalyticsChip, LagIndicator, SeriesBlock } from "./components";
 import { useDashboard } from "./hooks";
 import { STRINGS } from "./strings";
-import type { DashboardMetric, Grain } from "./types";
+import type { DashboardMetric, Grain, Series } from "./types";
 
 export interface DashboardPageProps {
   readonly title: string;
@@ -23,6 +31,75 @@ export interface DashboardPageProps {
 
 const DAY_OPTIONS = [1, 7, 14, 30, 60, 90] as const;
 const HOUR_MAX_DAYS = 14;
+
+const useStyles = makeStyles({
+  section: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalM },
+  sectionCompact: { rowGap: tokens.spacingVerticalS },
+  heading: {
+    margin: 0,
+    fontSize: tokens.fontSizeBase500,
+    lineHeight: tokens.lineHeightBase500,
+    fontWeight: tokens.fontWeightSemibold,
+    textTransform: "capitalize",
+  },
+  strip: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalM,
+  },
+  charts: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalM,
+  },
+  blocks: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalM,
+    alignItems: "start",
+  },
+});
+
+/** Display text of a series total in its own unit; unknown is never 0 and nothing is summed. */
+export function totalText(s: Series): string {
+  const { value, status } = s.total;
+  if (status !== "known" || value === null) return STRINGS.unknown;
+  switch (s.unit) {
+    case "currency":
+      return s.currency === null ? formatNumber(value) : formatCurrency(value, s.currency);
+    case "ms":
+      return formatDuration(value);
+    case "ratio":
+      return `${formatNumber(value * 100, { maximumFractionDigits: 1 })}%`;
+    case "count":
+      return formatNumber(value);
+  }
+}
+
+function ChartPanel({
+  group,
+  metric,
+  grain,
+}: {
+  readonly group: ChartGroup;
+  readonly metric: DashboardMetric;
+  readonly grain: Grain;
+}): ReactElement {
+  const chartSeries = group.series.map(toChartSeries);
+  const hasPoints = chartSeries.some((s) => s.points.length > 0);
+  return (
+    <Panel title={groupTitle(group, metric)} level={3} testId="chart-panel">
+      {hasPoints ? (
+        <TimeSeriesChart series={chartSeries} grain={grain} variant="line" height={260} />
+      ) : (
+        <EmptyState title={STRINGS.chartEmpty} />
+      )}
+    </Panel>
+  );
+}
 
 function MetricSection({
   metric,
@@ -37,6 +114,8 @@ function MetricSection({
   readonly grain: Grain;
   readonly title: string;
 }): ReactElement {
+  const styles = useStyles();
+  const { density } = useUiStyle();
   const query = useDashboard({ metric, domainId, days, grain });
 
   if (query.isError) {
@@ -45,33 +124,75 @@ function MetricSection({
       return <ForbiddenState workspace={title} correlationId={error.correlationId} />;
     }
     return (
-      <MessageBar intent="error" role="alert" data-testid="error-state">
-        <MessageBarBody>
-          <MessageBarTitle>Could not load {metric}</MessageBarTitle>
-          The request failed
-          {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}. This is not an
-          empty result. Try again later.
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="error-state">
+        <ErrorState
+          title={`Could not load ${metric}`}
+          message={`${STRINGS.errorBody}${
+            error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""
+          }`}
+          onRetry={() => void query.refetch()}
+        />
+      </div>
     );
   }
   if (query.isPending) {
-    return <p aria-busy="true">Loading {metric}...</p>;
+    return (
+      <div aria-busy="true">
+        <LoadingState label={`${STRINGS.loadingLabel} ${metric}`} rows={4} />
+      </div>
+    );
   }
   const data = query.data;
   const showPrice = metric === "cost";
+  const groups = groupSeries(data.series);
   return (
-    <section aria-label={`${title} ${metric}`} data-testid={`section-${metric}`}>
-      <h2>{metric}</h2>
-      <div>
+    <section
+      className={`${styles.section} ${density === "compact" ? styles.sectionCompact : ""}`}
+      aria-label={`${title} ${metric}`}
+      data-testid={`section-${metric}`}
+    >
+      <h2 className={styles.heading}>{metric}</h2>
+      <div className={styles.strip} data-slot="dashboard-kpis">
+        {data.series.map((s) => (
+          <KpiCard
+            key={s.key}
+            label={s.label}
+            value={totalText(s)}
+            accent={s.total.status !== "known" ? "unknown" : s.total.complete ? "ok" : "degraded"}
+            {...(s.total.status === "known" && !s.total.complete
+              ? { delta: { text: STRINGS.incompleteDelta, direction: "flat" as const } }
+              : {})}
+          />
+        ))}
+        <LagIndicator freshness={data.freshness} />
         <AnalyticsChip analytics={data.analytics} />
       </div>
-      <LagIndicator freshness={data.freshness} />
-      {!data.complete ? <p data-testid="incomplete-data">{STRINGS.incompleteData}</p> : null}
-      {data.truncated ? <p data-testid="truncated">{STRINGS.truncated}</p> : null}
-      {data.series.map((s) => (
-        <SeriesBlock key={s.key} series={s} showPrice={showPrice} />
-      ))}
+      {!data.complete ? (
+        <div data-testid="incomplete-data">
+          <StatusPill tone="warning" label={STRINGS.incompleteData} />
+        </div>
+      ) : null}
+      {data.truncated ? (
+        <div data-testid="truncated">
+          <StatusPill tone="warning" label={STRINGS.truncated} />
+        </div>
+      ) : null}
+      {data.series.length === 0 ? (
+        <EmptyState title={STRINGS.emptyTitle} description={STRINGS.emptyBody} />
+      ) : (
+        <>
+          <div className={styles.charts}>
+            {groups.map((g) => (
+              <ChartPanel key={g.key} group={g} metric={metric} grain={grain} />
+            ))}
+          </div>
+          <div className={styles.blocks}>
+            {data.series.map((s) => (
+              <SeriesBlock key={s.key} series={s} showPrice={showPrice} grain={grain} />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -121,7 +242,9 @@ export function DashboardPage({ title, metrics }: DashboardPageProps): ReactElem
       }
     >
       {domainId === "" ? (
-        <p data-testid="domain-required">Choose a domain to view this dashboard.</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequiredTitle} description={STRINGS.domainRequired} />
+        </div>
       ) : (
         metrics.map((m) => (
           <MetricSection

@@ -1,4 +1,11 @@
-import { Button, Field, Textarea, makeStyles, tokens } from "@fluentui/react-components";
+import {
+  Button,
+  Field,
+  Textarea,
+  makeStyles,
+  mergeClasses,
+  tokens,
+} from "@fluentui/react-components";
 import {
   useCallback,
   useEffect,
@@ -9,6 +16,7 @@ import {
   type ReactElement,
 } from "react";
 import { useLocation } from "react-router";
+import { useUiStyle } from "../../design-system";
 import { AssistantTurnView, ContextChip } from "./components";
 import { buildMessageContext } from "./requestContext";
 import { useCurrentCopilotSelection } from "./selection";
@@ -25,6 +33,12 @@ const useStyles = makeStyles({
     right: tokens.spacingHorizontalL,
     bottom: tokens.spacingVerticalL,
     zIndex: 1000,
+    boxShadow: tokens.shadow8,
+  },
+  toggleSmall: { borderRadius: tokens.borderRadiusSmall },
+  toggleRound: {
+    borderRadius: tokens.borderRadiusCircular,
+    paddingInline: tokens.spacingHorizontalXL,
   },
   panel: {
     position: "fixed",
@@ -42,6 +56,25 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: tokens.borderRadiusLarge,
     boxShadow: tokens.shadow16,
+  },
+  panelOps: {
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusSmall,
+    paddingBlock: tokens.spacingVerticalS,
+    paddingInline: tokens.spacingHorizontalM,
+    boxShadow: tokens.shadow8,
+  },
+  panelEnterprise: {
+    borderRadius: tokens.borderRadiusXLarge,
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+    paddingBlock: tokens.spacingVerticalL,
+    paddingInline: tokens.spacingHorizontalL,
+  },
+  headingOps: {
+    fontSize: tokens.fontSizeBase200,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
   },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between" },
   heading: { margin: 0, fontSize: tokens.fontSizeBase400 },
@@ -63,6 +96,8 @@ const useStyles = makeStyles({
  */
 export function CopilotDock(): ReactElement {
   const styles = useStyles();
+  const { id: styleId } = useUiStyle();
+  const ops = styleId === "ops-console";
   const ids = { title: useId(), panel: useId() };
   const location = useLocation();
   const selection = useCurrentCopilotSelection();
@@ -109,7 +144,7 @@ export function CopilotDock(): ReactElement {
     <>
       <Button
         ref={toggleRef}
-        className={styles.toggle}
+        className={mergeClasses(styles.toggle, ops ? styles.toggleSmall : styles.toggleRound)}
         appearance="primary"
         aria-expanded={open}
         aria-controls={open ? ids.panel : undefined}
@@ -121,13 +156,13 @@ export function CopilotDock(): ReactElement {
       {open ? (
         <section
           id={ids.panel}
-          className={styles.panel}
+          className={mergeClasses(styles.panel, ops ? styles.panelOps : styles.panelEnterprise)}
           aria-labelledby={ids.title}
           onKeyDown={onKeyDown}
           data-testid="copilot-panel"
         >
           <div className={styles.header}>
-            <h2 id={ids.title} className={styles.heading}>
+            <h2 id={ids.title} className={mergeClasses(styles.heading, ops && styles.headingOps)}>
               {STRINGS.title}
             </h2>
             <Button appearance="subtle" onClick={() => setOpen(false)}>

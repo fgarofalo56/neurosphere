@@ -1,6 +1,13 @@
-import { MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { ForbiddenError, createQueryHook } from "../../api/index.js";
+import {
+  ErrorState,
+  HealthIndicator,
+  LoadingState,
+  PageTemplate,
+  Panel,
+  StatusPill,
+} from "../../design-system";
 import { ForbiddenState } from "./ForbiddenState";
 import { probePath, type WorkspaceDef } from "./personas";
 
@@ -13,47 +20,55 @@ const useWorkspaceProbe = createQueryHook<{ path: string }, unknown>({
 export function WorkspacePage({ def }: { readonly def: WorkspaceDef }): ReactElement {
   const query = useWorkspaceProbe({ path: probePath(def.persona) });
   const label = `${def.label} workspace`;
-  const heading = <h1>{label}</h1>;
 
   if (query.isError) {
     const error = query.error;
     if (error instanceof ForbiddenError) {
       return (
-        <section aria-label={label}>
-          {heading}
+        <PageTemplate title={label}>
           <ForbiddenState workspace={def.label} correlationId={error.correlationId} />
-        </section>
+        </PageTemplate>
       );
     }
     return (
-      <section aria-label={label}>
-        {heading}
-        <MessageBar intent="error" role="alert" data-testid="error-state">
-          <MessageBarBody>
-            <MessageBarTitle>Could not load this workspace</MessageBarTitle>
-            The request failed
-            {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}. This is not
-            an empty result. Try again later.
-          </MessageBarBody>
-        </MessageBar>
-      </section>
+      <PageTemplate title={label}>
+        <ErrorState
+          title="Could not load this workspace"
+          testId="error-state"
+          message={
+            <>
+              The request failed
+              {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}. This is not
+              an empty result. Try again later.
+            </>
+          }
+        />
+      </PageTemplate>
     );
   }
 
   if (query.isPending) {
     return (
-      <section aria-label={label} aria-busy="true">
-        {heading}
-        <p>Loading...</p>
-      </section>
+      <PageTemplate title={label} busy>
+        <LoadingState label={`Loading the ${label}`} rows={4} />
+      </PageTemplate>
     );
   }
 
   return (
-    <section aria-label={label}>
-      {heading}
-      <p>{def.description}</p>
-      <p>Placeholder: this workspace is built out in later work.</p>
-    </section>
+    <PageTemplate title={label} layout="grid">
+      <Panel title="Purpose">
+        <p>{def.description}</p>
+        <div>
+          <StatusPill label={def.persona} tone="neutral" />
+        </div>
+      </Panel>
+      <Panel title="Service status">
+        <div>
+          <HealthIndicator state="ok" label="Service answered" />
+        </div>
+        <p>Placeholder: this workspace is built out in later work.</p>
+      </Panel>
+    </PageTemplate>
   );
 }

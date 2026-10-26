@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Dialog,
   DialogActions,
@@ -20,6 +19,7 @@ import {
   StaleVersionError,
   type ApiError,
 } from "../../api/index.js";
+import { ErrorState, HealthIndicator, StatusPill, type StatusTone } from "../../design-system";
 import { useEmergencyDisable } from "./hooks";
 import { STRINGS, orUnknown } from "./strings";
 import type { ActionIntent, ActionState, ExecutionView, ProposedDiff } from "./types";
@@ -39,31 +39,37 @@ export function QueryErrorState({
   const ref = referenceOf(error);
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.forbidden}</MessageBarTitle>
-          {STRINGS.forbiddenDetail}
-          {ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <ErrorState
+        tone="warning"
+        title={STRINGS.forbidden}
+        testId="forbidden-state"
+        message={
+          <>
+            {STRINGS.forbiddenDetail}
+            {ref}.
+          </>
+        }
+      />
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-        {onRetry !== undefined ? (
-          <>
-            {" "}
-            <Button size="small" onClick={onRetry}>
-              {STRINGS.retry}
-            </Button>
-          </>
-        ) : null}
-      </MessageBarBody>
-    </MessageBar>
+    <ErrorState
+      title={STRINGS.unavailable}
+      testId="unavailable-state"
+      action={
+        onRetry !== undefined ? (
+          <Button size="small" onClick={onRetry}>
+            {STRINGS.retry}
+          </Button>
+        ) : undefined
+      }
+      message={
+        <>
+          {STRINGS.unavailableDetail}
+          {ref}
+        </>
+      }
+    />
   );
 }
 
@@ -92,12 +98,16 @@ export function actionErrorText(error: ApiError): string {
 
 export function ActionError({ error }: { readonly error: ApiError }): ReactElement {
   return (
-    <MessageBar intent="error" role="alert" data-testid="action-error">
-      <MessageBarBody>
-        {actionErrorText(error)}
-        {referenceOf(error)}
-      </MessageBarBody>
-    </MessageBar>
+    <ErrorState
+      title={STRINGS.errors.title}
+      testId="action-error"
+      message={
+        <>
+          {actionErrorText(error)}
+          {referenceOf(error)}
+        </>
+      }
+    />
   );
 }
 
@@ -117,18 +127,18 @@ export function EmergencyBanner(): ReactElement | null {
 }
 
 export function StateBadge({ state }: { readonly state: ActionState }): ReactElement {
-  const color =
+  const tone: StatusTone =
     state === "succeeded"
       ? "success"
       : state === "failed" || state === "rolled_back" || state === "expired"
         ? "danger"
         : state === "executing" || state === "awaiting_approval"
           ? "warning"
-          : "informative";
+          : "neutral";
   return (
-    <Badge appearance="tint" color={color} data-testid="state-badge">
-      {state}
-    </Badge>
+    <span data-testid="state-badge">
+      <StatusPill label={state} tone={tone} />
+    </span>
   );
 }
 
@@ -163,26 +173,46 @@ export function ExecutionPanel({
   readonly execution: ExecutionView | null;
 }): ReactElement {
   if (execution === null) return <p data-testid="execution-none">{STRINGS.detail.noExecution}</p>;
-  const verify =
-    execution.verify_matched === null
-      ? STRINGS.unknown
-      : execution.verify_matched
-        ? STRINGS.detail.verifyMatched
-        : STRINGS.detail.verifyMismatch;
   return (
     <dl data-testid="execution">
       <dt>{STRINGS.detail.phase}</dt>
       <dd data-testid="execution-phase">{execution.phase}</dd>
       <dt>{STRINGS.detail.canary}</dt>
-      <dd data-testid="execution-canary">{orUnknown(execution.canary)}</dd>
+      <dd data-testid="execution-canary">
+        <StatusPill label={orUnknown(execution.canary)} tone={canaryTone(execution.canary)} />
+      </dd>
       <dt>{STRINGS.detail.verify}</dt>
-      <dd data-testid="execution-verify">{verify}</dd>
+      <dd data-testid="execution-verify">
+        {execution.verify_matched === null ? (
+          <HealthIndicator state="unknown" label={STRINGS.unknown} />
+        ) : execution.verify_matched ? (
+          <HealthIndicator state="ok" label={STRINGS.detail.verifyMatched} />
+        ) : (
+          <HealthIndicator state="failing" label={STRINGS.detail.verifyMismatch} />
+        )}
+      </dd>
       <dt>{STRINGS.detail.rollback}</dt>
       <dd data-testid="execution-rollback">
-        {execution.rolled_back ? STRINGS.detail.rolledBack : STRINGS.detail.notRolledBack}
+        {execution.rolled_back ? (
+          <StatusPill label={STRINGS.detail.rolledBack} tone="warning" />
+        ) : (
+          <StatusPill label={STRINGS.detail.notRolledBack} />
+        )}
       </dd>
     </dl>
   );
+}
+
+function canaryTone(canary: string | null): StatusTone {
+  if (canary === "passed" || canary === "ok" || canary === "succeeded") return "success";
+  if (canary === "failed") return "danger";
+  return "neutral";
+}
+
+function prerequisiteTone(status: string): StatusTone {
+  if (status === "passed") return "success";
+  if (status === "failed") return "danger";
+  return "neutral";
 }
 
 export function Prerequisites({ intent }: { readonly intent: ActionIntent }): ReactElement {
@@ -193,7 +223,8 @@ export function Prerequisites({ intent }: { readonly intent: ActionIntent }): Re
     <ul aria-label={STRINGS.detail.prerequisites} data-testid="prerequisites">
       {intent.prerequisite_results.map((p) => (
         <li key={p.check_id} data-testid="prerequisite">
-          <code>{p.check_id}</code>: {p.status}
+          <code>{p.check_id}</code>:{" "}
+          <StatusPill label={p.status} tone={prerequisiteTone(p.status)} />
           {p.detail !== null ? ` - ${p.detail}` : ""}
         </li>
       ))}

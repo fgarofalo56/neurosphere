@@ -58,3 +58,7 @@ Every manual section is marked `Status: OPEN (unsigned)`. Only a human tester fi
 ## Gate status
 
 Gate G09 (theme, brand and media review) is tracked in [`docs/RESEARCH-AND-GATES.md`](../RESEARCH-AND-GATES.md) (row G09). It stays OPEN until Product plus legal and accessibility review complete, using the signed checklists and a cleared remediation log.
+
+## UI styles and visual regression (PRP-30 item 10)
+
+The automated suite now seeds the UI style as well: `themes.a11y.spec.ts` covers 2 styles x 3 modes x 2 packs and `routes.a11y.spec.ts` covers every manifest route x 2 styles x 3 modes. The latest committed run is `axe-results-2026-10-26.json`. The manual tester runbook must cover both styles; see the 2026-10-26 section of `remediation-log.md`. Pixel baselines (`frontend/tests/e2e/visual/`) are layout evidence only, not accessibility evidence, and are authoritative on Linux CI only.

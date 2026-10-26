@@ -1,8 +1,8 @@
-import { Button, MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
+import { Button } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import { EmptyState, LoadingState, PageTemplate, Panel, Timestamp } from "../../design-system";
 import { ChartFrame } from "../charts";
 import {
   Citations,
@@ -24,18 +24,21 @@ function RunSection({ report }: { readonly report: ReportView }): ReactElement {
   if (run.isError) {
     return <QueryErrorState error={run.error} onRetry={() => void run.refetch()} />;
   }
-  if (run.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (run.isPending) {
+    return (
+      <div aria-busy="true">
+        <LoadingState label={STRINGS.loading} />
+      </div>
+    );
+  }
   const result = run.data;
   return (
-    <section aria-label={report.title} data-testid="run-section">
+    <Panel label={report.title} testId="run-section">
       <p>{STRINGS.runDescription}</p>
       {result.status === "no_data" || result.chart_plan === null ? (
-        <MessageBar intent="info" role="status" data-testid="no-data-state">
-          <MessageBarBody>
-            <MessageBarTitle>{STRINGS.noData}</MessageBarTitle>
-            {STRINGS.noDataDetail}
-          </MessageBarBody>
-        </MessageBar>
+        <div role="status" data-testid="no-data-state">
+          <EmptyState title={STRINGS.noData} description={STRINGS.noDataDetail} />
+        </div>
       ) : (
         <ChartFrame plan={result.chart_plan} title={report.title} />
       )}
@@ -46,12 +49,12 @@ function RunSection({ report }: { readonly report: ReportView }): ReactElement {
       ) : null}
       <Citations citations={result.citations} />
       <p>
-        {STRINGS.ranAt} {result.ran_at}{" "}
+        {STRINGS.ranAt} <Timestamp value={result.ran_at} />{" "}
         <Button size="small" disabled={run.isFetching} onClick={() => void run.refetch()}>
           {STRINGS.run}
         </Button>
       </p>
-    </section>
+    </Panel>
   );
 }
 
@@ -96,7 +99,9 @@ export function ReportViewPage(): ReactElement {
   if (!enabled) {
     return (
       <PageTemplate title={STRINGS.viewTitle}>
-        <p data-testid="report-required">{STRINGS.domainRequired}</p>
+        <div data-testid="report-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       </PageTemplate>
     );
   }
@@ -110,7 +115,9 @@ export function ReportViewPage(): ReactElement {
   if (query.isPending) {
     return (
       <PageTemplate title={STRINGS.viewTitle} busy>
-        <p aria-busy="true">{STRINGS.loading}</p>
+        <div aria-busy="true">
+          <LoadingState label={STRINGS.loading} />
+        </div>
       </PageTemplate>
     );
   }
@@ -120,16 +127,21 @@ export function ReportViewPage(): ReactElement {
 
   return (
     <PageTemplate title={report.title}>
-      <p>
-        <PublicationBadge state={report.publication.state} />{" "}
-        {report.is_owner ? STRINGS.youAreOwner : `${STRINGS.owner}: ${report.owner}`}
-      </p>
-      {report.is_owner ? (
+      <Panel label="Report details">
         <p>
-          <ShareDialog report={report} /> <RequestPublication report={report} />{" "}
-          <DeleteButton report={report} />
+          <PublicationBadge state={report.publication.state} />{" "}
+          {report.is_owner ? STRINGS.youAreOwner : `${STRINGS.owner}: ${report.owner}`}
         </p>
-      ) : null}
+        <p>
+          {STRINGS.headers.updated}: <Timestamp value={report.updated_at} />
+        </p>
+        {report.is_owner ? (
+          <p>
+            <ShareDialog report={report} /> <RequestPublication report={report} />{" "}
+            <DeleteButton report={report} />
+          </p>
+        ) : null}
+      </Panel>
       <DecisionControls report={report} />
       {canRun ? <RunSection report={report} /> : null}
     </PageTemplate>

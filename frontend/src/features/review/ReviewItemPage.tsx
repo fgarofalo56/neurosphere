@@ -1,13 +1,26 @@
-import { Button, Field, Textarea } from "@fluentui/react-components";
+import { Button, Field, Textarea, makeStyles, tokens } from "@fluentui/react-components";
 import { useEffect, useState, type ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import type { ApiError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
-import { DecisionList, MutationError, QueryErrorState, StateBadge, slaText } from "./components";
+import { EmptyState, LoadingState, PageTemplate, Panel, Timestamp } from "../../design-system";
+import { DecisionList, MutationError, QueryErrorState, SlaDue, StateBadge } from "./components";
 import { useClaimItem, useDecideItem, useReviewItem, useReviewedIntent } from "./hooks";
-import { STRINGS, orUnknown } from "./strings";
+import { STRINGS } from "./strings";
 import { OPEN_STATES, type Decision, type ReviewItemView } from "./types";
+
+const useStyles = makeStyles({
+  article: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalM,
+  },
+  actions: {
+    display: "flex",
+    flexWrap: "wrap",
+    columnGap: tokens.spacingHorizontalS,
+  },
+});
 
 function IntentUnderReview({
   domainId,
@@ -36,11 +49,16 @@ function IntentUnderReview({
       />
     );
   }
-  if (query.isPending) return <p aria-busy="true">{D.intentLoading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="intent-loading">
+        <LoadingState label={D.intentLoading} rows={3} />
+      </div>
+    );
+  }
   const { intent, advisory } = query.data;
   return (
-    <section aria-label={D.change} data-testid="intent-under-review">
-      <h2>{D.change}</h2>
+    <Panel title={D.change} testId="intent-under-review">
       {advisory ? <p>{D.advisory}</p> : null}
       <dl>
         <dt>{D.target}</dt>
@@ -48,7 +66,13 @@ function IntentUnderReview({
         <dt>{D.version}</dt>
         <dd data-testid="review-version">{intent.target_version}</dd>
         <dt>{D.expires}</dt>
-        <dd>{orUnknown(intent.confirmation_expires_at)}</dd>
+        <dd>
+          {intent.confirmation_expires_at === null ? (
+            STRINGS.unknown
+          ) : (
+            <Timestamp value={intent.confirmation_expires_at} />
+          )}
+        </dd>
       </dl>
       <ol data-testid="review-diff">
         {intent.proposed_diff.operations.map((op, index) => (
@@ -63,7 +87,7 @@ function IntentUnderReview({
           </li>
         ))}
       </ol>
-    </section>
+    </Panel>
   );
 }
 
@@ -78,6 +102,7 @@ function ItemControls({
   readonly confirmationHash: string | null;
   readonly onItem: (item: ReviewItemView) => void;
 }): ReactElement {
+  const styles = useStyles();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<{ error: ApiError; action: Decision | "claim" } | null>(null);
   const claim = useClaimItem();
@@ -88,7 +113,11 @@ function ItemControls({
   const needsHash = isMakerChecker && confirmationHash === null;
 
   if (!OPEN_STATES.includes(item.state)) {
-    return <p data-testid="item-final">{STRINGS.detail.final}</p>;
+    return (
+      <Panel testId="item-final">
+        <p>{STRINGS.detail.final}</p>
+      </Panel>
+    );
   }
 
   const submit = (decision: Decision): void => {
@@ -112,9 +141,9 @@ function ItemControls({
   };
 
   return (
-    <div data-testid="item-controls">
+    <Panel title={F.title} testId="item-controls">
       {item.assignee_pseudonym === null ? (
-        <p>
+        <div>
           <Button
             disabled={busy}
             onClick={() => {
@@ -130,7 +159,7 @@ function ItemControls({
           >
             {claim.isPending ? F.working : F.claim}
           </Button>
-        </p>
+        </div>
       ) : null}
       <Field label={F.reasonLabel}>
         <Textarea
@@ -141,21 +170,23 @@ function ItemControls({
         />
       </Field>
       {needsHash ? <p>{F.needsHash}</p> : null}
-      <Button
-        appearance="primary"
-        disabled={busy || reason.trim() === "" || needsHash}
-        onClick={() => submit("approved")}
-      >
-        {F.approve}
-      </Button>{" "}
-      <Button
-        disabled={busy || reason.trim() === "" || needsHash}
-        onClick={() => submit("rejected")}
-      >
-        {F.reject}
-      </Button>
+      <div className={styles.actions}>
+        <Button
+          appearance="primary"
+          disabled={busy || reason.trim() === "" || needsHash}
+          onClick={() => submit("approved")}
+        >
+          {F.approve}
+        </Button>
+        <Button
+          disabled={busy || reason.trim() === "" || needsHash}
+          onClick={() => submit("rejected")}
+        >
+          {F.reject}
+        </Button>
+      </div>
       {error !== null ? <MutationError error={error.error} action={error.action} /> : null}
-    </div>
+    </Panel>
   );
 }
 
@@ -166,6 +197,7 @@ function ItemBody({
   readonly domainId: string;
   readonly itemId: string;
 }): ReactElement {
+  const styles = useStyles();
   const query = useReviewItem({ domainId, itemId });
   const [override, setOverride] = useState<ReviewItemView | null>(null);
   const [hash, setHash] = useState<string | null>(null);
@@ -180,34 +212,47 @@ function ItemBody({
       />
     );
   }
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" data-testid="loading-state">
+        <LoadingState label={STRINGS.loading} rows={5} />
+      </div>
+    );
+  }
   const item = override ?? query.data;
   const D = STRINGS.detail;
   return (
-    <article aria-label={STRINGS.itemTitle} data-testid="review-item">
-      <dl>
-        <dt>{D.kind}</dt>
-        <dd>{item.kind}</dd>
-        <dt>{D.state}</dt>
-        <dd>
-          <StateBadge state={item.state} />
-        </dd>
-        <dt>{D.subject}</dt>
-        <dd>{item.subject_ref}</dd>
-        <dt>{D.assignee}</dt>
-        <dd data-testid="item-assignee">{item.assignee_pseudonym ?? STRINGS.unassigned}</dd>
-        <dt>{D.sla}</dt>
-        <dd data-testid="item-sla">{slaText(item.sla_due_at)}</dd>
-        <dt>{D.escalation}</dt>
-        <dd data-testid="item-escalation">{item.escalation_level}</dd>
-        <dt>{D.created}</dt>
-        <dd>{item.created_at}</dd>
-      </dl>
+    <article aria-label={STRINGS.itemTitle} data-testid="review-item" className={styles.article}>
+      <Panel title={D.facts}>
+        <dl>
+          <dt>{D.kind}</dt>
+          <dd>{item.kind}</dd>
+          <dt>{D.state}</dt>
+          <dd>
+            <StateBadge state={item.state} />
+          </dd>
+          <dt>{D.subject}</dt>
+          <dd>{item.subject_ref}</dd>
+          <dt>{D.assignee}</dt>
+          <dd data-testid="item-assignee">{item.assignee_pseudonym ?? STRINGS.unassigned}</dd>
+          <dt>{D.sla}</dt>
+          <dd data-testid="item-sla">
+            <SlaDue slaDueAt={item.sla_due_at} />
+          </dd>
+          <dt>{D.escalation}</dt>
+          <dd data-testid="item-escalation">{item.escalation_level}</dd>
+          <dt>{D.created}</dt>
+          <dd>
+            <Timestamp value={item.created_at} />
+          </dd>
+        </dl>
+      </Panel>
       {item.kind === "maker_checker" && item.intent_id !== null ? (
         <IntentUnderReview domainId={domainId} intentId={item.intent_id} onHash={setHash} />
       ) : null}
-      <h2>{D.decisions}</h2>
-      <DecisionList item={item} />
+      <Panel title={D.decisions}>
+        <DecisionList item={item} />
+      </Panel>
       <ItemControls domainId={domainId} item={item} confirmationHash={hash} onItem={setOverride} />
     </article>
   );
@@ -220,7 +265,9 @@ export function ReviewItemPage(): ReactElement {
   return (
     <PageTemplate title={STRINGS.itemTitle}>
       {domainId === "" || itemId === "" ? (
-        <p data-testid="domain-required">{STRINGS.itemRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.itemRequired} />
+        </div>
       ) : (
         <ItemBody key={`${domainId}|${itemId}`} domainId={domainId} itemId={itemId} />
       )}
