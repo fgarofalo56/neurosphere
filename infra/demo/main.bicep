@@ -227,8 +227,11 @@ var apiSettings = {
 // the site does (D8). The sites are therefore declared twice with identical resources: the
 // bootstrap pass creates them and their identities, the second pass adds the object id. Both
 // passes target the same resources, so the result is one plan, three sites.
+// Not 'all': the recommendations and evaluation roles read sandbox data from compose volume
+// mounts (NS_WORKER_REC_DATA_DIR / NS_WORKER_EVAL_DATA_DIR) that the hosted image does not have.
+// Hosted recommendations and evaluations are written by the seeder instead.
 var workersBaseSettings = {
-  NS_WORKER_ROLES: 'all'
+  NS_WORKER_ROLES: 'ingestion,projections,aggregates,actions,hitl_timers,lifecycle'
   NS_WORKER_TENANT_ID: entraTenantId
   NS_INGESTION_EVENTHUBS_NAMESPACE: eventHubsName
   NS_INGESTION_EVENTHUB_NAME: eventHubName

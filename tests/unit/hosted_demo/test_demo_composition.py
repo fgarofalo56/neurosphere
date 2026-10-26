@@ -284,7 +284,10 @@ def test_workers_get_their_identity_in_a_second_pass(arm: dict[str, Any]) -> Non
     bootstrap, final = sorted(_by_type(arm, "Microsoft.Web/sites"), key=_is_bootstrap, reverse=True)
     assert _is_bootstrap(bootstrap) and not _is_bootstrap(final)
     base = arm["variables"]["workersBaseSettings"]
-    assert base["NS_WORKER_ROLES"] == "all"
+    # recommendations/evaluation need compose-mounted data dirs the hosted image lacks.
+    assert (
+        base["NS_WORKER_ROLES"] == "ingestion,projections,aggregates,actions,hitl_timers,lifecycle"
+    )
     assert base["NS_WORKER_TENANT_ID"] == "[parameters('entraTenantId')]"
     assert "NS_WORKER_OBJECT_ID" not in base
     assert _param(bootstrap, "workersAppSettings") == "[variables('workersBaseSettings')]"
