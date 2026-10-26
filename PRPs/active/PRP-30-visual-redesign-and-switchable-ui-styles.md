@@ -1,6 +1,8 @@
 ---
 name: prp-30-visual-redesign-and-switchable-ui-styles
-status: backlog
+status: active
+started: 2026-10-26
+branch: prp-30-visual-redesign
 review: required
 priority: P0
 created: 2026-10-24
@@ -575,6 +577,22 @@ Snyk code scan on new first-party code before each merge (0 new issues). There i
 - [x] All clarification questions are decided, not guessed (open confirmations listed under "Decisions to confirm at plan approval")
 
 ## Execution state
+
+Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; D-c in-house SVG charts; D-b, D-d to D-h accepted as written; D-i moot (PRP-29 shipped).
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 style-foundation | todo | | sonnet | | 2026-10-26 |
+| 2 brand-and-component-primitives | todo | | sonnet | | 2026-10-26 |
+| 3 chart-primitives | todo | | sonnet | | 2026-10-26 |
+| 4 mockups-and-approval-checkpoint | todo | | sonnet | | 2026-10-26 |
+| CHECKPOINT mockup approval | todo | | operator | | 2026-10-26 |
+| 5 shell-chrome-demo-and-fixtures | todo | | sonnet | | 2026-10-26 |
+| 6 lane-overview-dashboards-reconciliation | todo | | sonnet | | 2026-10-26 |
+| 7 lane-actions-review-workspaces-sandbox-mcp | todo | | sonnet | | 2026-10-26 |
+| 8 lane-quality-recommendations-reports-chartframe | todo | | sonnet | | 2026-10-26 |
+| 9 lane-map-maptable-replay | todo | | sonnet | | 2026-10-26 |
+| 10 visual-regression-and-a11y-matrix | todo | | sonnet | | 2026-10-26 |
 
 ## Completion note (filled at ship)
 - Date:
