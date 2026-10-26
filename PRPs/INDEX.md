@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-32-hosted-azure-environment](active/PRP-32-hosted-azure-environment.md) | P0 | 0/9 (0%) | todo 5, in-progress 4 | ? / ? | required |
+| [prp-32-hosted-azure-environment](active/PRP-32-hosted-azure-environment.md) | P0 | 4/9 (44%) | todo 3, in-progress 2, merged 4 | ? / ? | required |
 
 ## Backlog
 
