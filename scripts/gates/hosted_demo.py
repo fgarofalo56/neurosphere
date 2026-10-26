@@ -1402,7 +1402,7 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
         "-o",
         "json",
     )
-    ctx.step("grant:rbac", "ok", f"role {role[:8]} granted")
+    ctx.step("grant:rbac", "ok", "role assignment granted")
     return assignment_id(made, "seed-access rbac")
 
 
@@ -1429,7 +1429,7 @@ def _revoke_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princi
     )
     for rid in ids or []:
         ctx.az("role", "assignment", "delete", "--ids", str(rid), parse=False)
-    ctx.step("revoke:rbac", "ok", f"role {role[:8]}")
+    ctx.step("revoke:rbac", "ok", "role assignment removed")
 
 
 def delete_cosmos_assignment(ctx: Ctx, assignment_id: str, account: str) -> None:
