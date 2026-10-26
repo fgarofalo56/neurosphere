@@ -22,21 +22,28 @@ param publicNetworkAccess string = 'Disabled'
 @maxValue(730)
 param retentionInDays int = 90
 
+@description('Daily ingestion cap in GB. -1 means no cap and the property is not emitted.')
+@minValue(-1)
+param dailyQuotaGb int = -1
+
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = if (empty(reuse)) {
   name: name
   location: location
   tags: tags
-  properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
-    retentionInDays: retentionInDays
-    features: {
-      disableLocalAuth: true
-    }
-    publicNetworkAccessForIngestion: publicNetworkAccess
-    publicNetworkAccessForQuery: publicNetworkAccess
-  }
+  properties: union(
+    {
+      sku: {
+        name: 'PerGB2018'
+      }
+      retentionInDays: retentionInDays
+      features: {
+        disableLocalAuth: true
+      }
+      publicNetworkAccessForIngestion: publicNetworkAccess
+      publicNetworkAccessForQuery: publicNetworkAccess
+    },
+    dailyQuotaGb == -1 ? {} : { workspaceCapping: { dailyQuotaGb: dailyQuotaGb } }
+  )
 }
 
 @description('Resource id of the workspace in use (reused or newly created).')
