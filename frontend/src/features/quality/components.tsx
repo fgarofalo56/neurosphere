@@ -1,6 +1,8 @@
-import { Badge, MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
+import { makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { ForbiddenError, type ApiError } from "../../api/index.js";
+import { ErrorState, StatusPill } from "../../design-system";
+import { Panel } from "./Panel";
 import { STRINGS, fractionText, levelText, numberText, orUnknown } from "./strings";
 import type { CalibrationState, Judge, PilotGroundedRate } from "./types";
 
@@ -8,22 +10,18 @@ export function QueryErrorState({ error }: { readonly error: ApiError }): ReactE
   const ref = error.correlationId !== "" ? ` (reference ${error.correlationId})` : "";
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.forbidden}</MessageBarTitle>
-          Contact your administrator if you need access{ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="forbidden-state">
+        <ErrorState
+          title={STRINGS.forbidden}
+          message={`Contact your administrator if you need access${ref}.`}
+        />
+      </div>
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-      </MessageBarBody>
-    </MessageBar>
+    <div data-testid="unavailable-state">
+      <ErrorState title={STRINGS.unavailable} message={`${STRINGS.unavailableDetail}${ref}`} />
+    </div>
   );
 }
 
@@ -41,21 +39,20 @@ export function CalibrationBadge({ state }: { readonly state: CalibrationState }
   if (state === "uncalibrated") {
     return (
       <span>
-        <Badge appearance="filled" color="warning" data-testid="calibration-state">
-          {STRINGS.uncalibrated}
-        </Badge>
+        <span data-testid="calibration-state">
+          <StatusPill label={STRINGS.uncalibrated} tone="warning" />
+        </span>
         <small> {STRINGS.uncalibratedNote}</small>
       </span>
     );
   }
   return (
-    <Badge
-      appearance="tint"
-      color={state === "calibrated" ? "success" : "informative"}
-      data-testid="calibration-state"
-    >
-      {state === "calibrated" ? STRINGS.calibrated : STRINGS.notApplicable}
-    </Badge>
+    <span data-testid="calibration-state">
+      <StatusPill
+        label={state === "calibrated" ? STRINGS.calibrated : STRINGS.notApplicable}
+        tone={state === "calibrated" ? "success" : "neutral"}
+      />
+    </span>
   );
 }
 
@@ -68,31 +65,49 @@ export function intervalText(
   return `${numberText(lower)} to ${numberText(upper)} (${levelText(level)})`;
 }
 
+const useStyles = makeStyles({
+  list: {
+    display: "grid",
+    gridTemplateColumns: "max-content 1fr",
+    columnGap: tokens.spacingHorizontalL,
+    rowGap: tokens.spacingVerticalXXS,
+    margin: 0,
+  },
+  term: { color: tokens.colorNeutralForeground2 },
+  def: { margin: 0, fontWeight: tokens.fontWeightSemibold },
+});
+
 export function PilotRate({ rate }: { readonly rate: PilotGroundedRate }): ReactElement {
+  const styles = useStyles();
   const estimable = rate.method === "wilson_score" && rate.value !== null;
   return (
-    <section aria-labelledby="pilot-heading" data-testid="pilot-rate">
-      <h2 id="pilot-heading">{STRINGS.pilot.title}</h2>
+    <Panel id="pilot-heading" title={STRINGS.pilot.title} testId="pilot-rate">
       <p data-testid="pilot-target">{rate.target_label}</p>
-      <dl>
-        <dt>{STRINGS.pilot.estimate}</dt>
-        <dd data-testid="pilot-value">{estimable ? fractionText(rate.value) : STRINGS.unknown}</dd>
+      <dl className={styles.list}>
+        <dt className={styles.term}>{STRINGS.pilot.estimate}</dt>
+        <dd className={styles.def} data-testid="pilot-value">
+          {estimable ? fractionText(rate.value) : STRINGS.unknown}
+        </dd>
         {estimable ? (
           <>
-            <dt>{STRINGS.pilot.interval}</dt>
-            <dd data-testid="pilot-interval">{intervalText(rate.lower, rate.upper, rate.level)}</dd>
+            <dt className={styles.term}>{STRINGS.pilot.interval}</dt>
+            <dd className={styles.def} data-testid="pilot-interval">
+              {intervalText(rate.lower, rate.upper, rate.level)}
+            </dd>
           </>
         ) : null}
-        <dt>{STRINGS.pilot.sampleSize}</dt>
-        <dd data-testid="pilot-n">{rate.n}</dd>
+        <dt className={styles.term}>{STRINGS.pilot.sampleSize}</dt>
+        <dd className={styles.def} data-testid="pilot-n">
+          {rate.n}
+        </dd>
         {estimable ? (
           <>
-            <dt>{STRINGS.pilot.method}</dt>
-            <dd>{rate.method}</dd>
+            <dt className={styles.term}>{STRINGS.pilot.method}</dt>
+            <dd className={styles.def}>{rate.method}</dd>
           </>
         ) : null}
       </dl>
       {estimable ? null : <p data-testid="pilot-reason">{STRINGS.pilot.notEstimableReason}</p>}
-    </section>
+    </Panel>
   );
 }
