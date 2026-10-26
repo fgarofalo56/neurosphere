@@ -2165,7 +2165,7 @@ export function createMockApi(options: MockApiOptions): Server {
     }
     const mcpAdmin = MCP_ADMIN_PATH.exec(url.pathname);
     if (mcpAdmin !== null) {
-      void mcpAdminHandler(copilotCtx, mcpAdminState, mcpAdmin[1] ?? "", demo);
+      void mcpAdminHandler(copilotCtx, mcpAdminState, mcpAdmin[1] ?? "");
       return;
     }
     const reports = REPORTS_PATH.exec(url.pathname);
@@ -2270,8 +2270,7 @@ export function createMockApi(options: MockApiOptions): Server {
         send(res, 401, { error: "missing or unrecognised token" }, cors);
         return;
       }
-      // Demo profile: the persona is Steward and every placeholder workspace is browsable.
-      if (role !== persona && !demo) {
+      if (role !== persona) {
         send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
         return;
       }

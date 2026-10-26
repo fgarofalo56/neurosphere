@@ -10,10 +10,13 @@ import { expect, test, type Page } from "@playwright/test";
  * `playwright.config.ts` is untouched and the default e2e servers are not involved. Every route in
  * `route-manifest.json` is visited (detail routes through a link on their list page), with no
  * forbidden state and no empty state on first load. The first landing must be Finance.
+ *
+ * The demo profile enriches DATA only; authorization is identical to the default profile. The demo
+ * persona is Steward, so the routes in `EXPECTED_FORBIDDEN` must show the access-denied state.
  */
 
-const APP_PORT = Number(process.env["NS_DEMO_AUDIT_APP_PORT"] ?? 5312);
-const API_PORT = Number(process.env["NS_DEMO_AUDIT_API_PORT"] ?? 5313);
+const APP_PORT = Number(process.env["NS_DEMO_AUDIT_APP_PORT"] ?? 5318);
+const API_PORT = Number(process.env["NS_DEMO_AUDIT_API_PORT"] ?? 5319);
 const APP_ORIGIN = `http://127.0.0.1:${APP_PORT}`;
 const API_HEALTH = `http://127.0.0.1:${API_PORT}/api/v1/health`;
 
@@ -33,6 +36,28 @@ const DETAIL_VIA: Readonly<Record<string, { list: string; link: string }>> = {
   "/reports/view": { list: "/reports", link: 'a[href*="/reports/view"]' },
   "/review/item": { list: "/review", link: 'a[href*="/review/item"]' },
   "/mcp-admin/server": { list: "/mcp-admin", link: 'a[href*="/mcp-admin/server"]' },
+};
+
+/**
+ * Routes the Steward persona legitimately cannot open, matching the authorization the real API
+ * enforces (and the mock reproduces in every profile):
+ *  - MCP admin list and detail need `config.manage`, which only Admin holds.
+ *  - A workspace is open only to its own persona, so every workspace but Steward's is denied.
+ * The audit asserts the forbidden state IS shown here, and fails if one of these ever renders
+ * data, so this list cannot rot silently.
+ */
+const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
+  "/mcp-admin",
+  "/mcp-admin/server",
+  "/workspaces/admin",
+  "/workspaces/analyst",
+  "/workspaces/auditor",
+  "/workspaces/viewer",
+]);
+
+/** The detail page needs an id in the URL; the denied list page has no link to follow. */
+const FORBIDDEN_DIRECT_URL: Readonly<Record<string, string>> = {
+  "/mcp-admin/server": "/mcp-admin/server?server_id=srv-demo",
 };
 
 const children: ChildProcess[] = [];
@@ -91,6 +116,13 @@ async function assertPopulated(page: Page, route: string): Promise<void> {
   await expect.soft(page.locator('[data-testid="error-state"]'), `${route}: error`).toHaveCount(0);
 }
 
+async function assertForbidden(page: Page, route: string): Promise<void> {
+  await settle(page);
+  await expect
+    .soft(page.locator('[data-testid="forbidden-state"]'), `${route}: expected forbidden`)
+    .toHaveCount(1);
+}
+
 test.describe("demo route audit", () => {
   test.describe.configure({ mode: "serial" });
   test.setTimeout(120_000);
@@ -141,10 +173,15 @@ test.describe("demo route audit", () => {
 
   // One test, soft assertions: every route is reported in a single run instead of the first
   // failure hiding the rest.
-  test("every manifest route shows data on a first visit", async ({ page }) => {
+  test("every manifest route shows data or the honest forbidden state", async ({ page }) => {
     test.setTimeout(manifest.routes.length * 30_000);
     for (const route of manifest.routes) {
       await test.step(route, async () => {
+        if (EXPECTED_FORBIDDEN.has(route)) {
+          await page.goto(`${APP_ORIGIN}${FORBIDDEN_DIRECT_URL[route] ?? route}`);
+          await assertForbidden(page, route);
+          return;
+        }
         const via = DETAIL_VIA[route];
         if (via === undefined) {
           await page.goto(`${APP_ORIGIN}${route}`);

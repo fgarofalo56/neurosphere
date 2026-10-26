@@ -239,7 +239,6 @@ export async function mcpAdminHandler(
   ctx: CopilotMockContext,
   state: McpAdminMockState,
   rest: string,
-  demo = false,
 ): Promise<void> {
   const header = ctx.req.headers.authorization ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
@@ -248,9 +247,9 @@ export async function mcpAdminHandler(
     return;
   }
   // Authorization outcome only: the real API requires config.manage on every route.
-  // The demo profile signs in as Steward and also shows this page, so it admits that persona.
+  // Identical in every mock profile: the demo never shows access the product would not grant.
   const role = token.slice(TOKEN_PREFIX.length).toLowerCase();
-  if (role !== "admin" && !(demo && role === "steward")) {
+  if (role !== "admin") {
     ctx.forbidden();
     return;
   }
