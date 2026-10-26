@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { ReactElement } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactElement, RefObject } from "react";
 import { tokens } from "@fluentui/react-components";
 import { ErrorState } from "../components";
 import type { ChartSeriesTheme, ChartTheme } from "../styles";
@@ -216,6 +216,32 @@ export function useMotionAllowed(): boolean {
     return () => query.removeEventListener?.("change", onChange);
   }, []);
   return allowed;
+}
+
+/**
+ * Pixel width of the element the returned ref is attached to. Falls back to `fallback` in jsdom
+ * (no ResizeObserver), before the first measurement, and whenever the measured width is 0, so
+ * charts always lay out in real pixels and never scale their text or strokes with the container.
+ */
+export function useContainerWidth(fallback: number): {
+  ref: RefObject<HTMLDivElement | null>;
+  width: number;
+} {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [measured, setMeasured] = useState<number | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      const next = Math.floor(entry.contentRect.width);
+      setMeasured(Number.isFinite(next) && next > 0 ? next : null);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, width: measured ?? fallback };
 }
 
 /** Accessible error presentation for invalid chart input (the design-system ErrorState). */

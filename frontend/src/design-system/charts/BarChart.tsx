@@ -15,6 +15,7 @@ import {
   plotPoints,
   seriesStyle,
   summarize,
+  useContainerWidth,
   useMotionAllowed,
 } from "./internal";
 import type { TooltipRow } from "./internal";
@@ -36,13 +37,14 @@ const MARGIN = { top: 10, right: 14, bottom: 28, left: 64 };
 export function BarChart({
   series,
   grain = "day",
-  width = 640,
+  width: widthProp = 640,
   height = 240,
   ariaLabel,
   legend = true,
 }: BarChartProps): ReactElement {
   const { chart } = useUiStyle();
   const motion = useMotionAllowed();
+  const { ref, width } = useContainerWidth(widthProp);
   const [hover, setHover] = useState<number | null>(null);
   const error = checkSeries(series);
 
@@ -100,12 +102,13 @@ export function BarChart({
         });
 
   return (
-    <div style={{ position: "relative", width: "100%" }} data-chart="bar">
+    <div ref={ref} style={{ position: "relative", width: "100%", minWidth: 0 }} data-chart="bar">
       <svg
         role="img"
         aria-label={label}
         viewBox={`0 0 ${width} ${height}`}
-        width="100%"
+        width={width}
+        height={height}
         data-motion={motion ? "on" : "off"}
         style={{ display: "block", maxWidth: "100%" }}
         onPointerMove={onMove}
