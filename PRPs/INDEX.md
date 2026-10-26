@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-30-visual-redesign-and-switchable-ui-styles](active/PRP-30-visual-redesign-and-switchable-ui-styles.md) | P0 | 4/12 (33%) | todo 6, in-progress 2, merged 4 | ? / ? | required |
+| [prp-30-visual-redesign-and-switchable-ui-styles](active/PRP-30-visual-redesign-and-switchable-ui-styles.md) | P0 | 6/12 (50%) | todo 2, in-progress 4, merged 6 | ? / ? | required |
 
 ## Backlog
 

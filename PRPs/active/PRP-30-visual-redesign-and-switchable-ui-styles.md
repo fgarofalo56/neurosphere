@@ -586,12 +586,12 @@ Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; 
 | 2 brand-and-component-primitives | merged | worktree-agent-abfe8d48212d2230b | sonnet | 5361ad0: typecheck/lint clean, vitest 679/679, build OK, Snyk 0; review APPROVED; merge 42d3e57 | 2026-10-26 |
 | 3 chart-primitives | merged | worktree-agent-ad516ea5d3efa1e6d | sonnet | bcea132: typecheck/lint clean, vitest 686/687 (reports sharing flake, 3/3 isolated), build OK, Snyk 0; review APPROVED; merge 929abae; on integration typecheck/lint/build OK, vitest 717/717 x7 after 2 contention flakes (reports.test sharing, follow-up to item 8) | 2026-10-26 |
 | 4 mockups-and-approval-checkpoint | merged | worktree-agent-abf5489aec670eb83 | sonnet | c20a4d3: typecheck/lint clean, vitest 734/734, build OK, Snyk 0 (demo + script), manifest unchanged, 12 PNGs viewed by orchestrator; review APPROVED; merge d0101bc; on integration touched suites 338 passed | 2026-10-26 |
-| CHECKPOINT mockup approval | in-progress | | operator | 2026-10-26 rework requested: (1) Ops console not distinct enough from Enterprise Fluent, (2) orphan 6th KPI card on a 5-col grid, (3) Ops console uppercases sentences and status pills, (4) cost area charts too heavy, estimated/invoiced overlap, (5) home table Item column wraps, flat delta glyph. Default style confirmed `enterprise-fluent`. Rework item R1 dispatched | 2026-10-26 |
-| R1 mockup-rework (items 1-4 owned files) | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
-| 5 shell-chrome-demo-and-fixtures | todo | | sonnet | | 2026-10-26 |
-| 6 lane-overview-dashboards-reconciliation | todo | | sonnet | | 2026-10-26 |
-| 7 lane-actions-review-workspaces-sandbox-mcp | todo | | sonnet | | 2026-10-26 |
-| 8 lane-quality-recommendations-reports-chartframe | todo | | sonnet | | 2026-10-26 |
+| CHECKPOINT mockup approval | merged | | operator | **mockups approved 2026-10-26 after one rework round (R1, merge 282dda1); default style `enterprise-fluent` confirmed; primitive signatures frozen at 282dda1 (additive only after this), incl. R1 additions: ComponentTreatment panelSurface/kpiAccent/numerals/monoNumerals/kpiMaxAcross/liveIndicator, KpiCard accent, DataTable column width/minWidth, Sparkline unit/currency, countKpis/kpiColumns, UiStyleContext/StyleOverrides root exports.** Original rework notes: (1) Ops console not distinct enough from Enterprise Fluent, (2) orphan 6th KPI card on a 5-col grid, (3) Ops console uppercases sentences and status pills, (4) cost area charts too heavy, estimated/invoiced overlap, (5) home table Item column wraps, flat delta glyph. Default style confirmed `enterprise-fluent`. Rework item R1 dispatched | 2026-10-26 |
+| R1 mockup-rework (items 1-4 owned files) | merged | worktree-agent-a4a702f5d9c694dc6 | sonnet | caf6dcd: scope = items 1-4 files only; typecheck/lint clean, vitest 750/750 x2, build OK, Snyk 0 new (4 pre-existing in untouched auth test + chart sandbox); 12 PNGs re-rendered and viewed by orchestrator; review APPROVED; merge 282dda1; on integration touched suites 354 passed | 2026-10-26 |
+| 5 shell-chrome-demo-and-fixtures | in-progress | (worktree) | sonnet | dispatched; ports e2e 5310/5311, demo 5312/5313 | 2026-10-26 |
+| 6 lane-overview-dashboards-reconciliation | in-progress | (worktree) | sonnet | dispatched; ports 5320/5321 | 2026-10-26 |
+| 7 lane-actions-review-workspaces-sandbox-mcp | in-progress | (worktree) | sonnet | dispatched; ports 5330/5331 | 2026-10-26 |
+| 8 lane-quality-recommendations-reports-chartframe | in-progress | (worktree) | sonnet | dispatched; ports 5340/5341 | 2026-10-26 |
 | 9 lane-map-maptable-replay | todo | | sonnet | | 2026-10-26 |
 | 10 visual-regression-and-a11y-matrix | todo | | sonnet | | 2026-10-26 |
 
