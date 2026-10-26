@@ -4,8 +4,22 @@ import { Link } from "react-router";
 import { ForbiddenError } from "../../api/index.js";
 import { NO_DOMAINS_MESSAGE, useSelectedDomain } from "../../app/domain";
 import { useRoles } from "../../auth/useRoles";
-import { PageTemplate } from "../../design-system";
-import { KindBadge, MetricText } from "../dashboards/components";
+import {
+  EmptyState,
+  ErrorState,
+  KpiCard,
+  LoadingState,
+  PageTemplate,
+  Sparkline,
+  Timestamp,
+  formatCurrency,
+  formatNumber,
+  useUiStyle,
+  type HealthState,
+} from "../../design-system";
+import { MetricText } from "../dashboards/components";
+import { Panel } from "../dashboards/Panel";
+import type { Series } from "../dashboards/types";
 import {
   AWAITING_STATES,
   countText,
@@ -17,32 +31,34 @@ import {
   useReportsTile,
   useReviewTile,
   type AwaitingState,
+  type MapCoverageResponse,
+  type PagedList,
   type TileId,
 } from "./data";
 import { STRINGS } from "./strings";
 
 const useStyles = makeStyles({
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: tokens.spacingHorizontalL,
-    listStyleType: "none",
-    margin: 0,
-    padding: 0,
-  },
   tile: {
     display: "flex",
     flexDirection: "column",
-    rowGap: tokens.spacingVerticalS,
-    padding: tokens.spacingHorizontalL,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
+    rowGap: tokens.spacingVerticalXS,
+    minWidth: 0,
   },
-  heading: { margin: 0, fontSize: tokens.fontSizeBase400 },
-  value: { fontSize: tokens.fontSizeHero700, fontWeight: tokens.fontWeightSemibold },
-  rows: { margin: 0, padding: 0, listStyleType: "none" },
-  muted: { color: tokens.colorNeutralForeground3 },
+  cards: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
+  lines: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXXS },
+  line: {
+    fontSize: tokens.fontSizeBase400,
+    lineHeight: tokens.lineHeightBase400,
+    fontWeight: tokens.fontWeightRegular,
+  },
+  muted: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
+  reports: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXS,
+    margin: 0,
+    paddingInlineStart: tokens.spacingHorizontalL,
+  },
 });
 
 type QueryLike = { isPending: boolean; isError: boolean; error: unknown };
@@ -55,70 +71,106 @@ function problemText(q: QueryLike): string | null {
 
 function Tile({
   id,
-  title,
   domainId,
   linkLabel,
   children,
 }: {
   readonly id: TileId;
-  readonly title: string;
   readonly domainId: string;
   readonly linkLabel: string;
   readonly children: ReactNode;
 }): ReactElement {
   const styles = useStyles();
-  const headingId = `overview-tile-${id}`;
   return (
-    <li>
-      <section className={styles.tile} aria-labelledby={headingId} data-testid={`tile-${id}`}>
-        <h2 id={headingId} className={styles.heading}>
-          {title}
-        </h2>
-        {children}
-        <Link to={tileHref(id, domainId)}>{linkLabel}</Link>
-      </section>
-    </li>
+    <div className={styles.tile} data-testid={`tile-${id}`}>
+      {children}
+      <Link to={tileHref(id, domainId)}>{linkLabel}</Link>
+    </div>
   );
 }
 
-/** Value line for a tile whose data is loading, failed or unknown. */
-function Status({ q }: { readonly q: QueryLike }): ReactElement | null {
-  const styles = useStyles();
+/** Loading or error panel standing in for a tile's card; the value is never shown as 0. */
+function Problem({
+  label,
+  q,
+}: {
+  readonly label: string;
+  readonly q: QueryLike;
+}): ReactElement | null {
   const problem = problemText(q);
   if (problem !== null) {
-    return (
-      <div role="alert">
-        <div>{STRINGS.notLoaded}</div>
-        <div className={styles.muted}>{problem}</div>
-      </div>
-    );
+    return <ErrorState title={`${label}: ${STRINGS.notLoaded}`} message={problem} />;
   }
-  if (q.isPending) return <div role="status">{STRINGS.loading}</div>;
+  if (q.isPending) return <LoadingState label={`${STRINGS.loading} ${label}`} rows={2} />;
   return null;
+}
+
+function costAccent(s: Series): HealthState {
+  if (s.total.status !== "known" || s.total.value === null) return "unknown";
+  return s.total.complete ? "ok" : "degraded";
+}
+
+function costLabel(s: Series): string {
+  const parts: string[] = [STRINGS.cost.label];
+  if (s.currency !== null) parts.push(s.currency);
+  if (s.kind !== null) parts.push(s.kind);
+  return parts.join(", ");
+}
+
+function CostCard({ series }: { readonly series: Series }): ReactElement {
+  const { density } = useUiStyle();
+  const size = density === "compact" ? { width: 120, height: 22 } : { width: 180, height: 30 };
+  const currency = series.currency;
+  // Unknown points stay null so the sparkline breaks; they are never plotted as 0.
+  const values = series.points.map((p) =>
+    p.value.status === "known" && p.value.value !== null ? p.value.value : null,
+  );
+  return (
+    <div data-testid="cost-row">
+      <KpiCard
+        label={costLabel(series)}
+        value={
+          <MetricText
+            metric={series.total}
+            format={(n) => (currency === null ? formatNumber(n) : formatCurrency(n, currency))}
+          />
+        }
+        accent={costAccent(series)}
+        sparkline={
+          values.length > 0 ? (
+            <Sparkline
+              values={values}
+              label={`${costLabel(series)}, daily`}
+              kind={series.kind}
+              unit="currency"
+              currency={currency}
+              {...size}
+            />
+          ) : undefined
+        }
+      />
+    </div>
+  );
 }
 
 function CostTile({ domainId }: { readonly domainId: string }): ReactElement {
   const styles = useStyles();
   const q = useCostTile({ domainId });
-  // One row per series (kind and currency). Series are NEVER added together: estimated and
+  // One card per series (kind and currency). Series are NEVER added together: estimated and
   // invoiced differ, and currencies must not be mixed.
   const rows = (q.data?.series ?? []).filter((s) => s.unit === "currency");
   return (
-    <Tile id="cost" title={STRINGS.cost.title} domainId={domainId} linkLabel={STRINGS.cost.link}>
-      <Status q={q} />
+    <Tile id="cost" domainId={domainId} linkLabel={STRINGS.cost.link}>
+      <Problem label={STRINGS.cost.label} q={q} />
       {q.data !== undefined && rows.length === 0 ? (
-        <div className={styles.value}>{STRINGS.unknown}</div>
+        <KpiCard label={STRINGS.cost.label} value={STRINGS.unknown} accent="unknown" />
       ) : null}
       {q.data !== undefined && rows.length > 0 ? (
-        <ul className={styles.rows}>
+        <div className={styles.cards}>
           {rows.map((s) => (
-            <li key={s.key} data-testid="cost-row">
-              {s.currency !== null ? <strong>{s.currency}</strong> : null}{" "}
-              {s.kind !== null ? <KindBadge kind={s.kind} /> : null}{" "}
-              <MetricText metric={s.total} unit={s.currency ?? ""} />
-            </li>
+            <CostCard key={s.key} series={s} />
           ))}
-        </ul>
+        </div>
       ) : null}
       <div className={styles.muted}>{STRINGS.cost.window}</div>
     </Tile>
@@ -127,27 +179,29 @@ function CostTile({ domainId }: { readonly domainId: string }): ReactElement {
 
 function ListTile({
   id,
-  title,
+  label,
   link,
   domainId,
   q,
-  count,
+  list,
 }: {
   readonly id: TileId;
-  readonly title: string;
+  readonly label: string;
   readonly link: string;
   readonly domainId: string;
   readonly q: QueryLike;
-  readonly count: string | null;
+  readonly list: PagedList<unknown> | undefined;
 }): ReactElement {
-  const styles = useStyles();
+  const more = list !== undefined && list.next_cursor !== null && list.next_cursor !== undefined;
   return (
-    <Tile id={id} title={title} domainId={domainId} linkLabel={link}>
-      <Status q={q} />
-      {count !== null ? (
-        <div className={styles.value} data-testid={`${id}-count`}>
-          {count}
-        </div>
+    <Tile id={id} domainId={domainId} linkLabel={link}>
+      <Problem label={label} q={q} />
+      {list !== undefined ? (
+        <KpiCard
+          label={label}
+          value={<span data-testid={`${id}-count`}>{countText(list)}</span>}
+          {...(more ? { delta: { text: STRINGS.moreOnNextPage, direction: "flat" as const } } : {})}
+        />
       ) : null}
     </Tile>
   );
@@ -158,11 +212,11 @@ function ReviewTile({ domainId }: { readonly domainId: string }): ReactElement {
   return (
     <ListTile
       id="review"
-      title={STRINGS.review.title}
+      label={STRINGS.review.title}
       link={STRINGS.review.link}
       domainId={domainId}
       q={q}
-      count={q.data === undefined ? null : countText(q.data)}
+      list={q.data}
     />
   );
 }
@@ -176,6 +230,7 @@ function AwaitingLine({
   readonly state: AwaitingState;
   readonly label: string;
 }): ReactElement {
+  const styles = useStyles();
   const q = useAwaitingTile({ domainId, state });
   const problem = problemText(q);
   const value =
@@ -185,9 +240,9 @@ function AwaitingLine({
         ? STRINGS.loading
         : `${STRINGS.notLoaded} (${problem ?? STRINGS.failed})`;
   return (
-    <li data-testid={`awaiting-${state}`}>
+    <span className={styles.line} data-testid={`awaiting-${state}`}>
       {label}: <strong>{value}</strong>
-    </li>
+    </span>
   );
 }
 
@@ -198,36 +253,51 @@ function AwaitingTile({ domainId }: { readonly domainId: string }): ReactElement
     awaiting_approval: STRINGS.awaiting.approval,
   };
   return (
-    <Tile
-      id="awaiting"
-      title={STRINGS.awaiting.title}
-      domainId={domainId}
-      linkLabel={STRINGS.awaiting.link}
-    >
+    <Tile id="awaiting" domainId={domainId} linkLabel={STRINGS.awaiting.link}>
       {/* Two separate counts, never added: each is its own page and may carry "N+". */}
-      <ul className={styles.rows}>
-        {AWAITING_STATES.map((state) => (
-          <AwaitingLine key={state} domainId={domainId} state={state} label={labels[state]} />
-        ))}
-      </ul>
+      <KpiCard
+        label={STRINGS.awaiting.title}
+        value={
+          <span className={styles.lines}>
+            {AWAITING_STATES.map((state) => (
+              <AwaitingLine key={state} domainId={domainId} state={state} label={labels[state]} />
+            ))}
+          </span>
+        }
+      />
     </Tile>
   );
 }
+
+const COVERAGE_HEALTH: Record<MapCoverageResponse["coverage"]["state"], HealthState> = {
+  complete: "ok",
+  partial: "degraded",
+  delayed: "degraded",
+  unknown: "unknown",
+};
 
 function MapTile({ domainId }: { readonly domainId: string }): ReactElement {
   const styles = useStyles();
   const q = useMapTile({ domainId });
   const coverage = q.data?.coverage;
   return (
-    <Tile id="map" title={STRINGS.map.title} domainId={domainId} linkLabel={STRINGS.map.link}>
-      <Status q={q} />
+    <Tile id="map" domainId={domainId} linkLabel={STRINGS.map.link}>
+      <Problem label={STRINGS.map.title} q={q} />
       {coverage !== undefined ? (
         <>
-          <div className={styles.value} data-testid="map-coverage">
-            {coverage.state}
-          </div>
+          <KpiCard
+            label={STRINGS.map.title}
+            value={<span data-testid="map-coverage">{coverage.state}</span>}
+            status={COVERAGE_HEALTH[coverage.state]}
+          />
           <div className={styles.muted}>
-            {coverage.as_of !== null ? `${STRINGS.map.asOf} ${coverage.as_of}` : STRINGS.unknown}
+            {coverage.as_of !== null ? (
+              <>
+                {STRINGS.map.asOf} <Timestamp value={coverage.as_of} />
+              </>
+            ) : (
+              STRINGS.unknown
+            )}
           </div>
         </>
       ) : null}
@@ -236,29 +306,37 @@ function MapTile({ domainId }: { readonly domainId: string }): ReactElement {
 }
 
 function ReportsTile({ domainId }: { readonly domainId: string }): ReactElement {
+  const q = useReportsTile({ domainId });
+  return (
+    <ListTile
+      id="reports"
+      label={STRINGS.reports.title}
+      link={STRINGS.reports.link}
+      domainId={domainId}
+      q={q}
+      list={q.data}
+    />
+  );
+}
+
+/** Recent report titles; shares the reports tile query (same key, so no extra call). */
+function RecentReports({ domainId }: { readonly domainId: string }): ReactElement {
   const styles = useStyles();
   const q = useReportsTile({ domainId });
   return (
-    <Tile
-      id="reports"
-      title={STRINGS.reports.title}
-      domainId={domainId}
-      linkLabel={STRINGS.reports.link}
-    >
-      <Status q={q} />
-      {q.data !== undefined ? (
-        <>
-          <div className={styles.value} data-testid="reports-count">
-            {countText(q.data)}
-          </div>
-          <ul className={styles.rows}>
-            {q.data.items.slice(0, 3).map((r) => (
-              <li key={r.id}>{r.title}</li>
-            ))}
-          </ul>
-        </>
+    <Panel title={STRINGS.reports.recent} level={2} data-testid="recent-reports">
+      {q.isError || q.isPending ? <Problem label={STRINGS.reports.recent} q={q} /> : null}
+      {q.data !== undefined && q.data.items.length === 0 ? (
+        <EmptyState title={STRINGS.reports.emptyTitle} description={STRINGS.reports.emptyBody} />
       ) : null}
-    </Tile>
+      {q.data !== undefined && q.data.items.length > 0 ? (
+        <ul className={styles.reports}>
+          {q.data.items.slice(0, 5).map((r) => (
+            <li key={r.id}>{r.title}</li>
+          ))}
+        </ul>
+      ) : null}
+    </Panel>
   );
 }
 
@@ -277,9 +355,8 @@ function TileFor({ id, domainId }: { readonly id: TileId; readonly domainId: str
   }
 }
 
-/** Role-aware home page: summary tiles for the selected domain, each with its own state. */
+/** Role-aware home page: summary KPI cards for the selected domain, each with its own state. */
 export function OverviewPage(): ReactElement {
-  const styles = useStyles();
   const { domainId, status } = useSelectedDomain();
   const { roles } = useRoles();
   const tiles = tilesForRoles(roles);
@@ -288,20 +365,14 @@ export function OverviewPage(): ReactElement {
   if (domainId === "") {
     body =
       status === "loading" ? (
-        <p role="status">{STRINGS.loadingDomains}</p>
+        <LoadingState label={STRINGS.loadingDomains} rows={2} />
       ) : status === "forbidden" || status === "ready" ? (
-        <p>{NO_DOMAINS_MESSAGE}</p>
+        <EmptyState title={NO_DOMAINS_MESSAGE} />
       ) : (
-        <p>{STRINGS.pickDomain}</p>
+        <EmptyState title={STRINGS.pickDomain} />
       );
   } else {
-    body = (
-      <ul className={styles.grid} aria-label={STRINGS.gridLabel}>
-        {tiles.map((id) => (
-          <TileFor key={id} id={id} domainId={domainId} />
-        ))}
-      </ul>
-    );
+    body = tiles.includes("reports") ? <RecentReports domainId={domainId} /> : null;
   }
 
   return (
@@ -309,6 +380,17 @@ export function OverviewPage(): ReactElement {
       title={STRINGS.title}
       description={STRINGS.description}
       data-testid="overview-page"
+      {...(domainId === ""
+        ? {}
+        : {
+            kpis: (
+              <>
+                {tiles.map((id) => (
+                  <TileFor key={id} id={id} domainId={domainId} />
+                ))}
+              </>
+            ),
+          })}
     >
       {body}
     </PageTemplate>

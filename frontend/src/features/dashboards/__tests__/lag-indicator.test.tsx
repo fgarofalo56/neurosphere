@@ -12,9 +12,13 @@ afterEach(cleanup);
 describe("LagIndicator", () => {
   it("renders watermark, lag and billing freshness", () => {
     render(<LagIndicator freshness={FRESH} />);
-    expect(screen.getByTestId("watermark").textContent).toBe("2026-10-19T10:00:00Z");
+    // Timestamps: the raw ISO rides in `datetime`, never as visible text.
+    const watermark = screen.getByTestId("watermark").querySelector("time");
+    expect(watermark?.getAttribute("datetime")).toBe("2026-10-19T10:00:00.000Z");
+    expect(screen.getByTestId("watermark").textContent).not.toContain("T10:00:00");
     expect(screen.getByTestId("lag").textContent).toBe("90 s");
-    expect(screen.getByTestId("billing-freshness").textContent).toBe("2026-10-18T00:00:00Z");
+    const billing = screen.getByTestId("billing-freshness").querySelector("time");
+    expect(billing?.getAttribute("datetime")).toBe("2026-10-18T00:00:00.000Z");
     expect(screen.getByText(STRINGS.billingFreshnessLabel)).toBeTruthy();
   });
 

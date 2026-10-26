@@ -18,6 +18,19 @@ export const STRINGS = {
     disabled: "analytics: disabled",
   } satisfies Record<AnalyticsState, string>,
   noReason: "no reason given",
+  undeterminedCurrency: "currency undetermined",
+  freshnessTitle: "Data freshness",
+  analyticsTitle: "Analytics",
+  totalLabel: "Total",
+  incompleteDelta: "incomplete total",
+  domainRequiredTitle: "Choose a domain",
+  domainRequired: "Choose a domain to view this dashboard.",
+  emptyTitle: "No data in this window",
+  emptyBody: "The API returned no series for this window. This is not a zero.",
+  chartEmpty: "No points to chart in this window.",
+  loadingLabel: "Loading",
+  errorBody: "The request failed. This is not an empty result. Try again later.",
+  tableColumns: { time: "Time", value: "Value", basis: "Basis", price: "Price version" },
 } as const;
 
 export function priceVersionText(pv: PriceVersion): string {
