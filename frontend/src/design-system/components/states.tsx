@@ -1,0 +1,87 @@
+import {
+  Button,
+  Skeleton,
+  SkeletonItem,
+  Text,
+  makeStyles,
+  shorthands,
+  tokens,
+} from "@fluentui/react-components";
+import type { ReactElement, ReactNode } from "react";
+
+const useStyles = makeStyles({
+  box: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: tokens.spacingVerticalS,
+    padding: tokens.spacingHorizontalL,
+    border: `${tokens.strokeWidthThin} dashed ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusMedium,
+    color: tokens.colorNeutralForeground1,
+  },
+  error: {
+    ...shorthands.borderStyle("solid"),
+    ...shorthands.borderColor(tokens.colorStatusDangerBorder1),
+    backgroundColor: tokens.colorStatusDangerBackground1,
+  },
+  title: { fontWeight: tokens.fontWeightSemibold, overflowWrap: "anywhere" },
+  skeleton: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
+});
+
+export interface EmptyStateProps {
+  readonly title: string;
+  readonly description?: ReactNode;
+  /** Optional call to action (a Fluent Button). */
+  readonly action?: ReactNode;
+}
+
+/** "Nothing here" panel. Uses text, not a heading, so it never changes the page outline. */
+export function EmptyState({ title, description, action }: EmptyStateProps): ReactElement {
+  const styles = useStyles();
+  return (
+    <div className={styles.box} data-slot="empty-state">
+      <Text className={styles.title}>{title}</Text>
+      {description === undefined ? null : <Text>{description}</Text>}
+      {action}
+    </div>
+  );
+}
+
+export interface LoadingStateProps {
+  /** Accessible name of the loading region. Defaults to "Loading". */
+  readonly label?: string;
+  /** Number of skeleton rows. Defaults to 3. */
+  readonly rows?: number;
+}
+
+/** Skeleton placeholder for content that is loading. */
+export function LoadingState({ label = "Loading", rows = 3 }: LoadingStateProps): ReactElement {
+  const styles = useStyles();
+  return (
+    <Skeleton aria-label={label} className={styles.skeleton} data-slot="loading-state">
+      {Array.from({ length: Math.max(1, rows) }, (_, i) => (
+        <SkeletonItem key={i} size={16} />
+      ))}
+    </Skeleton>
+  );
+}
+
+export interface ErrorStateProps {
+  readonly title: string;
+  readonly message?: ReactNode;
+  /** When set, a "Try again" button calls it. */
+  readonly onRetry?: () => void;
+}
+
+/** Error panel announced to assistive tech (`role="alert"`). */
+export function ErrorState({ title, message, onRetry }: ErrorStateProps): ReactElement {
+  const styles = useStyles();
+  return (
+    <div className={`${styles.box} ${styles.error}`} role="alert" data-slot="error-state">
+      <Text className={styles.title}>{title}</Text>
+      {message === undefined ? null : <Text>{message}</Text>}
+      {onRetry === undefined ? null : <Button onClick={onRetry}>Try again</Button>}
+    </div>
+  );
+}
