@@ -1747,7 +1747,8 @@ def run(
         return 2
     except (AzError, ValueError, OSError, json.JSONDecodeError) as exc:
         ctx.errors.append(cm.g01().safe_text(str(exc)))
-        ctx.step(args.command, "failed", cm.g01().safe_text(str(exc)))
+        # The console names only the error type; the scrubbed text lands in the evidence.
+        ctx.step(args.command, "failed", f"{type(exc).__name__}; see the evidence errors")
     except Exception as exc:
         ctx.errors.append(f"{type(exc).__name__}: {cm.g01().safe_text(str(exc))}")
         ctx.step(args.command, "failed", type(exc).__name__)
