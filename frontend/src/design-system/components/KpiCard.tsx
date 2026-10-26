@@ -68,6 +68,8 @@ export interface KpiCardProps {
   readonly accent?: HealthState;
   /** Optional sparkline slot (decorative or with its own text alternative). */
   readonly sparkline?: ReactNode;
+  /** Rendered as `data-testid` on the root element. */
+  readonly testId?: string;
 }
 
 /** Direction glyphs as inline SVG; "flat" is a thin neutral dash, never a solid block. */
@@ -106,6 +108,7 @@ export function KpiCard({
   status,
   accent,
   sparkline,
+  testId,
 }: KpiCardProps): ReactElement {
   const styles = useStyles();
   const labelId = useId();
@@ -134,6 +137,7 @@ export function KpiCard({
       )}
       style={edgeStyle}
       data-slot="kpi-card"
+      data-testid={testId}
       data-accent={edge ? (accentState ?? "none") : undefined}
     >
       <span

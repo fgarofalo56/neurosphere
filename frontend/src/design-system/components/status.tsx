@@ -1,4 +1,5 @@
 import { makeStyles, mergeClasses, shorthands, tokens } from "@fluentui/react-components";
+import type { Theme } from "@fluentui/react-components";
 import type { CSSProperties, ReactElement } from "react";
 import { useUiStyle, type HealthState } from "../styles";
 
@@ -27,7 +28,8 @@ const usePillStyles = makeStyles({
   },
   info: {
     backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground1,
+    // Neutral foreground: brand foreground on brand background 2 was too faint (axe color-contrast).
+    color: tokens.colorNeutralForeground1,
     ...shorthands.borderColor(tokens.colorBrandStroke1),
   },
   success: {
@@ -49,14 +51,30 @@ const usePillStyles = makeStyles({
 
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger";
 
+/**
+ * Theme-token (foreground, background) pair behind each pill tone. The pill styles above use
+ * the same tokens; status.contrast.test.tsx checks every pair at 4.5:1 in every style, mode and pack.
+ */
+export const STATUS_TONE_TOKENS: Readonly<
+  Record<StatusTone, readonly [fg: keyof Theme, bg: keyof Theme]>
+> = {
+  neutral: ["colorNeutralForeground1", "colorNeutralBackground3"],
+  info: ["colorNeutralForeground1", "colorBrandBackground2"],
+  success: ["colorStatusSuccessForeground1", "colorStatusSuccessBackground1"],
+  warning: ["colorStatusWarningForeground1", "colorStatusWarningBackground1"],
+  danger: ["colorStatusDangerForeground1", "colorStatusDangerBackground1"],
+};
+
 export interface StatusPillProps {
   /** Pill text; it is also the accessible name (no hidden or extra label). */
   readonly label: string;
   readonly tone?: StatusTone;
+  /** Rendered as `data-testid` on the root element. */
+  readonly testId?: string;
 }
 
 /** Wrapping status label. Meaning is carried by the text; tone is only reinforcement. */
-export function StatusPill({ label, tone = "neutral" }: StatusPillProps): ReactElement {
+export function StatusPill({ label, tone = "neutral", testId }: StatusPillProps): ReactElement {
   const styles = usePillStyles();
   // Never uppercased: pills carry words and sentences, and case is part of their meaning.
   return (
@@ -64,6 +82,7 @@ export function StatusPill({ label, tone = "neutral" }: StatusPillProps): ReactE
       className={mergeClasses(styles.pill, styles[tone])}
       data-slot="status-pill"
       data-tone={tone}
+      data-testid={testId}
     >
       {label}
     </span>

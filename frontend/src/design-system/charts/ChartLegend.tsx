@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { tokens } from "@fluentui/react-components";
 import { useUiStyle } from "../styles";
-import { basisWord, seriesStyle } from "./internal";
+import { legendLabel, seriesStyle } from "./internal";
 import type { ChartSeries } from "./types";
 
 export interface ChartLegendProps {
@@ -48,9 +48,7 @@ export function ChartLegend({ series }: ChartLegendProps): ReactElement {
                 data-dash={style.dash ?? "solid"}
               />
             </svg>
-            <span>
-              {s.label} ({basisWord(s)})
-            </span>
+            <span>{legendLabel(s)}</span>
           </li>
         );
       })}
