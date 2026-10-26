@@ -8,11 +8,14 @@ import { createStubMsalInstance } from "../../tests/e2e-support/stubMsal";
 import {
   AppThemeProvider,
   DEFAULT_THEME_PACK_ID,
+  DEFAULT_UI_STYLE_ID,
+  UI_STYLE_IDS,
   THEME_NAMES,
   THEME_PACKS,
   reloadStoredTheme,
   useThemeStore,
   type ThemeName,
+  type UiStyleId,
 } from "../design-system";
 import { sandboxRoutes } from "../features/sandbox/routes";
 import { STRINGS } from "../features/sandbox/strings";
@@ -107,6 +110,8 @@ interface Observed {
   readonly outcome: string;
   readonly pack: string | null;
   readonly mode: string | null;
+  readonly style: string | null;
+  readonly live: boolean;
 }
 
 async function observe(
@@ -114,8 +119,9 @@ async function observe(
   scenario: Scenario,
   packId: string,
   mode: ThemeName,
+  styleId: UiStyleId = DEFAULT_UI_STYLE_ID,
 ): Promise<Observed> {
-  useThemeStore.setState({ packId, themeName: mode });
+  useThemeStore.setState({ packId, themeName: mode, styleId });
   const account: AccountInfo = accountWith(`home-${crypto.randomUUID()}`, ["Viewer"]);
   const fetchImpl = vi.fn<typeof fetch>((input) =>
     Promise.resolve(answer(String(input), scenario)),
@@ -164,6 +170,8 @@ async function observe(
     outcome,
     pack: root?.getAttribute("data-theme-pack") ?? null,
     mode: root?.getAttribute("data-theme") ?? null,
+    style: root?.getAttribute("data-ui-style") ?? null,
+    live: container.querySelector("[data-slot='live-indicator']") !== null,
   };
   unmount();
   cleanup();
@@ -203,5 +211,45 @@ describe("theme packs do not change requests or route-guard outcomes", () => {
         expect(screen.queryByTestId("sandbox-total")).toBeNull();
       }
     }
+  }, 60_000);
+});
+
+describe("UI styles do not change requests or route-guard outcomes", () => {
+  for (const [path, scenario] of CASES) {
+    it(`${path} (${scenario}) is identical under every UI style and mode`, async () => {
+      const baseline = await observe(
+        path,
+        scenario,
+        DEFAULT_THEME_PACK_ID,
+        "light",
+        "enterprise-fluent",
+      );
+      expect(baseline.requests.length).toBeGreaterThan(0);
+      expect(baseline.style).toBe("enterprise-fluent");
+      for (const styleId of UI_STYLE_IDS) {
+        for (const mode of THEME_NAMES) {
+          const run = await observe(path, scenario, DEFAULT_THEME_PACK_ID, mode, styleId);
+          // The style really was applied, so identical requests are not a vacuous result.
+          expect(run.style).toBe(styleId);
+          expect(run.mode).toBe(mode);
+          expect(run.requests).toEqual(baseline.requests);
+          expect(run.outcome).toBe(baseline.outcome);
+        }
+      }
+    }, 60_000);
+  }
+
+  it("the Ops LIVE label is static: shown only in the Ops console, with no extra request", async () => {
+    const enterprise = await observe(
+      "/",
+      "allowed",
+      DEFAULT_THEME_PACK_ID,
+      "dark",
+      "enterprise-fluent",
+    );
+    const ops = await observe("/", "allowed", DEFAULT_THEME_PACK_ID, "dark", "ops-console");
+    expect(enterprise.live).toBe(false);
+    expect(ops.live).toBe(true);
+    expect(ops.requests).toEqual(enterprise.requests);
   }, 60_000);
 });

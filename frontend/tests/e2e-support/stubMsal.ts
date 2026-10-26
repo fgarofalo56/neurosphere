@@ -11,17 +11,26 @@ import type { AccountInfo, IPublicClientApplication } from "@azure/msal-browser"
 export const STUB_ROLES = ["Viewer"] as const;
 export const STUB_TOKEN = `ns-e2e-fake-token.${STUB_ROLES[0]}`;
 
-export const STUB_ACCOUNT: AccountInfo = {
-  homeAccountId: "e2e-home-account",
-  environment: "login.example.invalid",
-  tenantId: "e2e-tenant",
-  username: "e2e.user@example.invalid",
-  localAccountId: "e2e-local-account",
-  name: "E2E User",
-  idTokenClaims: { roles: [...STUB_ROLES] },
-};
+function accountFor(roles: readonly string[]): AccountInfo {
+  return {
+    homeAccountId: "e2e-home-account",
+    environment: "login.example.invalid",
+    tenantId: "e2e-tenant",
+    username: "e2e.user@example.invalid",
+    localAccountId: "e2e-local-account",
+    name: "E2E User",
+    idTokenClaims: { roles: [...roles] },
+  };
+}
 
-export function createStubMsalInstance(): IPublicClientApplication {
+export const STUB_ACCOUNT: AccountInfo = accountFor(STUB_ROLES);
+
+/** The persona is the first role; the mock API reads it from the token suffix. */
+export function createStubMsalInstance(
+  roles: readonly string[] = STUB_ROLES,
+): IPublicClientApplication {
+  const account = accountFor(roles);
+  const token = `ns-e2e-fake-token.${roles[0] ?? STUB_ROLES[0]}`;
   const logger = { info: () => undefined, verbose: () => undefined, clone: () => logger };
   const stub = {
     initializeWrapperLibrary: () => undefined,
@@ -30,11 +39,11 @@ export function createStubMsalInstance(): IPublicClientApplication {
     removeEventCallback: () => undefined,
     initialize: () => Promise.resolve(),
     handleRedirectPromise: () => Promise.resolve(null),
-    getAllAccounts: () => [STUB_ACCOUNT],
-    getActiveAccount: () => STUB_ACCOUNT,
+    getAllAccounts: () => [account],
+    getActiveAccount: () => account,
     setActiveAccount: () => undefined,
     loginRedirect: () => Promise.resolve(),
-    acquireTokenSilent: () => Promise.resolve({ accessToken: STUB_TOKEN }),
+    acquireTokenSilent: () => Promise.resolve({ accessToken: token }),
     acquireTokenRedirect: () => Promise.resolve(),
     logoutRedirect: () => Promise.resolve(),
   };

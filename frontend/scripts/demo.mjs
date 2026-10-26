@@ -80,6 +80,7 @@ process.on("exit", () => {
 start("mock API", ["tests/mock-api/server.ts"], {
   NS_MOCK_API_PORT: String(apiPort),
   NS_E2E_APP_ORIGIN: appOrigin,
+  NS_MOCK_PROFILE: "demo",
 });
 start(
   "vite",

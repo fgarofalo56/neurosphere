@@ -92,4 +92,19 @@ describe("theme defaults", () => {
     expect(() => parseConfig({ ...valid, defaultThemePack: "nope" })).toThrow(/defaultThemePack/);
     expect(() => parseConfig({ ...valid, defaultThemeMode: "sepia" })).toThrow(/defaultThemeMode/);
   });
+
+  it("accepts a known default UI style and leaves it undefined when absent", () => {
+    expect(parseConfig({ ...valid, defaultUiStyle: "enterprise-fluent" }).defaultUiStyle).toBe(
+      "enterprise-fluent",
+    );
+    expect(parseConfig({ ...valid, defaultUiStyle: "ops-console" }).defaultUiStyle).toBe(
+      "ops-console",
+    );
+    expect(parseConfig(valid).defaultUiStyle).toBeUndefined();
+  });
+
+  it("rejects an unknown UI style", () => {
+    expect(() => parseConfig({ ...valid, defaultUiStyle: "neon" })).toThrow(/defaultUiStyle/);
+    expect(() => parseConfig({ ...valid, defaultUiStyle: 3 })).toThrow(/defaultUiStyle/);
+  });
 });
