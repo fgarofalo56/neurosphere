@@ -950,11 +950,15 @@ def post_check_sites(ctx: Ctx, out: dict[str, Any]) -> None:
             ctx.errors.append(f"{label} site image reference does not match the pinned image")
 
 
-def budget_ids(ctx: Ctx) -> list[str]:
+def budget_ids(ctx: Ctx, *, strict: bool = False) -> list[str]:
+    """Budget ids in the group. ``strict`` raises on a failed listing: the pre-deploy snapshot
+    must never read as "no budgets", or a foreign budget would be registered as created."""
     url = f"{_ARM_API}{ctx.rg_id}/providers/Microsoft.Consumption/budgets?api-version={_BUDGET_API}"
     res = ctx.run_az(
         ["rest", "--method", "get", "--url", url, "--query", "value[].id", "-o", "json"]
     )
+    if res.rc != 0 and strict:
+        raise AzError("could not list the group's budgets before deploying; nothing was created")
     if res.rc != 0 or not res.stdout.strip():
         return []
     ids = json.loads(res.stdout)
@@ -987,7 +991,7 @@ def cmd_deploy(ctx: Ctx) -> None:
         # (and was in the approved change list) can be registered as ours.
         rg_owned = rg_is_ours(ctx)
         pre_ids = {r["id"].lower().rstrip("/") for r in list_rg_resources(ctx)}
-        pre_budgets = {i.lower().rstrip("/") for i in budget_ids(ctx)}
+        pre_budgets = {i.lower().rstrip("/") for i in budget_ids(ctx, strict=True)}
         create_ids = {c["resourceId"] for c in changes if c["changeType"] == "Create"}
         result = ctx.az(*_deployment_args(ctx, "create", params))
     finally:

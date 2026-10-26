@@ -142,6 +142,7 @@ class FakeAz:
         self.blank_assignment_id = False
         self.appear_on_deploy: list[dict[str, str]] = []
         self.budgets: list[str] = []
+        self.budget_list_rc = 0
         self.changes: list[dict[str, Any]] = [
             {"changeType": "Create", "resourceId": r["id"]} for r in RESOURCES
         ]
@@ -295,6 +296,8 @@ class FakeAz:
     def _rest(self, a: list[str]) -> R:
         method, url = _opt(a, "--method"), _opt(a, "--url")
         if method == "get" and "Consumption/budgets" in url:
+            if self.budget_list_rc:
+                return R(self.budget_list_rc, "", "forbidden")
             return R(0, json.dumps(self.budgets), "")
         if method == "get":
             return R(0, json.dumps({"id": APP_OBJECT, "spa": {"redirectUris": self.app_spa}}), "")

@@ -351,6 +351,15 @@ def test_pre_existing_group_and_resources_are_not_registered_as_created(env: Any
     assert env.evidence("deploy")["details"]["register_not_ours_count"] == 2
 
 
+def test_failed_pre_deploy_budget_snapshot_aborts_before_create(env: Any) -> None:
+    # An unreadable budget list must not read as "no budgets": a pre-existing foreign budget
+    # would then be registered as created and deleted at teardown.
+    env.fake.group_exists = True
+    env.fake.budget_list_rc = 1
+    assert env.deploy() == 1
+    assert env.fake.index("deployment", "group", "create") == -1
+
+
 def test_snapshot_is_taken_before_the_deployment_is_created(env: Any) -> None:
     assert env.deploy() == 0
     assert 0 <= env.fake.index("resource", "list") < env.fake.index("deployment", "group", "create")
