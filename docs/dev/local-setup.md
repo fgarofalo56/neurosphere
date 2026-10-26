@@ -90,6 +90,55 @@ It never ships: the demo branch sits behind `import.meta.env.MODE === "demo"` an
 
 Stop it with Ctrl+C; both child processes are stopped. If a port is busy, set the env vars above to free ones.
 
+## Real local sign-in
+
+Sign in to the locally running app with your own Entra account. Two things are needed, and they are different: the app registration (so Entra issues a token the API accepts) and a policy-store grant (so the API lets you do anything).
+
+**App roles only drive navigation display. Authority comes from the policy store.** Without step 3 the pages show but every API call answers 403.
+
+1. Get your object id: `az ad signed-in-user show --query id -o tsv`.
+2. Prepare the app registration. Dry-run first (Graph GETs only, prints a before/after diff of redirect URIs and role values), then apply with operator approval. Use your own `<app-id>` and `<tenant-id>`; they are never committed.
+
+   ```bash
+   python scripts/gates/p29_entra_local.py --app-id <app-id> --tenant-id <tenant-id>
+   NS_LIVE_APPROVED=1 python scripts/gates/p29_entra_local.py --app-id <app-id> --tenant-id <tenant-id> --apply --assign-self admin
+   ```
+
+   It adds the `spa` redirect URIs `http://localhost:5173` and `http://localhost:8080`, the five app roles, and sets `requestedAccessTokenVersion` to 2. It only merges and is safe to re-run.
+3. Grant yourself a role in the local policy store (emulator must be up and seeded, `NS_AUTH_TENANT_ID=<tenant-id>` exported):
+
+   ```bash
+   make grant-operator OPERATOR_OID=<object-id> OPERATOR_ROLE=admin
+   ```
+
+   or `python scripts/sandbox/sbx_grant_operator.py --object-id <object-id> --role admin`. It refuses a non-loopback Cosmos endpoint and uses the same pseudonym key resolver as the API.
+4. Sign in. The grant is time-bound for privileged roles (30 days); re-run step 3 to renew.
+
+## Real stack
+
+The whole platform on your machine: the nginx edge with the built SPA (`http://localhost:8080`), the API, the workers and the three emulators, with a real Entra sign-in. Emulators only, no paid calls. It needs the app registration and grant from "Real local sign-in" above.
+
+1. Export the two ids of your `neurosphere-api-dev` app registration (your own values; they are never committed, and compose has no default for them). The tenant id is `az account show --query tenantId -o tsv`; the client id is `az ad app list --display-name neurosphere-api-dev --query "[0].appId" -o tsv`:
+
+   ```bash
+   export NS_ENTRA_TENANT_ID=<tenant-id>
+   export NS_ENTRA_CLIENT_ID=<client-id>
+   ```
+
+2. Start it: `make stack-up`. It checks both variables, generates the sandbox data (`make sandbox-generate`, mounted read-only into the workers for the `recommendations` and `evaluation` roles), runs `docker compose --profile app up -d --wait --build`, then seeds from the host against `127.0.0.1`: first the sandbox seed (creates the isolated `sandbox-neurosphere` database behind `/sandbox`), then the stack seed with the same tenant and worker object id as the workers (the seed refuses non-loopback hosts, so it is a host step, not a compose service). Add `OPERATOR_OID=<your-object-id>` to also grant yourself admin in the same step. Re-running is safe; the seed is idempotent.
+3. Grant yourself a role (policy-store grant, step 3 of "Real local sign-in") if you did not pass `OPERATOR_OID`: `make grant-operator OPERATOR_OID=<object-id> OPERATOR_ROLE=admin`.
+4. Open `http://localhost:8080` and sign in. `curl -fsS http://127.0.0.1:8080/readyz` answers through the edge (200 `ready`).
+5. Stop it: `make stack-down` (stops the whole project, emulators included; `make dev-up` brings the emulators back).
+
+Good to know:
+
+- Copilot is `disabled` here, so the assistant answers 503 `copilot_unconfigured`. That is expected until a model endpoint is configured (PRP-32).
+- Port 8080 busy? `NS_FRONTEND_PORT=8082 make stack-up`, and register `http://localhost:8082` as a SPA redirect URI.
+- Every worker role in `all` reports ready (workers publish no host port: `docker compose exec workers python -c "import urllib.request as u; print(u.urlopen('http://127.0.0.1:8090/readyz').read().decode())"`). Use `make stack-up`, not a bare `docker compose --profile app up`: it generates the sandbox directory the workers mount and seeds the sandbox database first (the stack seed expects the sandbox events to be on the hub already, never the reverse).
+- The seed rebases its generated world to the run time: the newest event is 30 minutes old and everything sits inside the profile's days (4 for `small`), so the overview cost tile and trace replay have data. It also writes the catalog entities (agents, grounding sources, model deployments, people) through the catalog repository, so the map has nodes. With `OPERATOR_OID` it saves a report owned by you; the analyst persona's reports stay private to that persona (no visibility rule is widened).
+- Re-running the seed is a no-op, including on a later day: it recovers the first run's time shift from the ledger, regenerates identical ids and windows, and creates nothing. The data therefore does not re-age; it just gets older. For fresh data run `make stack-down` and `docker compose down -v`, then `make stack-up`. A stack seeded by an older version keeps its 2026-10-01..04 dates until you do.
+- Checks: `uv run pytest -q services/api/tests/runtime_routes` (no emulators), and with the stack up and seeded `NS_PROBE_COSMOS_URL=http://127.0.0.1:8081/ MSYS_NO_PATHCONV=1 uv run pytest -q -m integration tests/integration/compose tests/integration/real_stack`. The browser run is a manual gate: `NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test -c playwright.real-stack.config.ts --headed` (a window opens; complete the Entra sign-in).
+
 ## Emulator limits
 
 Document and respect these. They are the known gaps between the emulators and the real services; the parity gate is [G12 in RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).

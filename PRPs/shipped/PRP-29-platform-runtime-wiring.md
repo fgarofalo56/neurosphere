@@ -1,6 +1,10 @@
 ---
 name: prp-29-platform-runtime-wiring
-status: backlog
+status: shipped
+started: 2026-10-24
+shipped: 2026-10-25
+pr: 129
+branch: prp-29-platform-runtime-wiring
 review: required
 priority: P0
 created: 2026-10-24
@@ -115,9 +119,10 @@ Evidence for the gap (audit 2026-10-24, verified against `main` at `ec8903d`):
   - policy grants for the synthetic personas.
 
   It prints a JSON count summary per page category and keeps the `sbx_guard` loopback rule.
-- [ ] Item 11: compose `--profile app` adds a `frontend` service (real mode, same-origin, port 8080) and a one-shot `seed` job.
+- [ ] Item 11: compose `--profile app` adds a `frontend` service (real mode, same-origin, port 8080).
+  - **Delta (user, 2026-10-25):** there is no compose `seed` job. `sbx_guard` accepts loopback hosts only, and a container reaches the emulators by service name. `make stack-up` runs `docker compose --profile app up -d --wait` and then `sbx_seed_stack.py` from the host against `127.0.0.1`.
   - `api` and `workers` get the emulator, auth and roles env.
-  - `docker compose --profile app up -d --wait` completes with every service healthy and the seed completed.
+  - `docker compose --profile app up -d --wait` completes with every service healthy, and the host seed step then exits 0.
   - `tests/integration/compose/test_app_profile.py` and a new `tests/integration/real_stack/` suite (integration marker) assert that every manifest route's API calls return 200 with non-empty data, using an operator-minted stand-in token routed through the composed deriver in-process, not through the container.
 - [ ] Item 11: a CI-safe route-coverage test builds the composed app with `CompositionOverrides` and asserts that no route backing a `route-manifest.json` page returns a `*_unconfigured` 503.
   - The overrides are in-memory backends plus test-only dev-issuer authz, supplied from test code only.
@@ -408,10 +413,10 @@ New containers:
 | `recommendations` | `/customer_id,/domain_id` |
 | `evaluation_runs` | `/customer_id,/domain_id` |
 | `evaluation_results` | `/customer_id,/domain_id` |
-| `price_snapshots` | `/source` |
+| `price_snapshots` | `/snapshot_id` (item 1 confirmed 2026-10-25: ids are unique only within a partition, `/source` breaks the put-conflict rule) |
 | `hitl_items` | `/customer_id,/domain_id` |
-| `hitl_decisions` | `/customer_id,/domain_id` |
-| `catalog_review_queue` | `/domain` |
+| `hitl_decisions` | `/review_item_id` (item 1 confirmed: decisions carry no customer or domain) |
+| `catalog_review_queue` | `/customer_id,/domain_id` (item 1 confirmed: `ReviewItem` has `domain_id`, no `domain`) |
 | `lifecycle_requests` | `/customer_id` |
 | `lifecycle_holds` | `/customer_id` |
 | `lifecycle_mappings` | `/customer_id` |
@@ -741,10 +746,79 @@ NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
+| 1 composition-root-authz-readiness-and-container-registry | merged | worktree-agent-a3643f6b5a46538c7 | opus | 283 passed (runtime_api, stores_registry, authz, openapi drift, health, me_api); review APPROVED; merge 3754d76 | 2026-10-25 |
+| 2 durable-stores-recommendations-evaluation-pricing | merged | worktree-agent-a5a5b2d2de54d8cb6 | sonnet | rework 15ed7b9 (price key=/snapshot_id, cross-domain id parity); on integration 269 unit + 36 emulator (stores_cosmos); gitleaks FP fingerprinted f855aee; merge d3a92bd | 2026-10-25 |
+| 3 durable-stores-hitl-review-queue-lifecycle | merged | worktree-agent-ab490c10a817e4b3b | sonnet | rework f5020a5 (store moved to hitl_cosmos per user; keys = registry); on integration: 424 unit + 36 emulator (stores_hitl) passed; merge c84d145 | 2026-10-25 |
+| 4 path-normalisation-aliases-and-curation-actor | merged | worktree-agent-af6d1108b708e36e6 | opus | rework 3cfa128 (helper actor); 1405 passed on integration; OpenAPI components unchanged (305), +23 paths; review APPROVED; merge 0201fbd | 2026-10-25 |
+| 5 same-origin-frontend-edge | merged | worktree-agent-a6e22c49f54f73ca9 | sonnet | 214669a: vitest 603, playwright 334, docker build+run OK (missing var fails named); WS/stream vs live upstream untested; on integration typecheck + edge 22 passed; merge 61968b3 | 2026-10-25 |
+| 6 entra-local-sign-in-and-operator-grant | merged | worktree-agent-aee9edfa34aa24239 | sonnet | 9aee7ab; 160 unit + operator-grant emulator passed; live --apply OPEN; merge 2b37022 | 2026-10-25 |
+| 7 data-plane-builders-and-replay-blob | merged | worktree-agent-a112a65db205d6723 | sonnet | 0b9181d; item-1 readiness test fixed forward 437b6ab (placeholder codes); on integration 312 unit + runtime_api 71 + real_stack data/grant emulator passed; catalog search fails closed (no search backend); merge 06b6cc3 | 2026-10-25 |
+| 8 action-reports-copilot-and-mcp-builders | merged | worktree-agent-a747f85cb9b49701e | opus | 4a520fa; review APPROVED; readiness expectations fixed forward; gitleaks FP fingerprinted 31f448b; on integration 1400 passed + real_stack 3 emulator; prod write targets empty (advisory); Commercial copilot gated off (no matrix rows); merge 5c60b54 | 2026-10-25 |
+| 9 workers-runtime-roles | merged | worktree-agent-a848c517ea8dd521c | sonnet | c9b45b7; 377 workers passed; hub endpoint fixed to 127.0.0.1 (2dfd666) -> workers_runtime 2 passed (hub + seeded); merge 3a10c2b | 2026-10-25 |
+| 10 real-stack-synthetic-seed | merged | worktree-agent-a64461014aaf78c41 | sonnet | 51ba6be; on integration 209 unit + test_seed emulator passed (12 categories >0; re-run skipped_existing 1041); worker/API pseudonym parity proven; merge 0b6da0c | 2026-10-25 |
+| 9b aggregates-price-refresh (fix-forward) | merged | worktree-agent-ab6f3c341b00ba8fa | sonnet | 30c8820: periodic PriceTableRefresher (NS_WORKER_PRICE_REFRESH_SECONDS, default 60); 381 workers passed on integration; merge 25db405 | 2026-10-25 |
+| 11 compose-app-profile-and-real-stack-smoke | merged | worktree-agent-af183ac3682cc98c6 | sonnet | fc149d8: up --wait OK, /readyz 200 via nginx, host seed exit 0, real_stack+compose 45 passed, default Playwright 334 unchanged; strict expected-gap list (sandbox db, dated seed, map empty, reports persona-private); workarounds: inline api build (api pkg lacks workers dep since PRP-21), cosmos-init (ensure_local_containers race); manual real-Entra Playwright OPEN; merge c194e1d | 2026-10-25 |
+| E1 platform-fix-forward (api workers dep, container race, worker data mounts, sandbox db) | merged | worktree-agent-a2741778526398487 | sonnet | 8d74f06: api declares neurosphere-workers (both Dockerfiles import OK); ensure_local_containers 409-idempotent; cosmos-init + inline build removed; all 8 worker roles ready; /sandbox 200; real_stack 33 + compose 13 passed; 492 unit on integration; merge 0ce42c7 | 2026-10-25 |
+| E2 seed-data-fix-forward (recent dates, map entities, operator reports, hard route asserts) | merged | worktree-agent-abdb67e2c3ddf9a4b | sonnet | 99b373b: seed rebased to recent window (idempotent), 119 catalog entities, operator report, cost-ledger 409 fix; KNOWN_EMPTY = EXPECTED_STATUS = {}; real_stack 33 x2 + compose 13 passed; orchestrator fix bd52132 (SANDBOX_DIR bind path, drain 900s); merge 0563476 | 2026-10-25 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Follow-ups:
+- Date: 2026-10-25. PR #129 into `main`. CI is green: 27 checks pass, including CodeQL, and the 3 skipped jobs are release-only.
+- Merged commits, on the integration branch `prp-29-platform-runtime-wiring`:
+  - Items:
+    - item 1 `3754d76`
+    - item 3 `c84d145`
+    - item 4 `0201fbd`
+    - item 2 `d3a92bd`
+    - item 6 `2b37022`
+    - item 5 `61968b3`
+    - item 7 `06b6cc3`
+    - item 8 `5c60b54`
+    - item 9 `3a10c2b`
+    - item 10 `0b6da0c`
+    - item 9b `25db405`
+    - item 11 `c194e1d`
+    - E1 `0ce42c7`
+    - E2 `0563476`
+  - Orchestrator fix-forwards:
+    - `437b6ab` and the item 8 readiness expectation: placeholder readiness codes.
+    - `2dfd666`: Event Hubs emulator on `127.0.0.1`.
+    - `bd52132`: the `SANDBOX_DIR` bind path and the 900s seed drain.
+    - `e2811aa`: repo-wide pyright.
+    - `5b48c50`: the CodeQL false positives.
+    - Worker supervisor readiness: a crash-looping role, briefly `running` between restarts, no longer counts as ready. This was a real defect, caught by a flaky CI run of `test_supervisor.py`.
+  - gitleaks fingerprints: `f855aee` and `31f448b`.
+- Exit evidence, local on the integration branch:
+  - `verify-gates -Mode full`: PASS on all 4 gates (lint, typecheck, 8121 tests, build).
+  - Integration suites, run in sequence:
+    - `stores_cosmos`: 36 passed.
+    - `stores_hitl`: 36 passed.
+    - `workers_runtime`: 2 passed (hub and seeded).
+    - `real_stack`: 33 passed, with `KNOWN_EMPTY` and `EXPECTED_STATUS` both empty.
+    - `compose`: 13 passed.
+  - `make stack-up`: exit 0. `/readyz` through nginx is `ready`, and all 8 worker roles are ready with 0 restarts.
+  - Reviews: item 1, item 4, item 8 and the final PRP-level pass were all APPROVED.
+  - Snyk Code: 0 issues in PRP-29 code. gitleaks over the full branch is clean.
+- Deviations from blueprint and why (all user-approved, 2026-10-25):
+  - **HITL Cosmos store location.** It lives in `neurosphere_core.hitl_cosmos` rather than `hitl/`. The PRP-17 no-network-import guard on `hitl/` stays untouched.
+  - **Partition keys confirmed by item 1.** These are recorded in the wire contract:
+    - `price_snapshots` → `/snapshot_id`
+    - `hitl_decisions` → `/review_item_id`
+    - `catalog_review_queue` → `/customer_id,/domain_id`
+  - **Curation test helper.** `services/api/tests/catalog/curation_helpers.py` was extended to send the real principal as the actor. This follows from Clarification 20.
+  - **No compose seed job.** `sbx_guard` accepts loopback hosts only. `make stack-up` runs the sandbox seed and the stack seed from the host after `up --wait`.
+  - **Fix-forward lanes added after the real-stack run.**
+    - 9b: the aggregates role refreshes its price table.
+    - E1: a pre-existing missing api→workers dependency (since PRP-21) was crashing both API images; it also covers the container-create race, the worker data mounts and the sandbox database.
+    - E2: the seed is rebased to a recent window, writes catalog entities, saves an operator report, and handles the `cost-ledger` 409.
+  - **Compose fail-fast.** Compose uses `${NS_ENTRA_*:-}` plus a `make stack-up` precheck, not `${VAR:?}`. Compose v5.6.1 interpolates inactive profiles, so `:?` would break emulator-only `up`.
+- Descoped items: none.
+- Live gates closed 2026-10-25, with operator approval:
+  - **Entra.** `az ad sp create` created the missing service principal for `neurosphere-api-dev`. Then `NS_LIVE_APPROVED=1 p29_entra_local.py --apply --assign-self admin` added SPA redirect URIs `http://localhost:5173` and `:8080`, plus the five app roles, and assigned `admin`. Token v2 was already set. A re-run reported "no change".
+  - **Headed real-Entra Playwright run** (`frontend/playwright.real-stack.config.ts`, port 8082): **27 passed**. The operator held policy grants `admin` + `domain_steward`; review queues need a reviewer role, by design.
+  - The run first surfaced and fixed four defects:
+    - `az.cmd` and `cmd.exe` mangled the Graph URL, so `p29_entra_local` now calls the CLI's bundled Python.
+    - Chromium hung on `localhost`, which resolves to `::1` first. The config now maps `localhost` to 127.0.0.1 while keeping the origin.
+    - The recommendations detail page crashed on contract `null`s (`projected_estimate: null`). The mock API omits nulls, so the mock suite could not catch it. Now null-safe, with a test.
+    - The real-stack spec counted click-through links before the list loaded.
+- OPEN: the live copilot call. It belongs to PRP-32, and Commercial copilot is also gated off by the capability matrix (#132).
+- Follow-ups: #130 (alias removal and headers), #131 (authz and composition hardening before hosting), #132 (write connectors, lifecycle targets, Commercial copilot matrix), #133 (concurrency and data correctness).

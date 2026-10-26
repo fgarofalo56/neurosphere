@@ -1,0 +1,20 @@
+{
+  "config_id": "sandbox-pairs",
+  "version": "2026.10.1",
+  "pairs": [
+    {
+      "pair_id": "large-to-mini",
+      "provider": "azure_openai",
+      "current_model": "gpt-4.1",
+      "candidate_model": "gpt-4.1-mini",
+      "candidate_model_version": "2025-04-14"
+    },
+    {
+      "pair_id": "mini-to-nano",
+      "provider": "azure_openai",
+      "current_model": "gpt-4.1-mini",
+      "candidate_model": "gpt-4.1-nano",
+      "candidate_model_version": "2025-04-14"
+    }
+  ]
+}

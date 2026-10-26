@@ -1,13 +1,14 @@
 # Local development stack: Azure emulators only. No paid or external calls.
-# Application services (api, workers) are defined by PRP-05 under profile `app`.
+# Application services (api, workers, frontend) are defined under profile `app`.
 #
 # Profiles:
 #   (default)  cosmos, azurite, eventhubs
 #   test       adds `egress-probe` on an `internal: true` network (no route out) that
 #              can still reach the emulators by service name. Run the probe with:
 #                docker compose --profile test up -d --wait
-#   app        adds `api` (:8000) and `workers` (health :8090), built from
-#              services/*/Dockerfile.dev and wired to the emulators by service name:
+#   app        adds `api` (:8000), `workers` (health :8090) and `frontend` (:8080, same-origin
+#              nginx edge), wired to the emulators by service name. Needs NS_ENTRA_TENANT_ID and
+#              NS_ENTRA_CLIENT_ID exported (never committed); `make stack-up` also seeds:
 #                docker compose --profile app up -d --wait
 #
 # Emulator limits that matter (see docs/RESEARCH-AND-GATES.md G12):
@@ -17,6 +18,19 @@
 #               across restarts, requires Azurite for checkpoints/metadata.
 #   azurite   - Blob + Queue GA; Table preview; no ADLS Gen2.
 name: neurosphere
+
+# Emulator credentials for the in-network app services, built at runtime from the installed SDKs
+# so no credential-shaped literal is committed. The vNext Cosmos emulator ignores the key; the
+# Azurite account is the SDK's public development account addressed by service name (the SDK's
+# development-storage shorthand targets 127.0.0.1, which is wrong inside a container);
+# the Event Hubs emulator takes its documented placeholder SAS value with UseDevelopmentEmulator.
+x-emulator-bootstrap: &emulator_bootstrap |
+  set -eu
+  NS_COSMOS_KEY="$$(python -c "import base64; print(base64.b64encode(b'emulator-ignores-this').decode())")"
+  NS_BLOB_CONNECTION_STRING="$$(python -c "from azure.storage.blob import ContainerClient as C; c = C.from_connection_string('UseDevelopmentStorage' + '=true;', 'x').credential; print('DefaultEndpointsProtocol=http;AccountName=' + c.account_name + ';Account' + 'Key=' + c.account_key + ';BlobEndpoint=http://azurite:10000/' + c.account_name + ';')")"
+  NS_EVENTHUBS_CONNECTION_STRING="$$(python -c "print('Endpoint=sb://eventhubs;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + 'SAS_KEY' + '_VALUE;UseDevelopmentEmulator=true;')")"
+  export NS_COSMOS_KEY NS_BLOB_CONNECTION_STRING NS_EVENTHUBS_CONNECTION_STRING
+  exec "$$0" "$$@"
 
 services:
   cosmos:
@@ -94,17 +108,45 @@ services:
       eventhubs-health:
         condition: service_healthy
 
-  # --- profile `app`: PRP-05 application services (dev images, no secrets) ---------
+  # --- profile `app`: application services wired to the emulators (dev images, no secrets) ---
+  # Entra ids come from the environment only (NS_ENTRA_TENANT_ID / NS_ENTRA_CLIENT_ID, never
+  # committed; see docs/dev/local-setup.md "Real stack"). They are deliberately NOT `${VAR:?}`:
+  # Compose interpolates every service even when its profile is inactive, so a required variable
+  # would break emulator-only `docker compose up`. Unset values fail fast elsewhere: `make
+  # stack-up` prechecks them, the frontend renderer exits naming the missing NS_UI_* variable and
+  # the api `/readyz` names `authz`.
   api:
     profiles: [app]
     build:
       context: .
       dockerfile: services/api/Dockerfile.dev
+    # Builds the emulator credentials at runtime (see x-emulator-bootstrap), then runs the server.
+    command:
+      - sh
+      - -c
+      - *emulator_bootstrap
+      - uvicorn
+      - --factory
+      - neurosphere_api.main:create
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
     ports:
       - "8000:8000"
     environment:
       NS_ENV: local
       NS_CLOUD: commercial
+      NS_AUTH_TENANT_ID: ${NS_ENTRA_TENANT_ID:-}
+      NS_AUTH_AUDIENCES: ${NS_ENTRA_CLIENT_ID:-}
+      NS_AUTH_CUSTOMER_ID: synthco
+      NS_STORE_DATABASE: neurosphere
+      NS_COSMOS_ENDPOINT: http://cosmos:8081
+      NS_ARCHIVE_CONTAINER: ns-archive
+      NS_CORS_ALLOWED_ORIGINS: ""
+      NS_COPILOT_MODE: disabled
+      NS_FEDERATION_CELL_ID: local
+      NS_EVALUATION_PILOT_DATASET_IDS: sbx-groundedness-pilot
       NS_PROBE_COSMOS_URL: http://cosmos:8081/
       NS_PROBE_EVENTHUBS_HOSTPORT: eventhubs:5672
       NS_PROBE_BLOB_HOSTPORT: azurite:10000
@@ -117,7 +159,8 @@ services:
       start_period: 5s
     # `isolated` is internal: Docker cannot publish host ports from an internal-only network
     # (verified: host connection refused). The api therefore also joins `default` so :8000 is
-    # reachable from the host. workers publish nothing and stay isolated-only.
+    # reachable from the host and the Entra JWKS endpoint is reachable for token validation.
+    # workers publish nothing and stay isolated-only.
     networks: [default, isolated]
     depends_on:
       cosmos:
@@ -132,11 +175,35 @@ services:
     build:
       context: .
       dockerfile: services/workers/Dockerfile.dev
+    command:
+      - sh
+      - -c
+      - *emulator_bootstrap
+      - python
+      - -m
+      - neurosphere_workers.runtime
     environment:
       NS_ENV: local
       NS_CLOUD: commercial
+      NS_WORKER_ROLES: all
       NS_WORKER_HEALTH_HOST: 0.0.0.0   # default bind is loopback, which the healthcheck probe could not reach otherwise
       NS_WORKER_HEALTH_PORT: "8090"
+      NS_AUTH_TENANT_ID: ${NS_ENTRA_TENANT_ID:-}
+      NS_AUTH_CUSTOMER_ID: synthco
+      # Synthetic, non-secret worker principal. The host seed (`make stack-up`) grants exactly this
+      # object id under the same tenant, so this default and the Makefile's must stay equal (a
+      # test pins it).
+      NS_WORKER_OBJECT_ID: ${NS_WORKER_OBJECT_ID:-7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6}
+      NS_STORE_DATABASE: neurosphere
+      NS_COSMOS_ENDPOINT: http://cosmos:8081
+      NS_ARCHIVE_CONTAINER: ns-archive
+      # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
+      NS_WORKER_REC_DATA_DIR: /data/sandbox
+      NS_WORKER_EVAL_DATA_DIR: /data/evaluation
+    volumes:
+      # Generated sandbox output (`make sandbox-generate`, run first by `make stack-up`).
+      - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
+      - ./sandbox/evaluation/data:/data/evaluation:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=3)"]
       interval: 5s
@@ -150,6 +217,35 @@ services:
       azurite:
         condition: service_healthy
       eventhubs-health:
+        condition: service_healthy
+
+  # Same-origin edge: nginx serves the SPA and proxies /api/ and /readyz to `api`. There is no
+  # seed service: the seed runs from the host after `up --wait` (`make stack-up`) because
+  # `sbx_guard` accepts loopback hosts only.
+  frontend:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      # Host port is 8080 (the registered Entra SPA redirect URI); NS_FRONTEND_PORT is an escape
+      # hatch for a machine where 8080 is already taken (then add that port as a redirect URI).
+      - "${NS_FRONTEND_PORT:-8080}:8080"
+    environment:
+      NS_UI_CLOUD: commercial
+      NS_UI_TENANT_ID: ${NS_ENTRA_TENANT_ID:-}
+      NS_UI_CLIENT_ID: ${NS_ENTRA_CLIENT_ID:-}
+      NS_UI_API_SCOPE: ${NS_ENTRA_CLIENT_ID:+api://${NS_ENTRA_CLIENT_ID}/access_as_user}
+      NS_UI_API_UPSTREAM: http://api:8000
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/config.json"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 5s
+    networks: [default]
+    depends_on:
+      api:
         condition: service_healthy
 
 networks:

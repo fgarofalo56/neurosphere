@@ -43,6 +43,10 @@ def test_factory_app_has_no_undeclared_routes() -> None:
 
 def test_producer_authenticated_paths_are_exact() -> None:
     assert PRODUCER_AUTHENTICATED_PATHS == {
+        "/api/v1/ingest/otlp/traces",
+        "/api/v1/ingest/otlp/metrics",
+        "/api/v1/ingest/events",
+        # Deprecated alias of the same router for one release (PRP-29 item 4).
         "/v1/ingest/otlp/traces",
         "/v1/ingest/otlp/metrics",
         "/v1/ingest/events",

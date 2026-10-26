@@ -12,8 +12,11 @@ What it does:
   `gen_ai.completion`, `gen_ai.input.messages`, `gen_ai.output.messages`,
   `gen_ai.system_instructions`, and any `*.prompt` / `*.response`) before export. The ingest
   edge drops them too; this keeps them off the wire.
-- Sends OTLP/JSON, uncompressed, to `/v1/ingest/otlp/traces` and `/v1/ingest/otlp/metrics`
-  with `Authorization: Bearer <producer_id>.<secret>`.
+- Sends OTLP/JSON, uncompressed, to `/api/v1/ingest/otlp/traces` and
+  `/api/v1/ingest/otlp/metrics` with `Authorization: Bearer <producer_id>.<secret>`.
+- The old `/v1/ingest/...` paths still work for one release as deprecated aliases: they answer
+  with `Deprecation: true`, `Sunset: Fri, 30 Apr 2027 00:00:00 GMT` and a `Link` header naming
+  the `/api/v1/ingest/...` successor. Move existing collectors before the sunset date.
 
 Things to know:
 

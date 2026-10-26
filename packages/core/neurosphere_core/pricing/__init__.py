@@ -3,6 +3,9 @@
 Token rates are mapped into the ledger ``PriceVersion`` (read through its interface; the ledger is
 never edited). No HTTP client and no refresh job live here: snapshots are loaded from committed
 files, and a live refresh is a separate operator-approved item.
+
+Import ``CosmosPriceSnapshotStore`` from ``neurosphere_core.pricing.cosmos_store`` (it pulls in the
+Azure SDK, so it is not re-exported here).
 """
 
 from neurosphere_core.pricing.loader import (

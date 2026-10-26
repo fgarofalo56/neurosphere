@@ -13079,6 +13079,1413 @@
         ]
       }
     },
+    "/api/v1/audit/chains/{chain_id}/records": {
+      "get": {
+        "operationId": "list_audit_records_api_v1_audit_chains__chain_id__records_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+              "title": "Chain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{1,18}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditRecord_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit Records",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/chains/{chain_id}/verify": {
+      "get": {
+        "operationId": "verify_audit_chain_api_v1_audit_chains__chain_id__verify_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$",
+              "title": "Chain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChainVerification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Audit Chain",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/catalog/curation/edges/{edge_id}": {
+      "get": {
+        "operationId": "presented_api_v1_catalog_curation_edges__edge_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentedEdge"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Presented",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/api/v1/catalog/curation/edges/{edge_id}/decisions": {
+      "post": {
+        "operationId": "decide_api_v1_catalog_curation_edges__edge_id__decisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdgeOverride-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/api/v1/catalog/curation/edges/{edge_id}/observations": {
+      "get": {
+        "operationId": "observations_api_v1_catalog_curation_edges__edge_id__observations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_EdgeObservation_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Observations",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/api/v1/catalog/curation/edges/{edge_id}/overrides": {
+      "get": {
+        "operationId": "overrides_api_v1_catalog_curation_edges__edge_id__overrides_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overrides",
+        "tags": [
+          "catalog-curation"
+        ]
+      }
+    },
+    "/api/v1/catalog/entities": {
+      "get": {
+        "operationId": "list_entities_api_v1_catalog_entities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "person",
+                      "agent",
+                      "agent_version",
+                      "model_deployment",
+                      "grounding_source",
+                      "tool",
+                      "service",
+                      "domain",
+                      "owner",
+                      "policy",
+                      "recommendation",
+                      "run_reference"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 12,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 512,
+                    "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+                    "type": "string"
+                  },
+                  "maxItems": 100,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "draft",
+                      "active",
+                      "deprecated",
+                      "retired"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Entities",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "post": {
+        "operationId": "create_entity_api_v1_catalog_entities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Create Entity Api V1 Catalog Entities Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/entities/{entity_id}": {
+      "get": {
+        "operationId": "get_entity_api_v1_catalog_entities__entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Get Entity Api V1 Catalog Entities  Entity Id  Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Entity",
+        "tags": [
+          "catalog"
+        ]
+      },
+      "put": {
+        "operationId": "update_entity_api_v1_catalog_entities__entity_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Update Entity Api V1 Catalog Entities  Entity Id  Put"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/entities/{entity_id}/deprecate": {
+      "post": {
+        "operationId": "deprecate_entity_api_v1_catalog_entities__entity_id__deprecate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Deprecate Entity Api V1 Catalog Entities  Entity Id  Deprecate Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deprecate Entity",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/entities/{entity_id}/recertify": {
+      "post": {
+        "operationId": "recertify_owner_api_v1_catalog_entities__entity_id__recertify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecertifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    }
+                  ],
+                  "title": "Response Recertify Owner Api V1 Catalog Entities  Entity Id  Recertify Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recertify Owner",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/export": {
+      "get": {
+        "operationId": "export_api_v1_catalog_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "person",
+                      "agent",
+                      "agent_version",
+                      "model_deployment",
+                      "grounding_source",
+                      "tool",
+                      "service",
+                      "domain",
+                      "owner",
+                      "policy",
+                      "recommendation",
+                      "run_reference"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 12,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 512,
+                    "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+                    "type": "string"
+                  },
+                  "maxItems": 100,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lifecycle",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "draft",
+                      "active",
+                      "deprecated",
+                      "retired"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lifecycle"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/import": {
+      "post": {
+        "operationId": "import_entities_api_v1_catalog_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Entities",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/lineage/impact": {
+      "post": {
+        "operationId": "impact_api_v1_catalog_lineage_impact_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineageImpactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Impact",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/lineage/neighbors": {
+      "post": {
+        "operationId": "neighbors_api_v1_catalog_lineage_neighbors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineageNeighborsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neighbors",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/recertifications": {
+      "get": {
+        "operationId": "recertifications_api_v1_catalog_recertifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "within_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 0,
+              "title": "Within Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "default": "both",
+              "enum": [
+                "due",
+                "overdue",
+                "both"
+              ],
+              "title": "Include",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecertificationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recertifications",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/reconcile/stale-agents/confirm": {
+      "post": {
+        "operationId": "stale_confirm_api_v1_catalog_reconcile_stale_agents_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaleAgentConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleAgentOutcome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stale Confirm",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/reconcile/stale-agents/dry-run": {
+      "post": {
+        "operationId": "stale_dry_run_api_v1_catalog_reconcile_stale_agents_dry_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaleAgentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaleAgentPlan"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stale Dry Run",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/search": {
+      "post": {
+        "operationId": "search_api_v1_catalog_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/api/v1/copilot/conversations": {
       "get": {
         "operationId": "list_conversations_api_v1_copilot_conversations_get",
@@ -13396,6 +14803,88 @@
         "summary": "Get Dashboard",
         "tags": [
           "dashboards"
+        ]
+      }
+    },
+    "/api/v1/deploy/plan": {
+      "post": {
+        "operationId": "plan_api_v1_deploy_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plan",
+        "tags": [
+          "deploy"
+        ]
+      }
+    },
+    "/api/v1/deploy/scan": {
+      "post": {
+        "operationId": "scan_api_v1_deploy_scan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scan",
+        "tags": [
+          "deploy"
         ]
       }
     },
@@ -13780,6 +15269,69 @@
         "summary": "Get Forecast",
         "tags": [
           "finops"
+        ]
+      }
+    },
+    "/api/v1/ingest/events": {
+      "post": {
+        "operationId": "events_api_v1_ingest_events_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Events",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/api/v1/ingest/otlp/metrics": {
+      "post": {
+        "operationId": "metrics_api_v1_ingest_otlp_metrics_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metrics",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/api/v1/ingest/otlp/traces": {
+      "post": {
+        "operationId": "traces_api_v1_ingest_otlp_traces_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Traces",
+        "tags": [
+          "ingest"
         ]
       }
     },
@@ -15977,6 +17529,7 @@
     },
     "/audit/chains/{chain_id}/records": {
       "get": {
+        "deprecated": true,
         "operationId": "list_audit_records_audit_chains__chain_id__records_get",
         "parameters": [
           {
@@ -16050,6 +17603,7 @@
     },
     "/audit/chains/{chain_id}/verify": {
       "get": {
+        "deprecated": true,
         "operationId": "verify_audit_chain_audit_chains__chain_id__verify_get",
         "parameters": [
           {
@@ -16094,6 +17648,7 @@
     },
     "/catalog/curation/edges/{edge_id}": {
       "get": {
+        "deprecated": true,
         "operationId": "presented_catalog_curation_edges__edge_id__get",
         "parameters": [
           {
@@ -16137,6 +17692,7 @@
     },
     "/catalog/curation/edges/{edge_id}/decisions": {
       "post": {
+        "deprecated": true,
         "operationId": "decide_catalog_curation_edges__edge_id__decisions_post",
         "parameters": [
           {
@@ -16190,6 +17746,7 @@
     },
     "/catalog/curation/edges/{edge_id}/observations": {
       "get": {
+        "deprecated": true,
         "operationId": "observations_catalog_curation_edges__edge_id__observations_get",
         "parameters": [
           {
@@ -16262,6 +17819,7 @@
     },
     "/catalog/curation/edges/{edge_id}/overrides": {
       "get": {
+        "deprecated": true,
         "operationId": "overrides_catalog_curation_edges__edge_id__overrides_get",
         "parameters": [
           {
@@ -16305,6 +17863,7 @@
     },
     "/catalog/entities": {
       "get": {
+        "deprecated": true,
         "operationId": "list_entities_catalog_entities_get",
         "parameters": [
           {
@@ -16447,6 +18006,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "create_entity_catalog_entities_post",
         "requestBody": {
           "content": {
@@ -16528,6 +18088,7 @@
     },
     "/catalog/entities/{entity_id}": {
       "get": {
+        "deprecated": true,
         "operationId": "get_entity_catalog_entities__entity_id__get",
         "parameters": [
           {
@@ -16607,6 +18168,7 @@
         ]
       },
       "put": {
+        "deprecated": true,
         "operationId": "update_entity_catalog_entities__entity_id__put",
         "parameters": [
           {
@@ -16711,6 +18273,7 @@
     },
     "/catalog/entities/{entity_id}/deprecate": {
       "post": {
+        "deprecated": true,
         "operationId": "deprecate_entity_catalog_entities__entity_id__deprecate_post",
         "parameters": [
           {
@@ -16803,6 +18366,7 @@
     },
     "/catalog/entities/{entity_id}/recertify": {
       "post": {
+        "deprecated": true,
         "operationId": "recertify_owner_catalog_entities__entity_id__recertify_post",
         "parameters": [
           {
@@ -16905,6 +18469,7 @@
     },
     "/catalog/export": {
       "get": {
+        "deprecated": true,
         "operationId": "export_catalog_export_get",
         "parameters": [
           {
@@ -17049,6 +18614,7 @@
     },
     "/catalog/import": {
       "post": {
+        "deprecated": true,
         "operationId": "import_entities_catalog_import_post",
         "requestBody": {
           "content": {
@@ -17090,6 +18656,7 @@
     },
     "/catalog/lineage/impact": {
       "post": {
+        "deprecated": true,
         "operationId": "impact_catalog_lineage_impact_post",
         "requestBody": {
           "content": {
@@ -17131,6 +18698,7 @@
     },
     "/catalog/lineage/neighbors": {
       "post": {
+        "deprecated": true,
         "operationId": "neighbors_catalog_lineage_neighbors_post",
         "requestBody": {
           "content": {
@@ -17172,6 +18740,7 @@
     },
     "/catalog/recertifications": {
       "get": {
+        "deprecated": true,
         "operationId": "recertifications_catalog_recertifications_get",
         "parameters": [
           {
@@ -17261,6 +18830,7 @@
     },
     "/catalog/reconcile/stale-agents/confirm": {
       "post": {
+        "deprecated": true,
         "operationId": "stale_confirm_catalog_reconcile_stale_agents_confirm_post",
         "requestBody": {
           "content": {
@@ -17302,6 +18872,7 @@
     },
     "/catalog/reconcile/stale-agents/dry-run": {
       "post": {
+        "deprecated": true,
         "operationId": "stale_dry_run_catalog_reconcile_stale_agents_dry_run_post",
         "requestBody": {
           "content": {
@@ -17343,6 +18914,7 @@
     },
     "/catalog/search": {
       "post": {
+        "deprecated": true,
         "operationId": "search_catalog_search_post",
         "requestBody": {
           "content": {
@@ -17436,6 +19008,7 @@
     },
     "/v1/deploy/plan": {
       "post": {
+        "deprecated": true,
         "operationId": "plan_v1_deploy_plan_post",
         "requestBody": {
           "content": {
@@ -17477,6 +19050,7 @@
     },
     "/v1/deploy/scan": {
       "post": {
+        "deprecated": true,
         "operationId": "scan_v1_deploy_scan_post",
         "requestBody": {
           "content": {
@@ -17518,6 +19092,7 @@
     },
     "/v1/ingest/events": {
       "post": {
+        "deprecated": true,
         "operationId": "events_v1_ingest_events_post",
         "responses": {
           "202": {
@@ -17539,6 +19114,7 @@
     },
     "/v1/ingest/otlp/metrics": {
       "post": {
+        "deprecated": true,
         "operationId": "metrics_v1_ingest_otlp_metrics_post",
         "responses": {
           "202": {
@@ -17560,6 +19136,7 @@
     },
     "/v1/ingest/otlp/traces": {
       "post": {
+        "deprecated": true,
         "operationId": "traces_v1_ingest_otlp_traces_post",
         "responses": {
           "202": {

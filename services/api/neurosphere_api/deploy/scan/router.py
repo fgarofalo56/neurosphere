@@ -16,9 +16,12 @@ from neurosphere_core.scope import IdentityScope
 from neurosphere_api.authz import require
 from neurosphere_api.deploy.scan.models import ScanRequest, ScanResponse
 from neurosphere_api.deploy.scan.service import ScanService
+from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.routers import RouterRegistry
 
-ROUTE_PREFIX = "/v1/deploy/scan"
+ROUTE_PREFIX = "/api/v1/deploy/scan"
+#: Deprecated alias for one release (PRP-29 item 4): same router, same permissions.
+ALIAS_PREFIX = "/v1/deploy/scan"
 
 
 def configure_scan(app: FastAPI, service: ScanService) -> None:
@@ -48,4 +51,4 @@ def build_router() -> APIRouter:
 
 def register(registry: RouterRegistry) -> None:
     """Router-registry hook (see ``neurosphere_api/routers.py``)."""
-    registry.register(ROUTE_PREFIX, build_router())
+    register_with_alias(registry, build_router(), prefix=ROUTE_PREFIX, alias_prefix=ALIAS_PREFIX)

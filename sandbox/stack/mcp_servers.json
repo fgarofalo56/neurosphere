@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "notice": "SYNTHETIC MCP server registrations. The .invalid TLD never resolves (RFC 6761), so nothing here is ever contacted.",
+  "servers": [
+    {"url": "https://mcp-docs.synthetic.invalid/mcp", "display_name": "Synthetic docs tools"},
+    {"url": "https://mcp-tickets.synthetic.invalid/mcp", "display_name": "Synthetic ticketing tools"},
+    {"url": "https://mcp-finops.synthetic.invalid/mcp", "display_name": "Synthetic FinOps tools"}
+  ]
+}

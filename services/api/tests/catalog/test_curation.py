@@ -423,4 +423,5 @@ def test_register_hook_uses_the_curation_prefix() -> None:
 
     registry = RouterRegistry()
     register(registry)
-    assert registry.prefixes == (PREFIX,)
+    # The successor prefix and its deprecated alias PREFIX (PRP-29 item 4).
+    assert registry.prefixes == ("/api/v1/catalog/curation", PREFIX)

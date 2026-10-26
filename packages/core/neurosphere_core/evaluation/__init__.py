@@ -2,4 +2,7 @@
 
 Judge scores are never shown without the judge-config version, calibration state and uncertainty.
 No paid judge calls in tests or CI; judge behaviour there comes from recorded fixtures.
+
+Import ``CosmosEvaluationStore`` from ``neurosphere_core.evaluation.cosmos_store`` (it pulls in the
+Azure SDK, so it is not re-exported here).
 """

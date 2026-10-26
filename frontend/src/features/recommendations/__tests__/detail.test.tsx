@@ -62,6 +62,28 @@ describe("recommendation detail", () => {
     expect(text("uncertainty")).toBe("not estimable");
   });
 
+  it("renders unknown, not a crash, when the real API sends explicit nulls", async () => {
+    // The real API serialises absent optionals as null (the mock API omits them): PRP-29's
+    // real-stack run crashed here on `projected_estimate: null`.
+    const base = rec();
+    const nulls = {
+      ...base,
+      projected_estimate: null,
+      uncertainty: { ...base.uncertainty, level: null },
+    } as unknown as Parameters<typeof rec>[0];
+    setupPage(detailPath(), { detail: detail(rec(nulls)) });
+    await screen.findByTestId("coverage");
+    expect(text("estimate-unknown")).toContain("unknown");
+    expect(text("uncertainty")).not.toContain("null");
+    const amounts = { ...base.projected_estimate!, lower_amount: null, upper_amount: null };
+    cleanup();
+    setupPage(detailPath(), {
+      detail: detail(rec({ projected_estimate: amounts } as unknown as Parameters<typeof rec>[0])),
+    });
+    await screen.findByTestId("estimate");
+    expect(text("estimate")).not.toContain("null");
+  });
+
   it("renders unknown for a missing estimate effective date and unbounded amounts", async () => {
     const base = rec();
     const estimate = { ...base.projected_estimate! };

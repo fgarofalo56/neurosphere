@@ -1,4 +1,5 @@
-"""Catalog curation routes (PRP-10 item 4), mounted at ``/catalog/curation``.
+"""Catalog curation routes (PRP-10 item 4), mounted at ``/api/v1/catalog/curation`` (deprecated
+alias ``/catalog/curation`` for one release, PRP-29 item 4).
 
 | Method | Path                                  | Permission      |
 |--------|---------------------------------------|-----------------|
@@ -38,12 +39,15 @@ from neurosphere_api.catalog.curation.dependencies import (
     get_service,
 )
 from neurosphere_api.catalog.curation.service import CurationService, DecisionResult
+from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
-__all__ = ["PREFIX", "build_router", "register"]
+__all__ = ["ALIAS_PREFIX", "PREFIX", "build_router", "register"]
 
-PREFIX = "/catalog/curation"
+PREFIX = "/api/v1/catalog/curation"
+#: Deprecated alias for one release (PRP-29 item 4): same router, same permissions.
+ALIAS_PREFIX = "/catalog/curation"
 
 
 def audit_correlation_id(request_id: str) -> str:
@@ -109,4 +113,4 @@ def build_router() -> APIRouter:
 
 
 def register(registry: RouterRegistry) -> None:
-    registry.register(PREFIX, build_router())
+    register_with_alias(registry, build_router(), prefix=PREFIX, alias_prefix=ALIAS_PREFIX)

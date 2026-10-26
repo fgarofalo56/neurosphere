@@ -29,11 +29,19 @@ _MAX_ADVANCE_ATTEMPTS: Final = 5
 
 
 async def ensure_containers(database: Any, *container_names: str) -> None:
-    """Create the containers if missing (local/emulator bootstrap; production uses Bicep)."""
+    """Create the containers if missing (local/emulator bootstrap; production uses Bicep).
+
+    A 409 "already exists" is success: on a fresh emulator another role (the API's
+    ``ensure_local_containers``) can create the container between the existence check and the
+    create call inside ``create_container_if_not_exists``.
+    """
     for name in container_names:
-        await database.create_container_if_not_exists(
-            id=name, partition_key=PartitionKey(path=PARTITION_KEY_PATH)
-        )
+        try:
+            await database.create_container_if_not_exists(
+                id=name, partition_key=PartitionKey(path=PARTITION_KEY_PATH)
+            )
+        except CosmosResourceExistsError:
+            continue
 
 
 class CosmosAcceptedMarkerStore:
