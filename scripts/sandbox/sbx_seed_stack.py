@@ -1481,8 +1481,9 @@ class HostedHubSeam(HubSeam):
     """``HubSeam`` publishing with an Entra credential to the registered namespace and hub."""
 
     def __init__(self, namespace: str, hub: str, credential: Any) -> None:
+        # No connection string exists in hosted mode; ``_producer`` uses the credential.
+        super().__init__(hub=hub, connection="")
         self._namespace = namespace
-        self._hub = hub
         self._credential = credential
 
     def _producer(self) -> Any:

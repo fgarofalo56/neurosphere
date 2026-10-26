@@ -1093,7 +1093,8 @@ def cmd_deploy(ctx: Ctx) -> None:
             ensure_pseudonym_secret(ctx, vault, str(out.get("pseudonymSecretName") or ""))
         except AzError as exc:
             ctx.errors.append(str(exc))
-            ctx.step("pseudonym-key", "failed", str(exc))
+            # Console line stays generic; the scrubbed evidence carries the az error.
+            ctx.step("pseudonym-key", "failed", "Key Vault call failed; see the evidence errors")
     try:
         post_check_sites(ctx, out)
     except AzError as exc:
