@@ -83,7 +83,14 @@ jobs:
         run: pnpm --filter @neurosphere/frontend exec playwright install --with-deps chromium
       - name: E2E (mock API, stubbed sign-in)
         if: steps.detect.outputs.present == 'true'
+        # test:e2e is pinned to the chromium project; the pixel-comparison `visual` project is
+        # excluded on the bare runner and runs in the pinned image in the next step.
         run: pnpm --filter @neurosphere/frontend test:e2e
+      - name: Visual regression (pinned Playwright image, compare only)
+        if: steps.detect.outputs.present == 'true'
+        # Baselines were generated in mcr.microsoft.com/playwright:v<@playwright/test>-noble
+        # (frontend/scripts/update-visual-baselines.mjs); the same image renders them here.
+        run: pnpm --filter @neurosphere/frontend visual:check
       - name: Audit
         if: steps.detect.outputs.present == 'true'
         run: pnpm audit --audit-level high
