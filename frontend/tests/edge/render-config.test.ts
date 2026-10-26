@@ -38,6 +38,7 @@ suite("render-config.sh", () => {
         PATH: process.env["PATH"] ?? "",
         NS_UI_HTML_DIR: html,
         NS_UI_CONFIG_OUT_DIR: out,
+        NS_UI_HEALTH_OUT_DIR: `${dir}/health`,
         ...env,
       },
     });
@@ -59,17 +60,20 @@ suite("render-config.sh", () => {
     expect(r.stdout + r.stderr).not.toContain(GOOD.NS_UI_CLIENT_ID);
   });
 
-  it.each(["NS_UI_CLOUD", "NS_UI_TENANT_ID", "NS_UI_CLIENT_ID", "NS_UI_API_SCOPE", "NS_UI_API_UPSTREAM"])(
-    "fails naming %s when it is missing",
-    (name) => {
-      const env: Record<string, string> = { ...GOOD };
-      delete env[name];
-      const r = run(env);
-      expect(r.status).not.toBe(0);
-      expect(r.stderr).toContain(name);
-      expect(existsSync(`${out}/config.json`)).toBe(false);
-    },
-  );
+  it.each([
+    "NS_UI_CLOUD",
+    "NS_UI_TENANT_ID",
+    "NS_UI_CLIENT_ID",
+    "NS_UI_API_SCOPE",
+    "NS_UI_API_UPSTREAM",
+  ])("fails naming %s when it is missing", (name) => {
+    const env: Record<string, string> = { ...GOOD };
+    delete env[name];
+    const r = run(env);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain(name);
+    expect(existsSync(`${out}/config.json`)).toBe(false);
+  });
 
   it("never prints a rejected value", () => {
     const r = run({ ...GOOD, NS_UI_TENANT_ID: `${SECRET_MARKER}"injected` });
@@ -93,6 +97,45 @@ suite("render-config.sh", () => {
     const r = run({ NS_UI_API_UPSTREAM: GOOD.NS_UI_API_UPSTREAM });
     expect(r.status).toBe(0);
     expect(existsSync(`${out}/config.json`)).toBe(false);
+  });
+
+  describe("health proxy opt-in (NS_UI_PROXY_HEALTH)", () => {
+    const readHealth = () => readFileSync(`${dir}/health/health.conf`, "utf8");
+
+    it("writes 404 locations for /readyz and /healthz without the opt-in", () => {
+      const r = run({ ...GOOD, NS_UI_HEALTH_OUT_DIR: `${dir}/health` });
+      expect(r.status).toBe(0);
+      const conf = readHealth();
+      expect(conf).toContain("location = /readyz {\n    return 404;");
+      expect(conf).toContain("location = /healthz {\n    return 404;");
+      expect(conf).not.toContain("proxy_pass");
+    });
+
+    it("does not treat a value other than 1 as opt-in", () => {
+      const r = run({ ...GOOD, NS_UI_HEALTH_OUT_DIR: `${dir}/health`, NS_UI_PROXY_HEALTH: "true" });
+      expect(r.status).toBe(0);
+      expect(readHealth()).not.toContain("proxy_pass");
+    });
+
+    it("proxies /readyz and /healthz to the upstream with the opt-in", () => {
+      const r = run({ ...GOOD, NS_UI_HEALTH_OUT_DIR: `${dir}/health`, NS_UI_PROXY_HEALTH: "1" });
+      expect(r.status).toBe(0);
+      const conf = readHealth();
+      expect(conf).toContain("location = /readyz {\n    proxy_pass http://api:8000;");
+      expect(conf).toContain("location = /healthz {\n    proxy_pass http://api:8000;");
+      expect(conf).toContain("proxy_set_header Host $proxy_host;");
+      expect(conf).not.toContain("return 404");
+    });
+
+    it("writes the health include even when a config.json is mounted", () => {
+      writeFileSync(`${html}/config.json`, "{}");
+      const r = run({
+        NS_UI_API_UPSTREAM: GOOD.NS_UI_API_UPSTREAM,
+        NS_UI_HEALTH_OUT_DIR: `${dir}/health`,
+      });
+      expect(r.status).toBe(0);
+      expect(existsSync(`${dir}/health/health.conf`)).toBe(true);
+    });
   });
 
   it("still requires the upstream when a config.json is mounted", () => {
