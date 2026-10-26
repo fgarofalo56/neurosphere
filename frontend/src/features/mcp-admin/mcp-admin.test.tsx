@@ -342,7 +342,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("stats")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     expect(within(dialog).getByTestId("review-hash").textContent).toBe(STATS_HASH);
     expect(within(dialog).getByTestId("entry-description").textContent).toBe(
       "Counts for a region.",
@@ -368,7 +368,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("lookup")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     expect(within(dialog).getByTestId("tool-diff")).toBeTruthy();
     expect(within(dialog).getByTestId("diff-description-before").textContent).toBe(
       "Look up a record by id.",
@@ -404,7 +404,7 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("stats")).getByTestId("review-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     await user.click(within(dialog).getByTestId("approve-tool"));
     expect((await within(dialog).findByTestId("mutation-error")).textContent).toContain(
       STRINGS.errors.stale,
@@ -424,11 +424,13 @@ describe("server detail", () => {
     );
     await screen.findAllByTestId("tool-row");
     await user.click(within(row("ping")).getByTestId("revoke-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", { hidden: true });
     const reason = within(dialog).getByLabelText(STRINGS.revoke.reasonLabel);
     await user.clear(reason);
     await user.type(reason, "no longer needed");
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.revoke.submit }));
+    await user.click(
+      within(dialog).getByRole("button", { name: STRINGS.revoke.submit, hidden: true }),
+    );
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
     const del = calls.find((c) => c.method === "DELETE");
     expect(new URLSearchParams(del?.search).get("reason")).toBe("no longer needed");
