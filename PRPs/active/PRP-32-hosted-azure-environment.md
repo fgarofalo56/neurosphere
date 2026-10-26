@@ -533,12 +533,12 @@ Gate interplay:
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 demo-data-and-network-modules | todo | | sonnet | | 2026-10-26 |
-| 2 appservice-profile-extension | todo | | sonnet | | 2026-10-26 |
+| 1 demo-data-and-network-modules | in-progress | worktree (wave A) | sonnet | | 2026-10-26 |
+| 2 appservice-profile-extension | review | worktree-agent-aab791ea460f62961 | sonnet | ecc5d04: build+params OK; hosted_demo+infra+network 82 passed (orchestrator re-run) | 2026-10-26 |
 | 3 demo-composition | todo | | sonnet | | 2026-10-26 |
-| 4 gated-deploy-script | todo | | sonnet | | 2026-10-26 |
-| 5 hosted-seeding-and-guard | todo | | sonnet | | 2026-10-26 |
-| 6 post-deploy-smoke (+ D2/D3 nginx) | todo | | sonnet | | 2026-10-26 |
+| 4 gated-deploy-script | in-progress | worktree (wave A) | sonnet | | 2026-10-26 |
+| 5 hosted-seeding-and-guard | in-progress | worktree (wave A) | sonnet | | 2026-10-26 |
+| 6 post-deploy-smoke (+ D2/D3 nginx) | in-progress | worktree (wave A slot) | sonnet | | 2026-10-26 |
 | 7 release-candidate-and-image-pin | todo | | sonnet | | 2026-10-26 |
 | 8 runbook-cost-and-gates-register | todo | | sonnet | | 2026-10-26 |
 | 9 live-deploy-seed-and-smoke (operator) | todo | | operator | | 2026-10-26 |
