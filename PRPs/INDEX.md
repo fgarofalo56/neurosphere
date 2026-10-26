@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-32-hosted-azure-environment](active/PRP-32-hosted-azure-environment.md) | P0 | 7/9 (77%) | todo 1, in-progress 1, merged 7 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-32-hosted-azure-environment](backlog/PRP-32-hosted-azure-environment.md) | P0 |  | - | - | ? / ? | required |
 | [prp-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 |  | - | - | ? / ? | required |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |

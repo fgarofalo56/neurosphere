@@ -159,9 +159,11 @@ def test_images_match_app_service_profile() -> None:
 
 def test_app_service_security_posture() -> None:
     text = (APPSERVICE / "main.bicep").read_text(encoding="utf-8")
-    assert text.count("httpsOnly: true") == 2
-    assert text.count("minTlsVersion: '1.2'") == 2
-    assert text.count("ftpsState: 'Disabled'") == 2
+    sites = len(re.findall(r"^resource \w+ 'Microsoft\.Web/sites@", text, re.MULTILINE))
+    assert sites >= 2
+    assert text.count("httpsOnly: true") == sites
+    assert text.count("minTlsVersion: '1.2'") == sites
+    assert text.count("ftpsState: 'Disabled'") == sites
     assert "@Microsoft.KeyVault(SecretUri=" in text
     assert re.search(r"(?i)(password|accountkey|connectionstring)\s*[:=]\s*'", text) is None
 

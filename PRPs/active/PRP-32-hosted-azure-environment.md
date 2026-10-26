@@ -1,6 +1,8 @@
 ---
 name: prp-32-hosted-azure-environment
-status: backlog
+status: active
+started: 2026-10-26
+branch: prp-32-hosted-azure
 review: required
 priority: P0
 created: 2026-10-24
@@ -117,6 +119,23 @@ Each defaults as above. Every shared-resource change is listed, and none happens
 8. **API private (inbound PE) vs public API hostname**: default private. A public API hostname would need CORS (not present) or remain unused.
 9. **SKU**: B2 (default) or P0v3. `delete-after` initial date: deploy date + 30 days.
 10. **Seeding path**: operator workstation over P2S (default) or a Container Apps job (a second shared subnet join).
+
+### Plan deltas (approved by the operator at plan approval, 2026-10-26)
+PRP-29 shipped with names and behaviour that differ from the C1-C4 proposals, and a Learn check overturned one gotcha. These deltas override the text below where they conflict.
+- **D1 Frontend env names.** The frontend container takes `NS_UI_CLOUD`, `NS_UI_TENANT_ID`, `NS_UI_CLIENT_ID`, `NS_UI_API_SCOPE` and `NS_UI_API_UPSTREAM` (not `NS_FRONTEND_*`). The rendered `config.json` always has `apiBaseUrl: "/"`; the smoke check asserts exactly `/`.
+- **D2 nginx Host and SNI.** `frontend/nginx/templates/default.conf.template` sends `Host $host` and no SNI, so an App Service upstream (which routes by host) never matches. Item 6 changes the `/api/` proxy to `proxy_set_header Host $proxy_host` and `proxy_ssl_server_name on` (local compose unchanged in behaviour) and owns that template plus `frontend/tests/edge/**`. It must merge before the item 7 tag.
+- **D3 `/readyz` not proxied when hosted** (#131, operator decision). The frontend proxies `/readyz` and `/healthz` only when an opt-in env (proposed `NS_UI_PROXY_HEALTH=1`) is set; compose sets it, the hosted demo does not, so hosted `/readyz` is 404 at the frontend. Item 6 owns `frontend/docker/render-config.sh`, `frontend/Dockerfile` (only if the opt-in needs it) and the one `docker-compose.yml` env line. The smoke asserts hosted `/readyz` is not 200.
+- **D4 Key Vault is required.** Under `NS_ENV=prod` the API refuses to start without `NS_AUTH_PSEUDONYM_KEY` plus `NS_AUTH_PSEUDONYM_KEY_REFERENCE` (`services/api/neurosphere_api/runtime/pseudonym.py`). `deployKeyVault` defaults to **true** in the demo. That adds a fifth hub PE (`vault`, zone `privatelink.vaultcore.azure.net`, presence checked in preflight; about +$8/month), Key Vault Secrets User for the API (and the workers if they resolve the key) at vault scope, and Key Vault reference app settings. The secret is created once by `hosted_demo.py deploy` only when absent, from a locally generated value written to a temp file passed with `--file` and deleted (never on a command line, never printed, never regenerated, since a new key orphans every policy grant). The operator is on the P2S VPN for this step.
+- **D5 Route-all is on.** Learn (app-service-key-vault-references, "Access network-restricted vaults"): Linux apps that connect to private endpoints must set `vnetRouteAllEnabled: true`. This replaces the "keep route-all false" gotcha. The demo sets it on all three sites. Preflight checks that `snet-functions` still has internet egress (no route table, `defaultOutboundAccess` not false, NSG has no outbound Internet deny), so Entra, Foundry and GHCR stay reachable without transiting the hub firewall. Image pulls stay on the public route (`WEBSITE_PULL_IMAGE_OVER_VNET` unset).
+- **D6 Registry-driven containers.** PRP-29 ships `neurosphere_core.stores.containers` and its export `infra/compose/cosmos-containers.json` (27 containers, catalog flat `/domain`). `cosmos-data.bicep` builds its containers from that file with `loadJsonContent`. The item 1 drift test compares the compiled ARM to the export (the registry-to-store parity is already PRP-29's test).
+- **D7 Hosted seeding extends `sbx_seed_stack.py`.** The shipped seeder is local-only (loopback guard, connection strings, `NS_ENV=local`). Item 5 owns `scripts/sandbox/sbx_seed_stack.py` and `scripts/sandbox/sbx_grant_operator.py` for a hosted mode only: Entra (`DefaultAzureCredential`) clients for Cosmos, Event Hubs and Blob, every endpoint passed through `require_hosted_endpoint`, no key or connection string accepted, no container creation. The local path is unchanged. Telemetry is sent to the hosted hub and processed by the hosted workers. `seed-access --grant` gives the operator time-boxed Cosmos Data Contributor (database scope), Event Hubs Data Sender (hub scope), Storage Blob Data Contributor (archive container) and Key Vault Secrets User (the pseudonym secret) on NeuroSphere-owned resources only; `--revoke` removes all four.
+- **D8 Worker identity settings.** `NS_WORKER_OBJECT_ID` and `NS_WORKER_TENANT_ID` are the workers' managed identity (C3 wiring in item 3).
+- **D9 Interface contracts between lanes** (items code against these names; a rename is a plan delta):
+  - `infra/demo/main.bicep` parameters (item 3 declares, item 4 generates the params file): `prefix` (default `nsdemo`), `location` (default RG location), `imageRegistry` (default `ghcr.io/fgarofalo56/neurosphere`), `imageTag`, `appServiceSkuName` (default `B2`), `deployKeyVault` (default `true`), `integrationSubnetId`, `privateEndpointSubnetId`, `cosmosDnsZoneId`, `eventHubsDnsZoneId`, `blobDnsZoneId`, `webAppsDnsZoneId`, `keyVaultDnsZoneId`, `entraTenantId`, `entraClientId`, `copilotEndpoint`, `copilotDeployment` (default `mini`), `budgetAmount` (default `200`), `budgetStartDate`, `budgetContactEmails` (array), `tagOwner`, `tagDeleteAfter`, `deploymentId`, `createdBy`. Every id, email, tenant/client and endpoint parameter has no default.
+  - `infra/demo/main.bicep` outputs: `apiSiteName`, `workersSiteName`, `frontendSiteName`, `frontendHostName`, `apiHostName`, `apiPrincipalId`, `workersPrincipalId`, `cosmosAccountName`, `cosmosEndpoint`, `cosmosDatabaseName`, `eventHubsNamespaceName`, `eventHubsFqdn`, `eventHubName`, `storageAccountName`, `archiveContainerName`, `keyVaultName` (empty when not deployed), `pseudonymSecretName`, `privateEndpointIds` (array).
+  - `temp/hosted-demo/registration.json` (item 4 writes after deploy, item 5 reads; gitignored, never committed): `{"schema": 1, "deployment_id", "cloud": "AzureCloud", "cosmos_host", "eventhubs_host", "blob_host", "key_vault_host", "database", "event_hub", "archive_container", "pseudonym_secret_uri", "workers_object_id", "customer_id"}`. Hosts are bare hostnames, no scheme, port, path or userinfo.
+- **#131** stays out of scope (operator decision), apart from D3.
+- **Hub subnet**: `snet-functions` (option a). Decisions 2-10 keep their defaults.
 
 ## Context manifest
 
@@ -514,6 +533,15 @@ Gate interplay:
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
+| 1 demo-data-and-network-modules | merged | worktree-agent-a347487e5a530c841 | sonnet | fb44b04: 6 modules build+lint; 98 passed; review APPROVED (audit_tail replace-only justified by AuditStore ETag replace); fix-forward 01f8ee8 EnableServerless capability (2024-11-15 has no capacityMode, Learn); merge 4b83862 | 2026-10-26 |
+| 2 appservice-profile-extension | merged | worktree-agent-aab791ea460f62961 | sonnet | ecc5d04: build+params OK; 82 passed; review APPROVED; merge 6a00fa1 | 2026-10-26 |
+| 3 demo-composition | merged | worktree-agent-a755e106ea8d0c544 | sonnet | 6b35a34 + orchestrator fix 4cb5a86 (worker roles: rec/eval need compose-mounted data); build+params+lint OK; with integration merged 413 passed (param-name contract test now runs) ; review APPROVED (two-pass app service acceptable); merge 346af83 | 2026-10-26 |
+| 4 gated-deploy-script | merged | worktree-agent-aba7892f197f40ff6 | sonnet | 5464e02; review CHANGES REQUIRED (pre-existing RG resources registered as created); rework 7964c19 (ownership snapshot, Entra restore removes only our URI, plan hash binds shared ids, GUID/resource-id validation, typed smoke wiring); Haiku confirm found budget-snapshot hole, orchestrator fix da3b0d0 + test; 291 passed 1 skipped, refuses exit 2; merge f26ed1a | 2026-10-26 |
+| 5 hosted-seeding-and-guard | merged | worktree-agent-a7737e1f8401ae772 | sonnet | 1109aaa: 88 passed, refuses exit 2; review APPROVED; test_prefix_guard::test_cli_never_touches_non_sandbox_databases fails on base too (pre-existing, emulator); merge 7a069a1 | 2026-10-26 |
+| 6 post-deploy-smoke (+ D2/D3 nginx) | merged | worktree-agent-a44d0d7e479f50df3 | sonnet | 34ef253: smoke 19 passed, edge vitest 26, hosted --list 1 test, default list excludes hosted; review APPROVED; merge 45d445f; on integration 369+26 passed | 2026-10-26 |
+| 7 release-candidate-and-image-pin | in-progress | worktree-agent-acfa8c0d4b669b038 (files merged 87ed358) | sonnet | 0fe535a: CHANGELOG 0.1.0-rc.2 (migration ids TODO(operator)), Chart 0.1.0-rc.2, evidence stub; orchestrator fixed test_changelog boundary assumption 19b6385; release+infra 111 passed. Remaining: tag v0.1.0-rc.2 on main after PR merge = S8 (operator approval), digests + cosign verify | 2026-10-26 |
+| 8 runbook-cost-and-gates-register | merged | worktree-agent-a99547580be06eca4 | sonnet | 3520fde: runbook + evidence index (S1-S10 OPEN) + G01/G07/G12 dated notes (no status change); runbook test 7 passed; gitleaks docs clean; Mermaid source only (not rendered); covered by final PRP review APPROVED; merge 9879b18 | 2026-10-26 |
+| 9 live-deploy-seed-and-smoke (operator) | todo | | operator | | 2026-10-26 |
 
 ## Completion note (filled at ship)
 - Date:

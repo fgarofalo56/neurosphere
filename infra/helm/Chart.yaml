@@ -2,5 +2,5 @@ apiVersion: v2
 name: neurosphere
 description: NeuroSphere stateless workloads (api, workers, frontend) for AKS. Helm 4.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.0-rc.2
+appVersion: "0.1.0-rc.2"
