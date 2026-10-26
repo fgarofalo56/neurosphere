@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -153,10 +154,12 @@ describe("map table", () => {
     expect(byHealth.get("degraded")?.textContent).toBe("Degraded");
     expect(byHealth.get("failing")?.textContent).toBe("Failing");
     expect(byHealth.get("unknown")?.textContent).toBe("Unknown");
-    expect(byHealth.get("ok")?.querySelector("[data-shape='circle-check']")).not.toBeNull();
-    expect(byHealth.get("degraded")?.querySelector("[data-shape='triangle']")).not.toBeNull();
-    expect(byHealth.get("failing")?.querySelector("[data-shape='octagon']")).not.toBeNull();
-    expect(byHealth.get("unknown")?.querySelector("[data-shape='circle-question']")).not.toBeNull();
+    // Each state carries its own glyph (the HealthIndicator primitive), so colour is never alone.
+    const glyphs = ["ok", "degraded", "failing", "unknown"].map(
+      (k) => byHealth.get(k)?.querySelector("[data-slot='health-icon'] svg")?.innerHTML ?? "",
+    );
+    expect(glyphs.every((g) => g !== "")).toBe(true);
+    expect(new Set(glyphs).size).toBe(4);
   });
 
   it("shows coverage, lag and the truncation reason as text", async () => {
@@ -170,10 +173,27 @@ describe("map table", () => {
     setup(PATH);
     await screen.findByRole("treegrid");
     const table = await screen.findByTestId("connections-table");
-    const rows = within(table).getAllByTestId("edge-row");
+    const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(2);
     expect(rows[0]?.textContent).toBe("Person-3fa9support-agentObserved");
     expect(rows[1]?.textContent).toBe("support-agenttriageDeclared");
+  });
+
+  it("renders connections with the design-system table and wrapping provenance pills", async () => {
+    setup(PATH);
+    await screen.findByRole("treegrid");
+    const table = await screen.findByRole("table", { name: "Connections between loaded nodes" });
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(3);
+    const pills = table.querySelectorAll("[data-slot='status-pill']");
+    expect(Array.from(pills).map((p) => p.textContent)).toEqual(["Observed", "Declared"]);
+  });
+
+  it("shows a loading state, then the table, and an empty state when there are no nodes", async () => {
+    setup(PATH, { top: { ...TOP, nodes: [], edges: [] } });
+    expect(screen.getByTestId("map-table-loading")).toHaveAttribute("aria-busy", "true");
+    expect(await screen.findByTestId("empty-state")).toHaveTextContent(
+      "No nodes found for this domain.",
+    );
   });
 
   it("expands a cluster and loads more pages, showing delayed lag", async () => {
@@ -201,9 +221,9 @@ describe("map table", () => {
     expect(await within(grid).findByText("member-3-0")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Load more/ })).toBeNull();
     // the cluster's connections joined the connections table
-    expect(within(screen.getByTestId("connections-table")).getAllByTestId("edge-row")).toHaveLength(
-      5,
-    );
+    expect(
+      within(screen.getByTestId("connections-table")).getAllByRole("row").slice(1),
+    ).toHaveLength(5);
   });
 
   it("moves between rows with arrow keys and announces the selected row", async () => {

@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -194,6 +195,50 @@ describe("replay viewer", () => {
     setup("/replay/traces?domain_id=dom-1", { status: 500 });
     expect(await screen.findByTestId("error-state")).toBeTruthy();
     expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("lists traces in a table with relative times and never a raw ISO string", async () => {
+    setup("/replay/traces?domain_id=dom-1");
+    const table = await screen.findByRole("table", { name: "Traces" });
+    const headers = within(table)
+      .getAllByRole("columnheader")
+      .map((h) => h.textContent);
+    expect(headers).toEqual(["Trace", "Root span", "Spans", "Errors", "Started"]);
+    const times = table.querySelectorAll("time");
+    expect(times.length).toBeGreaterThan(0);
+    for (const t of times) {
+      expect(t.getAttribute("dateTime")).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(t.textContent ?? "").not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    }
+  });
+
+  it("shows a loading state while the traces load", () => {
+    const never = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl: never,
+      maxRetries: 0,
+    });
+    const router = createMemoryRouter(replayRoutes, {
+      initialEntries: ["/replay/traces?domain_id=dom-1"],
+    });
+    render(
+      <QueryProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryProvider>,
+    );
+    expect(screen.getByTestId("trace-list-loading")).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByTestId("empty-state")).toBeNull();
+  });
+
+  it("uses wrapping status pills, never clipping badges, for span annotations", async () => {
+    setup(OPEN);
+    await screen.findByRole("tree");
+    expect(document.querySelector(".fui-Badge")).toBeNull();
+    expect(
+      within(screen.getByTestId("late-badge")).getByText("Late: started before its parent"),
+    ).toHaveAttribute("data-slot", "status-pill");
   });
 
   it("shows the forbidden state on 403", async () => {

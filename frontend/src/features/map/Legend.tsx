@@ -1,26 +1,24 @@
 import { Select, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
-import { NODE_TYPES, NodeTypeIcon } from "../../design-system";
-import { EDGE_COLOUR, HEALTH_COLOUR, UNKNOWN_OPACITY, type MetricRange } from "./appearance";
+import { HealthIndicator, NODE_TYPES, NodeTypeIcon, useUiStyle } from "../../design-system";
+import { UNKNOWN_OPACITY, type MetricRange } from "./appearance";
+import { useCardClasses } from "./card";
+import { EDGE_TOKEN } from "./mapTheme";
 import { HEALTH_LABEL, KIND_LABEL, PROVENANCE_LABEL, SIZE_METRIC_LABEL, STRINGS } from "./strings";
 import { HEALTHS, PROVENANCES, SIZE_METRICS, type Provenance, type SizeMetric } from "./types";
 
 const useStyles = makeStyles({
-  root: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: tokens.spacingVerticalM,
-    padding: tokens.spacingHorizontalM,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground2,
-    maxWidth: "320px",
+  group: { margin: 0, padding: 0, border: "none", minWidth: 0 },
+  legendTitle: {
+    padding: 0,
+    marginBottom: tokens.spacingVerticalXS,
+    color: tokens.colorNeutralForeground2,
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
   },
-  group: { margin: 0, padding: 0, border: "none" },
   list: { listStyle: "none", margin: 0, padding: 0, display: "grid", rowGap: "4px" },
   item: { display: "flex", alignItems: "center", columnGap: tokens.spacingHorizontalS },
-  swatch: { width: "14px", height: "14px", flex: "none", boxSizing: "border-box" },
-  heading: { margin: 0, fontSize: tokens.fontSizeBase300 },
+  note: { margin: 0, color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
 });
 
 /** Formats a metric for display; null is "unknown", never 0. */
@@ -43,7 +41,7 @@ function EdgeSample({ provenance }: { readonly provenance: Provenance }): ReactE
         y1="5"
         x2="35"
         y2="5"
-        stroke={EDGE_COLOUR[provenance]}
+        style={{ stroke: EDGE_TOKEN[provenance] }}
         strokeWidth={provenance === "observed" ? 2.5 : 2}
         strokeDasharray={DASH[provenance]}
         strokeLinecap="round"
@@ -61,12 +59,15 @@ export interface LegendProps {
 
 export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): ReactElement {
   const styles = useStyles();
+  const card = useCardClasses();
+  const { health } = useUiStyle();
+  const unknownColour = health.unknown.icon;
   return (
-    <section className={styles.root} aria-label={STRINGS.legendHeading} data-testid="map-legend">
-      <h2 className={styles.heading}>{STRINGS.legendHeading}</h2>
+    <section className={card.card} aria-label={STRINGS.legendHeading} data-testid="map-legend">
+      <h2 className={card.title}>{STRINGS.legendHeading}</h2>
 
       <fieldset className={styles.group}>
-        <legend>{STRINGS.sizeBy}</legend>
+        <legend className={styles.legendTitle}>{STRINGS.sizeBy}</legend>
         <Select
           aria-label={STRINGS.sizeBy}
           value={sizeBy}
@@ -91,10 +92,9 @@ export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): 
                 cx="7"
                 cy="7"
                 r="3"
-                fill={HEALTH_COLOUR.unknown}
                 fillOpacity={UNKNOWN_OPACITY}
-                stroke={HEALTH_COLOUR.unknown}
                 strokeDasharray="2 2"
+                style={{ fill: unknownColour, stroke: unknownColour }}
               />
             </svg>
             <span>
@@ -102,30 +102,22 @@ export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): 
             </span>
           </li>
         </ul>
-        <p>{STRINGS.clusterSizeNote}</p>
+        <p className={styles.note}>{STRINGS.clusterSizeNote}</p>
       </fieldset>
 
       <fieldset className={styles.group}>
-        <legend>{STRINGS.colourBy}</legend>
+        <legend className={styles.legendTitle}>{STRINGS.colourBy}</legend>
         <ul className={styles.list} data-testid="health-legend">
           {HEALTHS.map((h) => (
             <li key={h} className={styles.item}>
-              <span
-                className={styles.swatch}
-                style={{
-                  backgroundColor: HEALTH_COLOUR[h],
-                  opacity: h === "unknown" ? UNKNOWN_OPACITY : 1,
-                }}
-                aria-hidden="true"
-              />
-              <span>{HEALTH_LABEL[h]}</span>
+              <HealthIndicator state={h} label={HEALTH_LABEL[h]} />
             </li>
           ))}
         </ul>
       </fieldset>
 
       <fieldset className={styles.group}>
-        <legend>{STRINGS.nodeKinds}</legend>
+        <legend className={styles.legendTitle}>{STRINGS.nodeKinds}</legend>
         <ul className={styles.list} data-testid="kind-legend">
           {NODE_TYPES.map((t) => (
             <li key={t}>
@@ -147,7 +139,7 @@ export function Legend({ sizeBy, onSizeBy, range, unknownCount }: LegendProps): 
       </fieldset>
 
       <fieldset className={styles.group}>
-        <legend>{STRINGS.edgeStyles}</legend>
+        <legend className={styles.legendTitle}>{STRINGS.edgeStyles}</legend>
         <ul className={styles.list} data-testid="edge-legend">
           {PROVENANCES.map((p) => (
             <li key={p} className={styles.item} data-provenance={p}>

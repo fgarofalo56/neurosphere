@@ -1,7 +1,9 @@
-import { makeStyles, tokens } from "@fluentui/react-components";
+import { makeStyles, mergeClasses, shorthands, tokens } from "@fluentui/react-components";
 import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useUiStyle } from "../../design-system";
 import { browserScheduler, createEdgeAnimator, type Scheduler } from "./animator";
 import type { MapGraph } from "./mapGraph";
+import { DEFAULT_MAP_THEME, type MapTheme } from "./mapTheme";
 import { createMapRenderer, type MapRenderer } from "./renderer";
 import { STRINGS } from "./strings";
 
@@ -9,12 +11,20 @@ const useStyles = makeStyles({
   frame: {
     position: "relative",
     width: "100%",
-    height: "560px",
+    height: "clamp(480px, 62vh, 720px)",
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: tokens.borderRadiusMedium,
     backgroundColor: tokens.colorNeutralBackground1,
     color: tokens.colorNeutralForeground1,
     overflow: "hidden",
+  },
+  raised: { boxShadow: tokens.shadow4, ...shorthands.borderColor(tokens.colorNeutralStroke2) },
+  strongBorder: { ...shorthands.borderColor(tokens.colorNeutralStroke1) },
+  // Ops console: an instrument-panel canvas with a faint measurement grid.
+  grid: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundImage: `linear-gradient(${tokens.colorNeutralStroke2} 1px, transparent 1px), linear-gradient(90deg, ${tokens.colorNeutralStroke2} 1px, transparent 1px)`,
+    backgroundSize: "40px 40px",
   },
   unavailable: { padding: tokens.spacingHorizontalL },
 });
@@ -28,6 +38,10 @@ export interface MapCanvasProps {
   /** Edge animation gate: motion allowed AND live AND coverage complete/partial. */
   readonly animateEdges: boolean;
   readonly selectedId: string | null;
+  /** Colours for the canvas (from the active UI style). */
+  readonly theme?: MapTheme;
+  /** Bump to zoom-to-fit (the toolbar "Fit view" button). */
+  readonly fitRequest?: number;
   readonly onSelect: (id: string | null) => void;
   readonly onActivate: (id: string) => void;
   /** Test seam: deterministic frame scheduler. */
@@ -45,11 +59,14 @@ export function MapCanvas({
   reducedMotion,
   animateEdges,
   selectedId,
+  theme = DEFAULT_MAP_THEME,
+  fitRequest = 0,
   onSelect,
   onActivate,
   scheduler = browserScheduler,
 }: MapCanvasProps): ReactElement {
   const styles = useStyles();
+  const { id: styleId, treatment } = useUiStyle();
   const frameRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const animatorRef = useRef<ReturnType<typeof createEdgeAnimator> | null>(null);
@@ -58,16 +75,22 @@ export function MapCanvas({
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
 
-  // Create the renderer once per graph; tear down on unmount.
+  // Create the renderer once per graph and theme; tear down on unmount. sigma styles are fixed at
+  // construction, so a style or colour-mode switch rebuilds the renderer (the camera starts fitted).
   useEffect(() => {
     const frame = frameRef.current;
     if (frame === null) return;
     let renderer: MapRenderer;
     try {
-      renderer = createMapRenderer(frame, mapGraph.graph, {
-        onSelect: (id) => callbacks.current.onSelect(id),
-        onActivate: (id) => callbacks.current.onActivate(id),
-      });
+      renderer = createMapRenderer(
+        frame,
+        mapGraph.graph,
+        {
+          onSelect: (id) => callbacks.current.onSelect(id),
+          onActivate: (id) => callbacks.current.onActivate(id),
+        },
+        theme,
+      );
     } catch {
       setFailed(true);
       return;
@@ -81,7 +104,7 @@ export function MapCanvas({
       rendererRef.current = null;
       setReady(false);
     };
-  }, [mapGraph]);
+  }, [mapGraph, theme]);
 
   // Redraw when the graph changed.
   useEffect(() => {
@@ -93,6 +116,10 @@ export function MapCanvas({
       frame.dataset["animatedEdges"] = String(mapGraph.animatedEdgeIds().length);
     }
   }, [mapGraph, version, ready]);
+
+  useEffect(() => {
+    if (fitRequest > 0) rendererRef.current?.fit();
+  }, [fitRequest]);
 
   useEffect(() => {
     rendererRef.current?.select(selectedId);
@@ -135,7 +162,11 @@ export function MapCanvas({
   return (
     <div
       ref={frameRef}
-      className={styles.frame}
+      className={mergeClasses(
+        styles.frame,
+        treatment.surface === "raised" ? styles.raised : styles.strongBorder,
+        styleId === "ops-console" && styles.grid,
+      )}
       role="region"
       aria-label={STRINGS.mapRegionName}
       data-testid="map-canvas"
