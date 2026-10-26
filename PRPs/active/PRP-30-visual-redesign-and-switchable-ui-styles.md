@@ -582,9 +582,9 @@ Plan approved 2026-10-26. Decisions confirmed: D-a default `enterprise-fluent`; 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 style-foundation | review | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0 | 2026-10-26 |
-| 2 brand-and-component-primitives | todo | | sonnet | | 2026-10-26 |
-| 3 chart-primitives | todo | | sonnet | | 2026-10-26 |
+| 1 style-foundation | merged | worktree-agent-ada44407b6067d976 | sonnet | e4e5663: typecheck/lint clean, vitest 649/649, build OK, Snyk 0; review APPROVED; on integration design-system+theme-requests 179 passed; merge ae9550e | 2026-10-26 |
+| 2 brand-and-component-primitives | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
+| 3 chart-primitives | in-progress | (worktree) | sonnet | dispatched | 2026-10-26 |
 | 4 mockups-and-approval-checkpoint | todo | | sonnet | | 2026-10-26 |
 | CHECKPOINT mockup approval | todo | | operator | | 2026-10-26 |
 | 5 shell-chrome-demo-and-fixtures | todo | | sonnet | | 2026-10-26 |
