@@ -8,6 +8,7 @@ import {
   PACKS,
   record,
   seedPreferences,
+  STYLES,
   writeAggregate,
 } from "./axe-support.ts";
 import { ROUTE_SAMPLES, THEME_MATRIX_PATTERNS } from "./route-samples.ts";
@@ -19,31 +20,39 @@ test.afterAll(() => {
   writeAggregate();
 });
 
-for (const pattern of THEME_MATRIX_PATTERNS) {
+// PRP-30 item 10: the matrix gains the UI style dimension (2 styles x 3 modes x 2 packs) and /map.
+const PATTERNS = [...THEME_MATRIX_PATTERNS, "/map"] as const;
+
+for (const pattern of PATTERNS) {
   const sample = ROUTE_SAMPLES.find((s) => s.pattern === pattern);
   if (!sample) throw new Error(`no route sample for ${pattern}`);
-  for (const packId of PACKS) {
-    for (const mode of MODES) {
-      test(`axe: ${pattern} with pack ${packId} in ${mode}`, async ({ page }) => {
-        await seedPreferences(page, { mode, packId });
-        await openSample(page, sample);
-        // The stored preference must have been applied, or the matrix proves nothing.
-        const stored = await page.evaluate(() => window.localStorage.getItem("ns.theme"));
-        expect(JSON.parse(stored ?? "{}")).toEqual({ packId, themeName: mode });
-        const { violations, counts } = await analyze(page);
-        record({
-          kind: "theme",
-          pattern,
-          name: sample.name,
-          url: sample.url,
-          mode,
-          packId,
-          sandboxMode: false,
-          counts,
-          violations,
+  for (const styleId of STYLES) {
+    for (const packId of PACKS) {
+      for (const mode of MODES) {
+        test(`axe: ${pattern} with style ${styleId} pack ${packId} in ${mode}`, async ({
+          page,
+        }) => {
+          await seedPreferences(page, { mode, packId, styleId });
+          await openSample(page, sample);
+          // The stored preference must have been applied, or the matrix proves nothing.
+          const stored = await page.evaluate(() => window.localStorage.getItem("ns.theme"));
+          expect(JSON.parse(stored ?? "{}")).toEqual({ packId, themeName: mode, styleId });
+          const { violations, counts } = await analyze(page);
+          record({
+            kind: "theme",
+            pattern,
+            name: sample.name,
+            url: sample.url,
+            mode,
+            packId,
+            styleId,
+            sandboxMode: false,
+            counts,
+            violations,
+          });
+          expect(blocking(violations), describeBlocking(violations)).toEqual([]);
         });
-        expect(blocking(violations), describeBlocking(violations)).toEqual([]);
-      });
+      }
     }
   }
 }

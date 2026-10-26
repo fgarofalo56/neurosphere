@@ -10,6 +10,7 @@ import {
   openSample,
   record,
   seedPreferences,
+  STYLES,
   writeAggregate,
   type AxeRecord,
 } from "./axe-support.ts";
@@ -43,25 +44,28 @@ test("every route in the manifest has an axe sample and every sample is in the m
 });
 
 for (const sample of ROUTE_SAMPLES) {
-  for (const mode of MODES) {
-    test(`axe: ${sample.pattern} (${sample.name}) in ${mode}`, async ({ page }) => {
-      await seedPreferences(page, { mode });
-      await openSample(page, sample);
-      const { violations, counts } = await analyze(page);
-      const rec: AxeRecord = {
-        kind: "route",
-        pattern: sample.pattern,
-        name: sample.name,
-        url: sample.url,
-        mode,
-        packId: "default",
-        sandboxMode: false,
-        counts,
-        violations,
-      };
-      record(rec);
-      expect(blocking(violations), describeBlocking(violations)).toEqual([]);
-    });
+  for (const styleId of STYLES) {
+    for (const mode of MODES) {
+      test(`axe: ${sample.pattern} (${sample.name}) in ${styleId} ${mode}`, async ({ page }) => {
+        await seedPreferences(page, { mode, styleId });
+        await openSample(page, sample);
+        const { violations, counts } = await analyze(page);
+        const rec: AxeRecord = {
+          kind: "route",
+          pattern: sample.pattern,
+          name: sample.name,
+          url: sample.url,
+          mode,
+          packId: "default",
+          styleId,
+          sandboxMode: false,
+          counts,
+          violations,
+        };
+        record(rec);
+        expect(blocking(violations), describeBlocking(violations)).toEqual([]);
+      });
+    }
   }
 
   test(`axe: ${sample.pattern} (${sample.name}) with sandbox mode on shows the banner`, async ({

@@ -1,0 +1,4379 @@
+{
+  "generatedAt": "2026-10-26T07:15:46.452Z",
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa",
+    "wcag22aa",
+    "section508"
+  ],
+  "modes": [
+    "light",
+    "dark",
+    "high-contrast"
+  ],
+  "packs": [
+    "default",
+    "sample-agency"
+  ],
+  "styles": [
+    "enterprise-fluent",
+    "ops-console"
+  ],
+  "totals": {
+    "checks": 257,
+    "routes": 26,
+    "byImpact": {
+      "critical": 0,
+      "serious": 0,
+      "moderate": 0,
+      "minor": 0
+    },
+    "ruleIds": {}
+  },
+  "records": [
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "route",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/actions/detail",
+      "name": "action detail",
+      "url": "/actions/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&intent_id=aaaaaaaa-0000-4000-8000-000000000002",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/actions/propose",
+      "name": "action propose",
+      "url": "/actions/propose?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/actions",
+      "name": "actions list",
+      "url": "/actions?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/dashboards/coverage",
+      "name": "coverage",
+      "url": "/dashboards/coverage?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/dashboards/latency",
+      "name": "latency",
+      "url": "/dashboards/latency?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/mcp-admin/server",
+      "name": "mcp server",
+      "url": "/mcp-admin/server?server_id=mcp-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/mcp-admin",
+      "name": "mcp admin",
+      "url": "/mcp-admin",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/quality",
+      "name": "quality",
+      "url": "/quality?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/recommendations/detail",
+      "name": "recommendation detail",
+      "url": "/recommendations/detail?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&recommendation_id=commercial%3Ae2e%3Aneurosphere%3Arecommendation%3Amodel-right-sizing-0a1b2c3d4e5f60718293a4b5",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/recommendations",
+      "name": "recommendations list",
+      "url": "/recommendations?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/reconciliation",
+      "name": "reconciliation",
+      "url": "/reconciliation?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/replay/traces",
+      "name": "trace replay",
+      "url": "/replay/traces?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&trace_id=trace-e2e-complete",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/reports",
+      "name": "reports list",
+      "url": "/reports?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/review/item",
+      "name": "review item",
+      "url": "/review/item?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&item_id=bbbbbbbb-0000-4000-8000-000000000001",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/review",
+      "name": "review list",
+      "url": "/review?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/workspaces/admin",
+      "name": "admin workspace",
+      "url": "/workspaces/admin?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/workspaces/analyst",
+      "name": "analyst workspace",
+      "url": "/workspaces/analyst?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/workspaces/auditor",
+      "name": "auditor workspace",
+      "url": "/workspaces/auditor?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/workspaces/steward",
+      "name": "steward workspace",
+      "url": "/workspaces/steward?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "sandbox",
+      "pattern": "/workspaces/viewer",
+      "name": "viewer workspace",
+      "url": "/workspaces/viewer?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aviewer-only",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": true,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "special",
+      "pattern": "/map/table",
+      "name": "keyboard traversal",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "special",
+      "pattern": "/map",
+      "name": "reduced motion",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": [],
+      "note": "prefers-reduced-motion: reduce via page.emulateMedia. The WebGL canvas itself is not machine-auditable; see docs/accessibility checklists for the manual rows."
+    },
+    {
+      "kind": "special",
+      "pattern": "chart-harness",
+      "name": "sandboxed chart iframe",
+      "url": "/src/features/charts/harness/index.html?plan=bar",
+      "mode": "light",
+      "packId": "default",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": [],
+      "note": "axe reached the opaque-origin sandboxed iframe content through Playwright frame injection."
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/dashboards/cost",
+      "name": "cost",
+      "url": "/dashboards/cost?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/",
+      "name": "home",
+      "url": "/?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map/table",
+      "name": "map table",
+      "url": "/map/table?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/map",
+      "name": "map",
+      "url": "/map?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/reports/view",
+      "name": "report view",
+      "url": "/reports/view?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance&report_id=rpt-seed-own",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "dark",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "high-contrast",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "default",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "enterprise-fluent",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    },
+    {
+      "kind": "theme",
+      "pattern": "/sandbox",
+      "name": "sandbox page",
+      "url": "/sandbox?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Afinance",
+      "mode": "light",
+      "packId": "sample-agency",
+      "styleId": "ops-console",
+      "sandboxMode": false,
+      "counts": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      },
+      "violations": []
+    }
+  ]
+}
