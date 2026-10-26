@@ -13,9 +13,10 @@ async function loadAuthInstance(): Promise<IPublicClientApplication | undefined>
     return createStubMsalInstance();
   }
   if (import.meta.env.MODE === "demo") {
-    // Local demo only (`pnpm demo`): same stub sign-in as e2e. Dead code in production builds.
+    // Local demo only (`pnpm demo`): same stub sign-in as e2e, as the Steward persona so the
+    // demo shows write-capable pages. Dead code in production builds.
     const { createStubMsalInstance } = await import("../../tests/e2e-support/stubMsal");
-    return createStubMsalInstance();
+    return createStubMsalInstance(["Steward"]);
   }
   return undefined;
 }

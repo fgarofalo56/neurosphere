@@ -61,14 +61,68 @@ export interface McpAdminMockState {
   servers: Map<string, Server>;
 }
 
-export function freshMcpAdminState(): McpAdminMockState {
-  return { servers: new Map() };
+export function freshMcpAdminState(demo = false): McpAdminMockState {
+  const state: McpAdminMockState = { servers: new Map() };
+  if (demo) for (const server of demoServers()) state.servers.set(server.id, server);
+  return state;
 }
 
 const ACTOR = "commercial:e2e:entra:person:psn_mock_admin";
 
 function sha(value: unknown): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
+}
+
+/** Demo profile: two registered servers with approved and pending tools (all SYNTHETIC). */
+function demoServers(): Server[] {
+  const seen = "2026-10-20T10:00:00Z";
+  const tool = (e: Entry, state: ToolState): Tool => ({
+    name: e.name,
+    state,
+    entry: e,
+    approvedEntry: state === "approved" ? e : null,
+    approvedBy: state === "approved" ? ACTOR : null,
+    approvedAt: state === "approved" ? seen : null,
+    revokedReason: null,
+    revokedBy: null,
+    firstSeen: seen,
+    lastSeen: seen,
+    updatedAt: seen,
+  });
+  const server = (url: string, display_name: string, tools: Tool[]): Server => ({
+    id: `mcp-${createHash("sha256").update(url).digest("hex").slice(0, 32)}`,
+    url,
+    host: new URL(url).hostname,
+    display_name,
+    status: "active",
+    registered_at: seen,
+    last_synced_at: seen,
+    version: 1,
+    syncs: 1,
+    tools,
+  });
+  const [lookup, stats] = manifest(0);
+  if (lookup === undefined || stats === undefined) return [];
+  return [
+    server("https://mcp.contoso.example/knowledge", "Knowledge base tools", [
+      tool(lookup, "approved"),
+      tool(stats, "pending"),
+      tool(
+        entry("search", "Search documents by keyword.", { query: { type: "string" } }),
+        "approved",
+      ),
+    ]),
+    server("https://mcp.contoso.example/finance", "Finance reporting tools", [
+      tool(
+        entry("ledger_summary", "Summarise ledger totals.", { period: { type: "string" } }),
+        "approved",
+      ),
+      tool(
+        entry("export_report", "Export a saved report.", { report_id: { type: "string" } }),
+        "pending",
+      ),
+    ]),
+  ];
 }
 
 function entry(name: string, description: string, properties: Record<string, unknown>): Entry {
@@ -185,6 +239,7 @@ export async function mcpAdminHandler(
   ctx: CopilotMockContext,
   state: McpAdminMockState,
   rest: string,
+  demo = false,
 ): Promise<void> {
   const header = ctx.req.headers.authorization ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
@@ -193,7 +248,9 @@ export async function mcpAdminHandler(
     return;
   }
   // Authorization outcome only: the real API requires config.manage on every route.
-  if (token.slice(TOKEN_PREFIX.length).toLowerCase() !== "admin") {
+  // The demo profile signs in as Steward and also shows this page, so it admits that persona.
+  const role = token.slice(TOKEN_PREFIX.length).toLowerCase();
+  if (role !== "admin" && !(demo && role === "steward")) {
     ctx.forbidden();
     return;
   }

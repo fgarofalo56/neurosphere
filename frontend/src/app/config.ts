@@ -1,5 +1,6 @@
 /** Runtime configuration (C7): fetched from /config.json at startup, validated by hand. */
 
+import { isUiStyleId, type UiStyleId } from "../design-system/styles";
 import { isThemeName, isThemePackId } from "../design-system/theme-store";
 import type { ThemeName } from "../design-system/tokens";
 
@@ -16,6 +17,8 @@ export interface AppConfig {
   readonly defaultThemePack?: string;
   /** Deployment default theme mode. Presentation only; a user's saved choice wins. */
   readonly defaultThemeMode?: ThemeName;
+  /** Deployment default UI style id. Presentation only; a user's saved choice wins. */
+  readonly defaultUiStyle?: UiStyleId;
 }
 
 export class ConfigError extends Error {
@@ -68,6 +71,11 @@ export function parseConfig(raw: unknown): AppConfig {
     problems.push('"defaultThemeMode" must be "light", "dark" or "high-contrast"');
   }
 
+  const uiStyle = raw["defaultUiStyle"];
+  if (uiStyle !== undefined && !isUiStyleId(uiStyle)) {
+    problems.push('"defaultUiStyle" must be "ops-console" or "enterprise-fluent"');
+  }
+
   const cloud = raw["cloud"];
   if (problems.length > 0 || !isCloud(cloud)) throw new ConfigError(problems);
 
@@ -79,6 +87,7 @@ export function parseConfig(raw: unknown): AppConfig {
     apiScope: strings["apiScope"] ?? "",
     ...(isThemePackId(themePack) ? { defaultThemePack: themePack } : {}),
     ...(isThemeName(themeMode) ? { defaultThemeMode: themeMode } : {}),
+    ...(isUiStyleId(uiStyle) ? { defaultUiStyle: uiStyle } : {}),
   };
 }
 
