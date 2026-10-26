@@ -2,7 +2,7 @@
  * Local demo mode (`pnpm demo`, Vite --mode demo). Loaded only by a dynamic import behind
  * `import.meta.env.MODE === "demo"` in main.tsx, so it is dead code in production builds.
  */
-import type { ReactElement, ReactNode } from "react";
+import { Suspense, lazy, type ReactElement, type ReactNode } from "react";
 import type { AppConfig } from "../config";
 import { DemoBanner } from "./DemoBanner";
 
@@ -23,7 +23,20 @@ export function demoConfig(env: Record<string, unknown> = import.meta.env): AppC
 
 export const demoConfigLoader = (): Promise<AppConfig> => Promise.resolve(demoConfig());
 
+// Static mockup gallery (PRP-30 item 4): rendered instead of the app under /__mockups/...
+// Lazy so the gallery loads only when asked for, and only ever through this demo-only module.
+const MockupGallery = lazy(() => import("./mockups"));
+const MOCKUP_PATH_PREFIX = "/__mockups/";
+
 export function withDemoBanner(app: ReactNode): ReactElement {
+  const pathname = window.location.pathname;
+  if (pathname.startsWith(MOCKUP_PATH_PREFIX)) {
+    return (
+      <Suspense fallback={null}>
+        <MockupGallery pathname={pathname} />
+      </Suspense>
+    );
+  }
   return (
     <>
       <DemoBanner />
