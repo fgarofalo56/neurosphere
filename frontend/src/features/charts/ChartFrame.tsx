@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { makeStyles, mergeClasses, tokens, Tab, TabList, Text } from "@fluentui/react-components";
 import type { ChartPlan } from "@neurosphere/contracts";
+import { ErrorState, Timestamp, useUiStyle } from "../../design-system";
 import { ChartTable } from "./ChartTable";
 import {
   MSG_ERROR,
@@ -33,7 +34,21 @@ export interface ChartFrameProps {
 }
 
 const useStyles = makeStyles({
-  root: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalS },
+  root: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalS,
+    minWidth: 0,
+    boxSizing: "border-box",
+    padding: tokens.spacingHorizontalM,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke2}`,
+  },
+  lifted: { backgroundColor: tokens.colorNeutralBackground2 },
+  raised: { boxShadow: tokens.shadow4 },
+  strong: { borderTopColor: tokens.colorNeutralStroke1 },
+  radiusSmall: { borderRadius: tokens.borderRadiusSmall },
+  radiusMedium: { borderRadius: tokens.borderRadiusMedium },
   frame: { width: "100%", border: "none", backgroundColor: tokens.colorNeutralBackground1 },
   frameFocused: {
     outline: `${tokens.strokeWidthThick} solid ${tokens.colorStrokeFocus2}`,
@@ -51,6 +66,7 @@ export function ChartFrame({
   onStatusChange,
 }: ChartFrameProps) {
   const styles = useStyles();
+  const { treatment } = useUiStyle();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const readyRef = useRef(false);
   const counterRef = useRef(0);
@@ -120,7 +136,16 @@ export function ChartFrame({
 
   const shown = rejected ? "table" : view;
   return (
-    <div className={styles.root} data-testid="chart-frame">
+    <div
+      className={mergeClasses(
+        styles.root,
+        treatment.panelSurface === "lifted" && styles.lifted,
+        treatment.surface === "raised" && styles.raised,
+        treatment.border === "strong" && styles.strong,
+        treatment.radius === "small" ? styles.radiusSmall : styles.radiusMedium,
+      )}
+      data-testid="chart-frame"
+    >
       <TabList
         selectedValue={shown}
         onTabSelect={(_, data) => setView(data.value === "table" ? "table" : "chart")}
@@ -133,7 +158,7 @@ export function ChartFrame({
         <Tab value="table">{STRINGS.tableView}</Tab>
       </TabList>
       {rejected ? (
-        <div role="alert">{STRINGS.rejected}</div>
+        <ErrorState title={STRINGS.rejected} />
       ) : (
         <div hidden={shown !== "chart"}>
           <iframe
@@ -157,13 +182,16 @@ export function ChartFrame({
           {status === "loading" ? <div role="status">{STRINGS.loading}</div> : null}
         </div>
       )}
-      {!rejected && status === "failed" ? <div role="alert">{STRINGS.failed}</div> : null}
+      {!rejected && status === "failed" ? <ErrorState title={STRINGS.failed} /> : null}
       {shown === "table" ? <ChartTable plan={plan} caption={title} /> : null}
-      <Text size={200} className={styles.sources}>
+      <Text size={200} className={styles.sources} data-testid="chart-sources">
         {STRINGS.sources}:{" "}
-        {plan.citations
-          .map((c) => `${c.label ?? c.evidence_id} (${STRINGS.asOf} ${c.as_of})`)
-          .join("; ")}
+        {plan.citations.map((c, i) => (
+          <span key={`${c.evidence_id}|${i}`}>
+            {i > 0 ? "; " : ""}
+            {c.label ?? c.evidence_id} ({STRINGS.asOf} <Timestamp value={c.as_of} />)
+          </span>
+        ))}
       </Text>
     </div>
   );

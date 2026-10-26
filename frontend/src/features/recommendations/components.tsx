@@ -1,6 +1,7 @@
-import { Badge, MessageBar, MessageBarBody, MessageBarTitle } from "@fluentui/react-components";
+import { makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { ForbiddenError, type ApiError } from "../../api/index.js";
+import { ErrorState, StatusPill, formatCurrency } from "../../design-system";
 import { STRINGS, fractionText, orUnknown, priceVersionText } from "./strings";
 import type { Coverage, Owner, ProjectedEstimate, Recommendation, Uncertainty } from "./types";
 
@@ -18,9 +19,9 @@ export function AdvisoryBadge({
   if (!advisory && executable) return null;
   return (
     <span>
-      <Badge appearance="tint" color="informative" data-testid="advisory-badge">
-        {STRINGS.advisory}
-      </Badge>
+      <span data-testid="advisory-badge">
+        <StatusPill label={STRINGS.advisory} tone="neutral" />
+      </span>
       {executable ? null : <small data-testid="advisory-reason"> {STRINGS.advisoryReason}</small>}
     </span>
   );
@@ -93,21 +94,75 @@ export function QueryErrorState({ error }: { readonly error: ApiError }): ReactE
   const ref = error.correlationId !== "" ? ` (reference ${error.correlationId})` : "";
   if (error instanceof ForbiddenError) {
     return (
-      <MessageBar intent="warning" role="alert" data-testid="forbidden-state">
-        <MessageBarBody>
-          <MessageBarTitle>{STRINGS.forbidden}</MessageBarTitle>
-          Contact your administrator if you need access{ref}.
-        </MessageBarBody>
-      </MessageBar>
+      <div data-testid="forbidden-state">
+        <ErrorState
+          title={STRINGS.forbidden}
+          message={`Contact your administrator if you need access${ref}.`}
+        />
+      </div>
     );
   }
   return (
-    <MessageBar intent="error" role="alert" data-testid="unavailable-state">
-      <MessageBarBody>
-        <MessageBarTitle>{STRINGS.unavailable}</MessageBarTitle>
-        {STRINGS.unavailableDetail}
-        {ref}
-      </MessageBarBody>
-    </MessageBar>
+    <div data-testid="unavailable-state">
+      <ErrorState title={STRINGS.unavailable} message={`${STRINGS.unavailableDetail}${ref}`} />
+    </div>
+  );
+}
+
+/**
+ * Projected change per period (projected minus baseline), in the estimate's one currency. It is
+ * an estimate, never a promise; "unknown" when either amount or the currency is missing.
+ */
+export function impactText(estimate: ProjectedEstimate | null | undefined): string {
+  if (estimate == null) return STRINGS.unknown;
+  const { baseline_amount: base, projected_amount: proj, currency } = estimate;
+  if (base == null || proj == null || currency == null) return STRINGS.unknown;
+  if (base.trim() === "" || proj.trim() === "") return STRINGS.unknown;
+  const delta = Number(proj) - Number(base);
+  if (!Number.isFinite(delta)) return STRINGS.unknown;
+  const sign = delta > 0 ? "+" : "";
+  const period = estimate.period == null ? "" : ` (${estimate.period})`;
+  return `${sign}${formatCurrency(delta, currency)}${period}`;
+}
+
+/** Short confidence wording from the evidence status and the uncertainty record. */
+export function confidenceText(rec: Recommendation): string {
+  if (rec.evidence_status === "insufficient_evidence") return STRINGS.insufficientHistory;
+  const u = rec.uncertainty;
+  if (u == null) return STRINGS.unknown;
+  if (u.method === "not_estimable") return "not estimable";
+  return u.level == null ? u.method : `${Number((u.level * 100).toFixed(2))}% interval`;
+}
+
+const useFactStyles = makeStyles({
+  facts: {
+    display: "grid",
+    gridTemplateColumns: "max-content 1fr",
+    columnGap: tokens.spacingHorizontalL,
+    rowGap: tokens.spacingVerticalXXS,
+    margin: 0,
+  },
+  term: { color: tokens.colorNeutralForeground2 },
+  def: { margin: 0, overflowWrap: "anywhere" },
+});
+
+/** Impact, confidence and owner as a definition list, used on each recommendation card. */
+export function Facts({ rec }: { readonly rec: Recommendation }): ReactElement {
+  const styles = useFactStyles();
+  return (
+    <dl className={styles.facts}>
+      <dt className={styles.term}>Projected change</dt>
+      <dd className={styles.def} data-testid="impact">
+        {impactText(rec.projected_estimate)}
+      </dd>
+      <dt className={styles.term}>Confidence</dt>
+      <dd className={styles.def} data-testid="confidence">
+        {confidenceText(rec)}
+      </dd>
+      <dt className={styles.term}>{STRINGS.sections.owner}</dt>
+      <dd className={styles.def} data-testid="card-owner">
+        {ownerText(rec.owner)}
+      </dd>
+    </dl>
   );
 }

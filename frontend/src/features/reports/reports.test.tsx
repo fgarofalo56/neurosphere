@@ -24,6 +24,12 @@ beforeAll(() => {
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 });
 
+// Opening a Fluent Dialog is the slowest step in this file (portal, focus trap, first-use
+// style injection). Under CPU contention it exceeded the 1s findBy default, so every dialog
+// wait gets an explicit budget; the dialog describes also get a longer test timeout.
+const DIALOG_WAIT = { timeout: 8000 } as const;
+const DIALOG_TEST_TIMEOUT = 20_000;
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -258,6 +264,17 @@ describe("report list", () => {
     expect(await screen.findByTestId("unavailable-state")).toBeTruthy();
     expect(screen.queryByTestId("empty-state")).toBeNull();
   });
+
+  it("shows a loading state first, then rows with a formatted updated time", async () => {
+    setup(LIST_PATH, {
+      [`GET ${LIST_API}`]: { status: 200, body: { items: [report()], next_cursor: null } },
+    });
+    expect(screen.getByLabelText(STRINGS.loading)).toBeTruthy();
+    const row = await screen.findByTestId("report-row");
+    expect(row.textContent).toContain("2026-10-21 12:00 UTC");
+    expect(row.textContent).not.toContain("2026-10-21T12:00:00Z");
+    expect(screen.getByRole("table", { name: STRINGS.listTitle })).toBeTruthy();
+  });
 });
 
 describe("report view", () => {
@@ -267,7 +284,8 @@ describe("report view", () => {
     expect(document.querySelector("iframe")?.getAttribute("title")).toBe("Agents by version");
     const citation = await screen.findByTestId("citation");
     expect(citation.textContent).toContain("fresh");
-    expect(citation.textContent).toContain("2026-10-21T08:00:00Z");
+    expect(citation.textContent).toContain("2026-10-21 08:00 UTC");
+    expect(citation.textContent).not.toContain("2026-10-21T08:00:00Z");
     expect(calls.filter((c) => c.method === "POST" && c.path === RUN_API)).toHaveLength(1);
     // The run request carries no body: scope and identity come from the bearer token.
     expect(calls.find((c) => c.path === RUN_API)?.body).toBeUndefined();
@@ -331,7 +349,26 @@ describe("report view", () => {
   });
 });
 
-describe("sharing", () => {
+/**
+ * Fluent dialogs are found with `hidden: true`. Root cause of the old flake: once a dialog is
+ * open, Tabster's modalizer sets `aria-hidden="true"` on the surface itself a few hundred ms
+ * later in jsdom (no layout, so it never marks the surface active). `findByRole("dialog")`
+ * evaluates accessibility with a slow `getComputedStyle` walk; under load that check landed after
+ * the attribute flip and never matched even though the dialog was open. Matching the element
+ * regardless of that jsdom artifact, and clicking buttons inside it by role with `hidden: true`,
+ * keeps every assertion on names, state and requests intact.
+ */
+function inDialog(dialog: HTMLElement, name: string): HTMLElement {
+  return within(dialog).getByRole("button", { name, hidden: true });
+}
+
+async function openShareDialog(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+  await screen.findByTestId("chart-frame", {}, DIALOG_WAIT);
+  await user.click(await screen.findByTestId("share-open"));
+  return screen.findByRole("dialog", { hidden: true }, DIALOG_WAIT);
+}
+
+describe("sharing", { timeout: DIALOG_TEST_TIMEOUT }, () => {
   it("shares with a principal and lists current shares", async () => {
     const user = userEvent.setup();
     const { calls } = setup(VIEW_PATH, {
@@ -341,12 +378,16 @@ describe("sharing", () => {
         body: report({ shares: [BOB] }),
       },
     });
-    await user.click(await screen.findByTestId("share-open"));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await openShareDialog(user);
     expect(within(dialog).getByTestId("share-list").textContent).toContain(BOB);
-    await user.type(within(dialog).getByLabelText(STRINGS.share.principalLabel), BOB);
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.share.add }));
-    await waitFor(() => expect(calls.some((c) => c.path.endsWith("/shares"))).toBe(true));
+    // One paste event, not 52 keystrokes: char-by-char typing into a controlled Fluent input
+    // exceeded the default test timeout under CPU contention in the full run.
+    await user.click(within(dialog).getByLabelText(STRINGS.share.principalLabel));
+    await user.paste(BOB);
+    await user.click(inDialog(dialog, STRINGS.share.add));
+    await waitFor(() => expect(calls.some((c) => c.path.endsWith("/shares"))).toBe(true), {
+      timeout: 4000,
+    });
     expect(calls.find((c) => c.path.endsWith("/shares"))?.body).toEqual({ principal_id: BOB });
   });
 
@@ -359,9 +400,8 @@ describe("sharing", () => {
         body: report(),
       },
     });
-    await user.click(await screen.findByTestId("share-open"));
-    const dialog = await screen.findByRole("dialog");
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.share.remove }));
+    const dialog = await openShareDialog(user);
+    await user.click(inDialog(dialog, STRINGS.share.remove));
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
   });
 
@@ -371,10 +411,12 @@ describe("sharing", () => {
       ...viewRoutes(report()),
       [`POST ${reportSharesPath(DOMAIN, REPORT_ID)}`]: problem(403, "forbidden", "not_owner"),
     });
-    await user.click(await screen.findByTestId("share-open"));
-    const dialog = await screen.findByRole("dialog");
-    await user.type(within(dialog).getByLabelText(STRINGS.share.principalLabel), BOB);
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.share.add }));
+    const dialog = await openShareDialog(user);
+    // One paste event, not 52 keystrokes: char-by-char typing into a controlled Fluent input
+    // exceeded the default test timeout under CPU contention in the full run.
+    await user.click(within(dialog).getByLabelText(STRINGS.share.principalLabel));
+    await user.paste(BOB);
+    await user.click(inDialog(dialog, STRINGS.share.add));
     expect((await within(dialog).findByTestId("mutation-error")).textContent).toContain(
       STRINGS.errors.notOwner,
     );
@@ -523,7 +565,7 @@ describe("delete", () => {
   });
 });
 
-describe("save from plan", () => {
+describe("save from plan", { timeout: DIALOG_TEST_TIMEOUT }, () => {
   it("builds a body from a plan and a bounded query, with no scope or identity fields", () => {
     const body = buildSaveReportRequest({
       title: "  Agents  ",
@@ -555,10 +597,11 @@ describe("save from plan", () => {
       route,
     ]);
     await user.click(await screen.findByTestId("save-report-open"));
-    const dialog = await screen.findByRole("dialog");
-    const submit = within(dialog).getByRole("button", { name: STRINGS.save.submit });
+    const dialog = await screen.findByRole("dialog", { hidden: true }, DIALOG_WAIT);
+    const submit = inDialog(dialog, STRINGS.save.submit);
     expect((submit as HTMLButtonElement).disabled).toBe(true);
-    await user.type(within(dialog).getByLabelText(STRINGS.save.titleLabel), "Agents by version");
+    await user.click(within(dialog).getByLabelText(STRINGS.save.titleLabel));
+    await user.paste("Agents by version");
     await user.click(submit);
     expect(await within(dialog).findByTestId("report-saved")).toBeTruthy();
     const post = calls.find((c) => c.method === "POST");
@@ -570,7 +613,9 @@ describe("save from plan", () => {
       metric: "cost",
     });
     expect(
-      within(dialog).getByRole("link", { name: STRINGS.save.open_report }).getAttribute("href"),
+      within(dialog)
+        .getByRole("link", { name: STRINGS.save.open_report, hidden: true })
+        .getAttribute("href"),
     ).toBe(reportViewHref(DOMAIN, REPORT_ID));
   });
 
@@ -582,9 +627,10 @@ describe("save from plan", () => {
     };
     setup("/chat", { [`POST ${LIST_API}`]: problem(422, "invalid_schema") }, [route]);
     await user.click(await screen.findByTestId("save-report-open"));
-    const dialog = await screen.findByRole("dialog");
-    await user.type(within(dialog).getByLabelText(STRINGS.save.titleLabel), "Agents");
-    await user.click(within(dialog).getByRole("button", { name: STRINGS.save.submit }));
+    const dialog = await screen.findByRole("dialog", { hidden: true }, DIALOG_WAIT);
+    await user.click(within(dialog).getByLabelText(STRINGS.save.titleLabel));
+    await user.paste("Agents");
+    await user.click(inDialog(dialog, STRINGS.save.submit));
     expect((await within(dialog).findByTestId("mutation-error")).textContent).toContain(
       STRINGS.errors.invalid,
     );

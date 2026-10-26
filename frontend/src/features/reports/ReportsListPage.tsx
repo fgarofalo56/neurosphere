@@ -1,14 +1,93 @@
-import { Button, Field, Select, makeStyles, tokens } from "@fluentui/react-components";
+import {
+  Button,
+  Field,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+  makeStyles,
+  tokens,
+} from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
-import { PageTemplate } from "../../design-system";
+import { EmptyState, LoadingState, PageTemplate, Timestamp, useUiStyle } from "../../design-system";
 import { PublicationBadge, QueryErrorState } from "./components";
 import { useReportList } from "./hooks";
 import { reportViewHref } from "./paths";
 import { STRINGS } from "./strings";
+import type { ReportView } from "./types";
 
 const PAGE_SIZE = 25;
+
+const useStyles = makeStyles({
+  form: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalS,
+  },
+  stripe: { ":nth-child(even)": { backgroundColor: tokens.colorNeutralBackground2 } },
+  strong: { borderTop: `${tokens.strokeWidthThin} solid ${tokens.colorNeutralStroke1}` },
+  upper: { textTransform: "uppercase", letterSpacing: "0.06em", fontSize: tokens.fontSizeBase200 },
+  title: { fontWeight: tokens.fontWeightSemibold, overflowWrap: "anywhere" },
+});
+
+/**
+ * The list stays a real table named "Saved reports" (pinned by the a11y specs), with the same
+ * density, stripe and border treatment the shared `DataTable` applies, plus a test id per row.
+ */
+function ReportTable({ items }: { readonly items: readonly ReportView[] }): ReactElement {
+  const styles = useStyles();
+  const { density, treatment } = useUiStyle();
+  const H = STRINGS.headers;
+  return (
+    <Table
+      aria-label={STRINGS.listTitle}
+      size={density === "compact" ? "small" : "medium"}
+      className={treatment.border === "strong" ? styles.strong : undefined}
+    >
+      <TableHeader>
+        <TableRow>
+          {[H.title, H.publication, H.updated].map((h) => (
+            <TableHeaderCell
+              key={h}
+              className={treatment.uppercaseLabels ? styles.upper : undefined}
+            >
+              {h}
+            </TableHeaderCell>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((report) => (
+          <TableRow
+            key={report.id}
+            data-testid="report-row"
+            className={treatment.tableStripes ? styles.stripe : undefined}
+          >
+            <TableCell>
+              <Link className={styles.title} to={reportViewHref(report.domain_id, report.id)}>
+                {report.title}
+              </Link>
+              {report.is_owner ? <span> ({STRINGS.youAreOwner})</span> : null}
+            </TableCell>
+            <TableCell>
+              <PublicationBadge state={report.publication.state} />
+            </TableCell>
+            <TableCell>
+              <Timestamp value={report.updated_at} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 function ListBody({
   domainId,
@@ -29,37 +108,23 @@ function ListBody({
 
   if (query.isError)
     return <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  if (query.isPending) return <p aria-busy="true">{STRINGS.loading}</p>;
+  if (query.isPending) {
+    return (
+      <div aria-busy="true">
+        <LoadingState label={STRINGS.loading} />
+      </div>
+    );
+  }
   const { items, next_cursor: next } = query.data;
 
   return (
     <>
       {items.length === 0 ? (
-        <p data-testid="empty-state">{STRINGS.empty}</p>
+        <div data-testid="empty-state">
+          <EmptyState title={STRINGS.empty} />
+        </div>
       ) : (
-        <table aria-label={STRINGS.listTitle}>
-          <thead>
-            <tr>
-              <th scope="col">{STRINGS.headers.title}</th>
-              <th scope="col">{STRINGS.headers.publication}</th>
-              <th scope="col">{STRINGS.headers.updated}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((report) => (
-              <tr key={report.id} data-testid="report-row">
-                <td>
-                  <Link to={reportViewHref(report.domain_id, report.id)}>{report.title}</Link>
-                  {report.is_owner ? ` (${STRINGS.youAreOwner})` : ""}
-                </td>
-                <td>
-                  <PublicationBadge state={report.publication.state} />
-                </td>
-                <td>{report.updated_at}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ReportTable items={items} />
       )}
       <p>
         {cursors.length > 1 ? (
@@ -72,16 +137,6 @@ function ListBody({
     </>
   );
 }
-
-const useStyles = makeStyles({
-  form: {
-    display: "flex",
-    flexWrap: "wrap",
-    alignItems: "flex-end",
-    columnGap: tokens.spacingHorizontalM,
-    rowGap: tokens.spacingVerticalS,
-  },
-});
 
 function ReportFilters({ pending }: { readonly pending: boolean }): ReactElement {
   const styles = useStyles();
@@ -126,7 +181,9 @@ export function ReportsListPage(): ReactElement {
       toolbarLabel="Report filters"
     >
       {domainId === "" ? (
-        <p data-testid="domain-required">{STRINGS.domainRequired}</p>
+        <div data-testid="domain-required">
+          <EmptyState title={STRINGS.domainRequired} />
+        </div>
       ) : (
         // Re-keyed so a new filter resets the cursor history.
         <ListBody key={`${domainId}|${pending}`} domainId={domainId} pending={pending} />

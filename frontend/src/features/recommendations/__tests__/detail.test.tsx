@@ -25,7 +25,10 @@ describe("recommendation detail", () => {
     await screen.findByTestId("coverage");
     expect(screen.getByRole("heading", { level: 1, name: "Model right-sizing" })).toBeTruthy();
     expect(text("score")).toBe("0.64");
-    expect(text("evidence-window")).toBe("2026-09-10T00:00:00Z to 2026-10-10T00:00:00Z");
+    // Times render through Timestamp: relative text plus the absolute UTC value, no raw ISO.
+    expect(text("evidence-window")).toContain("2026-09-10 00:00 UTC");
+    expect(text("evidence-window")).toContain("2026-10-10 00:00 UTC");
+    expect(text("evidence-window")).not.toContain("T00:00:00Z");
     expect(text("coverage")).toBe("sampled, observed 20%");
     expect(text("uncertainty")).toBe("confidence_interval: lower 0.51, upper 0.74, level 0.9");
     expect(text("prerequisites")).toContain("quality_regression_test: unmet");
