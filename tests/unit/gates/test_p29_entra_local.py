@@ -186,3 +186,20 @@ def test_rejects_non_guid_and_wrong_tenant() -> None:
     other = "77777777-7777-4777-8777-777777777777"
     assert mod.main(["--app-id", APP, "--tenant-id", other], az=fake, env={}) != 0
     assert fake.calls == []
+
+
+def test_windows_az_cmd_runs_the_bundled_python_not_cmd_exe(tmp_path: Path) -> None:
+    wbin = tmp_path / "CLI2" / "wbin"
+    wbin.mkdir(parents=True)
+    launcher = wbin / "az.CMD"
+    launcher.write_text("@echo off\n", encoding="utf-8")
+    bundled = tmp_path / "CLI2" / "python.exe"
+    bundled.write_bytes(b"")
+    assert mod.az_command(str(launcher)) == [str(bundled), "-IBm", "azure.cli"]
+
+
+def test_az_without_bundled_python_runs_as_found(tmp_path: Path) -> None:
+    launcher = tmp_path / "az.cmd"
+    launcher.write_text("@echo off\n", encoding="utf-8")
+    assert mod.az_command(str(launcher)) == [str(launcher)]
+    assert mod.az_command("/usr/bin/az") == ["/usr/bin/az"]

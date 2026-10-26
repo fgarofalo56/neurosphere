@@ -96,13 +96,29 @@ def role_body(value: str, description: str) -> dict[str, Any]:
     }
 
 
+def az_command(exe: str) -> list[str]:
+    """The argv prefix that runs ``az``.
+
+    On Windows ``az`` is ``az.cmd``, and cmd.exe re-parses its arguments: the parentheses in
+    ``/applications(appId='...')?$select=...`` end the batch ``IF (...)`` block and az exits
+    255. ``az.cmd`` only runs its bundled ``..\\python.exe -IBm azure.cli``, so call that
+    directly when it exists and keep cmd.exe out of the argument path.
+    """
+    path = Path(exe)
+    if path.suffix.lower() in {".cmd", ".bat"}:
+        bundled = path.parent.parent / "python.exe"
+        if bundled.is_file():
+            return [str(bundled), "-IBm", "azure.cli"]
+    return [exe]
+
+
 def default_az(args: Sequence[str], body: Mapping[str, Any] | None = None) -> str:
-    """Run ``az``. The JSON body goes through a temp file (``--body @file``) because cmd.exe
-    mangles inline JSON quotes when ``az.cmd`` is launched on Windows."""
+    """Run ``az``. The JSON body goes through a temp file (``--body @file``) so no inline JSON
+    reaches a shell."""
     exe = shutil.which("az")
     if exe is None:
         raise AzError("az CLI not found on PATH")
-    command = [exe, *args]
+    command = [*az_command(exe), *args]
     tmp_path: Path | None = None
     try:
         if body is not None:
