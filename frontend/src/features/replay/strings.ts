@@ -1,5 +1,5 @@
 /** Every label for replay lives here so tests assert exact text. Status is never colour alone. */
-import type { GapReason, Sampling, Span } from "./types";
+import type { GapReason, Sampling } from "./types";
 
 export const STRINGS = {
   title: "Trace replay",
@@ -50,12 +50,4 @@ export function samplingText(rate: number | null): string {
 export function traceSamplingText(s: Sampling): string {
   const base = samplingText(s.rate);
   return s.reason !== null ? `${base} (${s.reason})` : base;
-}
-
-export function spanLabel(span: Span): string {
-  const parts = [span.name, span.kind, durationText(span.duration_ms)];
-  if (span.status === "error") parts.push(STRINGS.error);
-  if (span.late) parts.push(STRINGS.late);
-  if (span.sampled) parts.push(samplingText(span.sampling_rate));
-  return parts.join(", ");
 }
