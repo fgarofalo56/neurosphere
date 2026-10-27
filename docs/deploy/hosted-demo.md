@@ -220,6 +220,28 @@ Cosmos `deploy_register` container and to `temp/hosted-demo/register-<id>.json`,
 `publicNetworkAccess` and image. A mismatch fails the run loudly (see Troubleshooting).
 Evidence: `<date>-deploy`.
 
+#### Recovering from a failed deploy
+
+If the top-level deployment fails after the nested modules created everything (the 2026-10-27
+`ResourceNotFound` on the Cosmos account and Event Hubs namespace outputs), the script stopped
+before it wrote the ownership register. A plain re-run would then record every resource as
+pre-existing and not ours, and teardown would refuse. Recover with the failed run's evidence:
+
+1. Keep the failed `<date>-deploy.json` and the `<date>-plan.json` it was approved against in
+   `docs/evidence/PRP-32/` (or pass `--evidence-dir`). Fix the cause first.
+2. Run `plan` again. The resources now exist, so what-if reports mostly NoChange and prints a new
+   hash.
+3. Run the S3 `deploy` command above with the new `--approve-plan` hash and the same
+   `--approve-shared` tokens, plus `--resume-failed docs/evidence/PRP-32/<date>-deploy.json`.
+
+The script refuses (exit 2, before any create) unless the group is ours; the file is a FAIL
+`deploy` for this deployment id, resource group and subscription with a `plan-hash` approval; a
+plan evidence file with the same `plan_sha256` and a change list is in the evidence directory; and
+the local register has no NeuroSphere-created rows. It then registers as ours only the live
+resources and budget whose scrubbed id was a Create in that plan, plus private-endpoint NICs named
+after a Create'd private endpoint. Anything else stays not ours. The new deploy evidence records
+`resumed_from` and `resume_registered_count`. Without the flag nothing changes.
+
 #### One-time pseudonym secret (D4)
 
 Under `NS_ENV=prod` the API refuses to start without a pseudonym key. `deploy` creates the Key

@@ -49,7 +49,7 @@ import tempfile
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
@@ -113,6 +113,15 @@ class AzError(RuntimeError):
 
 class RefusedError(RuntimeError):
     """A precondition failed before anything was changed."""
+
+
+#: Evidence keeps the whole az error (a failed deployment lists every failing resource).
+AZ_TEXT_LIMIT = 4000
+
+
+def _az_text(text: str, limit: int = AZ_TEXT_LIMIT) -> str:
+    """az error text for evidence: long limit; secret-pattern redaction still applies."""
+    return str(cm.g01().safe_text(text, limit))
 
 
 class SubprocessAzRunner:
@@ -259,6 +268,12 @@ def build_parser() -> argparse.ArgumentParser:
     infra(p)
     p.add_argument("--approve-plan", default="", help="sha256 printed by `plan`")
     p.add_argument("--approve-shared", default="", help="comma list of shared-step tokens")
+    p.add_argument(
+        "--resume-failed",
+        default="",
+        metavar="DEPLOY_EVIDENCE_JSON",
+        help="recover from a failed deploy: register what the prior plan created as ours",
+    )
     p.add_argument("--keep", action="store_true", help="accepted; keeping is the default")
     p.add_argument("--customer-id", default="synthco")
     p = sub.add_parser("grant-model-access", parents=[common])
@@ -321,7 +336,7 @@ class Ctx:
     def az(self, *args: str, parse: bool = True) -> Any:
         res = self.run_az(args)
         if res.rc != 0:
-            raise AzError(f"az {' '.join(args[:3])} failed: {cm.g01().safe_text(res.stderr)}")
+            raise AzError(f"az {' '.join(args[:3])} failed: {_az_text(res.stderr)}")
         if not parse:
             return None
         text = res.stdout.strip()
@@ -669,6 +684,7 @@ def classify_resources(
     pre_ids: set[str],
     create_ids: set[str],
     earlier_created: set[str],
+    resumed: set[str] | frozenset[str] = frozenset(),
 ) -> tuple[set[str], set[str]]:
     """Split live ids into (ours, not ours).
 
@@ -683,7 +699,7 @@ def classify_resources(
         key = r["id"].lower().rstrip("/")
         rtype = cm.resource_type(key)
         implicit = _IMPLICIT_CHILD_TYPES.get(rtype)
-        if key in earlier_created:
+        if key in earlier_created or key in resumed:
             ours.add(key)
         elif key not in pre_ids and (
             key in create_ids or (implicit is not None and implicit in create_types)
@@ -692,6 +708,104 @@ def classify_resources(
         else:
             other.add(key)
     return ours, other
+
+
+# --------------------------------------------------------------------------- resume
+
+
+class ResumeState(NamedTuple):
+    """What ``--resume-failed`` proved: the file name and the prior plan's scrubbed Create ids."""
+
+    source: str
+    create_ids: frozenset[str]
+
+
+def scrub_key(ctx: Ctx, resource_id: str) -> str:
+    """An id as the evidence stores it: scrubbed like ``finalize_evidence``, lower-cased."""
+    scrubbed = cm.finalize_evidence({"id": resource_id}, ctx.sub)["id"]
+    return str(scrubbed).lower().rstrip("/")
+
+
+def _load_json_object(path: Path, what: str) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise RefusedError(f"{what} is not readable JSON ({type(exc).__name__})") from exc
+    if not isinstance(data, dict):
+        raise RefusedError(f"{what} is not a JSON object")
+    return cast("dict[str, Any]", data)
+
+
+def load_resume(ctx: Ctx) -> ResumeState:
+    """Check every ``--resume-failed`` precondition. Raises RefusedError; changes nothing."""
+    path = Path(ctx.args.resume_failed)
+    failed = _load_json_object(path, "--resume-failed file")
+    if failed.get("command") != "deploy" or failed.get("result") != "FAIL":
+        raise RefusedError("--resume-failed must be the evidence of a deploy that ended FAIL")
+    if failed.get("deployment_id") != ctx.deployment_id:
+        raise RefusedError("--resume-failed evidence belongs to a different deployment id")
+    if failed.get("resource_group") != ctx.rg:
+        raise RefusedError("--resume-failed evidence belongs to a different resource group")
+    if str(failed.get("subscription_id", "")).lower() != scrub_key(ctx, ctx.sub):
+        raise RefusedError("--resume-failed evidence belongs to a different subscription")
+    approvals = failed.get("approvals")
+    if not any(isinstance(x, dict) and x.get("token") == "plan-hash" for x in approvals or []):
+        raise RefusedError("--resume-failed evidence has no plan-hash approval")
+    failed_details = failed.get("details")
+    digest = str(
+        failed_details.get("plan_sha256", "") if isinstance(failed_details, dict) else ""
+    ).lower()
+    if not digest:
+        raise RefusedError("--resume-failed evidence records no plan_sha256")
+    if not rg_is_ours(ctx):
+        raise RefusedError(
+            "resource group is not ours (no plan state or tag mismatch); nothing to resume"
+        )
+    create_ids: set[str] = set()
+    for plan_path in sorted(Path(ctx.args.evidence_dir).glob("*-plan.json")):
+        try:
+            plan = _load_json_object(plan_path, "plan evidence")
+        except RefusedError:
+            continue
+        details = plan.get("details")
+        if plan.get("command") != "plan" or not isinstance(details, dict):
+            continue
+        if str(details.get("plan_sha256", "")).lower() != digest:
+            continue
+        for change in details.get("changes") or []:
+            if isinstance(change, dict) and change.get("changeType") == "Create":
+                create_ids.add(str(change.get("resourceId", "")).lower().rstrip("/"))
+    if not create_ids:
+        raise RefusedError(
+            "no plan evidence with the failed deploy's plan_sha256 and its change list was "
+            "found in --evidence-dir"
+        )
+    book = open_book(ctx)
+    book.load()
+    if any(r.created_by == "neurosphere" for r in book.rows):
+        raise RefusedError("the local register already has created rows; nothing to resume")
+    return ResumeState(path.name, frozenset(create_ids))
+
+
+def resume_owned(ctx: Ctx, resume: ResumeState, live_ids: Sequence[str]) -> set[str]:
+    """Live ids (lower-cased) the failed run created. A resource or budget is ours when its
+    scrubbed id was a Create in the prior plan; a private-endpoint NIC is ours when its name
+    starts with the name of a private endpoint that was a Create there."""
+    pe_names = {
+        i.rsplit("/", 1)[-1]
+        for i in resume.create_ids
+        if cm.resource_type(i) == "microsoft.network/privateendpoints"
+    }
+    owned: set[str] = set()
+    for rid in live_ids:
+        key = rid.lower().rstrip("/")
+        if scrub_key(ctx, key) in resume.create_ids:
+            owned.add(key)
+        elif cm.resource_type(key) == "microsoft.network/networkinterfaces" and any(
+            key.rsplit("/", 1)[-1].startswith(n) for n in pe_names
+        ):
+            owned.add(key)
+    return owned
 
 
 # --------------------------------------------------------------------------- preflight
@@ -972,6 +1086,7 @@ def cmd_deploy(ctx: Ctx) -> None:
     exists = ctx.az("group", "exists", "--name", ctx.rg, "--subscription", ctx.sub, "-o", "json")
     if exists is not True:
         raise RefusedError("resource group does not exist; run `plan` first. No changes made.")
+    resume = load_resume(ctx) if a.resume_failed else None
     params = write_params_file(ctx, values)
     try:
         changes, digest = run_what_if(ctx, params)
@@ -1012,8 +1127,17 @@ def cmd_deploy(ctx: Ctx) -> None:
         r.resource_id.lower().rstrip("/") for r in book.rows if r.created_by == "neurosphere"
     }
     resources = list_rg_resources(ctx)
+    resumed: set[str] = set()
+    resumed_budgets: set[str] = set()
+    if resume is not None:
+        resumed = resume_owned(ctx, resume, [r["id"] for r in resources])
+        resumed_budgets = resume_owned(ctx, resume, budget_ids(ctx))
     created_ids, foreign_ids = classify_resources(
-        resources, pre_ids=pre_ids, create_ids=create_ids, earlier_created=earlier_created
+        resources,
+        pre_ids=pre_ids,
+        create_ids=create_ids,
+        earlier_created=earlier_created,
+        resumed=resumed,
     )
     if rg_owned:
         rows = [make_row(ctx, ctx.rg_id, "Microsoft.Resources/resourceGroups", created=True)]
@@ -1037,7 +1161,7 @@ def cmd_deploy(ctx: Ctx) -> None:
             )
     for rid in budget_ids(ctx):
         key = rid.lower().rstrip("/")
-        if key not in pre_budgets or key in earlier_created:
+        if key not in pre_budgets or key in earlier_created or key in resumed_budgets:
             rows.append(make_row(ctx, rid, "Microsoft.Consumption/budgets", created=True))
         else:
             rows.append(
@@ -1049,6 +1173,9 @@ def cmd_deploy(ctx: Ctx) -> None:
                     consent="pre-existing-at-deploy",
                 )
             )
+    if resume is not None:
+        ctx.details["resumed_from"] = resume.source
+        ctx.details["resume_registered_count"] = len(created_ids & resumed) + len(resumed_budgets)
     ctx.details["register_created_count"] = sum(1 for r in rows if r.created_by == "neurosphere")
     ctx.details["register_not_ours_count"] = len(foreign_ids) + (0 if rg_owned else 1)
     if foreign_ids or not rg_owned:
@@ -1502,7 +1629,7 @@ class _LiveInventory:
 def _tolerant(ctx: Ctx, *args: str) -> None:
     res = ctx.run_az(args)
     if res.rc != 0 and not any(m in res.stderr.lower() for m in _NOT_FOUND):
-        raise AzError(f"az {' '.join(args[:3])} failed: {cm.g01().safe_text(res.stderr)}")
+        raise AzError(f"az {' '.join(args[:3])} failed: {_az_text(res.stderr)}")
 
 
 def cmd_teardown(ctx: Ctx) -> None:
@@ -1746,11 +1873,11 @@ def run(
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 2
     except (AzError, ValueError, OSError, json.JSONDecodeError) as exc:
-        ctx.errors.append(cm.g01().safe_text(str(exc)))
+        ctx.errors.append(_az_text(str(exc), AZ_TEXT_LIMIT + 200))
         # The console names only the error type; the scrubbed text lands in the evidence.
         ctx.step(args.command, "failed", f"{type(exc).__name__}; see the evidence errors")
     except Exception as exc:
-        ctx.errors.append(f"{type(exc).__name__}: {cm.g01().safe_text(str(exc))}")
+        ctx.errors.append(f"{type(exc).__name__}: {_az_text(str(exc), AZ_TEXT_LIMIT + 200)}")
         ctx.step(args.command, "failed", type(exc).__name__)
     result = "FAIL" if ctx.errors else "PASS"
     return 0 if _emit(ctx, started, result) == "PASS" else 1
