@@ -21,7 +21,7 @@ to those subcommands.
 | S5 | entra-redirect and user/app-role assignment | `<date>-entra` (script name: `entra-redirect`) | **OPEN** |
 | S6 | seed-access --grant | `<date>-seed-access` | **OPEN** |
 | S7 | seed, then seed-access --revoke | `<date>-seed` (from `hosted_demo_seed.json`, counts only) | **OPEN** |
-| S8 | release tag `v0.1.0-rc.2` push, signature and digest verification | `release-v0.1.0-rc.2.md` | **OPEN** |
+| S8 | release tag `v0.1.0-rc.2` push, signature and digest verification | `release-v0.1.0-rc.2.md` | **DONE** 2026-10-26 (run 40417878914 success; 3 images cosign verify + verify-attestation exit 0) |
 | S9 | smoke (automated), then manual hosted Playwright run | `<date>-smoke` | **OPEN** |
 | S10 | teardown, then leftover check (`rg-ns-*`, hub PEs by tag, Entra redirect) | `<date>-teardown` | **OPEN** |
 
