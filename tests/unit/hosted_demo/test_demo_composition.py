@@ -172,6 +172,39 @@ def test_parameters_and_outputs_are_the_d9_contract(arm: dict[str, Any]) -> None
         assert spec.get("metadata", {}).get("description"), f"{name} lacks @description"
 
 
+def test_outputs_reference_only_module_deployments(arm: dict[str, Any]) -> None:
+    """PRP-32 item 10: an out-of-template reference() fails the whole deploy (ResourceNotFound).
+
+    The Cosmos account and the Event Hubs namespace are created inside nested modules, so the
+    root outputs must read them through the module outputs, never through ``existing`` resources.
+    """
+    for name, spec in arm["outputs"].items():
+        value = str(spec["value"])
+        targets = re.findall(r"reference\(resourceId\('([^']+)'", value)
+        assert value.count("reference(") == len(targets), f"{name}: reference() not on a resourceId"
+        assert set(targets) <= {"Microsoft.Resources/deployments"}, name
+    top_types = {r["type"] for r in arm["resources"]}
+    assert "Microsoft.DocumentDB/databaseAccounts" not in top_types
+    assert "Microsoft.EventHub/namespaces" not in top_types
+
+
+@pytest.mark.parametrize(
+    ("module", "output", "created"),
+    [
+        ("cosmos.bicep", "documentEndpoint", "Microsoft.DocumentDB/databaseAccounts"),
+        ("eventhubs.bicep", "serviceBusEndpoint", "Microsoft.EventHub/namespaces"),
+    ],
+)
+def test_module_endpoint_outputs_guard_the_reuse_branch(
+    module: str, output: str, created: str
+) -> None:
+    """The reused branch is only evaluated when ``reuse`` is set; the created one is in-template."""
+    arm = compile_bicep(ROOT / "infra" / "bicep" / "modules" / module)
+    value = str(arm["outputs"][output]["value"])
+    assert value.startswith("[if(empty(parameters('reuse')), reference(resourceId('" + created)
+    assert value.count("reference(") == 2
+
+
 def test_no_forbidden_resource_types_anywhere(arm: dict[str, Any]) -> None:
     types = {r["type"].lower() for r in walk_resources(arm)}
     for resource_type in types:
