@@ -10,3 +10,5 @@ dd62b13e6b2165b09641b8337b5264d7cd853303:services/api/tests/copilot_api/test_eng
 6042dc382d8bf07228b09566d4fd829aa11f2a44:packages/core/neurosphere_core/evaluation/cosmos_store.py:generic-api-key:503
 # PRP-29 item 8: synthetic action idempotency key `idem-2026-10-25-planes-0001` in a planes builder test.
 4a520fadd1e1351b8eab98227984ff55f1663d92:services/api/tests/runtime_planes/test_planes_builder.py:generic-api-key:135
+# PRP-32 item 1: built-in Key Vault Secrets User role definition id (public Azure constant), not a credential.
+fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:generic-api-key:11

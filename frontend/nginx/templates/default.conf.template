@@ -36,7 +36,10 @@ server {
     location /api/ {
         proxy_pass ${NS_UI_API_UPSTREAM};
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        # Host is the upstream's own host and SNI is sent, so an HTTPS App Service upstream (which
+        # routes by Host) matches. For http://api:8000 this is "api:8000", which the API accepts.
+        proxy_set_header Host $proxy_host;
+        proxy_ssl_server_name on;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $ns_connection_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
@@ -49,19 +52,9 @@ server {
         proxy_send_timeout 3600s;
     }
 
-    location = /readyz {
-        proxy_pass ${NS_UI_API_UPSTREAM};
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location = /healthz {
-        proxy_pass ${NS_UI_API_UPSTREAM};
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    # /readyz and /healthz: written at start by render-config.sh. Proxied to the API only when
+    # NS_UI_PROXY_HEALTH=1 (compose); otherwise an explicit 404 (hosted demo, PRP-32 D3).
+    include /tmp/ns-nginx/health.conf;
 
     # Vite emits content-hashed files under /assets.
     location /assets/ {

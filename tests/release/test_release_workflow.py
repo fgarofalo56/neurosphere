@@ -19,7 +19,7 @@ ALLOWED_USES = {
     "actions/download-artifact@v8",
     "actions/setup-python@v7",
     "astral-sh/setup-uv@v7",
-    "azure/setup-helm@v4",
+    "azure/setup-helm@v5",
 }
 # Commands that publish or sign something; they must sit behind a non-dry-run guard.
 GUARDED = re.compile(
@@ -121,7 +121,7 @@ def test_uses_are_allowed(wf: dict[str, Any]) -> None:
 
 
 def test_helm_pinned(wf: dict[str, Any]) -> None:
-    helm = [s for _, s in _steps(wf) if s.get("uses") == "azure/setup-helm@v4"]
+    helm = [s for _, s in _steps(wf) if s.get("uses") == "azure/setup-helm@v5"]
     assert helm
     assert all(s["with"]["version"] == "v4.3.0" for s in helm)
 

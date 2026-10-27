@@ -7,7 +7,7 @@ dependencies = [
   "neurosphere-core",
   "neurosphere-connector",
   "neurosphere-workers",
-  "fastapi>=0.143,<0.144",
+  "fastapi>=0.143,<0.150",
   "pydantic>=2.14,<3",
   "uvicorn>=0.54,<0.55",
   "httpx>=0.28,<0.29",

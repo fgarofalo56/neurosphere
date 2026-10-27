@@ -76,7 +76,7 @@ writers must not emit the new field until readers run the regenerated bindings.
 
 | Tool | Pin | Licence | Scope | Source |
 |---|---|---|---|---|
-| datamodel-code-generator | 0.83.0 | MIT | dev (Python codegen) | https://pypi.org/project/datamodel-code-generator/ |
+| datamodel-code-generator | 0.86.0 | MIT | dev (Python codegen) | https://pypi.org/project/datamodel-code-generator/ |
 | json-schema-to-typescript | 16.0.0 | MIT | dev (TS codegen) | https://www.npmjs.com/package/json-schema-to-typescript |
 | typescript | ~6.0.0 (6.0.3 locked) | Apache-2.0 | dev (typecheck) | ADR-0002 |
 | vitest | ^4.0.0 (4.1.11 locked, same range as `frontend/`) | MIT | dev (test runner for item 7) | ADR-0002 |
@@ -180,7 +180,7 @@ idempotence test in `test_generate.py` skips with a reason; the other tests run.
 ## References
 
 - JSON Schema 2020-12: https://json-schema.org/draft/2020-12 (observed 2026-10-10).
-- datamodel-code-generator 0.83.0: https://pypi.org/project/datamodel-code-generator/
+- datamodel-code-generator 0.86.0: https://pypi.org/project/datamodel-code-generator/
   (released 2026-09-24, observed 2026-10-10).
 - json-schema-to-typescript 16.0.0: https://www.npmjs.com/package/json-schema-to-typescript
   (released 2026-08-28, observed 2026-10-10).

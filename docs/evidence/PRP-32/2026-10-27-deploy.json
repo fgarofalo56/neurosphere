@@ -1,0 +1,65 @@
+{
+  "approvals": [
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-subnet",
+      "utc": "2026-10-27T02:58:20Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-pe",
+      "utc": "2026-10-27T02:58:20Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-dns",
+      "utc": "2026-10-27T02:58:20Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "budget",
+      "utc": "2026-10-27T02:58:20Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "plan-hash",
+      "utc": "2026-10-27T02:58:43Z"
+    }
+  ],
+  "command": "deploy",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "change_counts": {
+      "Create": 59,
+      "Unsupported": 62
+    },
+    "plan_sha256": "25ac6ba25fd41cb0a07a8af9cad6463414273de9dd31292e687651981b4bbeb7"
+  },
+  "errors": [
+    "az deployment group create failed: WARNING: A new Bicep release is available: v0.48.1. Upgrade now by running \"az bicep upgrade\". ERROR: {\"status\":\"Failed\",\"error\":{\"code\":\"DeploymentFailed\",\"target\":\"/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-demo/providers/Mi"
+  ],
+  "finished_utc": "2026-10-27T03:48:13Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-27T02:58:19Z",
+  "steps": [
+    {
+      "detail": "121 change(s) {'Create': 59, 'Unsupported': 62}",
+      "status": "ok",
+      "step": "what-if"
+    },
+    {
+      "detail": "AzError; see the evidence errors",
+      "status": "failed",
+      "step": "deploy"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}

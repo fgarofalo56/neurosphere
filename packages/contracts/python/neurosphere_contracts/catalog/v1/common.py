@@ -17,6 +17,7 @@ from pydantic import (
     StrictFloat,
     StrictInt,
     StrictStr,
+    StringConstraints,
     constr,
 )
 
@@ -122,13 +123,13 @@ class DisplayName(RootModel[StrictStr]):
 class Attributes(
     RootModel[
         dict[
-            constr(pattern=r"^[a-z][a-z0-9_]{0,63}$", strict=True),
+            Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,63}$", strict=True)],
             constr(max_length=1024, strict=True) | StrictFloat | StrictBool | None,
         ]
     ]
 ):
     root: dict[
-        constr(pattern=r"^[a-z][a-z0-9_]{0,63}$", strict=True),
+        Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,63}$", strict=True)],
         constr(max_length=1024, strict=True) | StrictFloat | StrictBool | None,
     ]
     """

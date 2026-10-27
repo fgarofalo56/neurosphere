@@ -237,6 +237,7 @@ services:
       NS_UI_CLIENT_ID: ${NS_ENTRA_CLIENT_ID:-}
       NS_UI_API_SCOPE: ${NS_ENTRA_CLIENT_ID:+api://${NS_ENTRA_CLIENT_ID}/access_as_user}
       NS_UI_API_UPSTREAM: http://api:8000
+      NS_UI_PROXY_HEALTH: "1"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/config.json"]
       interval: 5s
