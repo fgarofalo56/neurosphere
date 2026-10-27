@@ -2,7 +2,7 @@ import { Tree, TreeItem, TreeItemLayout, makeStyles, tokens } from "@fluentui/re
 import type { ReactElement } from "react";
 import { StatusPill } from "../../design-system";
 import { buildTree } from "./buildTree";
-import { STRINGS, durationText, samplingText, spanLabel } from "./strings";
+import { STRINGS, durationText, samplingText } from "./strings";
 import type { Gap, Span, TraceNode } from "./types";
 
 const useStyles = makeStyles({
@@ -84,13 +84,13 @@ function Node({ node }: { readonly node: TraceNode }): ReactElement {
   );
   if (node.children.length === 0) {
     return (
-      <TreeItem itemType="leaf" value={span.span_id} aria-label={spanLabel(span)}>
+      <TreeItem itemType="leaf" value={span.span_id}>
         {layout}
       </TreeItem>
     );
   }
   return (
-    <TreeItem itemType="branch" value={span.span_id} aria-label={spanLabel(span)}>
+    <TreeItem itemType="branch" value={span.span_id}>
       {layout}
       <Tree>
         {node.children.map((c) => (
