@@ -48,7 +48,7 @@ TS_DRIVER = SCRIPT_DIR / "json2ts.cjs"
 RUFF_CONFIG = PY_PROJECT_DIR / "pyproject.toml"
 
 # Generator pins (ADR-0004). Changing one is a deliberate, reviewed regeneration.
-DATAMODEL_CODE_GENERATOR_VERSION = "0.83.0"
+DATAMODEL_CODE_GENERATOR_VERSION = "0.86.0"
 JSON_SCHEMA_TO_TYPESCRIPT_VERSION = "16.0.0"
 
 MAJOR_DIR = re.compile(r"v[1-9][0-9]*")
