@@ -35,12 +35,23 @@ FOREIGN = {
     "id": F._rid("Microsoft.Storage/storageAccounts", "foreignstore"),
     "type": "Microsoft.Storage/storageAccounts",
 }
-NIC = F._rid("Microsoft.Network/networkInterfaces", "nsdemo-api-pe-nic")
+_SHARED_NIC = F._rid("Microsoft.Network/networkInterfaces", "nsdemo-api-pe-nic")
+# The real implicit NIC name shape is ``<pe>.nic.<id>``.
+NIC = F._rid("Microsoft.Network/networkInterfaces", "nsdemo-api-pe.nic.0a1b2c3d")
+
+
+def _nic(name: str) -> dict[str, str]:
+    rid = F._rid("Microsoft.Network/networkInterfaces", name)
+    return {"id": rid, "type": "Microsoft.Network/networkInterfaces"}
 
 
 @pytest.fixture(autouse=True)
 def _approved(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NS_LIVE_APPROVED", "1")
+    resources = [
+        _nic("nsdemo-api-pe.nic.0a1b2c3d") if r["id"] == _SHARED_NIC else r for r in F.RESOURCES
+    ]
+    monkeypatch.setattr(F, "RESOURCES", resources)
 
 
 @pytest.fixture
@@ -118,6 +129,17 @@ def test_resume_registers_prior_plan_resources_and_budget_as_ours(env: Any) -> N
     details = json.loads(_latest(env, "deploy").read_text("utf-8"))["details"]
     assert details["resumed_from"] == failed.name
     assert details["resume_registered_count"] == len(F.RESOURCES) + 1
+
+
+def test_resume_never_claims_a_sibling_prefix_nic(env: Any) -> None:
+    failed = failed_deploy(env)
+    siblings = [_nic("nsdemo-api-pe2.nic.0a1b2c3d"), _nic("nsdemo-api-pe-x.nic.0a1b2c3d")]
+    env.fake.live += siblings
+    assert resume(env, failed, replan(env)) == 0
+    rows = _rows(env)
+    assert rows[NIC.lower()]["created_by"] == "neurosphere"
+    for s in siblings:
+        assert rows[s["id"].lower()]["created_by"] is None, s["id"]
 
 
 def test_resume_deploys_even_though_the_new_plan_has_no_creates(env: Any) -> None:

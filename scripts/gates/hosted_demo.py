@@ -789,8 +789,9 @@ def load_resume(ctx: Ctx) -> ResumeState:
 
 def resume_owned(ctx: Ctx, resume: ResumeState, live_ids: Sequence[str]) -> set[str]:
     """Live ids (lower-cased) the failed run created. A resource or budget is ours when its
-    scrubbed id was a Create in the prior plan; a private-endpoint NIC is ours when its name
-    starts with the name of a private endpoint that was a Create there."""
+    scrubbed id was a Create in the prior plan; a private-endpoint NIC is ours when its name is
+    ``<pe>.nic.<id>`` for a private endpoint that was a Create there (a sibling such as
+    ``<pe>2.nic.<id>`` or ``<pe>-x.nic.<id>`` is not)."""
     pe_names = {
         i.rsplit("/", 1)[-1]
         for i in resume.create_ids
@@ -802,7 +803,7 @@ def resume_owned(ctx: Ctx, resume: ResumeState, live_ids: Sequence[str]) -> set[
         if scrub_key(ctx, key) in resume.create_ids:
             owned.add(key)
         elif cm.resource_type(key) == "microsoft.network/networkinterfaces" and any(
-            key.rsplit("/", 1)[-1].startswith(n) for n in pe_names
+            key.rsplit("/", 1)[-1].startswith(f"{n}.nic.") for n in pe_names
         ):
             owned.add(key)
     return owned
