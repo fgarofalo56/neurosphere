@@ -511,14 +511,6 @@ resource frontendDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-p
 // Outputs (names and ids only; no secret material)
 // ---------------------------------------------------------------------------------------------
 
-resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' existing = {
-  name: cosmosName
-}
-
-resource eventHubsNamespace 'Microsoft.EventHub/namespaces@2024-01-01' existing = {
-  name: eventHubsName
-}
-
 @description('Name of the API site.')
 output apiSiteName string = appService.outputs.apiSiteName
 
@@ -541,20 +533,20 @@ output apiPrincipalId string = appServiceBootstrap.outputs.apiPrincipalId
 output workersPrincipalId string = appServiceBootstrap.outputs.workersPrincipalId
 
 @description('Cosmos DB account name.')
-output cosmosAccountName string = cosmosAccount.name
+output cosmosAccountName string = cosmosName
 
 @description('Cosmos DB document endpoint (https URL; the host resolves to the private endpoint).')
-output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
+output cosmosEndpoint string = cosmos.outputs.documentEndpoint
 
 @description('Cosmos DB database name.')
 output cosmosDatabaseName string = cosmosData.outputs.databaseName
 
 @description('Event Hubs namespace name.')
-output eventHubsNamespaceName string = eventHubsNamespace.name
+output eventHubsNamespaceName string = eventHubsName
 
 @description('Event Hubs fully qualified namespace host name (no scheme or port).')
 output eventHubsFqdn string = replace(
-  replace(replace(eventHubsNamespace.properties.serviceBusEndpoint, 'https://', ''), ':443', ''),
+  replace(replace(eventHubs.outputs.serviceBusEndpoint, 'https://', ''), ':443', ''),
   '/',
   ''
 )

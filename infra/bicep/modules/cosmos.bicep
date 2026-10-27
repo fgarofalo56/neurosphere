@@ -48,8 +48,24 @@ resource account 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = if (empty(
   )
 }
 
+// The reused account may live in another group; these are only read when reuse is set.
+var reuseParts = split(reuse, '/')
+var reuseSubscription = empty(reuse) ? subscription().subscriptionId : reuseParts[2]
+var reuseGroup = empty(reuse) ? resourceGroup().name : reuseParts[4]
+var reuseName = empty(reuse) ? name : last(reuseParts)
+
+resource reused 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' existing = if (!empty(reuse)) {
+  name: reuseName
+  scope: resourceGroup(reuseSubscription, reuseGroup)
+}
+
 @description('Resource id of the Cosmos DB account in use (reused or newly created).')
 output id string = empty(reuse) ? account.id : reuse
 
 @description('True when this module created the account.')
 output created bool = empty(reuse)
+
+@description('Document endpoint (https URL) of the account in use. ARM evaluates only the branch the ternary takes, and the created branch is a same-template reference, so it waits for the account.')
+output documentEndpoint string = empty(reuse)
+  ? account!.properties.documentEndpoint
+  : reused!.properties.documentEndpoint
