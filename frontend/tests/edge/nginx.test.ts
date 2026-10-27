@@ -27,16 +27,20 @@ describe("nginx edge template", () => {
     expect(api).toContain("proxy_http_version 1.1;");
     expect(api).toContain("proxy_set_header Upgrade $http_upgrade;");
     expect(api).toContain("proxy_set_header Connection $ns_connection_upgrade;");
-    expect(api).toContain("proxy_set_header Host $host;");
+    expect(api).toContain("proxy_set_header Host $proxy_host;");
+    expect(api).not.toContain("proxy_set_header Host $host;");
+    expect(api).toContain("proxy_ssl_server_name on;");
+    expect(api).toContain("proxy_set_header X-Forwarded-Host $host;");
     expect(api).toContain("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;");
     expect(api).toContain("proxy_set_header X-Forwarded-Proto $scheme;");
     expect(api).toContain("proxy_buffering off;");
     expect(template).toContain("map $http_upgrade $ns_connection_upgrade");
   });
 
-  it("proxies /readyz and /healthz", () => {
-    expect(locationBlock("= /readyz")).toContain("proxy_pass ${NS_UI_API_UPSTREAM};");
-    expect(locationBlock("= /healthz")).toContain("proxy_pass ${NS_UI_API_UPSTREAM};");
+  it("does not hard-code /readyz or /healthz; they come from the opt-in health include", () => {
+    expect(template).not.toContain("location = /readyz");
+    expect(template).not.toContain("location = /healthz");
+    expect(template).toContain("include /tmp/ns-nginx/health.conf;");
   });
 
   it("sets no CORS headers (same origin)", () => {
@@ -55,7 +59,9 @@ describe("nginx edge template", () => {
     expect(template).toContain("add_header X-Content-Type-Options nosniff always;");
     expect(template).toContain("add_header Referrer-Policy no-referrer always;");
     expect(template).toContain("try_files $uri /index.html;");
-    expect(locationBlock("= /config.json")).toContain('add_header Cache-Control "no-store" always;');
+    expect(locationBlock("= /config.json")).toContain(
+      'add_header Cache-Control "no-store" always;',
+    );
     expect(locationBlock("= /config.json")).toContain("try_files $uri @ns_rendered_config;");
   });
 

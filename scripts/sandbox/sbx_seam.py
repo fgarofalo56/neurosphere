@@ -109,8 +109,12 @@ def partition_for(line: bytes, partition_ids: list[str]) -> str:
 
 
 class HubSeam:
-    def __init__(self, env: dict[str, str] | None = None, hub: str = HUB) -> None:
-        self._conn = eventhubs_connection_string(env)
+    def __init__(
+        self, env: dict[str, str] | None = None, hub: str = HUB, *, connection: str | None = None
+    ) -> None:
+        # ``connection`` lets a subclass that publishes without a connection string (the hosted,
+        # Entra-only seam) skip resolving one; it overrides ``_producer`` instead.
+        self._conn = eventhubs_connection_string(env) if connection is None else connection
         self._hub = hub
 
     def _producer(self) -> EventHubProducerClient:

@@ -195,6 +195,7 @@ jobs:
             az bicep build-params --file "$p" --stdout > /dev/null || rc=1
           done < <(find infra -name '*.bicepparam' | sort)
           az bicep lint --file infra/bicep/modules/main.bicep || rc=1
+          az bicep lint --file infra/demo/main.bicep || rc=1
           exit $rc
 
   helm:
@@ -203,7 +204,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         with:
           version: v4.3.0
       - name: Helm major version is 4

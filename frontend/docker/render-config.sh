@@ -52,6 +52,24 @@ esac
 
 [ -z "$CONF_OUT_DIR" ] || mkdir -p "$CONF_OUT_DIR"
 
+# 3. /readyz and /healthz are proxied to the API only when NS_UI_PROXY_HEALTH=1 (compose sets it;
+#    the hosted demo does not, so they are a clean 404 there). The nginx template includes the
+#    file written here; it is always written because a missing include is a config error. The
+#    upstream was validated above, so it is safe to embed.
+HEALTH_DIR="${NS_UI_HEALTH_OUT_DIR:-/tmp/ns-nginx}"
+mkdir -p "$HEALTH_DIR"
+health="$HEALTH_DIR/health.conf"
+: >"$health.tmp"
+for path in readyz healthz; do
+  if [ "${NS_UI_PROXY_HEALTH:-}" = "1" ]; then
+    printf 'location = /%s {\n    proxy_pass %s;\n    proxy_http_version 1.1;\n    proxy_set_header Host $proxy_host;\n    proxy_ssl_server_name on;\n    proxy_set_header X-Forwarded-Proto $scheme;\n}\n' \
+      "$path" "$NS_UI_API_UPSTREAM" >>"$health.tmp"
+  else
+    printf 'location = /%s {\n    return 404;\n}\n' "$path" >>"$health.tmp"
+  fi
+done
+mv "$health.tmp" "$health"
+
 if [ -f "$HTML_DIR/config.json" ]; then
   echo "ns-edge: using the mounted $HTML_DIR/config.json; NS_UI_* identity variables ignored"
   exit 0

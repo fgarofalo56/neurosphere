@@ -37,8 +37,24 @@ resource namespace 'Microsoft.EventHub/namespaces@2024-01-01' = if (empty(reuse)
   }
 }
 
+// The reused namespace may live in another group; these are only read when reuse is set.
+var reuseParts = split(reuse, '/')
+var reuseSubscription = empty(reuse) ? subscription().subscriptionId : reuseParts[2]
+var reuseGroup = empty(reuse) ? resourceGroup().name : reuseParts[4]
+var reuseName = empty(reuse) ? name : last(reuseParts)
+
+resource reused 'Microsoft.EventHub/namespaces@2024-01-01' existing = if (!empty(reuse)) {
+  name: reuseName
+  scope: resourceGroup(reuseSubscription, reuseGroup)
+}
+
 @description('Resource id of the Event Hubs namespace in use (reused or newly created).')
 output id string = empty(reuse) ? namespace.id : reuse
 
 @description('True when this module created the namespace.')
 output created bool = empty(reuse)
+
+@description('Service bus endpoint (https URL with port) of the namespace in use. ARM evaluates only the branch the ternary takes, and the created branch is a same-template reference, so it waits for the namespace.')
+output serviceBusEndpoint string = empty(reuse)
+  ? namespace!.properties.serviceBusEndpoint
+  : reused!.properties.serviceBusEndpoint
