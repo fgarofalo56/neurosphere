@@ -1,0 +1,234 @@
+{
+  "approvals": [],
+  "command": "preflight",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "checks": [
+      {
+        "check": "provider:Microsoft.Web",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.DocumentDB",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.EventHub",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.Storage",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.KeyVault",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.Network",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.OperationalInsights",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.Insights",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "provider:Microsoft.Consumption",
+        "detail": "Registered",
+        "ok": true
+      },
+      {
+        "check": "subnet-delegated",
+        "detail": "",
+        "ok": true
+      },
+      {
+        "check": "subnet-empty",
+        "detail": "links=0 ips=0",
+        "ok": true
+      },
+      {
+        "check": "subnet-no-route-table",
+        "detail": "",
+        "ok": true
+      },
+      {
+        "check": "subnet-default-outbound",
+        "detail": "",
+        "ok": true
+      },
+      {
+        "check": "nsg-outbound-internet",
+        "detail": "",
+        "ok": true
+      },
+      {
+        "check": "pe-subnet-present",
+        "detail": "",
+        "ok": true
+      },
+      {
+        "check": "zone:privatelink.documents.azure.com",
+        "detail": "present",
+        "ok": true
+      },
+      {
+        "check": "zone:privatelink.servicebus.windows.net",
+        "detail": "present",
+        "ok": true
+      },
+      {
+        "check": "zone:privatelink.blob.core.windows.net",
+        "detail": "present",
+        "ok": true
+      },
+      {
+        "check": "zone:privatelink.azurewebsites.net",
+        "detail": "present",
+        "ok": true
+      },
+      {
+        "check": "zone:privatelink.vaultcore.azure.net",
+        "detail": "present",
+        "ok": true
+      },
+      {
+        "check": "foundry-deployment",
+        "detail": "",
+        "ok": true
+      }
+    ]
+  },
+  "errors": [],
+  "finished_utc": "2026-10-27T02:35:37Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "PASS",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-27T02:34:53Z",
+  "steps": [
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.Web"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.DocumentDB"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.EventHub"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.Storage"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.KeyVault"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.Network"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.OperationalInsights"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.Insights"
+    },
+    {
+      "detail": "Registered",
+      "status": "ok",
+      "step": "preflight:provider:Microsoft.Consumption"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:subnet-delegated"
+    },
+    {
+      "detail": "links=0 ips=0",
+      "status": "ok",
+      "step": "preflight:subnet-empty"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:subnet-no-route-table"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:subnet-default-outbound"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:nsg-outbound-internet"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:pe-subnet-present"
+    },
+    {
+      "detail": "present",
+      "status": "ok",
+      "step": "preflight:zone:privatelink.documents.azure.com"
+    },
+    {
+      "detail": "present",
+      "status": "ok",
+      "step": "preflight:zone:privatelink.servicebus.windows.net"
+    },
+    {
+      "detail": "present",
+      "status": "ok",
+      "step": "preflight:zone:privatelink.blob.core.windows.net"
+    },
+    {
+      "detail": "present",
+      "status": "ok",
+      "step": "preflight:zone:privatelink.azurewebsites.net"
+    },
+    {
+      "detail": "present",
+      "status": "ok",
+      "step": "preflight:zone:privatelink.vaultcore.azure.net"
+    },
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "preflight:foundry-deployment"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}

@@ -5,7 +5,7 @@ This directory holds evidence for `docs/deploy/hosted-demo.md`. Files are genera
 live run. Nothing here is hand-written except this index. The repo is public: the scripts redact
 subscription ids and run the secret scrubber before writing.
 
-**No live step has run. Every step S1-S10 is OPEN.** A step moves out of OPEN only when its
+**Live steps run so far: S1 (read-only preflight), S2 (plan) and S8 (release). Every other step is OPEN.** A step moves out of OPEN only when its
 evidence file is committed. Provider-specific live results, region availability and authorization
 are separate gates and none is claimed here.
 
@@ -14,9 +14,9 @@ to those subcommands.
 
 | Step | What | Expected evidence | Status |
 |---|---|---|---|
-| S1 | preflight (read-only) | `<date>-preflight` | **OPEN** |
-| S2 | plan (create tagged RG, what-if, plan hash) | `<date>-plan` | **OPEN** |
-| S3 | deploy (billable plus hub-subnet, hub-pe, hub-dns, budget) | `<date>-deploy` | **OPEN** |
+| S1 | preflight (read-only) | `2026-10-27-preflight` | **DONE** 2026-10-27 (21/21 checks ok: 9 providers, `snet-functions` delegated/empty/no route table/default outbound, NSG outbound Internet, PE subnet, 5 hub zones, Foundry deployment; exit 0) |
+| S2 | plan (create tagged RG, what-if, plan hash) | `2026-10-27-plan` | **DONE** 2026-10-27 (`rg-neurosphere-demo` created by the plan; what-if 121 changes: 59 Create, all in the demo RG, plus 62 Unsupported, which are role assignments named from not-yet-existing managed identities via `reference()`; plan sha256 `25ac6ba2…bbeb7`; exit 0) |
+| S3 | deploy (billable plus hub-subnet, hub-pe, hub-dns, budget) | `2026-10-27-deploy` | **FAILED** 2026-10-27 (exit 1, `DeploymentFailed` on `hosted-demo`; all 17 nested module deployments Succeeded and every planned resource exists, including the ARM role assignments; the top-level `hosted-demo` failed with `ResourceNotFound` on the out-of-template `reference()` calls behind the `cosmosEndpoint` and `eventHubsFqdn` outputs (`infra/demo/main.bicep` `existing` declarations), so the script's post-deploy steps (ownership register, registration file, pseudonym key, site post-checks) did not run; evidence error text truncated at 300 chars) |
 | S4 | grant-model-access (Foundry role) | `<date>-grant` (script name: `grant-model-access`) | **OPEN** |
 | S5 | entra-redirect and user/app-role assignment | `<date>-entra` (script name: `entra-redirect`) | **OPEN** |
 | S6 | seed-access --grant | `<date>-seed-access` | **OPEN** |
