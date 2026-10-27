@@ -49,9 +49,9 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | colorama | 0.4.6 | BSD | dev-only | 0.x: minor releases may break; no support window recorded |
 | cryptography | 50.0.2 | Apache-2.0 OR BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
-| datamodel-code-generator | 0.83.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| datamodel-code-generator | 0.86.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.143.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.149.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | filelock | 4.2.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -61,7 +61,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | httpx | 0.28.1 | BSD-3-Clause | runtime | 0.x: minor releases may break; no support window recorded |
 | httpx2 | 2.16.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | httpx2-jsfetch | 1.0 | BSD-3-Clause | runtime | PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved 2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22) |
-| hypothesis | 6.170.0 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
+| hypothesis | 6.170.8 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -129,7 +129,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | pycparser | 3.11 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | pydantic | 2.14.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pydantic-core | 2.50.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic-settings | 2.15.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic-settings | 2.16.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pygments | 2.21.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | pyjwt | 2.15.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pyparsing | 3.3.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -147,7 +147,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | respx | 0.23.1 | BSD-3-Clause | dev-only | 0.x: minor releases may break; no support window recorded |
 | rich | 15.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | rpds-py | 2026.9.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| ruff | 0.16.10 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| ruff | 0.17.1 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | sortedcontainers | 2.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | sse-starlette | 3.5.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | starlette | 1.7.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
