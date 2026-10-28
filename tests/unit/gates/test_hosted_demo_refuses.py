@@ -675,6 +675,13 @@ def test_generated_params_match_the_declared_contract(env: Env) -> None:
     assert env.fake.params_seen["parameters"]["budgetContactEmails"]["value"] == [
         "ops@example.invalid"
     ]
+    # PRP-32 item 12: the copilot stays disabled until the decision 5 capability row exists.
+    assert env.fake.params_seen["parameters"]["copilotMode"]["value"] == "disabled"
+
+
+def test_copilot_mode_flag_reaches_the_params(env: Env) -> None:
+    assert env.run("plan", "--copilot-mode", "approved_endpoint") == 0
+    assert env.fake.params_seen["parameters"]["copilotMode"]["value"] == "approved_endpoint"
 
 
 @pytest.mark.skipif(not TEMPLATE.exists(), reason="infra/demo/main.bicep not landed yet (item 3)")

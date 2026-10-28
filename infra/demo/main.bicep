@@ -64,6 +64,14 @@ param copilotEndpoint string
 @description('Model deployment name on the copilot endpoint.')
 param copilotDeployment string = 'mini'
 
+@description('Copilot mode. Stays disabled until a dated capability row for the region and model exists (PRP-32 decision 5); approved_endpoint without that row fails the copilot builder and blocks readiness.')
+@allowed([
+  'disabled'
+  'approved_endpoint'
+  'foundry_agent'
+])
+param copilotMode string = 'disabled'
+
 @description('Monthly budget amount for the resource group, in the billing currency.')
 @minValue(1)
 param budgetAmount int = 200
@@ -213,7 +221,7 @@ var apiSettings = {
   NS_AUTH_AUDIENCES: entraClientId
   NS_INGEST_EVENTHUBS_NAMESPACE: eventHubsName
   NS_INGEST_EVENTHUB_NAME: eventHubName
-  NS_COPILOT_MODE: 'approved_endpoint'
+  NS_COPILOT_MODE: copilotMode
   NS_COPILOT_ENDPOINT: copilotEndpoint
   NS_COPILOT_DEPLOYMENT: copilotDeployment
   NS_COPILOT_API_VERSION: '2024-10-21'
@@ -248,6 +256,17 @@ var frontendSettings = {
   NS_UI_CLIENT_ID: entraClientId
   NS_UI_API_SCOPE: apiScope
   NS_UI_API_UPSTREAM: apiUpstream
+}
+
+// /readyz probes (neurosphere_api/health/probes.py) default to the local emulators on localhost,
+// which always fail in Azure and keep the API out of readiness. Point them at the real private
+// hosts, read from the module outputs so the template stays cloud-agnostic. Cosmos answers an
+// unauthenticated GET with 401 (< 500, reachable); Event Hubs on AMQPS. Only the second site pass
+// carries them (it replaces the bootstrap pass's settings), so the bootstrap ordering is unchanged.
+var apiProbeSettings = {
+  NS_PROBE_COSMOS_URL: cosmos.outputs.documentEndpoint
+  NS_PROBE_EVENTHUBS_HOSTPORT: '${replace(replace(replace(eventHubs.outputs.serviceBusEndpoint, 'https://', ''), ':443', ''), '/', '')}:5671'
+  NS_PROBE_BLOB_HOSTPORT: '${storageName}.blob.${environment().suffixes.storage}:443'
 }
 
 module appServiceBootstrap '../appservice/main.bicep' = {
@@ -292,7 +311,7 @@ module appService '../appservice/main.bicep' = {
     capacity: 1
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
-    apiAppSettings: apiSettings
+    apiAppSettings: union(apiSettings, apiProbeSettings)
     workersAppSettings: union(workersBaseSettings, {
       NS_WORKER_OBJECT_ID: appServiceBootstrap.outputs.workersPrincipalId
     })

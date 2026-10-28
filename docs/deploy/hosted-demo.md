@@ -375,8 +375,10 @@ MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py
 What it checks: the frontend `/` is 200; `/config.json` is 200 with `no-store`, the expected keys,
 non-zero ids and `apiBaseUrl` equal to `/`; an unauthenticated `GET /api/v1/me/domains` through the
 frontend is 401 (the proxy reaches the API and auth is enforced); the API's own public hostname is
-refused; all three sites are `Running`; the `HealthCheckStatus` metric is healthy. Evidence:
-`<date>-smoke`.
+refused; all three sites are `Running`; the `HealthCheckStatus` metric is healthy. The metric is read
+at the 5-minute grain (`PT5M`) over the last hour, because Azure Monitor does not offer a finer grain
+for it. If `az monitor metrics list` itself fails, the check reports the first line of the az error
+(scrubbed) rather than "no datapoints". Evidence: `<date>-smoke`.
 
 Then the manual browser run, which needs your sign-in:
 
@@ -483,7 +485,15 @@ month, run `status`, decide whether the demo is still wanted, and if so extend t
   hosted image lacks, so those records are written by the seeder instead.
 - Copilot shows disabled. Expected until a dated Commercial `centralus` capability row exists for the
   chosen model (decision 5) and S4 ran. `NS_COPILOT_MODEL_FEATURE` and `NS_COPILOT_SKU` are set from
-  the chosen model but are unverified until a live answer proves them.
+  the chosen model but are unverified until a live answer proves them. The template parameter
+  `copilotMode` defaults to `disabled` (`NS_COPILOT_MODE`). With `approved_endpoint` and no matching
+  capability row the copilot builder fails and blocks `/readyz`. `deploy` passes every template
+  parameter from its own flags (not from `main.bicepparam`), so once the decision 5 row exists the
+  operator re-runs `plan` and `deploy` with `--copilot-mode approved_endpoint`.
+- The API's `/readyz` probes (`NS_PROBE_COSMOS_URL`, `NS_PROBE_EVENTHUBS_HOSTPORT`,
+  `NS_PROBE_BLOB_HOSTPORT`) default to the local emulators on `localhost`. The template sets them
+  to the deployment's private Cosmos, Event Hubs (AMQPS 5671) and blob hosts from the module
+  outputs. Without them `/readyz` stays 503 and the HealthCheckStatus metric reads 0.
 - Log Analytics ingestion and query are public (no private link scope). This is deliberate so
   diagnostic settings work; the workspace holds site logs only.
 - A short workers restart during deploy is expected. The app-service module is deployed twice (the

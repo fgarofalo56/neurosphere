@@ -9,6 +9,7 @@ token or a header value other than ``Cache-Control``; results carry statuses and
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -21,7 +22,10 @@ REQUEST_TIMEOUT_SECONDS = 20.0
 CONFIG_KEYS = ("cloud", "tenantId", "clientId", "apiBaseUrl", "apiScope")
 # HealthCheckStatus is reported as a percentage of healthy instances; anything below this is not.
 HEALTHY_MIN = 99.0
-METRIC_WINDOW = "30m"
+# Azure Monitor accepts only 5 minute, 1 hour and 1 day grains for HealthCheckStatus. The offset
+# uses az's ``##d##h`` format.
+METRIC_INTERVAL = "PT5M"
+METRIC_WINDOW = "1h"
 
 
 class AzResult(NamedTuple):
@@ -185,6 +189,18 @@ def _latest_average(metrics: object) -> float | None:
     return latest
 
 
+_GUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+_URL_OR_ID = re.compile(r"https?://\S+|/subscriptions/\S+")
+
+
+def _az_error_line(stderr: str) -> str:
+    """First non-empty line of an az error, with ids and URLs removed and length bounded."""
+    first = next((ln.strip() for ln in stderr.splitlines() if ln.strip()), "no error text")
+    first = _URL_OR_ID.sub("<redacted>", first)
+    first = _GUID.sub("<guid>", first)
+    return first[:200]
+
+
 def _json(result: AzResult) -> object | None:
     if result.rc != 0:
         return None
@@ -223,28 +239,33 @@ def _check_site(az_runner: AzRunner, site: SiteTarget, out: SmokeResult) -> None
     if not isinstance(resource_id, str) or not resource_id:
         out._add(health_name, False, "site has no resource id")
         return
-    metrics = _json(
-        az_runner(
-            [
-                "monitor",
-                "metrics",
-                "list",
-                "--resource",
-                resource_id,
-                "--metric",
-                "HealthCheckStatus",
-                "--interval",
-                "PT1M",
-                "--aggregation",
-                "Average",
-                "--offset",
-                METRIC_WINDOW,
-                "-o",
-                "json",
-            ]
-        )
+    metrics_result = az_runner(
+        [
+            "monitor",
+            "metrics",
+            "list",
+            "--resource",
+            resource_id,
+            "--metrics",
+            "HealthCheckStatus",
+            "--interval",
+            METRIC_INTERVAL,
+            "--aggregation",
+            "Average",
+            "--offset",
+            METRIC_WINDOW,
+            "-o",
+            "json",
+        ]
     )
-    value = _latest_average(metrics)
+    if metrics_result.rc != 0:
+        out._add(
+            health_name,
+            False,
+            f"az monitor metrics list failed: {_az_error_line(metrics_result.stderr)}",
+        )
+        return
+    value = _latest_average(_json(metrics_result))
     if value is None:
         out._add(health_name, False, "no HealthCheckStatus datapoints")
         return
