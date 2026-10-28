@@ -1,7 +1,9 @@
 ---
 name: prp-32-hosted-azure-environment
-status: active
+status: shipped
 started: 2026-10-26
+shipped: 2026-10-28
+pr: 135
 branch: prp-32-hosted-azure
 review: required
 priority: P0
@@ -585,15 +587,44 @@ Gate interplay:
 | 6 post-deploy-smoke (+ D2/D3 nginx) | merged | worktree-agent-a44d0d7e479f50df3 | sonnet | 34ef253: smoke 19 passed, edge vitest 26, hosted --list 1 test, default list excludes hosted; review APPROVED; merge 45d445f; on integration 369+26 passed | 2026-10-26 |
 | 7 release-candidate-and-image-pin | merged | worktree-agent-acfa8c0d4b669b038 | sonnet | files in PR #135 (66f18d9); S8: tag v0.1.0-rc.2 on 66f18d9 operator-approved, release run 40417878914 success, api/workers/frontend cosign verify + verify-attestation exit 0, digests in docs/evidence/PRP-32/release-v0.1.0-rc.2.md; draft release unpublished | 2026-10-26 |
 | 8 runbook-cost-and-gates-register | merged | worktree-agent-a99547580be06eca4 | sonnet | 3520fde: runbook + evidence index (S1-S10 OPEN) + G01/G07/G12 dated notes (no status change); runbook test 7 passed; gitleaks docs clean; Mermaid source only (not rendered); covered by final PRP review APPROVED; merge 9879b18 | 2026-10-26 |
-| 9 live-deploy-seed-and-smoke (operator) | in-progress | | operator | S1 preflight PASS 21/21, exit 0, docs/evidence/PRP-32/2026-10-27-preflight.{json,md} (scrubbed, no GUIDs); S2 plan PASS, RG created, what-if 59 Create + 62 Unsupported (reference()-named role assignments), all in demo RG, 5 PEs (runbook count; PRP text said 4 before Key Vault PE), sha256 25ac6ba2...bbeb7, 2026-10-27-plan.{json,md}; S3 deploy FAILED exit 1 (all 17 nested modules Succeeded, every planned resource exists; top-level hosted-demo ResourceNotFound on main.bicep `existing` cosmosAccount/eventHubsNamespace output references; post-deploy steps register/registration/pseudonym-key/site post-checks did not run; KV purge protection 90d rules out teardown+redeploy; needs plan delta; evidence error truncated at 300 chars); S3 resume (after item 10) 2026-10-27-115918-deploy: deployment Succeeded, register 21 created/7 shared/0 not ours locally, site post-checks ok; pseudonym key OPEN (KV ForbiddenByConnection, not on VPN), Cosmos register mirror OPEN (no operator Cosmos data role; S6 re-saves); S3 third run 2026-10-27-233226-deploy on VPN (run by Claude on operator instruction): deployment Succeeded, pseudonym key created, 21 created/7 shared/1 not ours (Defender for Storage auto-created Event Grid system topic; untouched; S10 teardown follow-up), exit 1 only for the Cosmos mirror -> S3 DONE; S4 DONE 2026-10-27-grant-model-access (operator-run, foundry-role, OpenAI User verified on aifndry-loom-centralus, registered as ours); S5 redirect DONE 2026-10-27-entra-redirect (entra-app, run by Claude on operator approval, nsdemo-web URI added, 2 prior kept, Graph-verified), user/app-role assignment OPEN (operator); S6 PARTIAL (blob/KV grant bug -> item 11), S7 DONE 2026-10-28-seed (second run PASS after KV reference refresh+restart; operator access revoked, verified 0); S8 done (item 7); S9 PARTIAL 2026-10-28-smoke (8/11; the 3 health failures are a smoke query bug, but the metric shows nsdemo-api /readyz 0% healthy, cause open: LAW shows no App Service logs, API PE unreachable from VPN); S9 manual DONE (operator Entra sign-in, hosted-smoke.spec 1/1 passed: shell, synthetic domains, overview, map, copilot, axe); 403-on-hidden-route OPEN (no viewer user, not in spec); S10 OPEN | 2026-10-27 |
+| 9 live-deploy-seed-and-smoke (operator) | merged | main (evidence via #140, #141, #142) | operator | S1 preflight PASS 21/21, exit 0, docs/evidence/PRP-32/2026-10-27-preflight.{json,md} (scrubbed, no GUIDs); S2 plan PASS, RG created, what-if 59 Create + 62 Unsupported (reference()-named role assignments), all in demo RG, 5 PEs (runbook count; PRP text said 4 before Key Vault PE), sha256 25ac6ba2...bbeb7, 2026-10-27-plan.{json,md}; S3 deploy FAILED exit 1 (all 17 nested modules Succeeded, every planned resource exists; top-level hosted-demo ResourceNotFound on main.bicep `existing` cosmosAccount/eventHubsNamespace output references; post-deploy steps register/registration/pseudonym-key/site post-checks did not run; KV purge protection 90d rules out teardown+redeploy; needs plan delta; evidence error truncated at 300 chars); S3 resume (after item 10) 2026-10-27-115918-deploy: deployment Succeeded, register 21 created/7 shared/0 not ours locally, site post-checks ok; pseudonym key OPEN (KV ForbiddenByConnection, not on VPN), Cosmos register mirror OPEN (no operator Cosmos data role; S6 re-saves); S3 third run 2026-10-27-233226-deploy on VPN (run by Claude on operator instruction): deployment Succeeded, pseudonym key created, 21 created/7 shared/1 not ours (Defender for Storage auto-created Event Grid system topic; untouched; S10 teardown follow-up), exit 1 only for the Cosmos mirror -> S3 DONE; S4 DONE 2026-10-27-grant-model-access (operator-run, foundry-role, OpenAI User verified on aifndry-loom-centralus, registered as ours); S5 redirect DONE 2026-10-27-entra-redirect (entra-app, run by Claude on operator approval, nsdemo-web URI added, 2 prior kept, Graph-verified), user/app-role assignment OPEN (operator); S6 PARTIAL (blob/KV grant bug -> item 11), S7 DONE 2026-10-28-seed (second run PASS after KV reference refresh+restart; operator access revoked, verified 0); S8 done (item 7); S9 PARTIAL 2026-10-28-smoke (8/11; the 3 health failures are a smoke query bug, but the metric shows nsdemo-api /readyz 0% healthy, cause open: LAW shows no App Service logs, API PE unreachable from VPN); S9 manual DONE (operator Entra sign-in, hosted-smoke.spec 1/1 passed: shell, synthetic domains, overview, map, copilot, axe); S9 smoke re-run after item 12: 11/11 PASS (2026-10-28-080233-smoke, all sites HealthCheckStatus 100) -> S9 DONE; 403-on-hidden-route OPEN (no viewer user, not in spec); S10 OPEN (persistent by design; Defender topic blocks teardown); open items tracked in #144, probe defaults in other profiles #143 | 2026-10-27 |
 | 10 s3-recovery-fix (plan delta) | merged | prp-32-item10-s3-recovery | sonnet | 4c18d64 template + f5fb274 resume/error-limit/runbook; bicep builds+lint clean, 471 passed, ruff/pyright clean, refuses exit 2, gitleaks clean, Snyk no new issues; review CHANGES REQUIRED (NIC bare-prefix match could claim a sibling `<pe>2.nic.` NIC) -> orchestrator rework 49bd037 (`<pe>.nic.` exact prefix, real-shape fixture, sibling test verified failing on old rule), 472 passed; PR #140 CI 24/24 green, merge d799314 | 2026-10-27 |
 | 11 live-run-fixes (plan delta) | merged | prp-32-item11-live-run-fixes | sonnet | 4a1b1db fixes+tests, 86a8921 runbook; 478 passed (6 new, 5 fail on old code), ruff/format/repo-wide pyright clean, revoke refuses exit 2, gitleaks clean, Snyk no new issues; `_hosted_demo_common.py` touched for `RegisterBook.remove` (allowed by the item); review APPROVED (follow-ups: Cosmos backend row delete, re-verify api-versions before next live run); PR #141 CI 24/24 green, merge c726b42 | 2026-10-28 |
-| 12 s9-readiness-fixes (plan delta) | verifying | prp-32-item12-s9-readiness-fixes | sonnet | 64d0a46 copilotMode param (default disabled) + smoke PT5M/--metrics/scrubbed az error + runbook; orchestrator ab0f957 `--copilot-mode` flag + GENERATED_PARAMS (contract test; touched hosted_demo.py, _hosted_demo_common.py, test_hosted_demo_refuses.py beyond the owned list); 481 passed, smoke tests fail on old code, ruff/repo-wide pyright clean, bicep build/build-params/lint clean, Snyk no new issues; review APPROVED; live interim NS_COPILOT_MODE=disabled on nsdemo-api 04:13Z; probes fix 24fceb6 (NS_PROBE_* from module outputs, after a direct /readyz showed localhost-default probes failing; live interim NS_PROBE_* 04:54Z -> /readyz 200 ready; probe test fails on old template; 481 passed, lint clean; orchestrator change after review, not re-reviewed); PR #142 | 2026-10-28 |
+| 12 s9-readiness-fixes (plan delta) | merged | prp-32-item12-s9-readiness-fixes | sonnet | 64d0a46 copilotMode param (default disabled) + smoke PT5M/--metrics/scrubbed az error + runbook; orchestrator ab0f957 `--copilot-mode` flag + GENERATED_PARAMS (contract test; touched hosted_demo.py, _hosted_demo_common.py, test_hosted_demo_refuses.py beyond the owned list); 481 passed, smoke tests fail on old code, ruff/repo-wide pyright clean, bicep build/build-params/lint clean, Snyk no new issues; review APPROVED; live interim NS_COPILOT_MODE=disabled on nsdemo-api 04:13Z; probes fix 24fceb6 (NS_PROBE_* from module outputs, after a direct /readyz showed localhost-default probes failing; live interim NS_PROBE_* 04:54Z -> /readyz 200 ready; probe test fails on old template; 481 passed, lint clean; orchestrator change after review, Haiku verify OK); PR #142 CI 24/24 green, merge d4f6503; S9 smoke re-run 11/11 PASS | 2026-10-28 |
 
 ## Completion note (filled at ship)
-- Date:
+- Date: 2026-10-28
 - Merged commits:
-- Live steps run (S1-S10) and evidence paths; steps not run reported OPEN:
+  - PR #135 (items 1-8), merge 66f18d9
+  - PR #139 (S8 release evidence), merge 211090f
+  - PR #140 (item 10), merge d799314
+  - PR #141 (item 11), merge c726b42
+  - PR #142 (item 12), merge d4f6503
+- Live steps run (S1-S10) and evidence paths; steps not run reported OPEN. Evidence index: `docs/evidence/PRP-32/README.md`.
+  - **S1** preflight: DONE (21/21).
+  - **S2** plan: DONE, re-planned after item 10.
+  - **S3** deploy: DONE on the third run.
+    - Run 1 failed at top-level outputs (item 10).
+    - Run 2 (`--resume-failed`) left the pseudonym key unwritten because the operator was not on the VPN.
+    - Run 3 succeeded: register 21 created, 7 shared, 1 not ours (Defender topic).
+  - **S4** Foundry role: DONE.
+  - **S5** SPA redirect: DONE. The operator already held the `admin` app role.
+  - **S6** seed access: PARTIAL. The blob/KV grants hit the role-id bug, fixed in item 11 and not yet re-run live.
+  - **S7** seed: DONE (PASS; operator access revoked and verified 0).
+  - **S8** release: DONE (`v0.1.0-rc.2`).
+  - **S9** smoke: DONE. Automated 11/11 after item 12; manual hosted browser spec 1/1 after the operator's Entra sign-in.
+  - **S10** teardown: OPEN, not run. The environment is persistent by design, and the Defender for Storage Event Grid topic would block teardown (#144).
+  - OPEN: the 403-on-hidden-route check (no viewer-only user; not in the spec).
 - Deviations from blueprint and why:
-- Descoped items:
+  - Three plan deltas came out of the live run, each with one independent review:
+    - Item 10: top-level `existing` outputs failed with ResourceNotFound; added `deploy --resume-failed`; full az error kept in evidence.
+    - Item 11: seed role ids at container scope; Key Vault reference refresh after secret creation; register-bound revoke.
+    - Item 12: copilot mode defaults to `disabled` until decision 5; `/readyz` probes pointed at the private hosts instead of localhost; smoke HealthCheckStatus uses a 5-minute grain.
+  - 5 private endpoints rather than the 4 NICs in the blueprint text: the Key Vault PE was added later, and the runbook was already correct.
+  - The operator explicitly delegated some live steps to Claude, recorded per step in the evidence: S1, S3 run 3, S5, the S6/S7 re-run, and S9. The blueprint said agents never run them.
+  - Interim live settings ahead of item 12: `NS_COPILOT_MODE=disabled` and `NS_PROBE_*` on the API, plus a Key Vault reference refresh and restart. The template now produces the same values.
+- Descoped items: none. Copilot answers stay disabled with a reason until decision 5, as the blueprint allows.
 - Follow-ups:
+  - #143: `/readyz` probe defaults in the App Service and Helm profiles.
+  - #144: live-run follow-ups (teardown vs Defender topic, App Service logs missing from Log Analytics, Cosmos register mirror deletes, 403 check, S6 live re-run, decision 5, drift, cost).
+  - #136: review hardening.

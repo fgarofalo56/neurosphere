@@ -199,6 +199,18 @@ All notable changes to this project are documented here. The format follows
   authorizes exactly like the real API. Accessibility: 257 axe checks across styles, modes,
   packs and routes with zero findings; 26 Linux visual baselines compared in the pinned
   Playwright image; CI e2e sharded across two jobs. G09 stays OPEN.
+- PRP-32 hosted Azure environment shipped (2026-10-28). It is a persistent Commercial demo in
+  the operator's subscription: real Entra sign-in, the real API and workers, private Cosmos,
+  Event Hubs, blob and Key Vault through hub private endpoints, and seeded synthetic data. The
+  live run produced three fixes:
+  - `deploy --resume-failed` recovers ownership after a partial deploy.
+  - Seed grants use full role-definition ids; Key Vault references are refreshed after the
+    pseudonym secret is created; revoke is register-bound.
+  - The copilot defaults to `disabled` until a capability row exists, and the API `/readyz`
+    probes target the private hosts instead of localhost.
+
+  Smoke 11/11 and the hosted browser spec 1/1. Teardown and the 403-on-hidden-route check stay
+  OPEN (#144). No FedRAMP, ATO or SLA claim is made about the environment.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.

@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-32-hosted-azure-environment](active/PRP-32-hosted-azure-environment.md) | P0 | 8/9 (88%) | todo 1, merged 8 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -25,6 +23,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-32-hosted-azure-environment](shipped/PRP-32-hosted-azure-environment.md) | 2026-10-28 | #135 |
 | [prp-30-visual-redesign-and-switchable-ui-styles](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) | 2026-10-26 | #134 |
 | [prp-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |
 | [prp-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
