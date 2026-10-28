@@ -1,0 +1,34 @@
+{
+  "approvals": [
+    {
+      "operator": "fgarofalo56",
+      "token": "foundry-role",
+      "utc": "2026-10-27T23:42:41Z"
+    }
+  ],
+  "command": "grant-model-access",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {},
+  "errors": [
+    "Cosmos register write failed (ForbiddenError)"
+  ],
+  "finished_utc": "2026-10-27T23:42:53Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-27T23:42:41Z",
+  "steps": [
+    {
+      "detail": "Cognitive Services OpenAI User assigned",
+      "status": "ok",
+      "step": "foundry-role"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}
