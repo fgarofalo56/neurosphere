@@ -64,6 +64,14 @@ param copilotEndpoint string
 @description('Model deployment name on the copilot endpoint.')
 param copilotDeployment string = 'mini'
 
+@description('Copilot mode. Stays disabled until a dated capability row for the region and model exists (PRP-32 decision 5); approved_endpoint without that row fails the copilot builder and blocks readiness.')
+@allowed([
+  'disabled'
+  'approved_endpoint'
+  'foundry_agent'
+])
+param copilotMode string = 'disabled'
+
 @description('Monthly budget amount for the resource group, in the billing currency.')
 @minValue(1)
 param budgetAmount int = 200
@@ -213,7 +221,7 @@ var apiSettings = {
   NS_AUTH_AUDIENCES: entraClientId
   NS_INGEST_EVENTHUBS_NAMESPACE: eventHubsName
   NS_INGEST_EVENTHUB_NAME: eventHubName
-  NS_COPILOT_MODE: 'approved_endpoint'
+  NS_COPILOT_MODE: copilotMode
   NS_COPILOT_ENDPOINT: copilotEndpoint
   NS_COPILOT_DEPLOYMENT: copilotDeployment
   NS_COPILOT_API_VERSION: '2024-10-21'

@@ -9,6 +9,7 @@ param appServiceSkuName = 'B2'
 param deployKeyVault = true
 param imageTag = '0.1.0-rc.2'
 param copilotDeployment = 'mini'
+param copilotMode = 'disabled'
 param budgetAmount = 200
 
 param integrationSubnetId = 'REPLACED-AT-DEPLOY'

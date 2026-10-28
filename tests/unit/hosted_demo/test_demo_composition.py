@@ -37,6 +37,7 @@ PARAMETERS = [
     "entraClientId",
     "copilotEndpoint",
     "copilotDeployment",
+    "copilotMode",
     "budgetAmount",
     "budgetStartDate",
     "budgetContactEmails",
@@ -166,6 +167,12 @@ def test_parameters_and_outputs_are_the_d9_contract(arm: dict[str, Any]) -> None
     assert arm["parameters"]["appServiceSkuName"]["defaultValue"] == "B2"
     assert arm["parameters"]["deployKeyVault"]["defaultValue"] is True
     assert arm["parameters"]["copilotDeployment"]["defaultValue"] == "mini"
+    assert arm["parameters"]["copilotMode"]["defaultValue"] == "disabled"
+    assert arm["parameters"]["copilotMode"]["allowedValues"] == [
+        "disabled",
+        "approved_endpoint",
+        "foundry_agent",
+    ]
     assert arm["parameters"]["budgetAmount"]["defaultValue"] == 200
     assert arm["parameters"]["imageRegistry"]["defaultValue"] == "ghcr.io/fgarofalo56/neurosphere"
     for name, spec in {**arm["parameters"], **arm["outputs"]}.items():
@@ -292,6 +299,7 @@ def test_app_settings_follow_the_wire_contract(arm: dict[str, Any]) -> None:
         "NS_COPILOT_DEPLOYMENT",
         "NS_COPILOT_API_VERSION",
     } <= api
+    assert variables["apiSettings"]["NS_COPILOT_MODE"] == "[parameters('copilotMode')]"
     assert variables["apiSettings"]["NS_AUTH_AUDIENCES"] == "[parameters('entraClientId')]"
     common = variables["commonSettings"]
     assert "'NS_ENV', 'prod'" in common

@@ -192,6 +192,40 @@ def test_az_failure_is_a_failed_check_not_an_exception() -> None:
     assert f"site-running:{SITES[0].name}" in _failed(result)
 
 
+def test_metric_call_uses_a_supported_grain_and_the_metrics_flag() -> None:
+    az = FakeAz()
+    _run(Edge(), az)
+    calls = [c for c in az.calls if c[:3] == ["monitor", "metrics", "list"]]
+    assert len(calls) == len(SITES)
+    for call in calls:
+        assert "--metrics" in call
+        assert "--metric" not in call
+        assert call[call.index("--metrics") + 1] == "HealthCheckStatus"
+        assert call[call.index("--interval") + 1] == "PT5M"
+        assert call[call.index("--offset") + 1] == "1h"
+
+
+def test_metric_az_error_is_reported_scrubbed_not_as_no_datapoints() -> None:
+    guid = "33333333-3333-4333-8333-333333333333"
+
+    def az(args: Sequence[str]) -> object:
+        if args[:2] == ["webapp", "show"]:
+            shown = {"state": "Running", "id": "/subscriptions/s/x"}
+            return smoke.AzResult(0, json.dumps(shown), "")
+        err = f"ERROR: (BadRequest) bad grain {guid} at https://management.example/x\nsecond line"
+        return smoke.AzResult(1, "", err)
+
+    result = _run(Edge(), az)  # type: ignore[arg-type]
+    health = [c for c in result.checks if c.name.startswith("site-health:")]
+    assert health and all(not c.passed for c in health)
+    for check in health:
+        assert "BadRequest" in check.detail
+        assert "no HealthCheckStatus datapoints" not in check.detail
+        assert "second line" not in check.detail
+        assert guid not in check.detail
+        assert "https://" not in check.detail
+
+
 def test_api_host_equal_to_frontend_host_is_rejected() -> None:
     result = smoke.run_smoke(
         frontend_url=FRONTEND,
