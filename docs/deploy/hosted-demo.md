@@ -487,8 +487,9 @@ month, run `status`, decide whether the demo is still wanted, and if so extend t
   chosen model (decision 5) and S4 ran. `NS_COPILOT_MODEL_FEATURE` and `NS_COPILOT_SKU` are set from
   the chosen model but are unverified until a live answer proves them. The template parameter
   `copilotMode` defaults to `disabled` (`NS_COPILOT_MODE`). With `approved_endpoint` and no matching
-  capability row the copilot builder fails and blocks `/readyz`. Once the decision 5 row exists, the
-  operator sets `copilotMode` to `approved_endpoint` and re-plans the deployment.
+  capability row the copilot builder fails and blocks `/readyz`. `deploy` passes every template
+  parameter from its own flags (not from `main.bicepparam`), so once the decision 5 row exists the
+  operator re-runs `plan` and `deploy` with `--copilot-mode approved_endpoint`.
 - Log Analytics ingestion and query are public (no private link scope). This is deliberate so
   diagnostic settings work; the workspace holds site logs only.
 - A short workers restart during deploy is expected. The app-service module is deployed twice (the

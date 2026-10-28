@@ -68,6 +68,7 @@ GENERATED_PARAMS: Final = (
     "entraClientId",
     "copilotEndpoint",
     "copilotDeployment",
+    "copilotMode",
     "budgetAmount",
     "budgetStartDate",
     "budgetContactEmails",

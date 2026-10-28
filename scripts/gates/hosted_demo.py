@@ -255,6 +255,13 @@ def build_parser() -> argparse.ArgumentParser:
             p.add_argument(flag, dest=dest, default=default, help=help_text)
         p.add_argument("--no-key-vault", action="store_true", help="deployKeyVault=false")
         p.add_argument(
+            "--copilot-mode",
+            dest="copilot_mode",
+            choices=("disabled", "approved_endpoint", "foundry_agent"),
+            default="disabled",
+            help="copilotMode; stays disabled until a dated capability row exists (decision 5)",
+        )
+        p.add_argument(
             "--foundry-account-id",
             default="",
             help="Foundry account ARM id (bound into the plan hash when given)",
@@ -436,6 +443,7 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
         "entraClientId": a.entra_client_id,
         "copilotEndpoint": a.copilot_endpoint,
         "copilotDeployment": a.copilot_deployment,
+        "copilotMode": a.copilot_mode,
         "budgetAmount": amount,
         "budgetStartDate": a.budget_start_date or cm.default_budget_start(),
         "budgetContactEmails": emails,
