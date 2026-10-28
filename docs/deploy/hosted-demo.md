@@ -490,6 +490,10 @@ month, run `status`, decide whether the demo is still wanted, and if so extend t
   capability row the copilot builder fails and blocks `/readyz`. `deploy` passes every template
   parameter from its own flags (not from `main.bicepparam`), so once the decision 5 row exists the
   operator re-runs `plan` and `deploy` with `--copilot-mode approved_endpoint`.
+- The API's `/readyz` probes (`NS_PROBE_COSMOS_URL`, `NS_PROBE_EVENTHUBS_HOSTPORT`,
+  `NS_PROBE_BLOB_HOSTPORT`) default to the local emulators on `localhost`. The template sets them
+  to the deployment's private Cosmos, Event Hubs (AMQPS 5671) and blob hosts from the module
+  outputs. Without them `/readyz` stays 503 and the HealthCheckStatus metric reads 0.
 - Log Analytics ingestion and query are public (no private link scope). This is deliberate so
   diagnostic settings work; the workspace holds site logs only.
 - A short workers restart during deploy is expected. The app-service module is deployed twice (the

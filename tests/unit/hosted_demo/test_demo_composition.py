@@ -300,6 +300,20 @@ def test_app_settings_follow_the_wire_contract(arm: dict[str, Any]) -> None:
         "NS_COPILOT_API_VERSION",
     } <= api
     assert variables["apiSettings"]["NS_COPILOT_MODE"] == "[parameters('copilotMode')]"
+    # PRP-32 item 12: unset probes fall back to localhost emulators and fail /readyz in Azure.
+    # The final (non-bootstrap) site pass carries them, read from the module outputs.
+    final = next(
+        d
+        for d in _by_type(arm, "Microsoft.Web/sites")
+        if not _is_bootstrap(d) and "apiAppSettings" in d["properties"]["parameters"]
+    )
+    api_settings = str(_param(final, "apiAppSettings"))
+    for key in ("NS_PROBE_COSMOS_URL", "NS_PROBE_EVENTHUBS_HOSTPORT", "NS_PROBE_BLOB_HOSTPORT"):
+        assert key in api_settings, key
+    assert "localhost" not in api_settings
+    assert "documentEndpoint" in api_settings
+    assert "serviceBusEndpoint" in api_settings
+    assert ":5671" in api_settings
     assert variables["apiSettings"]["NS_AUTH_AUDIENCES"] == "[parameters('entraClientId')]"
     common = variables["commonSettings"]
     assert "'NS_ENV', 'prod'" in common

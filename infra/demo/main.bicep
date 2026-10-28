@@ -258,6 +258,17 @@ var frontendSettings = {
   NS_UI_API_UPSTREAM: apiUpstream
 }
 
+// /readyz probes (neurosphere_api/health/probes.py) default to the local emulators on localhost,
+// which always fail in Azure and keep the API out of readiness. Point them at the real private
+// hosts, read from the module outputs so the template stays cloud-agnostic. Cosmos answers an
+// unauthenticated GET with 401 (< 500, reachable); Event Hubs on AMQPS. Only the second site pass
+// carries them (it replaces the bootstrap pass's settings), so the bootstrap ordering is unchanged.
+var apiProbeSettings = {
+  NS_PROBE_COSMOS_URL: cosmos.outputs.documentEndpoint
+  NS_PROBE_EVENTHUBS_HOSTPORT: '${replace(replace(replace(eventHubs.outputs.serviceBusEndpoint, 'https://', ''), ':443', ''), '/', '')}:5671'
+  NS_PROBE_BLOB_HOSTPORT: '${storageName}.blob.${environment().suffixes.storage}:443'
+}
+
 module appServiceBootstrap '../appservice/main.bicep' = {
   name: '${prefix}-appservice-bootstrap'
   params: {
@@ -300,7 +311,7 @@ module appService '../appservice/main.bicep' = {
     capacity: 1
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
-    apiAppSettings: apiSettings
+    apiAppSettings: union(apiSettings, apiProbeSettings)
     workersAppSettings: union(workersBaseSettings, {
       NS_WORKER_OBJECT_ID: appServiceBootstrap.outputs.workersPrincipalId
     })
