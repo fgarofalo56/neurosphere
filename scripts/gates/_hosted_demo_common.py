@@ -334,6 +334,14 @@ class RegisterBook:
             by_id[r.resource_id.lower()] = r
         self.rows = list(by_id.values())
 
+    def remove(self, resource_ids: Iterable[str]) -> int:
+        """Drop rows by resource id (case-insensitive); returns how many were dropped."""
+        gone = {i.lower() for i in resource_ids}
+        kept = [r for r in self.rows if r.resource_id.lower() not in gone]
+        dropped = len(self.rows) - len(kept)
+        self.rows = kept
+        return dropped
+
     def save(self) -> list[str]:
         """Write both copies; returns problems (a Cosmos failure is reported, never hidden)."""
         from neurosphere_core.deploy.register import RegisterExport

@@ -172,6 +172,12 @@ class FakeAz:
         self.foundry_deployments = ["mini"]
         self.params_seen: dict[str, Any] = {}
         self.cosmos_assignments: list[dict[str, str]] = []
+        self.rbac_live: list[str] = []  # role assignments created through the fake
+        self.ref_refreshes: list[str] = []
+        self.ref_statuses: dict[str, str] = {
+            "NS_AUTH_PSEUDONYM_KEY": "Resolved",
+            "NS_ARCHIVE_PSEUDONYM_KEY": "Resolved",
+        }
 
     @staticmethod
     def _site(public: str, image: str) -> dict[str, str]:
@@ -262,13 +268,21 @@ class FakeAz:
         if a[0] == "rest":
             return self._rest(a)
         if h3 == "role assignment list":
-            return ok(["/x/existing"] if self.role_present else [])
+            scope = _opt(a, "--scope")
+            live = [r for r in self.rbac_live if r.lower().startswith(scope.lower() + "/")]
+            return ok((["/x/existing"] if self.role_present else []) + live)
         if h3 == "role assignment create":
             if self.blank_assignment_id:
                 return ok({"id": ""})
             rid = f"{_opt(a, '--scope')}/providers/Microsoft.Authorization/roleAssignments/"
-            return ok({"id": rid + "dddddddd-0000-0000-0000-" + str(len(self.calls)).zfill(12)})
+            rid += "dddddddd-0000-0000-0000-" + str(len(self.calls)).zfill(12)
+            self.rbac_live.append(rid)
+            return ok({"id": rid})
         if h3 == "role assignment delete":
+            gone = _opt(a, "--ids")
+            self.rbac_live = [r for r in self.rbac_live if r != gone]
+            return ok()
+        if h2 == "webapp restart":
             return ok()
         if a[:5] == ["cosmosdb", "sql", "role", "assignment", "list"]:
             return ok(self.cosmos_assignments)
@@ -286,7 +300,10 @@ class FakeAz:
             self.cosmos_assignments.append(made)
             return ok({**made, "id": ""} if self.blank_assignment_id else made)
         if a[:5] == ["cosmosdb", "sql", "role", "assignment", "delete"]:
-            self.cosmos_assignments.clear()
+            gone = _opt(a, "--role-assignment-id")
+            self.cosmos_assignments = [
+                r for r in self.cosmos_assignments if not r["id"].endswith("/" + gone)
+            ]
             return ok()
         if h3 in ("webapp vnet-integration remove", "network private-endpoint delete"):
             return ok()
@@ -302,6 +319,12 @@ class FakeAz:
             if self.budget_list_rc:
                 return R(self.budget_list_rc, "", "forbidden")
             return R(0, json.dumps(self.budgets), "")
+        if "/config/configreferences/appsettings" in url:
+            if method == "post":
+                self.ref_refreshes.append(url)
+                return R(0, "", "")
+            value = [{"name": n, "properties": {"status": s}} for n, s in self.ref_statuses.items()]
+            return R(0, json.dumps({"value": value}), "")
         if method == "get":
             return R(0, json.dumps({"id": APP_OBJECT, "spa": {"redirectUris": self.app_spa}}), "")
         if method == "patch":
