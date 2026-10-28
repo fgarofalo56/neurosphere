@@ -1,0 +1,46 @@
+{
+  "approvals": [],
+  "command": "seed-access",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {},
+  "errors": [],
+  "finished_utc": "2026-10-28T00:09:24Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "PASS",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-28T00:08:37Z",
+  "steps": [
+    {
+      "detail": "",
+      "status": "ok",
+      "step": "revoke:cosmos"
+    },
+    {
+      "detail": "role assignment removed",
+      "status": "ok",
+      "step": "revoke:rbac"
+    },
+    {
+      "detail": "role assignment removed",
+      "status": "ok",
+      "step": "revoke:rbac"
+    },
+    {
+      "detail": "role assignment removed",
+      "status": "ok",
+      "step": "revoke:rbac"
+    },
+    {
+      "detail": "revoked",
+      "status": "ok",
+      "step": "seed-access"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}

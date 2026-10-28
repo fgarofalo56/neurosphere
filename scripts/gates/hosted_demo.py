@@ -955,15 +955,18 @@ def cmd_status(ctx: Ctx) -> None:
 # --------------------------------------------------------------------------- deploy
 
 
-def ensure_pseudonym_secret(ctx: Ctx, vault: str, secret_name: str) -> None:
-    """D4: create the secret once, from a local value, via a temp file. Never overwrites."""
+def ensure_pseudonym_secret(ctx: Ctx, vault: str, secret_name: str) -> bool:
+    """D4: create the secret once, from a local value, via a temp file. Never overwrites.
+
+    Returns True only when this call created the secret (the sites then hold stale references).
+    """
     names = ctx.az(
         "keyvault", "secret", "list", "--vault-name", vault, "--query", "[].name", "-o", "json"
     )
     if secret_name in (names or []):
         ctx.step("pseudonym-key", "ok", "already present; left untouched")
         ctx.details["pseudonym_value_stored"] = "existing"
-        return
+        return False
     path = cm.write_secret_file(ctx.work_dir, cm.new_pseudonym_value())
     try:
         ctx.az(
@@ -986,6 +989,73 @@ def ensure_pseudonym_secret(ctx: Ctx, vault: str, secret_name: str) -> None:
         path.unlink(missing_ok=True)
     ctx.step("pseudonym-key", "ok", "created from a locally generated value")
     ctx.details["pseudonym_value_stored"] = "created"
+    return True
+
+
+_REFS_API_REFRESH = "2022-03-01"
+_REFS_API_READ = "2023-12-01"
+
+
+def refresh_key_vault_references(ctx: Ctx, out: dict[str, Any]) -> None:
+    """Force App Service to re-resolve Key Vault references after the secret was created.
+
+    References are cached for 24 h (a cached SecretNotFound survives a plain restart), so POST the
+    refresh, restart, then re-read each reference. Only setting names and statuses are logged.
+    """
+    for key in ("apiSiteName", "workersSiteName"):
+        name = str(out.get(key) or "")
+        if not name:
+            continue
+        site_id = f"{ctx.rg_id}/providers/Microsoft.Web/sites/{name}"
+        refs = f"{_ARM_API}{site_id}/config/configreferences/appsettings"
+        label = f"kv-refs:{key.removesuffix('SiteName')}"
+        try:
+            ctx.az(
+                "rest",
+                "--method",
+                "post",
+                "--url",
+                f"{refs}/refresh?api-version={_REFS_API_REFRESH}",
+                "--subscription",
+                ctx.sub,
+                parse=False,
+            )
+            ctx.az(
+                "webapp",
+                "restart",
+                "--resource-group",
+                ctx.rg,
+                "--name",
+                name,
+                "--subscription",
+                ctx.sub,
+                parse=False,
+            )
+            body = ctx.az(
+                "rest",
+                "--method",
+                "get",
+                "--url",
+                f"{refs}?api-version={_REFS_API_READ}",
+                "--subscription",
+                ctx.sub,
+            )
+        except AzError as exc:
+            ctx.errors.append(str(exc))
+            ctx.step(label, "failed", "refresh, restart or read failed; see the evidence errors")
+            continue
+        items = body.get("value") if isinstance(body, dict) else None  # pyright: ignore[reportUnknownMemberType]
+        bad: list[str] = []
+        for item in items or []:
+            status = str((item.get("properties") or {}).get("status", "unknown"))
+            if status != "Resolved":
+                bad.append(f"{item.get('name', 'unknown')}={status}")
+        if bad or not items:
+            detail = "not resolved: " + ", ".join(bad) if bad else "no references returned"
+            ctx.errors.append(f"{label} {detail}")
+            ctx.step(label, "failed", detail)
+        else:
+            ctx.step(label, "ok", f"{len(items)} reference(s) Resolved")
 
 
 def _host(value: Any) -> str:
@@ -1218,7 +1288,9 @@ def cmd_deploy(ctx: Ctx) -> None:
     vault = str(out.get("keyVaultName") or "")
     if vault:
         try:
-            ensure_pseudonym_secret(ctx, vault, str(out.get("pseudonymSecretName") or ""))
+            created = ensure_pseudonym_secret(ctx, vault, str(out.get("pseudonymSecretName") or ""))
+            if created:
+                refresh_key_vault_references(ctx, out)
         except AzError as exc:
             ctx.errors.append(str(exc))
             # Console line stays generic; the scrubbed evidence carries the az error.
@@ -1398,6 +1470,11 @@ def _seed_scopes(ctx: Ctx, out: dict[str, Any]) -> list[tuple[str, str, str]]:
     ]
 
 
+def role_definition_id(ctx: Ctx, role: str) -> str:
+    """Full built-in role-definition id; a bare GUID fails to resolve at some scopes."""
+    return f"/subscriptions/{ctx.sub}/providers/Microsoft.Authorization/roleDefinitions/{role}"
+
+
 def cmd_seed_access(ctx: Ctx) -> None:
     a = ctx.args
     out = get_outputs(ctx)
@@ -1418,6 +1495,7 @@ def cmd_seed_access(ctx: Ctx) -> None:
             "seed grants are limited to NeuroSphere-created resources in the register"
         )
     ids: list[str] = []
+    removed = 0
     try:
         for kind, role, scope in _seed_scopes(ctx, out):
             if a.grant:
@@ -1425,11 +1503,12 @@ def cmd_seed_access(ctx: Ctx) -> None:
                 if created:
                     ids.append(created)
             else:
-                _revoke_one(ctx, kind, role, scope, account, a.principal)
+                removed += _revoke_one(ctx, book, kind, role, scope, account, a.principal)
     except AzError:
         # Grants made before the failure are real: register them so teardown can remove them.
         if ids:
             book.add([make_row(ctx, rid, "seed-access", created=True) for rid in ids])
+        if ids or removed:
             ctx.errors.extend(book.save())
         raise
     if a.grant:
@@ -1438,7 +1517,8 @@ def cmd_seed_access(ctx: Ctx) -> None:
         book.add([make_row(ctx, rid, "seed-access", created=True) for rid in ids])
         ctx.errors.extend(book.save())
     else:
-        ctx.step("seed-access", "ok", "revoked")
+        ctx.errors.extend(book.save())
+        ctx.step("seed-access", "ok", f"revoked {removed} registered assignment(s)")
 
 
 def _cosmos_assignments(ctx: Ctx, account: str, principal: str, scope_suffix: str) -> list[str]:
@@ -1504,7 +1584,7 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
         "--assignee",
         principal,
         "--role",
-        role,
+        role_definition_id(ctx, role),
         "--scope",
         scope,
         "--query",
@@ -1524,7 +1604,7 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
         "--assignee-principal-type",
         "User",
         "--role",
-        role,
+        role_definition_id(ctx, role),
         "--scope",
         scope,
         "-o",
@@ -1534,30 +1614,44 @@ def _grant_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, princip
     return assignment_id(made, "seed-access rbac")
 
 
-def _revoke_one(ctx: Ctx, kind: str, role: str, scope: str, account: str, principal: str) -> None:
+def _revoke_one(
+    ctx: Ctx, book: Any, kind: str, role: str, scope: str, account: str, principal: str
+) -> int:
+    """Delete only assignments that are live AND registered as created by seed-access."""
+    registered = {
+        r.resource_id.lower()
+        for r in book.rows
+        if r.created_by == "neurosphere" and r.service == "seed-access"
+    }
     if kind == "cosmos":
-        for rid in _cosmos_assignments(ctx, account, principal, scope):
+        live = _cosmos_assignments(ctx, account, principal, scope)
+    else:
+        found = ctx.az(
+            "role",
+            "assignment",
+            "list",
+            "--assignee",
+            principal,
+            "--role",
+            role_definition_id(ctx, role),
+            "--scope",
+            scope,
+            "--query",
+            "[].id",
+            "-o",
+            "json",
+        )
+        live = [str(x) for x in found or []]
+    mine = [rid for rid in live if rid.lower() in registered]
+    for rid in mine:
+        if kind == "cosmos":
             delete_cosmos_assignment(ctx, rid, account)
-        ctx.step("revoke:cosmos", "ok")
-        return
-    ids = ctx.az(
-        "role",
-        "assignment",
-        "list",
-        "--assignee",
-        principal,
-        "--role",
-        role,
-        "--scope",
-        scope,
-        "--query",
-        "[].id",
-        "-o",
-        "json",
-    )
-    for rid in ids or []:
-        ctx.az("role", "assignment", "delete", "--ids", str(rid), parse=False)
-    ctx.step("revoke:rbac", "ok", "role assignment removed")
+        else:
+            ctx.az("role", "assignment", "delete", "--ids", rid, parse=False)
+        book.remove([rid])
+    detail = f"removed {len(mine)}" if mine else "removed 0 (none registered)"
+    ctx.step(f"revoke:{kind}", "ok", detail)
+    return len(mine)
 
 
 def delete_cosmos_assignment(ctx: Ctx, assignment_id: str, account: str) -> None:

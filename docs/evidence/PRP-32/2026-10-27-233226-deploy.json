@@ -1,0 +1,124 @@
+{
+  "approvals": [
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-subnet",
+      "utc": "2026-10-27T23:30:23Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-pe",
+      "utc": "2026-10-27T23:30:23Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-dns",
+      "utc": "2026-10-27T23:30:23Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "budget",
+      "utc": "2026-10-27T23:30:23Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "plan-hash",
+      "utc": "2026-10-27T23:30:46Z"
+    }
+  ],
+  "command": "deploy",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "change_counts": {
+      "Modify": 51,
+      "NoChange": 8,
+      "Unsupported": 62
+    },
+    "output_names": [
+      "apiHostName",
+      "apiPrincipalId",
+      "apiSiteName",
+      "archiveContainerName",
+      "cosmosAccountName",
+      "cosmosDatabaseName",
+      "cosmosEndpoint",
+      "eventHubName",
+      "eventHubsFqdn",
+      "eventHubsNamespaceName",
+      "frontendHostName",
+      "frontendSiteName",
+      "keyVaultName",
+      "privateEndpointIds",
+      "pseudonymSecretName",
+      "storageAccountName",
+      "workersPrincipalId",
+      "workersSiteName"
+    ],
+    "plan_sha256": "823afcf5f1abcebb2bb137adce7abaf3cd6983a2746bd2091a52b224384dc793",
+    "pseudonym_value_stored": "created",
+    "register_created_count": 21,
+    "register_not_ours_count": 1
+  },
+  "errors": [
+    "Cosmos register write failed (ForbiddenError)"
+  ],
+  "finished_utc": "2026-10-27T23:32:26Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-27T23:30:22Z",
+  "steps": [
+    {
+      "detail": "121 change(s) {'Modify': 51, 'NoChange': 8, 'Unsupported': 62}",
+      "status": "ok",
+      "step": "what-if"
+    },
+    {
+      "detail": "Succeeded",
+      "status": "ok",
+      "step": "deployment-create"
+    },
+    {
+      "detail": "1 pre-existing resource(s) recorded as not ours; resource group created by this deployment; teardown will refuse while foreign resources remain",
+      "status": "ok",
+      "step": "ownership"
+    },
+    {
+      "detail": "29 rows; Cosmos register write failed (ForbiddenError)",
+      "status": "failed",
+      "step": "register"
+    },
+    {
+      "detail": "registration.json",
+      "status": "ok",
+      "step": "registration"
+    },
+    {
+      "detail": "created from a locally generated value",
+      "status": "ok",
+      "step": "pseudonym-key"
+    },
+    {
+      "detail": "publicNetworkAccess=Enabled image_match=True",
+      "status": "ok",
+      "step": "post-check:web"
+    },
+    {
+      "detail": "publicNetworkAccess=Disabled image_match=True",
+      "status": "ok",
+      "step": "post-check:api"
+    },
+    {
+      "detail": "publicNetworkAccess=Disabled image_match=True",
+      "status": "ok",
+      "step": "post-check:workers"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}

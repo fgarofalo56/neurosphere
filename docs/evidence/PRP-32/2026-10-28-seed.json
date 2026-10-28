@@ -1,0 +1,36 @@
+{
+  "gate": "hosted_demo_seed",
+  "generated_files": {
+    "agent_versions.ndjson": 45,
+    "agents.ndjson": 24,
+    "bad-event-manifest.ndjson": 0,
+    "cost.ndjson": 883,
+    "domains.ndjson": 3,
+    "grounding_sources.ndjson": 11,
+    "model_deployments.ndjson": 6,
+    "owners.ndjson": 12,
+    "persons.ndjson": 6,
+    "relations.ndjson": 128,
+    "telemetry.ndjson": 1638,
+    "tools.ndjson": 12
+  },
+  "profile": "small",
+  "recorded": "2026-10-28",
+  "result": "PASS",
+  "seeded": {
+    "aggregates": 0,
+    "archives": 0,
+    "catalog": 0,
+    "entities": 119,
+    "evaluations": 0,
+    "grants": 0,
+    "intents": 0,
+    "ledger": 0,
+    "mcp_servers": 0,
+    "prices": 0,
+    "recommendations": 0,
+    "reports": 0,
+    "reviews": 0
+  },
+  "skipped_existing": 5707
+}

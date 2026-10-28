@@ -213,6 +213,13 @@ MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py
   --keep
 ```
 
+When this run creates the pseudonym secret, the sites already started and App Service has cached
+`SecretNotFound` for the Key Vault references (it refetches only every 24 hours, and a plain
+restart does not clear it). `deploy` therefore POSTs
+`<site id>/config/configreferences/appsettings/refresh` for the API and workers sites, restarts
+them, and re-reads the references. A reference that is not `Resolved` fails the step and names the
+setting and its status, never a value. If the secret already existed, no refresh is sent.
+
 `--keep` is the default and is accepted for clarity. The script re-runs what-if and refuses before
 any create if the hash changed. After it deploys it writes the ownership register to the hosted
 Cosmos `deploy_register` container and to `temp/hosted-demo/register-<id>.json`, writes
@@ -338,6 +345,13 @@ MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py
   --revoke \
   --principal <operator-object-id>
 ```
+
+Revoke is register-bound: it deletes only assignments that exist live and that the register
+records as created by `seed-access` (the S6 grant), drops those register rows, and logs the count
+actually removed (`removed 0 (none registered)` when there is nothing to remove). A matching
+assignment that someone else created is left in place. S6 and S7 pass the full role-definition id
+(`/subscriptions/<id>/providers/Microsoft.Authorization/roleDefinitions/<guid>`) to `--role`,
+because a bare GUID failed to resolve at the blob-container scope.
 
 ### S8 Release tag
 
