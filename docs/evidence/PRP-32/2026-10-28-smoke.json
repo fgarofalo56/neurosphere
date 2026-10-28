@@ -1,0 +1,139 @@
+{
+  "approvals": [],
+  "command": "smoke",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "smoke": {
+      "checks": [
+        {
+          "detail": "GET / -> 200",
+          "name": "frontend-root",
+          "passed": true
+        },
+        {
+          "detail": "ok",
+          "name": "frontend-config-json",
+          "passed": true
+        },
+        {
+          "detail": "GET /api/v1/me/domains -> 401, expected 401",
+          "name": "api-unauthenticated-401",
+          "passed": true
+        },
+        {
+          "detail": "GET /readyz -> 404, expected anything but 200",
+          "name": "readyz-not-proxied",
+          "passed": true
+        },
+        {
+          "detail": "direct API host -> 403, expected 403 or unreachable",
+          "name": "api-host-refuses-direct",
+          "passed": true
+        },
+        {
+          "detail": "state 'Running', expected 'Running'",
+          "name": "site-running:nsdemo-web",
+          "passed": true
+        },
+        {
+          "detail": "no HealthCheckStatus datapoints",
+          "name": "site-health:nsdemo-web",
+          "passed": false
+        },
+        {
+          "detail": "state 'Running', expected 'Running'",
+          "name": "site-running:nsdemo-api",
+          "passed": true
+        },
+        {
+          "detail": "no HealthCheckStatus datapoints",
+          "name": "site-health:nsdemo-api",
+          "passed": false
+        },
+        {
+          "detail": "state 'Running', expected 'Running'",
+          "name": "site-running:nsdemo-workers",
+          "passed": true
+        },
+        {
+          "detail": "no HealthCheckStatus datapoints",
+          "name": "site-health:nsdemo-workers",
+          "passed": false
+        }
+      ],
+      "ok": false
+    }
+  },
+  "errors": [
+    "smoke checks failed: site-health:nsdemo-web, site-health:nsdemo-api, site-health:nsdemo-workers"
+  ],
+  "finished_utc": "2026-10-28T03:41:33Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-10-28T03:41:07Z",
+  "steps": [
+    {
+      "detail": "GET / -> 200",
+      "status": "ok",
+      "step": "smoke:frontend-root"
+    },
+    {
+      "detail": "ok",
+      "status": "ok",
+      "step": "smoke:frontend-config-json"
+    },
+    {
+      "detail": "GET /api/v1/me/domains -> 401, expected 401",
+      "status": "ok",
+      "step": "smoke:api-unauthenticated-401"
+    },
+    {
+      "detail": "GET /readyz -> 404, expected anything but 200",
+      "status": "ok",
+      "step": "smoke:readyz-not-proxied"
+    },
+    {
+      "detail": "direct API host -> 403, expected 403 or unreachable",
+      "status": "ok",
+      "step": "smoke:api-host-refuses-direct"
+    },
+    {
+      "detail": "state 'Running', expected 'Running'",
+      "status": "ok",
+      "step": "smoke:site-running:nsdemo-web"
+    },
+    {
+      "detail": "no HealthCheckStatus datapoints",
+      "status": "failed",
+      "step": "smoke:site-health:nsdemo-web"
+    },
+    {
+      "detail": "state 'Running', expected 'Running'",
+      "status": "ok",
+      "step": "smoke:site-running:nsdemo-api"
+    },
+    {
+      "detail": "no HealthCheckStatus datapoints",
+      "status": "failed",
+      "step": "smoke:site-health:nsdemo-api"
+    },
+    {
+      "detail": "state 'Running', expected 'Running'",
+      "status": "ok",
+      "step": "smoke:site-running:nsdemo-workers"
+    },
+    {
+      "detail": "no HealthCheckStatus datapoints",
+      "status": "failed",
+      "step": "smoke:site-health:nsdemo-workers"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}
