@@ -1,0 +1,14 @@
+<policies>
+	<inbound>
+		<base />[[includes]][[backend]]
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>
