@@ -47,6 +47,7 @@ from neurosphere_connector_apim_gateway.applier import PlanApplier
 from neurosphere_connector_apim_gateway.arm import ApimArm
 from neurosphere_connector_apim_gateway.compare import payload_matches
 from neurosphere_connector_apim_gateway.gateway import GatewayRef
+from neurosphere_connector_apim_gateway.mode import MODE_TARGET_TYPE, GatewayModeHandler
 from neurosphere_connector_apim_gateway.models import PublishPlan, ResourceSpec
 from neurosphere_connector_apim_gateway.planner import build_plan
 from neurosphere_connector_apim_gateway.records import ApplyRecordStore
@@ -83,6 +84,8 @@ ACTION_KINDS: Final = (
     "grant_unpublish",
     "mcp_server_publish",
     "mcp_server_unpublish",
+    # PRP-34 item 2: the audited observe/manage switch (target ``apim_gateway_mode``).
+    "gateway_mode_change",
 )
 # v2 tiers are unverified in Government (PRP-34 gotcha); manage stays disabled until this row
 # says ``available``.
@@ -146,10 +149,16 @@ class ApimGatewayConnector:
         records: ApplyRecordStore,
         translators: Sequence[IntentTranslator] = (),
         id_factory: Callable[[], str] | None = None,
+        mode: GatewayModeHandler | None = None,
     ) -> None:
+        if mode is not None and mode.gateway != gateway:
+            raise ValueError("the mode handler is bound to another gateway")
         self.gateway = gateway
         self._arm = arm
         self._records = records
+        # PRP-34 item 2: with a mode handler, ``gateway_mode_change`` runs and every resource
+        # plan first requires the gateway to be in manage mode (``gateway_observe_mode``).
+        self._mode = mode
         self._applier = (
             PlanApplier(arm, records, id_factory=id_factory)
             if id_factory is not None
@@ -179,6 +188,17 @@ class ApimGatewayConnector:
         if refusal is not None:
             raise refusal
 
+    @staticmethod
+    def _is_mode_change(target_entity_type: str) -> bool:
+        return target_entity_type == MODE_TARGET_TYPE
+
+    def _mode_handler(self) -> GatewayModeHandler:
+        if self._mode is None:
+            raise CapabilityUnavailableError(
+                "gateway_mode_switch_unconfigured", "no mode switch is wired for this gateway"
+            )
+        return self._mode
+
     def _translator(self, request: WriteRequest) -> IntentTranslator:
         translator = self._translators.get(request.target.entity_type)
         if translator is None:
@@ -195,6 +215,8 @@ class ApimGatewayConnector:
     ) -> tuple[IntentTranslator, PublishPlan, list[ResourceSpec]]:
         self._refuse_cloud()
         translator = self._translator(request)
+        if self._mode is not None:
+            await self._mode.require_manage()
         specs = translator.specs(self.gateway, request)
         current = await self._current_version(translator, request)
         if current != request.target_version:
@@ -231,6 +253,8 @@ class ApimGatewayConnector:
     # -- WriteConnector --------------------------------------------------------------------
 
     async def dry_run(self, request: WriteRequest) -> DryRunResult:
+        if self._is_mode_change(request.target.entity_type):
+            return await self._mode_handler().dry_run(request)
         _, plan, _ = await self._plan(request)
         self._check_reviewed(request, plan, required=False)
         return DryRunResult(
@@ -241,6 +265,8 @@ class ApimGatewayConnector:
         )
 
     async def apply(self, request: WriteRequest) -> ApplyResult:
+        if self._is_mode_change(request.target.entity_type):
+            return await self._mode_handler().apply(request)
         translator, plan, specs = await self._plan(request)
         self._check_reviewed(request, plan, required=True)
         record = await self._applier.apply(plan, specs)
@@ -254,6 +280,8 @@ class ApimGatewayConnector:
 
     async def verify(self, request: WriteRequest) -> VerifyResult:
         """Read every planned resource back. Observed state holds booleans, never payloads."""
+        if self._is_mode_change(request.target.entity_type):
+            return await self._mode_handler().verify(request)
         self._refuse_cloud()
         translator = self._translator(request)
         specs = translator.specs(self.gateway, request)
@@ -283,6 +311,8 @@ class ApimGatewayConnector:
 
     async def rollback(self, applied: ApplyResult) -> RollbackResult:
         """Run the reverse plan of a succeeded apply from its ownership record."""
+        if self._is_mode_change(applied.target.entity_type):
+            return await self._mode_handler().rollback(applied)
         self._refuse_cloud()
         record = (
             await self._records.latest(applied.rollback_token) if applied.rollback_token else None
@@ -301,12 +331,14 @@ def create_apim_connector(
     *,
     records: ApplyRecordStore,
     translators: Sequence[IntentTranslator] = (),
+    mode: GatewayModeHandler | None = None,
 ) -> ApimGatewayConnector | ApimGatewayAdvisoryConnector:
     """Write connector for a Commercial gateway; the advisory one where manage is disabled.
 
-    Item 2 adds the observe/manage mode and the write-permission preflight in front of this.
+    ``mode`` (PRP-34 item 2) wires the observe/manage switch: ``gateway_mode_change`` runs the
+    permissions preflight and flips the registration, and resource plans require manage mode.
     """
     refusal = government_refusal(gateway.cloud)
     if refusal is not None:
         return ApimGatewayAdvisoryConnector(gateway, reason=refusal.detail or "manage disabled")
-    return ApimGatewayConnector(gateway, arm, records=records, translators=translators)
+    return ApimGatewayConnector(gateway, arm, records=records, translators=translators, mode=mode)

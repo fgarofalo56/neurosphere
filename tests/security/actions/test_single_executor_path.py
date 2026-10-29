@@ -58,7 +58,14 @@ ACTION_PLANE: Final = (
     API / "hitl",
     REPO / "services" / "workers" / "neurosphere_workers" / "actions",
     REPO / "connectors" / "reference" / "foundry-actions" / "neurosphere_connector_foundry_actions",
+    REPO / "connectors" / "reference" / "apim-gateway" / "neurosphere_connector_apim_gateway",
 )
+#: Write connectors whose own code may call ``apply``/``rollback`` only to DELEGATE from their
+#: own ``apply``/``rollback`` (PRP-34 item 2 extends D5 to the APIM gateway connector).
+CONNECTOR_PACKAGES: Final = (
+    REPO / "connectors" / "reference" / "apim-gateway" / "neurosphere_connector_apim_gateway",
+)
+DELEGATING_METHODS: Final = WRITE_PATH
 
 
 def _rel(path: Path) -> str:
@@ -133,6 +140,23 @@ def api_apply_path_uses(tree: ast.AST, *, attrs: frozenset[str]) -> list[str]:
     return found
 
 
+def non_delegating_write_calls(tree: ast.AST) -> list[int]:
+    """Write-path calls that are NOT inside a function named ``apply``/``rollback``.
+
+    Inside a connector, ``apply`` may hand off to its applier or mode step and ``rollback`` to
+    its reverse plan; any other caller (``dry_run``, ``verify``, a helper, module level) would be
+    a second path to a change.
+    """
+    allowed: set[int] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+            and node.name in DELEGATING_METHODS
+        ):
+            allowed.update(write_path_calls(node))
+    return [line for line in write_path_calls(tree) if line not in allowed]
+
+
 def catalog_writes(tree: ast.AST) -> list[str]:
     found: list[str] = []
     for node in ast.walk(tree):
@@ -194,6 +218,18 @@ def test_scanners_detect_what_they_forbid() -> None:
     assert any("ApplyResult" in hit for hit in api_apply_path_uses(sample, attrs=WRITE_PATH))
     assert len(catalog_writes(sample)) == 2
     assert intent_store_writes(sample) == [7]
+    connector = ast.parse(
+        "class C:\n"
+        "    async def apply(self, r):\n"
+        "        return await self._applier.apply(r)\n"
+        "    async def rollback(self, a):\n"
+        "        return await self._mode.rollback(a)\n"
+        "    async def dry_run(self, r):\n"
+        "        return await self._applier.apply(r)\n"
+        "    async def verify(self, r):\n"
+        "        return await getattr(self._mode, 'rollback')(r)\n"
+    )
+    assert non_delegating_write_calls(connector) == [7, 9]
 
 
 # -- the rules -----------------------------------------------------------------------------------
@@ -213,6 +249,21 @@ def test_only_the_executor_calls_apply_or_rollback() -> None:
     for path, why in APPLY_EXCEPTIONS.items():
         assert (REPO / path).is_file(), f"stale exception {path}"
         assert len(why) > 40
+
+
+def test_apim_gateway_connector_only_delegates_apply_and_rollback() -> None:
+    """PRP-34 item 2: the APIM connector reaches its applier and mode step only from its own
+    ``apply``/``rollback`` (which only the executor worker calls, per the rule above)."""
+    files = _files(*CONNECTOR_PACKAGES)
+    names = {p.name for p in files}
+    assert {"connector.py", "applier.py", "mode.py"} <= names
+    offenders = {
+        _rel(path): lines for path in files if (lines := non_delegating_write_calls(_tree(path)))
+    }
+    assert not offenders, offenders
+    # The connector does delegate (so the scan is not vacuous).
+    connector = next(p for p in files if p.name == "connector.py")
+    assert write_path_calls(_tree(connector))
 
 
 def test_no_api_module_touches_the_connector_apply_path() -> None:

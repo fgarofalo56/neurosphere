@@ -8,9 +8,13 @@ from pathlib import Path
 import pytest
 from neurosphere_core.actions.targets import (
     ACTION_CONNECTORS,
+    APIM_GATEWAY_CONNECTOR,
+    TARGET_KIND_CONNECTORS,
     WriteTargetSource,
     connector_name_for,
+    connector_names_for,
     resolve_write_target,
+    resolve_write_targets,
 )
 
 _TARGETS = Path(__file__).resolve().parents[2] / "neurosphere_core" / "actions" / "targets.py"
@@ -65,8 +69,63 @@ def test_unresolvable_target_is_advisory(registered: dict[str, tuple[str, ...]])
 
 def test_unknown_kind_is_advisory() -> None:
     registry = FakeRegistry({"foundry-model-swap": ("model_deployment_swap",)})
-    assert connector_name_for("budget_cap_change") is None
+    assert connector_name_for("model_deployment_scale") is None
+    assert connector_name_for("model_deployment_scale", "apim_backend") is None
+    assert connector_names_for("model_deployment_scale") == ()
+    assert resolve_write_target(registry, "model_deployment_scale") is None
+    # A known APIM kind with no APIM connector registered is advisory too.
     assert resolve_write_target(registry, "budget_cap_change") is None
+
+
+PRP34_KINDS = (
+    "budget_cap_change",
+    "grant_publish",
+    "grant_unpublish",
+    "mcp_server_publish",
+    "mcp_server_unpublish",
+    "gateway_mode_change",
+)
+
+
+@pytest.mark.parametrize("kind", PRP34_KINDS)
+def test_prp34_kinds_map_to_the_apim_gateway_connector(kind: str) -> None:
+    assert ACTION_CONNECTORS[kind] == APIM_GATEWAY_CONNECTOR == "apim-gateway"
+    assert connector_names_for(kind) == ("apim-gateway",)
+
+
+def test_target_kind_routes_model_swap_between_foundry_and_apim() -> None:
+    assert TARGET_KIND_CONNECTORS["apim_backend"] == "apim-gateway"
+    assert TARGET_KIND_CONNECTORS["grant"] == "apim-gateway"
+    assert connector_name_for("model_deployment_swap", "model_deployment") == "foundry-model-swap"
+    assert connector_name_for("model_deployment_swap", "apim_backend") == "apim-gateway"
+    assert connector_name_for("budget_cap_change", "grant") == "apim-gateway"
+    assert connector_names_for("model_deployment_swap") == ("foundry-model-swap", "apim-gateway")
+    with pytest.raises(TypeError):
+        TARGET_KIND_CONNECTORS["agent"] = "x"  # type: ignore[index]
+
+
+def test_target_kind_resolution_uses_the_registry() -> None:
+    registry = FakeRegistry(
+        {
+            "foundry-model-swap": ("model_deployment_swap",),
+            "apim-gateway": ("model_deployment_swap", "budget_cap_change"),
+        }
+    )
+    assert (
+        resolve_write_target(registry, "model_deployment_swap", "apim_backend")
+        == "connector:apim-gateway"
+    )
+    assert (
+        resolve_write_target(registry, "model_deployment_swap", "model_deployment")
+        == "connector:foundry-model-swap"
+    )
+    assert resolve_write_targets(registry, "model_deployment_swap") == {
+        "foundry-model-swap": "connector:foundry-model-swap",
+        "apim-gateway": "connector:apim-gateway",
+    }
+    only_foundry = FakeRegistry({"foundry-model-swap": ("model_deployment_swap",)})
+    assert resolve_write_target(only_foundry, "model_deployment_swap", "apim_backend") is None
+    assert resolve_write_targets(only_foundry, "budget_cap_change") == {}
 
 
 def test_core_table_does_not_import_the_connector_sdk() -> None:

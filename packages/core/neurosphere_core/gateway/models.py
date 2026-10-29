@@ -15,7 +15,15 @@ import hashlib
 import re
 from typing import Annotated, Final, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 __all__ = [
     "ARM_ID_PATTERN",
@@ -26,7 +34,9 @@ __all__ = [
     "CircuitBreakerRule",
     "DiagnosticsState",
     "GatewayInventory",
+    "GatewayMode",
     "GatewayRegistration",
+    "ModePreflight",
     "OperationEntry",
     "PolicyFragmentEntry",
     "PoolMember",
@@ -72,6 +82,12 @@ _GUID_RE: Final = re.compile(
 )
 
 Short = Annotated[str, StringConstraints(max_length=512)]
+ActionName = Annotated[str, StringConstraints(min_length=1, max_length=256)]
+
+#: ``observe`` is read-only; ``manage`` lets the APIM write connector change the gateway. A
+#: registration only reaches ``manage`` through the audited ``gateway_mode_change`` action whose
+#: connector step proved write access first (PRP-34 item 2).
+GatewayMode = Literal["observe", "manage"]
 
 
 def normalize_arm_id(arm_resource_id: str) -> str:
@@ -100,6 +116,25 @@ class DiagnosticsState(_Model):
     workspace_resource_id: str | None = Field(default=None, max_length=1024)
 
 
+class ModePreflight(_Model):
+    """Outcome of the write-permission preflight (``Microsoft.Authorization/permissions``).
+
+    ``required`` lists the ARM actions the APIM write connector needs at the gateway scope and
+    ``missing`` the ones the service identity does not hold. Only action names are kept.
+    """
+
+    passed: bool
+    checked_at: AwareDatetime
+    required: list[ActionName] = Field(max_length=64)
+    missing: list[ActionName] = Field(default_factory=list[ActionName], max_length=64)
+
+    @model_validator(mode="after")
+    def _consistent(self) -> ModePreflight:
+        if self.passed == bool(self.missing):
+            raise ValueError("a preflight passes exactly when nothing is missing")
+        return self
+
+
 class GatewayRegistration(_Model):
     id: Annotated[str, StringConstraints(pattern=GATEWAY_ID_PATTERN)]
     customer_id: Annotated[str, StringConstraints(min_length=1, max_length=128)]
@@ -109,7 +144,12 @@ class GatewayRegistration(_Model):
     name: Annotated[str, StringConstraints(min_length=1, max_length=50)]
     tier: Tier
     sku_name_raw: str | None = Field(default=None, max_length=64)
-    mode: Literal["observe"] = "observe"
+    mode: GatewayMode = "observe"
+    mode_changed_by: str | None = Field(default=None, max_length=256)
+    mode_changed_at: AwareDatetime | None = None
+    # Bumped by every mode switch; ``gateway_mode_change`` intents bind to it (target_version).
+    mode_revision: int = Field(default=0, ge=0)
+    preflight: ModePreflight | None = None
     workspace_id: str | None = None
     diagnostics: DiagnosticsState = Field(default_factory=DiagnosticsState)
     capabilities: dict[str, str] = Field(default_factory=dict)
@@ -137,6 +177,20 @@ class GatewayRegistration(_Model):
         if value is not None and not _GUID_RE.fullmatch(value):
             raise ValueError("workspace_id must be a Log Analytics workspace GUID")
         return value
+
+    @model_validator(mode="after")
+    def _manage_needs_switch(self) -> GatewayRegistration:
+        # Fail closed: a document can never claim manage mode without the audited switch and a
+        # passed preflight (a reused enterprise APIM is registered, and stays, in observe).
+        if self.mode == "manage" and (
+            self.preflight is None
+            or not self.preflight.passed
+            or self.mode_changed_by is None
+            or self.mode_changed_at is None
+            or self.mode_revision < 1
+        ):
+            raise ValueError("manage mode requires the audited switch and a passed preflight")
+        return self
 
     def sort_key(self) -> str:
         return f"{self.created_at.isoformat()}#{self.id}"

@@ -32,6 +32,7 @@ __all__ = [
     "GATEWAY_ALREADY_REGISTERED",
     "GATEWAY_MODIFIED",
     "GATEWAY_STORE_UNAVAILABLE",
+    "GatewayModeLookup",
     "GatewayStore",
     "InMemoryGatewayStore",
     "check_limit",
@@ -74,6 +75,17 @@ class GatewayStore(Protocol):
     async def get_inventory(
         self, customer_id: str, domain_id: str, gateway_id: str
     ) -> GatewayInventory | None: ...
+
+
+@runtime_checkable
+class GatewayModeLookup(Protocol):
+    """Find a registration by customer and gateway id alone (PRP-34 item 2, mode checks).
+
+    A write connector is bound to one gateway but an action request does not carry the domain
+    the gateway is registered in; gateway ids are unique per customer (the id hashes the domain).
+    """
+
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None: ...
 
 
 def store_unavailable() -> DependencyTransientError:
@@ -166,6 +178,13 @@ class InMemoryGatewayStore:
     ) -> GatewayRegistration | None:
         self._check()
         return self._load((customer_id, domain_id, gateway_id))
+
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None:
+        self._check()
+        for key in list(self._docs):
+            if key[0] == customer_id and key[2] == gateway_id:
+                return self._load(key)
+        return None
 
     async def list(
         self,

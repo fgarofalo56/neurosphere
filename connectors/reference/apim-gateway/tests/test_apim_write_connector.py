@@ -46,6 +46,7 @@ def test_action_kinds_are_the_prp_34_set() -> None:
         "grant_unpublish",
         "mcp_server_publish",
         "mcp_server_unpublish",
+        "gateway_mode_change",  # PRP-34 item 2
     )
 
 

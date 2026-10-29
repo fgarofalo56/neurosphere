@@ -133,6 +133,23 @@ class CosmosGatewayStore:
             return None
         return _registration(row)
 
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None:
+        """Cross-partition point query by customer and gateway id (ids are unique per customer)."""
+        sql = (
+            "SELECT TOP 1 * FROM c WHERE c.doc_type = @doc_type"
+            " AND c.customer_id = @customer AND c.id = @id"
+        )
+        params: builtins.list[dict[str, Any]] = [
+            {"name": "@doc_type", "value": GATEWAY_DOC_TYPE},
+            {"name": "@customer", "value": customer_id},
+            {"name": "@id", "value": gateway_id},
+        ]
+        try:
+            rows = [row async for row in self._container.query_items(sql, parameters=params)]
+        except Exception as exc:
+            _raise_mapped(exc)
+        return _registration(rows[0]) if rows else None
+
     async def list(
         self,
         customer_id: str,

@@ -17,6 +17,10 @@ Hard rules enforced here, not by convention:
   named-value references) is placed in an exception or a log line.
 - ``412`` maps to ``stale_version`` (reason ``etag_mismatch``). ``429`` honours ``Retry-After``
   for a bounded number of retries and then maps to ``dependency_transient`` carrying the wait.
+
+``ApimPermissionsReader`` (PRP-34 item 2) is the one read outside the resource tree: a ``GET`` of
+``Microsoft.Authorization/permissions`` at the service scope, used by the manage-mode preflight.
+Only ``actions`` and ``notActions`` are kept from it.
 """
 
 from __future__ import annotations
@@ -25,7 +29,8 @@ import asyncio
 import re
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Final, Protocol, runtime_checkable
+from typing import Any, Final, Protocol, cast, runtime_checkable
+from urllib.parse import urlsplit
 
 import httpx
 from neurosphere_core.clients import assert_host_in_cloud
@@ -38,19 +43,27 @@ from neurosphere_core.errors import (
     StaleVersionError,
     UnauthorizedError,
 )
+from neurosphere_core.gateway.mode import PERMISSIONS_API_VERSION
 from neurosphere_core.gateway.models import normalize_arm_id
 
 from neurosphere_connector_apim_gateway.models import ResourceType, classify_path
 
 __all__ = [
     "APIM_API_VERSION",
+    "PERMISSIONS_PATH",
     "ApimArm",
+    "ApimPermissionsReader",
     "ArmResource",
     "HttpApimArm",
     "check_path",
     "map_status",
+    "permission_entries",
     "strip_secrets",
 ]
+
+#: Relative to the service id: the caller's effective role permissions at the gateway scope.
+PERMISSIONS_PATH: Final = "providers/Microsoft.Authorization/permissions"
+MAX_PERMISSION_PAGES: Final = 10
 
 # v2 tiers and the AI gateway policies need api-version 2024-05-01 or later (Learn, v2 tiers
 # overview); PRP-33's inventory reads pin the same version.
@@ -91,6 +104,34 @@ class ApimArm(Protocol):
     async def delete(self, path: str, *, if_match: str) -> bool:
         """Delete with ``If-Match``; False when the resource was already gone."""
         ...
+
+
+@runtime_checkable
+class ApimPermissionsReader(Protocol):
+    async def permissions(self) -> list[dict[str, Any]]:
+        """``{"actions": [...], "notActions": [...]}`` per permission entry at the service."""
+        ...
+
+
+def permission_entries(body: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The ``actions``/``notActions`` of every entry in one permissions page (nothing else)."""
+    value = body.get("value")
+    if not isinstance(value, list):
+        raise DependencyTransientError(
+            "ARM returned an unexpected body", reason="arm_invalid_body", upstream_invalid=True
+        )
+    entries: list[dict[str, Any]] = []
+    for item in cast(list[object], value):
+        if not isinstance(item, Mapping):
+            continue
+        entry = cast(Mapping[str, Any], item)
+        entries.append(
+            {
+                key: [a for a in cast(list[object], entry.get(key) or []) if isinstance(a, str)]
+                for key in ("actions", "notActions")
+            }
+        )
+    return entries
 
 
 def check_path(path: str, *, allow_service: bool = False) -> ResourceType | None:
@@ -273,3 +314,37 @@ class HttpApimArm:
         if response.status_code >= 300:
             raise map_status(response.status_code)
         return True
+
+    async def permissions(self) -> list[dict[str, Any]]:
+        """GET ``Microsoft.Authorization/permissions`` at the service (pages on the same host)."""
+        url = f"{self._service}/{PERMISSIONS_PATH}?api-version={PERMISSIONS_API_VERSION}"
+        base = urlsplit(str(self._client.base_url))
+        entries: list[dict[str, Any]] = []
+        for _ in range(MAX_PERMISSION_PAGES):
+            response = await self._send("GET", url)
+            if response.status_code >= 300:
+                raise map_status(response.status_code)
+            try:
+                body = response.json()
+            except ValueError:
+                raise DependencyTransientError(
+                    "ARM returned a non-JSON body", reason="arm_invalid_body", upstream_invalid=True
+                ) from None
+            if not isinstance(body, dict):
+                raise DependencyTransientError(
+                    "ARM returned an unexpected body",
+                    reason="arm_invalid_body",
+                    upstream_invalid=True,
+                )
+            page = cast(dict[str, Any], body)
+            entries.extend(permission_entries(page))
+            next_link = page.get("nextLink")
+            if not isinstance(next_link, str) or not next_link:
+                return entries
+            target = urlsplit(next_link)
+            if target.scheme != "https" or target.netloc.lower() != base.netloc.lower():
+                raise DependencyTransientError(
+                    "ARM paging left the management host", reason="arm_invalid_body"
+                )
+            url = next_link
+        raise DependencyTransientError("too many permission pages", reason="arm_paging_limit")

@@ -22,6 +22,7 @@ from typing import Any
 from neurosphere_core.errors import InvalidSchemaError
 
 from neurosphere_connector_apim_gateway.arm import (
+    PERMISSIONS_PATH,
     ArmResource,
     check_path,
     map_status,
@@ -60,6 +61,13 @@ class InMemoryApim:
     )
     calls: list[ArmCall] = field(default_factory=list[ArmCall])
     before: Callable[[str, str], None] | None = None
+    # ``Microsoft.Authorization/permissions`` entries of the service identity (PRP-34 item 2);
+    # the default grants the write connector everything it needs on the service.
+    permission_entries: list[dict[str, Any]] = field(
+        default_factory=lambda: [
+            {"actions": ["Microsoft.ApiManagement/service/*"], "notActions": []}
+        ]
+    )
     _failures: dict[tuple[str, str], _Failure] = field(
         default_factory=dict[tuple[str, str], _Failure]
     )
@@ -151,6 +159,12 @@ class InMemoryApim:
             raise map_status(412)
         del self.resources[path]
         return True
+
+    # -- ApimPermissionsReader -------------------------------------------------------------
+
+    async def permissions(self) -> list[dict[str, Any]]:
+        self._enter("GET", PERMISSIONS_PATH)
+        return copy.deepcopy(self.permission_entries)
 
     def kind_of(self, path: str) -> ResourceType | None:
         return classify_path(path)

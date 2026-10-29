@@ -4662,10 +4662,43 @@
             "type": "string"
           },
           "mode": {
-            "const": "observe",
             "default": "observe",
+            "enum": [
+              "observe",
+              "manage"
+            ],
             "title": "Mode",
             "type": "string"
+          },
+          "mode_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode Changed At"
+          },
+          "mode_changed_by": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode Changed By"
+          },
+          "mode_revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Mode Revision",
+            "type": "integer"
           },
           "name": {
             "maxLength": 50,
@@ -4696,6 +4729,16 @@
               }
             ],
             "title": "Poll Watermark"
+          },
+          "preflight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModePreflight"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "registered_by": {
             "maxLength": 256,
@@ -4860,6 +4903,42 @@
         "title": "GatewayList",
         "type": "object"
       },
+      "GatewayModeBody": {
+        "additionalProperties": false,
+        "description": "``POST .../mode``: the requested mode. Identity, target and version are server-side.",
+        "properties": {
+          "channel": {
+            "default": "rest",
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "observe",
+              "manage"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "idempotency_key"
+        ],
+        "title": "GatewayModeBody",
+        "type": "object"
+      },
       "GatewayRegistration": {
         "additionalProperties": false,
         "properties": {
@@ -4966,10 +5045,43 @@
             "type": "string"
           },
           "mode": {
-            "const": "observe",
             "default": "observe",
+            "enum": [
+              "observe",
+              "manage"
+            ],
             "title": "Mode",
             "type": "string"
+          },
+          "mode_changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode Changed At"
+          },
+          "mode_changed_by": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode Changed By"
+          },
+          "mode_revision": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Mode Revision",
+            "type": "integer"
           },
           "name": {
             "maxLength": 50,
@@ -5000,6 +5112,16 @@
               }
             ],
             "title": "Poll Watermark"
+          },
+          "preflight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModePreflight"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "registered_by": {
             "maxLength": 256,
@@ -6687,6 +6809,48 @@
           "missing"
         ],
         "title": "MissingLabels",
+        "type": "object"
+      },
+      "ModePreflight": {
+        "additionalProperties": false,
+        "description": "Outcome of the write-permission preflight (``Microsoft.Authorization/permissions``).\n\n``required`` lists the ARM actions the APIM write connector needs at the gateway scope and\n``missing`` the ones the service identity does not hold. Only action names are kept.",
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "missing": {
+            "items": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Missing",
+            "type": "array"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "required": {
+            "items": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Required",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passed",
+          "checked_at",
+          "required"
+        ],
+        "title": "ModePreflight",
         "type": "object"
       },
       "ModelDeployment": {
@@ -17215,6 +17379,71 @@
           }
         },
         "summary": "Get Inventory",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/mode": {
+      "post": {
+        "description": "Draft the audited ``gateway_mode_change`` intent (the switch runs in the executor).",
+        "operationId": "change_gateway_mode_api_v1_gateways_domains__domain__gateways__gateway_id__mode_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GatewayModeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Gateway Mode",
         "tags": [
           "gateways"
         ]
