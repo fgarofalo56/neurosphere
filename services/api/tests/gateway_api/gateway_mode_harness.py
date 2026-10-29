@@ -7,8 +7,8 @@ REAL APIM write connector (with its mode step) over ``InMemoryApim`` registered 
 
 People (customer ``contoso``):
 
-* OPERATOR -- admin + domain steward on FINANCE: ``config.manage`` and ``action.propose``
-* STEWARD  -- domain steward on FINANCE (no ``config.manage``)
+* OPERATOR -- admin + domain steward on FINANCE: ``action.propose`` (and ``config.manage``)
+* STEWARD  -- domain steward on FINANCE: ``action.propose`` (can draft a mode change)
 * ADMIN    -- admin on FINANCE only (no ``action.propose``)
 * VIEWER   -- viewer on FINANCE
 * OUTSIDER -- admin + domain steward on OPERATIONS only

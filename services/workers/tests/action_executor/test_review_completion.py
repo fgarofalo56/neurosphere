@@ -218,7 +218,15 @@ async def test_executor_without_a_hook_is_unchanged() -> None:
 def test_worker_uses_the_one_core_action_kind_table() -> None:
     assert DEFAULT_ACTION_CONNECTORS is ACTION_CONNECTORS
     assert worker_targets.DEFAULT_ACTION_CONNECTORS is ACTION_CONNECTORS
-    assert dict(DEFAULT_ACTION_CONNECTORS) == {"model_deployment_swap": "foundry-model-swap"}
+    assert dict(DEFAULT_ACTION_CONNECTORS) == {
+        "model_deployment_swap": "foundry-model-swap",
+        "budget_cap_change": "apim-gateway",
+        "grant_publish": "apim-gateway",
+        "grant_unpublish": "apim-gateway",
+        "mcp_server_publish": "apim-gateway",
+        "mcp_server_unpublish": "apim-gateway",
+        "gateway_mode_change": "apim-gateway",
+    }
     assert ACTION_KIND in DEFAULT_ACTION_CONNECTORS
     assert FAKE_CONNECTOR not in DEFAULT_ACTION_CONNECTORS.values()
 

@@ -7,7 +7,7 @@
 | GET    | ``/domains/{domain}/gateways/{gateway_id}``   | ``data.read``   |
 | GET    | ``/domains/{domain}/gateways/{gateway_id}/inventory`` | ``data.read`` |
 | POST   | ``/domains/{domain}/gateways/{gateway_id}/sync`` | ``config.manage`` |
-| POST   | ``/domains/{domain}/gateways/{gateway_id}/mode`` | ``config.manage``+``action.propose`` |
+| POST   | ``/domains/{domain}/gateways/{gateway_id}/mode`` | ``action.propose`` |
 
 The path ``{domain}`` is the authorization target (403 outside the caller's scope, 503 on a
 policy-store outage). There is no ``deploy.*`` permission in the shipped permission set, so the
@@ -18,8 +18,9 @@ routes) and the read routes ``data.read``. No route writes to the gateway itself
 action intent through the one action plane (same ``ActionApi.draft`` as ``POST
 /api/v1/actions/.../intents``), so validate, confirmation, maker-checker approval and the
 executor worker apply exactly as for any other action. The executor's connector step runs the
-write-permission preflight and flips the registration. The route needs ``config.manage`` (the
-stand-in for ``deploy.write``) AND ``action.propose`` on the gateway's domain; it refuses an
+write-permission preflight and flips the registration. The route needs only ``action.propose`` on
+the gateway's domain (maker-checker is unchanged: another principal approves through the normal
+action flow); it refuses an
 unchanged mode, manage in a Government profile (``gateway_manage_unavailable``) and a gateway
 whose domain has an APIM action executing (``gateway_applying``). Every request is audited on the
 ``<customer>.gateway`` chain (before record, then the drafted intent or the refusal).
@@ -80,9 +81,10 @@ ReadScope = Annotated[
 WriteScope = Annotated[
     IdentityScope, Depends(require(Permission.CONFIG_MANAGE, domain_from_path("domain")))
 ]
-# The mode route drafts an action intent, so it also needs the draft permission (a route
-# dependency; the derived scope is the same one ``WriteScope`` returns).
-_REQUIRE_PROPOSE: Final = require(Permission.ACTION_PROPOSE, domain_from_path("domain"))
+# The mode route drafts an action intent, so it needs only the scoped draft permission.
+ProposeScope = Annotated[
+    IdentityScope, Depends(require(Permission.ACTION_PROPOSE, domain_from_path("domain")))
+]
 Plane = Annotated[GatewayPlane, Depends(get_gateway_plane)]
 Actions = Annotated[ActionPlane, Depends(get_action_plane)]
 DomainPath = Annotated[str, Path(min_length=1, max_length=512)]
@@ -253,7 +255,6 @@ def build_router() -> APIRouter:
         response_model=ActionView,
         response_model_exclude_unset=True,
         status_code=status.HTTP_201_CREATED,
-        dependencies=[Depends(_REQUIRE_PROPOSE)],
     )
     async def change_gateway_mode(
         request: Request,
@@ -261,7 +262,7 @@ def build_router() -> APIRouter:
         domain: DomainPath,
         gateway_id: GatewayPath,
         body: GatewayModeBody,
-        scope: WriteScope,
+        scope: ProposeScope,
         plane: Plane,
         actions: Actions,
     ) -> ActionView:

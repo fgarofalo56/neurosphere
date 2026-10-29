@@ -309,7 +309,7 @@ def test_every_gateway_route_declares_a_permission() -> None:
         (f"{base}/{{gateway_id}}/inventory", ("GET",)): ("data.read",),
         (f"{base}/{{gateway_id}}/sync", ("POST",)): ("config.manage",),
         # PRP-34 item 2: the mode switch drafts an action intent.
-        (f"{base}/{{gateway_id}}/mode", ("POST",)): ("action.propose", "config.manage"),
+        (f"{base}/{{gateway_id}}/mode", ("POST",)): ("action.propose",),
     }
 
 

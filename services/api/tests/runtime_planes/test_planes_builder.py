@@ -107,7 +107,7 @@ def test_production_write_targets_hold_no_connector_so_every_intent_is_advisory(
     assert plane.write_targets.names() == ()
     # No write connector for the model swap kind: advisory, never a metadata-only stand-in.
     assert plane.connector_for("model_deployment_swap") is None
-    assert frozenset({"foundry-model-swap"}) == SUPPORTED_WRITE_CONNECTORS
+    assert frozenset({"foundry-model-swap", "apim-gateway"}) == SUPPORTED_WRITE_CONNECTORS
 
 
 class _ForeignTargets(WriteTargetRegistry):

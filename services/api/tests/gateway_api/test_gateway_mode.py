@@ -103,9 +103,16 @@ def test_refusals_are_audited_as_failed() -> None:
 # -- authorization ------------------------------------------------------------------------------
 
 
-def test_viewer_steward_admin_alone_and_other_domains_cannot_draft() -> None:
+def test_steward_holding_action_propose_can_draft() -> None:
     env = make_mode_env()
-    for who in (VIEWER, STEWARD, ADMIN):
+    drafted = env.mode(STEWARD, "manage")
+    assert drafted.status_code == 201, drafted.text
+    assert drafted.json()["intent"]["action_kind"] == "gateway_mode_change"
+
+
+def test_viewer_admin_alone_and_other_domains_cannot_draft() -> None:
+    env = make_mode_env()
+    for who in (VIEWER, ADMIN):
         denied = env.mode(who, "manage")
         assert denied.status_code == 403, (who, denied.text)
     # Right permissions, wrong domain scope: the gateway's domain is the authorization target.
