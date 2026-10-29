@@ -213,15 +213,16 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 
 Plan approved 2026-10-29 with one delta signed off by the operator:
 
+- D2 (2026-10-29, item 3): `CostRecord.amount` and `currency` are required by the shipped cost contract, so an unpriced gateway row cannot be a `CostRecord`. Token counts already live on `TelemetryEvent`. Resolution: the APIM gateway source emits one `TelemetryEvent` per `CorrelationId` carrying tokens, model, deployment, latency and success; the connector-local `GatewayCostObservation` (CostRecord field names, amount null, `observation_source: gateway`) is the typed row for later pricing and is NOT posted to ingest. Item 3 acceptance "one TelemetryEvent plus one CostRecord" is replaced by "one TelemetryEvent plus one GatewayCostObservation". Item 4 posts telemetry only. Pricing of gateway tokens into estimated `CostRecord`s through the PRP-15 price sheets is a follow-up (not this PRP).
 - D1: PRP-31 (dependency) is active at 0 of 8 items. Items 1-6 and 8 run now; item 7 (Gateways page, catalog renderers; shares `route-manifest.json`, `workspaceNav.ts` and `mock-api/server.ts` with PRP-31) stays `todo` until PRP-31 ships. If PRP-31 has not shipped at close-out, item 7 is descoped to a follow-up issue and this PRP closes without the UI. Integration branch `prp-33-apim-gateway-observe` is cut from `main` (not from the PRP-31 branch).
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | todo | | sonnet | | |
-| 2 | todo | | sonnet | | |
-| 3 | todo | | sonnet | | |
+| 1 | merged | worktree-agent-a69e4bd8b9d1b0abd | sonnet | 65 passed (capabilities + matrix contract), ruff/pyright clean on branch and post-merge; 112 rows (matrix 534 -> 646); 05fc8c3, merge 0859b97 | 2026-10-29 |
+| 2 | merged | worktree-agent-ab24fd5690eaf7c0b | sonnet | 81 passed (cloud, clients, profile), 224 passed services -k cloud/profile/runtime post-merge; ruff/pyright clean; 6d5b26c, merge 11b009a | 2026-10-29 |
+| 3 | merged | worktree-agent-a8a3ee10ace95fae5 | sonnet | 39 passed connector suite on branch, 140 passed post-merge; KQL body-column grep = 0; ruff/pyright clean; validate_planning PASS; 4e12cd9, merge 8fdbee3 | 2026-10-29 |
 | 4 | todo | | sonnet | | |
-| 5 | todo | | opus | | |
+| 5 | in-progress | worktree lane | opus | | 2026-10-29 |
 | 6 | todo | | sonnet | | |
 | 7 | todo | | sonnet | | |
 | 8 | todo | | sonnet | | |

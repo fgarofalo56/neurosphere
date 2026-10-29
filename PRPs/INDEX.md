@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-33-apim-gateway-observe](active/PRP-33-apim-gateway-observe.md) | P1 | 0/8 (0%) | todo 8 | ? / ? | required |
+| [prp-33-apim-gateway-observe](active/PRP-33-apim-gateway-observe.md) | P1 | 3/8 (37%) | todo 4, in-progress 1, merged 3 | ? / ? | required |
 
 ## Backlog
 
