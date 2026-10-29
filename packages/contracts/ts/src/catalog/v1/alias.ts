@@ -65,7 +65,9 @@ export interface Alias {
     | "owner"
     | "policy"
     | "recommendation"
-    | "run_reference";
+    | "run_reference"
+    | "grant"
+    | "mcp_server";
   status: "active" | "retired";
   validity: Validity;
   provenance: Provenance;

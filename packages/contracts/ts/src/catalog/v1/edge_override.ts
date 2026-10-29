@@ -22,7 +22,7 @@ export interface EdgeOverride {
    */
   edge_id: string;
   /**
-   * Relation name in wire form (lowercase snake_case of INVOKES, DELEGATES_TO, USES_MODEL, READS, WRITES, GROUNDED_BY, OWNED_BY, DEPENDS_ON, SUPERSEDES).
+   * Relation name in wire form (lowercase snake_case of INVOKES, DELEGATES_TO, USES_MODEL, READS, WRITES, GROUNDED_BY, OWNED_BY, DEPENDS_ON, SUPERSEDES, GRANTS_ACCESS_TO).
    */
   relation_type:
     | "invokes"
@@ -33,7 +33,8 @@ export interface EdgeOverride {
     | "grounded_by"
     | "owned_by"
     | "depends_on"
-    | "supersedes";
+    | "supersedes"
+    | "grants_access_to";
   /**
    * Monotonic document version, incremented on every accepted write.
    */

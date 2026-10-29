@@ -177,6 +177,22 @@ def validate_validity_interval(doc: Doc) -> Problems:
     return _ordered(validity, "valid_from", "valid_to", strict=True)
 
 
+def validate_grant_window(doc: Doc) -> Problems:
+    """Grant valid_from < valid_until when both are set (either may be null: open-ended)."""
+    if doc.get("valid_from") is None or doc.get("valid_until") is None:
+        return []
+    return _ordered(doc, "valid_from", "valid_until", strict=True)
+
+
+def validate_mcp_tool_names_unique(doc: Doc) -> Problems:
+    """McpServer tool names are unique within one server (uniqueItems compares whole objects)."""
+    names = [_mapping(tool).get("name") for tool in _list(doc.get("tools"))]
+    counts = Counter(name for name in names if isinstance(name, str))
+    return [
+        f"tools: name {name!r} appears {n} times" for name, n in sorted(counts.items()) if n > 1
+    ]
+
+
 def validate_security_evidence_subset(doc: Doc) -> Problems:
     """security_evidence_ids is a subset of evidence_ids."""
     evidence = set(_list(doc.get("evidence_ids")))
@@ -1121,6 +1137,7 @@ _ENTITIES = (
 _RELATIONS = (
     "delegates_to",
     "depends_on",
+    "grants_access_to",
     "grounded_by",
     "invokes",
     "owned_by",
@@ -1147,6 +1164,11 @@ def single_document_validators(
     table.update(
         {
             "catalog/v1/person.schema.json": (*_ENTITY_VALIDATORS, validate_person_id_is_pseudonym),
+            "catalog/v1/grant.schema.json": (*_ENTITY_VALIDATORS, validate_grant_window),
+            "catalog/v1/mcp_server.schema.json": (
+                *_ENTITY_VALIDATORS,
+                validate_mcp_tool_names_unique,
+            ),
             "catalog/v1/supersedes.schema.json": (
                 *_RELATION_VALIDATORS,
                 validate_supersedes_same_type,

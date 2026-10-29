@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:mcp_server:finance/vendor-search",
+  "entity_type": "mcp_server",
+  "version": 1,
+  "etag": "\"mcp-etag-1\"",
+  "lifecycle_status": "draft",
+  "created_at": "2026-10-21T10:15:00Z",
+  "updated_at": "2026-10-21T10:15:00Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "display_name": "Vendor search (third party)",
+  "url": "https://vendor-search.fabrikam.example:8443/v1/mcp",
+  "transport": "streamable_http",
+  "protocol_versions": [
+    "2025-06-18"
+  ],
+  "auth": {
+    "kind": "api_key",
+    "audience": null
+  },
+  "publishable": true,
+  "tools": [],
+  "owner_id": null,
+  "provenance": {
+    "method": "import",
+    "source_id": "apim-observe",
+    "recorded_at": "2026-10-21T10:15:00Z"
+  }
+}

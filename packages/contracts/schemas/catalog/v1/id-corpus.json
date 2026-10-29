@@ -33,7 +33,12 @@
     "commercial:contoso:synapse:grounding_source:workspace/pool/table",
     "government:contoso:fabric:grounding_source:lakehouse/sales=2026",
     "commercial:contoso:foundry:edge_override:ovr-1",
-    "commercial:contoso:foundry:agent:x/y/z=1/2"
+    "commercial:contoso:foundry:agent:x/y/z=1/2",
+    "commercial:contoso:neurosphere:grant:finance/analyst-gpt-4o",
+    "government:dod-army:neurosphere:grant:triage/ops-group-mcp",
+    "commercial:contoso:neurosphere:mcp_server:finance/ledger-tools",
+    "government:usda:apim:mcp_server:hr/policy-search",
+    "commercial:contoso:neurosphere:grants_access_to:e-grant-0001"
   ],
   "invalid": [
     {
@@ -171,6 +176,14 @@
     {
       "value": "commercial:*:foundry:agent:abc",
       "reason": "wildcard customer"
+    },
+    {
+      "value": "grant:finance:analyst-gpt-4o",
+      "reason": "planning shorthand grant:<domain>:<slug> lacks the cloud, customer and source segments"
+    },
+    {
+      "value": "commercial:contoso:neurosphere:mcp_server:finance:ledger-tools",
+      "reason": "colon between domain and slug in an mcp_server id segment"
     },
     {
       "value": "commercial:contoso:foundry:agent:abc\n",

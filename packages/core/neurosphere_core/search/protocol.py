@@ -36,6 +36,8 @@ SearchEntity = Literal[
     "policy",
     "recommendation",
     "run_reference",
+    "grant",
+    "mcp_server",
 ]
 
 
@@ -44,7 +46,7 @@ class SearchFilters(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    entities: Annotated[list[SearchEntity] | None, Field(max_length=12)] = None
+    entities: Annotated[list[SearchEntity] | None, Field(max_length=14)] = None
     domain_ids: Annotated[list[CanonicalIdStr] | None, Field(max_length=100)] = None
 
 
