@@ -1,0 +1,8 @@
+<fragment>
+	<llm-token-limit counter-key='[[counter_key]]' estimate-prompt-tokens="false"[[limit_attributes]] remaining-tokens-header-name="x-ns-remaining-tokens" />
+	<llm-emit-token-metric namespace="[[metric_namespace]]">
+		<dimension name="API ID" />
+		<dimension name="Subscription ID" />
+		<dimension name="x-ns-cost-center" value='@(context.Request.Headers.GetValueOrDefault("x-ns-cost-center", "N/A"))' />
+	</llm-emit-token-metric>
+</fragment>
