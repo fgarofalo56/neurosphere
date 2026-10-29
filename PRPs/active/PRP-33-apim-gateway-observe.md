@@ -214,6 +214,7 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 Plan approved 2026-10-29 with one delta signed off by the operator:
 
 - D2 (2026-10-29, item 3): `CostRecord.amount` and `currency` are required by the shipped cost contract, so an unpriced gateway row cannot be a `CostRecord`. Token counts already live on `TelemetryEvent`. Resolution: the APIM gateway source emits one `TelemetryEvent` per `CorrelationId` carrying tokens, model, deployment, latency and success; the connector-local `GatewayCostObservation` (CostRecord field names, amount null, `observation_source: gateway`) is the typed row for later pricing and is NOT posted to ingest. Item 3 acceptance "one TelemetryEvent plus one CostRecord" is replaced by "one TelemetryEvent plus one GatewayCostObservation". Item 4 posts telemetry only. Pricing of gateway tokens into estimated `CostRecord`s through the PRP-15 price sheets is a follow-up (not this PRP).
+- D3 (2026-10-29, item 6): `deploy.read` / `deploy.write` named in item 6 do not exist in the permission enum; the deploy scan and plan routes use `config.manage` (writes) and `data.read` (reads), so the gateway routes do the same and no permission is added here. Item 6 also found that nothing in the runtime composition root builds the gateway plane (routes answer 503 `gateway_plane_unconfigured` until wired), so a new **item 9 api-runtime-gateway-builder** is added: `services/api/neurosphere_api/runtime/builders/gateway.py` plus registration in `default_builders`, the `gateways` container in the stores registry, and `services/api/tests/runtime_gateway_builder/`; depends on item 6; sonnet; review none.
 - D1: PRP-31 (dependency) is active at 0 of 8 items. Items 1-6 and 8 run now; item 7 (Gateways page, catalog renderers; shares `route-manifest.json`, `workspaceNav.ts` and `mock-api/server.ts` with PRP-31) stays `todo` until PRP-31 ships. If PRP-31 has not shipped at close-out, item 7 is descoped to a follow-up issue and this PRP closes without the UI. Integration branch `prp-33-apim-gateway-observe` is cut from `main` (not from the PRP-31 branch).
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
@@ -221,12 +222,13 @@ Plan approved 2026-10-29 with one delta signed off by the operator:
 | 1 | merged | worktree-agent-a69e4bd8b9d1b0abd | sonnet | 65 passed (capabilities + matrix contract), ruff/pyright clean on branch and post-merge; 112 rows (matrix 534 -> 646); 05fc8c3, merge 0859b97 | 2026-10-29 |
 | 2 | merged | worktree-agent-ab24fd5690eaf7c0b | sonnet | 81 passed (cloud, clients, profile), 224 passed services -k cloud/profile/runtime post-merge; ruff/pyright clean; 6d5b26c, merge 11b009a | 2026-10-29 |
 | 3 | merged | worktree-agent-a8a3ee10ace95fae5 | sonnet | 39 passed connector suite on branch, 140 passed post-merge; KQL body-column grep = 0; ruff/pyright clean; validate_planning PASS; 4e12cd9, merge 8fdbee3 | 2026-10-29 |
-| 4 | todo | | sonnet | | |
+| 4 | in-progress | worktree lane | sonnet | | 2026-10-29 |
 | 5 | merged | worktree-agent-a09f858a868960b78 | opus | review APPROVE (one pass, no blockers; follow-up: structured-query contract enum still lists 12 entity types); merge + openapi regen: drift/authz/contracts/catalog/search 2185 passed; generate --check OK; tests/contracts + core catalog/auth 2306 passed; authz 150 passed; TS 118 passed; ruff/pyright clean; Snyk 0 issues; openapi.json regenerated at merge; ownership extended to search/protocol.py, catalog/router.py cap, CatalogEntity/CatalogEdge unions; a21d2bc | 2026-10-29 |
-| 6 | in-progress | worktree lane | sonnet | | 2026-10-29 |
-| 7 | todo | | sonnet | | |
-| 8 | todo | | sonnet | | |
+| 6 | merged | worktree-agent-abed72718b8c8e3ce | sonnet | 58 passed core+api+drift on branch, integration 5 passed (emulator), 221 passed post-merge incl. authz; repo-wide ruff clean; review APPROVE (follow-ups: ARM id regex allows `..` RG, single-document inventory size, log swallowed failures); 6879982, merge 46ecf33 | 2026-10-29 |
+| 7 | todo | | sonnet | parked per D1 | |
+| 8 | in-progress | worktree lane | sonnet | | 2026-10-29 |
+| 9 | in-progress | worktree lane | sonnet | added per D3 | 2026-10-29 |
 
-Waves: 1 = items 1, 2, 3, 5 in parallel; 2 = item 6 (after 1, 2, 5); 3 = items 4, 7, 8 in parallel (after 6; item 4 and 8 also after 3). Models: item 5 opus; all others sonnet; verify passes haiku. Review: one independent pass on items 5 and 6; other items need review only if the reviewer of 6 flags a shared concern.
+Waves: 1 = items 1, 2, 3, 5 in parallel; 2 = item 6 (after 1, 2, 5); 3 = items 4, 8, 9 in parallel (after 6; items 4 and 8 also after 3); item 7 parked per D1. Models: item 5 opus; all others sonnet; verify passes haiku. Review: one independent pass on items 5 and 6; other items need review only if the reviewer of 6 flags a shared concern.
 
 ## Completion note (filled at ship)
