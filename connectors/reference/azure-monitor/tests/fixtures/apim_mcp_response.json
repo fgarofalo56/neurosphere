@@ -1,0 +1,21 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "TimeGenerated", "type": "datetime"},
+        {"name": "CorrelationId", "type": "string"},
+        {"name": "ToolName", "type": "string"},
+        {"name": "ToolCount", "type": "int"},
+        {"name": "TransportType", "type": "string"},
+        {"name": "_ResourceId", "type": "string"}
+      ],
+      "rows": [
+        [
+          "2026-10-29T10:00:03.0000000Z", "corr-mcp-0003", "search_docs", 1, "streamable-http",
+          "/SUBSCRIPTIONS/00000000-0000-0000-0000-000000000000/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.APIMANAGEMENT/SERVICE/APIM-TEST"
+        ]
+      ]
+    }
+  ]
+}

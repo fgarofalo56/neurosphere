@@ -1,0 +1,45 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "TimeGenerated", "type": "datetime"},
+        {"name": "CorrelationId", "type": "string"},
+        {"name": "ApiId", "type": "string"},
+        {"name": "ApiRevision", "type": "string"},
+        {"name": "OperationId", "type": "string"},
+        {"name": "ProductId", "type": "string"},
+        {"name": "ApimSubscriptionId", "type": "string"},
+        {"name": "BackendId", "type": "string"},
+        {"name": "BackendResponseCode", "type": "int"},
+        {"name": "ResponseCode", "type": "int"},
+        {"name": "IsRequestSuccess", "type": "bool"},
+        {"name": "TotalTime", "type": "real"},
+        {"name": "BackendTime", "type": "real"},
+        {"name": "Region", "type": "string"},
+        {"name": "_ResourceId", "type": "string"},
+        {"name": "ModelName", "type": "string"},
+        {"name": "DeploymentName", "type": "string"},
+        {"name": "PromptTokens", "type": "long"},
+        {"name": "CompletionTokens", "type": "long"},
+        {"name": "TotalTokens", "type": "long"},
+        {"name": "IsStreamCompletion", "type": "bool"},
+        {"name": "ApiVersion", "type": "string"}
+      ],
+      "rows": [
+        [
+          "2026-10-29T10:00:01.1234567Z", "corr-llm-0001", "openai-api", "1", "chat-completions",
+          "ai-product", "sub-0001-raw-value", "foundry-backend", 200, 200, true, 812.0, 790.0,
+          "East US", "/SUBSCRIPTIONS/00000000-0000-0000-0000-000000000000/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.APIMANAGEMENT/SERVICE/APIM-TEST",
+          "gpt-4o", "gpt-4o-prod", 120, 45, 165, false, "2025-01-01-preview"
+        ],
+        [
+          "2026-10-29T10:00:02.5000000Z", "corr-plain-0002", "echo-api", "1", "get-echo",
+          "starter", "sub-0002-raw-value", null, 200, 200, true, 35.0, 30.0,
+          "East US", "/SUBSCRIPTIONS/00000000-0000-0000-0000-000000000000/RESOURCEGROUPS/RG/PROVIDERS/MICROSOFT.APIMANAGEMENT/SERVICE/APIM-TEST",
+          null, null, null, null, null, null, null
+        ]
+      ]
+    }
+  ]
+}
