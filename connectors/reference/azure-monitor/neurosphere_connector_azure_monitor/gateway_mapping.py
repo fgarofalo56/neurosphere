@@ -20,6 +20,7 @@ Rules:
 from __future__ import annotations
 
 import hashlib
+import math
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -126,7 +127,7 @@ def _int(row: Mapping[str, Any], name: str) -> int | None:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    if number != number or number < 0 or number != int(number):
+    if math.isnan(number) or number < 0 or number != int(number):
         return None
     return int(number)
 
@@ -139,7 +140,7 @@ def _duration_ms(row: Mapping[str, Any], name: str) -> int | None:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    if number != number or number < 0:
+    if math.isnan(number) or number < 0:
         return None
     return round(number)
 

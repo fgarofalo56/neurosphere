@@ -253,7 +253,7 @@ class Gate:
     purge: bool = False
     approve_rbac: bool = False
     publisher_email: str = "g17-gate@example.com"
-    sender: Sender = _default_sender
+    sender: Sender | None = None
     observer: Observer | None = None
     row_fetcher: RowFetcher | None = None
     sleep: Sleeper = time.sleep
@@ -312,7 +312,6 @@ class Gate:
     def phase(self, name: str, fn: Callable[[], dict[str, Any] | None]) -> bool:
         print(f"[phase {name}]", flush=True)
         start = self.clock()
-        status, detail = "pass", {}
         try:
             out = fn()
             detail = dict(out or {})
@@ -566,7 +565,8 @@ class Gate:
             f"/chat/completions?api-version={CHAT_API_VERSION}"
         )
         body = {"messages": [{"role": "user", "content": FIXED_PROMPT}], "max_tokens": 8}
-        status, headers = self.sender(url, {"Ocp-Apim-Subscription-Key": self._key}, body)
+        sender = self.sender or _default_sender
+        status, headers = sender(url, {"Ocp-Apim-Subscription-Key": self._key}, body)
         corr = headers.get("x-ms-request-id") or headers.get("request-id") or ""
         self.facts["request_status"] = status
         self.facts["correlation_id"] = corr

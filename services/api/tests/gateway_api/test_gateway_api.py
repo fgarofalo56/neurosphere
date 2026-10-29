@@ -24,7 +24,7 @@ from gateway_harness import (  # pyright: ignore[reportMissingImports]
 from neurosphere_api.authz import route_inventory, undeclared_routes
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.gateway import ApiEntry, GatewayInventory
-from neurosphere_core.gateway.inventory import MAX_RETRIES
+from neurosphere_core.gateway import inventory as inv
 
 AUDIT_CHAIN = "contoso.gateway"
 
@@ -159,7 +159,6 @@ def test_failed_sync_is_recorded_and_surfaces_503() -> None:
     env = make_env(arm)
     created = env.register().json()
     arm.throttle_forever = True
-    import neurosphere_core.gateway.inventory as inv
 
     async def no_sleep(_: float) -> None:
         return None
@@ -174,7 +173,7 @@ def test_failed_sync_is_recorded_and_surfaces_503() -> None:
     assert failed.json()["reason"] == "arm_rate_limited"
     detail = env.call("GET", ADMIN, f"/domains/{FINANCE}/gateways/{created['id']}").json()
     assert detail["last_sync_status"] == "failed"
-    assert MAX_RETRIES == 3
+    assert inv.MAX_RETRIES == 3
 
 
 def test_only_get_requests_reach_arm_across_register_and_sync() -> None:
