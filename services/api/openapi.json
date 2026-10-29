@@ -790,6 +790,88 @@
         ],
         "title": "AnyField"
       },
+      "ApiEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "api_type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Type"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "protocols": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Protocols",
+            "type": "array"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "subscription_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Required"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ApiEntry",
+        "type": "object"
+      },
       "ApprovalDecision": {
         "additionalProperties": false,
         "description": "Immutable decision on a HITL review item (PRD NS-04). Written once and never updated: a changed mind is a new review item with a new decision, never an edit, so the schema has no update-capable field. Insight review and maker-checker approval of executable changes are separate kinds. A maker-checker approval binds to the exact confirmation_hash it approves, so an approval cannot be replayed against a different target, version or diff. Rules JSON Schema cannot express are checked by `validate_maker_checker_separation` in tests/contracts/test_action_transitions.py: when self_approval_allowed is false, reviewer.principal_pseudonym differs from maker.principal_pseudonym and from maker.on_behalf_of.",
@@ -1148,6 +1230,56 @@
         "title": "AzureResourceType",
         "type": "string"
       },
+      "BackendEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "circuit_breaker_rules": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitBreakerRule"
+            },
+            "title": "Circuit Breaker Rules",
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "pool_members": {
+            "items": {
+              "$ref": "#/components/schemas/PoolMember"
+            },
+            "title": "Pool Members",
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "Single",
+              "Pool"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "BackendEntry",
+        "type": "object"
+      },
       "BiasCheck": {
         "additionalProperties": false,
         "properties": {
@@ -1498,6 +1630,68 @@
           "records_checked"
         ],
         "title": "ChainVerification",
+        "type": "object"
+      },
+      "CircuitBreakerRule": {
+        "additionalProperties": false,
+        "properties": {
+          "failure_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Count"
+          },
+          "failure_interval": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Interval"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Status Codes",
+            "type": "array"
+          },
+          "trip_duration": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trip Duration"
+          }
+        },
+        "title": "CircuitBreakerRule",
         "type": "object"
       },
       "CitationView": {
@@ -2421,6 +2615,40 @@
           "analytics"
         ],
         "title": "DeploymentProfile",
+        "type": "object"
+      },
+      "DiagnosticsState": {
+        "additionalProperties": false,
+        "properties": {
+          "gateway_llm_logs": {
+            "default": false,
+            "title": "Gateway Llm Logs",
+            "type": "boolean"
+          },
+          "gateway_logs": {
+            "default": false,
+            "title": "Gateway Logs",
+            "type": "boolean"
+          },
+          "gateway_mcp_logs": {
+            "default": false,
+            "title": "Gateway Mcp Logs",
+            "type": "boolean"
+          },
+          "workspace_resource_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Resource Id"
+          }
+        },
+        "title": "DiagnosticsState",
         "type": "object"
       },
       "DiscoveredResource": {
@@ -4300,6 +4528,494 @@
           "detail"
         ],
         "title": "Gap",
+        "type": "object"
+      },
+      "GatewayDetail": {
+        "additionalProperties": false,
+        "description": "Registration plus the inventory summary (full snapshot: ``.../inventory``).",
+        "properties": {
+          "arm_resource_id": {
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/DiagnosticsState"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "freshness_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Seconds"
+          },
+          "id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "inventory_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Counts"
+          },
+          "inventory_taken_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Taken At"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "default": "never",
+            "enum": [
+              "ok",
+              "failed",
+              "never"
+            ],
+            "title": "Last Sync Status",
+            "type": "string"
+          },
+          "mode": {
+            "const": "observe",
+            "default": "observe",
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "registered_by": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Registered By",
+            "type": "string"
+          },
+          "sku_name_raw": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Name Raw"
+          },
+          "tier": {
+            "enum": [
+              "consumption",
+              "developer",
+              "basic",
+              "standard",
+              "premium",
+              "basic_v2",
+              "standard_v2",
+              "premium_v2",
+              "unknown"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "domain_id",
+          "cloud",
+          "arm_resource_id",
+          "name",
+          "tier",
+          "created_at",
+          "updated_at",
+          "registered_by"
+        ],
+        "title": "GatewayDetail",
+        "type": "object"
+      },
+      "GatewayInventory": {
+        "additionalProperties": false,
+        "properties": {
+          "apis": {
+            "items": {
+              "$ref": "#/components/schemas/ApiEntry"
+            },
+            "title": "Apis",
+            "type": "array"
+          },
+          "backends": {
+            "items": {
+              "$ref": "#/components/schemas/BackendEntry"
+            },
+            "title": "Backends",
+            "type": "array"
+          },
+          "gateway_id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Gateway Id",
+            "type": "string"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/OperationEntry"
+            },
+            "title": "Operations",
+            "type": "array"
+          },
+          "policy_fragments": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyFragmentEntry"
+            },
+            "title": "Policy Fragments",
+            "type": "array"
+          },
+          "product_api_links": {
+            "items": {
+              "$ref": "#/components/schemas/ProductApiLink"
+            },
+            "title": "Product Api Links",
+            "type": "array"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductEntry"
+            },
+            "title": "Products",
+            "type": "array"
+          },
+          "subscriptions": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionEntry"
+            },
+            "title": "Subscriptions",
+            "type": "array"
+          },
+          "taken_at": {
+            "format": "date-time",
+            "title": "Taken At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gateway_id",
+          "taken_at"
+        ],
+        "title": "GatewayInventory",
+        "type": "object"
+      },
+      "GatewayList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GatewayRegistration"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GatewayList",
+        "type": "object"
+      },
+      "GatewayRegistration": {
+        "additionalProperties": false,
+        "properties": {
+          "arm_resource_id": {
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/DiagnosticsState"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "freshness_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Seconds"
+          },
+          "id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "default": "never",
+            "enum": [
+              "ok",
+              "failed",
+              "never"
+            ],
+            "title": "Last Sync Status",
+            "type": "string"
+          },
+          "mode": {
+            "const": "observe",
+            "default": "observe",
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "registered_by": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Registered By",
+            "type": "string"
+          },
+          "sku_name_raw": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Name Raw"
+          },
+          "tier": {
+            "enum": [
+              "consumption",
+              "developer",
+              "basic",
+              "standard",
+              "premium",
+              "basic_v2",
+              "standard_v2",
+              "premium_v2",
+              "unknown"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "domain_id",
+          "cloud",
+          "arm_resource_id",
+          "name",
+          "tier",
+          "created_at",
+          "updated_at",
+          "registered_by"
+        ],
+        "title": "GatewayRegistration",
         "type": "object"
       },
       "Generator": {
@@ -6355,6 +7071,51 @@
         "title": "OpaqueId",
         "type": "string"
       },
+      "OperationEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "api_id": {
+            "maxLength": 512,
+            "title": "Api Id",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "url_template": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Template"
+          }
+        },
+        "required": [
+          "api_id",
+          "id"
+        ],
+        "title": "OperationEntry",
+        "type": "object"
+      },
       "Outcome": {
         "additionalProperties": false,
         "properties": {
@@ -7400,6 +8161,71 @@
         "title": "Policy",
         "type": "object"
       },
+      "PolicyFragmentEntry": {
+        "additionalProperties": false,
+        "description": "Name and description only. The fragment XML is never read into the snapshot.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 512,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PolicyFragmentEntry",
+        "type": "object"
+      },
+      "PoolMember": {
+        "additionalProperties": false,
+        "properties": {
+          "backend_id": {
+            "maxLength": 512,
+            "title": "Backend Id",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "backend_id"
+        ],
+        "title": "PoolMember",
+        "type": "object"
+      },
       "Prerequisite": {
         "additionalProperties": false,
         "description": "A precondition for acting on the recommendation (NS-03: compatibility, quality regression, cost comparison, staged rollout, rollback).",
@@ -7791,6 +8617,88 @@
           "object_id"
         ],
         "title": "Principal",
+        "type": "object"
+      },
+      "ProductApiLink": {
+        "additionalProperties": false,
+        "properties": {
+          "api_id": {
+            "maxLength": 512,
+            "title": "Api Id",
+            "type": "string"
+          },
+          "product_id": {
+            "maxLength": 512,
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "api_id"
+        ],
+        "title": "ProductApiLink",
+        "type": "object"
+      },
+      "ProductEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Required"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "subscription_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Required"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ProductEntry",
         "type": "object"
       },
       "ProjectedEstimate": {
@@ -8697,6 +9605,34 @@
         "pattern": "^[a-z][a-z0-9]{2,39}$",
         "title": "Region",
         "type": "string"
+      },
+      "RegisterGatewayBody": {
+        "additionalProperties": false,
+        "description": "Register by ARM resource id. ``customer_id``/``domain_id``/identity are never in the body.",
+        "properties": {
+          "arm_resource_id": {
+            "pattern": "(?i)^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[A-Za-z0-9_.()-]{1,90}/providers/Microsoft\\.ApiManagement/service/[A-Za-z][A-Za-z0-9-]{0,49}$",
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "arm_resource_id"
+        ],
+        "title": "RegisterGatewayBody",
+        "type": "object"
       },
       "RegisterServerBody": {
         "additionalProperties": false,
@@ -10965,6 +11901,58 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
         "title": "SubjectId",
         "type": "string"
+      },
+      "SubscriptionEntry": {
+        "additionalProperties": false,
+        "description": "APIM subscription metadata. Keys are never requested (no ``listSecrets``).",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "SubscriptionEntry",
+        "type": "object"
       },
       "SubscriptionScan": {
         "additionalProperties": false,
@@ -15947,6 +16935,294 @@
         "summary": "Get Forecast",
         "tags": [
           "finops"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways": {
+      "get": {
+        "operationId": "list_gateways_api_v1_gateways_domains__domain__gateways_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Gateways",
+        "tags": [
+          "gateways"
+        ]
+      },
+      "post": {
+        "operationId": "register_gateway_api_v1_gateways_domains__domain__gateways_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterGatewayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayRegistration"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Gateway",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}": {
+      "get": {
+        "operationId": "get_gateway_api_v1_gateways_domains__domain__gateways__gateway_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Gateway",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/inventory": {
+      "get": {
+        "operationId": "get_inventory_api_v1_gateways_domains__domain__gateways__gateway_id__inventory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayInventory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Inventory",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/sync": {
+      "post": {
+        "operationId": "sync_gateway_api_v1_gateways_domains__domain__gateways__gateway_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Gateway",
+        "tags": [
+          "gateways"
         ]
       }
     },
