@@ -88,7 +88,8 @@ def test_only_data_read_domains_are_listed_with_derived_names() -> None:
     assert {i["display_name_source"] for i in items} == {"derived"}
     assert {i["cloud"] for i in items} == {"commercial"}
     by_id = {i["domain_id"]: i["permissions"] for i in items}
-    assert by_id[FINANCE] == ["data.read"]
+    # Viewer carries data.read plus grant.read (PRP-33 item 5); still no write permission.
+    assert by_id[FINANCE] == ["data.read", "grant.read"]
     assert "report.create" in by_id[OPERATIONS]
     assert HR not in by_id
 

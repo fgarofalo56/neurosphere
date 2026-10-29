@@ -12,3 +12,7 @@ dd62b13e6b2165b09641b8337b5264d7cd853303:services/api/tests/copilot_api/test_eng
 4a520fadd1e1351b8eab98227984ff55f1663d92:services/api/tests/runtime_planes/test_planes_builder.py:generic-api-key:135
 # PRP-32 item 1: built-in Key Vault Secrets User role definition id (public Azure constant), not a credential.
 fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:generic-api-key:11
+# PRP-33 item 8: fake subscription key constant in the G17 gate unit test, not a credential.
+81440c2452a8292f9228e9b95b59cda62a68fb73:tests/unit/gates/test_g17_observe.py:generic-api-key:20
+# PRP-33 item 4: sha256 of a fake local-only producer secret in the gateway_poll example producers file.
+208d34c530292a80491e1f2d501be1dda7d0493f:services/workers/neurosphere_workers/ingestion/gateway_poll/producers.example.json:generic-api-key:5
