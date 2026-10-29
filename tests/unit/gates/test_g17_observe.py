@@ -154,3 +154,17 @@ def test_teardown_refuses_untagged_resource() -> None:
         g.teardown()
     assert exc.value.untagged == ["/subscriptions/x/foreign"]
     assert not any(c[:2] == ["group", "delete"] for c in az.calls)
+
+
+def test_evidence_dir_stays_inside_repo_unless_overridden(tmp_path: Path) -> None:
+    inside = g17.REPO / "docs" / "evidence" / "G17"
+    assert g17.evidence_dir_for(str(inside)) == inside.resolve()
+    assert (
+        g17.evidence_dir_for(str(g17.REPO / "docs" / ".." / "temp"))
+        == (g17.REPO / "temp").resolve()
+    )
+    with pytest.raises(g17.EvidenceDirRefusedError):
+        g17.evidence_dir_for(str(tmp_path))
+    with pytest.raises(g17.EvidenceDirRefusedError):
+        g17.evidence_dir_for(str(g17.REPO.parent))
+    assert g17.evidence_dir_for(str(tmp_path), allow_external=True) == tmp_path.resolve()

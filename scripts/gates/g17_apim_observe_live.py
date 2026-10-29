@@ -194,6 +194,11 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--approve-rbac", action="store_true", help="run the OpenAI User RBAC write")
     ap.add_argument("--publisher-email", default="g17-gate@example.com")
     ap.add_argument("--evidence-dir", default=str(REPO / "docs" / "evidence" / "G17"))
+    ap.add_argument(
+        "--allow-external-evidence-dir",
+        action="store_true",
+        help="allow --evidence-dir outside the repository checkout (default: refused)",
+    )
     return ap
 
 
@@ -799,6 +804,24 @@ def render_markdown(evidence: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+class EvidenceDirRefusedError(ValueError):
+    """``--evidence-dir`` resolves outside the repository and the override flag is absent."""
+
+
+def evidence_dir_for(raw: str, *, allow_external: bool = False) -> Path:
+    """Resolve the evidence directory; refuse one outside ``REPO`` unless explicitly allowed.
+
+    The argument is operator input on a CLI; keeping it under the checkout by default stops a
+    stray ``..`` from writing evidence somewhere unexpected.
+    """
+    out = Path(raw).expanduser().resolve()
+    if allow_external or out == REPO or out.is_relative_to(REPO):
+        return out
+    raise EvidenceDirRefusedError(
+        f"--evidence-dir {raw!r} is outside the repository; pass --allow-external-evidence-dir"
+    )
+
+
 def write_evidence(
     evidence: dict[str, Any],
     out_dir: Path,
@@ -927,10 +950,17 @@ def main(
     else:  # pragma: no cover - live only
         gate.observer = _real_observer
         gate.row_fetcher = _real_row_fetcher(gate)
+    try:
+        out_dir = evidence_dir_for(
+            args.evidence_dir, allow_external=args.allow_external_evidence_dir
+        )
+    except EvidenceDirRefusedError as exc:
+        print(f"REFUSED: {exc}. No az command was run.", file=sys.stderr)
+        return 2
     code, evidence = run_gate(gate)
     path = write_evidence(
         evidence,
-        Path(args.evidence_dir),
+        out_dir,
         secrets=[gate._key],  # pyright: ignore[reportPrivateUsage]
         hosts=[urlparse(args.foundry_endpoint).hostname or ""],
     )
