@@ -1,10 +1,12 @@
 ---
 name: prp-34-apim-gateway-manage
-status: backlog
+status: active
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
+started: 2026-10-29
+branch: prp-34-apim-gateway-manage
 model: opus
 phase: 6
 ns: NS-04, NS-06, NS-07, NS-08, NS-09
