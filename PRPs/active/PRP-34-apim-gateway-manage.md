@@ -219,16 +219,21 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | todo | | opus | | |
+| 1 | merged | worktree-agent-a038917ecafd1995d | opus | merge ed25498; reviewed (1 rework: lost-response restore); connector+infra pytest 154 passed 1 xfailed (enum, item 1b), ruff, pyright | 2026-10-29 |
+| 1b | todo | | opus | contract enum + SDK WriteAction + licence register (plan delta, user-approved 2026-10-29) | 2026-10-29 |
 | 2 | todo | | opus | | |
 | 3 | todo | | opus | | |
 | 4 | todo | | opus | | |
 | 5 | todo | | sonnet | | |
 | 6 | todo | | opus | | |
-| 7 | todo | | sonnet | | |
+| 7 | merged | worktree-agent-a99aacda7f4e6981f | sonnet | ff to ee4c771; reviewed (1 rework: diag dependsOn, own-server keeps Authorization), confirmed; infra pytest 62 passed, ruff, bicep build/lint | 2026-10-29 |
 | 8 | todo | | sonnet | | |
 | 9 | todo | | sonnet | | |
 
 Waves: 1 = items 1 and 7 in parallel; 2 = item 2 (after 1); 3 = items 3, 4, 5, 6 in parallel (after 2; 4 only needs 1); 4 = item 8 (after 2, 5, 6); 5 = item 9 (after 1-7). Models: items 1-4 and 6 opus; 5, 7, 8, 9 sonnet; verify passes haiku. Review: one independent pass on every item (`review: required`).
+
+### Plan deltas (user-approved 2026-10-29)
+- Item 1b (new, opus, review required): extend the connector-manifest contract `write_support.actions` enum in `packages/contracts` (regenerate models) and the SDK `WriteAction` type to admit `budget_cap_change`, `grant_publish`, `grant_unpublish`, `mcp_server_publish`, `mcp_server_unpublish`, and regenerate `docs/licenses.md` and `docs/adr/0002-stack-pins.md` for the new workspace member. Remove the strict xfail in item 1's manifest test. Sequenced after item 1, before item 2.
+- Item 7: the optional own-MCP-server APIM front keeps the `Authorization` header (NeuroSphere's MCP server needs the caller bearer token, `factory.py:283`); it still strips `Ocp-Apim-Subscription-Key`, `api-key`, `subscription-key`. It is therefore a separate policy from the item 6 customer-server template, which still strips `Authorization`. The byte-identity test in the item 7 criteria is replaced by a test of this policy. Env var is `NS_MCP_RESOURCE_SERVER_URL`.
 
 ## Completion note (filled at ship)
