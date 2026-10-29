@@ -12,7 +12,11 @@ alone); ``found`` resources are restored to their captured prior properties, nev
 reversal that fails leaves the resource in ``orphans`` and the error becomes
 ``capability_unavailable`` reason ``rollback_failed``. A write whose response was lost may have
 reached ARM; when the failing create step's resource is present afterwards its ownership is
-unknown, so it is reported as an orphan rather than deleted.
+unknown, so it is reported as an orphan rather than deleted. When the failing step updated or
+deleted a found resource, the resource is re-read: if its ETag changed or it is gone, the
+properties captured before the write are put back (``If-Match`` the new ETag, or none when it is
+absent), and a restore that fails is an orphan. A ``412`` means nothing was written, so it needs
+no restore.
 
 Nothing here logs payloads: log lines carry the step's type, name and ownership only.
 """
@@ -109,10 +113,12 @@ class PlanApplier:
         await self._records.append(record)
         done: list[StepRecord] = []
         for step in plan.steps:
+            current: ArmResource | None = None
             try:
-                done.append(await self._apply_step(step, bound[step.index]))
+                current = await self._arm.get(step.name)
+                done.append(await self._apply_step(step, bound[step.index], current))
             except Exception as cause:
-                orphans = await self._unknown_write(step, cause)
+                orphans = await self._unknown_write(step, current, cause)
                 orphans += await self._reverse(done)
                 status = "rollback_failed" if orphans else "rolled_back"
                 await self._records.append(
@@ -144,8 +150,9 @@ class PlanApplier:
             )
         return after
 
-    async def _apply_step(self, step: PlanStep, spec: ResourceSpec) -> StepRecord:
-        current = await self._arm.get(step.name)
+    async def _apply_step(
+        self, step: PlanStep, spec: ResourceSpec, current: ArmResource | None
+    ) -> StepRecord:
         if step.operation == "delete":
             if current is None:
                 raise StaleVersionError("a resource to delete vanished", reason="resource_vanished")
@@ -195,17 +202,38 @@ class PlanApplier:
         )
         return rec
 
-    async def _unknown_write(self, step: PlanStep, cause: Exception) -> list[str]:
-        """A create whose response was lost may exist now; its ownership is unknown."""
-        if step.operation != "upsert" or step.expected != "create":
-            return []
+    async def _unknown_write(
+        self, step: PlanStep, current: ArmResource | None, cause: Exception
+    ) -> list[str]:
+        """Settle the failing step: its write may have reached ARM although the call failed.
+
+        A create that may exist now has unknown ownership: an orphan, never deleted. A found
+        resource that was updated or deleted is restored to ``current`` (its pre-write state).
+        """
         if isinstance(cause, StaleVersionError):
-            return []
+            return []  # 412 or a pre-write refusal: nothing was written
+        if step.operation == "upsert" and step.expected == "create":
+            try:
+                present = await self._arm.get(step.name)
+            except Exception:
+                return [step.name]
+            return [step.name] if present is not None else []
+        wrote_found = step.operation == "delete" or step.changes
+        if current is None or not current.etag or not wrote_found:
+            return []  # the pre-write read never completed, or no write was attempted
         try:
-            present = await self._arm.get(step.name)
+            now = await self._arm.get(step.name)
+            if now is not None and now.etag == current.etag:
+                return []  # the write did not land
+            await self._arm.put(
+                step.name, current.properties, if_match=None if now is None else now.etag
+            )
         except Exception:
             return [step.name]
-        return [step.name] if present is not None else []
+        _log.info(
+            "apim step %d %s restored after a failed write", step.index, step.resource_type.value
+        )
+        return []
 
     # -- reverse ---------------------------------------------------------------------------
 

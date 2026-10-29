@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -23,6 +24,7 @@ from neurosphere_connector_apim_gateway import (
     StepOwnership,
 )
 from neurosphere_connector_apim_gateway.arm import map_status
+from neurosphere_connector_apim_gateway.inmemory import ArmCall
 from neurosphere_connector_apim_gateway.policies import fragment_payload, render_deny_fragment
 from neurosphere_core.errors import (
     CapabilityUnavailableError,
@@ -170,13 +172,33 @@ async def test_failed_reversal_reports_rollback_failed_with_orphans() -> None:
     assert set(apim.snapshot()) == {"backends/foundry"}
 
 
+@dataclass
 class _LostResponseApim(InMemoryApim):
-    """The PUT reaches ARM but the response is lost."""
+    """The first write matching ``lost`` reaches ARM but its response is lost.
+
+    With ``fail_restore`` every later PUT of that path fails before reaching ARM.
+    """
+
+    lost: tuple[str, str] = ("PUT", "apis/llm")
+    fail_restore: bool = False
+    _landed: bool = field(default=False)
+
+    def _after_write(self, method: str, path: str) -> None:
+        if (method, path) == self.lost and not self._landed:
+            self._landed = True
+            raise DependencyTransientError(reason="arm_unreachable")
 
     async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
-        await super().put(path, properties, if_match=if_match)
-        if path == "apis/llm":
+        if self.fail_restore and self._landed and path == self.lost[1]:
+            self.calls.append(ArmCall("PUT", path, if_match))
             raise DependencyTransientError(reason="arm_unreachable")
+        await super().put(path, properties, if_match=if_match)
+        self._after_write("PUT", path)
+
+    async def delete(self, path: str, *, if_match: str) -> bool:
+        deleted = await super().delete(path, if_match=if_match)
+        self._after_write("DELETE", path)
+        return deleted
 
 
 async def test_lost_create_response_is_reported_as_orphan_not_deleted() -> None:
@@ -186,6 +208,82 @@ async def test_lost_create_response_is_reported_as_orphan_not_deleted() -> None:
         await conn.apply(req)
     assert err.value.orphans == ("apis/llm",)
     assert set(apim.snapshot()) == {"apis/llm"}  # ownership unknown: left, reported
+
+
+_OLD_BACKEND = {"url": "https://old.openai.azure.com/openai", "protocol": "http"}
+_NEW_BACKEND = {"url": "https://new.openai.azure.com/openai", "protocol": "http"}
+_LINK = "products/ns-grant-g1/apiLinks/llm"
+
+
+async def test_lost_update_response_restores_the_found_resource() -> None:
+    apim = _LostResponseApim(lost=("PUT", "backends/foundry"))
+    seeded = apim.seed("backends/foundry", _OLD_BACKEND)
+    conn, apim, records = make(apim)
+    req = await reviewed(conn, request(upsert("backends/foundry", _NEW_BACKEND)))
+    with pytest.raises(DependencyTransientError):
+        await conn.apply(req)
+    assert apim.snapshot() == {"backends/foundry": _OLD_BACKEND}  # prior put back, not deleted
+    puts = [c for c in apim.writes() if c.path == "backends/foundry"]
+    assert [c.method for c in puts] == ["PUT", "PUT"]
+    assert puts[0].if_match == seeded
+    assert puts[1].if_match not in (None, seeded)  # guarded by the ETag our lost write minted
+    record = await records.latest("apply-1")
+    assert record is not None and record.status == "rolled_back" and record.orphans == ()
+
+
+async def test_lost_update_response_with_failed_restore_is_rollback_failed() -> None:
+    apim = _LostResponseApim(lost=("PUT", "backends/foundry"), fail_restore=True)
+    apim.seed("backends/foundry", _OLD_BACKEND)
+    conn, apim, records = make(apim)
+    req = await reviewed(conn, request(upsert("backends/foundry", _NEW_BACKEND)))
+    with pytest.raises(RollbackFailedError) as err:
+        await conn.apply(req)
+    assert err.value.orphans == ("backends/foundry",)
+    assert apim.snapshot() == {"backends/foundry": _NEW_BACKEND}
+    record = await records.latest("apply-1")
+    assert record is not None
+    assert record.status == "rollback_failed" and record.orphans == ("backends/foundry",)
+
+
+async def test_lost_delete_response_recreates_the_found_resource() -> None:
+    apim = _LostResponseApim(lost=("DELETE", _LINK))
+    apim.seed(_LINK, PUBLICATION[_LINK])
+    conn, apim, records = make(apim)
+    req = await reviewed(conn, request(remove(_LINK)))
+    with pytest.raises(DependencyTransientError):
+        await conn.apply(req)
+    assert apim.snapshot() == {_LINK: PUBLICATION[_LINK]}
+    restore = apim.writes()[-1]
+    assert (restore.method, restore.if_match) == ("PUT", None)  # absent: no If-Match
+    record = await records.latest("apply-1")
+    assert record is not None and record.status == "rolled_back" and record.orphans == ()
+
+
+async def test_lost_delete_response_with_failed_restore_is_rollback_failed() -> None:
+    apim = _LostResponseApim(lost=("DELETE", _LINK), fail_restore=True)
+    apim.seed(_LINK, PUBLICATION[_LINK])
+    conn, apim, records = make(apim)
+    req = await reviewed(conn, request(remove(_LINK)))
+    with pytest.raises(RollbackFailedError) as err:
+        await conn.apply(req)
+    assert err.value.orphans == (_LINK,)
+    assert apim.snapshot() == {}
+    record = await records.latest("apply-1")
+    assert record is not None
+    assert record.status == "rollback_failed" and record.orphans == (_LINK,)
+
+
+async def test_failed_update_that_did_not_land_needs_no_restore() -> None:
+    conn, apim, records = make()
+    apim.seed("backends/foundry", _OLD_BACKEND)
+    req = await reviewed(conn, request(upsert("backends/foundry", _NEW_BACKEND)))
+    apim.fail("PUT", "backends/foundry", DependencyTransientError(reason="arm_unreachable"))
+    with pytest.raises(DependencyTransientError):
+        await conn.apply(req)
+    assert [c.method for c in apim.writes()] == ["PUT"]  # the failed write only, no restore
+    assert apim.snapshot() == {"backends/foundry": _OLD_BACKEND}
+    record = await records.latest("apply-1")
+    assert record is not None and record.status == "rolled_back"
 
 
 async def test_verify_reads_every_resource_back() -> None:
