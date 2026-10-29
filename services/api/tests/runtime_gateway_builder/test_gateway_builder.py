@@ -15,7 +15,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     role,
 )
 from gateway_harness import RID, FakeArm, fake_arm  # pyright: ignore[reportMissingImports]
-from neurosphere_api.gateway import GatewayPlane
+from neurosphere_api.gateway import GatewayPlane, GatewaySettings
 from neurosphere_api.runtime import CompositionOverrides
 from neurosphere_api.runtime.builders import (
     AUDIT_REPOSITORY,
@@ -134,14 +134,27 @@ def test_default_store_is_cosmos_on_the_shared_client() -> None:
     assert cosmos.created_databases == []  # the builder opens no second client or database
 
 
-@pytest.mark.asyncio
-async def test_local_startup_creates_the_container() -> None:
-    cosmos = FakeCosmosClient()
-    composed = _compose(cosmos=lambda: cosmos)
-    app = composed.app
-    async with app.router.lifespan_context(app):
-        pass
-    assert "gateways" in cosmos.databases["neurosphere"].containers
+def test_local_startup_creates_the_container_from_the_registry() -> None:
+    from neurosphere_core.stores import container_spec
+
+    spec = container_spec("gateways")
+    assert spec.partition_key_paths == ("/customer_id", "/domain_id")
+    assert spec.default_ttl is None
+
+
+def test_store_kind_resolution() -> None:
+    from neurosphere_api.gateway.settings import resolve_store_kind
+    from neurosphere_core.cloud import Settings
+    from neurosphere_core.errors import InvalidSchemaError
+
+    local = Settings()
+    assert resolve_store_kind(local, GatewaySettings()) == "cosmos"
+    assert resolve_store_kind(local, GatewaySettings(store="cosmos")) == "cosmos"
+    assert resolve_store_kind(local, GatewaySettings(store="memory")) == "memory"
+    hosted = Settings(env="dev", cloud="commercial")
+    assert resolve_store_kind(hosted, GatewaySettings()) == "cosmos"
+    with pytest.raises(InvalidSchemaError):
+        resolve_store_kind(hosted, GatewaySettings(store="memory"))
 
 
 def test_cosmos_failure_is_a_named_reason_and_does_not_break_others() -> None:

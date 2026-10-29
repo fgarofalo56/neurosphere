@@ -178,6 +178,8 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
     ),
     ContainerSpec("lifecycle_holds", _CUSTOMER, "neurosphere_core.lifecycle.cosmos"),
     ContainerSpec("lifecycle_mappings", _CUSTOMER, "neurosphere_core.lifecycle.cosmos"),
+    # --- gateway registry (PRP-33) -----------------------------------------------------------
+    ContainerSpec("gateways", _CUSTOMER_DOMAIN, "neurosphere_core.gateway.cosmos_store"),
 )
 
 

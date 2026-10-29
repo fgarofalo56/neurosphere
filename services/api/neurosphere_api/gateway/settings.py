@@ -1,7 +1,7 @@
 """Gateway registry settings (``NS_GATEWAY_*``) and store selection.
 
-``NS_GATEWAY_STORE``: ``auto`` (default) is in-memory under ``NS_ENV=local`` and Cosmos
-everywhere else; ``memory`` is refused outside ``NS_ENV=local``; ``cosmos`` always uses Cosmos
+``NS_GATEWAY_STORE``: ``auto`` (default) and ``cosmos`` always use Cosmos; ``memory`` is
+the only in-memory choice and is refused outside ``NS_ENV=local``
 (``NS_GATEWAY_COSMOS_ACCOUNT`` outside local, emulator keys come from the usual ``NS_COSMOS_*``).
 """
 
@@ -54,6 +54,4 @@ def resolve_store_kind(settings: Settings, gateway: GatewaySettings) -> Literal[
                 reason="config",
             )
         return "memory"
-    if gateway.store == "cosmos":
-        return "cosmos"
-    return "memory" if settings.env == "local" else "cosmos"
+    return "cosmos"

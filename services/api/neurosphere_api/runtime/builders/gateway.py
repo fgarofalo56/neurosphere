@@ -7,8 +7,9 @@ answering 503 ``gateway_plane_unconfigured``).
 * Store: ``NS_GATEWAY_STORE=memory`` (only under ``NS_ENV=local``) is in-memory; ``auto`` and
   ``cosmos`` (even under local) use the ``CosmosGatewayStore`` on the ONE shared Cosmos client
   (``ctx.cosmos_client()``) in the ``NS_STORE_DATABASE`` database, container
-  ``NS_GATEWAY_COSMOS_CONTAINER`` (default ``gateways``). Under ``NS_ENV=local`` a startup
-  hook creates the container if missing; outside local it must already exist (IaC).
+  ``NS_GATEWAY_COSMOS_CONTAINER`` (default ``gateways``). The container is in the
+  ``neurosphere_core.stores`` registry: ``ensure_local_containers`` creates it under local and
+  Bicep (``cosmos-containers.json``) elsewhere.
 * ARM: ``neurosphere_core.clients.arm_client`` bound to the deployment cloud, with an aio
   ``DefaultAzureCredential`` (environment credential excluded outside local), closed at shutdown.
 * Audit: the ``AUDIT_REPOSITORY`` the data builder published (the one the action plane audits to).
@@ -31,7 +32,6 @@ from neurosphere_core.gateway import (
     CosmosGatewayStore,
     GatewayStore,
     InMemoryGatewayStore,
-    create_gateway_container,
 )
 from pydantic import ValidationError
 
@@ -65,26 +65,16 @@ def _store(ctx: BuildContext, gateway: GatewaySettings) -> GatewayStore:
         if not isinstance(override, GatewayStore):
             raise ComponentUnavailableError("gateway_store_override_invalid")
         return override
-    # ``auto`` is Cosmos here even under NS_ENV=local (the emulator): the composition shares one
-    # client and registrations must survive a restart. Memory only when asked for (and local).
     try:
-        explicit = resolve_store_kind(ctx.settings, gateway) if gateway.store == "memory" else None
+        kind = resolve_store_kind(ctx.settings, gateway)
     except InvalidSchemaError:
         raise ComponentUnavailableError("gateway_settings_invalid") from None
-    if explicit == "memory":
+    if kind == "memory":
         return InMemoryGatewayStore()
-    database = ctx.store_settings().database
-    client = ctx.cosmos_client()
-    if ctx.settings.env == "local":
-
-        async def create_container() -> None:
-            await create_gateway_container(
-                client.get_database_client(database), gateway.cosmos_container
-            )
-
-        ctx.on_startup(create_container)
     return CosmosGatewayStore.from_client(
-        client, database=database, container=gateway.cosmos_container
+        ctx.cosmos_client(),
+        database=ctx.store_settings().database,
+        container=gateway.cosmos_container,
     )
 
 
