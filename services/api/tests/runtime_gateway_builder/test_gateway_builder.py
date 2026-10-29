@@ -35,7 +35,7 @@ from neurosphere_core.auth.scope import (
     principal_document_id,
 )
 from neurosphere_core.clients import arm_client
-from neurosphere_core.cloud import CloudProfile
+from neurosphere_core.cloud import CloudName, CloudProfile
 from neurosphere_core.gateway import InMemoryGatewayStore
 from runtime_api import runtime_helpers  # pyright: ignore[reportMissingImports]
 from runtime_api.runtime_helpers import (  # pyright: ignore[reportMissingImports]
@@ -151,7 +151,7 @@ def test_store_kind_resolution() -> None:
     assert resolve_store_kind(local, GatewaySettings()) == "cosmos"
     assert resolve_store_kind(local, GatewaySettings(store="cosmos")) == "cosmos"
     assert resolve_store_kind(local, GatewaySettings(store="memory")) == "memory"
-    hosted = Settings(env="dev", cloud="commercial")
+    hosted = Settings(env="dev", cloud=CloudName.COMMERCIAL)
     assert resolve_store_kind(hosted, GatewaySettings()) == "cosmos"
     with pytest.raises(InvalidSchemaError):
         resolve_store_kind(hosted, GatewaySettings(store="memory"))
