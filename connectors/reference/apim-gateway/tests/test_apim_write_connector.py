@@ -67,14 +67,6 @@ def test_manifest_lists_every_kind_the_contract_admits() -> None:
     assert manifest_actions() == [k for k in ACTION_KINDS if k in allowed]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "connector-manifest contract enum (write_support.actions) does not yet admit "
-        "budget_cap_change, grant_publish, grant_unpublish, mcp_server_publish, "
-        "mcp_server_unpublish; a contract change outside item 1 is needed"
-    ),
-)
 def test_manifest_declares_all_prp_34_kinds() -> None:
     conn, _, _ = make()
     assert conn.manifest.write_support.actions == list(ACTION_KINDS)

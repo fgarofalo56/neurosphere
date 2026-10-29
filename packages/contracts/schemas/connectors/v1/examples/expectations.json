@@ -13,6 +13,21 @@
     },
     {
       "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/valid/write-capable-gateway-actions.json",
+      "valid": true
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
+      "file": "connector-manifest/invalid/write-action-unknown-kind.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/write_support/actions/1"
+      },
+      "why": "write actions come from the closed action-kind enum"
+    },
+    {
+      "schema": "../connector-manifest.schema.json",
       "file": "connector-manifest/invalid/credential-with-value-field.json",
       "valid": false,
       "expected_error": {

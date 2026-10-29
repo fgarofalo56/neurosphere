@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "name": "apim-gateway",
+  "version": "0.1.0",
+  "documentation_url": "https://learn.microsoft.com/azure/api-management/genai-gateway-capabilities",
+  "supported_clouds": [
+    "commercial"
+  ],
+  "capabilities": [
+    "health_reporting",
+    "action_execution"
+  ],
+  "scopes": [
+    "https://management.azure.com/.default"
+  ],
+  "granularity": {
+    "time_grain": "unknown",
+    "subject_level": "deployment"
+  },
+  "freshness": {
+    "typical_delay_ms": null,
+    "max_delay_ms": null
+  },
+  "rate_limits": null,
+  "auth_mode": "managed_identity",
+  "credential_refs": [],
+  "advisory": false,
+  "write_support": {
+    "supported": true,
+    "actions": [
+      "grant_publish",
+      "gateway_delete"
+    ]
+  }
+}
