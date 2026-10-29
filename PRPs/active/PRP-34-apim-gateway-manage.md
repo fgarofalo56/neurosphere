@@ -220,7 +220,7 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
 | 1 | merged | worktree-agent-a038917ecafd1995d | opus | merge ed25498; reviewed (1 rework: lost-response restore); connector+infra pytest 154 passed 1 xfailed (enum, item 1b), ruff, pyright | 2026-10-29 |
-| 1b | todo | | opus | contract enum + SDK WriteAction + licence register (plan delta, user-approved 2026-10-29) | 2026-10-29 |
+| 1b | merged | worktree-agent-a8c863d2a544d9dfd | opus | ff to 91af346; reviewed APPROVE (no rework); generate.py --check OK, sdk+apim+foundry-actions pytest 212 passed, licences PASS, pyright/ruff clean | 2026-10-29 |
 | 2 | todo | | opus | | |
 | 3 | todo | | opus | | |
 | 4 | todo | | opus | | |
