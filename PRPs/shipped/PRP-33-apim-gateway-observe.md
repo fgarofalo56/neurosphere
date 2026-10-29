@@ -1,7 +1,8 @@
 ---
 name: prp-33-apim-gateway-observe
-status: active
+status: shipped
 started: 2026-10-29
+shipped: 2026-10-29
 branch: prp-33-apim-gateway-observe
 pr: 146
 review: required
@@ -233,3 +234,9 @@ Plan approved 2026-10-29 with one delta signed off by the operator:
 Waves: 1 = items 1, 2, 3, 5 in parallel; 2 = item 6 (after 1, 2, 5); 3 = items 4, 8, 9 in parallel (after 6; items 4 and 8 also after 3); item 7 parked per D1. Models: item 5 opus; all others sonnet; verify passes haiku. Review: one independent pass on items 5 and 6; other items need review only if the reviewer of 6 flags a shared concern.
 
 ## Completion note (filled at ship)
+- Shipped 2026-10-29 on PR #146 (branch `prp-33-apim-gateway-observe`, cut from `main`); CI 30 pass, 3 skipped by design (release and signing jobs). Merge commits: 0859b97 (item 1), 11b009a (item 2), 8fdbee3 (item 3), f011f10 (item 5), 46ecf33 (item 6), fb0ee92 (item 8), 4980fc5 (item 4), faf4078 (item 9); post-CI fixes d43c3c0 (Dockerfiles copy the azure-monitor connector, gitleaks fixture fingerprints, viewer `grant.read` expectation) and 07e58ef (CodeQL: explicit optional sender in the gate script, `math.isnan`, single inventory import).
+- Verified: each item's gates on its branch and re-run after every serialized merge; items 5 and 6 reviewed independently (APPROVE, no blockers). Post-merge totals: contracts 1859, worker suite 405, authz 150, gates 322, gateway core/api/builder 113, integration gateway 6 (Cosmos emulator), repo-wide ruff and pyright clean, frontend build and vitest green. Snyk Code 0 issues on every new area after one Low fix (evidence-dir guard in the gate script).
+- Deviations from the blueprint: D1 item 7 (UI) parked behind PRP-31 and descoped to issue #147; D2 gateway rows emit `TelemetryEvent` only because `CostRecord.amount` is required (pricing follow-up in #148); D3 gateway routes use `config.manage` / `data.read` (no `deploy.*` permissions exist) and item 9 (runtime gateway builder, `gateways` container in the stores registry) was added and shipped. Item 4 made `gateway_poll` opt-in (not started by `all`) to avoid a missing-secret failure on existing deployments. Item 5 ids use the existing five-part canonical grammar, not the `grant:<domain>:<slug>` shorthand named in the brief; `provenance` stays closed and PRP-34 records publication details in `attributes`.
+- Descoped: item 7 (Gateways page, Grant and McpServer catalog renderers), issue #147.
+- Not run: `tests/integration/real_stack` locally (needs the seeded local tenant exported; never runs in CI); the G17 observe live run (script built, refusal verified; G17 OPEN in `docs/RESEARCH-AND-GATES.md`). `.env.example` not updated (lane denied that path; names in #148).
+- Follow-ups: #148 (structured-query entity enum, inventory hardening, `.env.example` names, gateway token pricing, shared Admin/Steward permission test pattern, G17 live run).

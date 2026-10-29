@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-33-apim-gateway-observe](active/PRP-33-apim-gateway-observe.md) | P1 | 9/9 (100%) | merged 8, descoped 1 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -26,6 +24,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-10-29 | #146 |
 | [prp-32-hosted-azure-environment](shipped/PRP-32-hosted-azure-environment.md) | 2026-10-28 | #135 |
 | [prp-30-visual-redesign-and-switchable-ui-styles](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) | 2026-10-26 | #134 |
 | [prp-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |

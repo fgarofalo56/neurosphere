@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- APIM AI gateway, observe side (PRP-33, #146): capability-matrix tier and feature rows
+  for API Management, cloud-profile gateway suffix with ARM and Log Analytics clients,
+  Azure Monitor connector source kinds for gateway and LLM token logs (bodies never
+  projected), `Grant` and `McpServer` catalog contracts with the `grants_access_to`
+  relation, an observe-mode gateway registry with read-only preflight and inventory,
+  the `gateway_poll` worker role, and the G17 observe live-gate script (live run OPEN).
 - Repository hygiene baseline: version-controlled git hooks, gitleaks config,
   CI without suppressed failures, CodeQL, Dependabot, issue/PR templates,
   CODEOWNERS, SECURITY and CONTRIBUTING guides.
