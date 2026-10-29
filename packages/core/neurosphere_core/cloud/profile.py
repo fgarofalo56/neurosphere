@@ -22,6 +22,7 @@ _HOST_FIELDS = (
     "cosmos_suffix",
     "eventhubs_suffix",
     "search_suffix",
+    "apim_gateway_suffix",
 )
 
 
@@ -33,6 +34,7 @@ def _table(cloud: CloudName) -> dict[str, str]:
             "cosmos_suffix": ".documents.azure.us",
             "eventhubs_suffix": ".servicebus.usgovcloudapi.net",
             "search_suffix": ".search.azure.us",
+            "apim_gateway_suffix": ".azure-api.us",
         }
     return {
         "login_host": "login.microsoftonline.com",
@@ -40,6 +42,7 @@ def _table(cloud: CloudName) -> dict[str, str]:
         "cosmos_suffix": ".documents.azure.com",
         "eventhubs_suffix": ".servicebus.windows.net",
         "search_suffix": ".search.windows.net",
+        "apim_gateway_suffix": ".azure-api.net",
     }
 
 
@@ -52,6 +55,7 @@ class CloudProfile(BaseModel):
     cosmos_suffix: str
     eventhubs_suffix: str
     search_suffix: str
+    apim_gateway_suffix: str
 
     @model_validator(mode="after")
     def _hosts_belong_to_cloud(self) -> Self:
