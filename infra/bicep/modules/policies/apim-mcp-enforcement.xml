@@ -1,0 +1,34 @@
+<policies>
+    <inbound>
+        <base />
+        <!-- Validate the Entra token for the MCP audience and required scope. Bodies are never read. -->
+        <validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized" require-scheme="Bearer" output-token-variable-name="jwt">
+            <openid-config url="{{ns-mcp-openid-config-url}}" />
+            <audiences>
+                <audience>{{ns-mcp-audience}}</audience>
+            </audiences>
+            <required-claims>
+                <claim name="scp" match="any" separator=" ">
+                    <value>{{ns-mcp-required-scope}}</value>
+                </claim>
+            </required-claims>
+        </validate-jwt>
+        <rate-limit-by-key calls="{{ns-mcp-rate-limit-calls}}" renewal-period="60" counter-key='@(((Jwt)context.Variables["jwt"]).Subject)' />
+        <!-- Credential stripping: nothing the client presented is forwarded to the backend. -->
+        <set-header name="Authorization" exists-action="delete" />
+        <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+        <set-header name="api-key" exists-action="delete" />
+        <set-header name="subscription-key" exists-action="delete" />
+        <set-backend-service backend-id="ns-mcp-api" />
+    </inbound>
+    <backend>
+        <!-- Streaming stays unbuffered: no request or response body access. -->
+        <forward-request buffer-request-body="false" buffer-response="false" timeout="300" />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

@@ -24,3 +24,12 @@ param reuseKeyVault = ''
 param reuseSearch = ''
 param reuseLogAnalytics = ''
 param reuseApim = ''
+
+// APIM (created only; a reused instance is never modified). The gateway URL comes from the
+// service itself (.azure-api.us, see sovereign-profile.yaml apimGatewaySuffix). The v2 tiers
+// (BasicV2, StandardV2, PremiumV2) are UNVERIFIED in Azure Government and are refused by
+// main.bicep there; keep a classic tier (Developer, Standard, Premium).
+param apimSkuName = 'Developer'
+param apimSkuCapacity = 1
+param enableApimDiagnostics = true
+param enableApimMcpFront = false

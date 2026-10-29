@@ -40,11 +40,17 @@ spec:
           ports:
             - name: http
               containerPort: {{ $c.port }}
-          {{- with $.Values.env }}
+          {{- $apimFront := and (eq $name "api") $.Values.mcp.apimFront.enabled }}
+          {{- if or $.Values.env $apimFront }}
           env:
-            {{- range $k, $v := . }}
+            {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
+            {{- end }}
+            {{- if $apimFront }}
+            # PRM resource identifier must equal the URL clients reach through the gateway.
+            - name: NS_MCP_RESOURCE_SERVER_URL
+              value: {{ printf "https://%s/mcp" (required "mcp.apimFront.gatewayHost is required when mcp.apimFront.enabled" $.Values.mcp.apimFront.gatewayHost) | quote }}
             {{- end }}
           {{- end }}
           readinessProbe:

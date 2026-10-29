@@ -21,16 +21,33 @@ param publisherEmail string = ''
 param publisherName string = ''
 
 @description('API Management SKU for a created service.')
-@allowed(['Developer', 'Standard', 'Premium'])
+// v2 tiers (BasicV2, StandardV2, PremiumV2) need API version 2024-05-01 or later.
+// Azure Government availability of the v2 tiers is unverified; main.bicep refuses them there.
+@allowed(['Developer', 'Standard', 'Premium', 'BasicV2', 'StandardV2', 'PremiumV2'])
 param skuName string = 'Developer'
 
-resource service 'Microsoft.ApiManagement/service@2022-08-01' = if (empty(reuse)) {
+@description('Scale units for a created service. Capped per tier: Developer 1, Standard 4, Premium 12, BasicV2 10, StandardV2 10, PremiumV2 12.')
+@minValue(1)
+@maxValue(12)
+param skuCapacity int = 1
+
+var capacityCeiling = {
+  Developer: 1
+  Standard: 4
+  Premium: 12
+  BasicV2: 10
+  StandardV2: 10
+  PremiumV2: 12
+}
+var effectiveCapacity = min(skuCapacity, capacityCeiling[skuName])
+
+resource service 'Microsoft.ApiManagement/service@2024-05-01' = if (empty(reuse)) {
   name: name
   location: location
   tags: tags
   sku: {
     name: skuName
-    capacity: 1
+    capacity: effectiveCapacity
   }
   identity: {
     type: 'SystemAssigned'
@@ -48,6 +65,9 @@ resource service 'Microsoft.ApiManagement/service@2022-08-01' = if (empty(reuse)
 
 @description('Resource id of the API Management service in use (reused or newly created).')
 output id string = empty(reuse) ? service.id : reuse
+
+@description('Gateway URL of a service created by this module; empty when reused (a reused instance is never read).')
+output gatewayUrl string = empty(reuse) ? service!.properties.gatewayUrl : ''
 
 @description('True when this module created the service.')
 output created bool = empty(reuse)

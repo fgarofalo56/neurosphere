@@ -18,6 +18,14 @@ env:
   NS_CLOUD: government
   NS_ENV: prod
 
+mcp:
+  apimFront:
+    # Off by default. When enabled the operator supplies the gateway host (a *.azure-api.us name
+    # from the sovereign profile apimGatewaySuffix). APIM v2 tiers are unverified in Government;
+    # use a classic tier.
+    enabled: false
+    gatewayHost: ""
+
 networkPolicy:
   # NetworkPolicy is CIDR-only (no FQDN support). Allow the private-endpoint subnet of the
   # network Bicep module; every Government PaaS endpoint resolves into it via private DNS.
