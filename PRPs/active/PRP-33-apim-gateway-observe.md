@@ -222,8 +222,8 @@ Plan approved 2026-10-29 with one delta signed off by the operator:
 | 2 | merged | worktree-agent-ab24fd5690eaf7c0b | sonnet | 81 passed (cloud, clients, profile), 224 passed services -k cloud/profile/runtime post-merge; ruff/pyright clean; 6d5b26c, merge 11b009a | 2026-10-29 |
 | 3 | merged | worktree-agent-a8a3ee10ace95fae5 | sonnet | 39 passed connector suite on branch, 140 passed post-merge; KQL body-column grep = 0; ruff/pyright clean; validate_planning PASS; 4e12cd9, merge 8fdbee3 | 2026-10-29 |
 | 4 | todo | | sonnet | | |
-| 5 | in-progress | worktree lane | opus | | 2026-10-29 |
-| 6 | todo | | sonnet | | |
+| 5 | merged | worktree-agent-a09f858a868960b78 | opus | review APPROVE (one pass, no blockers; follow-up: structured-query contract enum still lists 12 entity types); merge + openapi regen: drift/authz/contracts/catalog/search 2185 passed; generate --check OK; tests/contracts + core catalog/auth 2306 passed; authz 150 passed; TS 118 passed; ruff/pyright clean; Snyk 0 issues; openapi.json regenerated at merge; ownership extended to search/protocol.py, catalog/router.py cap, CatalogEntity/CatalogEdge unions; a21d2bc | 2026-10-29 |
+| 6 | in-progress | worktree lane | sonnet | | 2026-10-29 |
 | 7 | todo | | sonnet | | |
 | 8 | todo | | sonnet | | |
 
