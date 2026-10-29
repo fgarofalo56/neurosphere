@@ -6,13 +6,16 @@ requires-python = ">=3.12"
 dependencies = [
   "neurosphere-core",
   "neurosphere-connector",
+  "neurosphere-connector-azure-monitor",
   "pydantic>=2.14,<3",
   "aiohttp>=3.9,<4",
+  "httpx>=0.28,<0.29",
 ]
 
 [tool.uv.sources]
 neurosphere-core = { workspace = true }
 neurosphere-connector = { workspace = true }
+neurosphere-connector-azure-monitor = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

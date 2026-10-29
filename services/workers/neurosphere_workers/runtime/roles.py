@@ -6,6 +6,7 @@ from typing import Final
 
 __all__ = [
     "ALL_ROLES_KEYWORD",
+    "OPT_IN_ROLES",
     "ROLE_NAMES",
     "RoleConfigError",
     "UnknownRoleError",
@@ -24,7 +25,12 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "lifecycle",
     "recommendations",
     "evaluation",
+    "gateway_poll",
 )
+
+#: Roles that must be named explicitly: ``all`` does not start them (they need extra
+#: configuration, e.g. a producer secret, that an existing ``all`` deployment does not have).
+OPT_IN_ROLES: Final[tuple[str, ...]] = ("gateway_poll",)
 
 
 class UnknownRoleError(ValueError):
@@ -53,7 +59,8 @@ class RoleConfigError(Exception):
 def parse_roles(raw: str | None) -> tuple[str, ...]:
     """The roles to run, de-duplicated in canonical order.
 
-    ``None``/blank -> ``()`` (idle). ``all`` expands to :data:`ROLE_NAMES`. Any unknown name
+    ``None``/blank -> ``()`` (idle). ``all`` expands to :data:`ROLE_NAMES` minus
+    :data:`OPT_IN_ROLES`. Any unknown name
     raises :class:`UnknownRoleError` (nothing is started).
     """
     if raw is None or not raw.strip():
@@ -66,5 +73,5 @@ def parse_roles(raw: str | None) -> tuple[str, ...]:
         raise UnknownRoleError(unknown)
     wanted = set(names)
     if ALL_ROLES_KEYWORD in wanted:
-        return ROLE_NAMES
+        wanted.update(role for role in ROLE_NAMES if role not in OPT_IN_ROLES)
     return tuple(role for role in ROLE_NAMES if role in wanted)

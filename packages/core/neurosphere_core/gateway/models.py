@@ -117,6 +117,10 @@ class GatewayRegistration(_Model):
     last_sync_status: Literal["ok", "failed", "never"] = "never"
     freshness_seconds: int | None = Field(default=None, ge=0)
     coverage: float | None = Field(default=None, ge=0.0, le=1.0)
+    # Written only by the gateway_poll worker role (PRP-33 item 4): the end of the last fully
+    # answered log slice, and a short machine code for the outcome of the latest poll.
+    poll_watermark: AwareDatetime | None = None
+    poll_status: str | None = Field(default=None, max_length=64)
     etag: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime

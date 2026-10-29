@@ -16,6 +16,7 @@ Role -> class:
 * ``lifecycle``       ``LifecycleWorker``
 * ``recommendations`` periodic ``run_pipeline``
 * ``evaluation``      periodic online ``EvaluationService`` run
+* ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; opt-in, not in ``all``)
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Final
 
+import httpx
 from azure.cosmos import CosmosClient as SyncCosmosClient
 from azure.cosmos.aio import CosmosClient, DatabaseProxy
 from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
@@ -72,6 +74,7 @@ from neurosphere_core.evaluation.registry import (
     JudgeConfig,
     RubricVersion,
 )
+from neurosphere_core.gateway import CosmosGatewayStore, create_gateway_container
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
@@ -97,6 +100,12 @@ from neurosphere_workers.evaluation.budget import BudgetLedger, BudgetLimits
 from neurosphere_workers.evaluation.service import EvaluationService, OnlineRunConfig
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
+from neurosphere_workers.ingestion.gateway_poll import (
+    GatewayPoller,
+    GatewayPollSettings,
+    IngestClient,
+    default_connector_factory,
+)
 from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.worker import LifecycleWorker, RequestedJob
@@ -614,6 +623,50 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
 
 
 # --------------------------------------------------------------------------------------------
+# gateway_poll (opt-in role: not part of ``all``)
+
+
+class _ClosableHttp:
+    """``ClientLifetime.register`` closes with ``close()``; httpx spells it ``aclose()``."""
+
+    def __init__(self, client: httpx.AsyncClient) -> None:
+        self.client = client
+
+    async def close(self) -> None:
+        await self.client.aclose()
+
+
+async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    poll = GatewayPollSettings()
+    if not poll.domains:
+        raise RoleConfigError("gateway_poll_domain_ids_missing")
+    if poll.api_base_url is None:
+        raise RoleConfigError("gateway_poll_api_base_url_missing")
+    if poll.producer_secret is None:
+        raise RoleConfigError("gateway_poll_producer_secret_missing")
+    customer = cfg.customer_id
+    cosmos = await _cosmos(cfg, lifetime)
+    if cfg.settings.env == "local":
+        await create_gateway_container(_database(cfg, cosmos))
+    http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    poller = GatewayPoller(
+        store=CosmosGatewayStore.from_client(cosmos, database=cfg.store.database),
+        ingest=IngestClient(
+            http.client,
+            base_url=poll.api_base_url,
+            producer_id=poll.producer_id,
+            secret=poll.producer_secret.get_secret_value(),
+        ),
+        settings=poll,
+        customer_id=customer,
+        domain_ids=poll.domains,
+        cloud=cfg.cloud,
+        connector_factory=default_connector_factory(poll.allow_unverified_government),
+    )
+    return _tick_role("gateway_poll", PeriodicTick(poller.tick, poll.interval_seconds), cfg)
+
+
+# --------------------------------------------------------------------------------------------
 
 BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "ingestion": build_ingestion,
@@ -624,6 +677,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "lifecycle": build_lifecycle,
     "recommendations": build_recommendations,
     "evaluation": build_evaluation,
+    "gateway_poll": build_gateway_poll,
 }
 
 

@@ -1,0 +1,11 @@
+{
+  "producers": [
+    {
+      "producer_id": "apim-gateway-poll",
+      "secret_sha256": "f3e45f14d3f589daaf92e2ca2a41a2e6633d7357d9298c7ddaec116d47127d24",
+      "customer_id": "synthco",
+      "cloud": "commercial",
+      "sources": { "apim-gateway-poll": "gateway" }
+    }
+  ]
+}
