@@ -83,7 +83,7 @@ def builders_with_stubs() -> tuple[BuilderSpec, ...]:
     """The default order with every placeholder REQUIRED component stubbed ``ok``."""
     out: list[BuilderSpec] = []
     for spec in default_builders():
-        if spec.name in ("data", "planes"):
+        if spec.name in ("data", "planes", "gateway"):
             out.append(stub_builder(f"stub-{spec.name}", spec.components))
         else:
             out.append(spec)

@@ -11,7 +11,7 @@ Each builder module defines three names::
 
 :func:`default_builders` returns the fixed order (the ``routers.py`` hook pattern)::
 
-    authz -> data -> planes -> copilot -> mcp -> edge
+    authz -> data -> planes -> copilot -> mcp -> gateway -> edge
 
 so a builder may consume anything an EARLIER builder published. ``compose_app(...,
 builders=...)`` accepts any sequence of :class:`BuilderSpec` (tests pass stubs for components
@@ -355,6 +355,22 @@ class BuildContext:
 
 def default_builders() -> tuple[BuilderSpec, ...]:
     """The production order. Local imports keep builder modules out of import time."""
-    from neurosphere_api.runtime.builders import authz, copilot, data, edge, mcp, planes
+    from neurosphere_api.runtime.builders import (
+        authz,
+        copilot,
+        data,
+        edge,
+        gateway,
+        mcp,
+        planes,
+    )
 
-    return (authz.BUILDER, data.BUILDER, planes.BUILDER, copilot.BUILDER, mcp.BUILDER, edge.BUILDER)
+    return (
+        authz.BUILDER,
+        data.BUILDER,
+        planes.BUILDER,
+        copilot.BUILDER,
+        mcp.BUILDER,
+        gateway.BUILDER,
+        edge.BUILDER,
+    )

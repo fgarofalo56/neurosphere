@@ -73,7 +73,9 @@ class EmptyContainer:
 def builders_with_real_data() -> tuple[BuilderSpec, ...]:
     """Default order; the REAL data builder; planes stubbed ``ok`` (item 8 owns them)."""
     return tuple(
-        stub_builder("stub-planes", spec.components) if spec.name == "planes" else spec
+        stub_builder(f"stub-{spec.name}", spec.components)
+        if spec.name in ("planes", "gateway")
+        else spec
         for spec in default_builders()
     )
 
