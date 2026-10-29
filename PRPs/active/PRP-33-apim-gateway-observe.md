@@ -1,6 +1,8 @@
 ---
 name: prp-33-apim-gateway-observe
-status: backlog
+status: active
+started: 2026-10-29
+branch: prp-33-apim-gateway-observe
 review: required
 priority: P1
 order: 1
@@ -208,6 +210,10 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 - [x] All clarification questions are decided, not guessed
 
 ## Execution state
+
+Plan approved 2026-10-29 with one delta signed off by the operator:
+
+- D1: PRP-31 (dependency) is active at 0 of 8 items. Items 1-6 and 8 run now; item 7 (Gateways page, catalog renderers; shares `route-manifest.json`, `workspaceNav.ts` and `mock-api/server.ts` with PRP-31) stays `todo` until PRP-31 ships. If PRP-31 has not shipped at close-out, item 7 is descoped to a follow-up issue and this PRP closes without the UI. Integration branch `prp-33-apim-gateway-observe` is cut from `main` (not from the PRP-31 branch).
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
