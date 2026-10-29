@@ -156,6 +156,7 @@ class RelationType(
             "owned_by",
             "depends_on",
             "supersedes",
+            "grants_access_to",
         ]
     ]
 ):
@@ -169,9 +170,10 @@ class RelationType(
         "owned_by",
         "depends_on",
         "supersedes",
+        "grants_access_to",
     ]
     """
-    Relation name in wire form (lowercase snake_case of INVOKES, DELEGATES_TO, USES_MODEL, READS, WRITES, GROUNDED_BY, OWNED_BY, DEPENDS_ON, SUPERSEDES).
+    Relation name in wire form (lowercase snake_case of INVOKES, DELEGATES_TO, USES_MODEL, READS, WRITES, GROUNDED_BY, OWNED_BY, DEPENDS_ON, SUPERSEDES, GRANTS_ACCESS_TO).
     """
 
 
@@ -190,6 +192,8 @@ class EntityType(
             "policy",
             "recommendation",
             "run_reference",
+            "grant",
+            "mcp_server",
         ]
     ]
 ):
@@ -206,6 +210,8 @@ class EntityType(
         "policy",
         "recommendation",
         "run_reference",
+        "grant",
+        "mcp_server",
     ]
     """
     Catalog entity type; equals the type segment of the entity's canonical ID.

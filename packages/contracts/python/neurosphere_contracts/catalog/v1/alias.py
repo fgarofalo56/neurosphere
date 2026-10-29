@@ -72,6 +72,8 @@ class Alias(BaseModel):
         "policy",
         "recommendation",
         "run_reference",
+        "grant",
+        "mcp_server",
     ]
     status: Literal["active", "retired"]
     validity: common.Validity

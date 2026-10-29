@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "commercial:contoso:neurosphere:grant:finance/analysts-ledger-tools",
+  "entity_type": "grant",
+  "version": 1,
+  "etag": "\"grant-etag-1\"",
+  "lifecycle_status": "active",
+  "created_at": "2026-10-21T10:15:00Z",
+  "updated_at": "2026-10-21T10:15:00Z",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "principal": {
+    "kind": "entra_group",
+    "object_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    "display": "finance-analysts"
+  },
+  "target": {
+    "kind": "mcp_server",
+    "ref": "commercial:contoso:neurosphere:mcp_server:finance/ledger-tools"
+  },
+  "limits": {
+    "mcp_calls_per_minute": 60,
+    "tokens_per_minute": 1000
+  },
+  "cost_center": null,
+  "enabled": true,
+  "valid_from": null,
+  "valid_until": null,
+  "provenance": {
+    "method": "import",
+    "source_id": "apim-observe",
+    "recorded_at": "2026-10-21T10:15:00Z"
+  }
+}
