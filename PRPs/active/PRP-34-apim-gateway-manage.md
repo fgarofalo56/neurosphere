@@ -221,7 +221,7 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 |---|---|---|---|---|---|
 | 1 | merged | worktree-agent-a038917ecafd1995d | opus | merge ed25498; reviewed (1 rework: lost-response restore); connector+infra pytest 154 passed 1 xfailed (enum, item 1b), ruff, pyright | 2026-10-29 |
 | 1b | merged | worktree-agent-a8c863d2a544d9dfd | opus | ff to 91af346; reviewed APPROVE (no rework); generate.py --check OK, sdk+apim+foundry-actions pytest 212 passed, licences PASS, pyright/ruff clean | 2026-10-29 |
-| 2 | todo | | opus | | |
+| 2 | merged | worktree-agent-ab6806e01efffe7f0 | opus | ff to 1f1802b; reviewed APPROVE after 1 rework (permission amended to action.propose, 2 stale tests); 807 pytest passed, openapi drift OK, ruff, pyright. Scope beyond declared files, recorded: apim-gateway connector files (mode handler, arm permissions GET), D5 test, 2 stale tests | 2026-10-29 |
 | 3 | todo | | opus | | |
 | 4 | todo | | opus | | |
 | 5 | todo | | sonnet | | |
@@ -234,6 +234,9 @@ Waves: 1 = items 1 and 7 in parallel; 2 = item 2 (after 1); 3 = items 3, 4, 5, 6
 
 ### Plan deltas (user-approved 2026-10-29)
 - Item 1b (new, opus, review required): extend the connector-manifest contract `write_support.actions` enum in `packages/contracts` (regenerate models) and the SDK `WriteAction` type to admit `budget_cap_change`, `grant_publish`, `grant_unpublish`, `mcp_server_publish`, `mcp_server_unpublish`, and regenerate `docs/licenses.md` and `docs/adr/0002-stack-pins.md` for the new workspace member. Remove the strict xfail in item 1's manifest test. Sequenced after item 1, before item 2.
+- Decision #9 amended (user, 2026-10-29): `deploy.write` does not exist and the PRP-06 role set is closed. The observe/manage mode switch requires `action.propose` scoped to the gateway domain; maker-checker (a different principal with `action.approve`/`action.execute`) and the Azure-write preflight are the safeguards. Item 2 also updates two tests outside its files that assert the old one-row `ACTION_CONNECTORS` table (`test_planes_builder.py`, `test_review_completion.py`).
+- Item 2 review hand-offs (non-blocking, owned by item 3 worker wiring unless noted): when wiring the worker, assert `stored.domain_id == registration.domain_id` for every APIM kind (the generic intents route can name a gateway in another domain of the same customer; `WriteRequest` carries no domain); make `ApimGatewayConnector(mode=...)` required or refuse when absent (today `mode=None` skips the observe guard, fail-open); `PlanApplier.reverse` does not append `applying`, so `running()` misses a rollback; store `_put`/Cosmos create/replace should validate before write. Follow-up issues at close-out: sync audit state hard-codes `"mode": "observe"`; idempotent replay after the mode moved returns `gateway_mode_unchanged`.
+- Open hand-off to item 3: the worker composition (durable `ApplyRecordStore`, `GatewayModeHandler`, observe guard) is not wired by item 2, and the worker `resolve_connector` still maps by action kind only, so `apim_backend` swaps would reach Foundry. Item 3 owns that wiring (`services/workers/.../action_executor/`).
 - Item 7: the optional own-MCP-server APIM front keeps the `Authorization` header (NeuroSphere's MCP server needs the caller bearer token, `factory.py:283`); it still strips `Ocp-Apim-Subscription-Key`, `api-key`, `subscription-key`. It is therefore a separate policy from the item 6 customer-server template, which still strips `Authorization`. The byte-identity test in the item 7 criteria is replaced by a test of this policy. Env var is `NS_MCP_RESOURCE_SERVER_URL`.
 
 ## Completion note (filled at ship)
