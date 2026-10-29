@@ -14,8 +14,12 @@
             </required-claims>
         </validate-jwt>
         <rate-limit-by-key calls="{{ns-mcp-rate-limit-calls}}" renewal-period="60" counter-key='@(((Jwt)context.Variables["jwt"]).Subject)' />
-        <!-- Credential stripping: nothing the client presented is forwarded to the backend. -->
-        <set-header name="Authorization" exists-action="delete" />
+        <!-- Credential stripping: subscription and API keys are never forwarded. Authorization is
+             deliberately RETAINED: this policy fronts NeuroSphere's own MCP server, which requires the
+             caller bearer token (it rejects requests without one and uses it for per-user permission
+             checks). APIM has already validated the token for the configured audience above. The item 6
+             customer-server policy (connectors/reference/apim-gateway) is a different template and
+             still strips Authorization. -->
         <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
         <set-header name="api-key" exists-action="delete" />
         <set-header name="subscription-key" exists-action="delete" />

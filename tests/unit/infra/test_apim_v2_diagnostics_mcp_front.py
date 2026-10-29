@@ -18,10 +18,6 @@ MODULES = ROOT / "infra" / "bicep" / "modules"
 POLICIES = MODULES / "policies"
 CHART = ROOT / "infra" / "helm"
 CI_VALUES = CHART / "ci" / "values-ci.yaml"
-# Item 1 authors the connector copy of the enforcement template; the path is wired after merge.
-CONNECTOR_COPY = (
-    ROOT / "connectors" / "reference" / "apim-gateway" / "policies" / "apim-mcp-enforcement.xml"
-)
 
 _COMMERCIAL_HOST = re.compile(
     r"[A-Za-z0-9.-]+\.(?:windows\.net|azure\.com|microsoftonline\.com|azure\.net|azure-api\.net)",
@@ -85,7 +81,7 @@ def test_policies_parse_and_hold_enforcement_rules() -> None:
     ET.fromstring(_text(enforcement))
     ET.fromstring(_text(POLICIES / "apim-mcp-prm.xml"))
     text = _text(enforcement)
-    for header in ("Authorization", "Ocp-Apim-Subscription-Key", "api-key", "subscription-key"):
+    for header in ("Ocp-Apim-Subscription-Key", "api-key", "subscription-key"):
         assert f'<set-header name="{header}" exists-action="delete" />' in text
     assert "validate-jwt" in text
     assert "rate-limit-by-key" in text
@@ -106,12 +102,13 @@ def test_mcp_front_declares_prm_operation_and_loads_policies() -> None:
     assert "environment().authentication.loginEndpoint" in text
 
 
-@pytest.mark.skipif(
-    not CONNECTOR_COPY.exists(),
-    reason="connector policy template (item 1) not merged yet; orchestrator wires the final path",
-)
-def test_enforcement_policy_matches_connector_copy() -> None:
-    assert (POLICIES / "apim-mcp-enforcement.xml").read_bytes() == CONNECTOR_COPY.read_bytes()
+def test_own_server_policy_retains_authorization_and_never_reads_bodies() -> None:
+    text = _text(POLICIES / "apim-mcp-enforcement.xml")
+    assert 'set-header name="Authorization"' not in text
+    for header in ("Ocp-Apim-Subscription-Key", "api-key", "subscription-key"):
+        assert f'<set-header name="{header}" exists-action="delete" />' in text
+    assert "context.Request.Body" not in text
+    assert "context.Response.Body" not in text
 
 
 @requires_az

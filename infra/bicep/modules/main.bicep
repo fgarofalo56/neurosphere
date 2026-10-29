@@ -73,7 +73,11 @@ var isV2Sku = endsWith(apimSkuName, 'V2')
 var v2GovernmentGate = { ok: '' }
 var v2GovernmentGuard = v2GovernmentGate[(isGovernment && isV2Sku) ? 'apim_v2_tiers_unverified_in_government' : 'ok']
 
-var suffix =uniqueString(resourceGroup().id)
+// Deliberate deploy-time failure when the MCP front is enabled without its backend URL or audience.
+var mcpFrontGate = { ok: '' }
+var mcpFrontGuard = mcpFrontGate[(enableApimMcpFront && (empty(apimMcpBackendUrl) || empty(apimMcpAudience))) ? 'apimMcpBackendUrl_and_apimMcpAudience_required_when_enableApimMcpFront' : 'ok']
+
+var suffix = uniqueString(resourceGroup().id)
 var compact = toLower(replace(namePrefix, '-', ''))
 
 module cosmos 'cosmos.bicep' = {
@@ -164,13 +168,16 @@ module apimDiagnostics 'apim-diagnostics.bicep' = if (enableApimDiagnostics && e
     apimName: '${compact}-apim-${suffix}'
     workspaceId: logAnalytics.outputs.id
   }
+  dependsOn: [
+    apim
+  ]
 }
 
 module apimMcpFront 'apim-mcp-front.bicep' = if (enableApimMcpFront && empty(reuseApim)) {
   name: 'ns-apim-mcp-front'
   params: {
     apimName: '${compact}-apim-${suffix}'
-    backendUrl: apimMcpBackendUrl
+    backendUrl: '${apimMcpBackendUrl}${mcpFrontGuard}'
     resourceUrl: '${apim.outputs.gatewayUrl}/mcp'
     audience: apimMcpAudience
   }
