@@ -3,6 +3,7 @@ name: prp-33-apim-gateway-observe
 status: active
 started: 2026-10-29
 branch: prp-33-apim-gateway-observe
+pr: 146
 review: required
 priority: P1
 order: 1
@@ -225,7 +226,7 @@ Plan approved 2026-10-29 with one delta signed off by the operator:
 | 4 | merged | worktree-agent-a81699dd472bbbe1f | sonnet | 68 passed gateway_poll + worker_roles on branch; 405 passed full worker suite post-merge; drift + gateway_api + gateway_core 58 passed; ruff/pyright clean; gateway_poll is opt-in (not in `all`); openapi.json regenerated for poll fields; `.env.example` NOT updated (lane denied on that path, operator to add NS_GATEWAY_POLL_* names); 208d34c, merge (see git log) | 2026-10-29 |
 | 5 | merged | worktree-agent-a09f858a868960b78 | opus | review APPROVE (one pass, no blockers; follow-up: structured-query contract enum still lists 12 entity types); merge + openapi regen: drift/authz/contracts/catalog/search 2185 passed; generate --check OK; tests/contracts + core catalog/auth 2306 passed; authz 150 passed; TS 118 passed; ruff/pyright clean; Snyk 0 issues; openapi.json regenerated at merge; ownership extended to search/protocol.py, catalog/router.py cap, CatalogEntity/CatalogEdge unions; a21d2bc | 2026-10-29 |
 | 6 | merged | worktree-agent-abed72718b8c8e3ce | sonnet | 58 passed core+api+drift on branch, integration 5 passed (emulator), 221 passed post-merge incl. authz; repo-wide ruff clean; review APPROVE (follow-ups: ARM id regex allows `..` RG, single-document inventory size, log swallowed failures); 6879982, merge 46ecf33 | 2026-10-29 |
-| 7 | todo | | sonnet | parked per D1 | |
+| 7 | descoped | | sonnet | per D1: PRP-31 still active at close-out; filed as follow-up issue #147 (other follow-ups in #148) | 2026-10-29 |
 | 8 | merged | worktree-agent-ab13d387444352ac5 | sonnet | 6 new G17 tests, 322 passed tests/unit/gates post-merge; refusal verified exit 2 with no az call; ruff/pyright clean; validate_planning PASS; G17 row added; live run NOT RUN (G17 OPEN); 81440c2 | 2026-10-29 |
 | 9 | merged | worktree-agent-a0a2d015cdc6f3029 | sonnet | added per D3; 744f497 + rework 911bd14 (`gateways` in stores CONTAINERS, cosmos-containers.json regenerated, container count 27 -> 28, NS_GATEWAY_STORE=auto always Cosmos); 113 passed builder/gateway_api/drift/hosted_demo/stores_registry on branch; ruff/pyright clean; builder order authz, data, planes, copilot, mcp, gateway, edge; merge faf4078; real-stack integration run recorded below | 2026-10-29 |
 
