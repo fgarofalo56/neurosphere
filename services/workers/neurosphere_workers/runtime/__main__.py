@@ -1,7 +1,8 @@
 """``python -m neurosphere_workers.runtime``: the roles in ``NS_WORKER_ROLES`` plus health.
 
 ``NS_WORKER_ROLES`` is a comma list of ingestion, projections, aggregates, actions, hitl_timers,
-lifecycle, recommendations, evaluation, or ``all``. Unset means idle (health only, ``roles: []``).
+lifecycle, recommendations, evaluation, gateway_poll (opt-in: not part of ``all``), or ``all``.
+Unset means idle (health only, ``roles: []``).
 An unknown role refuses to start (exit 2). Every role runs as a supervised task: a crash restarts
 that role with backoff and marks readiness failed without touching the others.
 """

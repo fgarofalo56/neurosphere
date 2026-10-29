@@ -17,7 +17,7 @@ WIRE_CONTRACT_ROLES = (
 
 
 def test_all_expands_to_the_wire_contract_list() -> None:
-    assert ROLE_NAMES == WIRE_CONTRACT_ROLES
+    assert ROLE_NAMES == (*WIRE_CONTRACT_ROLES, "gateway_poll")  # gateway_poll is opt-in
     assert parse_roles("all") == WIRE_CONTRACT_ROLES
     assert parse_roles("ALL") == WIRE_CONTRACT_ROLES
     assert parse_roles("ingestion, all") == WIRE_CONTRACT_ROLES
