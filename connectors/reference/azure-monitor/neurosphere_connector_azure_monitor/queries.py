@@ -12,7 +12,16 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-__all__ = ["MAX_ROWS", "TEMPLATES", "MonitorSource", "SourceKind", "template_for"]
+__all__ = [
+    "APIM_GATEWAY_COLUMNS",
+    "APIM_LLM_COLUMNS",
+    "APIM_MCP_COLUMNS",
+    "MAX_ROWS",
+    "TEMPLATES",
+    "MonitorSource",
+    "SourceKind",
+    "template_for",
+]
 
 # Fixed row cap per query; reaching it marks the page truncated (the API itself caps at 500,000).
 MAX_ROWS: Final = 10_000
@@ -21,6 +30,8 @@ MAX_ROWS: Final = 10_000
 class SourceKind(StrEnum):
     LOG_ANALYTICS = "log_analytics"
     APP_INSIGHTS = "app_insights"
+    APIM_GATEWAY = "apim_gateway"
+    APIM_MCP = "apim_mcp"
 
 
 # Workspace-based Application Insights data lives in Log Analytics tables (AppRequests).
@@ -38,9 +49,40 @@ _APP_INSIGHTS_QUERY: Final = (
     f" | order by timestamp asc | take {MAX_ROWS}"
 )
 
+# API Management gateway logs (resource-specific tables). The column lists are an allowlist:
+# bodies, headers and trace records are never projected. The window is the request's
+# ``timespan``, applied to both tables, never query text. ``GatewayLogs`` and ``GatewayLlmLogs``
+# are separate diagnostic categories; with only the first enabled the LLM columns are all null.
+APIM_GATEWAY_COLUMNS: Final = (
+    "TimeGenerated, CorrelationId, ApiId, ApiRevision, OperationId, ProductId,"
+    " ApimSubscriptionId, BackendId, BackendResponseCode, ResponseCode, IsRequestSuccess,"
+    " TotalTime, BackendTime, Region, _ResourceId"
+)
+APIM_LLM_COLUMNS: Final = (
+    "ModelName, DeploymentName, PromptTokens, CompletionTokens, TotalTokens,"
+    " IsStreamCompletion, ApiVersion"
+)
+_APIM_GATEWAY_QUERY: Final = (
+    f"ApiManagementGatewayLogs | project {APIM_GATEWAY_COLUMNS}"
+    " | join kind=leftouter ("
+    f"ApiManagementGatewayLlmLog | project CorrelationId, {APIM_LLM_COLUMNS}"
+    ") on CorrelationId"
+    " | project-away CorrelationId1"
+    f" | order by TimeGenerated asc | take {MAX_ROWS}"
+)
+APIM_MCP_COLUMNS: Final = (
+    "TimeGenerated, CorrelationId, ToolName, ToolCount, TransportType, _ResourceId"
+)
+_APIM_MCP_QUERY: Final = (
+    f"ApiManagementGatewayMCPLog | project {APIM_MCP_COLUMNS}"
+    f" | order by TimeGenerated asc | take {MAX_ROWS}"
+)
+
 TEMPLATES: Final = {
     SourceKind.LOG_ANALYTICS: _LOG_ANALYTICS_QUERY,
     SourceKind.APP_INSIGHTS: _APP_INSIGHTS_QUERY,
+    SourceKind.APIM_GATEWAY: _APIM_GATEWAY_QUERY,
+    SourceKind.APIM_MCP: _APIM_MCP_QUERY,
 }
 
 
