@@ -689,6 +689,94 @@
       "keyword": "minLength",
       "instance_path": "/reason",
       "reason": "steward decisions need a reason"
+    },
+    {
+      "file": "valid/grant.user-model-deployment-token-limits.json",
+      "schema": "grant.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grant.entra-group-mcp-calls.json",
+      "schema": "grant.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/mcp_server.entra-streamable-http.json",
+      "schema": "mcp_server.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/mcp_server.api-key-not-publishable.json",
+      "schema": "mcp_server.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grants_access_to.asserted.json",
+      "schema": "grants_access_to.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/grant.mcp-token-limits.json",
+      "schema": "grant.schema.json",
+      "expect": "invalid",
+      "keyword": "type",
+      "instance_path": "/limits/tokens_per_minute",
+      "reason": "MCP grants are call-limited only: token limits must be null",
+      "derived_from": "valid/grant.entra-group-mcp-calls.json"
+    },
+    {
+      "file": "invalid/grant.quota-without-period.json",
+      "schema": "grant.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "/limits",
+      "reason": "a token quota needs its quota period",
+      "derived_from": "valid/grant.user-model-deployment-token-limits.json"
+    },
+    {
+      "file": "invalid/grant.user-with-display.json",
+      "schema": "grant.schema.json",
+      "expect": "invalid",
+      "keyword": "type",
+      "instance_path": "/principal/display",
+      "reason": "a user principal carries no display label (no person names)",
+      "derived_from": "valid/grant.user-model-deployment-token-limits.json"
+    },
+    {
+      "file": "invalid/mcp_server.url-without-mcp.json",
+      "schema": "mcp_server.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/url",
+      "reason": "MCP endpoint path must end in /mcp",
+      "derived_from": "valid/mcp_server.entra-streamable-http.json"
+    },
+    {
+      "file": "invalid/mcp_server.url-query-string.json",
+      "schema": "mcp_server.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/url",
+      "reason": "MCP endpoint must not carry a query string",
+      "derived_from": "valid/mcp_server.entra-streamable-http.json"
+    },
+    {
+      "file": "invalid/mcp_server.api-key-publishable.json",
+      "schema": "mcp_server.schema.json",
+      "expect": "invalid",
+      "keyword": "const",
+      "instance_path": "/publishable",
+      "reason": "API-key upstreams are never publishable",
+      "derived_from": "valid/mcp_server.api-key-not-publishable.json"
+    },
+    {
+      "file": "invalid/grants_access_to.wrong-source-type.json",
+      "schema": "grants_access_to.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/source_id",
+      "reason": "GRANTS_ACCESS_TO starts at a Grant",
+      "derived_from": "valid/grants_access_to.asserted.json"
     }
   ]
 }

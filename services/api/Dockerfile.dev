@@ -16,6 +16,7 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY packages ./packages
 COPY services ./services
 COPY connectors/sdk-python ./connectors/sdk-python
+COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
 RUN uv sync --frozen --no-dev --package neurosphere-api
 
 RUN useradd --system --create-home --uid 10001 ns

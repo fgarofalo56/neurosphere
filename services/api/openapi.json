@@ -337,7 +337,7 @@
           "description": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Description"
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__agent__Description"
               },
               {
                 "type": "null"
@@ -705,6 +705,68 @@
         "title": "AnalyticsInfo",
         "type": "object"
       },
+      "Annotations": {
+        "additionalProperties": false,
+        "description": "MCP tool annotations in snake_case. Hints are advisory and server-asserted; null means not declared. Unknown annotation keys are dropped by the mapper, not stored.",
+        "properties": {
+          "destructive_hint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destructive Hint"
+          },
+          "idempotent_hint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotent Hint"
+          },
+          "open_world_hint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open World Hint"
+          },
+          "read_only_hint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Only Hint"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Title"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Annotations",
+        "type": "object"
+      },
       "AnyField": {
         "anyOf": [
           {
@@ -727,6 +789,88 @@
           }
         ],
         "title": "AnyField"
+      },
+      "ApiEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "api_type": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Type"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "protocols": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Protocols",
+            "type": "array"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "subscription_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Required"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ApiEntry",
+        "type": "object"
       },
       "ApprovalDecision": {
         "additionalProperties": false,
@@ -896,6 +1040,13 @@
         "title": "Attributes",
         "type": "object"
       },
+      "Audience": {
+        "maxLength": 512,
+        "minLength": 1,
+        "pattern": "^[^\\u0000-\\u001f\\u007f\\s]+$",
+        "title": "Audience",
+        "type": "string"
+      },
       "AuditRecord": {
         "additionalProperties": false,
         "description": "Append-only, hash-chained audit evidence (PRP.md section 3, PRD NS-06 'audit before/after'). Kinds: `before` (target state captured before a change), `after` (outcome and target state after), `denied` (a query, tool, export, push or action that authorization or policy refused). There is no update-capable field: no updated_at, modified_by, etag, version, status or deleted flag; corrections are new records. previous_hash is required for every record except the chain head (sequence 0), where it is null. Rules JSON Schema cannot express are checked by `validate_audit_chain` in tests/contracts/test_schemas.py: record_hash equals sha256 over the RFC 8785 (JCS) canonical form of the record without record_hash; within a chain_id, sequence is contiguous from 0 and each previous_hash equals the preceding record's record_hash.",
@@ -1042,11 +1193,92 @@
         "title": "AuditRecord",
         "type": "object"
       },
+      "Auth": {
+        "additionalProperties": false,
+        "description": "How a caller (or a gateway in front of it) authenticates to the upstream server. No credential is ever stored here.",
+        "properties": {
+          "audience": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Audience"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "entra",
+              "managed_identity",
+              "none",
+              "api_key"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Auth",
+        "type": "object"
+      },
       "AzureResourceType": {
         "maxLength": 256,
         "minLength": 1,
         "title": "AzureResourceType",
         "type": "string"
+      },
+      "BackendEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "circuit_breaker_rules": {
+            "items": {
+              "$ref": "#/components/schemas/CircuitBreakerRule"
+            },
+            "title": "Circuit Breaker Rules",
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "pool_members": {
+            "items": {
+              "$ref": "#/components/schemas/PoolMember"
+            },
+            "title": "Pool Members",
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "Single",
+              "Pool"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "BackendEntry",
+        "type": "object"
       },
       "BiasCheck": {
         "additionalProperties": false,
@@ -1400,6 +1632,68 @@
         "title": "ChainVerification",
         "type": "object"
       },
+      "CircuitBreakerRule": {
+        "additionalProperties": false,
+        "properties": {
+          "failure_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Count"
+          },
+          "failure_interval": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Interval"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "title": "Status Codes",
+            "type": "array"
+          },
+          "trip_duration": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trip Duration"
+          }
+        },
+        "title": "CircuitBreakerRule",
+        "type": "object"
+      },
       "CitationView": {
         "additionalProperties": false,
         "properties": {
@@ -1711,6 +2005,11 @@
       "CorrelationId": {
         "pattern": "^[A-Za-z0-9._-]{1,128}$",
         "title": "CorrelationId",
+        "type": "string"
+      },
+      "CostCenter": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$",
+        "title": "CostCenter",
         "type": "string"
       },
       "CostImplication": {
@@ -2318,11 +2617,39 @@
         "title": "DeploymentProfile",
         "type": "object"
       },
-      "Description": {
-        "maxLength": 2000,
-        "minLength": 1,
-        "title": "Description",
-        "type": "string"
+      "DiagnosticsState": {
+        "additionalProperties": false,
+        "properties": {
+          "gateway_llm_logs": {
+            "default": false,
+            "title": "Gateway Llm Logs",
+            "type": "boolean"
+          },
+          "gateway_logs": {
+            "default": false,
+            "title": "Gateway Logs",
+            "type": "boolean"
+          },
+          "gateway_mcp_logs": {
+            "default": false,
+            "title": "Gateway Mcp Logs",
+            "type": "boolean"
+          },
+          "workspace_resource_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Resource Id"
+          }
+        },
+        "title": "DiagnosticsState",
+        "type": "object"
       },
       "DiscoveredResource": {
         "additionalProperties": false,
@@ -2733,11 +3060,12 @@
                     "grounded_by",
                     "owned_by",
                     "depends_on",
-                    "supersedes"
+                    "supersedes",
+                    "grants_access_to"
                   ],
                   "type": "string"
                 },
-                "maxItems": 9,
+                "maxItems": 10,
                 "type": "array"
               },
               {
@@ -2835,7 +3163,8 @@
               "grounded_by",
               "owned_by",
               "depends_on",
-              "supersedes"
+              "supersedes",
+              "grants_access_to"
             ],
             "title": "Relation Type",
             "type": "string"
@@ -3272,11 +3601,13 @@
                     "owner",
                     "policy",
                     "recommendation",
-                    "run_reference"
+                    "run_reference",
+                    "grant",
+                    "mcp_server"
                   ],
                   "type": "string"
                 },
-                "maxItems": 12,
+                "maxItems": 14,
                 "type": "array"
               },
               {
@@ -3862,7 +4193,7 @@
                   "$ref": "#/components/schemas/GroundingSource"
                 },
                 {
-                  "$ref": "#/components/schemas/Tool"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                 },
                 {
                   "$ref": "#/components/schemas/Service"
@@ -3881,6 +4212,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/RunReference"
+                },
+                {
+                  "$ref": "#/components/schemas/Grant"
+                },
+                {
+                  "$ref": "#/components/schemas/McpServer"
                 }
               ]
             },
@@ -4193,6 +4530,542 @@
         "title": "Gap",
         "type": "object"
       },
+      "GatewayDetail": {
+        "additionalProperties": false,
+        "description": "Registration plus the inventory summary (full snapshot: ``.../inventory``).",
+        "properties": {
+          "arm_resource_id": {
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/DiagnosticsState"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "freshness_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Seconds"
+          },
+          "id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "inventory_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Counts"
+          },
+          "inventory_taken_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Taken At"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "default": "never",
+            "enum": [
+              "ok",
+              "failed",
+              "never"
+            ],
+            "title": "Last Sync Status",
+            "type": "string"
+          },
+          "mode": {
+            "const": "observe",
+            "default": "observe",
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "poll_status": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Status"
+          },
+          "poll_watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Watermark"
+          },
+          "registered_by": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Registered By",
+            "type": "string"
+          },
+          "sku_name_raw": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Name Raw"
+          },
+          "tier": {
+            "enum": [
+              "consumption",
+              "developer",
+              "basic",
+              "standard",
+              "premium",
+              "basic_v2",
+              "standard_v2",
+              "premium_v2",
+              "unknown"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "domain_id",
+          "cloud",
+          "arm_resource_id",
+          "name",
+          "tier",
+          "created_at",
+          "updated_at",
+          "registered_by"
+        ],
+        "title": "GatewayDetail",
+        "type": "object"
+      },
+      "GatewayInventory": {
+        "additionalProperties": false,
+        "properties": {
+          "apis": {
+            "items": {
+              "$ref": "#/components/schemas/ApiEntry"
+            },
+            "title": "Apis",
+            "type": "array"
+          },
+          "backends": {
+            "items": {
+              "$ref": "#/components/schemas/BackendEntry"
+            },
+            "title": "Backends",
+            "type": "array"
+          },
+          "gateway_id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Gateway Id",
+            "type": "string"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/OperationEntry"
+            },
+            "title": "Operations",
+            "type": "array"
+          },
+          "policy_fragments": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyFragmentEntry"
+            },
+            "title": "Policy Fragments",
+            "type": "array"
+          },
+          "product_api_links": {
+            "items": {
+              "$ref": "#/components/schemas/ProductApiLink"
+            },
+            "title": "Product Api Links",
+            "type": "array"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductEntry"
+            },
+            "title": "Products",
+            "type": "array"
+          },
+          "subscriptions": {
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionEntry"
+            },
+            "title": "Subscriptions",
+            "type": "array"
+          },
+          "taken_at": {
+            "format": "date-time",
+            "title": "Taken At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gateway_id",
+          "taken_at"
+        ],
+        "title": "GatewayInventory",
+        "type": "object"
+      },
+      "GatewayList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GatewayRegistration"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "GatewayList",
+        "type": "object"
+      },
+      "GatewayRegistration": {
+        "additionalProperties": false,
+        "properties": {
+          "arm_resource_id": {
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "customer_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/DiagnosticsState"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "freshness_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Seconds"
+          },
+          "id": {
+            "pattern": "^gw-[0-9a-f]{32}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "default": "never",
+            "enum": [
+              "ok",
+              "failed",
+              "never"
+            ],
+            "title": "Last Sync Status",
+            "type": "string"
+          },
+          "mode": {
+            "const": "observe",
+            "default": "observe",
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "poll_status": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Status"
+          },
+          "poll_watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Watermark"
+          },
+          "registered_by": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Registered By",
+            "type": "string"
+          },
+          "sku_name_raw": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku Name Raw"
+          },
+          "tier": {
+            "enum": [
+              "consumption",
+              "developer",
+              "basic",
+              "standard",
+              "premium",
+              "basic_v2",
+              "standard_v2",
+              "premium_v2",
+              "unknown"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "id",
+          "customer_id",
+          "domain_id",
+          "cloud",
+          "arm_resource_id",
+          "name",
+          "tier",
+          "created_at",
+          "updated_at",
+          "registered_by"
+        ],
+        "title": "GatewayRegistration",
+        "type": "object"
+      },
       "Generator": {
         "additionalProperties": false,
         "properties": {
@@ -4208,6 +5081,147 @@
           "generator_version"
         ],
         "title": "Generator",
+        "type": "object"
+      },
+      "Grant": {
+        "additionalProperties": false,
+        "description": "Access grant of one Entra principal (user, application, agent or Entra group) to one target (a model API, a model deployment or an MCP server) with optional usage limits and a cost center. It is the unit a gateway enforces (PRP-34); this document is desired state only and records no enforcement. Cross-field rules enforced in this schema: target.ref carries the type segment of target.kind (model_api is a 'service' entity, model_deployment a 'model_deployment', mcp_server an 'mcp_server'); MCP grants are call-limited only (tokens_per_minute, token_quota, quota_period and requests_per_minute must be null) and model grants carry no mcp_calls_per_minute; token_quota and quota_period are set together; a user principal carries no display label (person names are never stored). The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_grant_window (valid_from < valid_until when both are set).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "cost_center": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostCenter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "entity_type": {
+            "const": "grant",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:grant:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/Limits"
+          },
+          "principal": {
+            "$ref": "#/components/schemas/Principal"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Target"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "principal",
+          "target",
+          "limits",
+          "enabled",
+          "provenance"
+        ],
+        "title": "Grant",
         "type": "object"
       },
       "GraphPath": {
@@ -4273,7 +5287,7 @@
                   "$ref": "#/components/schemas/GroundingSource"
                 },
                 {
-                  "$ref": "#/components/schemas/Tool"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                 },
                 {
                   "$ref": "#/components/schemas/Service"
@@ -4292,6 +5306,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/RunReference"
+                },
+                {
+                  "$ref": "#/components/schemas/Grant"
+                },
+                {
+                  "$ref": "#/components/schemas/McpServer"
                 }
               ]
             },
@@ -5066,6 +6086,73 @@
         "title": "LifecycleStatus",
         "type": "string"
       },
+      "Limits": {
+        "additionalProperties": false,
+        "description": "Usage limits; null means no limit of that kind is declared. Token limits apply to model targets only; MCP grants are call-limited only.",
+        "properties": {
+          "mcp_calls_per_minute": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpCallsPerMinute"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quota_period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "minute",
+                  "hour",
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quota Period"
+          },
+          "requests_per_minute": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RequestsPerMinute"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "token_quota": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenQuota"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tokens_per_minute": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokensPerMinute"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "Limits",
+        "type": "object"
+      },
       "LineageImpactRequest": {
         "additionalProperties": false,
         "description": "Bounded impact paths (downstream = edges out) in the presented lineage.",
@@ -5182,6 +6269,176 @@
         "minimum": 0.0,
         "title": "MaxOutputTokens",
         "type": "integer"
+      },
+      "McpCallsPerMinute": {
+        "minimum": 1.0,
+        "title": "McpCallsPerMinute",
+        "type": "integer"
+      },
+      "McpServer": {
+        "additionalProperties": false,
+        "description": "Model Context Protocol server governed as a catalog entity: endpoint, transport, protocol versions, upstream authentication and the tools it exposes. Grants (grant.schema.json) target it with call limits only. Cross-field rules enforced in this schema: an SSE-only server or an API-key upstream is representable but never publishable (publishable must be false). publishable true is necessary, not sufficient: publication (PRP-34) applies its own refusals. The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_mcp_tool_names_unique (tool names are unique within one server).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "auth": {
+            "$ref": "#/components/schemas/Auth"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "mcp_server",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:mcp_server:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protocol_versions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProtocolVersion"
+                },
+                "maxItems": 32,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Protocol Versions"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "publishable": {
+            "title": "Publishable",
+            "type": "boolean"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__mcp_server__Tool"
+                },
+                "maxItems": 512,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Tools"
+          },
+          "transport": {
+            "enum": [
+              "streamable_http",
+              "sse"
+            ],
+            "title": "Transport",
+            "type": "string"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "url": {
+            "maxLength": 2048,
+            "pattern": "^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?(/[A-Za-z0-9._~%!$&'()*+,;=:@-]+)*/mcp$",
+            "title": "Url",
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "url",
+          "transport",
+          "auth",
+          "publishable",
+          "provenance"
+        ],
+        "title": "McpServer",
+        "type": "object"
       },
       "McpServerRef": {
         "maxLength": 512,
@@ -5862,6 +7119,51 @@
         "title": "OpaqueId",
         "type": "string"
       },
+      "OperationEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "api_id": {
+            "maxLength": 512,
+            "title": "Api Id",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "url_template": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Template"
+          }
+        },
+        "required": [
+          "api_id",
+          "id"
+        ],
+        "title": "OperationEntry",
+        "type": "object"
+      },
       "Outcome": {
         "additionalProperties": false,
         "properties": {
@@ -6025,6 +7327,12 @@
         "title": "OwnerConsentRecord",
         "type": "object"
       },
+      "OwnerId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:owner:[a-z0-9._/=-]+$",
+        "title": "OwnerId",
+        "type": "string"
+      },
       "Page_AuditRecord_": {
         "additionalProperties": false,
         "properties": {
@@ -6089,7 +7397,7 @@
         "title": "Page[EdgeObservation]",
         "type": "object"
       },
-      "Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__": {
+      "Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__Grant__McpServer__": {
         "additionalProperties": false,
         "properties": {
           "items": {
@@ -6111,7 +7419,7 @@
                   "$ref": "#/components/schemas/GroundingSource"
                 },
                 {
-                  "$ref": "#/components/schemas/Tool"
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                 },
                 {
                   "$ref": "#/components/schemas/Service"
@@ -6130,6 +7438,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/RunReference"
+                },
+                {
+                  "$ref": "#/components/schemas/Grant"
+                },
+                {
+                  "$ref": "#/components/schemas/McpServer"
                 }
               ]
             },
@@ -6155,7 +7469,7 @@
         "required": [
           "items"
         ],
-        "title": "Page[Union[Person, Agent, AgentVersion, ModelDeployment, GroundingSource, Tool, Service, Domain, Owner, Policy, RecommendationReference, RunReference]]",
+        "title": "Page[Union[Person, Agent, AgentVersion, ModelDeployment, GroundingSource, Tool, Service, Domain, Owner, Policy, RecommendationReference, RunReference, Grant, McpServer]]",
         "type": "object"
       },
       "ParentDomainId": {
@@ -6895,6 +8209,71 @@
         "title": "Policy",
         "type": "object"
       },
+      "PolicyFragmentEntry": {
+        "additionalProperties": false,
+        "description": "Name and description only. The fragment XML is never read into the snapshot.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 512,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PolicyFragmentEntry",
+        "type": "object"
+      },
+      "PoolMember": {
+        "additionalProperties": false,
+        "properties": {
+          "backend_id": {
+            "maxLength": 512,
+            "title": "Backend Id",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "backend_id"
+        ],
+        "title": "PoolMember",
+        "type": "object"
+      },
       "Prerequisite": {
         "additionalProperties": false,
         "description": "A precondition for acting on the recommendation (NS-03: compatibility, quality regression, cost comparison, staged rollout, rollback).",
@@ -7073,7 +8452,8 @@
               "grounded_by",
               "owned_by",
               "depends_on",
-              "supersedes"
+              "supersedes",
+              "grants_access_to"
             ],
             "title": "Relation Type",
             "type": "string"
@@ -7250,6 +8630,125 @@
         "title": "PriceVersion",
         "type": "object"
       },
+      "Principal": {
+        "additionalProperties": false,
+        "description": "The Entra principal the grant applies to. Gateways match object_id against the token 'oid' claim (user, application, agent) or the 'groups' claim (entra_group).",
+        "properties": {
+          "display": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DisplayName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "user",
+              "application",
+              "agent",
+              "entra_group"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "object_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "title": "Object Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "object_id"
+        ],
+        "title": "Principal",
+        "type": "object"
+      },
+      "ProductApiLink": {
+        "additionalProperties": false,
+        "properties": {
+          "api_id": {
+            "maxLength": 512,
+            "title": "Api Id",
+            "type": "string"
+          },
+          "product_id": {
+            "maxLength": 512,
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "api_id"
+        ],
+        "title": "ProductApiLink",
+        "type": "object"
+      },
+      "ProductEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Required"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "subscription_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Required"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ProductEntry",
+        "type": "object"
+      },
       "ProjectedEstimate": {
         "additionalProperties": false,
         "description": "Projected cost effect. Always an estimate, always cites price_version (estimated spend without a price version is invalid, matching CostRecord).",
@@ -7347,6 +8846,11 @@
         ],
         "title": "ProposedDiff",
         "type": "object"
+      },
+      "ProtocolVersion": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "title": "ProtocolVersion",
+        "type": "string"
       },
       "Provenance": {
         "additionalProperties": false,
@@ -8150,6 +9654,34 @@
         "title": "Region",
         "type": "string"
       },
+      "RegisterGatewayBody": {
+        "additionalProperties": false,
+        "description": "Register by ARM resource id. ``customer_id``/``domain_id``/identity are never in the body.",
+        "properties": {
+          "arm_resource_id": {
+            "pattern": "(?i)^/subscriptions/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/resourceGroups/[A-Za-z0-9_.()-]{1,90}/providers/Microsoft\\.ApiManagement/service/[A-Za-z][A-Za-z0-9-]{0,49}$",
+            "title": "Arm Resource Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "arm_resource_id"
+        ],
+        "title": "RegisterGatewayBody",
+        "type": "object"
+      },
       "RegisterServerBody": {
         "additionalProperties": false,
         "properties": {
@@ -8201,7 +9733,8 @@
           "grounded_by",
           "owned_by",
           "depends_on",
-          "supersedes"
+          "supersedes",
+          "grants_access_to"
         ],
         "title": "RelationType",
         "type": "string"
@@ -8368,6 +9901,11 @@
         "minLength": 1,
         "title": "RequestId",
         "type": "string"
+      },
+      "RequestsPerMinute": {
+        "minimum": 1.0,
+        "title": "RequestsPerMinute",
+        "type": "integer"
       },
       "ResetResult": {
         "additionalProperties": false,
@@ -10412,6 +11950,58 @@
         "title": "SubjectId",
         "type": "string"
       },
+      "SubscriptionEntry": {
+        "additionalProperties": false,
+        "description": "APIM subscription metadata. Keys are never requested (no ``listSecrets``).",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "maxLength": 512,
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "SubscriptionEntry",
+        "type": "object"
+      },
       "SubscriptionScan": {
         "additionalProperties": false,
         "properties": {
@@ -10515,6 +12105,33 @@
           "synced_at"
         ],
         "title": "SyncView",
+        "type": "object"
+      },
+      "Target": {
+        "additionalProperties": false,
+        "description": "What the principal may call. ref is the canonical ID of the target catalog entity; its type segment follows kind (model_api -> service, model_deployment -> model_deployment, mcp_server -> mcp_server).",
+        "properties": {
+          "kind": {
+            "enum": [
+              "model_api",
+              "model_deployment",
+              "mcp_server"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ref": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(service|model_deployment|mcp_server):[a-z0-9._/=-]+$",
+            "title": "Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "title": "Target",
         "type": "object"
       },
       "TargetRef": {
@@ -10621,157 +12238,27 @@
         "title": "TimeRange",
         "type": "object"
       },
+      "Title": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
       "Token": {
         "maxLength": 128,
         "pattern": "^[a-z0-9][a-z0-9._-]*$",
         "title": "Token",
         "type": "string"
       },
-      "Tool": {
-        "additionalProperties": false,
-        "description": "Callable tool exposed to agents (function, API, MCP tool, search, code interpreter). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
-        "properties": {
-          "attributes": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Attributes"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "classification": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Classification"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "unknown"
-          },
-          "cloud": {
-            "$ref": "#/components/schemas/Cloud"
-          },
-          "created_at": {
-            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
-          },
-          "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
-          },
-          "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
-          },
-          "domain_id": {
-            "$ref": "#/components/schemas/DomainId"
-          },
-          "entity_type": {
-            "const": "tool",
-            "title": "Entity Type",
-            "type": "string"
-          },
-          "etag": {
-            "$ref": "#/components/schemas/Etag"
-          },
-          "id": {
-            "maxLength": 512,
-            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:tool:[a-z0-9._/=-]+$",
-            "title": "Id",
-            "type": "string"
-          },
-          "lifecycle_status": {
-            "$ref": "#/components/schemas/LifecycleStatus"
-          },
-          "mcp_server_ref": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/McpServerRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "residency_region": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Token"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "schema_version": {
-            "$ref": "#/components/schemas/SchemaVersion"
-          },
-          "side_effects": {
-            "anyOf": [
-              {
-                "enum": [
-                  "read_only",
-                  "writes",
-                  "unknown"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "unknown",
-            "title": "Side Effects"
-          },
-          "source_id": {
-            "$ref": "#/components/schemas/Token"
-          },
-          "tool_kind": {
-            "anyOf": [
-              {
-                "enum": [
-                  "function",
-                  "api",
-                  "mcp_tool",
-                  "search",
-                  "code_interpreter",
-                  "other",
-                  "unknown"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "unknown",
-            "title": "Tool Kind"
-          },
-          "updated_at": {
-            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
-          },
-          "version": {
-            "$ref": "#/components/schemas/EntityVersion"
-          }
-        },
-        "required": [
-          "schema_version",
-          "id",
-          "entity_type",
-          "version",
-          "etag",
-          "lifecycle_status",
-          "created_at",
-          "updated_at",
-          "cloud",
-          "customer_id",
-          "domain_id",
-          "display_name",
-          "source_id"
-        ],
-        "title": "Tool",
-        "type": "object"
+      "TokenQuota": {
+        "minimum": 1.0,
+        "title": "TokenQuota",
+        "type": "integer"
+      },
+      "TokensPerMinute": {
+        "minimum": 1.0,
+        "title": "TokensPerMinute",
+        "type": "integer"
       },
       "ToolChangeView": {
         "additionalProperties": false,
@@ -12074,6 +13561,12 @@
         "title": "UtcTimestamp",
         "type": "string"
       },
+      "neurosphere_contracts__catalog__v1__agent__Description": {
+        "maxLength": 2000,
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
       "neurosphere_contracts__catalog__v1__common__Date": {
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
         "title": "Date",
@@ -12088,6 +13581,47 @@
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
         "title": "Timestamp",
         "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__mcp_server__Description": {
+        "maxLength": 8192,
+        "minLength": 1,
+        "title": "Description",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__mcp_server__Tool": {
+        "additionalProperties": false,
+        "properties": {
+          "annotations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Annotations"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__mcp_server__Description"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_.-]{1,128}$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Tool",
+        "type": "object"
       },
       "neurosphere_contracts__catalog__v1__owner__Owner": {
         "additionalProperties": false,
@@ -12228,6 +13762,152 @@
           "owner_kind"
         ],
         "title": "Owner",
+        "type": "object"
+      },
+      "neurosphere_contracts__catalog__v1__tool__Tool": {
+        "additionalProperties": false,
+        "description": "Callable tool exposed to agents (function, API, MCP tool, search, code interpreter). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+        "properties": {
+          "attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Classification"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/CustomerId"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "entity_type": {
+            "const": "tool",
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "etag": {
+            "$ref": "#/components/schemas/Etag"
+          },
+          "id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:tool:[a-z0-9._/=-]+$",
+            "title": "Id",
+            "type": "string"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "mcp_server_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/McpServerRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "side_effects": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read_only",
+                  "writes",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Side Effects"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "tool_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "function",
+                  "api",
+                  "mcp_tool",
+                  "search",
+                  "code_interpreter",
+                  "other",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown",
+            "title": "Tool Kind"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/EntityVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "id",
+          "entity_type",
+          "version",
+          "etag",
+          "lifecycle_status",
+          "created_at",
+          "updated_at",
+          "cloud",
+          "customer_id",
+          "domain_id",
+          "display_name",
+          "source_id"
+        ],
+        "title": "Tool",
         "type": "object"
       },
       "neurosphere_contracts__deployment__v1__deployment_manifest__UtcTimestamp": {
@@ -13431,11 +15111,13 @@
                       "owner",
                       "policy",
                       "recommendation",
-                      "run_reference"
+                      "run_reference",
+                      "grant",
+                      "mcp_server"
                     ],
                     "type": "string"
                   },
-                  "maxItems": 12,
+                  "maxItems": 14,
                   "type": "array"
                 },
                 {
@@ -13528,7 +15210,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__"
+                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__Grant__McpServer__"
                 }
               }
             },
@@ -13586,7 +15268,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -13605,6 +15287,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Create Entity Api V1 Catalog Entities Post"
@@ -13667,7 +15355,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -13686,6 +15374,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Get Entity Api V1 Catalog Entities  Entity Id  Get"
@@ -13769,7 +15463,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -13788,6 +15482,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Update Entity Api V1 Catalog Entities  Entity Id  Put"
@@ -13861,7 +15561,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -13880,6 +15580,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Deprecate Entity Api V1 Catalog Entities  Entity Id  Deprecate Post"
@@ -13963,7 +15669,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -13982,6 +15688,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Recertify Owner Api V1 Catalog Entities  Entity Id  Recertify Post"
@@ -14031,11 +15743,13 @@
                       "owner",
                       "policy",
                       "recommendation",
-                      "run_reference"
+                      "run_reference",
+                      "grant",
+                      "mcp_server"
                     ],
                     "type": "string"
                   },
-                  "maxItems": 12,
+                  "maxItems": 14,
                   "type": "array"
                 },
                 {
@@ -15269,6 +16983,294 @@
         "summary": "Get Forecast",
         "tags": [
           "finops"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways": {
+      "get": {
+        "operationId": "list_gateways_api_v1_gateways_domains__domain__gateways_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2048,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Gateways",
+        "tags": [
+          "gateways"
+        ]
+      },
+      "post": {
+        "operationId": "register_gateway_api_v1_gateways_domains__domain__gateways_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterGatewayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayRegistration"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Gateway",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}": {
+      "get": {
+        "operationId": "get_gateway_api_v1_gateways_domains__domain__gateways__gateway_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Gateway",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/inventory": {
+      "get": {
+        "operationId": "get_inventory_api_v1_gateways_domains__domain__gateways__gateway_id__inventory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayInventory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Inventory",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/domains/{domain}/gateways/{gateway_id}/sync": {
+      "post": {
+        "operationId": "sync_gateway_api_v1_gateways_domains__domain__gateways__gateway_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "pattern": "^gw-[0-9a-f]{32}$",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Gateway",
+        "tags": [
+          "gateways"
         ]
       }
     },
@@ -17886,11 +19888,13 @@
                       "owner",
                       "policy",
                       "recommendation",
-                      "run_reference"
+                      "run_reference",
+                      "grant",
+                      "mcp_server"
                     ],
                     "type": "string"
                   },
-                  "maxItems": 12,
+                  "maxItems": 14,
                   "type": "array"
                 },
                 {
@@ -17983,7 +19987,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__"
+                  "$ref": "#/components/schemas/Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__Grant__McpServer__"
                 }
               }
             },
@@ -18042,7 +20046,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -18061,6 +20065,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Create Entity Catalog Entities Post"
@@ -18124,7 +20134,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -18143,6 +20153,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Get Entity Catalog Entities  Entity Id  Get"
@@ -18227,7 +20243,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -18246,6 +20262,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Update Entity Catalog Entities  Entity Id  Put"
@@ -18320,7 +20342,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -18339,6 +20361,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Deprecate Entity Catalog Entities  Entity Id  Deprecate Post"
@@ -18423,7 +20451,7 @@
                       "$ref": "#/components/schemas/GroundingSource"
                     },
                     {
-                      "$ref": "#/components/schemas/Tool"
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
                     },
                     {
                       "$ref": "#/components/schemas/Service"
@@ -18442,6 +20470,12 @@
                     },
                     {
                       "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
                     }
                   ],
                   "title": "Response Recertify Owner Catalog Entities  Entity Id  Recertify Post"
@@ -18492,11 +20526,13 @@
                       "owner",
                       "policy",
                       "recommendation",
-                      "run_reference"
+                      "run_reference",
+                      "grant",
+                      "mcp_server"
                     ],
                     "type": "string"
                   },
-                  "maxItems": 12,
+                  "maxItems": 14,
                   "type": "array"
                 },
                 {

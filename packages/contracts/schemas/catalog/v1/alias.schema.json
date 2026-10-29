@@ -75,7 +75,9 @@
         "owner",
         "policy",
         "recommendation",
-        "run_reference"
+        "run_reference",
+        "grant",
+        "mcp_server"
       ]
     },
     "status": {

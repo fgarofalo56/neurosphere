@@ -7,6 +7,7 @@ import typing
 import pytest
 from neurosphere_contracts.scope.v1.identity_scope import RoleAssignment
 from neurosphere_core.auth.scope import (
+    GRANT_PERMISSIONS,
     PRIVILEGED_ROLES,
     ROLE_PERMISSIONS,
     Permission,
@@ -36,20 +37,31 @@ from .scope_helpers import (
 P = Permission
 
 EXPECTED = {
-    Role.VIEWER: {P.DATA_READ},
-    Role.ANALYST: {P.DATA_READ, P.DATA_EXPORT, P.REPORT_CREATE, P.ACTION_PROPOSE},
+    Role.VIEWER: {P.DATA_READ, P.GRANT_READ},
+    Role.ANALYST: {P.DATA_READ, P.GRANT_READ, P.DATA_EXPORT, P.REPORT_CREATE, P.ACTION_PROPOSE},
     Role.DOMAIN_STEWARD: {
         P.DATA_READ,
+        P.GRANT_READ,
         P.DATA_EXPORT,
         P.REPORT_CREATE,
         P.ACTION_PROPOSE,
         P.CATALOG_CURATE,
         P.ACTION_APPROVE,
         P.ACTION_EXECUTE,
+        P.GRANT_WRITE,
     },
-    Role.ADMIN: {P.DATA_READ, P.CONFIG_MANAGE, P.POLICY_MANAGE, P.REVOCATION_MANAGE},
+    Role.ADMIN: {
+        P.DATA_READ,
+        P.CONFIG_MANAGE,
+        P.POLICY_MANAGE,
+        P.REVOCATION_MANAGE,
+        P.GRANT_READ,
+        P.GRANT_WRITE,
+    },
     Role.SECURITY_AUDITOR: {P.AUDIT_READ, P.EVIDENCE_READ},
 }
+# Held by Admin and Domain Steward alike (PRP-33 item 5), so not an admin-only permission.
+SHARED_ADMIN_STEWARD = {P.GRANT_WRITE}
 
 
 @pytest.mark.parametrize("role_", list(Role))
@@ -70,9 +82,38 @@ def test_role_set_is_closed_and_matches_contract() -> None:
 
 
 def test_analyst_pro_never_implies_admin() -> None:
-    admin_only = EXPECTED[Role.ADMIN] - EXPECTED[Role.VIEWER]
+    admin_only = EXPECTED[Role.ADMIN] - EXPECTED[Role.VIEWER] - SHARED_ADMIN_STEWARD
+    assert admin_only == {P.CONFIG_MANAGE, P.POLICY_MANAGE, P.REVOCATION_MANAGE}
     assert not role_permissions(Role.ANALYST) & admin_only
+    assert not role_permissions(Role.ANALYST) & SHARED_ADMIN_STEWARD
     assert not role_permissions(Role.DOMAIN_STEWARD) & admin_only
+
+
+def test_grant_permissions_follow_the_catalog_grant_mapping() -> None:
+    """grant.read for every data-reading role; grant.write only for Steward and Admin."""
+    readers = {r for r in Role if P.GRANT_READ in role_permissions(r)}
+    writers = {r for r in Role if P.GRANT_WRITE in role_permissions(r)}
+    assert readers == {Role.VIEWER, Role.ANALYST, Role.DOMAIN_STEWARD, Role.ADMIN}
+    assert writers == {Role.DOMAIN_STEWARD, Role.ADMIN}
+    assert not {P.GRANT_READ, P.GRANT_WRITE} & role_permissions(Role.SECURITY_AUDITOR)
+    assert (P.GRANT_READ.value, P.GRANT_WRITE.value) == ("grant.read", "grant.write")
+    # Unrelated to resource-scoped grants: no GRANT_PERMISSIONS entry maps to grant.*.
+    assert not {P.GRANT_READ, P.GRANT_WRITE} & set(GRANT_PERMISSIONS.values())
+
+
+async def test_grant_write_is_scoped_to_the_steward_domains() -> None:
+    policy = principal_policy(
+        memberships=(FINANCE, OPERATIONS),
+        roles=(role(Role.DOMAIN_STEWARD, FINANCE), role(Role.VIEWER, OPERATIONS)),
+    )
+    scope = await make_deriver(make_repo(policy)).from_verified_claims(make_claims())
+    now = at(0)
+    assert permits(scope, P.GRANT_WRITE, domain_id=FINANCE, now=now)
+    assert permits(scope, P.GRANT_READ, domain_id=OPERATIONS, now=now)
+    assert not permits(scope, P.GRANT_WRITE, domain_id=OPERATIONS, now=now)
+    for other in (HR, OTHER_CUSTOMER_FINANCE, GOV_FINANCE):
+        assert not permits(scope, P.GRANT_READ, domain_id=other, now=now)
+        assert not permits(scope, P.GRANT_WRITE, domain_id=other, now=now)
 
 
 def test_auditor_has_no_data_permissions() -> None:

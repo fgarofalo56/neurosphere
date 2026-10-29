@@ -11,7 +11,7 @@ import yaml
 from neurosphere_core.capabilities import MatrixLoadError, load_matrix
 from rows import raw_row
 
-TODAY = date(2026, 10, 20)
+TODAY = date(2026, 10, 29)
 
 
 def write(tmp_path: Path, name: str, rows: list[dict[str, Any]]) -> None:
@@ -20,7 +20,7 @@ def write(tmp_path: Path, name: str, rows: list[dict[str, Any]]) -> None:
 
 def test_shipped_matrix_loads() -> None:
     matrix = load_matrix(today=TODAY)
-    assert len(matrix) == 534
+    assert len(matrix) == 646
     assert len(matrix.services()) == 11
 
 

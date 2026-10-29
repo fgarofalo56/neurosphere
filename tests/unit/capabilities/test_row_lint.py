@@ -31,7 +31,7 @@ FABRIC_GA_REGIONS = {"usgovvirginia", "usgovtexas"}
 
 @pytest.fixture(scope="module")
 def matrix() -> CapabilityMatrix:
-    return load_matrix(today=date(2026, 10, 20))
+    return load_matrix(today=date(2026, 10, 29))
 
 
 def test_every_row_has_source_and_date(matrix: CapabilityMatrix) -> None:

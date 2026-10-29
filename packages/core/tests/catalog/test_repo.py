@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import json
 import uuid
+from typing import Any
 
 import pytest
+from neurosphere_contracts.catalog.v1.grant import Grant
+from neurosphere_contracts.catalog.v1.grants_access_to import GrantsAccessToRelation
+from neurosphere_contracts.catalog.v1.mcp_server import McpServer
 from neurosphere_contracts.catalog.v1.person import Person
 from neurosphere_core.capabilities import default_matrix
 from neurosphere_core.catalog import (
     CatalogRepository,
+    EdgeFilter,
+    EntityFilter,
     PartitionKeyShape,
     partition_key_paths,
     resolve_shape,
@@ -22,6 +29,7 @@ from neurosphere_core.catalog.repo import (
 from neurosphere_core.catalog.repo import documents as docs
 from neurosphere_core.catalog.repo.cosmos import build_sql, partition_key_definition
 from neurosphere_core.errors.taxonomy import InvalidSchemaError
+from neurosphere_core.paging import PageRequest
 
 from .repo_conformance import CHECKS, agent, dom, example, make_scope
 
@@ -126,3 +134,72 @@ async def test_person_without_domain_is_refused() -> None:
     repo = InMemoryCatalogRepository()
     with pytest.raises(InvalidSchemaError):
         await repo.create_entity(make_scope("acme", [dom("acme", "a")]), Person.model_validate(raw))
+
+
+# --------------------------------------------------------------------------- PRP-33 item 5
+
+
+def _rehome(name: str, ns: str) -> dict[str, Any]:
+    """A golden catalog example moved into customer ``ns`` (every canonical ID and customer_id)."""
+    text = json.dumps(example(name)).replace(":contoso:", f":{ns}:")
+    raw = json.loads(text)
+    raw["customer_id"] = ns
+    raw["version"] = 1
+    raw["etag"] = "caller-etag"
+    return raw
+
+
+GATEWAY_ENTITIES = [
+    ("grant.user-model-deployment-token-limits.json", Grant),
+    ("grant.entra-group-mcp-calls.json", Grant),
+    ("mcp_server.entra-streamable-http.json", McpServer),
+    ("mcp_server.api-key-not-publishable.json", McpServer),
+]
+
+
+@pytest.mark.parametrize("shape", SHAPES, ids=lambda s: s.value)
+@pytest.mark.parametrize(("name", "model"), GATEWAY_ENTITIES, ids=[n for n, _ in GATEWAY_ENTITIES])
+async def test_grant_and_mcp_server_entities_round_trip_through_the_store(
+    name: str, model: type[Grant] | type[McpServer], shape: PartitionKeyShape
+) -> None:
+    ns = f"t{uuid.uuid4().hex[:10]}"
+    repo = InMemoryCatalogRepository(shape)
+    scope = make_scope(ns, [dom(ns, "finance")])
+    entity = model.model_validate(_rehome(name, ns))
+    created = await repo.create_entity(scope, entity)
+    assert isinstance(created, model)
+    assert created.version.root == 1 and created.etag.root != "caller-etag"
+    got = await repo.get_entity(scope, entity.id)
+    assert got == created
+    expected = entity.model_dump(mode="json", exclude={"version", "etag"})
+    assert created.model_dump(mode="json", exclude={"version", "etag"}) == expected
+    listed = await repo.list_entities(
+        scope, EntityFilter(entity_types=[entity.entity_type]), PageRequest()
+    )
+    assert [e.id for e in listed.items] == [entity.id]
+    # out of scope reads as missing
+    assert await repo.get_entity(make_scope(ns, [dom(ns, "other")]), entity.id) is None
+
+
+@pytest.mark.parametrize("shape", SHAPES, ids=lambda s: s.value)
+async def test_grants_access_to_edge_round_trips_through_the_store(
+    shape: PartitionKeyShape,
+) -> None:
+    ns = f"t{uuid.uuid4().hex[:10]}"
+    repo = InMemoryCatalogRepository(shape)
+    scope = make_scope(ns, [dom(ns, "finance")])
+    grant = Grant.model_validate(_rehome("grant.entra-group-mcp-calls.json", ns))
+    server = McpServer.model_validate(_rehome("mcp_server.entra-streamable-http.json", ns))
+    await repo.create_entity(scope, grant)
+    await repo.create_entity(scope, server)
+    edge = GrantsAccessToRelation.model_validate(_rehome("grants_access_to.asserted.json", ns))
+    assert edge.source_id == grant.id and edge.target_id == server.id
+    stored = await repo.put_edge(scope, edge, None)
+    assert isinstance(stored, GrantsAccessToRelation)
+    assert await repo.get_edge(scope, edge.id) == stored
+    out = await repo.list_edges_by_node(
+        scope, grant.id, "out", EdgeFilter(relation_types=["grants_access_to"]), PageRequest()
+    )
+    assert [e.id for e in out.items] == [edge.id]
+    inn = await repo.list_edges_by_node(scope, server.id, "in", EdgeFilter(), PageRequest())
+    assert [e.id for e in inn.items] == [edge.id]

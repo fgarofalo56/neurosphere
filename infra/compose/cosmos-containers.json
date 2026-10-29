@@ -138,6 +138,18 @@
     },
     {
       "default_ttl": null,
+      "name": "gateways",
+      "owner": "neurosphere_core.gateway.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
       "name": "hitl_decisions",
       "owner": "neurosphere_core.hitl_cosmos.store",
       "partition_key": {

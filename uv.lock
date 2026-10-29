@@ -1370,7 +1370,9 @@ version = "0.0.0"
 source = { editable = "services/workers" }
 dependencies = [
     { name = "aiohttp" },
+    { name = "httpx" },
     { name = "neurosphere-connector" },
+    { name = "neurosphere-connector-azure-monitor" },
     { name = "neurosphere-core" },
     { name = "pydantic" },
 ]
@@ -1378,7 +1380,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9,<4" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.14,<3" },
 ]

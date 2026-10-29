@@ -18,6 +18,7 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY packages ./packages
 COPY services ./services
 COPY connectors/sdk-python ./connectors/sdk-python
+COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
 RUN uv sync --frozen --no-dev --no-editable --package neurosphere-workers
 
 # python:3.12-alpine, digest observed 2026-10-18

@@ -7,17 +7,23 @@ applies tenant-wide and there is no wildcard, superuser or bypass permission any
 =================  ====================================================================
 Role               Permissions (within the domains the assignment names)
 =================  ====================================================================
-viewer             data.read
-analyst            data.read, data.export, report.create, action.propose
-domain_steward     analyst + catalog.curate, action.approve, action.execute
-admin              data.read, config.manage, policy.manage, revocation.manage
+viewer             data.read, grant.read
+analyst            viewer + data.export, report.create, action.propose
+domain_steward     analyst + catalog.curate, action.approve, action.execute, grant.write
+admin              data.read, config.manage, policy.manage, revocation.manage, grant.read,
+                   grant.write
 security_auditor   audit.read, evidence.read  (no data.read: auditors read evidence, not data)
 =================  ====================================================================
 
 "Pro" is an Analyst capability tier (C6), not a role: it confers nothing from the Admin row.
 Admin manages configuration within its domains; it does not inherit Steward approval or
-Auditor evidence permissions. Resource-scoped grants (``GRANT_PERMISSIONS``) add a contract
-permission on exactly one named resource and never add a role or a domain.
+Auditor evidence permissions. ``grant.write`` is the one write both Admin and Domain Steward
+hold (PRP-33 item 5): it is not admin-only, and Analyst and Viewer never hold it.
+
+``grant.read`` / ``grant.write`` govern catalog Grant documents (gateway access grants of a
+principal to a model API, deployment or MCP server; catalog/v1/grant.schema.json). They are
+unrelated to resource-scoped grants (``GRANT_PERMISSIONS``), which add a contract permission
+on exactly one named resource and never add a role or a domain.
 """
 
 from __future__ import annotations
@@ -69,14 +75,17 @@ class Permission(StrEnum):
     REVOCATION_MANAGE = "revocation.manage"
     AUDIT_READ = "audit.read"
     EVIDENCE_READ = "evidence.read"
+    GRANT_READ = "grant.read"
+    GRANT_WRITE = "grant.write"
 
 
-_VIEWER = frozenset({Permission.DATA_READ})
+_VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ})
 _ANALYST = _VIEWER | {Permission.DATA_EXPORT, Permission.REPORT_CREATE, Permission.ACTION_PROPOSE}
 _STEWARD = _ANALYST | {
     Permission.CATALOG_CURATE,
     Permission.ACTION_APPROVE,
     Permission.ACTION_EXECUTE,
+    Permission.GRANT_WRITE,
 }
 _ADMIN = frozenset(
     {
@@ -84,6 +93,8 @@ _ADMIN = frozenset(
         Permission.CONFIG_MANAGE,
         Permission.POLICY_MANAGE,
         Permission.REVOCATION_MANAGE,
+        Permission.GRANT_READ,
+        Permission.GRANT_WRITE,
     }
 )
 _AUDITOR = frozenset({Permission.AUDIT_READ, Permission.EVIDENCE_READ})

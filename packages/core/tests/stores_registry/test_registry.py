@@ -63,6 +63,7 @@ WIRE_CONTRACT: dict[str, tuple[str, ...]] = {
     "lifecycle_requests": ("/customer_id",),
     "lifecycle_holds": ("/customer_id",),
     "lifecycle_mappings": ("/customer_id",),
+    "gateways": ("/customer_id", "/domain_id"),
 }
 
 

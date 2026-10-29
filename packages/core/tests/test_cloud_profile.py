@@ -11,6 +11,7 @@ _EXPECTED = {
         "cosmos_suffix": ".documents.azure.us",
         "eventhubs_suffix": ".servicebus.usgovcloudapi.net",
         "search_suffix": ".search.azure.us",
+        "apim_gateway_suffix": ".azure-api.us",
     },
     CloudName.COMMERCIAL: {
         "login_host": "login.microsoftonline.com",
@@ -18,6 +19,7 @@ _EXPECTED = {
         "cosmos_suffix": ".documents.azure.com",
         "eventhubs_suffix": ".servicebus.windows.net",
         "search_suffix": ".search.windows.net",
+        "apim_gateway_suffix": ".azure-api.net",
     },
 }
 

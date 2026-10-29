@@ -36,9 +36,12 @@ from neurosphere_contracts.catalog.v1.delegates_to import DelegatesToRelation
 from neurosphere_contracts.catalog.v1.depends_on import DependsOnRelation
 from neurosphere_contracts.catalog.v1.domain import Domain
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
+from neurosphere_contracts.catalog.v1.grant import Grant
+from neurosphere_contracts.catalog.v1.grants_access_to import GrantsAccessToRelation
 from neurosphere_contracts.catalog.v1.grounded_by import GroundedByRelation
 from neurosphere_contracts.catalog.v1.grounding_source import GroundingSource
 from neurosphere_contracts.catalog.v1.invokes import InvokesRelation
+from neurosphere_contracts.catalog.v1.mcp_server import McpServer
 from neurosphere_contracts.catalog.v1.model_deployment import ModelDeployment
 from neurosphere_contracts.catalog.v1.owned_by import OwnedByRelation
 from neurosphere_contracts.catalog.v1.owner import Owner
@@ -78,6 +81,8 @@ EntityTypeName = Literal[
     "policy",
     "recommendation",
     "run_reference",
+    "grant",
+    "mcp_server",
 ]
 RelationTypeName = Literal[
     "invokes",
@@ -89,6 +94,7 @@ RelationTypeName = Literal[
     "owned_by",
     "depends_on",
     "supersedes",
+    "grants_access_to",
 ]
 LifecycleName = Literal["draft", "active", "deprecated", "retired"]
 Direction = Literal["out", "in", "both"]
@@ -106,8 +112,10 @@ CatalogEntity = (
     | Policy
     | RecommendationReference
     | RunReference
+    | Grant
+    | McpServer
 )
-"""Any of the 12 versioned entity documents (generated contract models)."""
+"""Any of the 14 versioned entity documents (generated contract models)."""
 
 CatalogEdge = (
     InvokesRelation
@@ -119,8 +127,9 @@ CatalogEdge = (
     | OwnedByRelation
     | DependsOnRelation
     | SupersedesRelation
+    | GrantsAccessToRelation
 )
-"""Any of the 9 relation edge documents (generated contract models)."""
+"""Any of the 10 relation edge documents (generated contract models)."""
 
 MAX_OVERRIDES_PER_EDGE = 200
 MAX_EDGES_PER_OVERRIDE_BATCH = 500
@@ -134,7 +143,7 @@ class EntityFilter(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    entity_types: Annotated[list[EntityTypeName] | None, Field(max_length=12)] = None
+    entity_types: Annotated[list[EntityTypeName] | None, Field(max_length=14)] = None
     domain_ids: Annotated[list[CanonicalIdStr] | None, Field(max_length=100)] = None
     lifecycle_statuses: Annotated[list[LifecycleName] | None, Field(max_length=4)] = None
 
@@ -144,7 +153,7 @@ class EdgeFilter(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    relation_types: Annotated[list[RelationTypeName] | None, Field(max_length=9)] = None
+    relation_types: Annotated[list[RelationTypeName] | None, Field(max_length=10)] = None
     statuses: Annotated[
         list[Literal["asserted", "inferred", "curated"]] | None, Field(max_length=3)
     ] = None
