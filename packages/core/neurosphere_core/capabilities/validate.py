@@ -224,6 +224,45 @@ def _resolve(
     return None, sku_note
 
 
+class TierCapabilityUnknown(BaseModel):
+    """No matrix row speaks for a (tier, feature, cloud) tuple: unverified, never available."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tier: str
+    feature: str
+    cloud: str
+    availability: Literal["unverified"] = "unverified"
+    reason: str
+
+
+def tier_capability(
+    matrix: CapabilityMatrix, *, tier: str, feature: str, cloud: str
+) -> CapabilityMatrixEntry | TierCapabilityUnknown:
+    """The APIM row for a tier, feature and cloud, or an ``unverified`` result with a reason.
+
+    Only same-cloud rows are consulted (no cross-cloud fallback). The tier is the row ``sku``.
+    """
+    want = _norm_sku(tier)
+    for row in matrix.rows:
+        if (
+            row.service == "apim"
+            and row.feature == feature
+            and row.cloud == cloud
+            and _norm_sku(row.sku) == want
+        ):
+            return row
+    return TierCapabilityUnknown(
+        tier=tier,
+        feature=feature,
+        cloud=cloud,
+        reason=(
+            f"No capability-matrix row for apim.{feature} on tier {tier!r} in {cloud}; "
+            "unverified, so disabled."
+        ),
+    )
+
+
 def _is_stale(row: CapabilityMatrixEntry, today: date) -> bool:
     return (today - observed_date(row)).days > STALE_AFTER_DAYS
 
