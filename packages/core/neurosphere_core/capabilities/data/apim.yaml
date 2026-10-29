@@ -54,3 +54,1570 @@
   source_url: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
   observed_on: '2026-10-11'
   notes: The compare page is Government-centric; Commercial availability is not stated.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.consumption
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: 'Consumption is not listed in APPLIES TO for this feature (policy reference table: Consumption
+    No). Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers
+    use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).'
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.consumption
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2). Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers
+    use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.consumption
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: 'Consumption is not listed in APPLIES TO for this feature (policy reference table: Consumption
+    No).'
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.consumption
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.consumption
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.consumption
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.consumption
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: 'Consumption is not listed in APPLIES TO for this feature (policy reference table: Consumption
+    No).'
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.consumption
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.consumption
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.consumption
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.consumption
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.consumption
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.consumption
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: consumption
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.consumption
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: consumption
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-features
+  observed_on: '2026-10-29'
+  notes: Consumption tier is not available in US Government (api-management-features, Important, note
+    2).
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.developer
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+    Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.developer
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+    Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.developer
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.developer
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.developer
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers only. Developer
+    tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.developer
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.developer
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.developer
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.developer
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page Developer tier is for non-production and has
+    no SLA.
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.developer
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.developer
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page Developer tier is for non-production and has
+    no SLA.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.developer
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.developer
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page Developer tier is for non-production and has
+    no SLA.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.developer
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: developer
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Developer tier is for non-production and has no SLA.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.basic
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.basic
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.basic
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.basic
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.basic
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.basic
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.basic
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.basic
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.basic
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.basic
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.basic
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.basic
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.basic
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.basic
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: basic
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.standard
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.standard
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.standard
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.standard
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.standard
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.standard
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.standard
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.standard
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.standard
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.standard
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.standard
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.standard
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.standard
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.standard
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: standard
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.premium
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.premium
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.premium
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.premium
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.premium
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: unavailable
+  ga_status: not_applicable
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.premium
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.premium
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.premium
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.premium
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.premium
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.premium
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.premium
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.premium
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.premium
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: premium
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: Government availability of this tier and feature is not proven by a feature page alone (PRP-02
+    clarification 10); unverified.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.basic_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.basic_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.basic_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.basic_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.basic_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers. v2 tiers are
+    GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.basic_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.basic_v2
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.basic_v2
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.basic_v2
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.basic_v2
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.basic_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.basic_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.basic_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.basic_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: basic_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.standard_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.standard_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.standard_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.standard_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.standard_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers. v2 tiers are
+    GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.standard_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.standard_v2
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.standard_v2
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.standard_v2
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.standard_v2
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.standard_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.standard_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.standard_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.standard_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: standard_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.commercial.global.premium_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    Counters are per gateway (regional or workspace), never aggregated across an instance; v2 tiers use
+    a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_token_limit.government.any.premium_v2
+  service: apim
+  feature: llm_token_limit
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only. Counters are per gateway (regional or workspace), never aggregated
+    across an instance; v2 tiers use a token bucket, classic tiers a sliding window (api-management-sample-flexible-throttling#rate-limits-and-quotas).
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.commercial.global.premium_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.llm_emit_token_metric.government.any.premium_v2
+  service: apim
+  feature: llm_emit_token_metric
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.commercial.global.premium_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/llm-token-limit-policy
+  observed_on: '2026-10-29'
+  notes: Anthropic Messages API schema is currently supported in API Management v2 tiers. v2 tiers are
+    GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.anthropic_messages_schema.government.any.premium_v2
+  service: apim
+  feature: anthropic_messages_schema
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.mcp_server.commercial.global.premium_v2
+  service: apim
+  feature: mcp_server
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: available
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/mcp-server-overview
+  observed_on: '2026-10-29'
+  notes: Listed in APPLIES TO (Developer, Basic, Basic v2, Standard, Standard v2, Premium, Premium v2).
+    v2 tiers are GA; latest capabilities need API version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.mcp_server.government.any.premium_v2
+  service: apim
+  feature: mcp_server
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.backend_pool.commercial.global.premium_v2
+  service: apim
+  feature: backend_pool
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/backends#load-balanced-pool
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.backend_pool.government.any.premium_v2
+  service: apim
+  feature: backend_pool
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.commercial.global.premium_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_llm_logs.government.any.premium_v2
+  service: apim
+  feature: gateway_llm_logs
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.commercial.global.premium_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: commercial
+  region: global
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+  observed_on: '2026-10-29'
+  notes: tier applicability not stated on the cited page v2 tiers are GA; latest capabilities need API
+    version 2024-05-01 or later.
+- schema_version: 1.1.0
+  id: apim.gateway_mcp_logs.government.any.premium_v2
+  service: apim
+  feature: gateway_mcp_logs
+  cloud: government
+  region: '*'
+  sku: premium_v2
+  availability: unverified
+  ga_status: unverified
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/api-management/api-management-region-availability
+  observed_on: '2026-10-29'
+  notes: v2 tier Government availability not on the Learn region table; the v2 region availability page
+    lists Commercial regions only.
