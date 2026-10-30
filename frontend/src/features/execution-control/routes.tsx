@@ -1,10 +1,10 @@
 import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
-import { ExecutionControlPlaceholderPage } from "./PlaceholderPage";
+import { ExecutionControlPage } from "./ExecutionControlPage";
 import { EXECUTION_CONTROL_ROUTE } from "./paths";
 
 export const executionControlRoutes: RouteObject[] = [
-  { path: EXECUTION_CONTROL_ROUTE, element: <ExecutionControlPlaceholderPage /> },
+  { path: EXECUTION_CONTROL_ROUTE, element: <ExecutionControlPage /> },
 ];
 
 /** Navigation is a usability aid only; the API decides access on every request. */

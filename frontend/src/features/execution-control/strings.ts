@@ -1,5 +1,31 @@
 export const STRINGS = {
   pageTitle: "Execution control",
-  pageDescription: "Emergency disable state for the action executor.",
-  placeholder: "This page is being built.",
+  pageDescription:
+    "Emergency disable state for the action executor. While it is on, no action is applied.",
+  loading: "Loading execution control state",
+  failedTitle: "Execution control state could not be loaded",
+  forbiddenWorkspace: "execution control",
+  stateLabel: "State",
+  enabledText: "Execution is enabled",
+  disabledText: "Execution is disabled",
+  reason: "Reason",
+  changedBy: "Changed by",
+  changedAt: "Changed at",
+  unknown: "Not recorded",
+  disable: "Disable execution",
+  enable: "Enable execution",
+  disableTitle: "Disable execution",
+  enableTitle: "Enable execution",
+  target: "Action executor (emergency disable)",
+  versionNone: "not versioned",
+  fieldState: "execution",
+  stateEnabled: "enabled",
+  stateDisabled: "disabled",
+  reasonCodeHint:
+    "Enter a reason code: lowercase letters, digits and underscores, starting with a letter, up to 64 characters (for example incident_review).",
+  invalidReason:
+    "The reason must be a snake_case code: start with a lowercase letter, then lowercase letters, digits or underscores, up to 64 characters.",
+  accessDenied: "The service declined this change. You need the config.manage permission.",
+  changeFailed: "The change was not applied.",
+  reference: (id: string): string => (id === "" ? "" : ` Reference: ${id}.`),
 } as const;
