@@ -229,7 +229,7 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 | 7 | merged | worktree-agent-a99aacda7f4e6981f | sonnet | ff to ee4c771; reviewed (1 rework: diag dependsOn, own-server keeps Authorization), confirmed; infra pytest 62 passed, ruff, bicep build/lint | 2026-10-29 |
 | 10 | todo | | opus | wiring and hand-offs (plan delta, 2026-10-29) | 2026-10-29 |
 | 8 | todo | | sonnet | | |
-| 9 | todo | | sonnet | | |
+| 9 | merged | worktree-agent-a77aae298a6efd344 | sonnet | ff to 98aac51; reviewed APPROVE (no rework); tests/unit/gates 347 passed, refusal exit 2 verified for unset and 0, ruff, pyright. **G17 manage OPEN, never run**; MCP echo backend operator-supplied (PRP said provisioned); API paths/diff shapes unverified; README states it. Follow-ups: refuse pre-existing resource group, persist rg name + clear state on teardown, require distinct approver token | 2026-10-29 |
 
 Waves: 1 = items 1 and 7 in parallel; 2 = item 2 (after 1); 3 = items 3, 4, 5, 6 in parallel (after 2; 4 only needs 1); 4 = item 8 (after 2, 5, 6); 5 = item 9 (after 1-7). Models: items 1-4 and 6 opus; 5, 7, 8, 9 sonnet; verify passes haiku. Review: one independent pass on every item (`review: required`).
 
