@@ -31,6 +31,10 @@ const useStyles = makeStyles({
   row: { display: "flex", flexWrap: "wrap", gap: tokens.spacingHorizontalM, alignItems: "end" },
   muted: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
   disabledText: { color: tokens.colorNeutralForeground3 },
+  // Fluent's Link only underlines on focus; WCAG 2.4.7 needs a visible ring in every theme.
+  link: {
+    ":focus-visible": { outline: `2px solid ${tokens.colorStrokeFocus2}`, outlineOffset: "2px" },
+  },
 });
 
 const REGION_RE = /^[a-z][a-z0-9]{2,39}$/;
@@ -42,7 +46,7 @@ const AVAILABILITY_TONE: Record<CapabilityRow["availability"], StatusTone> = {
   unverified: "warning",
 };
 
-function columns(cloud: Cloud): readonly DataTableColumn<CapabilityRow>[] {
+function columns(cloud: Cloud, linkClass: string): readonly DataTableColumn<CapabilityRow>[] {
   const c = STRINGS.capColumns;
   return [
     {
@@ -76,7 +80,7 @@ function columns(cloud: Cloud): readonly DataTableColumn<CapabilityRow>[] {
       header: c.source,
       render: (r) =>
         r.source_url.startsWith("https://") ? (
-          <Link href={r.source_url} target="_blank" rel="noopener noreferrer">
+          <Link className={linkClass} href={r.source_url} target="_blank" rel="noopener noreferrer">
             {STRINGS.sourceLink}
           </Link>
         ) : (
@@ -161,7 +165,7 @@ export function CapabilitiesPage(): ReactElement {
           </Text>
           <DataTable
             label={STRINGS.capTable}
-            columns={columns(applied.cloud)}
+            columns={columns(applied.cloud, styles.link)}
             rows={rows}
             getRowId={(r) => r.id}
             getRowProps={(r) => ({
