@@ -14,7 +14,12 @@ from typing import Any
 
 import httpx
 import pytest
-from apim_write_support import ARM_ID, GATEWAY, GATEWAY_ID  # pyright: ignore[reportMissingImports]
+from apim_write_support import (  # pyright: ignore[reportMissingImports]
+    ARM_ID,
+    GATEWAY,
+    GATEWAY_ID,
+    mode_handler,
+)
 from neurosphere_connector.write import WriteRequest
 from neurosphere_connector_apim_gateway import (
     ApimGatewayConnector,
@@ -125,6 +130,7 @@ def make(
         GATEWAY,
         apim,
         records=records,
+        mode=mode_handler(apim),
         translators=[translator],
         id_factory=lambda: f"apply-{next(counter)}",
     )

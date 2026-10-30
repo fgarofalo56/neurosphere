@@ -46,9 +46,10 @@ from neurosphere_api.hitl import RecheckerReviewerAuthorizer  # noqa: E402
 from neurosphere_connector.write import WriteRequest, WriteTargetRegistry  # noqa: E402
 from neurosphere_connector_apim_gateway import (  # noqa: E402
     ApimGatewayConnector,
+    ApplyRecord,
+    GatewayModeHandler,
     GatewayRef,
     InMemoryApim,
-    InMemoryApplyRecordStore,
 )
 from neurosphere_connector_apim_gateway import mcp as connector_mcp  # noqa: E402
 from neurosphere_contracts.actions.v1.action_intent import ActionIntent  # noqa: E402
@@ -70,10 +71,11 @@ from neurosphere_core.cloud import CloudProfile  # noqa: E402
 from neurosphere_core.cloud.profile import CloudName  # noqa: E402
 from neurosphere_core.gateway import (  # noqa: E402
     GatewayRegistration,
+    InMemoryGatewayRecordStore,
     InMemoryGatewayStore,
     gateway_id_for,
 )
-from neurosphere_core.gateway.mode import evaluate_permissions  # noqa: E402
+from neurosphere_core.gateway.mode import GatewayModeSwitch, evaluate_permissions  # noqa: E402
 from neurosphere_core.hitl import (  # noqa: E402
     DecisionLog,
     HitlService,
@@ -286,10 +288,17 @@ def make_env(server: dict[str, Any] | None = None) -> Env:
             },
         )
     gateway = GatewayRef(gateway_id=GATEWAY_ID, cloud=CloudName.COMMERCIAL, arm_resource_id=RID)
+    store = InMemoryGatewayStore()
+    asyncio.run(store.create(registration()))
+    records: InMemoryGatewayRecordStore[ApplyRecord] = InMemoryGatewayRecordStore(ApplyRecord)
+    switch = GatewayModeSwitch(
+        store, customer_id=CUSTOMER, domain_id=FINANCE, gateway_id=GATEWAY_ID, activity=records
+    )
     connector = ApimGatewayConnector(
         gateway,
         apim,
-        records=InMemoryApplyRecordStore(),
+        records=records,
+        mode=GatewayModeHandler(gateway, apim, switch),
         translators=[
             connector_mcp.McpServerTranslator(paths=connector_mcp.InMemoryApiPathIndex(apim))
         ],
@@ -308,8 +317,6 @@ def make_env(server: dict[str, Any] | None = None) -> Env:
         audit_repository=audit,
         clock=clock,
     )
-    store = InMemoryGatewayStore()
-    asyncio.run(store.create(registration()))
 
     def factory(profile: CloudProfile) -> httpx.AsyncClient:
         raise AssertionError("the publish API never calls ARM")
