@@ -14,6 +14,14 @@ export function edgePath(edgeId: string): string {
   return `${CURATION_API_PREFIX}/curation/edges/${encodeURIComponent(edgeId)}`;
 }
 
+/** Domain-path read adapter: the edge plus the version/etag the next decision must quote. */
+export function domainEdgePath(domain: string, edgeId: string): string {
+  return (
+    `${CURATION_API_PREFIX}/domains/${encodeURIComponent(domain)}` +
+    `/curation/edges/${encodeURIComponent(edgeId)}`
+  );
+}
+
 export function edgeOverridesPath(edgeId: string): string {
   return `${edgePath(edgeId)}/overrides`;
 }

@@ -44,10 +44,14 @@ export interface PresentedEdge {
   readonly last_observed: string;
   readonly pinned: boolean;
   readonly override_ids: readonly string[];
-  /** The binding the next decision needs. Absent when the service does not return it. */
-  readonly version?: number | null;
-  readonly etag?: string | null;
   readonly provenance?: EdgeProvenance | null;
+}
+
+/** Domain-path read: the presented edge plus the binding the next decision needs. */
+export interface EdgeRead {
+  readonly edge: PresentedEdge;
+  readonly edge_version?: number | string | null;
+  readonly edge_etag?: string | null;
 }
 
 export interface EdgeOverrideRecord {
@@ -83,7 +87,7 @@ export interface ObservationPage {
 export interface DecisionBody {
   readonly decision: Decision;
   readonly reason: string;
-  readonly expected_edge_version: number;
+  readonly expected_edge_version: number | string;
   readonly expected_edge_etag: string;
   readonly lock_expiry?: string;
   readonly set_confidence?: number;

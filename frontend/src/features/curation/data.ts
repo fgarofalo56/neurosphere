@@ -9,12 +9,18 @@ import {
   type ApiError,
 } from "../../api/index.js";
 import type { ChangeDiffRow } from "../governed-change";
-import { edgeDecisionsPath, edgeObservationsPath, edgeOverridesPath, edgePath } from "./paths";
+import {
+  domainEdgePath,
+  edgeDecisionsPath,
+  edgeObservationsPath,
+  edgeOverridesPath,
+} from "./paths";
 import { STRINGS } from "./strings";
 import type {
   Decision,
   DecisionBody,
   DecisionResult,
+  EdgeRead,
   ObservationPage,
   OverrideHistory,
   PresentedEdge,
@@ -23,9 +29,11 @@ import type {
 /** Observations are cursor paged; no total is ever shown. */
 export const OBSERVATION_PAGE_SIZE = 25;
 
-export const useEdge = createQueryHook<{ edgeId: string }, PresentedEdge>({
+/** Reads through the selected domain's path so the response carries edge_version / edge_etag. */
+export const useEdge = createQueryHook<{ domain: string; edgeId: string }, EdgeRead>({
   key: "curation-edge",
-  fetcher: (client, p, signal) => client.get<PresentedEdge>(edgePath(p.edgeId), undefined, signal),
+  fetcher: (client, p, signal) =>
+    client.get<EdgeRead>(domainEdgePath(p.domain, p.edgeId), undefined, signal),
 });
 
 export const useOverrides = createQueryHook<{ edgeId: string }, OverrideHistory>({

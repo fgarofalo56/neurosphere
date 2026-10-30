@@ -110,7 +110,13 @@ function IdList({
 }
 
 /** Evidence ids are listed read-only. Nothing here can remove one. */
-function EdgeSummary({ edge }: { readonly edge: PresentedEdge }): ReactElement {
+function EdgeSummary({
+  edge,
+  version,
+}: {
+  readonly edge: PresentedEdge;
+  readonly version: number | string | null;
+}): ReactElement {
   const styles = useStyles();
   const s = STRINGS.summary;
   const lock = edge.lock;
@@ -186,10 +192,10 @@ function EdgeSummary({ edge }: { readonly edge: PresentedEdge }): ReactElement {
           {
             term: s.version,
             value:
-              edge.version === null || edge.version === undefined ? (
+              version === null ? (
                 STRINGS.decide.noVersion
               ) : (
-                <span data-testid="edge-version">{edge.version}</span>
+                <span data-testid="edge-version">{version}</span>
               ),
           },
           { term: s.evidence, value: <IdList ids={edge.evidence_ids} testId="evidence-ids" /> },
@@ -301,7 +307,7 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
   const styles = useStyles();
   const queryClient = useQueryClient();
   const { domainId, domains } = useSelectedDomain();
-  const edgeQuery = useEdge({ edgeId });
+  const edgeQuery = useEdge({ domain: domainId, edgeId }, domainId !== "");
   const overridesQuery = useOverrides({ edgeId });
   const decide = useDecide();
   const [tab, setTab] = useState<TabId>("summary");
@@ -328,13 +334,14 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
       />
     );
   }
-  const edge = edgeQuery.data;
+  const edge = edgeQuery.data.edge;
+  const rawVersion = edgeQuery.data.edge_version;
+  const rawEtag = edgeQuery.data.edge_etag;
+  const edgeVersion: number | string | null =
+    rawVersion === undefined || rawVersion === null || rawVersion === "" ? null : rawVersion;
+  const edgeEtag: string | null = typeof rawEtag === "string" && rawEtag !== "" ? rawEtag : null;
   const confidenceValue = parseConfidence(confidenceText);
-  const bound =
-    edge.version !== null &&
-    edge.version !== undefined &&
-    edge.etag !== null &&
-    edge.etag !== undefined;
+  const bound = edgeVersion !== null && edgeEtag !== null;
 
   const reload = (): void => {
     void edgeQuery.refetch();
@@ -349,7 +356,7 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
   };
 
   const submit = (value: ChangeConfirmSubmit): void => {
-    if (pending === null || !bound || domainId === "") return;
+    if (pending === null || edgeVersion === null || edgeEtag === null || domainId === "") return;
     let lockExpiry: string | undefined;
     if (needsExpiry(pending)) {
       const stamp = value.expiry === null ? null : expiryToTimestamp(value.expiry);
@@ -366,8 +373,8 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
     const body: DecisionBody = {
       decision: pending,
       reason: value.reason,
-      expected_edge_version: edge.version as number,
-      expected_edge_etag: edge.etag as string,
+      expected_edge_version: edgeVersion,
+      expected_edge_etag: edgeEtag,
       ...(lockExpiry === undefined ? {} : { lock_expiry: lockExpiry }),
       ...(needsExpiry(pending) && typeof confidenceValue === "number"
         ? { set_confidence: confidenceValue }
@@ -428,7 +435,7 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
         <Tab value="observations">{STRINGS.tabs.observations}</Tab>
       </TabList>
 
-      {tab === "summary" ? <EdgeSummary edge={edge} /> : null}
+      {tab === "summary" ? <EdgeSummary edge={edge} version={edgeVersion} /> : null}
       {tab === "history" ? (
         overridesQuery.isPending ? (
           <LoadingState label={STRINGS.history.label} rows={2} />
@@ -491,7 +498,7 @@ function EdgeBody({ edgeId }: { readonly edgeId: string }): ReactElement {
           open
           title={STRINGS.titles[pending]}
           target={edge.edge_id}
-          version={`${edge.version ?? "unknown"} / ${edge.etag ?? "unknown"}`}
+          version={`${edgeVersion ?? "unknown"} / ${edgeEtag ?? "unknown"}`}
           diff={decisionDiff(edge, pending, previewConfidence, "as entered")}
           showExpiry={needsExpiry(pending)}
           expiryRequired={needsExpiry(pending)}
