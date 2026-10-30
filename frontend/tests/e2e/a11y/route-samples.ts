@@ -42,6 +42,12 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     url: `/actions/propose?${q()}`,
     ready: "main h1",
   },
+  {
+    pattern: "/catalog/publication",
+    name: "catalog publication",
+    url: `/catalog/publication?${q()}`,
+    ready: "main h1",
+  },
   { pattern: "/dashboards/cost", name: "cost", url: `/dashboards/cost?${q()}`, ready: "main h1" },
   {
     pattern: "/dashboards/coverage",
@@ -55,6 +61,7 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     url: `/dashboards/latency?${q()}`,
     ready: "main h1",
   },
+  { pattern: "/gateways", name: "gateways", url: `/gateways?${q()}`, ready: "main h1" },
   {
     pattern: "/map",
     name: "map",

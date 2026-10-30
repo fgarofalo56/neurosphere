@@ -1,7 +1,9 @@
 import type { RouteObject } from "react-router";
 import { actionsRoutes } from "../features/actions";
+import { catalogRoutes } from "../features/catalog";
 import { copilotRoutes } from "../features/copilot";
 import { dashboardRoutes } from "../features/dashboards";
+import { gatewaysRoutes } from "../features/gateways";
 import { mapRoutes } from "../features/map";
 import { mapTableRoutes } from "../features/map-table";
 import { mcpAdminRoutes } from "../features/mcp-admin";
@@ -26,6 +28,8 @@ export const appRoutes: readonly RouteObject[] = [
   ...recommendationRoutes,
   ...qualityRoutes,
   ...actionsRoutes,
+  ...gatewaysRoutes,
+  ...catalogRoutes,
   ...reviewRoutes,
   ...mapRoutes,
   ...mapTableRoutes,

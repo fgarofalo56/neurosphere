@@ -21,6 +21,7 @@ import {
 } from "../../api/index.js";
 import { ErrorState, HealthIndicator, StatusPill, type StatusTone } from "../../design-system";
 import { useEmergencyDisable } from "./hooks";
+import { PlanPreview } from "./PlanPreview";
 import { STRINGS, orUnknown } from "./strings";
 import type { ActionIntent, ActionState, ExecutionView, ProposedDiff } from "./types";
 
@@ -303,6 +304,7 @@ export function ConfirmationDialog(props: ConfirmationDialogProps): ReactElement
               <dd>
                 <DiffView diff={intent.proposed_diff} />
               </dd>
+              <PlanPreview diff={intent.proposed_diff} />
               <dt>{C.expires}</dt>
               <dd data-testid="confirm-expiry">{orUnknown(intent.confirmation_expires_at)}</dd>
               <dt>{C.remaining}</dt>
