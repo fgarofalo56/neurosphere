@@ -453,6 +453,9 @@ def test_all_catalog_routes_declare_permissions() -> None:
         (f"{PREFIX}/recertifications", ("GET",)): read,
         (f"{PREFIX}/reconcile/stale-agents/dry-run", ("POST",)): curate,
         (f"{PREFIX}/reconcile/stale-agents/confirm", ("POST",)): curate,
+        (f"{PREFIX}/grants/{{entity_id:path}}/publish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/grants/{{entity_id:path}}/unpublish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/grants/{{entity_id:path}}/publication", ("POST",)): curate,
     }
 
 
