@@ -41,6 +41,8 @@ export interface ChangeConfirmDialogProps {
   /** Make the expiry mandatory when it is shown. */
   readonly expiryRequired?: boolean;
   readonly submitting?: boolean;
+  /** Static caveat shown under the reason field, e.g. when the endpoint does not store it. */
+  readonly reasonNote?: ReactNode;
   /** Server error to show inside the dialog (409 stale, 403, 422). */
   readonly error?: ReactNode;
   /** Receives focus when the dialog closes. Fluent also restores focus to the opener. */
@@ -64,6 +66,7 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
     showExpiry = false,
     expiryRequired = false,
     submitting = false,
+    reasonNote,
     error,
     triggerRef,
     onSubmit,
@@ -129,6 +132,9 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
                 disabled={submitting}
               />
             </Field>
+            {reasonNote === undefined || reasonNote === null ? null : (
+              <p data-testid="change-reason-note">{reasonNote}</p>
+            )}
             {showExpiry ? (
               <Field
                 label={expiryRequired ? STRINGS.expiryRequired : STRINGS.expiry}

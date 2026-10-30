@@ -333,6 +333,7 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
         version={entity.etag}
         diff={diff}
         submitting={mutation.isPending}
+        reasonNote={S.reasonNotStored}
         error={changeError(mutation.error)}
         triggerRef={triggerRef}
         onSubmit={submit}

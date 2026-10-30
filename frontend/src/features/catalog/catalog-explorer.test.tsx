@@ -369,6 +369,8 @@ describe("CatalogEntityPage", () => {
     expect(await screen.findByTestId("change-target")).toHaveTextContent(AGENT);
     expect(screen.getByTestId("change-version")).toHaveTextContent("etag-3");
     expect(screen.getByTestId("change-diff-row")).toHaveTextContent("deprecated");
+    // The PRP-10 endpoints take no reason, so the dialog must not imply it is recorded.
+    expect(screen.getByTestId("change-reason-note")).toHaveTextContent("reason is not stored");
     // hidden: Tabster can mark the dialog subtree aria-hidden mid-animation under load.
     await user.type(
       await screen.findByRole("textbox", { name: /Reason/, hidden: true }),

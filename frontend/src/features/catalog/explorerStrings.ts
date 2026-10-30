@@ -61,6 +61,8 @@ export const EXPLORER_STRINGS = {
     noOwners: "No owner relationship in the visible lineage.",
     deprecate: "Deprecate",
     deprecateTitle: "Deprecate entity",
+    reasonNotStored:
+      "This change is permission-checked, version-bound and audited, but the reason is not stored with it yet.",
     recertify: "Recertify owner",
     recertifyTitle: "Recertify owner",
     validForDays: "Valid for (days)",
