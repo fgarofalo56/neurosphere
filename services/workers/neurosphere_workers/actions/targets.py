@@ -16,6 +16,10 @@ depth).
 review): the connector is bound to ONE registered gateway, but a ``WriteRequest`` carries no
 domain, so the executor asserts the gateway is registered in the intent's own domain before any
 connector call (``gateway_domain_mismatch``; an unknown gateway is ``gateway_not_registered``).
+With the intent at hand it also ties the diff grammar to the action kind through the connector's
+``check_action`` (PRP-34 item 10: ``WriteRequest`` carries no kind, so e.g. a ``remove`` stage
+under ``mcp_server_publish`` or an unpublish diff under ``grant_publish`` is refused here,
+``action_kind_mismatch``, before any connector call).
 """
 
 from __future__ import annotations
@@ -24,18 +28,20 @@ import re
 from collections.abc import Mapping
 from typing import Final
 
-from neurosphere_connector.write import WriteConnector, WriteTargetRegistry
+from neurosphere_connector.write import WriteConnector, WriteRequest, WriteTargetRegistry
+from neurosphere_contracts.actions.v1.action_intent import ActionIntent
 from neurosphere_core.actions.targets import (
     ACTION_CONNECTORS,
     APIM_GATEWAY_CONNECTOR,
     TARGET_KIND_CONNECTORS,
 )
-from neurosphere_core.errors import CapabilityUnavailableError
+from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
 from neurosphere_core.gateway.mode import GATEWAY_NOT_REGISTERED
 from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.gateway.store import GatewayModeLookup
 
 __all__ = [
+    "ACTION_KIND_MISMATCH",
     "DEFAULT_ACTION_CONNECTORS",
     "GATEWAY_DOMAIN_MISMATCH",
     "GATEWAY_LOOKUP_UNCONFIGURED",
@@ -49,6 +55,7 @@ __all__ = [
 DEFAULT_ACTION_CONNECTORS: Final[Mapping[str, str]] = ACTION_CONNECTORS
 GATEWAY_DOMAIN_MISMATCH: Final = "gateway_domain_mismatch"
 GATEWAY_LOOKUP_UNCONFIGURED: Final = "gateway_lookup_unconfigured"
+ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
 _GATEWAY_ID: Final = re.compile(GATEWAY_ID_PATTERN)
 
 
@@ -97,11 +104,14 @@ async def check_gateway_binding(
     *,
     customer_id: str,
     domain_id: str,
+    intent: ActionIntent | None = None,
 ) -> None:
-    """Refuse an APIM connector whose gateway is not registered in the intent's domain.
+    """Refuse an APIM connector whose gateway is not registered in the intent's domain, or
+    (given ``intent``) whose diff grammar does not belong to the intent's action kind.
 
     No-op for every other connector. Fails closed: without a gateway lookup an APIM intent never
-    runs (``gateway_lookup_unconfigured``). A store outage propagates (the pass is deferred).
+    runs (``gateway_lookup_unconfigured``). A store outage propagates (the pass is deferred). A
+    grammar refusal is final (``action_kind_mismatch``), never retried.
     """
     if connector.manifest.name != APIM_GATEWAY_CONNECTOR:
         return
@@ -116,3 +126,17 @@ async def check_gateway_binding(
         raise _unavailable(
             "the gateway is registered in another domain than the intent", GATEWAY_DOMAIN_MISMATCH
         )
+    check = getattr(connector, "check_action", None)
+    if intent is None or not callable(check):
+        return
+    request = WriteRequest(
+        target=intent.target,
+        target_version=intent.target_version,
+        proposed_diff=intent.proposed_diff,
+    )
+    try:
+        check(intent.action_kind, request)
+    except InvalidSchemaError:
+        raise _unavailable(
+            "the diff does not belong to the intent's action kind", ACTION_KIND_MISMATCH
+        ) from None

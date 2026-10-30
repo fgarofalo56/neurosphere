@@ -28,9 +28,13 @@ recording time, and ``attributes`` carry the state, the gateway id, the API path
 ownership of every gateway resource (``created`` per-server resources, ``shared`` metadata API).
 It is a catalog write recording a real, verified gateway change, never a stand-in for one: it
 refuses an intent that did not succeed, did not verify, names another server, was drafted against
-another publication state, or was applied before the last record (a superseded change). The
+another publication state, carries a stage its action kind may not carry (``remove`` under
+``mcp_server_publish``), or was applied before the last record (a superseded change). The
 McpServer schema is unchanged
 (``provenance`` is closed, so the detail lives in the schema's ``attributes`` extension point).
+The rules and naming live in ``neurosphere_workers.publication.mcp``, shared with the worker's
+post-success recorder (PRP-34 item 10), which records each stage without anyone calling this
+route; the route stays the manual and retry path.
 
 Grants: the enforcement admits only callers with a direct (``oid``) grant on the server that is
 enabled, active and in its validity window, read with the caller's own scope; ``entra_group``
@@ -40,27 +44,42 @@ grants are not enforced (groups-claim overage would fail closed) and are reporte
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
-import hashlib
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Annotated, Any, Final, Literal, cast
+from typing import Annotated, Any, Final, cast
 
 from fastapi import APIRouter, Depends, Request, Response
+from neurosphere_connector.write import WriteRequest
 from neurosphere_contracts.actions.v1.action_intent import ProposedDiff
 from neurosphere_contracts.actions.v1.target_ref import TargetRef
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.catalog import CatalogEntity, CatalogRepository, EntityFilter
 from neurosphere_core.catalog.repo.documents import dump
-from neurosphere_core.catalog.rules import format_timestamp, parse_timestamp
+from neurosphere_core.catalog.rules import parse_timestamp
 from neurosphere_core.errors import (
     CapabilityUnavailableError,
     InvalidSchemaError,
-    StaleVersionError,
 )
 from neurosphere_core.gateway.mode import GATEWAY_NOT_REGISTERED
 from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.paging.models import MAX_PAGE_SIZE
+from neurosphere_workers.publication.mcp import (
+    METADATA_API,
+    PUBLISH_KIND,
+    STAGE_VERSIONS,
+    STATE_VERSIONS,
+    TENANT_NAMED_VALUE,
+    UNPUBLISH_KIND,
+    Stage,
+    State,
+    check_mcp_intent,
+    mcp_attr,
+    mcp_publication_document,
+    mcp_state,
+    publication_prefix,
+    publication_resources,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 from neurosphere_api.actions.dependencies import ActionPlane, get_action_plane
@@ -77,6 +96,10 @@ from neurosphere_api.middleware import correlation_id_of
 __all__ = [
     "BODY_BYTES_NOTE",
     "MCP_PUBLISH_PREFIX",
+    "METADATA_API",
+    "STAGE_VERSIONS",
+    "STATE_VERSIONS",
+    "TENANT_NAMED_VALUE",
     "McpPublicationDraft",
     "McpPublicationRecordBody",
     "McpPublicationStatus",
@@ -88,34 +111,7 @@ __all__ = [
 ]
 
 MCP_PUBLISH_PREFIX: Final = "/api/v1/catalog/mcp-servers"
-PUBLISH_KIND: Final = "mcp_server_publish"
-UNPUBLISH_KIND: Final = "mcp_server_unpublish"
 ENTITY_TYPE: Final = "mcp_server"
-#: Mirrors of the APIM connector's ``mcp`` module (the API does not import connectors; a test
-#: asserts both sides agree).
-METADATA_API: Final = "ns-mcp-metadata"
-TENANT_NAMED_VALUE: Final = "ns-mcp-tenant-id"
-STAGE_VERSIONS: Final[Mapping[str, str]] = {
-    "publish": "mcp-absent",
-    "deny": "mcp-published",
-    "change": "mcp-denied",
-    "remove": "mcp-denied",
-}
-STATE_VERSIONS: Final[Mapping[str, str]] = {
-    "unpublished": "mcp-absent",
-    "published": "mcp-published",
-    "denied": "mcp-denied",
-}
-_AFTER: Final[Mapping[str, str]] = {
-    "publish": "published",
-    "deny": "denied",
-    "change": "published",
-    "remove": "unpublished",
-}
-_KIND_STAGES: Final[Mapping[str, frozenset[str]]] = {
-    PUBLISH_KIND: frozenset({"publish", "deny", "change"}),
-    UNPUBLISH_KIND: frozenset({"deny", "remove"}),
-}
 _PUBLISH_STAGE: Final[Mapping[str, str]] = {
     "unpublished": "publish",
     "published": "deny",
@@ -126,9 +122,6 @@ _UNPUBLISH_STAGE: Final[Mapping[str, str | None]] = {
     "published": "deny",
     "denied": "remove",
 }
-CONNECTOR_SOURCE: Final = "apim-gateway"
-CONNECTOR_VERSION: Final = "0.1.0"
-_ATTR: Final = "mcp_publication_"
 _MAX_GRANT_PAGES: Final = 20
 _API_PATH = r"^[a-z0-9][a-z0-9-]{0,62}$"
 _NAMED_VALUE = r"^[A-Za-z0-9._-]{1,256}$"
@@ -148,9 +141,6 @@ _NAMED_VALUES_NOTE: Final = (
     "gateway; NeuroSphere references them and never writes their values."
 )
 
-Stage = Literal["publish", "deny", "change", "remove"]
-State = Literal["unpublished", "published", "denied"]
-
 ReadAccess = Annotated[EntityAccess, Depends(entity_access(Permission.DATA_READ))]
 ProposeAccess = Annotated[EntityAccess, Depends(entity_access(Permission.ACTION_PROPOSE))]
 Actions = Annotated[ActionPlane, Depends(get_action_plane)]
@@ -159,28 +149,6 @@ Repository = Annotated[CatalogRepository, Depends(get_repository)]
 Service = Annotated[CatalogService, Depends(get_service)]
 ClockDep = Annotated[Clock, Depends(get_clock)]
 IdempotencyKey = Annotated[str, Field(pattern=r"^[A-Za-z0-9._:-]{16,128}$")]
-
-
-# -- naming (mirrors the connector) -----------------------------------------------------------
-
-
-def publication_prefix(server_id: str) -> str:
-    """Resource-name prefix of one catalog MCP server on a gateway (``ns-mcp-`` + 16 hex)."""
-    return "ns-mcp-" + hashlib.sha256(server_id.encode("utf-8")).hexdigest()[:16]
-
-
-def publication_resources(server_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """``(created per-server resources, shared resources)`` as relative ARM paths."""
-    prefix = publication_prefix(server_id)
-    created = (
-        f"backends/{prefix}",
-        f"policyFragments/{prefix}-enforce",
-        f"apis/{prefix}",
-        f"apis/{METADATA_API}/operations/{prefix}-prm",
-        f"apis/{prefix}/policies/policy",
-    )
-    shared = (f"apis/{METADATA_API}", f"apis/{METADATA_API}/policies/policy")
-    return created, shared
 
 
 # -- bodies and views -------------------------------------------------------------------------
@@ -249,21 +217,12 @@ def _server(entity: CatalogEntity) -> dict[str, Any]:
     return doc
 
 
-def _attributes(doc: Mapping[str, Any]) -> dict[str, Any]:
-    raw = doc.get("attributes")
-    return dict(cast(Mapping[str, Any], raw)) if isinstance(raw, Mapping) else {}
-
-
 def _attr(doc: Mapping[str, Any], key: str) -> str | None:
-    value = _attributes(doc).get(_ATTR + key)
-    return value if isinstance(value, str) and value else None
+    return mcp_attr(doc, key)
 
 
 def _state(doc: Mapping[str, Any]) -> State:
-    value = _attr(doc, "state")
-    if value in ("published", "denied"):
-        return cast(State, value)
-    return "unpublished"
+    return mcp_state(doc)
 
 
 def _split(value: str | None) -> list[str]:
@@ -361,16 +320,35 @@ async def _draft(
     channel: Channel,
     correlation_id: str,
 ) -> ActionView:
+    """Draft ``stage`` with the connector's own ``dry_run`` diff (PRP-34 item 10).
+
+    The APIM connector applies only a diff carrying the reviewed plan digest
+    (``test /plan_digest``); the executor applies the intent's stored diff as is, so a bare
+    ``replace /publication`` could never be applied. Planning here (the API only ever calls
+    ``dry_run``) binds the digest into the diff the maker confirms and the approver approves, and
+    refuses a stage the live gateway cannot take before anything is drafted.
+    """
+    target = TargetRef(canonical_id=access.entity.id, entity_type=ENTITY_TYPE)
+    version = STAGE_VERSIONS[stage]
+    bare = ProposedDiff.model_validate(
+        {
+            "format": "json_patch",
+            "operations": [{"op": "replace", "path": "/publication", "value": publication}],
+        }
+    )
+    connector = actions.connector_for(kind)
+    if connector is None:
+        raise CapabilityUnavailableError(
+            "write_connector_unsupported_target", "no write connector is registered for this kind"
+        )
+    planned = await connector.dry_run(
+        WriteRequest(target=target, target_version=version, proposed_diff=bare)
+    )
     body = DraftIntentBody(
         action_kind=kind,
-        target=TargetRef(canonical_id=access.entity.id, entity_type=ENTITY_TYPE),
-        target_version=STAGE_VERSIONS[stage],
-        proposed_diff=ProposedDiff.model_validate(
-            {
-                "format": "json_patch",
-                "operations": [{"op": "replace", "path": "/publication", "value": publication}],
-            }
-        ),
+        target=target,
+        target_version=version,
+        proposed_diff=planned.planned_diff,
         idempotency_key=key,
         channel=channel,
     )
@@ -392,50 +370,6 @@ def _status(doc: Mapping[str, Any], server_id: str) -> McpPublicationStatus:
         next_unpublish_stage=cast(Stage | None, unpublish_stage),
         diagnostics=[BODY_BYTES_NOTE],
     )
-
-
-def _publication_of(diff: Any) -> Mapping[str, Any]:
-    ops = [op for op in diff.operations if op.path == "/publication"]
-    value = ops[0].value if len(ops) == 1 else None
-    if not isinstance(value, Mapping):
-        raise _bad("intent_mismatch", "the intent is not an MCP publication")
-    return cast(Mapping[str, Any], value)
-
-
-def _recorded(
-    doc: Mapping[str, Any],
-    server_id: str,
-    stage: Stage,
-    publication: Mapping[str, Any],
-    intent_id: str,
-    now: datetime,
-) -> dict[str, Any]:
-    """The McpServer document after recording ``stage``: attributes plus provenance."""
-    attributes = {k: v for k, v in _attributes(doc).items() if not k.startswith(_ATTR)}
-    state = _AFTER[stage]
-    attributes[_ATTR + "state"] = state
-    attributes[_ATTR + "intent_id"] = intent_id
-    gateway_id = str(publication.get("gateway_id"))
-    if state != "unpublished":
-        created, shared = publication_resources(server_id)
-        previous = _attr(doc, "api_path")
-        api_path = publication.get("api_path") or previous
-        attributes[_ATTR + "gateway_id"] = gateway_id
-        attributes[_ATTR + "api_path"] = api_path if isinstance(api_path, str) else None
-        attributes[_ATTR + "audience_named_value"] = publication.get(
-            "audience_named_value"
-        ) or _attr(doc, "audience_named_value")
-        attributes[_ATTR + "created"] = ",".join(created)
-        attributes[_ATTR + "shared"] = ",".join(shared)
-    out = dict(doc)
-    out["attributes"] = attributes
-    out["provenance"] = {
-        "method": "declared",
-        "source_id": f"{CONNECTOR_SOURCE}.{gateway_id}",
-        "connector_version": CONNECTOR_VERSION,
-        "recorded_at": format_timestamp(now),
-    }
-    return out
 
 
 # -- router -----------------------------------------------------------------------------------
@@ -582,54 +516,9 @@ def build_mcp_publish_router() -> APIRouter:
         stored = await actions.intents.get(access.scope.customer_id, domain, body.intent_id)
         if stored is None:
             raise _bad("intent_not_found", "no such intent in this domain")
-        intent = stored.intent
-        if intent.target.canonical_id != access.entity.id or intent.action_kind not in _KIND_STAGES:
-            raise _bad("intent_mismatch", "the intent is not a publication of this server")
-        publication = _publication_of(intent.proposed_diff)
-        stage = publication.get("stage")
-        if stage not in _KIND_STAGES[intent.action_kind]:
-            raise _bad("intent_mismatch", "the stage does not belong to this action kind")
-        execution = stored.execution
-        if (
-            stored.state != "succeeded"
-            or intent.dry_run
-            or execution is None
-            or execution.verify_matched is not True
-            or execution.apply_finished_at is None
-        ):
-            raise _bad("intent_not_succeeded", "only a succeeded, verified intent is recorded")
-        applied_at = execution.apply_finished_at
-        state = _state(doc)
-        if intent.target_version != STATE_VERSIONS[state]:
-            raise StaleVersionError(
-                "the publication state changed since the intent was drafted",
-                reason="publication_state_changed",
-            )
-        recorded_gateway = _attr(doc, "gateway_id")
-        if recorded_gateway is not None and publication.get("gateway_id") != recorded_gateway:
-            raise _bad("mcp_published_elsewhere", "the intent names another gateway")
-        # An intent applied before the last record is history (its effect was superseded):
-        # replaying it would record a state the gateway no longer has.
-        provenance = cast(Mapping[str, Any], doc.get("provenance") or {})
-        source = provenance.get("source_id")
-        recorded_at = provenance.get("recorded_at")
-        if (
-            isinstance(source, str)
-            and source.startswith(CONNECTOR_SOURCE + ".")
-            and isinstance(recorded_at, str)
-            and applied_at < parse_timestamp(recorded_at)
-        ):
-            raise StaleVersionError(
-                "the intent was applied before the last recorded publication",
-                reason="stale_intent",
-            )
-        updated = _recorded(
-            doc,
-            access.entity.id,
-            cast(Stage, stage),
-            publication,
-            body.intent_id,
-            clock(),
+        stage, publication = check_mcp_intent(doc, access.entity.id, stored)
+        updated = mcp_publication_document(
+            doc, access.entity.id, stage, publication, body.intent_id, clock()
         )
         entity = await service.update(
             access.scope,

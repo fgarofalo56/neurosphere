@@ -11,6 +11,7 @@ Module layout, so later items extend without editing shared files:
 - ``policies``: policy XML templates and renderers.
 - ``connector``: the ``WriteConnector`` and the advisory connector.
 - ``mode``: the ``gateway_mode_change`` step (permissions preflight, observe/manage flip).
+- ``dispatch``: the default translator set and the ``grant`` dispatcher (cap vs publication).
 """
 
 from neurosphere_connector_apim_gateway.applier import PlanApplier, RollbackFailedError
@@ -31,6 +32,7 @@ from neurosphere_connector_apim_gateway.connector import (
     create_apim_connector,
     manifest_actions,
 )
+from neurosphere_connector_apim_gateway.dispatch import GrantDispatchTranslator, default_translators
 from neurosphere_connector_apim_gateway.gateway import GatewayRef
 from neurosphere_connector_apim_gateway.inmemory import InMemoryApim
 from neurosphere_connector_apim_gateway.mode import MODE_TARGET_TYPE, GatewayModeHandler
@@ -74,6 +76,7 @@ __all__ = [
     "GatewayModeHandler",
     "GatewayRef",
     "GatewayResourcesTranslator",
+    "GrantDispatchTranslator",
     "HttpApimArm",
     "InMemoryApim",
     "InMemoryApplyRecordStore",
@@ -88,6 +91,7 @@ __all__ = [
     "StepRecord",
     "build_plan",
     "create_apim_connector",
+    "default_translators",
     "manifest_actions",
     "resource_pointer",
 ]

@@ -69,6 +69,7 @@ from neurosphere_core.catalog.repo import InMemoryCatalogRepository  # noqa: E40
 from neurosphere_core.catalog.repo.documents import parse_entity  # noqa: E402
 from neurosphere_core.cloud import CloudProfile  # noqa: E402
 from neurosphere_core.cloud.profile import CloudName  # noqa: E402
+from neurosphere_core.errors import InvalidSchemaError  # noqa: E402
 from neurosphere_core.gateway import (  # noqa: E402
     GatewayRegistration,
     InMemoryGatewayRecordStore,
@@ -182,7 +183,9 @@ class Env:
         return asyncio.run(run())
 
     def execute(self, intent_id: str) -> None:
-        """Play the executor: dry run, apply and verify on the gateway, then mark succeeded."""
+        """Play the executor: dry run, apply and verify the STORED diff exactly as drafted (the
+        executor never re-reviews it, so the draft itself must carry the plan digest), then mark
+        the intent succeeded."""
 
         async def run() -> None:
             stored = await self.intents.get(CUSTOMER, FINANCE, intent_id)
@@ -194,9 +197,9 @@ class Env:
                 proposed_diff=intent.proposed_diff,
             )
             planned = await self.connector.dry_run(req)
-            reviewed = req.model_copy(update={"proposed_diff": planned.planned_diff})
-            await self.connector.apply(reviewed)
-            assert (await self.connector.verify(reviewed)).matched is True
+            assert planned.planned_diff == req.proposed_diff  # the digest is already bound
+            await self.connector.apply(req)
+            assert (await self.connector.verify(req)).matched is True
             wire = intent_to_wire(intent)
             wire["state"] = "succeeded"
             finished = datetime.fromtimestamp(self.h.clock(), UTC)
@@ -354,8 +357,10 @@ def _problem(response: httpx.Response) -> dict[str, Any]:
 
 def _publication(view: dict[str, Any]) -> dict[str, Any]:
     ops = view["action"]["intent"]["proposed_diff"]["operations"]
-    assert [op["path"] for op in ops] == ["/publication"]
-    return ops[0]["value"]
+    # The connector's dry_run diff: the reviewed plan digest bound in first (PRP-34 item 10).
+    assert [op["path"] for op in ops] == ["/plan_digest", "/publication"]
+    assert ops[0]["op"] == "test" and len(ops[0]["value"]) == 64
+    return ops[1]["value"]
 
 
 # -- authorization ------------------------------------------------------------------------
@@ -422,6 +427,36 @@ def test_the_drafted_intent_validates_through_the_apim_connector_plan(env: Env) 
     assert checks["write_connector_supported"]["status"] == "passed"
     assert checks["target_dry_run"]["status"] == "passed", checks["target_dry_run"]
     assert env.apim.writes() == []  # the API only plans
+
+
+def test_a_drafted_publish_applies_as_stored_and_a_bare_diff_is_refused(env: Env) -> None:
+    """PRP-34 item 10 defect fix: the draft carries the connector's plan digest, so the executor
+    can apply the STORED diff unchanged; the old bare ``replace /publication`` could not."""
+    drafted = env.publish(gateway_id=GATEWAY_ID, api_path="ledger")
+    assert drafted.status_code == 201, drafted.text
+    intent = drafted.json()["action"]["intent"]
+    stored = WriteRequest.model_validate(
+        {
+            "target": intent["target"],
+            "target_version": intent["target_version"],
+            "proposed_diff": intent["proposed_diff"],
+        }
+    )
+    bare = stored.model_copy(
+        update={
+            "proposed_diff": stored.proposed_diff.model_copy(
+                update={"operations": stored.proposed_diff.operations[1:]}
+            )
+        }
+    )
+    with pytest.raises(InvalidSchemaError) as caught:
+        asyncio.run(env.connector.apply(bare))
+    assert caught.value.reason == "plan_digest_required"
+    assert env.apim.writes() == []
+    asyncio.run(env.connector.apply(stored))
+    names = connector_mcp.resource_names(SERVER_ID)
+    assert set(names.per_server) <= set(env.apim.resources)
+    assert asyncio.run(env.connector.verify(stored)).matched is True
 
 
 def test_publish_refusals(env: Env) -> None:

@@ -98,6 +98,8 @@ from neurosphere_connector_apim_gateway.policies.mcp_publication import (
 from neurosphere_connector_apim_gateway.translate import PLAN_DIGEST_PATH
 
 __all__ = [
+    "ACTION_KIND_MISMATCH",
+    "KIND_STAGES",
     "MCP_SERVER_ENTITY_TYPE",
     "METADATA_API",
     "PUBLICATION_PATH",
@@ -113,6 +115,7 @@ __all__ = [
     "McpPublication",
     "McpResourceNames",
     "McpServerTranslator",
+    "check_mcp_kind",
     "publication_prefix",
     "resource_names",
 ]
@@ -134,6 +137,16 @@ STAGE_VERSIONS: Final[Mapping[str, str]] = {
     "change": VERSION_DENIED,
     "remove": VERSION_DENIED,
 }
+PUBLISH_KIND: Final = "mcp_server_publish"
+UNPUBLISH_KIND: Final = "mcp_server_unpublish"
+#: The stages each action kind may carry (PRP-34 item 10): ``remove`` never rides on a publish
+#: and ``publish``/``change`` never on an unpublish. ``WriteRequest`` carries no kind, so the
+#: executor and the API planning view check it through ``check_kind`` before a plan is made.
+KIND_STAGES: Final[Mapping[str, frozenset[str]]] = {
+    PUBLISH_KIND: frozenset({"publish", "deny", "change"}),
+    UNPUBLISH_KIND: frozenset({"deny", "remove"}),
+}
+ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
 PRM_PREFIX: Final = "/.well-known/oauth-protected-resource"
 _MCP_SUFFIX: Final = "/mcp"
 _NAME = r"^[A-Za-z0-9._-]{1,256}$"
@@ -348,6 +361,13 @@ def parse_publication(request: WriteRequest) -> McpPublication:
         raise _bad("bad_payload", "the publication is not valid") from None
 
 
+def check_mcp_kind(action_kind: str, request: WriteRequest) -> None:
+    """Refuse a stage the action kind may not carry (``action_kind_mismatch``)."""
+    pub = parse_publication(request)
+    if pub.stage not in KIND_STAGES.get(action_kind, frozenset()):
+        raise _bad(ACTION_KIND_MISMATCH, f"stage {pub.stage} is not part of {action_kind}")
+
+
 def _upstream(pub: McpPublication) -> _Upstream:
     """Refusals of an unpublishable upstream; the upstream facts of a publishable one."""
     if (
@@ -408,8 +428,13 @@ class McpServerTranslator:
         if pub.gateway_id != gateway.gateway_id:
             raise _bad("wrong_entity", "the publication names another gateway")
 
+    def check_kind(self, action_kind: str, request: WriteRequest) -> None:
+        check_mcp_kind(action_kind, request)
+
     @staticmethod
     def _check_stage(request: WriteRequest, pub: McpPublication) -> None:
+        """Stage against the live publication state. The stage-to-kind tie (``remove`` only
+        under ``mcp_server_unpublish``) is ``check_kind``: the request itself carries no kind."""
         expected = STAGE_VERSIONS[pub.stage]
         if request.target_version == expected:
             return

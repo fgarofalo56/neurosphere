@@ -22,6 +22,7 @@ from neurosphere_connector_apim_gateway import (
     StepOwnership,
 )
 from neurosphere_connector_apim_gateway.grants import (
+    APPLY_RECORD_PATH,
     PUBLICATION_PATH,
     RESOURCES_PATH,
     VERSION_PUBLISHED,
@@ -66,18 +67,20 @@ def publish_request(version: str = VERSION_UNPUBLISHED, **over: Any) -> WriteReq
     )
 
 
-def unpublish_request(names: list[str], version: str = VERSION_PUBLISHED) -> WriteRequest:
+def unpublish_request(
+    names: list[str], version: str = VERSION_PUBLISHED, *, record: str | None = "apply-1"
+) -> WriteRequest:
+    ops = [PatchOperation(op="test", path="/publication/gateway_id", value=GATEWAY_ID)]
+    if record is not None:
+        ops.append(PatchOperation(op="test", path=APPLY_RECORD_PATH, value=record))
+    ops += [
+        PatchOperation(op="test", path=RESOURCES_PATH, value=names),
+        PatchOperation(op="remove", path=PUBLICATION_PATH),
+    ]
     return WriteRequest(
         target=_target(),
         target_version=version,
-        proposed_diff=ProposedDiff(
-            format="json_patch",
-            operations=[
-                PatchOperation(op="test", path="/publication/gateway_id", value=GATEWAY_ID),
-                PatchOperation(op="test", path=RESOURCES_PATH, value=names),
-                PatchOperation(op="remove", path=PUBLICATION_PATH),
-            ],
-        ),
+        proposed_diff=ProposedDiff(format="json_patch", operations=ops),
     )
 
 
@@ -91,7 +94,7 @@ def make() -> tuple[ApimGatewayConnector, InMemoryApim, InMemoryApplyRecordStore
         apim,
         records=records,
         mode=mode_handler(apim),
-        translators=[GrantPublicationTranslator()],
+        translators=[GrantPublicationTranslator(records=records)],
         id_factory=lambda: f"apply-{next(counter)}",
     )
     return conn, apim, records

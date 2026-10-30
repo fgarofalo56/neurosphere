@@ -10,16 +10,24 @@ Publish diff (one ``add`` operation)::
                        tokens_per_minute?, token_quota?, token_quota_period?,
                        tenant_named_value?, audience_named_value?}
 
-Unpublish diff (``remove /publication`` guarded by two ``test`` operations)::
+Unpublish diff (``remove /publication`` guarded by three ``test`` operations)::
 
-    test /publication/gateway_id  <gateway id>
-    test /publication/resources   [relative ARM paths to delete]
+    test /publication/gateway_id    <gateway id>
+    test /publication/apply_record  <id of the publish apply record>
+    test /publication/resources     [relative ARM paths to delete]
     remove /publication
 
 The resource names are derived from the grant id (``publication_names``) so a grant can never
 address a resource outside its own ``ns-grant-*`` namespace; an unpublish may name only a subset
-of those (the resources recorded ``created`` when the grant was published, so a resource the
-grant merely found is never deleted).
+of those, and (PRP-34 item 10) only resources the named publish apply record recorded
+``created``: the translator reads that record from the connector's apply-record store while it
+plans (``dry_run`` and ``apply``) and refuses (``resource_not_created``) any listed resource the
+publication merely found, and a record of another grant or gateway or of a publish that did not
+succeed (``ownership_record_mismatch``). Without a record store an unpublish is refused
+(``ownership_unverifiable``): a resource is never deleted on the diff's word alone.
+
+The diff grammar is tied to the action kind (``check_kind``): a publish diff only under
+``grant_publish``, an unpublish diff only under ``grant_unpublish`` (``action_kind_mismatch``).
 
 What a publish plans (dependency order is the planner's job): a policy fragment with
 ``llm-token-limit`` + ``llm-emit-token-metric`` (the item 1 grant template), a product, a product
@@ -51,7 +59,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from neurosphere_connector_apim_gateway.arm import ApimArm, check_path
 from neurosphere_connector_apim_gateway.gateway import GatewayRef
-from neurosphere_connector_apim_gateway.models import ResourceSpec, ResourceType
+from neurosphere_connector_apim_gateway.models import ResourceSpec, ResourceType, StepOwnership
 from neurosphere_connector_apim_gateway.policies import (
     GrantLimits,
     fragment_payload,
@@ -59,24 +67,37 @@ from neurosphere_connector_apim_gateway.policies import (
     render_api_policy,
     render_grant_fragment,
 )
+from neurosphere_connector_apim_gateway.records import ApplyRecordStore
 from neurosphere_connector_apim_gateway.translate import PLAN_DIGEST_PATH
 
 __all__ = [
+    "ACTION_KIND_MISMATCH",
+    "APPLY_RECORD_PATH",
     "GRANT_ENTITY_TYPE",
     "PUBLICATION_PATH",
+    "PUBLISH_KIND",
     "RESOURCES_PATH",
+    "UNPUBLISH_KIND",
     "VERSION_PUBLISHED",
     "VERSION_UNPUBLISHED",
     "GrantPublicationTranslator",
     "PublicationNames",
     "PublicationSpec",
+    "check_grant_kind",
+    "fragment_id_for",
+    "is_publish_diff",
     "publication_names",
 ]
 
 GRANT_ENTITY_TYPE: Final = "grant"
 PUBLICATION_PATH: Final = "/publication"
 RESOURCES_PATH: Final = "/publication/resources"
+APPLY_RECORD_PATH: Final = "/publication/apply_record"
 _GATEWAY_PATH: Final = "/publication/gateway_id"
+PUBLISH_KIND: Final = "grant_publish"
+UNPUBLISH_KIND: Final = "grant_unpublish"
+#: Refusal reason when a diff's grammar does not belong to the intent's action kind.
+ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
 #: The version a grant publication intent binds to: it moves when the product appears or goes.
 VERSION_UNPUBLISHED: Final = "grant-unpublished"
 VERSION_PUBLISHED: Final = "grant-published"
@@ -125,6 +146,12 @@ def publication_names(grant_id: str) -> PublicationNames:
     )
 
 
+def fragment_id_for(grant_id: str) -> str:
+    """The policy fragment id a grant publication creates (``ns-grant-<slug>-<sha8>``); the
+    budget-cap translator edits this very fragment (PRP-34 item 10)."""
+    return publication_names(grant_id).fragment.split("/", 1)[1]
+
+
 class PublicationSpec(BaseModel):
     """The value of ``add /publication``; validated here, never trusted from the wire."""
 
@@ -171,13 +198,16 @@ def _publish_spec(operations: list[Any]) -> PublicationSpec | None:
         raise _bad("invalid publication", "bad_payload") from exc
 
 
-def _unpublish(operations: list[Any]) -> tuple[str, list[str]]:
+def _unpublish(operations: list[Any]) -> tuple[str, list[str], str | None]:
+    """(gateway id, listed resources, publish apply record id) of an unpublish diff."""
     by_path = {op.path: op for op in operations}
     remove = by_path.get(PUBLICATION_PATH)
     gate = by_path.get(_GATEWAY_PATH)
     listed = by_path.get(RESOURCES_PATH)
+    record = by_path.get(APPLY_RECORD_PATH)
     if (
-        len(operations) != 3
+        len(operations) != (3 if record is None else 4)
+        or len(by_path) != len(operations)
         or remove is None
         or remove.op != "remove"
         or gate is None
@@ -187,9 +217,33 @@ def _unpublish(operations: list[Any]) -> tuple[str, list[str]]:
         or listed.op != "test"
         or not isinstance(listed.value, list)
         or not all(isinstance(n, str) for n in listed.value)
+        or (record is not None and (record.op != "test" or not isinstance(record.value, str)))
     ):
         raise _bad("unsupported grant diff", "unsupported_operation")
-    return gate.value, [str(n) for n in listed.value]
+    record_id = None if record is None else str(record.value)
+    return gate.value, [str(n) for n in listed.value], record_id
+
+
+def is_publish_diff(operations: list[Any]) -> bool:
+    """True for the publish grammar: exactly one ``add /publication`` (pure, no validation)."""
+    return (
+        len(operations) == 1
+        and operations[0].path == PUBLICATION_PATH
+        and operations[0].op == "add"
+    )
+
+
+def check_grant_kind(action_kind: str, request: WriteRequest) -> None:
+    """Refuse a publication diff under the wrong action kind (``action_kind_mismatch``): a
+    publish diff only under ``grant_publish``, an unpublish diff only under ``grant_unpublish``."""
+    operations = _operations(request)
+    if is_publish_diff(operations):
+        expected = PUBLISH_KIND
+    else:
+        _unpublish(operations)  # anything else is not a publication diff at all
+        expected = UNPUBLISH_KIND
+    if action_kind != expected:
+        raise _bad("the diff is not a publication of this action kind", ACTION_KIND_MISMATCH)
 
 
 def _quota_period(spec: PublicationSpec) -> str | None:
@@ -224,11 +278,53 @@ def _product_policy(spec: PublicationSpec, fragment_id: str) -> str:
 
 
 class GrantPublicationTranslator:
-    """``IntentTranslator`` for target ``grant`` (publish and unpublish)."""
+    """``IntentTranslator`` for target ``grant`` (publish and unpublish).
+
+    ``records`` is the connector's apply-record store: an unpublish is checked against the
+    publish record it names, and refused without a store (``ownership_unverifiable``).
+    """
+
+    def __init__(self, *, records: ApplyRecordStore | None = None) -> None:
+        self._records = records
 
     @property
     def entity_types(self) -> frozenset[str]:
         return frozenset({GRANT_ENTITY_TYPE})
+
+    def check_kind(self, action_kind: str, request: WriteRequest) -> None:
+        check_grant_kind(action_kind, request)
+
+    async def _check_ownership(
+        self, gateway: GatewayRef, request: WriteRequest, listed: list[str], record_id: str | None
+    ) -> None:
+        """Every listed resource must be recorded ``created`` by the named publish record."""
+        if self._records is None:
+            raise CapabilityUnavailableError(
+                "ownership_unverifiable",
+                "no apply-record store: the unpublish cannot prove what the publish created",
+            )
+        if record_id is None:
+            raise _bad("the unpublish must name the publish apply record", "apply_record_required")
+        record = await self._records.latest(record_id)
+        if (
+            record is None
+            or record.target != request.target.canonical_id
+            or record.gateway_id != gateway.gateway_id
+            or record.status != "succeeded"
+        ):
+            raise _bad(
+                "the apply record is not a succeeded publish of this grant on this gateway",
+                "ownership_record_mismatch",
+            )
+        created = {
+            step.name
+            for step in record.steps
+            if step.operation == "upsert" and step.ownership == StepOwnership.CREATED
+        }
+        if not set(listed) <= created:
+            raise _bad(
+                "only resources the publication created may be deleted", "resource_not_created"
+            )
 
     async def current_version(
         self, arm: ApimArm, gateway: GatewayRef, request: WriteRequest
@@ -238,8 +334,9 @@ class GrantPublicationTranslator:
         if publish is not None:
             _gateway_matches(gateway, request, publish.gateway_id)
         else:
-            gateway_id, _ = _unpublish(operations)
+            gateway_id, listed, record_id = _unpublish(operations)
             _gateway_matches(gateway, request, gateway_id)
+            await self._check_ownership(gateway, request, listed, record_id)
         names = publication_names(request.target.canonical_id)
         product = await arm.get(names.product)
         if publish is not None and product is None:
@@ -322,7 +419,7 @@ class GrantPublicationTranslator:
         operations: list[Any],
         names: PublicationNames,
     ) -> list[ResourceSpec]:
-        gateway_id, listed = _unpublish(operations)
+        gateway_id, listed, _ = _unpublish(operations)
         _gateway_matches(gateway, request, gateway_id)
         if not listed or len(set(listed)) != len(listed):
             raise _bad("the unpublish names no (or a repeated) resource", "empty_plan")

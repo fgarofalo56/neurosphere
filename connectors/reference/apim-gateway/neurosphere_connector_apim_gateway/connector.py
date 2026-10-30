@@ -20,7 +20,7 @@ repo-wide test to this package.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Any, Final, cast, get_args
+from typing import Any, Final, Protocol, cast, get_args, runtime_checkable
 
 from neurosphere_connector import build_manifest
 from neurosphere_connector.manifest import WriteAction
@@ -42,9 +42,11 @@ from neurosphere_core.errors import (
     InvalidSchemaError,
     StaleVersionError,
 )
+from neurosphere_core.gateway.mode import MODE_CHANGE_KIND
 
 from neurosphere_connector_apim_gateway.applier import PlanApplier
 from neurosphere_connector_apim_gateway.arm import ApimArm
+from neurosphere_connector_apim_gateway.cap import AttributeChange
 from neurosphere_connector_apim_gateway.compare import payload_matches
 from neurosphere_connector_apim_gateway.gateway import GatewayRef
 from neurosphere_connector_apim_gateway.mode import MODE_TARGET_TYPE, GatewayModeHandler
@@ -61,6 +63,7 @@ from neurosphere_connector_apim_gateway.translate import (
 
 __all__ = [
     "ACTION_KINDS",
+    "ACTION_KIND_MISMATCH",
     "ADVISORY_CONNECTOR_NAME",
     "CONNECTOR_NAME",
     "GOVERNMENT_ROW",
@@ -90,6 +93,17 @@ ACTION_KINDS: Final = (
 # v2 tiers are unverified in Government (PRP-34 gotcha); manage stays disabled until this row
 # says ``available``.
 GOVERNMENT_ROW: Final = "apim.backend_pool.government.any.standard_v2"
+#: Refusal when a diff grammar does not belong to the intent's action kind (PRP-34 item 10).
+ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
+
+
+@runtime_checkable
+class _Previewing(Protocol):
+    """A translator that offers a before/after attribute preview (the budget cap)."""
+
+    async def preview(
+        self, arm: ApimArm, gateway: GatewayRef, request: WriteRequest
+    ) -> list[AttributeChange]: ...
 
 
 def manifest_actions() -> list[WriteAction]:
@@ -248,6 +262,40 @@ class ApimGatewayConnector:
             raise StaleVersionError(
                 "the plan no longer matches the reviewed plan", reason="plan_digest_mismatch"
             )
+
+    def check_action(self, action_kind: str, request: WriteRequest) -> None:
+        """Refuse a diff whose grammar does not belong to ``action_kind`` (PRP-34 item 10).
+
+        ``WriteRequest`` carries no action kind, so the executor (at connector resolution) and
+        the API planning view call this before any plan: a ``remove`` stage under
+        ``mcp_server_publish``, an unpublish diff under ``grant_publish`` or a cap diff under a
+        publication kind is ``invalid_schema`` reason ``action_kind_mismatch``. Pure; no I/O.
+        """
+        mode_target = self._is_mode_change(request.target.entity_type)
+        if mode_target != (action_kind == MODE_CHANGE_KIND):
+            raise InvalidSchemaError(
+                "the mode switch has its own action kind and target", reason=ACTION_KIND_MISMATCH
+            )
+        if mode_target:
+            return
+        # An unhandled target kind is refused by dry_run itself (``wrong_entity``).
+        translator = self._translators.get(request.target.entity_type)
+        check = getattr(translator, "check_kind", None)
+        if callable(check):
+            check(action_kind, request)
+
+    async def preview(self, request: WriteRequest) -> list[AttributeChange]:
+        """Before/after attribute diff of a change whose translator offers one (a cap change:
+        the ``llm-token-limit`` attributes of the live fragment and of the rendered one). Reads
+        only, with the same cloud and observe-mode refusals as ``dry_run``; empty otherwise."""
+        self._refuse_cloud()
+        if self._is_mode_change(request.target.entity_type):
+            return []
+        translator = self._translator(request)
+        await self._mode.require_manage()
+        if not isinstance(translator, _Previewing):
+            return []
+        return list(await translator.preview(self._arm, self.gateway, request))
 
     # -- WriteConnector --------------------------------------------------------------------
 
