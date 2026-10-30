@@ -342,7 +342,10 @@ def test_apim_is_the_only_module_without_the_switch(main_arm: dict[str, Any]) ->
         for name, dep in _deployments(main_arm).items()
         if "publicNetworkAccess" not in dep["template"]["parameters"]
     }
-    assert without == {"ns-apim", "ns-network"}
+    # ns-apim-diagnostics and ns-apim-mcp-front (PRP-34 item 7) are children of the APIM instance
+    # (a diagnostic setting; a backend, API and policy). They carry no data-plane network surface
+    # of their own: APIM's network settings govern it, and the 'Enabled' literal scan covers them.
+    assert without == {"ns-apim", "ns-network", "ns-apim-diagnostics", "ns-apim-mcp-front"}
 
 
 def test_reuse_default_leaves_no_public_literal_in_source() -> None:
