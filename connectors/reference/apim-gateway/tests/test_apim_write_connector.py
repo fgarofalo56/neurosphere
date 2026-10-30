@@ -10,6 +10,7 @@ from apim_write_support import (  # pyright: ignore[reportMissingImports]
     GOV_GATEWAY,
     PUBLICATION,
     make,
+    mode_handler,
     publication_ops,
     request,
     target,
@@ -78,7 +79,13 @@ def test_inmemory_double_satisfies_the_arm_protocol() -> None:
 
 
 async def test_government_gateway_gets_the_advisory_connector_with_reason() -> None:
-    conn = create_apim_connector(GOV_GATEWAY, InMemoryApim(), records=InMemoryApplyRecordStore())
+    apim = InMemoryApim()
+    conn = create_apim_connector(
+        GOV_GATEWAY,
+        apim,
+        records=InMemoryApplyRecordStore(),
+        mode=mode_handler(apim, GOV_GATEWAY),
+    )
     assert isinstance(conn, ApimGatewayAdvisoryConnector)
     assert conn.advisory is True
     assert conn.manifest.name == ADVISORY_CONNECTOR_NAME
@@ -93,13 +100,21 @@ async def test_government_gateway_gets_the_advisory_connector_with_reason() -> N
 
 
 async def test_commercial_factory_returns_the_write_connector() -> None:
-    conn = create_apim_connector(GATEWAY, InMemoryApim(), records=InMemoryApplyRecordStore())
+    apim = InMemoryApim()
+    conn = create_apim_connector(
+        GATEWAY, apim, records=InMemoryApplyRecordStore(), mode=mode_handler(apim)
+    )
     assert isinstance(conn, ApimGatewayConnector)
 
 
 async def test_write_connector_bound_to_government_refuses_every_method() -> None:
     apim = InMemoryApim(service_etag='"svc-1"')
-    conn = ApimGatewayConnector(GOV_GATEWAY, apim, records=InMemoryApplyRecordStore())
+    conn = ApimGatewayConnector(
+        GOV_GATEWAY,
+        apim,
+        records=InMemoryApplyRecordStore(),
+        mode=mode_handler(apim, GOV_GATEWAY),
+    )
     req = request(*publication_ops(), tgt=target("government"))
     for call in (conn.dry_run, conn.apply, conn.verify):
         with pytest.raises(CapabilityUnavailableError) as err:

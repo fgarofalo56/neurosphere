@@ -18,6 +18,8 @@ import binascii
 import itertools
 from typing import Any, Final, Protocol, runtime_checkable
 
+from pydantic import ValidationError
+
 from neurosphere_core.errors import (
     DependencyTransientError,
     InvalidSchemaError,
@@ -39,6 +41,7 @@ __all__ = [
     "decode_cursor",
     "encode_cursor",
     "store_unavailable",
+    "validated",
 ]
 
 GATEWAY_ALREADY_REGISTERED: Final = "gateway_already_registered"
@@ -86,6 +89,20 @@ class GatewayModeLookup(Protocol):
     """
 
     async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None: ...
+
+
+def validated(registration: GatewayRegistration) -> GatewayRegistration:
+    """Re-validate a registration before it is written (PRP-34 item 2 review).
+
+    ``model_copy(update=...)`` skips validators, so a caller could otherwise persist a document
+    the model forbids (for example ``manage`` without the audited switch and a passed preflight).
+    """
+    try:
+        return GatewayRegistration.model_validate(registration.model_dump())
+    except ValidationError as exc:
+        raise InvalidSchemaError(
+            "gateway registration is not valid", reason="gateway_registration_invalid"
+        ) from exc
 
 
 def store_unavailable() -> DependencyTransientError:
@@ -159,6 +176,7 @@ class InMemoryGatewayStore:
         return GatewayRegistration.model_validate({**document, "etag": etag})
 
     def _put(self, registration: GatewayRegistration) -> GatewayRegistration:
+        registration = validated(registration)
         key = (registration.customer_id, registration.domain_id, registration.id)
         etag = f'"{next(self._etags)}"'
         self._docs[key] = (registration.model_dump(mode="json", exclude={"etag"}), etag)

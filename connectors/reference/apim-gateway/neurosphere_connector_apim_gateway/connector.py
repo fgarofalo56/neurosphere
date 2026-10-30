@@ -147,16 +147,20 @@ class ApimGatewayConnector:
         arm: ApimArm,
         *,
         records: ApplyRecordStore,
+        mode: GatewayModeHandler,
         translators: Sequence[IntentTranslator] = (),
         id_factory: Callable[[], str] | None = None,
-        mode: GatewayModeHandler | None = None,
     ) -> None:
-        if mode is not None and mode.gateway != gateway:
+        # Required (PRP-34 item 2 review): without a mode handler the observe-mode guard would
+        # be skipped, so a missing handler is refused at construction (fail closed).
+        if not isinstance(mode, GatewayModeHandler):
+            raise TypeError("a GatewayModeHandler is required (observe-mode guard)")
+        if mode.gateway != gateway:
             raise ValueError("the mode handler is bound to another gateway")
         self.gateway = gateway
         self._arm = arm
         self._records = records
-        # PRP-34 item 2: with a mode handler, ``gateway_mode_change`` runs and every resource
+        # PRP-34 item 2: ``gateway_mode_change`` runs through the handler and every resource
         # plan first requires the gateway to be in manage mode (``gateway_observe_mode``).
         self._mode = mode
         self._applier = (
@@ -193,10 +197,6 @@ class ApimGatewayConnector:
         return target_entity_type == MODE_TARGET_TYPE
 
     def _mode_handler(self) -> GatewayModeHandler:
-        if self._mode is None:
-            raise CapabilityUnavailableError(
-                "gateway_mode_switch_unconfigured", "no mode switch is wired for this gateway"
-            )
         return self._mode
 
     def _translator(self, request: WriteRequest) -> IntentTranslator:
@@ -215,8 +215,7 @@ class ApimGatewayConnector:
     ) -> tuple[IntentTranslator, PublishPlan, list[ResourceSpec]]:
         self._refuse_cloud()
         translator = self._translator(request)
-        if self._mode is not None:
-            await self._mode.require_manage()
+        await self._mode.require_manage()
         specs = translator.specs(self.gateway, request)
         current = await self._current_version(translator, request)
         if current != request.target_version:
@@ -330,13 +329,14 @@ def create_apim_connector(
     arm: ApimArm,
     *,
     records: ApplyRecordStore,
+    mode: GatewayModeHandler,
     translators: Sequence[IntentTranslator] = (),
-    mode: GatewayModeHandler | None = None,
 ) -> ApimGatewayConnector | ApimGatewayAdvisoryConnector:
     """Write connector for a Commercial gateway; the advisory one where manage is disabled.
 
-    ``mode`` (PRP-34 item 2) wires the observe/manage switch: ``gateway_mode_change`` runs the
-    permissions preflight and flips the registration, and resource plans require manage mode.
+    ``mode`` (PRP-34 item 2, required) wires the observe/manage switch: ``gateway_mode_change``
+    runs the permissions preflight and flips the registration, and resource plans require
+    manage mode.
     """
     refusal = government_refusal(gateway.cloud)
     if refusal is not None:
