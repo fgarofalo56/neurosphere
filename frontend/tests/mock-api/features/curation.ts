@@ -15,6 +15,7 @@ import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
 
 const EDGES_PREFIX = "/api/v1/catalog/curation/edges/";
 const DOMAINS_PREFIX = "/api/v1/catalog/domains/";
+const EDGES_INFIX = "/curation/edges/";
 const DOMAIN_OK = "commercial:e2e:sandbox:domain:finance";
 const CURATE_ROLES = new Set(["steward", "admin"]);
 const EVIDENCE_ROLES = new Set(["auditor", "admin"]);
@@ -111,8 +112,6 @@ function presented(edge: MockEdge): Record<string, unknown> {
     last_observed: "2026-10-20T08:00:00Z",
     pinned: edge.lock.locked,
     override_ids: edge.overrides.map((o) => o.id),
-    version: edge.version,
-    etag: etagOf(edge),
     provenance: {
       method: "trace_observation",
       source_id: "sandbox-connector",
@@ -245,8 +244,29 @@ export const handle: FeatureMockHandler = (ctx) => {
     path.includes("/curation/edges/") &&
     path.endsWith("/decisions") &&
     ctx.req.method === "POST";
-  if (!isEdgeRead && !isDecision) return false;
+  const isDomainRead =
+    path.startsWith(DOMAINS_PREFIX) &&
+    path.includes(EDGES_INFIX) &&
+    !path.endsWith("/decisions") &&
+    ctx.req.method === "GET";
+  if (!isEdgeRead && !isDecision && !isDomainRead) return false;
   if (!ctx.authorized) return json(ctx, 401, { error: "missing or unrecognised token" });
+
+  if (isDomainRead) {
+    const at = path.indexOf(EDGES_INFIX);
+    const domain = decodeURIComponent(path.slice(DOMAINS_PREFIX.length, at));
+    if (domain !== DOMAIN_OK) {
+      ctx.problem(404, "not_found", "edge_not_in_domain", "The edge is not in this domain.");
+      return true;
+    }
+    const edge = edgeFor(decodeURIComponent(path.slice(at + EDGES_INFIX.length)));
+    const etag = etagOf(edge);
+    ctx.res.writeHead(200, { "content-type": "application/json", etag, ...ctx.cors });
+    ctx.res.end(
+      JSON.stringify({ edge: presented(edge), edge_version: edge.version, edge_etag: etag }),
+    );
+    return true;
+  }
 
   if (isDecision) {
     const start = path.indexOf("/curation/edges/") + "/curation/edges/".length;

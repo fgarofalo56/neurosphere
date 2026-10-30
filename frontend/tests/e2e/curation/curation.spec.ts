@@ -72,6 +72,9 @@ test("lock with a future expiry is accepted (201) and the edge reloads locked", 
   expect(Object.keys(sent).sort()).toEqual(
     ["decision", "expected_edge_etag", "expected_edge_version", "lock_expiry", "reason"].sort(),
   );
+  // Version and etag come from the domain-path read's edge_version / edge_etag.
+  expect(sent["expected_edge_version"]).toBe(3);
+  expect(sent["expected_edge_etag"]).toBe("etag-3");
   expect(decided.url()).toContain(encodeURIComponent(DOMAIN_OK));
   await expect(page.getByTestId("decision-notice")).toBeVisible();
   await expect(page.getByTestId("edge-lock")).toContainText("Locked");

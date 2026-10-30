@@ -13,6 +13,7 @@ import {
   edgeHref,
   edgeObservationsPath,
   edgeOverridesPath,
+  domainEdgePath,
   edgePath,
 } from "./paths";
 import { STRINGS } from "./strings";
@@ -52,8 +53,6 @@ const EDGE: PresentedEdge = {
   last_observed: "2026-10-20T08:00:00Z",
   pinned: false,
   override_ids: [],
-  version: 4,
-  etag: "etag-4",
   provenance: { method: "trace_observation", source_id: "connector-a" },
 };
 
@@ -135,6 +134,9 @@ interface Recorded {
 interface ApiOptions {
   readonly permissions?: readonly string[];
   readonly edge?: PresentedEdge;
+  /** Successive edge reads; the last one repeats. Default: version 4 / etag-4. */
+  readonly reads?: readonly Record<string, unknown>[];
+  readonly readStatus?: number;
   readonly observations?: () => Response;
   readonly decision?: () => Response;
 }
@@ -143,6 +145,8 @@ interface ApiOptions {
 function useApi(options: ApiOptions = {}): Recorded[] {
   const calls: Recorded[] = [];
   const edge = options.edge ?? EDGE;
+  const reads = options.reads ?? [{ edge, edge_version: 4, edge_etag: "etag-4" }];
+  let readIndex = 0;
   activeFetch = (input, init) => {
     const raw = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(raw);
@@ -170,7 +174,14 @@ function useApi(options: ApiOptions = {}): Recorded[] {
         options.decision?.() ?? json({ override: HISTORY.overrides[0], presented: edge }, 201),
       );
     }
-    if (method === "GET" && p === edgePath(EDGE_ID)) return Promise.resolve(json(edge));
+    if (method === "GET" && p === domainEdgePath(DOMAIN, EDGE_ID)) {
+      if (options.readStatus !== undefined) {
+        return Promise.resolve(problem(options.readStatus, "not_found", "edge_not_in_domain"));
+      }
+      const read = reads[Math.min(readIndex, reads.length - 1)];
+      readIndex += 1;
+      return Promise.resolve(json(read));
+    }
     if (method === "GET" && p === edgeOverridesPath(EDGE_ID)) return Promise.resolve(json(HISTORY));
     if (method === "GET" && p === edgeObservationsPath(EDGE_ID)) {
       return Promise.resolve(options.observations?.() ?? json({ items: [OBS], next_cursor: null }));
@@ -220,7 +231,7 @@ function decisionCalls(calls: Recorded[]): Recorded[] {
 describe("paths", () => {
   it("encodes ids with colon and slash and round-trips them", () => {
     for (const path of [
-      edgePath(EDGE_ID),
+      domainEdgePath(DOMAIN, EDGE_ID),
       edgeOverridesPath(EDGE_ID),
       edgeObservationsPath(EDGE_ID),
       edgeDecisionsPath(DOMAIN, EDGE_ID),
@@ -230,6 +241,7 @@ describe("paths", () => {
       expect(path).not.toContain(EDGE_ID);
     }
     const encoded = edgePath(EDGE_ID).slice(edgePath("").length);
+    expect(domainEdgePath(DOMAIN, EDGE_ID)).toContain(encodeURIComponent(DOMAIN));
     expect(decodeURIComponent(encoded)).toBe(EDGE_ID);
     const href = new URL(edgeHref(EDGE_ID), "http://x");
     expect(href.searchParams.get("edge_id")).toBe(EDGE_ID);
@@ -375,14 +387,77 @@ describe("decisions", () => {
       /changed since you opened it/,
     );
     expect(decisionCalls(calls)).toHaveLength(1);
-    const before = calls.filter((c) => c.url.pathname === edgePath(EDGE_ID)).length;
+    const before = calls.filter((c) => c.url.pathname === domainEdgePath(DOMAIN, EDGE_ID)).length;
     fireEvent.click(within(dialog).getByRole("button", { name: STRINGS.decide.reload }));
     await waitFor(() =>
-      expect(calls.filter((c) => c.url.pathname === edgePath(EDGE_ID)).length).toBeGreaterThan(
-        before,
-      ),
+      expect(
+        calls.filter((c) => c.url.pathname === domainEdgePath(DOMAIN, EDGE_ID)).length,
+      ).toBeGreaterThan(before),
     );
     expect(decisionCalls(calls)).toHaveLength(1);
+  });
+
+  it("takes the decision's version and etag from edge_version and edge_etag", async () => {
+    const calls = useApi({ reads: [{ edge: EDGE, edge_version: 17, edge_etag: 'W/"abc"' }] });
+    renderPage();
+    const dialog = await openDialog("Accept");
+    expect(within(dialog).getByTestId("change-version")).toHaveTextContent('17 / W/"abc"');
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "ok" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm change" }));
+    await waitFor(() => expect(decisionCalls(calls)).toHaveLength(1));
+    expect(decisionCalls(calls)[0]?.body).toEqual({
+      decision: "accept",
+      reason: "ok",
+      expected_edge_version: 17,
+      expected_edge_etag: 'W/"abc"',
+    });
+  });
+
+  it("re-fetches after a 409 stale_edge and sends the new version and etag", async () => {
+    let attempts = 0;
+    const calls = useApi({
+      reads: [
+        { edge: EDGE, edge_version: 4, edge_etag: "etag-4" },
+        { edge: EDGE, edge_version: 5, edge_etag: "etag-5" },
+      ],
+      decision: () => {
+        attempts += 1;
+        return attempts === 1
+          ? problem(409, "stale_version", "stale_edge")
+          : json({ override: HISTORY.overrides[0], presented: EDGE }, 201);
+      },
+    });
+    renderPage();
+    let dialog = await openDialog("Accept");
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "first" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm change" }));
+    await within(dialog).findByTestId("decision-error");
+    fireEvent.click(within(dialog).getByRole("button", { name: STRINGS.decide.reload }));
+    await waitFor(() => expect(screen.queryByTestId("change-confirm-dialog")).toBeNull());
+    await waitFor(() =>
+      expect(calls.filter((c) => c.url.pathname === domainEdgePath(DOMAIN, EDGE_ID))).toHaveLength(
+        2,
+      ),
+    );
+    dialog = await openDialog("Accept");
+    await waitFor(() =>
+      expect(within(dialog).getByTestId("change-version")).toHaveTextContent("5 / etag-5"),
+    );
+    fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "second" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Confirm change" }));
+    await waitFor(() => expect(decisionCalls(calls)).toHaveLength(2));
+    expect(decisionCalls(calls)[1]?.body).toMatchObject({
+      expected_edge_version: 5,
+      expected_edge_etag: "etag-5",
+    });
+  });
+
+  it("shows a not-found state when the edge is not in the domain", async () => {
+    useApi({ readStatus: 404 });
+    renderPage();
+    expect(await screen.findByText(STRINGS.notFound)).toBeInTheDocument();
+    expect(screen.queryByTestId("edge-summary")).toBeNull();
+    expect(screen.queryByTestId("decisions")).toBeNull();
   });
 
   it("shows the service's 403 on a forced submit", async () => {
@@ -421,7 +496,7 @@ describe("decisions", () => {
   });
 
   it("does not offer decisions when the edge carries no version binding", async () => {
-    useApi({ edge: { ...EDGE, version: null, etag: null } });
+    useApi({ reads: [{ edge: EDGE }] });
     renderPage();
     const accept = await screen.findByRole("button", { name: "Accept" });
     expect(accept).toBeDisabled();
