@@ -1,6 +1,8 @@
 ---
 name: prp-25-docs-site-and-public-assistant
-status: backlog
+status: active
+started: 2026-10-30
+branch: prp-25-docs-site
 review: none
 created: 2026-10-08
 model: sonnet
