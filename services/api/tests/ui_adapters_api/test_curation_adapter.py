@@ -16,6 +16,7 @@ from neurosphere_core.catalog import CatalogEdge, format_timestamp
 
 from .adapter_support import (
     APP_STEWARD,
+    AUDITOR,
     STEWARD,
     STEWARD_BOTH,
     VIEWER,
@@ -119,6 +120,69 @@ def test_button_channel_lands_in_the_audit_record(world: World) -> None:
     assert {r.operation for r in records} == {"catalog.curate"}
     assert records[-1].subject is not None
     assert records[-1].subject.target.canonical_id == edge.id
+
+
+# --------------------------------------------------------------------------- edge read
+
+
+def _read_path(edge: CatalogEdge, domain: str = FINANCE) -> str:
+    return f"{BASE}/{domain}/curation/edges/{quote(edge.id, safe=':')}"
+
+
+def test_read_returns_version_etag_and_header(world: World) -> None:
+    edge = _seed(world)
+    response = world.get(VIEWER, _read_path(edge))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == {"edge", "edge_version", "edge_etag"}
+    assert body["edge_version"] == edge.version.root
+    assert body["edge_etag"] == edge.etag.root
+    assert response.headers["etag"] == body["edge_etag"]
+    assert body["edge"]["edge_id"] == edge.id
+
+
+@pytest.mark.parametrize("decision", ["accept", "lock"])
+def test_read_values_are_accepted_by_the_decision_route(world: World, decision: str) -> None:
+    edge = _seed(world)
+    got = world.get(STEWARD, _read_path(edge)).json()
+    body: dict[str, Any] = {
+        "decision": decision,
+        "reason": f"steward {decision}",
+        "expected_edge_version": got["edge_version"],
+        "expected_edge_etag": got["edge_etag"],
+    }
+    if decision == "lock":
+        body["lock_expiry"] = EXPIRY
+    response = world.post(STEWARD, _path(edge), body)
+    assert response.status_code == 201, response.text
+
+
+def test_read_slash_edge_id(world: World) -> None:
+    edge = _seed(world, name="team/a-1")
+    encoded = f"{BASE}/{FINANCE}/curation/edges/{quote(edge.id, safe='')}"
+    assert world.get(VIEWER, encoded).status_code == 200
+
+
+def test_read_edge_in_another_domain_is_404(world: World) -> None:
+    edge = _seed(world, OPERATIONS, "e-ops")
+    assert world.get(STEWARD_BOTH, _read_path(edge, FINANCE)).status_code == 404
+
+
+def test_read_unknown_edge_is_404(world: World) -> None:
+    edge = _seed(world)
+    assert world.get(VIEWER, _read_path(edge) + "-missing").status_code == 404
+
+
+def test_read_without_data_read_on_domain_is_403(world: World) -> None:
+    edge = _seed(world)
+    assert world.get(AUDITOR, _read_path(edge)).status_code == 403
+    other = _seed(world, OPERATIONS, "e-ops")
+    assert world.get(VIEWER, _read_path(other, OPERATIONS)).status_code == 403
+
+
+def test_read_unauthenticated_is_401(world: World) -> None:
+    edge = _seed(world)
+    assert world.get(None, _read_path(edge)).status_code == 401
 
 
 # --------------------------------------------------------------------------- 409 / 403 / 404

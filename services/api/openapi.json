@@ -2551,6 +2551,33 @@
         "title": "CurationDecisionRequest",
         "type": "object"
       },
+      "CurationEdgeView": {
+        "additionalProperties": false,
+        "description": "``GET /api/v1/catalog/domains/{domain}/curation/edges/{edge_id}``: the presented edge plus\nthe stored version and etag a decision must echo as its preconditions.",
+        "properties": {
+          "edge": {
+            "$ref": "#/components/schemas/PresentedEdge"
+          },
+          "edge_etag": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Edge Etag",
+            "type": "string"
+          },
+          "edge_version": {
+            "minimum": 1.0,
+            "title": "Edge Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "edge",
+          "edge_version",
+          "edge_etag"
+        ],
+        "title": "CurationEdgeView",
+        "type": "object"
+      },
       "Currency": {
         "pattern": "^[A-Z]{3}$",
         "title": "Currency",
@@ -16176,6 +16203,61 @@
         "summary": "Overrides",
         "tags": [
           "catalog-curation"
+        ]
+      }
+    },
+    "/api/v1/catalog/domains/{domain}/curation/edges/{edge_id}": {
+      "get": {
+        "operationId": "read_edge_in_domain_api_v1_catalog_domains__domain__curation_edges__edge_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "edge_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Edge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurationEdgeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Edge In Domain",
+        "tags": [
+          "ui-adapters"
         ]
       }
     },
