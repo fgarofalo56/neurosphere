@@ -352,5 +352,11 @@ def build_router() -> APIRouter:
 
 def register(registry: RouterRegistry) -> None:
     register_with_alias(registry, build_router(), prefix=PREFIX, alias_prefix=ALIAS_PREFIX)
-    # PRP-34 item 6: MCP server publish/unpublish drafts (own prefix; no deprecated alias).
-    registry.register(MCP_PUBLISH_PREFIX, build_mcp_publish_router())
+    # PRP-34 item 6: MCP server publish/unpublish drafts, on their own successor prefix and (like
+    # every route under /api/v1/catalog, see the path_aliases suite) the deprecated alias.
+    register_with_alias(
+        registry,
+        build_mcp_publish_router(),
+        prefix=MCP_PUBLISH_PREFIX,
+        alias_prefix=f"{ALIAS_PREFIX}/mcp-servers",
+    )

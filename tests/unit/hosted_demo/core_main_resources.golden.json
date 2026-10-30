@@ -1,8 +1,53 @@
 [
   [
     "Microsoft.ApiManagement/service",
-    "2022-08-01",
+    "2024-05-01",
     "[parameters('name')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis",
+    "2024-05-01",
+    "[format('{0}/{1}', parameters('apimName'), 'ns-mcp')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/operations",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}', parameters('apimName'), 'ns-mcp', 'mcp-delete')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/operations",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}', parameters('apimName'), 'ns-mcp', 'mcp-get')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/operations",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}', parameters('apimName'), 'ns-mcp', 'mcp-post')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/operations",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}', parameters('apimName'), 'ns-mcp', 'protected-resource-metadata')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/operations/policies",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}/{3}', parameters('apimName'), 'ns-mcp', 'protected-resource-metadata', 'policy')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/apis/policies",
+    "2024-05-01",
+    "[format('{0}/{1}/{2}', parameters('apimName'), 'ns-mcp', 'policy')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/backends",
+    "2024-05-01",
+    "[format('{0}/{1}', parameters('apimName'), 'ns-mcp-api')]"
+  ],
+  [
+    "Microsoft.ApiManagement/service/namedValues",
+    "2024-05-01",
+    "[format('{0}/{1}', parameters('apimName'), items(variables('namedValues'))[copyIndex()].key)]"
   ],
   [
     "Microsoft.DocumentDB/databaseAccounts",
@@ -13,6 +58,11 @@
     "Microsoft.EventHub/namespaces",
     "2024-01-01",
     "[parameters('name')]"
+  ],
+  [
+    "Microsoft.Insights/diagnosticSettings",
+    "2021-05-01-preview",
+    "ns-apim-diagnostics"
   ],
   [
     "Microsoft.KeyVault/vaults",
@@ -63,6 +113,16 @@
     "Microsoft.Resources/deployments",
     "2025-04-01",
     "ns-apim"
+  ],
+  [
+    "Microsoft.Resources/deployments",
+    "2025-04-01",
+    "ns-apim-diagnostics"
+  ],
+  [
+    "Microsoft.Resources/deployments",
+    "2025-04-01",
+    "ns-apim-mcp-front"
   ],
   [
     "Microsoft.Resources/deployments",
