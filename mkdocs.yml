@@ -1,0 +1,45 @@
+# NeuroSphere documentation site. Tool choice: docs/adr/0008-docs-site-tool.md.
+# Build: uv run --no-project --with mkdocs-material==9.8.0 mkdocs build --strict --site-dir temp/site
+site_name: NeuroSphere
+site_description: Customer-hosted AI governance documentation
+docs_dir: docs
+site_dir: temp/site
+strict: true
+
+theme:
+  name: material
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+# Link check: strict mode turns each of these warnings into a build failure.
+validation:
+  omitted_files: info
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+# Publish allowlist, part 1: files outside this set are not built into the site at all
+# (gitignore syntax). Everything at the top of docs/ is excluded, then only these paths
+# are re-included. docs/evidence/ and internal planning stay unpublished. Keep this in
+# step with `nav` below; tests/docs/test_nav_allowlist.py enforces it.
+exclude_docs: |
+  /*
+  !/index.md
+  !/adr/
+
+# Publish allowlist, part 2: explicit nav. Add pages here deliberately.
+nav:
+  - Home: index.md
+  - Architecture decisions:
+      - adr/0001-record-architecture-decisions.md
+      - adr/0002-stack-pins.md
+      - adr/0003-harness-orchestrated-prp-kit.md
+      - adr/0004-contract-versioning.md
+      - adr/0005-catalog-store.md
+      - adr/0006-eventhubs-quarantine.md
+      - adr/0007-analytics-adapter-contract.md
+      - adr/0008-docs-site-tool.md
