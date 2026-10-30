@@ -20,11 +20,15 @@ export interface RouteSample {
   readonly url: string;
   /** Selector that must be visible before axe runs (the state the page settles in). */
   readonly ready: string;
+  /** Token persona for lanes whose spec needs one (`/audit` is an auditor-only page). */
+  readonly persona?: string;
 }
 
 const domain = encodeURIComponent(DOMAIN_OK);
 const q = (extra = ""): string => `domain_id=${domain}${extra}`;
 const REPORT_ID = "rpt-seed-own";
+const ENTITY_ID = "commercial:e2e:catalog:agent:sample-agent";
+const EDGE_ID = "commercial:e2e:edge:sample-agent/uses/sample-model";
 const MCP_SERVER_ID = `mcp-${"a".repeat(32)}`;
 
 export const ROUTE_SAMPLES: readonly RouteSample[] = [
@@ -149,6 +153,79 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     pattern: "/workspaces/viewer",
     name: "viewer workspace",
     url: `/workspaces/viewer?domain_id=${encodeURIComponent(DOMAIN_VIEWER)}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/catalog",
+    name: "catalog explorer",
+    url: `/catalog?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/catalog/entity",
+    name: "catalog entity",
+    url: `/catalog/entity?${q(`&entity_id=${encodeURIComponent(ENTITY_ID)}`)}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/catalog/edge",
+    name: "relationship edge",
+    url: `/catalog/edge?${q(`&edge_id=${encodeURIComponent(EDGE_ID)}`)}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/catalog/recertifications",
+    name: "recertifications",
+    url: `/catalog/recertifications?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/catalog/stale-agents",
+    name: "stale agents",
+    url: `/catalog/stale-agents?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/audit",
+    name: "audit log",
+    url: `/audit?audit_domain=${domain}`,
+    ready: "main h1",
+    persona: "auditor",
+  },
+  {
+    pattern: "/finops/forecast",
+    name: "finops forecast",
+    url: `/finops/forecast?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/federation",
+    name: "federation",
+    url: `/federation?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/deploy",
+    name: "deployment",
+    url: `/deploy?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/deploy/capabilities",
+    name: "deployment capabilities",
+    url: `/deploy/capabilities?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/evaluations",
+    name: "evaluation results",
+    url: `/evaluations?${q()}`,
+    ready: "main h1",
+  },
+  {
+    pattern: "/admin/execution-control",
+    name: "execution control",
+    url: `/admin/execution-control?${q()}`,
     ready: "main h1",
   },
 ];

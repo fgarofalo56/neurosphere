@@ -34,6 +34,7 @@ import {
   demoTopology,
   demoWindow,
 } from "./demoProfile.ts";
+import { dispatchFeatureMocks } from "./features/index.ts";
 import { MCP_ADMIN_PATH, freshMcpAdminState, mcpAdminHandler } from "./mcpAdmin.ts";
 
 export const DEFAULT_PORT = 4010;
@@ -2535,6 +2536,14 @@ export function createMockApi(options: MockApiOptions): Server {
       void mcpAdminHandler(copilotCtx, mcpAdminState, mcpAdmin[1] ?? "");
       return;
     }
+    if (
+      dispatchFeatureMocks({
+        ...copilotCtx,
+        role: roleFromAuthorization(req.headers.authorization),
+        correlationId,
+      })
+    )
+      return;
     const reports = REPORTS_PATH.exec(url.pathname);
     if (reports !== null) {
       reportsHandler(copilotCtx, copilotState, reports[1] ?? "");
