@@ -29,9 +29,10 @@ apply record, read through ``app.state.apim_apply_records`` (wired by the gatewa
 to the ``gateways`` container the executor writes to); without it ownership is recorded as
 ``unrecorded`` and an unpublish is refused (it would otherwise not know which resources the
 publication created). The rules are shared with the worker's post-success recorder
-(``neurosphere_workers.publication``), which normally records the publication without anyone
-calling this route; the route stays the manual and retry path. Replaying an already recorded
-intent is a no-op.
+(``neurosphere_workers.publication``). That recorder is built but NOT yet wired into a deployed
+worker composition, so until it is, this route is the only caller that records a publication; once
+it is wired the route stays the manual and retry path. Replaying an already recorded intent is a
+no-op.
 
 The unpublish draft names the publish apply record (``test /publication/apply_record``) so the
 connector re-checks, while it plans, that every listed resource was recorded ``created``.

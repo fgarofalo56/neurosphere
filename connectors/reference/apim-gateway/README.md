@@ -25,6 +25,10 @@ with `ApimGatewayConnector.register_translator`; the planner and applier stay sh
 
 ## Default translators and the `grant` dispatcher (PRP-34 item 10)
 
+**Status: not wired into a deployed worker or the API image yet.** `runtime/factories.py` registers
+no APIM write connector, so none of this runs in a deployment until a worker composition binds a
+gateway and ARM configuration; it is exercised by the tests only.
+
 `dispatch.default_translators(records=..., paths=...)` is the set a production composition
 registers (the worker's `build_apim_gateway_connector` does): `BackendSwapTranslator`
 (`apim_backend`), `GrantDispatchTranslator` (`grant`) and `McpServerTranslator(paths=...)`

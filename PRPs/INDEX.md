@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-34-apim-gateway-manage](active/PRP-34-apim-gateway-manage.md) | P1 | 10/11 (90%) | todo 1, merged 10 | ? / ? | required |
+| [prp-34-apim-gateway-manage](active/PRP-34-apim-gateway-manage.md) | P1 | 11/11 (100%) | merged 11 | ? / ? | required |
 
 ## Backlog
 

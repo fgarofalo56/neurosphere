@@ -33,8 +33,9 @@ another publication state, carries a stage its action kind may not carry (``remo
 McpServer schema is unchanged
 (``provenance`` is closed, so the detail lives in the schema's ``attributes`` extension point).
 The rules and naming live in ``neurosphere_workers.publication.mcp``, shared with the worker's
-post-success recorder (PRP-34 item 10), which records each stage without anyone calling this
-route; the route stays the manual and retry path.
+post-success recorder (PRP-34 item 10). That recorder is built but NOT yet wired into a deployed
+worker composition, so until it is, this route is the only caller that records a stage; once it is
+wired the route stays the manual and retry path.
 
 Grants: the enforcement admits only callers with a direct (``oid``) grant on the server that is
 enabled, active and in its validity window, read with the caller's own scope; ``entra_group``
