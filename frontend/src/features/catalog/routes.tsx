@@ -1,12 +1,10 @@
 import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
 import { CatalogPublicationPage } from "./CatalogPublicationPage";
-import {
-  CatalogEntityPlaceholderPage,
-  CatalogExplorerPlaceholderPage,
-  RecertificationsPlaceholderPage,
-  StaleAgentsPlaceholderPage,
-} from "./PlaceholderPage";
+import { CatalogEntityPage } from "./CatalogEntityPage";
+import { CatalogExplorerPage } from "./CatalogExplorerPage";
+import { RecertificationsPage } from "./RecertificationsPage";
+import { StaleAgentsPage } from "./StaleAgentsPage";
 import {
   CATALOG_ENTITY_ROUTE,
   CATALOG_EXPLORER_ROUTE,
@@ -15,12 +13,12 @@ import {
   CATALOG_STALE_AGENTS_ROUTE,
 } from "./paths";
 
-/** PRP-31 explorer routes (placeholders until the catalog lane lands). */
+/** PRP-31 explorer routes . */
 export const catalogExplorerRoutes: RouteObject[] = [
-  { path: CATALOG_EXPLORER_ROUTE, element: <CatalogExplorerPlaceholderPage /> },
-  { path: CATALOG_ENTITY_ROUTE, element: <CatalogEntityPlaceholderPage /> },
-  { path: CATALOG_RECERTIFICATIONS_ROUTE, element: <RecertificationsPlaceholderPage /> },
-  { path: CATALOG_STALE_AGENTS_ROUTE, element: <StaleAgentsPlaceholderPage /> },
+  { path: CATALOG_EXPLORER_ROUTE, element: <CatalogExplorerPage /> },
+  { path: CATALOG_ENTITY_ROUTE, element: <CatalogEntityPage /> },
+  { path: CATALOG_RECERTIFICATIONS_ROUTE, element: <RecertificationsPage /> },
+  { path: CATALOG_STALE_AGENTS_ROUTE, element: <StaleAgentsPage /> },
 ];
 
 export const catalogRoutes: RouteObject[] = [
