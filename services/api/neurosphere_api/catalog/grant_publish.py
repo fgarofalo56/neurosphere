@@ -18,20 +18,28 @@ the plan digest bound in as ``test /plan_digest``), so the approver confirms the
 the executor refuses a gateway that moved since.
 
 ``.../publication`` records a REAL gateway change in the catalog and nothing else: it accepts
-only an intent id and re-reads that intent, which must be a ``succeeded`` and verified
-``grant_publish`` / ``grant_unpublish`` of THIS grant. It then writes the publication into the
-Grant through the catalog service (audited, ETag-guarded): ``provenance`` names the gateway
-(``source_id``), the connector and the time; the closed ``provenance`` object has no room for
-resource names or ownership, so those go in the Grant's existing scalar ``attributes``
-(``apim_*``). The Grant schema is unchanged. Ownership comes from the connector's apply record
-when the deployment wires ``app.state.apim_apply_records``; without it ownership is recorded as
+only an intent id and re-reads that intent, which must be a ``succeeded``, verified, non-dry-run
+``grant_publish`` / ``grant_unpublish`` of THIS grant whose diff has the grammar of its kind (a
+``grant_publish`` carrying a remove diff is never recorded as an unpublish). It then writes the
+publication into the Grant through the catalog service (audited, ETag-guarded): ``provenance``
+names the gateway (``source_id``), the connector and the time; the closed ``provenance`` object
+has no room for resource names or ownership, so those go in the Grant's existing scalar
+``attributes`` (``apim_*``). The Grant schema is unchanged. Ownership comes from the connector's
+apply record, read through ``app.state.apim_apply_records`` (wired by the gateway runtime builder
+to the ``gateways`` container the executor writes to); without it ownership is recorded as
 ``unrecorded`` and an unpublish is refused (it would otherwise not know which resources the
-publication created).
+publication created). The rules are shared with the worker's post-success recorder
+(``neurosphere_workers.publication``), which normally records the publication without anyone
+calling this route; the route stays the manual and retry path. Replaying an already recorded
+intent is a no-op.
+
+The unpublish draft names the publish apply record (``test /publication/apply_record``) so the
+connector re-checks, while it plans, that every listed resource was recorded ``created``.
 
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
-from typing import Annotated, Any, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from neurosphere_connector.write import WriteRequest
@@ -42,6 +50,13 @@ from neurosphere_core.auth.scope import Permission
 from neurosphere_core.catalog import CatalogEntity, format_timestamp
 from neurosphere_core.catalog.repo.documents import dump, entity_domain
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
+from neurosphere_workers.publication import ApplyRecordReader, reader_for
+from neurosphere_workers.publication.grant import (
+    check_grant_intent,
+    grant_attributes,
+    grant_publication_update,
+    grant_recorded,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 from neurosphere_api.actions.common import load_intent
@@ -70,7 +85,7 @@ GRANT_TARGET_TYPE: Final = "grant"
 APPLY_RECORDS_STATE: Final = "apim_apply_records"
 VERSION_UNPUBLISHED: Final = "grant-unpublished"
 VERSION_PUBLISHED: Final = "grant-published"
-CONNECTOR_VERSION: Final = "apim-gateway/0.1.0"
+
 _QUOTA_PERIODS: Final = {
     "hour": "Hourly",
     "day": "Daily",
@@ -119,17 +134,15 @@ class PublicationRecordBody(_Body):
     ]
 
 
-class _ApplyRecords(Protocol):
-    async def latest(self, record_id: str) -> Any: ...
-
-
 def _correlation(request: Request) -> str:
     return "corr-" + correlation_id_of(request.scope).replace("-", "")
 
 
-def get_apply_records(request: Request) -> _ApplyRecords | None:
-    found = getattr(request.app.state, APPLY_RECORDS_STATE, None)
-    return found if found is not None and hasattr(found, "latest") else None
+def get_apply_records(request: Request) -> object | None:
+    """``app.state.apim_apply_records``: an ``ApplyRecordLookup`` (production: the Cosmos
+    ``gateways`` container the executor writes apply records to) or a store bound to one
+    partition (tests). ``None`` when unwired: ownership is then recorded ``unrecorded``."""
+    return getattr(request.app.state, APPLY_RECORDS_STATE, None)
 
 
 def _not_found() -> HTTPException:
@@ -205,8 +218,7 @@ async def _planned(
 
 
 def _attrs(doc: dict[str, Any]) -> dict[str, Any]:
-    raw = doc.get("attributes")
-    return dict(raw) if isinstance(raw, dict) else {}  # pyright: ignore[reportUnknownArgumentType]
+    return grant_attributes(doc)
 
 
 async def _draft(
@@ -232,95 +244,23 @@ async def _draft(
     return await ActionApi(plane).draft(access.scope, domain, draft, correlation_id)
 
 
-def _created_names(record: Any) -> tuple[list[str], list[str]]:
-    """(all upserted names, names recorded ``created``) of an apply record."""
-    every: list[str] = []
-    created: list[str] = []
-    for step in getattr(record, "steps", ()):
-        if getattr(step, "operation", None) != "upsert":
-            continue
-        name = str(step.name)
-        every.append(name)
-        if str(step.ownership) == "created":
-            created.append(name)
-    return every, created
-
-
-def _succeeded(stored: StoredIntent, grant_id: str) -> None:
-    intent = stored.intent
-    execution = stored.execution
-    if (
-        intent.action_kind not in (PUBLISH_KIND, UNPUBLISH_KIND)
-        or intent.target.canonical_id != grant_id
-        or intent.state.root != "succeeded"
-        or execution is None
-        or execution.verify_matched is not True
-    ):
-        raise InvalidSchemaError(
-            "the intent is not a verified publication of this grant", reason="intent_not_verified"
-        )
-
-
-def _publish_gateway(stored: StoredIntent) -> str:
-    for op in stored.intent.proposed_diff.operations:
-        value = op.value
-        if op.path == "/publication" and isinstance(value, dict):
-            gateway = value.get("gateway_id")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-            if isinstance(gateway, str):
-                return gateway
-        if op.path == "/publication/gateway_id" and isinstance(value, str):
-            return value
-    raise InvalidSchemaError("the intent names no gateway", reason="intent_not_verified")
-
-
 async def _record(
     service: CatalogService,
     access: EntityAccess,
     stored: StoredIntent,
-    records: _ApplyRecords | None,
+    records: ApplyRecordReader | None,
     now: str,
     correlation_id: str,
 ) -> CatalogEntity:
+    """Write the shared publication record (``neurosphere_workers.publication.grant``)."""
     doc = dump(access.entity)
-    attrs = _attrs(doc)
-    intent_id = str(stored.intent.intent_id.root)
-    if attrs.get("apim_intent_id") == intent_id:
+    if grant_recorded(doc, str(stored.intent.intent_id.root)):
         return access.entity
-    gateway_id = _publish_gateway(stored)
-    publishing = stored.intent.action_kind == PUBLISH_KIND
-    token = (
-        (stored.execution.apply_result or {}).get("rollback_token") if stored.execution else None
-    )
-    attrs.update(
-        apim_published=publishing,
-        apim_gateway_id=gateway_id,
-        apim_intent_id=intent_id,
-        apim_apply_record=str(token) if token else None,
-    )
-    if publishing:
-        found = await records.latest(str(token)) if records is not None and token else None
-        if found is None:
-            attrs.update(apim_ownership="unrecorded", apim_resources=None, apim_created=None)
-        else:
-            every, created = _created_names(found)
-            attrs.update(
-                apim_ownership="recorded",
-                apim_resources=",".join(every),
-                apim_created=",".join(created),
-            )
-    else:
-        attrs.update(apim_ownership=None, apim_resources=None, apim_created=None)
-    doc["attributes"] = attrs
-    doc["provenance"] = {
-        "method": "declared",
-        "source_id": gateway_id,
-        "connector_version": CONNECTOR_VERSION,
-        "recorded_at": now,
-    }
+    updated = await grant_publication_update(doc, stored, records, now)
     return await service.update(
         access.scope,
         access.entity,
-        doc,
+        updated,
         access.entity.etag.root,
         correlation_id=correlation_id,
     )
@@ -383,8 +323,15 @@ def add_routes(router: APIRouter) -> None:
                 "the publication has no recorded ownership; nothing may be deleted",
                 reason="ownership_unrecorded",
             )
+        record_id = attrs.get("apim_apply_record")
+        if not isinstance(record_id, str) or not record_id:
+            raise InvalidSchemaError(
+                "the publication names no apply record; nothing may be deleted",
+                reason="ownership_unrecorded",
+            )
         ops = [
             PatchOperation(op="test", path="/publication/gateway_id", value=gateway_id),
+            PatchOperation(op="test", path="/publication/apply_record", value=record_id),
             PatchOperation(op="test", path="/publication/resources", value=created.split(",")),
             PatchOperation(op="remove", path="/publication"),
         ]
@@ -408,14 +355,15 @@ def add_routes(router: APIRouter) -> None:
         access: CurateAccess,
         plane: Actions,
         service: Service,
-        records: Annotated[_ApplyRecords | None, Depends(get_apply_records)],
+        records: Annotated[object | None, Depends(get_apply_records)],
         clock: Annotated[Any, Depends(get_clock)],
     ) -> CatalogEntity:
         _, domain = _grant_doc(access)
         stored = await load_intent(
             plane, IntentKey(access.scope.customer_id, domain, body.intent_id)
         )
-        _succeeded(stored, access.entity.id)
+        check_grant_intent(stored, access.entity.id)
+        reader = reader_for(records, access.scope.customer_id, domain)
         return await _record(
-            service, access, stored, records, format_timestamp(clock()), _correlation(request)
+            service, access, stored, reader, format_timestamp(clock()), _correlation(request)
         )

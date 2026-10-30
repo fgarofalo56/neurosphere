@@ -30,6 +30,20 @@ kind and, for every APIM kind except ``gateway_mode_change`` itself, first requi
 to be in manage mode (``capability_unavailable`` reason ``gateway_observe_mode``; fails closed
 when the gateway registry is not configured). The view never applies, verifies or rolls back.
 
+PRP-34 item 10: before planning, the view ties the diff grammar to the action kind through the
+connector's ``check_action`` (``WriteRequest`` carries no kind; e.g. a ``remove`` stage under
+``mcp_server_publish`` or an unpublish diff under ``grant_publish`` is ``invalid_schema`` reason
+``action_kind_mismatch``), the same check the executor makes at connector resolution. The view
+routes to whatever connector ``write_targets`` holds; an APIM gateway connector is composed with
+its default translators (swap, the ``grant`` cap/publication dispatcher, MCP) by
+``neurosphere_workers.actions.apim.build_apim_gateway_connector``, the one composition shared
+with the executor (the API image itself registers no write connector). An APIM resource change
+(swap, cap, grant or MCP publication) must be drafted with the diff its ``dry_run`` returned,
+which carries ``test /plan_digest``: the executor applies the stored diff as is and the connector
+refuses one without the digest (``plan_digest_required``). The catalog publish routes do so; a
+swap or cap drafted through the generic intents route must take the planned diff from a dry run
+first. ``gateway_mode_change`` alone is digest-free.
+
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
@@ -145,8 +159,12 @@ class _PlanningConnector:
                 "write_connector_unsupported_target",
                 "no write connector is registered for this target kind",
             )
-        if name == APIM_GATEWAY_CONNECTOR and self._kind != MODE_CHANGE_KIND:
-            await self._require_manage(connector, request)
+        if name == APIM_GATEWAY_CONNECTOR:
+            check = getattr(connector, "check_action", None)
+            if callable(check):
+                check(self._kind, request)
+            if self._kind != MODE_CHANGE_KIND:
+                await self._require_manage(connector, request)
         return await connector.dry_run(request)
 
     # The write path is refused outright (NoReturn satisfies the WriteConnector signatures

@@ -125,7 +125,7 @@ class ModeEnv:
     apim: InMemoryApim
     intents: InMemoryIntentStore
     rechecker: GrantTablePermissionRechecker
-    records: InMemoryGatewayRecordStore[ApplyRecord]
+    records: Any
     registry: WriteTargetRegistry
     responses: list[httpx.Response] = field(default_factory=list[httpx.Response])
 
@@ -172,7 +172,10 @@ def make_mode_env(
     permissions: list[dict[str, Any]] | None = None,
     gateway_plane: bool = True,
     seed: GatewayRegistration | None = None,
+    records: Any | None = None,
 ) -> ModeEnv:
+    """``records``: the connector's apply-record store (default: in-memory); PRP-34 item 10
+    passes the worker's Cosmos store over a fake container."""
     h = helpers.harness(
         helpers.policy(
             OPERATOR,
@@ -219,7 +222,8 @@ def make_mode_env(
     apim = InMemoryApim(service_etag='"svc-1"')
     if permissions is not None:
         apim.permission_entries = permissions
-    records: InMemoryGatewayRecordStore[ApplyRecord] = InMemoryGatewayRecordStore(ApplyRecord)
+    if records is None:
+        records = InMemoryGatewayRecordStore(ApplyRecord)
     gateway = GatewayRef(gateway_id=GATEWAY_ID, cloud=CloudName.COMMERCIAL, arm_resource_id=RID)
     switch = GatewayModeSwitch(
         store, customer_id=CUSTOMER, domain_id=FINANCE, gateway_id=GATEWAY_ID, activity=records

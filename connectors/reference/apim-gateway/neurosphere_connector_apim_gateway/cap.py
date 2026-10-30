@@ -28,13 +28,18 @@ instead of an exception. A live fragment that is not exactly a rendering of the 
 (foreign content, a DTD, an unknown counter key) is refused (``grant_fragment_unrecognised``)
 rather than overwritten; an MCP enforcement fragment is refused as ``mcp_grant_token_limit``.
 
-The fragment id is ``grant_fragment_id(grant canonical id)`` unless the constructor is given the
-naming function the grant publisher uses (PRP-34 item 5).
+The fragment id is ``grant_fragment_id(grant canonical id)``, which is the grant publisher's own
+fragment naming (``ns-grant-<slug>-<sha8>``, PRP-34 item 5), so a cap edits the very fragment the
+publication created (PRP-34 item 10); the constructor still accepts another naming function.
+The PUT keeps the publisher's fragment description, so a cap change never strips it.
+
+The shared target kind ``grant`` is routed to this translator or to the publication translator by
+``dispatch.GrantDispatchTranslator`` (non-overlapping diff grammars); ``check_kind`` ties this
+grammar to ``budget_cap_change``.
 """
 
 from __future__ import annotations
 
-import hashlib
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -47,6 +52,7 @@ from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaErr
 from neurosphere_connector_apim_gateway.arm import ApimArm
 from neurosphere_connector_apim_gateway.compare import normalize_xml
 from neurosphere_connector_apim_gateway.gateway import GatewayRef
+from neurosphere_connector_apim_gateway.grants import ACTION_KIND_MISMATCH, fragment_id_for
 from neurosphere_connector_apim_gateway.models import ResourceSpec, ResourceType
 from neurosphere_connector_apim_gateway.policies import (
     COUNTER_KEYS,
@@ -65,6 +71,7 @@ __all__ = [
     "BudgetCapTranslator",
     "CapIntent",
     "attribute_diff",
+    "fragment_description",
     "grant_fragment_id",
     "limit_attributes",
     "parse_cap_diff",
@@ -103,8 +110,13 @@ CounterKey = Literal["subscription", "oid"]
 
 
 def grant_fragment_id(grant_id: str) -> str:
-    """Default policy fragment id for a grant canonical id (a valid APIM resource segment)."""
-    return "ns-grant-" + hashlib.sha256(grant_id.encode("utf-8")).hexdigest()[:24]
+    """Policy fragment id of a grant: the one its publication creates (``publication_names``)."""
+    return fragment_id_for(grant_id)
+
+
+def fragment_description(fragment_id: str) -> str:
+    """The description the grant publisher writes on the fragment (kept by every cap PUT)."""
+    return f"NeuroSphere grant {fragment_id}"
 
 
 def _bad(message: str, reason: str) -> InvalidSchemaError:
@@ -283,6 +295,12 @@ class BudgetCapTranslator:
     def entity_types(self) -> frozenset[str]:
         return frozenset({GRANT_ENTITY_TYPE})
 
+    def check_kind(self, action_kind: str, request: WriteRequest) -> None:
+        """The cap grammar belongs to ``budget_cap_change`` only (``action_kind_mismatch``)."""
+        parse_cap_diff(request.proposed_diff)
+        if action_kind != BUDGET_CAP_KIND:
+            raise _bad("a cap diff is a budget_cap_change", ACTION_KIND_MISMATCH)
+
     def fragment_path(self, gateway: GatewayRef, request: WriteRequest) -> str:
         """Relative ARM path of the grant's policy fragment on this gateway."""
         parts = request.target.canonical_id.split(":")
@@ -298,12 +316,13 @@ class BudgetCapTranslator:
         path = self.fragment_path(gateway, request)
         intent = parse_cap_diff(request.proposed_diff)
         xml = render_grant_fragment(intent.limits)
+        fragment_id = path.split("/", 1)[1]
         return [
             ResourceSpec(
                 resource_type=ResourceType.POLICY_FRAGMENT,
                 name=path,
                 operation="upsert",
-                payload=fragment_payload(xml),
+                payload=fragment_payload(xml, description=fragment_description(fragment_id)),
             )
         ]
 

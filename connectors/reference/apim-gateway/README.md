@@ -23,6 +23,45 @@ Only the worker executor calls `apply` and `rollback` (PRP-17 D5).
 Later items add translators (`apim_backend`, `grant`, `mcp_server`) in new modules and register them
 with `ApimGatewayConnector.register_translator`; the planner and applier stay shared.
 
+## Default translators and the `grant` dispatcher (PRP-34 item 10)
+
+`dispatch.default_translators(records=..., paths=...)` is the set a production composition
+registers (the worker's `build_apim_gateway_connector` does): `BackendSwapTranslator`
+(`apim_backend`), `GrantDispatchTranslator` (`grant`) and `McpServerTranslator(paths=...)`
+(`mcp_server`; production passes `HttpApiPathIndex(client, arm_resource_id)` over the same ARM
+client). The connector keeps one translator per target kind, so `GrantDispatchTranslator` routes a
+`grant` request by diff grammar: every path under `/publication` goes to the publication
+translator, every path in `/target/kind`, `/counter_key`, `/metric_namespace` or under `/limits/`
+to the cap translator; a mixed diff is refused (`grant_diff_ambiguous`) and anything else
+(`grant_diff_unrecognised`), never guessed. The cap translator's fragment id is the publication's
+own (`ns-grant-<slug>-<sha8>`), so a cap edits the fragment the publication created, keeping its
+description.
+
+An unpublish names the publish apply record (`test /publication/apply_record`); the publication
+translator reads it from the connector's own record store while it plans and refuses any listed
+resource that record did not mark `created` (`resource_not_created`), a record of another grant,
+gateway or of a publish that did not succeed (`ownership_record_mismatch`), and any unpublish when
+no store is wired (`ownership_unverifiable`).
+
+`ApimGatewayConnector.check_action(action_kind, request)` ties the diff grammar to the action kind
+(the request carries none): a publish diff only under `grant_publish`, an unpublish diff only
+under `grant_unpublish`, a cap diff only under `budget_cap_change`, MCP stages per kind (`remove`
+never under `mcp_server_publish`), the mode switch only as `gateway_mode_change`
+(`action_kind_mismatch`). The executor calls it at connector resolution and the API planning view
+before every plan. The generic `apim_gateway` target has no kind grammar.
+
+`ApimGatewayConnector.preview(request)` returns the cap's before/after `llm-token-limit`
+attribute diff (empty for other changes). It is not part of `DryRunResult`: that SDK model is
+closed (`extra="forbid"`), and putting it in the planned diff would bind it into the confirmation
+hash and break the cap grammar.
+
+Drafting: every resource change (swap, cap, grant and MCP publication) must be drafted with the
+diff `dry_run` returned (it carries `test /plan_digest`), because the executor applies the stored
+diff as is and `apply` refuses a diff without the digest (`plan_digest_required`). The catalog
+publish routes do this themselves; a swap or cap drafted through the generic
+`POST /api/v1/actions/domains/{domain}/intents` route must first take the planned diff from a
+dry run (the plan preview). Only `gateway_mode_change` is digest-free (its own handler).
+
 ## Plan, digest and binding
 
 - Write order: named value (only for a key-authenticated backend in the same plan), backend, policy
@@ -94,7 +133,7 @@ and a PRM operation on the shared blank-path `ns-mcp-metadata` API. It refuses S
 audience-less and query-string upstreams, missing named values, an already existing per-server
 resource and a blank or API path owned by another API. The path checks need an `ApiPathIndex`
 (`HttpApiPathIndex` over ARM, `InMemoryApiPathIndex` for tests); without one publication fails
-closed. Not registered by default in this package: pass `translators=[McpServerTranslator(...)]`.
+closed. Registered by `dispatch.default_translators` (see above).
 Unverified against a live gateway: the `type: mcp` / `mcpProperties` API shape at api-version
 2024-05-01 and whether an MCP API is accepted without a `backendId` (G17 manage OPEN).
 

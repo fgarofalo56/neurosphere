@@ -13,9 +13,17 @@ answering 503 ``gateway_plane_unconfigured``).
 * ARM: ``neurosphere_core.clients.arm_client`` bound to the deployment cloud, with an aio
   ``DefaultAzureCredential`` (environment credential excluded outside local), closed at shutdown.
 * Audit: the ``AUDIT_REPOSITORY`` the data builder published (the one the action plane audits to).
+* APIM apply records (PRP-34 item 10): ``app.state.apim_apply_records``, the read side of the
+  APIM connector's durable apply records, so recording a Grant publication captures which
+  resources it ``created`` (without it ownership is ``unrecorded`` and an unpublish is refused).
+  With the Cosmos gateway store it is a ``CosmosApplyRecordLookup`` over the SAME client,
+  database and container as the gateway store, partitioned per ``(customer, domain)`` exactly as
+  the executor worker writes them (``neurosphere_workers.actions.apim.apim_record_store``); with
+  the in-memory store it is an in-memory lookup.
 
-Test fakes: ``ctx.overrides.backend("gateway_store")`` (a ``GatewayStore``) and
-``backend("gateway_arm_factory")`` (a ``Callable[[CloudProfile], httpx.AsyncClient]``).
+Test fakes: ``ctx.overrides.backend("gateway_store")`` (a ``GatewayStore``),
+``backend("gateway_arm_factory")`` (a ``Callable[[CloudProfile], httpx.AsyncClient]``) and
+``backend("apim_apply_records")`` (an ``ApplyRecordLookup``).
 """
 
 from __future__ import annotations
@@ -33,8 +41,14 @@ from neurosphere_core.gateway import (
     GatewayStore,
     InMemoryGatewayStore,
 )
+from neurosphere_workers.publication import (
+    ApplyRecordLookup,
+    CosmosApplyRecordLookup,
+    InMemoryApplyRecordLookup,
+)
 from pydantic import ValidationError
 
+from neurosphere_api.catalog.grant_publish import APPLY_RECORDS_STATE
 from neurosphere_api.gateway import GatewayPlane, GatewaySettings, configure_gateway_plane
 from neurosphere_api.gateway.dependencies import ArmFactory
 from neurosphere_api.gateway.settings import resolve_store_kind
@@ -96,12 +110,32 @@ def _arm_factory(ctx: BuildContext) -> ArmFactory:
     return factory
 
 
+def _apply_records(
+    ctx: BuildContext, gateway: GatewaySettings, store: GatewayStore
+) -> ApplyRecordLookup:
+    """The apply-record lookup bound to the same place as ``store`` (module docstring)."""
+    override = ctx.overrides.backend("apim_apply_records")
+    if override is not None:
+        if not isinstance(override, ApplyRecordLookup):
+            raise ComponentUnavailableError("apim_apply_records_override_invalid")
+        return override
+    if not isinstance(store, CosmosGatewayStore):
+        return InMemoryApplyRecordLookup()
+    return CosmosApplyRecordLookup(
+        ctx.cosmos_client(),
+        database=ctx.store_settings().database,
+        container=gateway.cosmos_container,
+    )
+
+
 def _install(ctx: BuildContext) -> None:
     gateway = _settings(ctx)
     audit = ctx.shared(AUDIT_REPOSITORY)
     store = _store(ctx, gateway)
+    records = _apply_records(ctx, gateway, store)
     plane = GatewayPlane(store=store, audit=audit, arm_factory=_arm_factory(ctx), settings=gateway)
     configure_gateway_plane(ctx.app, plane)
+    setattr(ctx.app.state, APPLY_RECORDS_STATE, records)
 
 
 def build(ctx: BuildContext) -> None:

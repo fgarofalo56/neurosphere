@@ -21,6 +21,7 @@ from neurosphere_connector_apim_gateway.cap import (
     AttributeChange,
     BudgetCapTranslator,
     attribute_diff,
+    fragment_description,
     grant_fragment_id,
     limit_attributes,
     parse_cap_diff,
@@ -81,7 +82,9 @@ def setup(
 ) -> tuple[ApimGatewayConnector, InMemoryApim, InMemoryApplyRecordStore, str]:
     conn, apim, records = make()
     conn.register_translator(BudgetCapTranslator())
-    etag = apim.seed(FRAGMENT, fragment_payload(xml, description="grant g1"))
+    etag = apim.seed(
+        FRAGMENT, fragment_payload(xml, description=fragment_description(FRAGMENT.split("/")[1]))
+    )
     return conn, apim, records, etag
 
 

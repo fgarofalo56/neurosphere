@@ -28,6 +28,7 @@ from gateway_mode_harness import (  # pyright: ignore[reportMissingImports]
 from neurosphere_api.catalog import get_clock, get_repository
 from neurosphere_connector.write import WriteRequest
 from neurosphere_connector_apim_gateway import ApimGatewayConnector
+from neurosphere_connector_apim_gateway.dispatch import GrantDispatchTranslator
 from neurosphere_connector_apim_gateway.grants import GrantPublicationTranslator
 from neurosphere_contracts.actions.v1.action_state import ActionState
 from neurosphere_core.actions import ExecutionRecord
@@ -133,12 +134,20 @@ class GrantEnv:
 
 
 def make_grant_env(
-    *, grant: dict[str, Any] | None = None, manage: bool = True, wire_records: bool = True
+    *,
+    grant: dict[str, Any] | None = None,
+    manage: bool = True,
+    wire_records: bool = True,
+    records: Any | None = None,
 ) -> GrantEnv:
-    env = make_mode_env(seed=registration(**manage_fields()) if manage else None)
+    env = make_mode_env(seed=registration(**manage_fields()) if manage else None, records=records)
     connector = env.registry.get("apim-gateway")
     assert isinstance(connector, ApimGatewayConnector)
-    connector.register_translator(GrantPublicationTranslator())
+    # The production grant translator: the cap/publication dispatcher, with the publication
+    # checked against the connector's own apply-record store (PRP-34 item 10).
+    connector.register_translator(
+        GrantDispatchTranslator(publication=GrantPublicationTranslator(records=env.records))
+    )
     env.apim.seed("apis/llm", {"displayName": "LLM", "path": "llm"})
     repo = InMemoryCatalogRepository()
     now = datetime(2027, 1, 15, 12, 0, tzinfo=UTC)

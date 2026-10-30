@@ -79,6 +79,7 @@ from pydantic import ValidationError
 from neurosphere_workers.actions.canary import CANARY_OUTCOMES, CanaryProbe, VerifyOnlyCanary
 from neurosphere_workers.actions.completion import FinishedHook
 from neurosphere_workers.actions.targets import (
+    ACTION_KIND_MISMATCH,
     DEFAULT_ACTION_CONNECTORS,
     GATEWAY_DOMAIN_MISMATCH,
     GATEWAY_LOOKUP_UNCONFIGURED,
@@ -117,7 +118,12 @@ _REASON_RE: Final = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _LEASE_RENEWED_AT: Final = "lease_renewed_at"
 #: Resolution refusals reported with their own reason (anything else: ``capability_unavailable``).
 _RESOLVE_REASONS: Final = frozenset(
-    {GATEWAY_DOMAIN_MISMATCH, GATEWAY_LOOKUP_UNCONFIGURED, GATEWAY_NOT_REGISTERED}
+    {
+        ACTION_KIND_MISMATCH,
+        GATEWAY_DOMAIN_MISMATCH,
+        GATEWAY_LOOKUP_UNCONFIGURED,
+        GATEWAY_NOT_REGISTERED,
+    }
 )
 
 # The longest a single connector apply/rollback call may take (Foundry: GETs + PUT + up to 300 s
@@ -397,6 +403,7 @@ class ActionExecutor:
                 self._gateways,
                 customer_id=stored.customer_id,
                 domain_id=stored.domain_id,
+                intent=stored.intent,
             )
             return connector
         except CapabilityUnavailableError as exc:
