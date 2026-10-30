@@ -1,5 +1,46 @@
 export const STRINGS = {
   pageTitle: "Audit log",
-  pageDescription: "Read-only audit records and chain verification.",
-  placeholder: "This page is being built.",
+  pageDescription:
+    "Read-only audit records and hash-chain verification. Values are shown exactly as the service returns them.",
+  domainLabel: "Audit domain",
+  domainsLoading: "Loading audit domains",
+  domainPlaceholder: "Select a domain",
+  domainUnavailable: "That domain is not one of your audit domains.",
+  domainsFailed: "Audit domains could not be loaded",
+  recordsLoading: "Loading audit records",
+  recordsFailed: "Audit records could not be loaded",
+  recordsTableLabel: "Audit records",
+  emptyTitle: "No audit records",
+  emptyBody: "This domain's chain has no records yet.",
+  loadMore: "Load more records",
+  loadingMore: "Loading more records",
+  endOfChain: "End of the chain. No further records.",
+  details: "Details",
+  detailsFor: (sequence: number): string => `Details for record ${sequence}`,
+  drawerTitle: (sequence: number): string => `Audit record ${sequence}`,
+  drawerClose: "Close details",
+  verify: "Verify chain",
+  verifying: "Verifying",
+  verifyValid: (checked: number): string => `Chain is valid. ${checked} records checked.`,
+  verifyBreak: (sequence: number | null): string =>
+    sequence === null
+      ? "Chain verification failed. The service did not report a sequence."
+      : `Chain verification failed. First break at sequence ${sequence}.`,
+  verifyFailed: "Verification could not be run",
+  notRecorded: "not recorded",
+  storeUnconfiguredTitle: "Audit store is not configured",
+  storeUnconfiguredBody:
+    "The service reports that no audit store is configured. This is not an empty log.",
+  forbiddenWorkspace: "audit log",
+  columns: {
+    sequence: "Sequence",
+    time: "Recorded",
+    kind: "Kind",
+    operation: "Operation",
+    outcome: "Outcome",
+    channel: "Channel",
+    actor: "Actor (pseudonym)",
+    subject: "Subject",
+    actions: "Details",
+  },
 } as const;
