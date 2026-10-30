@@ -16,3 +16,9 @@ fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:
 81440c2452a8292f9228e9b95b59cda62a68fb73:tests/unit/gates/test_g17_observe.py:generic-api-key:20
 # PRP-33 item 4: sha256 of a fake local-only producer secret in the gateway_poll example producers file.
 208d34c530292a80491e1f2d501be1dda7d0493f:services/workers/neurosphere_workers/ingestion/gateway_poll/producers.example.json:generic-api-key:5
+# PRP-34 item 8: APIM api_operation resource name used as a fixture row in the plan preview test, not a credential.
+025de4aef1eae8a78bf4be1070d63fbcabe42c34:frontend/src/features/actions/__tests__/plan-preview.test.tsx:generic-api-key:41
+# PRP-34 item 10: synthetic action idempotency key in the publication wiring test, not a credential.
+55b6a633ca3269bc16ddc423c219b975291138db:services/api/tests/catalog_api/test_publication_wiring.py:generic-api-key:282
+# PRP-34 item 9: FAKE_KEY constant in the G17 manage gate unit test (proves tokenisation), not a credential.
+98aac514da1d728c4e6db521ba18c0afd3bda974:tests/unit/gates/test_g17_manage.py:generic-api-key:23
