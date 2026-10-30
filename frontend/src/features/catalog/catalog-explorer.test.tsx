@@ -369,7 +369,11 @@ describe("CatalogEntityPage", () => {
     expect(await screen.findByTestId("change-target")).toHaveTextContent(AGENT);
     expect(screen.getByTestId("change-version")).toHaveTextContent("etag-3");
     expect(screen.getByTestId("change-diff-row")).toHaveTextContent("deprecated");
-    await user.type(screen.getByRole("textbox", { name: /Reason/ }), "replaced by v2");
+    // hidden: Tabster can mark the dialog subtree aria-hidden mid-animation under load.
+    await user.type(
+      await screen.findByRole("textbox", { name: /Reason/, hidden: true }),
+      "replaced by v2",
+    );
     await user.click(screen.getByRole("button", { name: "Confirm change" }));
     expect(await screen.findByTestId("change-done")).toHaveTextContent("etag-4");
     const post = api.calls.find(

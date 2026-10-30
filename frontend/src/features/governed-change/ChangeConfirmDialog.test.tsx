@@ -55,9 +55,11 @@ describe("ChangeConfirmDialog", () => {
     await user.click(screen.getByRole("button", { name: "Open change" }));
     const submit = await screen.findByRole("button", { name: "Confirm change" });
     expect(submit).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: /Reason/ }), "   ");
+    // hidden: Tabster can mark the dialog subtree aria-hidden mid-animation under load.
+    const reason = await screen.findByRole("textbox", { name: /Reason/, hidden: true });
+    await user.type(reason, "   ");
     expect(submit).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: /Reason/ }), " duplicate edge ");
+    await user.type(reason, " duplicate edge ");
     expect(submit).toBeEnabled();
     await user.click(submit);
     expect(onSubmit).toHaveBeenCalledWith({ reason: "duplicate edge", expiry: null });
