@@ -16,6 +16,7 @@ from typing import Annotated, Literal
 
 from neurosphere_contracts.deployment.v1.capability_matrix_entry import CapabilityMatrixEntry
 from neurosphere_contracts.query.v1.budget import Budget
+from neurosphere_core.catalog import PresentedEdge
 from neurosphere_core.catalog.protocol import EntityTypeName
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr
 
@@ -25,6 +26,7 @@ __all__ = [
     "CapabilityMatrixView",
     "CatalogDomainSearchRequest",
     "CurationDecisionRequest",
+    "CurationEdgeView",
     "DecisionValidity",
 ]
 
@@ -70,6 +72,17 @@ class CurationDecisionRequest(BaseModel):
     lock_expiry: TimestampStr | None = None
     set_confidence: Annotated[StrictFloat, Field(ge=0.0, le=1.0)] | None = None
     set_validity: DecisionValidity | None = None
+
+
+class CurationEdgeView(BaseModel):
+    """``GET /api/v1/catalog/domains/{domain}/curation/edges/{edge_id}``: the presented edge plus
+    the stored version and etag a decision must echo as its preconditions."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    edge: PresentedEdge
+    edge_version: Annotated[StrictInt, Field(ge=1)]
+    edge_etag: Annotated[StrictStr, Field(min_length=1, max_length=256)]
 
 
 class AuditDomainView(BaseModel):

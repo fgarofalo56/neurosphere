@@ -3,7 +3,11 @@
 
 | Method | Path                                             | Permission                         |
 |--------|--------------------------------------------------|------------------------------------|
+| GET    | ``/{domain}/curation/edges/{edge_id}``           | ``data.read`` on ``{domain}``      |
 | POST   | ``/{domain}/curation/edges/{edge_id}/decisions`` | ``catalog.curate`` on ``{domain}`` |
+
+The GET returns the presented edge plus the stored ``edge_version``/``edge_etag`` (and an ``ETag``
+header) a browser must echo as the decision's ``expected_edge_*`` preconditions.
 
 The browser sends only the decision and its preconditions (:class:`CurationDecisionRequest`,
 ``extra="forbid"``). The server fills everything else before PRP-10's
@@ -28,7 +32,7 @@ import re
 import uuid
 from typing import Annotated, Any, Final
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response, status
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.catalog import CatalogEdge, CatalogRepository, format_timestamp
@@ -47,8 +51,8 @@ from neurosphere_api.catalog.curation import (
 )
 from neurosphere_api.catalog.curation.router import audit_correlation_id
 from neurosphere_api.middleware import correlation_id_of
-from neurosphere_api.ui_adapters.catalog import DomainPath
-from neurosphere_api.ui_adapters.models import CurationDecisionRequest
+from neurosphere_api.ui_adapters.catalog import DomainPath, ReadScope
+from neurosphere_api.ui_adapters.models import CurationDecisionRequest, CurationEdgeView
 
 __all__ = ["add_routes", "stamp_decision"]
 
@@ -140,7 +144,30 @@ def stamp_decision(
 
 
 def add_routes(router: APIRouter) -> None:
-    """Add the decision route to the ``/api/v1/catalog/domains`` adapter router."""
+    """Add the edge read and decision routes to the ``/api/v1/catalog/domains`` adapter router."""
+
+    @router.get(
+        "/{domain}/curation/edges/{edge_id:path}",
+        response_model=CurationEdgeView,
+    )
+    async def read_edge_in_domain(
+        response: Response,
+        domain: DomainPath,
+        edge_id: EdgeIdPath,
+        scope: ReadScope,
+        repository: Repository,
+        service: Service,
+    ) -> CurationEdgeView:
+        edge = await repository.get_edge(scope, edge_id)
+        if edge is None or edge.domain_id.root != domain:
+            raise _not_found()
+        etag = edge.etag.root
+        response.headers["ETag"] = etag
+        return CurationEdgeView(
+            edge=await service.presented(scope, edge),
+            edge_version=edge.version.root,
+            edge_etag=etag,
+        )
 
     @router.post(
         "/{domain}/curation/edges/{edge_id:path}/decisions",

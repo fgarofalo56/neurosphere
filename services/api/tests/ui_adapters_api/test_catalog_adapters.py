@@ -152,6 +152,7 @@ EXPECTED_PERMISSIONS = {
     ("GET", "/api/v1/catalog/domains/{domain}/entities"): ("data.read",),
     ("POST", "/api/v1/catalog/domains/{domain}/search"): ("data.read",),
     ("GET", "/api/v1/catalog/domains/{domain}/export"): ("data.export",),
+    ("GET", "/api/v1/catalog/domains/{domain}/curation/edges/{edge_id:path}"): ("data.read",),
     (
         "POST",
         "/api/v1/catalog/domains/{domain}/curation/edges/{edge_id:path}/decisions",
@@ -181,6 +182,7 @@ SAMPLES = [
     ("POST", f"{BASE}/{FINANCE}/search"),
     ("GET", f"{BASE}/{FINANCE}/export"),
     ("POST", f"{BASE}/{FINANCE}/curation/edges/{EDGE}/decisions"),
+    ("GET", f"{BASE}/{FINANCE}/curation/edges/{EDGE}"),
     ("GET", "/api/v1/audit/domains"),
     ("GET", f"/api/v1/audit/domains/{FINANCE}/records"),
     ("GET", f"/api/v1/audit/domains/{FINANCE}/verify"),
