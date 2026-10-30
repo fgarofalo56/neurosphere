@@ -73,6 +73,7 @@ from neurosphere_api.catalog.dependencies import (
     get_service,
 )
 from neurosphere_api.catalog.grant_publish import add_routes as add_grant_publish_routes
+from neurosphere_api.catalog.mcp_publish import MCP_PUBLISH_PREFIX, build_mcp_publish_router
 from neurosphere_api.catalog.models import (
     ExportPage,
     ImportRequest,
@@ -351,3 +352,5 @@ def build_router() -> APIRouter:
 
 def register(registry: RouterRegistry) -> None:
     register_with_alias(registry, build_router(), prefix=PREFIX, alias_prefix=ALIAS_PREFIX)
+    # PRP-34 item 6: MCP server publish/unpublish drafts (own prefix; no deprecated alias).
+    registry.register(MCP_PUBLISH_PREFIX, build_mcp_publish_router())

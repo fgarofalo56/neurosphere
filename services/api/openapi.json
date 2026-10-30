@@ -6496,6 +6496,235 @@
         "title": "McpCallsPerMinute",
         "type": "integer"
       },
+      "McpPublicationDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ActionView"
+          },
+          "diagnostics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "stage": {
+            "enum": [
+              "publish",
+              "deny",
+              "change",
+              "remove"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "unpublished",
+              "published",
+              "denied"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "stage",
+          "state",
+          "diagnostics"
+        ],
+        "title": "McpPublicationDraft",
+        "type": "object"
+      },
+      "McpPublicationRecordBody": {
+        "additionalProperties": false,
+        "description": "``POST .../publication-record``: the succeeded intent whose outcome is recorded.",
+        "properties": {
+          "intent_id": {
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            "title": "Intent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent_id"
+        ],
+        "title": "McpPublicationRecordBody",
+        "type": "object"
+      },
+      "McpPublicationStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "api_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Path"
+          },
+          "created_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Created Resources",
+            "type": "array"
+          },
+          "diagnostics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "gateway_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway Id"
+          },
+          "next_publish_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "publish",
+                  "deny",
+                  "change",
+                  "remove"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Publish Stage"
+          },
+          "next_unpublish_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "publish",
+                  "deny",
+                  "change",
+                  "remove"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Unpublish Stage"
+          },
+          "server_id": {
+            "title": "Server Id",
+            "type": "string"
+          },
+          "shared_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Resources",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "unpublished",
+              "published",
+              "denied"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_id",
+          "state",
+          "gateway_id",
+          "api_path",
+          "created_resources",
+          "shared_resources",
+          "next_publish_stage",
+          "next_unpublish_stage",
+          "diagnostics"
+        ],
+        "title": "McpPublicationStatus",
+        "type": "object"
+      },
+      "McpPublishBody": {
+        "additionalProperties": false,
+        "description": "``POST .../publish``. The gateway, path and audience named value are needed only for the\nfirst publication; later stages reuse what the catalog recorded.",
+        "properties": {
+          "api_path": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9-]{0,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Path"
+          },
+          "audience_named_value": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9._-]{1,256}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience Named Value"
+          },
+          "channel": {
+            "default": "rest",
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "gateway_id": {
+            "anyOf": [
+              {
+                "pattern": "^gw-[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gateway Id"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "McpPublishBody",
+        "type": "object"
+      },
       "McpServer": {
         "additionalProperties": false,
         "description": "Model Context Protocol server governed as a catalog entity: endpoint, transport, protocol versions, upstream authentication and the tools it exposes. Grants (grant.schema.json) target it with call limits only. Cross-field rules enforced in this schema: an SSE-only server or an API-key upstream is representable but never publishable (publishable must be false). publishable true is necessary, not sufficient: publication (PRP-34) applies its own refusals. The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_mcp_tool_names_unique (tool names are unique within one server).",
@@ -6666,6 +6895,32 @@
         "minLength": 1,
         "title": "McpServerRef",
         "type": "string"
+      },
+      "McpUnpublishBody": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "default": "rest",
+            "enum": [
+              "button",
+              "chat",
+              "rest",
+              "mcp"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "pattern": "^[A-Za-z0-9._:-]{16,128}$",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "McpUnpublishBody",
+        "type": "object"
       },
       "MeDomains": {
         "additionalProperties": false,
@@ -16465,6 +16720,256 @@
           }
         },
         "summary": "Neighbors",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/mcp-servers/{entity_id}/publication": {
+      "get": {
+        "description": "Publication state of the server, the gateway resources it owns, and diagnostics.",
+        "operationId": "mcp_publication_status_api_v1_catalog_mcp_servers__entity_id__publication_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpPublicationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mcp Publication Status",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/mcp-servers/{entity_id}/publication-record": {
+      "post": {
+        "description": "Record a succeeded, verified publication stage on the catalog McpServer.",
+        "operationId": "record_mcp_publication_api_v1_catalog_mcp_servers__entity_id__publication_record_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpPublicationRecordBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
+                    }
+                  ],
+                  "title": "Response Record Mcp Publication Api V1 Catalog Mcp Servers  Entity Id  Publication Record Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Mcp Publication",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/mcp-servers/{entity_id}/publish": {
+      "post": {
+        "description": "Draft the next publish stage (``publish``, or ``deny`` then ``change``).",
+        "operationId": "publish_mcp_server_api_v1_catalog_mcp_servers__entity_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpPublishBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpPublicationDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Mcp Server",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/mcp-servers/{entity_id}/unpublish": {
+      "post": {
+        "description": "Draft the next unpublish stage (``deny``, then ``remove``).",
+        "operationId": "unpublish_mcp_server_api_v1_catalog_mcp_servers__entity_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpUnpublishBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpPublicationDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unpublish Mcp Server",
         "tags": [
           "catalog"
         ]
