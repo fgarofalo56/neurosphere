@@ -419,10 +419,10 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 2 | UI-facing API adapters (`ui_adapters`) | A | merged | worktree-agent-ac56db059969aac5d | opus | ruff+pyright clean (agent); 505 pass: ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi diff additive (+947/-0); two out-of-ownership test fixes approved; merged e261ad2 | 2026-10-30 |
 | 3 | Lane: catalog | B | in-progress | | sonnet | | 2026-10-30 |
 | 4 | Lane: relationship curation | B | in-progress | | sonnet | | 2026-10-30 |
-| 5 | Lane: audit log | B | in-progress | | sonnet | | 2026-10-30 |
-| 6 | Lane: FinOps forecast and federation | B | in-progress | | sonnet | | 2026-10-30 |
-| 7 | Lane: deployment intelligence | C | todo | | sonnet | | 2026-10-30 |
-| 8 | Lane: evaluation results and execution control | C | todo | | sonnet | | 2026-10-30 |
+| 5 | Lane: audit log | B | merged | worktree-agent-a124232576995f3f4 | sonnet | tsc+eslint clean; vitest 3f/18t; e2e audit 8 pass (me); merged b158425; openSample ignores persona (a11y matrix opens /audit as Viewer -> ForbiddenState) | 2026-10-30 |
+| 6 | Lane: FinOps forecast and federation | B | merged | worktree-agent-a7e8cc1113c8460f9 | sonnet | tsc+eslint clean; vitest 4f/33t; e2e finops 11 pass (me); merged be391fc; invoiced-chart band dashing not guaranteed | 2026-10-30 |
+| 7 | Lane: deployment intelligence | C | in-progress | | sonnet | | 2026-10-30 |
+| 8 | Lane: evaluation results and execution control | C | in-progress | | sonnet | | 2026-10-30 |
 
 Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
