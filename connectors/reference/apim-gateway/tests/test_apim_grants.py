@@ -12,6 +12,7 @@ from apim_write_support import (  # pyright: ignore[reportMissingImports]
     GATEWAY,
     GATEWAY_ID,
     SERVICE_ETAG,
+    mode_handler,
 )
 from neurosphere_connector.write import WriteRequest
 from neurosphere_connector_apim_gateway import (
@@ -89,6 +90,7 @@ def make() -> tuple[ApimGatewayConnector, InMemoryApim, InMemoryApplyRecordStore
         GATEWAY,
         apim,
         records=records,
+        mode=mode_handler(apim),
         translators=[GrantPublicationTranslator()],
         id_factory=lambda: f"apply-{next(counter)}",
     )

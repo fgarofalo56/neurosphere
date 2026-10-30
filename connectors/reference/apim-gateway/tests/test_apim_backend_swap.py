@@ -236,6 +236,124 @@ async def test_pool_rollback_restores_prior_weights() -> None:
     assert apim.snapshot()["backends/chat-pool"] == POOL
 
 
+# -- pool priority groups: the canary share is judged within a member's group ----------------------
+
+
+def _tiered(*members: tuple[str, int, int | None]) -> dict[str, Any]:
+    services: list[dict[str, Any]] = []
+    for name, weight, priority in members:
+        service: dict[str, Any] = {"id": f"/backends/{name}", "weight": weight}
+        if priority is not None:
+            service["priority"] = priority
+        services.append(service)
+    return {"type": "Pool", "description": "tiered pool", "pool": {"services": services}}
+
+
+async def test_a_large_weight_in_another_priority_group_does_not_dilute_the_canary() -> None:
+    """A (19, p1) + C (1, p1) serve all traffic; B (990, p2) is only a fallback.
+
+    Raising C to 100 is 100/1109 = 9.0 percent of the WHOLE pool (under the cap), but APIM splits
+    by weight only within the priority-1 group, so C goes from 5 to 84 percent of real traffic in
+    one intent: refused.
+    """
+    base = _tiered(("a-east", 19, 1), ("c-east", 1, 1), ("b-west", 990, 2))
+    apim, etag = _seeded("tiered", base)
+    conn, _ = _connector(apim)
+    with pytest.raises(InvalidSchemaError) as info:
+        await conn.dry_run(
+            _request("tiered", etag, backend_swap_diff(base, weights={"c-east": 100}))
+        )
+    assert info.value.reason == "canary_weight_exceeded"
+    assert apim.writes() == []
+
+
+async def test_lowering_a_group_peer_is_judged_within_the_group() -> None:
+    """Lowering A (19 -> 1) in priority 1 moves C from 5 to 50 percent of real traffic: refused,
+    even though C's whole-pool share stays at about 0.1 percent."""
+    base = _tiered(("a-east", 19, 1), ("c-east", 1, 1), ("b-west", 990, 2))
+    apim, etag = _seeded("tiered", base)
+    conn, _ = _connector(apim)
+    with pytest.raises(InvalidSchemaError) as info:
+        await conn.dry_run(_request("tiered", etag, backend_swap_diff(base, weights={"a-east": 1})))
+    assert info.value.reason == "canary_weight_exceeded"
+
+
+async def test_a_member_already_at_the_canary_share_of_its_group_may_be_promoted() -> None:
+    """A (9, p1) + C (1, p1) + B (990, p2): C already carries 10 percent of real traffic.
+
+    Judged within its priority group, C has passed the canary step (the same rule as
+    ``test_a_member_past_the_canary_share_may_be_promoted``), so raising it to 100 is a
+    promotion. The whole-pool share (0.1 percent) is what used to hide this; it no longer
+    decides anything.
+    """
+    base = _tiered(("a-east", 9, 1), ("c-east", 1, 1), ("b-west", 990, 2))
+    swap = parse_backend_swap(
+        GATEWAY, _request("tiered", '"e"', backend_swap_diff(base, weights={"c-east": 100}))
+    )
+    assert [s.member for s in swap.raised] == ["c-east"]
+
+
+async def test_a_canary_step_within_the_group_is_accepted() -> None:
+    base = _tiered(("a-east", 100, 1), ("c-east", 0, 1), ("b-west", 990, 2))
+    apim, etag = _seeded("tiered", base)
+    conn, _ = _connector(apim)
+    diff = backend_swap_diff(base, weights={"a-east": 90, "c-east": 10})
+    req = await _reviewed(conn, _request("tiered", etag, diff))
+    assert [s.member for s in parse_backend_swap(GATEWAY, req).raised] == ["c-east"]
+    await conn.apply(req)
+    assert pool_weights(apim.snapshot()["backends/tiered"])["c-east"] == 10
+
+
+async def test_a_lower_priority_member_is_judged_by_its_own_group() -> None:
+    """B and D share priority 2 behind healthy priority-1 members.
+
+    Priority 2 only takes traffic when priority 1 is unavailable, and then splits by weight
+    within priority 2. The canary therefore caps B's share of ITS group (the traffic it gets
+    when that group serves): B 0 -> 10 of 100 is a 10 percent step (accepted); B 0 -> 50 is a
+    33 percent step (refused). Priority-1 weights do not enter the computation either way.
+    """
+    base = _tiered(("a-east", 500, 1), ("c-east", 500, 1), ("b-west", 0, 2), ("d-west", 100, 2))
+    apim, etag = _seeded("tiered", base)
+    conn, _ = _connector(apim)
+    with pytest.raises(InvalidSchemaError) as info:
+        await conn.dry_run(
+            _request("tiered", etag, backend_swap_diff(base, weights={"b-west": 50}))
+        )
+    assert info.value.reason == "canary_weight_exceeded"
+    diff = backend_swap_diff(base, weights={"b-west": 10, "d-west": 90})
+    req = await _reviewed(conn, _request("tiered", etag, diff))
+    assert [s.member for s in parse_backend_swap(GATEWAY, req).raised] == ["b-west"]
+    await conn.apply(req)
+    assert pool_weights(apim.snapshot()["backends/tiered"])["b-west"] == 10
+
+
+async def test_a_pool_without_priorities_is_one_group() -> None:
+    base = _tiered(("a-east", 100, None), ("c-east", 0, None))
+    apim, etag = _seeded("flat", base)
+    conn, _ = _connector(apim)
+    diff = backend_swap_diff(base, weights={"a-east": 90, "c-east": 10})
+    await conn.apply(await _reviewed(conn, _request("flat", etag, diff)))
+    with pytest.raises(InvalidSchemaError) as info:
+        parse_backend_swap(
+            GATEWAY, _request("flat", etag, backend_swap_diff(base, weights={"c-east": 100}))
+        )
+    assert info.value.reason == "canary_weight_exceeded"
+
+
+async def test_mixed_set_and_unset_priorities_are_refused_while_the_cap_is_on() -> None:
+    base = _tiered(("a-east", 9, 1), ("c-east", 1, None), ("b-west", 990, 2))
+    apim, etag = _seeded("mixed", base)
+    conn, _ = _connector(apim)
+    with pytest.raises(InvalidSchemaError) as info:
+        await conn.dry_run(_request("mixed", etag, backend_swap_diff(base, weights={"c-east": 2})))
+    assert info.value.reason == "canary_priority_ambiguous"
+    assert apim.writes() == []
+    uncapped, _ = _connector(apim, canary_percent=None)
+    diff = backend_swap_diff(base, weights={"c-east": 2})
+    await uncapped.apply(await _reviewed(uncapped, _request("mixed", etag, diff)))
+    assert pool_weights(apim.snapshot()["backends/mixed"])["c-east"] == 2
+
+
 # -- binding and refusals --------------------------------------------------------------------------
 
 

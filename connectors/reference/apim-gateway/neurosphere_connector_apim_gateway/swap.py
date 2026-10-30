@@ -8,8 +8,13 @@ digest-bound plan, applier and ownership record as every other APIM change:
 * a ``Pool`` backend shifts ``pool.services[i].weight``. The canary is a REAL weight shift: a
   member whose traffic share is below ``canary_percent`` (default 10) may be raised at most to
   that share by one intent (``invalid_schema`` reason ``canary_weight_exceeded``); a later
-  intent promotes it. The worker's ``CanaryProbe`` reads the pool back and, when the gateway
-  writes ``GatewayLogs``, waits for one log row naming the raised member (absence = failure).
+  intent promotes it. APIM routes to the lowest ``priority`` group first and splits by weight
+  only WITHIN a group, so a member's share is computed within its priority group (members with
+  no ``priority`` form one group of their own). A pool that mixes set and unset priorities is
+  refused while the cap is on (reason ``canary_priority_ambiguous``): which explicit group the
+  unset members join is APIM's default, and guessing it wrong would let a raise past the cap.
+  The worker's ``CanaryProbe`` reads the pool back and, when the gateway writes
+  ``GatewayLogs``, waits for one log row naming the raised member (absence = failure).
 
 Target: entity type ``apim_backend``; canonical id ``{cloud}:{customer}:apim:apim_backend:{id}``
 where ``{id}`` is the backend name, optionally prefixed by the bound gateway id
@@ -209,8 +214,23 @@ def _effective(weights: Sequence[int | None]) -> list[int]:
     return [1 if w is None else w for w in weights]
 
 
-def _share(weights: Sequence[int], index: int) -> float:
-    total = sum(weights)
+def _priority(service: Mapping[str, Any]) -> int | None:
+    value = service.get("priority")
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _groups(services: Sequence[Mapping[str, Any]]) -> dict[int | None, list[int]]:
+    """Priority -> member indexes. APIM splits traffic by weight only within one group."""
+    groups: dict[int | None, list[int]] = {}
+    for index, service in enumerate(services):
+        groups.setdefault(_priority(service), []).append(index)
+    return groups
+
+
+def _share(weights: Sequence[int], index: int, group: Sequence[int]) -> float:
+    """Share of ``index`` within its priority ``group`` (the traffic it gets when that group
+    serves), not over the whole pool: a big weight in another group must not dilute it."""
+    total = sum(weights[i] for i in group)
     return 0.0 if total == 0 else 100.0 * weights[index] / total
 
 
@@ -260,11 +280,22 @@ def parse_backend_swap(
     ]
     after = _effective([s.get("weight") for s in services])
     prior = _effective(typed_before)
+    groups = _groups(services)
+    if canary_percent is not None and None in groups and len(groups) > 1:
+        raise _bad(
+            "a pool that mixes set and unset member priorities cannot be held to the canary "
+            "share; give every member an explicit priority first",
+            reason="canary_priority_ambiguous",
+        )
+    group_of = {index: members for members in groups.values() for index in members}
     raised: list[PoolShift] = []
     # Every member whose SHARE grows counts, also one whose own weight is untouched (lowering
     # the other members' weights shifts traffic too): no promotion past the canary by proxy.
+    # Shares are judged within the member's priority group (priorities are not changed here).
     for index in range(len(services)):
-        share_before, share_after = _share(prior, index), _share(after, index)
+        group = group_of[index]
+        share_before = _share(prior, index, group)
+        share_after = _share(after, index, group)
         if share_after <= share_before:
             continue
         if (
