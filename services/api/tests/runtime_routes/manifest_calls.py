@@ -213,6 +213,52 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ApiCall(_REVIEW + "/{item_id}", needs=("item_id",), non_empty="item_id"),
     ),
     "/sandbox": (*_SHELL, ApiCall("/api/v1/sandbox/status")),
+    # PRP-31: the missing UI surfaces. Mutations (decisions, deprecate, recertify, stale-agent
+    # confirm, emergency disable) need a user action and are not listed. The edge page and the
+    # stale-agents page issue no GET on render: the edge id arrives in the URL and the dry run is
+    # a POST.
+    "/admin/execution-control": (*_SHELL, _EMERGENCY),
+    "/audit": (
+        *_SHELL,
+        ApiCall("/api/v1/audit/domains"),
+        ApiCall("/api/v1/audit/domains/{domain}/records", q(page_size=50)),
+    ),
+    "/catalog": (
+        *_SHELL,
+        ApiCall("/api/v1/catalog/domains/{domain}/entities", q(page_size=50)),
+    ),
+    "/catalog/edge": _SHELL,
+    "/catalog/entity": (
+        *_SHELL,
+        ApiCall(
+            "/api/v1/catalog/domains/{domain}/entities",
+            q(page_size=50),
+            capture=(("entity_id", ("items", 0, "id")),),
+        ),
+        ApiCall("/api/v1/catalog/entities/{entity_id}", needs=("entity_id",)),
+    ),
+    "/catalog/recertifications": (
+        *_SHELL,
+        ApiCall("/api/v1/catalog/recertifications", q(within_days=30, page_size=50)),
+    ),
+    "/catalog/stale-agents": _SHELL,
+    "/deploy": _SHELL,
+    "/deploy/capabilities": (
+        *_SHELL,
+        ApiCall("/api/v1/capabilities", q(cloud="commercial")),
+    ),
+    "/evaluations": (
+        *_SHELL,
+        ApiCall("/api/v1/evaluation/domains/{domain}/results", q(limit=50)),
+    ),
+    "/federation": (*_SHELL, ApiCall("/api/v1/federation/summary", q(days=30))),
+    "/finops/forecast": (
+        *_SHELL,
+        ApiCall(
+            "/api/v1/finops/domains/{domain}/forecast",
+            q(history_days=30, horizon_days=30, currency="USD"),
+        ),
+    ),
     "/workspaces/admin": _workspace("admin"),
     "/workspaces/analyst": _workspace("analyst"),
     "/workspaces/auditor": _workspace("auditor"),

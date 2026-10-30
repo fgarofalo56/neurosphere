@@ -60,7 +60,7 @@ def test_audit_routes_behind_require(
 def test_audit_routes_declare_permissions() -> None:
     h = _audit_harness()
     assert undeclared_routes(h.app) == ()
-    audit = [e for e in route_inventory(h.app) if e.path.startswith(ROUTE_PREFIX)]
+    audit = [e for e in route_inventory(h.app) if e.path.startswith(f"{ROUTE_PREFIX}/chains/")]
     assert len(audit) == 2
     assert all(e.permissions == ("audit.read",) for e in audit)
 

@@ -2,8 +2,18 @@ import { useMemo } from "react";
 // The shell and nav import ONLY light route modules (`paths.ts` / `routes.tsx`), never a feature
 // `index.ts`: those pull in the WebGL map renderer and the chart sandbox, which crash jsdom.
 import { actionsNavItems } from "../features/actions/routes";
-import { catalogNavItems } from "../features/catalog/routes";
+import { auditNavItems } from "../features/audit/routes";
+import {
+  catalogExplorerNavItems,
+  catalogGovernanceNavItems,
+  catalogNavItems,
+} from "../features/catalog/routes";
 import { dashboardNavItems } from "../features/dashboards/routes";
+import { deployNavItems } from "../features/deploy/routes";
+import { evaluationsNavItems } from "../features/evaluations/routes";
+import { executionControlNavItems } from "../features/execution-control/routes";
+import { federationNavItems } from "../features/federation/routes";
+import { finopsNavItems } from "../features/finops/routes";
 import { gatewaysNavItems } from "../features/gateways/routes";
 import { MAP_PATH } from "../features/map/paths";
 import { MAP_TABLE_PATH } from "../features/map-table/paths";
@@ -38,18 +48,32 @@ export function buildAppNavItems(): readonly NavItem[] {
       group: "Overview",
       roles: [def.persona],
     })),
-    ...inGroup("Cost & usage", [...dashboardNavItems(), ...reconciliationNavItems()]),
+    ...inGroup("Cost & usage", [
+      ...dashboardNavItems(),
+      ...reconciliationNavItems(),
+      ...finopsNavItems(),
+      ...federationNavItems(),
+    ]),
     ...inGroup("Agents", [
       { to: MAP_PATH, label: "Map" },
       { to: MAP_TABLE_PATH, label: "Map table" },
       ...replayNavItems(),
+      ...catalogExplorerNavItems(),
     ]),
-    ...inGroup("Quality", [...qualityNavItems(), ...recommendationNavItems()]),
+    ...inGroup("Quality", [
+      ...qualityNavItems(),
+      ...recommendationNavItems(),
+      ...evaluationsNavItems(),
+    ]),
     ...inGroup("Governance", [
       ...reviewNavItems(),
       ...actionsNavItems(),
       ...gatewaysNavItems(),
       ...catalogNavItems(),
+      ...catalogGovernanceNavItems(),
+      ...auditNavItems(),
+      ...deployNavItems(),
+      ...executionControlNavItems(),
       // Cosmetic: the API requires config.manage on every MCP admin route.
       ...mcpAdminNavItems(),
     ]),

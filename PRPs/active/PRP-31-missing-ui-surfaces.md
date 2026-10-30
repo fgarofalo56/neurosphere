@@ -1,6 +1,8 @@
 ---
 name: prp-31-missing-ui-surfaces
-status: backlog
+status: active
+started: 2026-10-30
+branch: prp-31-missing-ui-surfaces-impl
 review: required
 priority: P1
 created: 2026-10-24
@@ -411,6 +413,20 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 - [x] All clarification questions are decided, not guessed (six are flagged to confirm at plan approval)
 
 ## Execution state
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 | merged | worktree-agent-a8d688440d7d599ad | sonnet | typecheck+lint clean; vitest 75f/928t pass (1 unexplained flaky first run, rerun green); touched 12f/95t pass; a11y e2e 500 pass (agent-reported); merged 3a2bb92 | 2026-10-30 |
+| 2 | merged | worktree-agent-ac56db059969aac5d | opus | ruff+pyright clean (agent); 505 pass: ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi diff additive (+947/-0); two out-of-ownership test fixes approved; merged e261ad2 | 2026-10-30 |
+| 3 | merged | worktree-agent-a692229675b41d7c3 | sonnet | tsc+eslint clean; vitest 4f/37t; e2e catalog 7 pass (me); merged 5a6a08e; reason field collected but not sent (endpoints take none); stale-agent confirm uses own dialog | 2026-10-30 |
+| 4 | merged | worktree-agent-aeea7d0e2bb52f6de | sonnet | agent-reported: tsc+eslint clean, vitest 3f/22t, e2e curation 6 pass; merged 602c168. defect (no version/etag on edge GET) fixed by 2b+4b | 2026-10-30 |
+| 5 | merged | worktree-agent-a124232576995f3f4 | sonnet | tsc+eslint clean; vitest 3f/18t; e2e audit 8 pass (me); merged b158425; openSample ignores persona (a11y matrix opens /audit as Viewer -> ForbiddenState) | 2026-10-30 |
+| 6 | merged | worktree-agent-a7e8cc1113c8460f9 | sonnet | tsc+eslint clean; vitest 4f/33t; e2e finops 11 pass (me); merged be391fc; invoiced-chart band dashing not guaranteed | 2026-10-30 |
+| 7 | merged | worktree-agent-af7487a07fc25fb8f | sonnet | tsc+eslint clean; vitest 3f/18t; e2e deploy 5 pass (me); no apply control, no browser storage (grep); merged a0317d2 | 2026-10-30 |
+| 8 | merged | worktree-agent-ac458121c2dffb894 | sonnet | tsc+eslint clean; vitest 4f/17t; e2e admin 7 pass (me); merged 72af36a | 2026-10-30 |
+| 2b | merged | worktree-agent-a85f80e3eeced77f2 | sonnet | ruff+pyright clean (agent); 514 pass ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi additive +82/-0; GET returns {edge, edge_version:int, edge_etag:str}+ETag header, matches 4b; merged 2dddb18 | 2026-10-30 |
+| 4b | merged | worktree-agent-a54f8d0bd1a262200 | sonnet | tsc+eslint clean; vitest 3f/25t; e2e curation 6 pass (me); merged 0ca8443 | 2026-10-30 |
+
+Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
 ## Completion note (filled at ship)
 - Date:

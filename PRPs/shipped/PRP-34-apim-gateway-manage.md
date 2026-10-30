@@ -1,11 +1,13 @@
 ---
 name: prp-34-apim-gateway-manage
-status: active
+status: shipped
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
 started: 2026-10-29
+shipped: 2026-10-30
+pr: 149
 branch: prp-34-apim-gateway-manage
 model: opus
 phase: 6
@@ -242,3 +244,26 @@ Waves: 1 = items 1 and 7 in parallel; 2 = item 2 (after 1); 3 = items 3, 4, 5, 6
 - Item 7: the optional own-MCP-server APIM front keeps the `Authorization` header (NeuroSphere's MCP server needs the caller bearer token, `factory.py:283`); it still strips `Ocp-Apim-Subscription-Key`, `api-key`, `subscription-key`. It is therefore a separate policy from the item 6 customer-server template, which still strips `Authorization`. The byte-identity test in the item 7 criteria is replaced by a test of this policy. Env var is `NS_MCP_RESOURCE_SERVER_URL`.
 
 ## Completion note (filled at ship)
+
+Shipped 2026-10-30 as PR #149 (merge `ea346b2`, branch head `5b65c11`). Items 1, 1b, 2 to 10 merged; every item had one independent review pass and 7 of them needed a rework round. Final gates on the merged head: `verify-gates -Mode full` green (9193 passed, lint, typecheck, build), `az bicep build`/`lint`, `helm lint`/`template`, `validate_planning.py`, frontend typecheck, lint, Vitest 921 and Playwright gateways 9, gitleaks over the branch history clean, CI 29 checks green.
+
+**Deviations from the blueprint**
+- Item 1b added: the connector-manifest `write_support.actions` enum and SDK `WriteAction` only admitted `model_deployment_swap`. Additive; also regenerated the licence register.
+- Item 10 added: dispatcher for the `grant` entity type shared by items 4 and 5, post-success publication recorder (new `neurosphere_workers/publication/` package), apply-record read wiring, MCP plan-digest fix, item 5 follow-ups.
+- Decision #9 amended: `deploy.write` does not exist and the role set is closed, so the mode switch needs `action.propose` scoped to the domain. Maker-checker and the Azure-write preflight are the safeguards.
+- Item 7: the own-MCP-server APIM front keeps `Authorization` (NeuroSphere's MCP server requires the caller bearer token); customer MCP servers (item 6) still strip it. The byte-identity test was replaced by a test of the own-server policy.
+- Item 6: deny-first is a separate intent, so MCP change and unpublish take two approvals (the shared applier reverses completed steps on failure and would undo a deny in the same plan).
+- Item 8: the gateway page was descoped to #147 in PRP-33, so a minimal `/gateways` page and a `/catalog/publication` page were created.
+- Item 9: the G17 manage script exists and is unit-tested but has never run; its MCP echo backend is operator-supplied instead of provisioned.
+- CI: the python job timeout was raised from 15 to 30 minutes (main already used 14m39s of 15).
+- MCP publication routes also get the deprecated `/catalog` alias, per the path-alias rule.
+
+**Open or only partly met (not claimed as done)**
+- G17 manage (live): OPEN, never run (needs `NS_LIVE_APPROVED=1` and operator approval per step). Government: OPEN (v2 tiers unverified, manage disabled with reason).
+- Not deployed: `runtime/factories.py` registers no APIM write connector and the API image registers none; the post-success recorder and HTTP connector composition are exercised by tests only.
+- Confirmation dialog shows digest prefix and diff resources; per-step `create`/`found` is not reported by the API yet.
+- Cost-center attribution in the PRP-33 gateway observation is not met: `x-ns-cost-center` is emitted, but the observation does not query `customMetrics` and `CostRecord` has no tags.
+- Unverified against Learn or a live gateway: `type: mcp` API shape at 2024-05-01, `BackendId` meaning in `GatewayLogs` (canary fails closed either way), pool weight bounds, `token-quota-period` values.
+
+**Follow-ups**
+- Create-race `If-None-Match`; grant stale-intent replay guard; MCP `publication-record` permission (`action.propose`) vs grant (`catalog.curate`); G17 script hardening (refuse an existing resource group, distinct approver token, clear state on teardown); `WWW-Authenticate` resource-metadata hint on the MCP 401; wire the APIM connector and recorder into the deployed worker composition; per-step create/found in the dry-run API; `customMetrics` query for cost-center attribution; over-broad `action_kind_mismatch` reason; unaudited intent-fetch failure in the recorder.

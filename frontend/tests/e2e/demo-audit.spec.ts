@@ -36,6 +36,12 @@ const DETAIL_VIA: Readonly<Record<string, { list: string; link: string }>> = {
   "/reports/view": { list: "/reports", link: 'a[href*="/reports/view"]' },
   "/review/item": { list: "/review", link: 'a[href*="/review/item"]' },
   "/mcp-admin/server": { list: "/mcp-admin", link: 'a[href*="/mcp-admin/server"]' },
+  "/catalog/entity": { list: "/catalog", link: 'a[href*="/catalog/entity"]' },
+};
+
+/** A detail route whose id arrives in the URL and that no list page links to. */
+const POPULATED_DIRECT_URL: Readonly<Record<string, string>> = {
+  "/catalog/edge": "/catalog/edge?edge_id=edge-demo",
 };
 
 /**
@@ -43,10 +49,12 @@ const DETAIL_VIA: Readonly<Record<string, { list: string; link: string }>> = {
  * enforces (and the mock reproduces in every profile):
  *  - MCP admin list and detail need `config.manage`, which only Admin holds.
  *  - A workspace is open only to its own persona, so every workspace but Steward's is denied.
+ *  - The audit trail needs `audit.read`, held by Auditor and Admin, not Steward.
  * The audit asserts the forbidden state IS shown here, and fails if one of these ever renders
  * data, so this list cannot rot silently.
  */
 const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
+  "/audit",
   "/mcp-admin",
   "/mcp-admin/server",
   "/workspaces/admin",
@@ -184,7 +192,7 @@ test.describe("demo route audit", () => {
         }
         const via = DETAIL_VIA[route];
         if (via === undefined) {
-          await page.goto(`${APP_ORIGIN}${route}`);
+          await page.goto(`${APP_ORIGIN}${POPULATED_DIRECT_URL[route] ?? route}`);
           await assertPopulated(page, route);
           return;
         }

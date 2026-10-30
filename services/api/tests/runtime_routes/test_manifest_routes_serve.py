@@ -147,7 +147,7 @@ def _unconfigured(response: Any) -> str | None:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 28
+    assert len(manifest) == 40
     assert sorted(MANIFEST_CALLS) == sorted(manifest)
     assert all(DOMAINS_CALL in calls for calls in MANIFEST_CALLS.values())
 

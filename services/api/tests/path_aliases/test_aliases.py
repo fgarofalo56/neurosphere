@@ -20,6 +20,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from neurosphere_api.authz import PRODUCER_AUTHENTICATED_PATHS, route_inventory, undeclared_routes
+from neurosphere_api.ui_adapters import PREFIXES as UI_ADAPTER_PREFIXES
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope import Role
 
@@ -81,6 +82,8 @@ def test_every_moved_operation_is_served_in_both_forms() -> None:
         assert (op.method, op.new_template) in served
     # and nothing under /api/v1/<moved> lacks its alias
     for method, path in sorted(served):
+        if path.startswith(UI_ADAPTER_PREFIXES):
+            continue  # PRP-31 adapters are new routes, not moved ones: no deprecated alias
         for alias, new in MOVES:
             if path.startswith(new + "/") or path == new:
                 assert (method, alias + path[len(new) :]) in served, path
