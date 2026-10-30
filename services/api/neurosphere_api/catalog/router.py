@@ -72,6 +72,7 @@ from neurosphere_api.catalog.dependencies import (
     get_repository,
     get_service,
 )
+from neurosphere_api.catalog.grant_publish import add_routes as add_grant_publish_routes
 from neurosphere_api.catalog.models import (
     ExportPage,
     ImportRequest,
@@ -156,6 +157,7 @@ def _correlation(request: Request) -> str:
 
 def build_router() -> APIRouter:
     router = APIRouter(tags=["catalog"])
+    add_grant_publish_routes(router)  # PRP-34 item 5
 
     # ------------------------------------------------------------------ entities
 

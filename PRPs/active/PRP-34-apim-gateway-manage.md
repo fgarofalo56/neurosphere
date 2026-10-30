@@ -223,8 +223,8 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 | 1b | merged | worktree-agent-a8c863d2a544d9dfd | opus | ff to 91af346; reviewed APPROVE (no rework); generate.py --check OK, sdk+apim+foundry-actions pytest 212 passed, licences PASS, pyright/ruff clean | 2026-10-29 |
 | 2 | merged | worktree-agent-ab6806e01efffe7f0 | opus | ff to 1f1802b; reviewed APPROVE after 1 rework (permission amended to action.propose, 2 stale tests); 807 pytest passed, openapi drift OK, ruff, pyright. Scope beyond declared files, recorded: apim-gateway connector files (mode handler, arm permissions GET), D5 test, 2 stale tests | 2026-10-29 |
 | 3 | todo | | opus | | |
-| 4 | todo | | opus | | |
-| 5 | todo | | sonnet | | |
+| 4 | merged | worktree-agent-ab474c9c3161f4138 | opus | ff to 0ead33d; reviewed APPROVE (no rework); connector+azure-monitor pytest 183 passed, ruff, pyright. OPEN: cost-center attribution in the PRP-33 observation is NOT met (customMetrics not queried, CostRecord has no tags); emit side only. Default translator registration deferred to wiring commit after items 3, 5, 6 | 2026-10-29 |
+| 5 | merged | worktree-agent-a53043ceba434b959 | sonnet | merge b53f88e; reviewed APPROVE (no rework); connector+catalog_api+actions_api+authz+openapi drift 318 passed; route inventory test fixed inline (catalog+catalog_api 91 passed). OPEN for wiring step: provenance record endpoint has no caller (criterion not met end to end); `grant` entity type shared with item 4 needs a dispatcher routing by action kind; `app.state.apim_apply_records` unwired in prod | 2026-10-29 |
 | 6 | todo | | opus | | |
 | 7 | merged | worktree-agent-a99aacda7f4e6981f | sonnet | ff to ee4c771; reviewed (1 rework: diag dependsOn, own-server keeps Authorization), confirmed; infra pytest 62 passed, ruff, bicep build/lint | 2026-10-29 |
 | 8 | todo | | sonnet | | |

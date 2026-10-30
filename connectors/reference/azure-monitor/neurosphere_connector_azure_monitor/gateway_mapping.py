@@ -13,6 +13,10 @@ Rules:
 - ``ApimSubscriptionId`` is sha256-hashed (hex); the raw value never leaves this module.
 - Rows without an LLM side (non-LLM APIs, or ``GatewayLlmLogs`` not enabled) still map, with the
   token fields null.
+- The grant cost center (PRP-34 item 4) arrives as the ``x-ns-cost-center`` dimension that the
+  grant fragment's ``llm-emit-token-metric`` emits (header value, default ``N/A``). When a row
+  carries it, ``cost_center_tags`` puts it on the cost observation's ``tags`` as
+  ``cost_center``; ``N/A`` and values outside the Grant contract pattern are dropped.
 - Only allowlisted columns are read; unknown columns on a row (for example the ``source_kind`` and
   ``source_id`` keys the poller adds) are ignored.
 """
@@ -21,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -38,6 +43,7 @@ __all__ = [
     "GatewayCostObservation",
     "GatewayObservation",
     "McpToolObservation",
+    "cost_center_tags",
     "hash_subscription_id",
     "map_gateway_row",
     "map_mcp_row",
@@ -45,6 +51,11 @@ __all__ = [
 
 _SCHEMA_VERSION = "1.0.0"
 _PROVIDER = "azure_api_management"
+#: The ``llm-emit-token-metric`` dimension name (PRP-34 grant fragment) and the tag key it maps to.
+COST_CENTER_DIMENSION = "x-ns-cost-center"
+_COST_CENTER_DEFAULT = "N/A"
+# Grant contract ``cost_center`` pattern: safe in an HTTP header and a metric dimension.
+_COST_CENTER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 
 class GatewayCostObservation(BaseModel):
@@ -83,6 +94,7 @@ class GatewayCostObservation(BaseModel):
     total_time_ms: Annotated[StrictInt | None, Field(ge=0)] = None
     backend_time_ms: Annotated[StrictInt | None, Field(ge=0)] = None
     is_stream_completion: bool | None = None
+    tags: dict[StrictStr, StrictStr] | None = None
 
 
 class GatewayObservation(BaseModel):
@@ -109,6 +121,14 @@ class McpToolObservation(BaseModel):
 def hash_subscription_id(value: str) -> str:
     """sha256 hex of an APIM subscription id."""
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def cost_center_tags(row: Mapping[str, Any]) -> dict[str, str] | None:
+    """``{"cost_center": value}`` from the row's ``x-ns-cost-center`` dimension, else None."""
+    value = _text(row, COST_CENTER_DIMENSION)
+    if value is None or value == _COST_CENTER_DEFAULT or not _COST_CENTER.fullmatch(value):
+        return None
+    return {"cost_center": value}
 
 
 def _text(row: Mapping[str, Any], name: str) -> str | None:
@@ -241,6 +261,7 @@ def map_gateway_row(
         total_time_ms=total_ms,
         backend_time_ms=_duration_ms(row, "BackendTime"),
         is_stream_completion=_bool(row, "IsStreamCompletion"),
+        tags=cost_center_tags(row),
     )
     return GatewayObservation(telemetry=telemetry, cost=cost)
 
