@@ -1,6 +1,8 @@
 ---
 name: prp-31-missing-ui-surfaces
-status: backlog
+status: active
+started: 2026-10-30
+branch: prp-31-missing-ui-surfaces-impl
 review: required
 priority: P1
 created: 2026-10-24
@@ -411,6 +413,18 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 - [x] All clarification questions are decided, not guessed (six are flagged to confirm at plan approval)
 
 ## Execution state
+| Item | Title | Wave | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|---|---|
+| 1 | Integration hookup and placeholders (extends existing `features/catalog/`) | A | todo | | sonnet | | 2026-10-30 |
+| 2 | UI-facing API adapters (`ui_adapters`) | A | todo | | opus | | 2026-10-30 |
+| 3 | Lane: catalog | B | todo | | sonnet | | 2026-10-30 |
+| 4 | Lane: relationship curation | B | todo | | sonnet | | 2026-10-30 |
+| 5 | Lane: audit log | B | todo | | sonnet | | 2026-10-30 |
+| 6 | Lane: FinOps forecast and federation | B | todo | | sonnet | | 2026-10-30 |
+| 7 | Lane: deployment intelligence | C | todo | | sonnet | | 2026-10-30 |
+| 8 | Lane: evaluation results and execution control | C | todo | | sonnet | | 2026-10-30 |
+
+Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
 ## Completion note (filled at ship)
 - Date:
