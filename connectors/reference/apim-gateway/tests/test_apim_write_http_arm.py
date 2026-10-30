@@ -176,9 +176,11 @@ async def test_delete_with_if_match_and_404_is_false() -> None:
         return httpx.Response(404 if request.url.path.endswith("gone") else 200)
 
     arm, rec, _ = _arm(handler)
-    assert await arm.delete("backends/b1", if_match='"e1"') is True
+    deleted = await arm.delete("backends/b1", if_match='"e1"')
+    assert deleted is True
     assert rec.requests[0].headers["If-Match"] == '"e1"'
-    assert await arm.delete("backends/gone", if_match='"e1"') is False
+    missing = await arm.delete("backends/gone", if_match='"e1"')
+    assert missing is False
 
 
 async def test_status_mapping_carries_no_body() -> None:

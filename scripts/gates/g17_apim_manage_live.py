@@ -988,7 +988,10 @@ def main(
     if api is None:  # pragma: no cover - live only
         token = os.environ.get(args.api_token_env, "")
         if not token:
-            print(f"REFUSED: environment variable {args.api_token_env} is empty.", file=sys.stderr)
+            print(
+                "REFUSED: the API token environment variable is empty (--api-token-env).",
+                file=sys.stderr,
+            )
             return 2
         api = HttpApiClient(args.api_url, token, os.environ.get(args.approver_token_env, ""))
     gate.api = api
