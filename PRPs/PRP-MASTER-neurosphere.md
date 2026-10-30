@@ -108,7 +108,7 @@ in `PRPs/shipped/`. Phase gates sit between waves and need operator sign-off.
 | W8 | 22, 23, 24 | **Phase 3 exit**: failure/revocation/action-injection suites pass (PRP-17, PRP-19, PRP-22) |
 | W9 | 29 and 30 (P0, parallel), then 31 and 32 | **Platform exit** (added 2026-10-24): the real stack runs end to end locally (PRP-29), the redesigned UI clears its mockup approval checkpoint (PRP-30), and the hosted environment is live in Limitlessdata with operator approval per live step (PRP-32) |
 | W9 (cont.) | 25, 26 | none |
-| W10 | 33, then 34 (added 2026-10-29) | **Gateway exit**: G17 observe and manage live runs on a throwaway Standard v2 APIM with operator approval, or recorded OPEN; reviewer confirms no write path to a reused gateway outside an audited manage-mode switch |
+| W10 | 33, then 34 (added 2026-10-29) | **Gateway exit**: G17 observe and manage live runs on a throwaway Standard v2 APIM with operator approval, or recorded OPEN (manage script `scripts/gates/g17_apim_manage_live.py` ships; live run OPEN until an operator-approved run writes `docs/evidence/G17/manage-*.md`); reviewer confirms no write path to a reused gateway outside an audited manage-mode switch |
 | W10 | 27 | explicit budget approval recorded in `marketing/video/APPROVAL.md` |
 
 ```mermaid
