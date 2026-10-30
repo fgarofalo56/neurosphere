@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 8/10 (80%) | todo 2, merged 8 | ? / ? | required |
+| [prp-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 10/10 (100%) | merged 10 | ? / ? | required |
 
 ## Backlog
 
