@@ -37,6 +37,7 @@ from neurosphere_core.auth.scope import (
     Role,
     principal_document_id,
 )
+from neurosphere_core.gateway import InMemoryGatewayStore
 from runtime_api.runtime_helpers import (  # pyright: ignore[reportMissingImports]
     ALICE,
     CUSTOMER,
@@ -102,6 +103,10 @@ def _operator_policy() -> InMemoryPolicyRepository:
     return repo
 
 
+def _no_arm(profile: object) -> object:
+    raise AssertionError("the manifest pages never call ARM")
+
+
 def _composed(
     monkeypatch: pytest.MonkeyPatch, *, copilot: bool, without: tuple[str, ...] = ()
 ) -> Composed:
@@ -111,6 +116,10 @@ def _composed(
     backends = {
         **base.backends,
         **plane_backends(),
+        # The gateway plane (PRP-33 builder) composes over an in-memory store; the /gateways page
+        # (PRP-34 item 8) only lists, so no ARM client is ever built.
+        "gateway_store": InMemoryGatewayStore(),
+        "gateway_arm_factory": _no_arm,
         "sandbox_repository": SandboxRepository(_EmptySandboxStore()),
     }
     overrides: CompositionOverrides = dataclasses.replace(
@@ -138,7 +147,7 @@ def _unconfigured(response: Any) -> str | None:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 26
+    assert len(manifest) == 28
     assert sorted(MANIFEST_CALLS) == sorted(manifest)
     assert all(DOMAINS_CALL in calls for calls in MANIFEST_CALLS.values())
 

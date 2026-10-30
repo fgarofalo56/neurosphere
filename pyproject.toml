@@ -34,6 +34,7 @@ dev = [
   "neurosphere-connector-foundry",
   "neurosphere-connector-foundry-actions",
   "neurosphere-connector-azure-billing",
+  "neurosphere-connector-apim-gateway",
 ]
 
 [tool.uv.sources]
@@ -47,6 +48,7 @@ neurosphere-connector-azure-monitor = { workspace = true }
 neurosphere-connector-foundry = { workspace = true }
 neurosphere-connector-foundry-actions = { workspace = true }
 neurosphere-connector-azure-billing = { workspace = true }
+neurosphere-connector-apim-gateway = { workspace = true }
 
 [tool.uv.workspace]
 members = [

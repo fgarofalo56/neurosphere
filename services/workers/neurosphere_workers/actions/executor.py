@@ -72,11 +72,20 @@ from neurosphere_core.actions.errors import TARGET_VERSION_CHANGED
 from neurosphere_core.audit.builders import OutcomeResult
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.errors import CapabilityUnavailableError, NeuroSphereError, StaleVersionError
+from neurosphere_core.gateway.mode import GATEWAY_NOT_REGISTERED
+from neurosphere_core.gateway.store import GatewayModeLookup
 from pydantic import ValidationError
 
 from neurosphere_workers.actions.canary import CANARY_OUTCOMES, CanaryProbe, VerifyOnlyCanary
 from neurosphere_workers.actions.completion import FinishedHook
-from neurosphere_workers.actions.targets import DEFAULT_ACTION_CONNECTORS, resolve_connector
+from neurosphere_workers.actions.targets import (
+    ACTION_KIND_MISMATCH,
+    DEFAULT_ACTION_CONNECTORS,
+    GATEWAY_DOMAIN_MISMATCH,
+    GATEWAY_LOOKUP_UNCONFIGURED,
+    check_gateway_binding,
+    resolve_connector,
+)
 
 __all__ = [
     "APPLY_FAILED_RESTORED",
@@ -107,6 +116,15 @@ CAPABILITY_UNAVAILABLE: Final = "capability_unavailable"
 _TERMINAL_STATES: Final = frozenset({"succeeded", "failed", "rolled_back", "expired"})
 _REASON_RE: Final = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 _LEASE_RENEWED_AT: Final = "lease_renewed_at"
+#: Resolution refusals reported with their own reason (anything else: ``capability_unavailable``).
+_RESOLVE_REASONS: Final = frozenset(
+    {
+        ACTION_KIND_MISMATCH,
+        GATEWAY_DOMAIN_MISMATCH,
+        GATEWAY_LOOKUP_UNCONFIGURED,
+        GATEWAY_NOT_REGISTERED,
+    }
+)
 
 # The longest a single connector apply/rollback call may take (Foundry: GETs + PUT + up to 300 s
 # provisioning poll, and on failure a restore PUT + another 300 s). The lease must outlive it
@@ -235,7 +253,10 @@ class ActionExecutor:
     """Runs ``executing`` intents through a write connector. See the module docstring.
 
     ``execution_control`` is REQUIRED (no default): the kill switch cannot be wired away.
-    ``action_connectors`` maps ``action_kind`` to a connector manifest name in ``registry``.
+    ``action_connectors`` maps ``action_kind`` to a connector manifest name in ``registry``;
+    the target's ``entity_type`` refines it (core ``TARGET_KIND_CONNECTORS``). ``gateways`` is the
+    gateway registry lookup the APIM gateway connector's binding is checked against (the gateway
+    must be registered in the intent's domain); without it APIM intents fail closed.
     ``worker_id`` names the lease owner. ``lease`` is renewed on every phase write and every
     ``lease_renewal`` while a connector apply/rollback runs; it must be at least
     ``max_connector_call`` (the declared longest single connector call) and more than twice
@@ -257,6 +278,7 @@ class ActionExecutor:
         max_connector_call: timedelta = DEFAULT_MAX_CONNECTOR_CALL,
         sleep: Sleep = asyncio.sleep,
         on_finished: FinishedHook | None = None,
+        gateways: GatewayModeLookup | None = None,
     ) -> None:
         if not isinstance(execution_control, ExecutionControl):
             raise TypeError("execution_control is required: the emergency disable is mandatory")
@@ -281,6 +303,7 @@ class ActionExecutor:
         self._renewal = lease_renewal
         self._sleep = sleep
         self._on_finished = on_finished
+        self._gateways = gateways
 
     @property
     def worker_id(self) -> str:
@@ -369,12 +392,26 @@ class ActionExecutor:
         try:
             if stored.advisory:
                 raise CapabilityUnavailableError(CAPABILITY_UNAVAILABLE, "advisory intent")
-            return resolve_connector(self._registry, self._table, stored.intent.action_kind)
-        except CapabilityUnavailableError:
+            connector = resolve_connector(
+                self._registry,
+                self._table,
+                stored.intent.action_kind,
+                stored.intent.target.entity_type,
+            )
+            await check_gateway_binding(
+                connector,
+                self._gateways,
+                customer_id=stored.customer_id,
+                domain_id=stored.domain_id,
+                intent=stored.intent,
+            )
+            return connector
+        except CapabilityUnavailableError as exc:
+            reason = exc.reason if exc.reason in _RESOLVE_REASONS else CAPABILITY_UNAVAILABLE
             details = {"operator_attention": True} if after_apply else None
-            raise _Halt(
-                await self._finish(stored, "failed", CAPABILITY_UNAVAILABLE, details=details)
-            ) from None
+            raise _Halt(await self._finish(stored, "failed", reason, details=details)) from None
+        except NeuroSphereError as exc:  # gateway registry outage: retried on a later pass
+            raise _Halt(await self._release(stored, _reason(exc))) from None
 
     async def _recheck(self, stored: StoredIntent) -> StoredIntent:
         """Kill switch, stored binding and the maker's current ``action.execute`` (service)."""

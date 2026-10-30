@@ -1,0 +1,16 @@
+<policies>
+	<inbound>
+		<base />
+		<include-fragment fragment-id="[[fragment_id]]" />
+		<set-backend-service backend-id="[[backend_id]]" />
+	</inbound>
+	<backend>
+		<forward-request buffer-request-body="false" buffer-response="false" />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -19,32 +19,66 @@ reason ``action_plane_unconfigured``) when absent or of the wrong type:
 ``action_api_settings``    optional ``ActionApiSettings`` (defaults when unset)
 ``action_clock``           optional ``() -> datetime`` (aware; default UTC now)
 ``reviewer_directory``     optional ``ReviewerDirectory`` (assigning another reviewer)
+``gateway_plane``          optional; its ``store`` (a ``GatewayModeLookup``) answers the
+                           observe-mode check of APIM gateway intents (PRP-34 item 2)
 =========================  ================================================================
+
+Connector resolution (:meth:`ActionPlane.connector_for`) follows the one core table
+(``ACTION_CONNECTORS`` refined by target kind). When the APIM gateway connector is a candidate,
+the API gets a planning-only view of it: ``dry_run`` picks the connector by the request's target
+kind and, for every APIM kind except ``gateway_mode_change`` itself, first requires the gateway
+to be in manage mode (``capability_unavailable`` reason ``gateway_observe_mode``; fails closed
+when the gateway registry is not configured). The view never applies, verifies or rolls back.
+
+PRP-34 item 10: before planning, the view ties the diff grammar to the action kind through the
+connector's ``check_action`` (``WriteRequest`` carries no kind; e.g. a ``remove`` stage under
+``mcp_server_publish`` or an unpublish diff under ``grant_publish`` is ``invalid_schema`` reason
+``action_kind_mismatch``), the same check the executor makes at connector resolution. The view
+routes to whatever connector ``write_targets`` holds; an APIM gateway connector is composed with
+its default translators (swap, the ``grant`` cap/publication dispatcher, MCP) by
+``neurosphere_workers.actions.apim.build_apim_gateway_connector``, the one composition shared
+with the executor (the API image itself registers no write connector). An APIM resource change
+(swap, cap, grant or MCP publication) must be drafted with the diff its ``dry_run`` returned,
+which carries ``test /plan_digest``: the executor applies the stored diff as is and the connector
+refuses one without the digest (``plan_digest_required``). The catalog publish routes do so; a
+swap or cap drafted through the generic intents route must take the planned diff from a dry run
+first. ``gateway_mode_change`` alone is digest-free.
 
 No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Final, cast
+from typing import Any, Final, NoReturn, cast
 
 from fastapi import FastAPI, Request
-from neurosphere_connector.write import WriteConnector
+from neurosphere_connector.write import DryRunResult, WriteConnector, WriteRequest
+from neurosphere_contracts.connectors.v1.connector_manifest import ConnectorManifest
 from neurosphere_core.actions import (
     ActionService,
     ExecutionControl,
     IntentStore,
     PermissionRechecker,
 )
-from neurosphere_core.actions.targets import WriteTargetSource, resolve_write_target
+from neurosphere_core.actions.targets import (
+    APIM_GATEWAY_CONNECTOR,
+    WriteTargetSource,
+    connector_name_for,
+    resolve_write_targets,
+)
 from neurosphere_core.audit import AuditRepository
-from neurosphere_core.errors import DependencyTransientError
+from neurosphere_core.errors import CapabilityUnavailableError, DependencyTransientError
+from neurosphere_core.gateway import GatewayModeLookup
+from neurosphere_core.gateway.mode import MODE_CHANGE_KIND, require_manage
+from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry
 
 from neurosphere_api.actions.settings import ActionApiSettings
 
 __all__ = [
+    "GATEWAY_PLANE_STATE",
     "ActionPlane",
     "Clock",
     "configure_action_plane",
@@ -54,6 +88,97 @@ __all__ = [
 Clock = Callable[[], datetime]
 
 _UNCONFIGURED: Final = "action_plane_unconfigured"
+#: ``app.state`` key of the gateway registry plane (same value as ``neurosphere_api.gateway``).
+GATEWAY_PLANE_STATE: Final = "gateway_plane"
+_GATEWAY_ID: Final = re.compile(GATEWAY_ID_PATTERN)
+_API_NEVER_EXECUTES: Final = "api_never_executes"
+
+
+def _never_executes() -> CapabilityUnavailableError:
+    return CapabilityUnavailableError(
+        _API_NEVER_EXECUTES, "the API only plans; the executor worker changes targets"
+    )
+
+
+def _gateway_id(connector: object, canonical_id: str) -> str:
+    """The gateway an APIM connector is bound to (or the one a gateway target names)."""
+    bound = getattr(getattr(connector, "gateway", None), "gateway_id", None)
+    if isinstance(bound, str) and _GATEWAY_ID.fullmatch(bound):
+        return bound
+    tail = canonical_id.rsplit(":", 1)[-1]
+    if _GATEWAY_ID.fullmatch(tail):
+        return tail
+    raise CapabilityUnavailableError("gateway_unresolved", "the target gateway is not known")
+
+
+class _PlanningConnector:
+    """API-side view over the connectors that may execute one action kind: ``dry_run`` only.
+
+    Picks the connector by the request's target kind (``connector_name_for``) and enforces the
+    observe-mode refusal before an APIM plan. ``apply``/``verify``/``rollback`` refuse: only the
+    executor worker changes a target (PRP-17 D5).
+    """
+
+    def __init__(
+        self,
+        action_kind: str,
+        connectors: dict[str, WriteConnector],
+        modes: GatewayModeLookup | None,
+    ) -> None:
+        self._kind = action_kind
+        self._connectors = connectors
+        self._modes = modes
+        default_name = connector_name_for(action_kind)
+        if default_name is None or default_name not in connectors:
+            default_name = sorted(connectors)[0]
+        self._default = connectors[default_name]
+
+    @property
+    def manifest(self) -> ConnectorManifest:
+        return self._default.manifest
+
+    @property
+    def advisory(self) -> bool:
+        return False
+
+    async def _require_manage(self, connector: WriteConnector, request: WriteRequest) -> None:
+        if self._modes is None:
+            raise DependencyTransientError(
+                "gateway registry is not configured", reason="gateway_plane_unconfigured"
+            )
+        canonical_id = request.target.canonical_id
+        await require_manage(
+            self._modes, canonical_id.split(":", 2)[1], _gateway_id(connector, canonical_id)
+        )
+
+    async def dry_run(self, request: WriteRequest) -> DryRunResult:
+        name = connector_name_for(self._kind, request.target.entity_type)
+        connector = None if name is None else self._connectors.get(name)
+        if name is None or connector is None:
+            raise CapabilityUnavailableError(
+                "write_connector_unsupported_target",
+                "no write connector is registered for this target kind",
+            )
+        if name == APIM_GATEWAY_CONNECTOR:
+            check = getattr(connector, "check_action", None)
+            if callable(check):
+                check(self._kind, request)
+            if self._kind != MODE_CHANGE_KIND:
+                await self._require_manage(connector, request)
+        return await connector.dry_run(request)
+
+    # The write path is refused outright (NoReturn satisfies the WriteConnector signatures
+    # without this module naming the apply-path result types).
+    async def apply(self, request: WriteRequest) -> NoReturn:
+        raise _never_executes()
+
+    async def verify(self, request: WriteRequest) -> NoReturn:
+        raise _never_executes()
+
+    async def rollback(self, applied: object) -> NoReturn:
+        raise _never_executes()
+
+
 _REQUIRED: Final[dict[str, type]] = {
     "action_service": ActionService,
     "intent_store": IntentStore,
@@ -85,6 +210,7 @@ class ActionPlane:
     settings: ActionApiSettings
     clock: Clock
     reviewer_directory: object | None = None
+    gateway_modes: GatewayModeLookup | None = None
 
     def now(self) -> datetime:
         at = self.clock()
@@ -95,8 +221,19 @@ class ActionPlane:
         return at.astimezone(UTC)
 
     def connector_for(self, action_kind: str) -> WriteConnector | None:
-        """The write connector for ``action_kind``; ``None`` means the intent is advisory."""
-        return resolve_write_target(self.write_targets, action_kind)
+        """The write connector for ``action_kind``; ``None`` means the intent is advisory.
+
+        A single non-APIM candidate is returned as is. When the APIM gateway connector is a
+        candidate, or several connectors share the kind (``model_deployment_swap`` on Foundry
+        and on an ``apim_backend``), a planning-only view routes ``dry_run`` by target kind and
+        refuses plans against a gateway in observe mode (``gateway_observe_mode``).
+        """
+        connectors = resolve_write_targets(self.write_targets, action_kind)
+        if not connectors:
+            return None
+        if len(connectors) == 1 and APIM_GATEWAY_CONNECTOR not in connectors:
+            return next(iter(connectors.values()))
+        return _PlanningConnector(action_kind, connectors, self.gateway_modes)
 
     def requires_approval(self, action_kind: str) -> bool:
         return self.settings.requires_approval(action_kind)
@@ -135,7 +272,15 @@ def get_action_plane(request: Request) -> ActionPlane:
         settings=settings,
         clock=clock,
         reviewer_directory=getattr(state, "reviewer_directory", None),
+        gateway_modes=_gateway_modes(state),
     )
+
+
+def _gateway_modes(state: Any) -> GatewayModeLookup | None:
+    """The gateway registry store when one is configured (read by duck type: no import of the
+    gateway API package, which itself drafts through this plane)."""
+    store = getattr(getattr(state, GATEWAY_PLANE_STATE, None), "store", None)
+    return store if isinstance(store, GatewayModeLookup) else None
 
 
 def configure_action_plane(

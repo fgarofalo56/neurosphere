@@ -1,0 +1,8 @@
+<fragment>
+	<return-response>
+		<set-status code="503" reason="Service Unavailable" />
+		<set-header name="Retry-After" exists-action="override">
+			<value>60</value>
+		</set-header>
+	</return-response>
+</fragment>

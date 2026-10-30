@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import get_args
 
 import pytest
 from neurosphere_connector import build_manifest, manifest_issues, validate_manifest
+from neurosphere_connector.manifest import WriteAction
 from neurosphere_contracts.connectors.v1.connector_manifest import (
     ConnectorManifest,
     Freshness,
     Granularity,
+    WriteSupport,
 )
 from neurosphere_core.errors import InvalidSchemaError
 
@@ -76,6 +79,35 @@ def test_builder_write_actions_derive_capability_and_not_advisory() -> None:
     assert m.advisory is False
     assert m.write_support.supported
     assert "action_execution" in m.capabilities
+
+
+def test_write_action_literal_matches_the_contract_enum() -> None:
+    # The SDK literal mirrors write_support.actions; drift would let the builder accept a kind
+    # the contract rejects (or hide one it admits).
+    contract = WriteSupport.model_fields["actions"].annotation
+    assert contract is not None
+    (item,) = get_args(contract)
+    assert get_args(WriteAction) == get_args(item)
+
+
+def test_builder_accepts_the_gateway_action_kinds() -> None:
+    kinds: list[WriteAction] = [
+        "budget_cap_change",
+        "grant_publish",
+        "grant_unpublish",
+        "mcp_server_publish",
+        "mcp_server_unpublish",
+        "gateway_mode_change",
+    ]
+    m = build_manifest(
+        name="demo",
+        version="1.0.0",
+        capabilities=["health_reporting"],
+        supported_clouds=["commercial"],
+        granularity=GRAIN,
+        write_actions=kinds,
+    )
+    assert m.write_support.actions == kinds
 
 
 def test_builder_rejects_invalid_combination() -> None:

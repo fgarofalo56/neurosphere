@@ -6,6 +6,7 @@ requires-python = ">=3.12, <3.14"
 members = [
     "neurosphere-api",
     "neurosphere-connector",
+    "neurosphere-connector-apim-gateway",
     "neurosphere-connector-azure-billing",
     "neurosphere-connector-azure-monitor",
     "neurosphere-connector-foundry",
@@ -1212,6 +1213,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "neurosphere-connector-apim-gateway"
+version = "0.0.0"
+source = { editable = "connectors/reference/apim-gateway" }
+dependencies = [
+    { name = "httpx" },
+    { name = "neurosphere-connector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28,<0.29" },
+    { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+]
+
+[[package]]
 name = "neurosphere-connector-azure-billing"
 version = "0.0.0"
 source = { editable = "connectors/reference/azure-billing" }
@@ -1372,6 +1388,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "httpx" },
     { name = "neurosphere-connector" },
+    { name = "neurosphere-connector-apim-gateway" },
     { name = "neurosphere-connector-azure-monitor" },
     { name = "neurosphere-core" },
     { name = "pydantic" },
@@ -1382,6 +1399,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.9,<4" },
     { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-connector-apim-gateway", editable = "connectors/reference/apim-gateway" },
     { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.14,<3" },
@@ -1401,6 +1419,7 @@ dev = [
     { name = "hypothesis" },
     { name = "neurosphere-api" },
     { name = "neurosphere-connector" },
+    { name = "neurosphere-connector-apim-gateway" },
     { name = "neurosphere-connector-azure-billing" },
     { name = "neurosphere-connector-azure-monitor" },
     { name = "neurosphere-connector-foundry" },
@@ -1428,6 +1447,7 @@ dev = [
     { name = "hypothesis", specifier = ">=6.168,<7" },
     { name = "neurosphere-api", editable = "services/api" },
     { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-connector-apim-gateway", editable = "connectors/reference/apim-gateway" },
     { name = "neurosphere-connector-azure-billing", editable = "connectors/reference/azure-billing" },
     { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
     { name = "neurosphere-connector-foundry", editable = "connectors/reference/foundry" },

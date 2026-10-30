@@ -139,5 +139,11 @@ export interface WriteSupport {
     | "routing_update"
     | "agent_disable"
     | "agent_enable"
+    | "budget_cap_change"
+    | "grant_publish"
+    | "grant_unpublish"
+    | "mcp_server_publish"
+    | "mcp_server_unpublish"
+    | "gateway_mode_change"
   )[];
 }

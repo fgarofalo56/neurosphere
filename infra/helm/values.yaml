@@ -108,3 +108,11 @@ frontend:
   resources:
     requests: { cpu: 50m, memory: 64Mi }
     limits: { cpu: 250m, memory: 128Mi }
+
+# PRP-34: publish NeuroSphere's own MCP server through a customer API Management gateway.
+# Off by default. When enabled, the API's NS_MCP_RESOURCE_SERVER_URL becomes
+# https://<gatewayHost>/mcp so the RFC 9728 resource identifier equals the gateway URL.
+mcp:
+  apimFront:
+    enabled: false
+    gatewayHost: "" # required when enabled; host only, no scheme (the gateway host of the created APIM)

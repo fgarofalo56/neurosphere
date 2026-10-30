@@ -108,6 +108,15 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         _EMERGENCY,
     ),
     "/actions/propose": (*_SHELL, _EMERGENCY),
+    # PRP-34 item 8: the gateways page lists the domain's registered gateways; the catalog
+    # publication page lists Grants and MCP servers. Neither is seeded in the stack, so no
+    # ``non_empty`` is asserted.
+    "/catalog/publication": (
+        *_SHELL,
+        ApiCall("/api/v1/catalog/entities", q(entity_type="grant")),
+        ApiCall("/api/v1/catalog/entities", q(entity_type="mcp_server")),
+    ),
+    "/gateways": (*_SHELL, ApiCall("/api/v1/gateways/domains/{domain}/gateways")),
     "/dashboards/cost": _dashboard("cost"),
     "/dashboards/coverage": _dashboard("coverage"),
     "/dashboards/latency": _dashboard("latency"),

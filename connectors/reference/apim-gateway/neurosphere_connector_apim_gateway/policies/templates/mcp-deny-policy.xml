@@ -1,0 +1,19 @@
+<policies>
+	<inbound>
+		<return-response>
+			<set-status code="503" reason="Service Unavailable" />
+			<set-header name="Retry-After" exists-action="override">
+				<value>60</value>
+			</set-header>
+		</return-response>
+	</inbound>
+	<backend>
+		<base />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

@@ -96,18 +96,20 @@ function meDomainItems(): readonly Record<string, unknown>[] {
     domain_id: string,
     display_name: string,
     display_name_source: "catalog" | "derived",
+    // PRP-34 item 8: the populated Finance domain also lets the caller draft actions.
+    permissions: readonly string[] = ["data.read"],
   ): Record<string, unknown> => ({
     domain_id,
     display_name,
     display_name_source,
     cloud: "commercial",
-    permissions: ["data.read"],
+    permissions,
   });
   // Sorted by display_name like the real API, so "Finance" (the populated domain) is first and a
   // first visit lands on data. The analytics-down fixture is named to sort after it.
   return [
     entry(DOMAIN_ANALYTICS_DOWN, "Telemetry (batch down)", "catalog"),
-    entry(DOMAIN_OK, "Finance", "catalog"),
+    entry(DOMAIN_OK, "Finance", "catalog", ["data.read", "action.propose"]),
     entry(DOMAIN_VIEWER, "Viewer Only", "derived"),
   ].sort((a, b) => String(a["display_name"]).localeCompare(String(b["display_name"])));
 }
@@ -1508,6 +1510,7 @@ function seedIntents(): ActionsState["intents"] {
         state: "awaiting_approval",
       }),
     ],
+    [INTENT_PLAN, DOMAIN_OK, makeView(planIntent())],
     [
       INTENT_VIEWER,
       DOMAIN_VIEWER,
@@ -2046,6 +2049,358 @@ function e2eHandler(ctx: ActionsContext, rest: string): void {
   send(ctx.res, 404, { error: "not found" }, ctx.cors);
 }
 
+// ---- PRP-34 item 8 fixtures: /api/v1/gateways/** (mode switch) and the catalog Grant and
+// McpServer publication routes. The routes only DRAFT action intents into the same actions state
+// the PRP-17 routes use, so validate, confirmation and the approval link work end to end. Every
+// identity is SYNTHETIC. The mock imitates only the outcomes the real API owns: DOMAIN_VIEWER can
+// read but every draft answers a 403 problem+json, an observe-mode gateway refuses publication
+// with `gateway_observe_mode`, and an applying gateway refuses a mode change with
+// `gateway_applying`.
+const GATEWAYS_PATH = /^\/api\/v1\/gateways\/(.*)$/;
+const CATALOG_PUBLICATION_PATH = /^\/api\/v1\/catalog\/(.*)$/;
+export const GATEWAY_OBSERVE = `gw-${"1".repeat(32)}`;
+export const GATEWAY_MANAGE = `gw-${"2".repeat(32)}`;
+export const GATEWAY_GOVERNMENT = `gw-${"3".repeat(32)}`;
+export const GATEWAY_BUSY = `gw-${"4".repeat(32)}`;
+export const GATEWAY_VIEWER = `gw-${"5".repeat(32)}`;
+export const GRANT_ID = "commercial:e2e:catalog:grant:finance-analyst";
+export const GRANT_VIEWER_ID = "commercial:e2e:catalog:grant:viewer-only";
+export const MCP_PUBLISHED = "commercial:e2e:catalog:mcp_server:finance-tools";
+export const MCP_DENIED = "commercial:e2e:catalog:mcp_server:legacy-tools";
+export const MCP_UNPUBLISHED = "commercial:e2e:catalog:mcp_server:new-tools";
+/** An awaiting-confirmation APIM publish intent whose diff carries the plan digest and steps. */
+export const INTENT_PLAN = "aaaaaaaa-0000-4000-8000-000000000007";
+export const PLAN_DIGEST = "9f2c1ab7d3e84f60a5b1c2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f6071";
+const PREFLIGHT_ACTIONS = [
+  "Microsoft.ApiManagement/service/apis/write",
+  "Microsoft.ApiManagement/service/backends/write",
+  "Microsoft.ApiManagement/service/products/write",
+] as const;
+
+interface MockGateway {
+  id: string;
+  domain: string;
+  body: Record<string, unknown>;
+}
+
+function mockGateway(
+  id: string,
+  domain: string,
+  name: string,
+  over: Record<string, unknown> = {},
+): MockGateway {
+  return {
+    id,
+    domain,
+    body: {
+      id,
+      customer_id: "e2e",
+      domain_id: domain,
+      cloud: "commercial",
+      arm_resource_id: `/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-e2e/providers/Microsoft.ApiManagement/service/${name}`,
+      name,
+      tier: "standard_v2",
+      created_at: PAST,
+      updated_at: RECENT,
+      registered_by: "p-admin",
+      capabilities: {},
+      diagnostics: {},
+      last_sync_status: "ok",
+      mode: "observe",
+      mode_changed_at: null,
+      mode_changed_by: null,
+      mode_revision: 0,
+      preflight: null,
+      ...over,
+    },
+  };
+}
+
+function seedGateways(): MockGateway[] {
+  return [
+    mockGateway(GATEWAY_OBSERVE, DOMAIN_OK, "apim-observe", {
+      preflight: {
+        passed: false,
+        checked_at: RECENT,
+        required: PREFLIGHT_ACTIONS,
+        missing: ["Microsoft.ApiManagement/service/backends/write"],
+      },
+    }),
+    mockGateway(GATEWAY_MANAGE, DOMAIN_OK, "apim-manage", {
+      mode: "manage",
+      mode_changed_at: RECENT,
+      mode_changed_by: "p-maker",
+      mode_revision: 3,
+      preflight: { passed: true, checked_at: RECENT, required: PREFLIGHT_ACTIONS, missing: [] },
+    }),
+    mockGateway(GATEWAY_GOVERNMENT, DOMAIN_OK, "apim-gov", { cloud: "government" }),
+    mockGateway(GATEWAY_BUSY, DOMAIN_OK, "apim-busy"),
+    mockGateway(GATEWAY_VIEWER, DOMAIN_VIEWER, "apim-viewer"),
+  ];
+}
+
+function planIntent(): MockIntent {
+  return withConfirmation(
+    makeIntent(INTENT_PLAN, {
+      action_kind: "grant_publish",
+      state: "validated",
+      target: { canonical_id: GRANT_ID, entity_type: "grant" },
+      target_version: "unpublished",
+      proposed_diff: {
+        format: "json_patch",
+        operations: [
+          { op: "test", path: "/plan_digest", value: PLAN_DIGEST },
+          {
+            op: "add",
+            path: "/resources/products~1finance-analyst",
+            value: { state: "published" },
+          },
+          {
+            op: "add",
+            path: "/resources/products~1finance-analyst~1apiLinks~1finance-api",
+            value: {},
+          },
+        ],
+      },
+    }),
+    minutesFromNow(60),
+  );
+}
+
+function draftedView(
+  state: ActionsState,
+  domain: string,
+  key: string,
+  over: Partial<MockIntent>,
+): { view: MockActionView; created: boolean } {
+  const replay = state.drafts.get(key);
+  const existing = replay === undefined ? undefined : state.intents.get(replay);
+  if (existing !== undefined) return { view: existing.view, created: false };
+  const id = randomUUID();
+  const view = makeView(makeIntent(id, { idempotency_key: key, ...over }));
+  state.intents.set(id, { domain, view });
+  state.drafts.set(key, id);
+  return { view, created: true };
+}
+
+function mockMcpStatus(id: string): Record<string, unknown> | undefined {
+  const base = {
+    server_id: id,
+    api_path: null,
+    created_resources: [],
+    shared_resources: [],
+    diagnostics: [],
+  };
+  if (id === MCP_PUBLISHED) {
+    return {
+      ...base,
+      state: "published",
+      gateway_id: GATEWAY_MANAGE,
+      api_path: "finance-tools",
+      next_publish_stage: "change",
+      next_unpublish_stage: "deny",
+    };
+  }
+  if (id === MCP_DENIED) {
+    return {
+      ...base,
+      state: "denied",
+      gateway_id: GATEWAY_MANAGE,
+      api_path: "legacy-tools",
+      next_publish_stage: "publish",
+      next_unpublish_stage: "remove",
+    };
+  }
+  if (id === MCP_UNPUBLISHED) {
+    return {
+      ...base,
+      state: "unpublished",
+      gateway_id: null,
+      next_publish_stage: "publish",
+      next_unpublish_stage: null,
+    };
+  }
+  return undefined;
+}
+
+function mockMcpServer(id: string, name: string): Record<string, unknown> {
+  return {
+    id,
+    entity_type: "mcp_server",
+    domain_id: DOMAIN_OK,
+    lifecycle_status: "active",
+    display_name: name,
+    url: `https://${name.toLowerCase().replaceAll(" ", "-")}.example.com/mcp`,
+    publishable: true,
+  };
+}
+
+function mockGrant(id: string, domain: string, who: string): Record<string, unknown> {
+  return {
+    id,
+    entity_type: "grant",
+    domain_id: domain,
+    lifecycle_status: "active",
+    enabled: true,
+    principal: { kind: "user", object_id: "11111111-1111-4111-8111-111111111111", display: who },
+    target: { kind: "model_api", ref: "commercial:e2e:foundry:service:support-gpt" },
+  };
+}
+
+function gatewaysHandler(ctx: ActionsContext, rest: string): void {
+  const match = /^domains\/([^/]+)\/gateways(?:\/([^/]+)\/mode)?\/?$/.exec(rest);
+  if (match === null) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  const domain = decodeURIComponent(match[1] ?? "");
+  const gatewayId = match[2];
+  const write = ctx.req.method === "POST";
+  if (!admitDomain(ctx, domain, write)) return;
+  const gateways = seedGateways().filter((g) => g.domain === domain);
+  if (gatewayId === undefined) {
+    send(ctx.res, 200, { items: gateways.map((g) => g.body), next_cursor: null }, ctx.cors);
+    return;
+  }
+  const gateway = gateways.find((g) => g.id === gatewayId);
+  if (!write || gateway === undefined) {
+    send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    return;
+  }
+  void ctx.readBody().then((raw) => {
+    const body = parseJson(raw);
+    const mode = body?.["mode"];
+    const key = body?.["idempotency_key"];
+    if ((mode !== "observe" && mode !== "manage") || typeof key !== "string") {
+      sendProblem(ctx, 422, "invalid_schema", undefined, "invalid mode request");
+      return;
+    }
+    if (mode === gateway.body["mode"]) {
+      sendProblem(ctx, 422, "invalid_schema", "gateway_mode_unchanged", "already in that mode");
+      return;
+    }
+    if (mode === "manage" && gateway.body["cloud"] === "government") {
+      sendProblem(
+        ctx,
+        400,
+        "capability_unavailable",
+        "gateway_manage_unavailable",
+        "APIM v2 tiers are unverified in Azure Government",
+      );
+      return;
+    }
+    if (gateway.id === GATEWAY_BUSY) {
+      sendProblem(
+        ctx,
+        400,
+        "capability_unavailable",
+        "gateway_applying",
+        "an APIM gateway action is executing in this domain",
+      );
+      return;
+    }
+    const { view, created } = draftedView(ctx.state, domain, key, {
+      action_kind: "gateway_mode_change",
+      target: { canonical_id: gateway.id, entity_type: "apim_gateway_mode" },
+      target_version: `mode-revision-${String(gateway.body["mode_revision"])}`,
+      proposed_diff: {
+        format: "json_patch",
+        operations: [{ op: "replace", path: "/mode", value: mode }],
+      },
+      channel: "button",
+    });
+    send(ctx.res, created ? 201 : 200, view, ctx.cors);
+  });
+}
+
+/** Returns false when the path is not a publication route (the caller then falls through). */
+function catalogPublicationHandler(ctx: ActionsContext, rest: string): boolean {
+  const status = /^mcp-servers\/([^/]+)\/publication$/.exec(rest);
+  const act = /^(grants|mcp-servers)\/([^/]+)\/(publish|unpublish)$/.exec(rest);
+  const isList = ctx.req.method === "GET" && rest === "entities";
+  const isStatus = ctx.req.method === "GET" && status !== null;
+  const isAct = ctx.req.method === "POST" && act !== null;
+  if (!isList && !isStatus && !isAct) return false;
+  if (roleFromAuthorization(ctx.req.headers.authorization) === undefined) {
+    send(ctx.res, 401, { error: "missing or unrecognised token" }, ctx.cors);
+    return true;
+  }
+  if (isList) {
+    const type = ctx.url.searchParams.get("entity_type");
+    const items =
+      type === "grant"
+        ? [
+            mockGrant(GRANT_ID, DOMAIN_OK, "Finance analysts"),
+            mockGrant(GRANT_VIEWER_ID, DOMAIN_VIEWER, "Viewers"),
+          ]
+        : type === "mcp_server"
+          ? [
+              mockMcpServer(MCP_PUBLISHED, "Finance tools"),
+              mockMcpServer(MCP_DENIED, "Legacy tools"),
+              mockMcpServer(MCP_UNPUBLISHED, "New tools"),
+            ]
+          : [];
+    send(ctx.res, 200, { items, next_cursor: null }, ctx.cors);
+    return true;
+  }
+  if (isStatus) {
+    const body = mockMcpStatus(decodeURIComponent(status[1] ?? ""));
+    if (body === undefined) send(ctx.res, 404, { error: "not found" }, ctx.cors);
+    else send(ctx.res, 200, body, ctx.cors);
+    return true;
+  }
+  if (act === null) return false;
+  const isGrant = act[1] === "grants";
+  const entityId = decodeURIComponent(act[2] ?? "");
+  const verb = act[3] ?? "publish";
+  const domain = entityId === GRANT_VIEWER_ID ? DOMAIN_VIEWER : DOMAIN_OK;
+  if (!admitDomain(ctx, domain, true)) return true;
+  void ctx.readBody().then((raw) => {
+    const body = parseJson(raw);
+    const key = body?.["idempotency_key"];
+    if (typeof key !== "string") {
+      sendProblem(ctx, 422, "invalid_schema", undefined, "invalid request");
+      return;
+    }
+    if (body?.["gateway_id"] === GATEWAY_OBSERVE) {
+      sendProblem(
+        ctx,
+        400,
+        "capability_unavailable",
+        "gateway_observe_mode",
+        "the gateway is in observe mode",
+      );
+      return;
+    }
+    const mcp = isGrant ? undefined : mockMcpStatus(entityId);
+    if (!isGrant && mcp === undefined) {
+      send(ctx.res, 404, { error: "not found" }, ctx.cors);
+      return;
+    }
+    const stage = mcp?.[verb === "publish" ? "next_publish_stage" : "next_unpublish_stage"];
+    if (!isGrant && stage === null) {
+      sendProblem(ctx, 422, "invalid_schema", "no_next_stage", "there is no such stage");
+      return;
+    }
+    const { view, created } = draftedView(ctx.state, domain, key, {
+      action_kind: isGrant ? `grant_${verb}` : `mcp_server_${verb}`,
+      target: { canonical_id: entityId, entity_type: isGrant ? "grant" : "mcp_server" },
+      target_version: isGrant ? "unpublished" : `mcp-${String(mcp?.["state"])}`,
+      proposed_diff: {
+        format: "json_patch",
+        operations: [{ op: verb === "publish" ? "add" : "remove", path: "/publication" }],
+      },
+      channel: "button",
+    });
+    if (isGrant) {
+      send(ctx.res, created ? 201 : 200, view, ctx.cors);
+      return;
+    }
+    send(ctx.res, 201, { action: view, stage, state: mcp?.["state"], diagnostics: [] }, ctx.cors);
+  });
+  return true;
+}
+
 function send(
   res: ServerResponse,
   status: number,
@@ -2124,6 +2479,18 @@ export function createMockApi(options: MockApiOptions): Server {
     const review = REVIEW_PATH.exec(url.pathname);
     if (review !== null) {
       reviewHandler(actionsCtx, review[1] ?? "");
+      return;
+    }
+    const gateways = GATEWAYS_PATH.exec(url.pathname);
+    if (gateways !== null) {
+      gatewaysHandler(actionsCtx, gateways[1] ?? "");
+      return;
+    }
+    const catalogPublication = CATALOG_PUBLICATION_PATH.exec(url.pathname);
+    if (
+      catalogPublication !== null &&
+      catalogPublicationHandler(actionsCtx, catalogPublication[1] ?? "")
+    ) {
       return;
     }
     const e2e = E2E_PATH.exec(url.pathname);

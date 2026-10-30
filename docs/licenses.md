@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 141 packages
+## Python (uv.lock) - 142 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -85,6 +85,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | mypy-extensions | 1.1.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | neurosphere-api | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector | 0.0.0 | first-party | first-party | workspace member |
+| neurosphere-connector-apim-gateway | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-azure-billing | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-azure-monitor | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-foundry | 0.0.0 | first-party | first-party | workspace member |

@@ -453,6 +453,16 @@ def test_all_catalog_routes_declare_permissions() -> None:
         (f"{PREFIX}/recertifications", ("GET",)): read,
         (f"{PREFIX}/reconcile/stale-agents/dry-run", ("POST",)): curate,
         (f"{PREFIX}/reconcile/stale-agents/confirm", ("POST",)): curate,
+        (f"{PREFIX}/grants/{{entity_id:path}}/publish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/grants/{{entity_id:path}}/unpublish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/grants/{{entity_id:path}}/publication", ("POST",)): curate,
+        # PRP-34 item 6: MCP server publication drafts (alias of /api/v1/catalog/mcp-servers).
+        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publication", ("GET",)): read,
+        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/unpublish", ("POST",)): ("action.propose",),
+        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publication-record", ("POST",)): (
+            "action.propose",
+        ),
     }
 
 
@@ -462,7 +472,13 @@ def test_register_hook_uses_the_catalog_prefix() -> None:
     registry = RouterRegistry()
     register(registry)
     # The successor prefix and its deprecated alias PREFIX (PRP-29 item 4).
-    assert registry.prefixes == ("/api/v1/catalog", PREFIX)
+    # Plus the MCP publication router (PRP-34 item 6): its own successor prefix and alias.
+    assert registry.prefixes == (
+        "/api/v1/catalog",
+        PREFIX,
+        "/api/v1/catalog/mcp-servers",
+        f"{PREFIX}/mcp-servers",
+    )
 
 
 def test_budget_clamp_lowers_but_never_raises() -> None:

@@ -55,9 +55,11 @@ MODULE_MOVES: Final = (
     (PLAN_ALIAS, PLAN_PREFIX),
 )
 
-#: Moved operations (method + path): 14 catalog, 4 curation, 2 audit, 3 ingest, 1 scan, 1 plan;
-#: 25 over 23 distinct paths (``/entities`` and ``/entities/{id}`` carry two methods each).
-EXPECTED_OPERATION_COUNT: Final = 25
+#: Moved operations (method + path): 21 catalog (14 plus the 3 grant publication routes of PRP-34
+#: item 5 and the 4 MCP server publication routes of item 6), 4 curation, 2 audit, 3 ingest,
+#: 1 scan, 1 plan; 32 over 30 distinct paths (``/entities`` and ``/entities/{id}`` carry two
+#: methods each).
+EXPECTED_OPERATION_COUNT: Final = 32
 
 #: Sample values for path parameters, so both forms hit the same concrete resource.
 _PARAMS: Final = {

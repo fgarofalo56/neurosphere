@@ -79,6 +79,17 @@ export const STRINGS = {
     missingHash: "No confirmation is available. Re-validate the change.",
     hashLabel: "Confirmation hash",
   },
+  plan: {
+    title: "Gateway plan",
+    digest: "Plan digest",
+    digestHelp:
+      "The first characters of the reviewed plan digest; apply refuses if the plan moves.",
+    notReported:
+      "Not reported yet: the API does not say whether this step creates the resource or finds it.",
+    create: "create",
+    found: "found",
+    noDigest: "No plan digest is bound to this change yet.",
+  },
   errors: {
     title: "The action was not completed",
     staleExpired:

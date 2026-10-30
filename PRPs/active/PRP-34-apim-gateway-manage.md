@@ -1,10 +1,12 @@
 ---
 name: prp-34-apim-gateway-manage
-status: backlog
+status: active
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
+started: 2026-10-29
+branch: prp-34-apim-gateway-manage
 model: opus
 phase: 6
 ns: NS-04, NS-06, NS-07, NS-08, NS-09
@@ -217,16 +219,26 @@ Full suite runs in CI. Live gate reported OPEN when it did not run.
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | todo | | opus | | |
-| 2 | todo | | opus | | |
-| 3 | todo | | opus | | |
-| 4 | todo | | opus | | |
-| 5 | todo | | sonnet | | |
-| 6 | todo | | opus | | |
-| 7 | todo | | sonnet | | |
-| 8 | todo | | sonnet | | |
-| 9 | todo | | sonnet | | |
+| 1 | merged | worktree-agent-a038917ecafd1995d | opus | merge ed25498; reviewed (1 rework: lost-response restore); connector+infra pytest 154 passed 1 xfailed (enum, item 1b), ruff, pyright | 2026-10-29 |
+| 1b | merged | worktree-agent-a8c863d2a544d9dfd | opus | ff to 91af346; reviewed APPROVE (no rework); generate.py --check OK, sdk+apim+foundry-actions pytest 212 passed, licences PASS, pyright/ruff clean | 2026-10-29 |
+| 2 | merged | worktree-agent-ab6806e01efffe7f0 | opus | ff to 1f1802b; reviewed APPROVE after 1 rework (permission amended to action.propose, 2 stale tests); 807 pytest passed, openapi drift OK, ruff, pyright. Scope beyond declared files, recorded: apim-gateway connector files (mode handler, arm permissions GET), D5 test, 2 stale tests | 2026-10-29 |
+| 3 | merged | worktree-agent-a08e93812d526a67c | opus | merge after 0c0548e; reviewed (1 rework: canary judged within priority group, mode= in grant tests), blockers confirmed fixed by Haiku; worker wiring + 4 item-2 hand-offs done. Merged-head full run 2597 passed (incl. tests/security, tests/unit/infra), ruff, pyright. Unverified live: GatewayLogs BackendId (member vs pool; fails closed either way), weight bound 0..1000 | 2026-10-29 |
+| 4 | merged | worktree-agent-ab474c9c3161f4138 | opus | ff to 0ead33d; reviewed APPROVE (no rework); connector+azure-monitor pytest 183 passed, ruff, pyright. OPEN: cost-center attribution in the PRP-33 observation is NOT met (customMetrics not queried, CostRecord has no tags); emit side only. Default translator registration deferred to wiring commit after items 3, 5, 6 | 2026-10-29 |
+| 5 | merged | worktree-agent-a53043ceba434b959 | sonnet | merge b53f88e; reviewed APPROVE (no rework); connector+catalog_api+actions_api+authz+openapi drift 318 passed; route inventory test fixed inline (catalog+catalog_api 91 passed). OPEN for wiring step: provenance record endpoint has no caller (criterion not met end to end); `grant` entity type shared with item 4 needs a dispatcher routing by action kind; `app.state.apim_apply_records` unwired in prod | 2026-10-29 |
+| 6 | merged | worktree-agent-a8a966c67c4f3e017 | opus | merge 0c0548e; reviewed APPROVE (no rework); deny-first is a separate intent (unpublish needs 2 approvals); merged-head full run 2597 passed. Unverified live: `type: mcp` API shape at 2024-05-01, MCP API with no backendId. OPEN for wiring: record endpoint has no caller | 2026-10-29 |
+| 7 | merged | worktree-agent-a99aacda7f4e6981f | sonnet | ff to ee4c771; reviewed (1 rework: diag dependsOn, own-server keeps Authorization), confirmed; infra pytest 62 passed, ruff, bicep build/lint | 2026-10-29 |
+| 10 | merged | worktree-agent-a090c1d8e645517a3 | opus | merge 607125f; reviewed APPROVE (no rework); reviewer run 1902 passed; implementer full list 2645 passed; ruff, pyright. Dispatcher, post-success recorder (new `neurosphere_workers/publication/` package, outside declared files, D5-compliant), unpublish ownership check, MCP plan-digest defect fixed. **NOT WIRED into a deployed worker or the API image** (`runtime/factories.py` registers no APIM connector); docstrings and README now say so. Follow-ups: grant stale-intent replay guard, over-broad `action_kind_mismatch` reason, unaudited fetch failure, explicit customer check in recorder | 2026-10-29 |
+| 8 | merged | worktree-agent-a1ad89c7c37fac8c1 | sonnet | merge d32476e; reviewed APPROVE (no rework); Playwright gateways 9 passed, vitest 133 passed, tsc+eslint clean. **Criterion partly met**: dialog shows digest prefix and diff resources; per-step create/found is NOT reported by the API (UI says so, `steps` prop ready). Created minimal `/gateways` and `/catalog/publication` pages (gateway page was descoped to #147). Full `pnpm test` has 1-3 random 5s timeouts in tests/edge/render-config.test.ts (passes alone), CI to judge | 2026-10-29 |
+| 9 | merged | worktree-agent-a77aae298a6efd344 | sonnet | ff to 98aac51; reviewed APPROVE (no rework); tests/unit/gates 347 passed, refusal exit 2 verified for unset and 0, ruff, pyright. **G17 manage OPEN, never run**; MCP echo backend operator-supplied (PRP said provisioned); API paths/diff shapes unverified; README states it. Follow-ups: refuse pre-existing resource group, persist rg name + clear state on teardown, require distinct approver token | 2026-10-29 |
 
 Waves: 1 = items 1 and 7 in parallel; 2 = item 2 (after 1); 3 = items 3, 4, 5, 6 in parallel (after 2; 4 only needs 1); 4 = item 8 (after 2, 5, 6); 5 = item 9 (after 1-7). Models: items 1-4 and 6 opus; 5, 7, 8, 9 sonnet; verify passes haiku. Review: one independent pass on every item (`review: required`).
+
+### Plan deltas (user-approved 2026-10-29)
+- Item 1b (new, opus, review required): extend the connector-manifest contract `write_support.actions` enum in `packages/contracts` (regenerate models) and the SDK `WriteAction` type to admit `budget_cap_change`, `grant_publish`, `grant_unpublish`, `mcp_server_publish`, `mcp_server_unpublish`, and regenerate `docs/licenses.md` and `docs/adr/0002-stack-pins.md` for the new workspace member. Remove the strict xfail in item 1's manifest test. Sequenced after item 1, before item 2.
+- Decision #9 amended (user, 2026-10-29): `deploy.write` does not exist and the PRP-06 role set is closed. The observe/manage mode switch requires `action.propose` scoped to the gateway domain; maker-checker (a different principal with `action.approve`/`action.execute`) and the Azure-write preflight are the safeguards. Item 2 also updates two tests outside its files that assert the old one-row `ACTION_CONNECTORS` table (`test_planes_builder.py`, `test_review_completion.py`).
+- Item 2 review hand-offs (non-blocking, owned by item 3 worker wiring unless noted): when wiring the worker, assert `stored.domain_id == registration.domain_id` for every APIM kind (the generic intents route can name a gateway in another domain of the same customer; `WriteRequest` carries no domain); make `ApimGatewayConnector(mode=...)` required or refuse when absent (today `mode=None` skips the observe guard, fail-open); `PlanApplier.reverse` does not append `applying`, so `running()` misses a rollback; store `_put`/Cosmos create/replace should validate before write. Follow-up issues at close-out: sync audit state hard-codes `"mode": "observe"`; idempotent replay after the mode moved returns `gateway_mode_unchanged`.
+- Open hand-off to item 3: the worker composition (durable `ApplyRecordStore`, `GatewayModeHandler`, observe guard) is not wired by item 2, and the worker `resolve_connector` still maps by action kind only, so `apim_backend` swaps would reach Foundry. Item 3 owns that wiring (`services/workers/.../action_executor/`).
+- Item 10 (new, opus, review required; wiring after wave 3): register the default translators (BackendSwap, BudgetCap, GrantPublication, McpServer) with a dispatcher for the shared `grant` entity type (cap vs publication, which have non-overlapping diff grammars); call the Grant and McpServer publication-record endpoints after a succeeded, verified apply (post-success caller outside the executor phases); wire `app.state.apim_apply_records` for the API in production composition; item 5 review follow-ups (unpublish `created`-only list checked against the apply record in the connector `dry_run`; tie stage to action kind in `_succeeded` and `_check_stage`); item 4's `preview()` before/after attribute diff surfaced in the dry-run; regenerate `openapi.json` once.
+- Item 7: the optional own-MCP-server APIM front keeps the `Authorization` header (NeuroSphere's MCP server needs the caller bearer token, `factory.py:283`); it still strips `Ocp-Apim-Subscription-Key`, `api-key`, `subscription-key`. It is therefore a separate policy from the item 6 customer-server template, which still strips `Authorization`. The byte-identity test in the item 7 criteria is replaced by a test of this policy. Env var is `NS_MCP_RESOURCE_SERVER_URL`.
 
 ## Completion note (filled at ship)

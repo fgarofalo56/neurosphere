@@ -19,6 +19,7 @@ COPY packages ./packages
 COPY services ./services
 COPY connectors/sdk-python ./connectors/sdk-python
 COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
+COPY connectors/reference/apim-gateway ./connectors/reference/apim-gateway
 RUN uv sync --frozen --no-dev --no-editable --package neurosphere-workers
 
 # python:3.12-alpine, digest observed 2026-10-18

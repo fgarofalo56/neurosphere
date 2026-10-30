@@ -45,7 +45,11 @@ GOVERNMENT_REGIONS = frozenset(
     }
 )
 
-SCANNED_SUFFIXES = {".bicep", ".bicepparam"}
+SCANNED_SUFFIXES = {
+    ".bicep",
+    ".bicepparam",
+    ".xml",
+}  # .xml: APIM policy text under modules/policies
 
 
 def find_commercial_hosts(text: str) -> list[str]:

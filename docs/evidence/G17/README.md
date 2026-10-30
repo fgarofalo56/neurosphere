@@ -50,3 +50,21 @@ model call (max_tokens 8).
 G17 stays OPEN in `docs/RESEARCH-AND-GATES.md` until an `observe-*.md` with `result: PASS` and
 `rbac: applied` is committed. `PARTIAL_OPEN`, a refusal or no run is OPEN. Evidence carries
 subscription ids as `<subscription:sha256-8>` and the gateway key only as `<key:redacted>`.
+
+## Manage side (PRP-34 item 9)
+
+`scripts/gates/g17_apim_manage_live.py` writes `manage-<UTC stamp>.{json,md}` here, and only after
+an operator-approved run that reached at least one live step. None exists: **G17 manage is OPEN**
+(not run). Every gateway change in that run is a drafted action intent executed by the worker, each
+step needs `--approve-step <name>` (or `--approve-all-steps`), the reused Loom APIM is never a
+target, and Government is OPEN. Evidence carries subscription ids as `<subscription:sha256-8>` and
+tokens only as `<token:redacted>`. `--print-echo-server` prints a stdlib header-echo MCP backend
+for the throwaway streamable-HTTP backend the credential-stripping check needs.
+
+**This script has never run, so treat it as unvalidated.** The MCP echo backend is supplied by the
+operator (`--mcp-backend-url`), not provisioned by the script as PRP-34 item 9 specifies, because the
+repo has no runnable MCP sandbox server. The API paths and diff shapes it drives (pool JSON-patch
+operations, `/catalog/grants/{id}/publish`, `/api/v1/catalog/mcp-servers/{id}/publish`, the fragment
+`test` operations) were read from the routers and connector docs, not exercised. Known follow-ups:
+refuse a pre-existing `--resource-group`, persist the resource-group name and clear the state file on
+teardown, and require a distinct approver token instead of falling back to the maker token.

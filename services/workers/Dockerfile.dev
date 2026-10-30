@@ -17,6 +17,7 @@ COPY packages ./packages
 COPY services ./services
 COPY connectors/sdk-python ./connectors/sdk-python
 COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
+COPY connectors/reference/apim-gateway ./connectors/reference/apim-gateway
 RUN uv sync --frozen --no-dev --package neurosphere-workers
 
 RUN useradd --system --create-home --uid 10001 ns

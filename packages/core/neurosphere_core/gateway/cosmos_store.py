@@ -32,6 +32,7 @@ from neurosphere_core.gateway.store import (
     encode_cursor,
     modified,
     store_unavailable,
+    validated,
 )
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE
@@ -104,6 +105,8 @@ class CosmosGatewayStore:
 
     @staticmethod
     def _body(registration: GatewayRegistration) -> dict[str, Any]:
+        # Validated before every create/replace: a model_copy can skip the model's invariants.
+        registration = validated(registration)
         body = registration.model_dump(mode="json", exclude={"etag"})
         body["doc_type"] = GATEWAY_DOC_TYPE
         body["sort_key"] = registration.sort_key()
@@ -132,6 +135,23 @@ class CosmosGatewayStore:
         if row.get("doc_type") != GATEWAY_DOC_TYPE:
             return None
         return _registration(row)
+
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None:
+        """Cross-partition point query by customer and gateway id (ids are unique per customer)."""
+        sql = (
+            "SELECT TOP 1 * FROM c WHERE c.doc_type = @doc_type"
+            " AND c.customer_id = @customer AND c.id = @id"
+        )
+        params: builtins.list[dict[str, Any]] = [
+            {"name": "@doc_type", "value": GATEWAY_DOC_TYPE},
+            {"name": "@customer", "value": customer_id},
+            {"name": "@id", "value": gateway_id},
+        ]
+        try:
+            rows = [row async for row in self._container.query_items(sql, parameters=params)]
+        except Exception as exc:
+            _raise_mapped(exc)
+        return _registration(rows[0]) if rows else None
 
     async def list(
         self,

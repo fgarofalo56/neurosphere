@@ -53,9 +53,11 @@ const ENTRIES: readonly Entry[] = [
     route: "/actions/propose",
     via: { list: "/actions", link: "a[href^='/actions/propose']" },
   },
+  { route: "/catalog/publication" },
   { route: "/dashboards/cost" },
   { route: "/dashboards/coverage" },
   { route: "/dashboards/latency" },
+  { route: "/gateways" },
   { route: "/map" },
   { route: "/map/table" },
   { route: "/mcp-admin", rows: "server-row" },
@@ -124,9 +126,7 @@ const withDomain = (route: string, domain: string): string =>
 function unexpected(answers: readonly ApiAnswer[], expected: readonly Expected[]): string[] {
   return answers
     .filter((a) => a.status >= 400)
-    .filter(
-      (a) => !expected.some((e) => e.status === a.status && a.path.startsWith(e.pathPrefix)),
-    )
+    .filter((a) => !expected.some((e) => e.status === a.status && a.path.startsWith(e.pathPrefix)))
     .map((a) => `${a.method} ${a.path} -> ${a.status}`);
 }
 

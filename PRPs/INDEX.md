@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-34-apim-gateway-manage](active/PRP-34-apim-gateway-manage.md) | P1 | 11/11 (100%) | merged 11 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
 | [prp-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 |  | - | - | ? / ? | required |
 | [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
 | [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |

@@ -45,6 +45,38 @@ param apimPublisherEmail string = ''
 @description('APIM publisher name; used only when APIM is created.')
 param apimPublisherName string = ''
 
+@description('SKU for a created APIM service. v2 tiers are refused in Azure Government (availability unverified, see government/sovereign-profile.yaml).')
+@allowed(['Developer', 'Standard', 'Premium', 'BasicV2', 'StandardV2', 'PremiumV2'])
+param apimSkuName string = 'Developer'
+
+@description('APIM scale units for a created service (capped per tier by the module).')
+@minValue(1)
+@maxValue(12)
+param apimSkuCapacity int = 1
+
+@description('Write GatewayLogs, GatewayLlmLogs and GatewayMCPLogs to the workspace. Created APIM only; a reused instance is never modified.')
+param enableApimDiagnostics bool = true
+
+@description('Publish the NeuroSphere MCP server through a created APIM instance. Off by default; ignored for a reused APIM.')
+param enableApimMcpFront bool = false
+
+@description('NeuroSphere API base URL (no trailing /mcp) the gateway forwards to. Required when enableApimMcpFront.')
+param apimMcpBackendUrl string = ''
+
+@description('Token audience (MCP app registration) the gateway accepts. Required when enableApimMcpFront.')
+param apimMcpAudience string = ''
+
+var isGovernment = environment().name == 'AzureUSGovernment'
+var isV2Sku = endsWith(apimSkuName, 'V2')
+// Deliberate deploy-time failure: looking up a missing key fails the deployment, because the
+// v2 tiers are unverified in Azure Government.
+var v2GovernmentGate = { ok: '' }
+var v2GovernmentGuard = v2GovernmentGate[(isGovernment && isV2Sku) ? 'apim_v2_tiers_unverified_in_government' : 'ok']
+
+// Deliberate deploy-time failure when the MCP front is enabled without its backend URL or audience.
+var mcpFrontGate = { ok: '' }
+var mcpFrontGuard = mcpFrontGate[(enableApimMcpFront && (empty(apimMcpBackendUrl) || empty(apimMcpAudience))) ? 'apimMcpBackendUrl_and_apimMcpAudience_required_when_enableApimMcpFront' : 'ok']
+
 var suffix = uniqueString(resourceGroup().id)
 var compact = toLower(replace(namePrefix, '-', ''))
 
@@ -122,7 +154,32 @@ module apim 'apim.bicep' = {
     reuse: reuseApim
     tags: tags
     publisherEmail: apimPublisherEmail
-    publisherName: apimPublisherName
+    // v2GovernmentGuard is '' unless a v2 tier is requested in Government, which fails the deployment.
+    publisherName: '${apimPublisherName}${v2GovernmentGuard}'
+    skuName: apimSkuName
+    skuCapacity: apimSkuCapacity
+  }
+}
+
+// Created instances only: a reused APIM is never modified.
+module apimDiagnostics 'apim-diagnostics.bicep' = if (enableApimDiagnostics && empty(reuseApim)) {
+  name: 'ns-apim-diagnostics'
+  params: {
+    apimName: '${compact}-apim-${suffix}'
+    workspaceId: logAnalytics.outputs.id
+  }
+  dependsOn: [
+    apim
+  ]
+}
+
+module apimMcpFront 'apim-mcp-front.bicep' = if (enableApimMcpFront && empty(reuseApim)) {
+  name: 'ns-apim-mcp-front'
+  params: {
+    apimName: '${compact}-apim-${suffix}'
+    backendUrl: '${apimMcpBackendUrl}${mcpFrontGuard}'
+    resourceUrl: '${apim.outputs.gatewayUrl}/mcp'
+    audience: apimMcpAudience
   }
 }
 

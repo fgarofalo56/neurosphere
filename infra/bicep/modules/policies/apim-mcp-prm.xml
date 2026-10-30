@@ -1,0 +1,15 @@
+<policies>
+    <inbound>
+        <!-- RFC 9728 protected-resource metadata: public by design, no token required. -->
+        <return-response>
+            <set-status code="200" reason="OK" />
+            <set-header name="Content-Type" exists-action="override">
+                <value>application/json</value>
+            </set-header>
+            <set-body>{"resource":"{{ns-mcp-resource-url}}","authorization_servers":["{{ns-mcp-authorization-server}}"],"bearer_methods_supported":["header"]}</set-body>
+        </return-response>
+    </inbound>
+    <backend />
+    <outbound />
+    <on-error />
+</policies>

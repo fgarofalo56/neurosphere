@@ -18,6 +18,8 @@ import binascii
 import itertools
 from typing import Any, Final, Protocol, runtime_checkable
 
+from pydantic import ValidationError
+
 from neurosphere_core.errors import (
     DependencyTransientError,
     InvalidSchemaError,
@@ -32,12 +34,14 @@ __all__ = [
     "GATEWAY_ALREADY_REGISTERED",
     "GATEWAY_MODIFIED",
     "GATEWAY_STORE_UNAVAILABLE",
+    "GatewayModeLookup",
     "GatewayStore",
     "InMemoryGatewayStore",
     "check_limit",
     "decode_cursor",
     "encode_cursor",
     "store_unavailable",
+    "validated",
 ]
 
 GATEWAY_ALREADY_REGISTERED: Final = "gateway_already_registered"
@@ -74,6 +78,31 @@ class GatewayStore(Protocol):
     async def get_inventory(
         self, customer_id: str, domain_id: str, gateway_id: str
     ) -> GatewayInventory | None: ...
+
+
+@runtime_checkable
+class GatewayModeLookup(Protocol):
+    """Find a registration by customer and gateway id alone (PRP-34 item 2, mode checks).
+
+    A write connector is bound to one gateway but an action request does not carry the domain
+    the gateway is registered in; gateway ids are unique per customer (the id hashes the domain).
+    """
+
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None: ...
+
+
+def validated(registration: GatewayRegistration) -> GatewayRegistration:
+    """Re-validate a registration before it is written (PRP-34 item 2 review).
+
+    ``model_copy(update=...)`` skips validators, so a caller could otherwise persist a document
+    the model forbids (for example ``manage`` without the audited switch and a passed preflight).
+    """
+    try:
+        return GatewayRegistration.model_validate(registration.model_dump())
+    except ValidationError as exc:
+        raise InvalidSchemaError(
+            "gateway registration is not valid", reason="gateway_registration_invalid"
+        ) from exc
 
 
 def store_unavailable() -> DependencyTransientError:
@@ -147,6 +176,7 @@ class InMemoryGatewayStore:
         return GatewayRegistration.model_validate({**document, "etag": etag})
 
     def _put(self, registration: GatewayRegistration) -> GatewayRegistration:
+        registration = validated(registration)
         key = (registration.customer_id, registration.domain_id, registration.id)
         etag = f'"{next(self._etags)}"'
         self._docs[key] = (registration.model_dump(mode="json", exclude={"etag"}), etag)
@@ -166,6 +196,13 @@ class InMemoryGatewayStore:
     ) -> GatewayRegistration | None:
         self._check()
         return self._load((customer_id, domain_id, gateway_id))
+
+    async def find(self, customer_id: str, gateway_id: str) -> GatewayRegistration | None:
+        self._check()
+        for key in list(self._docs):
+            if key[0] == customer_id and key[2] == gateway_id:
+                return self._load(key)
+        return None
 
     async def list(
         self,
