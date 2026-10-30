@@ -13,6 +13,7 @@ from apim_write_support import (  # pyright: ignore[reportMissingImports]
     GATEWAY,
     GATEWAY_ID,
     SERVICE_ETAG,
+    mode_handler,
     publication_ops,
     request,
 )
@@ -136,7 +137,12 @@ def test_mode_change_is_a_declared_write_action() -> None:
     registry = WriteTargetRegistry()
     apim = InMemoryApim()
     registry.register(
-        ApimGatewayConnector(GATEWAY, apim, records=InMemoryGatewayRecordStore(ApplyRecord))
+        ApimGatewayConnector(
+            GATEWAY,
+            apim,
+            records=InMemoryGatewayRecordStore(ApplyRecord),
+            mode=mode_handler(apim),
+        )
     )
     assert registry.supports(CONNECTOR_NAME, "gateway_mode_change")
     assert MODE_TARGET_TYPE == "apim_gateway_mode"
@@ -273,12 +279,14 @@ async def test_switching_back_to_observe_leaves_published_resources_serving() ->
     assert env.apim.snapshot() == published
 
 
-async def test_without_a_mode_handler_the_switch_is_unavailable() -> None:
+async def test_a_connector_without_a_mode_handler_is_refused() -> None:
+    # PRP-34 item 2 review: a missing handler would skip the observe guard (fail-open).
     env = await _env()
-    bare = ApimGatewayConnector(GATEWAY, env.apim, records=env.records)
-    with pytest.raises(CapabilityUnavailableError) as info:
-        await bare.dry_run(await env.mode_request("manage"))
-    assert info.value.reason == "gateway_mode_switch_unconfigured"
+    with pytest.raises(TypeError):
+        ApimGatewayConnector(GATEWAY, env.apim, records=env.records, mode=None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        ApimGatewayConnector(GATEWAY, env.apim, records=env.records)  # type: ignore[call-arg]
+    assert env.apim.calls == []
 
 
 async def test_handler_must_match_the_connector_gateway() -> None:

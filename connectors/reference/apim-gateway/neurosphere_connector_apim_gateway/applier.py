@@ -264,11 +264,22 @@ class PlanApplier:
         await self._arm.put(rec.name, rec.prior or {}, if_match=rec.etag_after)
 
     async def reverse(self, record: ApplyRecord) -> ApplyRecord:
-        """Reverse a succeeded apply (the reverse plan). Raises ``RollbackFailedError``."""
-        if record.status != "succeeded":
+        """Reverse a succeeded apply (the reverse plan). Raises ``RollbackFailedError``.
+
+        The record first gets an ``applying`` version, so the gateway reads as busy (the mode
+        switch refuses while ``running``) for as long as the reverse writes run (PRP-34 item 2
+        review). An ``applying`` record is accepted too: a rollback token only exists for an
+        apply that reached ``succeeded``, so ``applying`` here is a reverse that was interrupted
+        and is now resumed (a created resource already deleted is skipped; a restored one whose
+        ETag moved is reported as an orphan, never as a silent success).
+        """
+        if record.status not in ("succeeded", "applying"):
             raise CapabilityUnavailableError(
                 "rollback_not_applicable", f"apply record status is {record.status}"
             )
+        if record.status == "succeeded":
+            record = record.model_copy(update={"status": "applying"})
+            await self._records.append(record)
         orphans = await self._reverse(record.steps)
         status = "rollback_failed" if orphans else "rolled_back"
         final = record.model_copy(update={"status": status, "orphans": tuple(orphans)})

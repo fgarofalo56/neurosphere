@@ -32,6 +32,7 @@ from neurosphere_core.gateway.store import (
     encode_cursor,
     modified,
     store_unavailable,
+    validated,
 )
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE
@@ -104,6 +105,8 @@ class CosmosGatewayStore:
 
     @staticmethod
     def _body(registration: GatewayRegistration) -> dict[str, Any]:
+        # Validated before every create/replace: a model_copy can skip the model's invariants.
+        registration = validated(registration)
         body = registration.model_dump(mode="json", exclude={"etag"})
         body["doc_type"] = GATEWAY_DOC_TYPE
         body["sort_key"] = registration.sort_key()
