@@ -1,11 +1,12 @@
 import type { RouteObject } from "react-router";
 import type { NavItem } from "../../app/routes";
-import { CapabilitiesPlaceholderPage, DeployPlaceholderPage } from "./PlaceholderPage";
+import { CapabilitiesPage } from "./CapabilitiesPage";
+import { DeployPage } from "./DeployPage";
 import { DEPLOY_CAPABILITIES_ROUTE, DEPLOY_ROUTE } from "./paths";
 
 export const deployRoutes: RouteObject[] = [
-  { path: DEPLOY_ROUTE, element: <DeployPlaceholderPage /> },
-  { path: DEPLOY_CAPABILITIES_ROUTE, element: <CapabilitiesPlaceholderPage /> },
+  { path: DEPLOY_ROUTE, element: <DeployPage /> },
+  { path: DEPLOY_CAPABILITIES_ROUTE, element: <CapabilitiesPage /> },
 ];
 
 /** Navigation is a usability aid only; the API decides access on every request. */
