@@ -15,6 +15,15 @@ import { qualityRoutes } from "../features/quality";
 import { recommendationRoutes } from "../features/recommendations";
 import { sandboxRoutes } from "../features/sandbox";
 import { workspaceRoutes } from "../features/workspaces";
+// PRP-31: light route modules only (never a feature index).
+import { catalogExplorerRoutes } from "../features/catalog/routes";
+import { auditRoutes } from "../features/audit/routes";
+import { curationRoutes } from "../features/curation/routes";
+import { deployRoutes } from "../features/deploy/routes";
+import { evaluationsRoutes } from "../features/evaluations/routes";
+import { executionControlRoutes } from "../features/execution-control/routes";
+import { federationRoutes } from "../features/federation/routes";
+import { finopsRoutes } from "../features/finops/routes";
 
 /**
  * Every feature route the app registers as a child of the shell layout. The route manifest test
@@ -38,4 +47,12 @@ export const appRoutes: readonly RouteObject[] = [
   ...mcpAdminRoutes,
   ...copilotRoutes,
   ...sandboxRoutes,
+  ...catalogExplorerRoutes,
+  ...curationRoutes,
+  ...auditRoutes,
+  ...finopsRoutes,
+  ...federationRoutes,
+  ...deployRoutes,
+  ...evaluationsRoutes,
+  ...executionControlRoutes,
 ];

@@ -1,0 +1,16 @@
+export const STRINGS = {
+  title: "Confirm change",
+  target: "Target",
+  version: "Version / ETag",
+  diff: "Before and after",
+  before: "Before",
+  after: "After",
+  noDiff: "No field changes were supplied.",
+  reason: "Reason (required)",
+  reasonHint: "Explain why this change is needed. It is recorded in the audit log.",
+  expiry: "Expiry (optional)",
+  expiryRequired: "Expiry (required)",
+  submit: "Confirm change",
+  submitting: "Submitting",
+  cancel: "Cancel",
+} as const;
