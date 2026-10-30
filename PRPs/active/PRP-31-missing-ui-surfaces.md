@@ -415,8 +415,8 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 ## Execution state
 | Item | Title | Wave | Status | Branch | Model | Evidence | Updated |
 |---|---|---|---|---|---|---|---|
-| 1 | Integration hookup and placeholders (extends existing `features/catalog/`) | A | todo | | sonnet | | 2026-10-30 |
-| 2 | UI-facing API adapters (`ui_adapters`) | A | todo | | opus | | 2026-10-30 |
+| 1 | Integration hookup and placeholders (extends existing `features/catalog/`) | A | merged | worktree-agent-a8d688440d7d599ad | sonnet | typecheck+lint clean; vitest 75f/928t pass (1 unexplained flaky first run, rerun green); touched 12f/95t pass; a11y e2e 500 pass (agent-reported); merged 3a2bb92 | 2026-10-30 |
+| 2 | UI-facing API adapters (`ui_adapters`) | A | merged | worktree-agent-ac56db059969aac5d | opus | ruff+pyright clean (agent); 505 pass: ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi diff additive (+947/-0); two out-of-ownership test fixes approved; merged e261ad2 | 2026-10-30 |
 | 3 | Lane: catalog | B | todo | | sonnet | | 2026-10-30 |
 | 4 | Lane: relationship curation | B | todo | | sonnet | | 2026-10-30 |
 | 5 | Lane: audit log | B | todo | | sonnet | | 2026-10-30 |

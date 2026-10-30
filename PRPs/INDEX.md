@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | n/a | no Execution state table | ? / ? | required |
+| [prp-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 0/8 (0%) |  | ? / ? | required |
 
 ## Backlog
 
