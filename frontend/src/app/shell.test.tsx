@@ -80,7 +80,7 @@ describe("app shell", () => {
     ]);
     expect(names("Agents")).toEqual(["Map", "Map table", "Trace replay"]);
     expect(names("Quality")).toEqual(["Quality", "Recommendations"]);
-    expect(names("Governance")).toEqual(["Review", "Actions"]);
+    expect(names("Governance")).toEqual(["Review", "Actions", "Gateways", "Publication"]);
     expect(names("Reports")).toEqual(["Reports"]);
   });
 
