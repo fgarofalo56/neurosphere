@@ -75,6 +75,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 | A6 | *Additional*: federation summaries and DR replication | section 5, `D1 --> S --> E`, `P --> R` | PRP-21 |
 | A7 | *Additional*: public docs-only assistant | section 5, `Public --> Docs` | PRP-25 |
 | A8 | *Additional*: build and supply chain (repo, CI, images, registry, cluster) | NS-08 (supply-chain scanning) | PRP-12, PRP-13, PRP-00 |
+| A9 | *Additional*: MCP through the APIM gateway (MCP client to a managed gateway to a published customer MCP server) | section 3 (`X --> Z` write connector), NS-09 | PRP-34, PRP-17, PRP-22 |
 
 ## Required boundaries
 
@@ -97,7 +98,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 | T | Script injection in the UI rewrites requests or exfiltrates data; chart specs execute code | React escaping; copilot chart plans are a Vega-Lite subset (no `expr`, signals or external `url` data) rendered by `vega-interpreter` in a sandboxed iframe; CSP for the shell | Planned | PRP-19, PRP-04 |
 | R | Requests cannot be correlated across gateway and API | `services/api/neurosphere_api/middleware/correlation.py` accepts a valid caller correlation id or generates a UUID4 and stamps it on responses, logs and audit | In repo | PRP-05 |
 | I | Error bodies leak stack traces, hosts or other domains' existence; hidden navigation mistaken for protection | `middleware/problem.py` renders RFC 9457 bodies with a correlation id and never a trace or host. Hidden navigation is not authorization: the API denies regardless of what the UI shows; theme is never permission | In repo | PRP-05, PRP-04 |
-| D | Request floods and oversized bodies | API size cap (`middleware/size_limit.py`, 422 `request_too_large`). No APIM rate-limit or quota policy exists in `infra/bicep/modules/apim.bicep` today | Gap (follow-up) | PRP-12 |
+| D | Request floods and oversized bodies | API size cap (`middleware/size_limit.py`, 422 `request_too_large`). No APIM rate-limit or quota policy exists for the UI-to-API ingress in `infra/bicep/modules/apim.bicep` today. PRP-34 adds gateway limits only for what it publishes through the gateway: `rate-limit-by-key` per caller on NeuroSphere's own MCP front (`infra/bicep/modules/policies/apim-mcp-enforcement.xml`, optional, off by default) and per grant on published customer MCP servers (A9); neither covers the API ingress | Gap (follow-up), re-stated and narrowed by PRP-34 | PRP-12, PRP-34 |
 | E | A UI-only role check is the only gate on an admin view | Every route uses `require(...)` server-side; the frontend never decides access (`useRoles.ts` comment, NS-10) | In repo | PRP-06, PRP-04 |
 
 ### B3. APIM to API authorization and policy
@@ -267,6 +268,23 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 | D | Scanner database or registry unavailable | Job fails rather than skipping: no `continue-on-error`, no `\|\| true` (`scripts/validate_planning.py` enforces the latter) | In progress | PRP-12 |
 | E | Workflow token over-permissioned; malicious PR workflow | Explicit top-level `permissions:` blocks in `ci.yml`, `codeql.yml` and `secret-scan.yml`; release signing gets `id-token: write` on its own job only | In repo; release Planned | PRP-00, PRP-13 |
 
+### A9. MCP through the APIM gateway (additional)
+
+A catalog `McpServer` is published through a registered gateway in manage mode by the
+`mcp_server_publish` / `mcp_server_unpublish` action kinds (PRP-34 item 6): the APIM write
+connector's `mcp_server` translator (`connectors/reference/apim-gateway/neurosphere_connector_apim_gateway/mcp.py`)
+and the catalog draft routes (`services/api/neurosphere_api/catalog/mcp_publish.py`). Nothing
+here has run against a real gateway: G17 manage is OPEN.
+
+| | Threat | Mitigation | State | Owner |
+|---|---|---|---|---|
+| S | Caller presents a token for another audience or tenant, or no token, and reaches the customer server | Enforcement fragment `validate-azure-ad-token` for the tenant and audience held in named values (referenced as `{{name}}`, never inlined); the MCP API carries no backend of its own, so it forwards nothing before its policy lands; callers without a direct (`oid`) grant get 403; group grants are not enforced (groups-claim overage would fail closed) | In progress (live G17 OPEN) | PRP-34 |
+| T | Publication changed or removed outside maker-checker; a half-applied backend change serves traffic | Drafted through the one action flow (catalog routes only draft; `action.propose` on the server's domain); plan digest bound into the confirmation; deny first: a change or removal is planned only against an API whose policy is the 503 deny, and its reversal on failure restores the deny, never the old enforcement; publication refuses to adopt an existing resource (`mcp_resource_exists`) and the blank-path metadata API is refused when another API owns `/` | In progress | PRP-34, PRP-17 |
+| R | Publication not attributable, or the catalog claims a publication the gateway does not have | Action audit as for every intent; the catalog record route writes `provenance` (`apim-gateway.<gateway id>`) and ownership attributes only for a succeeded, read-back-verified intent drafted against the current publication state, through the audited catalog update | In progress | PRP-34, PRP-06 |
+| I | Caller credentials or subscription keys reach the customer server; bodies logged | `Authorization`, `Ocp-Apim-Subscription-Key`, `api-key` and `subscription-key` deleted before forwarding (no passthrough); the gateway managed identity is attached after the strip when the server's auth kind is `managed_identity`; no policy reads a request or response body, forwarding is unbuffered, and MCP APIs log zero body bytes; the connector never calls `listSecrets` and never writes a named-value value | In progress | PRP-34 |
+| D | One caller exhausts a published server | `rate-limit-by-key` per grant (`mcp_calls_per_minute`, counter key `<publication>:<oid>`) | In progress | PRP-34 |
+| E | SSE-only or API-key upstream published behind Entra; publish onto a gateway in another domain; observe-mode gateway written | SSE-only (`mcp_sse_unsupported`) and API-key (`mcp_api_key_upstream`) upstreams, a missing audience, a URL with a query string or not ending in `/mcp` are refused by the connector; the route refuses a gateway not registered in the server's domain; every plan first requires manage mode (`gateway_observe_mode`) | In progress | PRP-34 |
+
 ## Abuse cases
 
 ### AC-1. Prompt injection (direct and indirect)
@@ -344,8 +362,11 @@ these production behaviours, so the affected rows above rely on live gates for t
 
 ## Open items found while modelling
 
-- **B2 D, Gap**: no APIM rate-limit or quota policy exists in `infra/bicep/modules/apim.bicep`.
-  Record as a follow-up issue against PRP-12; the API size cap is the only current request bound.
+- **B2 D, Gap (re-stated, PRP-34)**: no APIM rate-limit or quota policy exists for the UI-to-API
+  ingress in `infra/bicep/modules/apim.bicep`; the API size cap is the only request bound on that
+  path. PRP-34 narrows the gap without closing it: the optional own-MCP-server front applies a
+  per-caller `rate-limit-by-key`, and customer MCP servers published through a managed gateway get
+  a per-grant `rate-limit-by-key` (A9). Still a follow-up issue against PRP-12 for the API ingress.
 - **Denial recorder wiring, Gap** (owner PRP-06): `authz/recorder.py` is an optional hook and
   no `DenialRecorder` is installed by the app (only test helpers implement one), so denied
   attempts are not recorded today (B1 R, B3 R, B5 R, A3 R).

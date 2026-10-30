@@ -78,6 +78,26 @@ codes, never bodies. Log lines carry step index, operation, type and ownership o
 single-quoted so every rendered document parses as XML. A test renders every template variant and
 parses it.
 
+## MCP server publication (PRP-34 item 6)
+
+`mcp.McpServerTranslator` handles target kind `mcp_server` (the catalog `McpServer`) for
+`mcp_server_publish` and `mcp_server_unpublish`. The diff is one `replace /publication` whose
+value names the stage (`publish`, `deny`, `change`, `remove`), the gateway and the upstream.
+Deny first is a stage of its own, because the shared applier reverses every completed step on
+failure: a change or removal is planned only against an API whose policy is the 503 deny
+(`target_version` `mcp-denied`), so its reversal restores the deny and never the old enforcement.
+Publish creates a backend (URL without `/mcp`), a policy fragment (`policies/templates/
+mcp-server-enforcement.xml`: Entra validation with tenant and audience named values, credential
+stripping, per-grant `rate-limit-by-key` by `oid` with 403 otherwise, `authentication-managed-identity`
+for `managed_identity` servers), an MCP API (`type: mcp`, streamable) routed only by its API policy,
+and a PRM operation on the shared blank-path `ns-mcp-metadata` API. It refuses SSE-only, API-key,
+audience-less and query-string upstreams, missing named values, an already existing per-server
+resource and a blank or API path owned by another API. The path checks need an `ApiPathIndex`
+(`HttpApiPathIndex` over ARM, `InMemoryApiPathIndex` for tests); without one publication fails
+closed. Not registered by default in this package: pass `translators=[McpServerTranslator(...)]`.
+Unverified against a live gateway: the `type: mcp` / `mcpProperties` API shape at api-version
+2024-05-01 and whether an MCP API is accepted without a `backendId` (G17 manage OPEN).
+
 ## References (Microsoft Learn; not re-fetched while writing this item)
 
 - llm-token-limit: <https://learn.microsoft.com/azure/api-management/llm-token-limit-policy>
