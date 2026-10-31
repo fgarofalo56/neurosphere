@@ -74,12 +74,8 @@ def test_overlong_question_and_bad_shape_rejected_422(repo: Path) -> None:
 
 def test_only_read_routes_exist(repo: Path) -> None:
     client = _client(repo)
-    app = client.app
-    routes = {
-        (m, r.path)  # pyright: ignore[reportAttributeAccessIssue]
-        for r in app.routes  # pyright: ignore[reportAttributeAccessIssue]
-        for m in getattr(r, "methods", set())
-    }
+    app_routes = getattr(client.app, "routes")  # noqa: B009 - ASGIApp type hides .routes
+    routes = {(m, getattr(r, "path")) for r in app_routes for m in getattr(r, "methods", set())}  # noqa: B009
     assert routes == {("GET", "/healthz"), ("POST", "/ask")}
     for method in ("put", "delete", "patch"):
         assert getattr(client, method)("/ask").status_code == 405

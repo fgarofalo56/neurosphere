@@ -10,14 +10,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import ConfigDict, Field
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Runtime settings, read from `DOCS_ASSISTANT_*` environment variables."""
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         extra="forbid",
         env_prefix="DOCS_ASSISTANT_",
         env_file=None,

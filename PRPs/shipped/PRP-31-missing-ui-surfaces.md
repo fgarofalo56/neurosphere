@@ -1,7 +1,9 @@
 ---
 name: prp-31-missing-ui-surfaces
-status: active
+status: shipped
 started: 2026-10-30
+shipped: 2026-10-30
+pr: 150
 branch: prp-31-missing-ui-surfaces-impl
 review: required
 priority: P1
@@ -429,8 +431,13 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-10-30
+- Merged commits: PR #150, squash-merged as `68de973` (items 1 to 8, 2b, 4b; plus `2565027`, `dbfea0a`, `bd03d7c` from the final gate, Playwright and review passes). CI at merge: everything green except `image api` and `image workers` (Grype, base image Python 3.12.15 CVE-2026-115557, not touched by this PRP; merged around it with the user's approval, tracked in #151).
 - Deviations from blueprint and why:
-- Descoped items:
-- Follow-ups:
+  - Catalog extended the existing `features/catalog/` in place instead of a new folder (approved plan delta).
+  - Deltas 2b and 4b: a backend curation edge read adapter returning `edge_version` and `edge_etag`, because the existing edge GET gave the curation page no version to bind to.
+  - Two out-of-ownership tests narrowed (authz audit mount, path aliases), and the manifest call map and its pinned route count (28 to 40) extended, all with approval.
+  - `demo-audit.spec.ts` now treats `/audit` as forbidden for the Steward demo persona (auditor/admin only) and opens the catalog detail routes by link or id.
+  - Catalog deprecate/recertify collect a required reason that is not stored: the PRP-10 endpoints take none and the PRP-06 audit `detail` is a machine code. The dialog says so. Chosen over a PRP-06 contract change.
+- Descoped items: none. The deploy pages have no apply control by design.
+- Follow-ups: store the reason on deprecate/recertify (needs an audit contract field); bump the base image digest when Python 3.12.16 ships (#151); real-API compatibility not proven end to end (in-memory API and mock only); G09 accessibility sign-off stays OPEN; Snyk code scan not run; `app.state` bootstrap (#104) not addressed; `pnpm demo` twelve-page manual check not done; one intermittent Fluent dialog test flake (hardened, may recur).
