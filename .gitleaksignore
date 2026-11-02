@@ -22,3 +22,5 @@ fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:
 55b6a633ca3269bc16ddc423c219b975291138db:services/api/tests/catalog_api/test_publication_wiring.py:generic-api-key:282
 # PRP-34 item 9: FAKE_KEY constant in the G17 manage gate unit test (proves tokenisation), not a credential.
 98aac514da1d728c4e6db521ba18c0afd3bda974:tests/unit/gates/test_g17_manage.py:generic-api-key:23
+# PRP-25 item 4: deliberately fake "sk-live-abc123" in a negative test proving the settings reject a non-env-var-name; not a credential.
+66ff1b225616d690ab3255f41af8ab9a7cede476:services/docs-assistant/tests/test_image_config_scan.py:generic-api-key:40
