@@ -191,6 +191,16 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 | merged | prp-25-docs-site | sonnet | ADR-0008, mkdocs.yml, Pages workflow; `mkdocs build --strict` passes (me, 2026-11-02); tests/docs nav allowlist + ADR present pass; committed 3a4a1fc | 2026-11-02 |
+| 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
+| 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
+| 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
+
+Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch history. Gates: 96 PRP tests pass, `validate_planning.py` PASS, `mkdocs build --strict` PASS, `verify-gates -Mode full` PASS (4/4 gates; first run failed only on a broken pnpm shim under Node 26, fixed by installing pnpm@11.17.0 globally).
+
 ## Completion note (filled at ship)
 - Date:
 - Merged commits:
