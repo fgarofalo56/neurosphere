@@ -155,6 +155,23 @@ def operations(spec: Mapping[str, Any]) -> list[tuple[str, str, Mapping[str, Any
     return out
 
 
+_API_STATUS_TEXT = (
+    "This page documents the committed API contract. It is not evidence that a live "
+    "deployment, provider or region behaves as described. Operations whose summary or "
+    "description says preview or unverified carry a **Preview/unverified** marker, and "
+    "operations the contract marks deprecated carry **Deprecated**. Capability rows that "
+    "are unverified in the capability matrix stay unverified here. Availability, feature "
+    "maturity and authorization are separate gates; nothing here claims an authorization "
+    "or compliance status.\n\n"
+)
+
+_API_ERRORS_TEXT = (
+    "Errors are RFC 9457 problem details (`ProblemDetails`, `application/problem+json`) "
+    "with one of the codes below. The table is the committed taxonomy; a `reason` is "
+    "mandatory where noted.\n\n"
+)
+
+
 def render_api(
     spec: Mapping[str, Any], taxonomy: Mapping[str, Any], stamp: Mapping[str, str]
 ) -> str:
@@ -165,17 +182,9 @@ def render_api(
         f"{info.get('title', 'API')} version {info.get('version', '?')}, OpenAPI "
         f"{spec.get('openapi', '?')}. {len(ops)} operations on {len(spec['paths'])} paths.\n\n",
         "## Status and verification\n\n",
-        "This page documents the committed API contract. It is not evidence that a live "
-        "deployment, provider or region behaves as described. Operations whose summary or "
-        "description says preview or unverified carry a **Preview/unverified** marker, and "
-        "operations the contract marks deprecated carry **Deprecated**. Capability rows that "
-        "are unverified in the capability matrix stay unverified here. Availability, feature "
-        "maturity and authorization are separate gates; nothing here claims an authorization "
-        "or compliance status.\n\n",
+        _API_STATUS_TEXT,
         "## Error taxonomy\n\n",
-        "Errors are RFC 9457 problem details (`ProblemDetails`, `application/problem+json`) "
-        "with one of the codes below. The table is the committed taxonomy; a `reason` is "
-        "mandatory where noted.\n\n",
+        _API_ERRORS_TEXT,
         "| Code | HTTP | Retryable | Reason | Retry-After | Meaning |\n",
         "|---|---|---|---|---|---|\n",
     ]
@@ -378,14 +387,19 @@ def ts_symbols(root: Path) -> list[tuple[str, str, str, str, str]]:
     return sorted(rows)
 
 
+_TS_SDK_INTRO = (
+    "Package `@neurosphere/connector-sdk`. Read side only: there is no write surface in the "
+    "TypeScript SDK; the `WriteConnector` interface lives in the Python SDK. Symbols are "
+    "the exports of `src/index.ts`, with declaration headers and the first doc-comment "
+    "paragraph extracted from source.\n\n"
+)
+
+
 def render_ts_sdk(root: Path, stamp: Mapping[str, str]) -> tuple[str, int]:
     rows = ts_symbols(root)
     lines = [
         _header("Connector SDK reference (TypeScript)", stamp, f"`{TS_SDK}/`"),
-        "Package `@neurosphere/connector-sdk`. Read side only: there is no write surface in the "
-        "TypeScript SDK; the `WriteConnector` interface lives in the Python SDK. Symbols are "
-        "the exports of `src/index.ts`, with declaration headers and the first doc-comment "
-        "paragraph extracted from source.\n\n",
+        _TS_SDK_INTRO,
         "| Symbol | Kind | Module |\n|---|---|---|\n",
     ]
     for name, kind, _h, _d, module in rows:
@@ -469,21 +483,26 @@ def mcp_resources(root: Path) -> list[dict[str, str]]:
     return sorted(out, key=lambda r: r["uri"])
 
 
+_MCP_INTRO = (
+    "The NeuroSphere MCP server exposes bounded structured tools and read-only resources "
+    "over streamable HTTP with OAuth 2.1 resource-server auth. Every call re-derives the "
+    "caller's `IdentityScope` server-side; scope-shaped arguments (domain, customer, "
+    "tenant, scope) are refused, never consulted. There is **no confirm, execute or "
+    "approve tool**: an agent can draft and present a confirmation, a human confirms in "
+    "the UI or REST API through the same durable action executor. Annotations are client "
+    "hints, never authorization.\n\n"
+    "Behaviour against live identity providers and provider backends is covered by live "
+    "gates; this page documents the registered surface only and does not assert live "
+    "verification.\n\n"
+)
+
+
 def render_mcp(root: Path, stamp: Mapping[str, str]) -> tuple[str, int]:
     tools = mcp_tools()
     resources = mcp_resources(root)
     lines = [
         _header("MCP reference", stamp, f"`{MCP_DIR}/server/` and the live tool registry"),
-        "The NeuroSphere MCP server exposes bounded structured tools and read-only resources "
-        "over streamable HTTP with OAuth 2.1 resource-server auth. Every call re-derives the "
-        "caller's `IdentityScope` server-side; scope-shaped arguments (domain, customer, "
-        "tenant, scope) are refused, never consulted. There is **no confirm, execute or "
-        "approve tool**: an agent can draft and present a confirmation, a human confirms in "
-        "the UI or REST API through the same durable action executor. Annotations are client "
-        "hints, never authorization.\n\n"
-        "Behaviour against live identity providers and provider backends is covered by live "
-        "gates; this page documents the registered surface only and does not assert live "
-        "verification.\n\n",
+        _MCP_INTRO,
         "## Tools\n\n| Tool | Scope requirement | Read-only | Idempotent |\n|---|---|---|---|\n",
     ]
     for t in tools:

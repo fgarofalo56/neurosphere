@@ -75,8 +75,9 @@ operator's privacy notice must say so.
 
 ## Image
 
-The Dockerfile uses only this directory as build context, runs as uid 10001, and holds no
-secrets. The site can be added at build time with `--build-context site=<dir>` or mounted
+The Dockerfile is built from the repo root (`docker build -f services/docs-assistant/Dockerfile .`,
+the same as CI) but copies only files under `services/docs-assistant/`. It runs as uid 10001 and
+holds no secrets. The site can be added at build time with `--build-context site=<dir>` or mounted
 at `/srv/site`.
 
 ## Tests

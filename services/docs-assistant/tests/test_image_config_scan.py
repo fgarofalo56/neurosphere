@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 from pydantic import ValidationError
@@ -86,12 +87,15 @@ def test_service_never_imports_product_packages() -> None:
 
 def test_no_product_api_url_strings() -> None:
     url = re.compile(r"https?://[^\s\"')]+")
-    allowed = ("docs.example.invalid", "x.invalid", "example.invalid")
+    allowed_hosts = {"docs.example.invalid", "x.invalid", "example.invalid"}
+    allowed_suffixes = (".example.invalid", ".docker.com")
     for path in _service_files((".py", ".md", ".toml", "")):
         if path.name == "Dockerfile" or path.suffix:
             text = path.read_text(encoding="utf-8", errors="replace")
         else:
             continue
         for found in url.findall(text):
-            assert any(a in found for a in allowed) or "docker.com" in found, (path, found)
+            host = urlparse(found).hostname or ""
+            ok = host in allowed_hosts or host.endswith(allowed_suffixes) or host == "docker.com"
+            assert ok, (path, found)
         assert not re.search(r"/api/v\d", text), path

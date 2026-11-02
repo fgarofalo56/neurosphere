@@ -1,14 +1,15 @@
-# Docs assistant image. Build context is THIS DIRECTORY only (never the repo root):
-#   docker build -t ns-docs-assistant:dev services/docs-assistant
+# Docs assistant image. Built from the repo root like every other service image (CI runs
+# `docker build -f <Dockerfile> .`), but only paths under services/docs-assistant/ are copied:
+#   docker build -f services/docs-assistant/Dockerfile -t ns-docs-assistant:dev .
 # Optionally bake in the built site (BuildKit named context):
-#   docker build --build-context site=temp/site -t ns-docs-assistant:dev services/docs-assistant
+#   docker build -f services/docs-assistant/Dockerfile --build-context site=temp/site -t ns-docs-assistant:dev .
 # Without --build-context the `site` stage is empty; mount the site at /srv/site instead.
 # No secrets and no product configuration are baked in. Runs as uid 10001.
 
 FROM scratch AS site
 
-# python:3.12-alpine, digest observed 2026-10-18
-FROM python:3.12-alpine@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4
+# python:3.12-alpine (Python 3.12.16), digest observed 2026-11-02
+FROM python:3.12-alpine@sha256:e6dae589c1c05976188fd3bd019afd091445fc533ed2ea29001beddc7368a9c8
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -17,8 +18,8 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apk upgrade --no-cache && adduser -S -H -D -u 10001 -s /sbin/nologin ns
 
 WORKDIR /app
-COPY pyproject.toml README.md ./
-COPY docs_assistant ./docs_assistant
+COPY services/docs-assistant/pyproject.toml services/docs-assistant/README.md ./
+COPY services/docs-assistant/docs_assistant ./docs_assistant
 RUN pip install --no-cache-dir .
 
 COPY --from=site / /srv/site/
