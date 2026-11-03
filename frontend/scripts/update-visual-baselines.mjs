@@ -48,7 +48,9 @@ const containerScript = [
     "package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json .node-version " +
     "frontend packages/contracts connectors/sdk-ts | tar -xf - -C /work",
   "cd /work",
-  "corepack enable",
+  // Newer Node images no longer ship corepack: install the pinned pnpm directly in that case.
+  "if command -v corepack >/dev/null 2>&1; then corepack enable; else " +
+    "npm install -g \"pnpm@$(node -p \"require('./package.json').packageManager.split('@')[1]\")\"; fi",
   "pnpm install --frozen-lockfile",
   "cd /work/frontend",
   'if [ "$NS_VISUAL_MODE" = "check" ]; then',
