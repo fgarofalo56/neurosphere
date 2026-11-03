@@ -23,7 +23,7 @@ claims:
     text: "The Admin walkthrough injects duplicate, out-of-order and malformed events so quarantine and replay can be observed."
     source: docs/walkthroughs/admin.md
   - id: C07
-    text: "The Auditor walkthrough compares cost sources for a seeded spike window on the reconciliation page."
+    text: "A persona with data.read can compare cost sources for a seeded spike window on the reconciliation page; access for the Auditor role is to be verified."
     source: docs/walkthroughs/auditor.md
   - id: C08
     text: "Consolidation candidates are always labelled candidate and never auto-merged; unused agents are agents that are active with zero telemetry for the window."
@@ -130,7 +130,7 @@ Claims: C04, C07
 - Unknown stays unknown: a missing value is null, never zero by default
 - Estimated and invoiced spend are kept distinct
 - Cost records carry a price version
-- Demo: the Auditor compares cost sources for a seeded spike on the reconciliation page
+- Demo: a persona with data.read compares cost sources for a seeded spike on the reconciliation page (Auditor access to be verified)
 
 Notes:
 The point for evaluators is honesty about cost data. Do not quote any dollar figure or percentage as a benefit. The seeded spike in the sandbox is an injected test condition, not a customer result.
