@@ -1,6 +1,8 @@
 ---
 name: prp-26-sales-and-marketing-deliverables
-status: backlog
+status: active
+started: 2026-11-02
+branch: prp-26-marketing
 review: required
 created: 2026-10-08
 model: sonnet
@@ -180,6 +182,20 @@ There is no live script and no paid call in this PRP. Opening the PPTX and recor
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
+
+## Execution state
+
+Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp-25-docs-site` because PR #154 (PRP-25) is not yet on main and the walkthroughs live only there.
+
+- D1: PPTX is built with python-pptx run through `uv run --with python-pptx==<pin>`; no root `pyproject.toml` change (item 1 does not own it). Pin and observed date go in `marketing/deck/README.md`.
+- D2: Items 1, 2, 3 run in parallel. Merge order A (item 1) then B (item 2) then C (item 3), because item 3's test imports `tests/marketing/claims_rules.py` from item 1. Item 4 follows.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 1 walking-deck | todo | | sonnet | | 2026-11-02 |
+| 2 persona-scripts | todo | | sonnet | | 2026-11-02 |
+| 3 video-storyboard | todo | | sonnet | | 2026-11-02 |
+| 4 asset-manifest | todo | | sonnet | | 2026-11-02 |
 
 ## Completion note (filled at ship)
 - Date:
