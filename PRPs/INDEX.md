@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-26-sales-and-marketing-deliverables](active/PRP-26-sales-and-marketing-deliverables.md) |  | 0/4 (0%) | review 4 | ? / ? | required |
+| [prp-26-sales-and-marketing-deliverables](active/PRP-26-sales-and-marketing-deliverables.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
 
 ## Backlog
 
