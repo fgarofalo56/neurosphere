@@ -192,9 +192,9 @@ Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 walking-deck | todo | | sonnet | | 2026-11-02 |
-| 2 persona-scripts | todo | | sonnet | | 2026-11-02 |
-| 3 video-storyboard | todo | | sonnet | | 2026-11-02 |
+| 1 walking-deck | in-progress | | sonnet | | 2026-11-02 |
+| 2 persona-scripts | in-progress | worktree-agent-af5704c7e2defe88d | sonnet | reported 05ec851 (17 pass); not yet verified by orchestrator | 2026-11-02 |
+| 3 video-storyboard | in-progress | worktree-agent-a9c573b58b3c1956c | sonnet | reported e0ea455 (10 pass, 1 skip pending item 1); not yet verified by orchestrator | 2026-11-02 |
 | 4 asset-manifest | todo | | sonnet | | 2026-11-02 |
 
 ## Completion note (filled at ship)
