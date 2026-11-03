@@ -46,7 +46,7 @@ Role `security_auditor`: `audit.read`, `evidence.read`. Access is scoped to gran
 
 ## Not on the demo path
 
-The walkthrough also lists `/actions`, `/actions/detail` and `/reconciliation`. In the role map the `security_auditor` role holds `audit.read` and `evidence.read` and no `data.read`, while those screens read data. Expect access-denied for the Auditor persona on them until verified against a running stack. Do not present them as Auditor capabilities. Show them with the Steward persona instead.
+The walkthrough also lists `/actions`, `/actions/detail` and `/reconciliation`. In the role map the `security_auditor` role holds `audit.read` and `evidence.read` and no `data.read`, while those screens read data. Verified with real requests through the API app: the Auditor persona receives HTTP 403 on every load-time call of those screens, and the Steward persona succeeds (`services/api/tests/auditor_access/test_auditor_screen_access.py`). Do not present them as Auditor capabilities. Show them with the Steward persona instead.
 
 ## Planned (excluded from the demo path)
 
