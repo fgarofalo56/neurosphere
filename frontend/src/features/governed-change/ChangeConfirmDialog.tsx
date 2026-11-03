@@ -96,6 +96,9 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
     <Dialog
       open={open}
       modalType="alert"
+      // No scale/fade entrance: a partly transparent surface blends the hint text towards the
+      // backdrop, so it is below 4.5:1 for the first frames after the dialog opens.
+      surfaceMotion={null}
       onOpenChange={(_event, data) => {
         if (!data.open) close();
       }}
