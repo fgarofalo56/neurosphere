@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-25-docs-site-and-public-assistant](active/PRP-25-docs-site-and-public-assistant.md) |  | n/a | no Execution state table | ? / ? | none |
+_none_
 
 ## Backlog
 
@@ -23,6 +21,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-02 | #154 |
 | [prp-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-10-30 | #150 |
 | [prp-34-apim-gateway-manage](shipped/PRP-34-apim-gateway-manage.md) | 2026-10-30 | #149 |
 | [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-10-29 | #146 |
