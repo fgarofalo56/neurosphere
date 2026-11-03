@@ -44,13 +44,13 @@ Sign in as the synthetic persona `steward` (policy-store role `domain_steward`).
    - Expected: The Steward landing workspace loads with the sandbox banner shown.
    - Permission: data.read
 2. Open `/recommendations` and find the `unused_agent` and duplicate-agent items.
-   - Expected: The unused agents (active, zero telemetry for the window) appear as `unused_agent` recommendations. Duplicate pairs are labelled `candidate`. Nothing is merged automatically.
+   - Expected: The unused agents (active, zero telemetry for the window) appear as `unused_agent` recommendations. Duplicate pairs are labelled `candidate`. Nothing is merged automatically. Checked 2026-11-03: on the `small` seed profile neither kind appears at all, so this step needs `SEED_PROFILE=demo`. On `demo`, the Customer Support domain showed one `unused_agent` recommendation and no `candidate_duplicate` ones (other domains were not checked). Pick the domain in the domain selector and show only what appears. The `demo` seed can also be throttled by the Event Hubs emulator on the first run ("server-busy"); re-running `make seed-stack SEED_PROFILE=demo` completed it.
    - Permission: data.read
 3. Open `/review`.
-   - Expected: The review queue lists the seeded items for this domain.
+   - Expected: The review queue lists the seeded items for this domain (checked 2026-11-03 on the small profile: four pending, unassigned `recommendation` items for cost spikes, each with an SLA due about 24 hours out).
    - Permission: data.read
 4. Open an item at `/review/item` and inspect it. Do not expect a change to be applied.
-   - Expected: The screen shows the exact target and diff. Seeded demo intents stop at awaiting confirmation and the screen reads "Advisory only" with nothing to be changed, so nothing executes in this demo. For a confirmed change outside the seeded demo, the executor rechecks permission, honors any required approval, writes an audit entry and verifies the real change.
+   - Expected: (checked 2026-11-03) the review item screen shows kind, state, subject, assignee, SLA, escalation level, created time and decisions ("No decisions yet"), with Claim, Approve and Reject controls. It does not show a diff or an "Advisory only" line; the exact target and diff are on the actions screens, not here. Do not press Approve or Reject in the demo. For a confirmed change outside the seeded demo, the executor rechecks permission, honors any required approval, writes an audit entry and verifies the real change.
    - Permission: data.read (inspect), action.approve and action.execute (confirm, not exercised by the seeded demo)
 
 ## Permissions

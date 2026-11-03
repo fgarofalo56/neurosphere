@@ -40,13 +40,13 @@ Sign in as the synthetic persona `analyst` (policy-store role `analyst`). After 
    - Expected: The Analyst landing workspace loads with the sandbox banner shown.
    - Permission: data.read
 2. Open `/dashboards/latency` and locate the regression.
-   - Expected: The latency dashboard shows durations rising from the window start. The affected agents match `temp/sandbox/anomaly-manifest.json`. `make seed-stack` moves the generated epoch to the run time, so the manifest's absolute window times will not match what you see; compare the ratios and the affected agents, not clock times.
+   - Expected: The latency dashboard shows durations rising from the window start (checked 2026-11-03 on the local stack: p95 rises from about 7.5 s to about 44-49 s on Nov 1-2, then falls back). The summary tiles read "unknown" and the page says "analytics: disabled", so the per-day tables are the evidence. The affected-agent comparison with the manifest was not checked. The affected agents match `temp/sandbox/anomaly-manifest.json`. `make seed-stack` moves the generated epoch to the run time, so the manifest's absolute window times will not match what you see; compare the ratios and the affected agents, not clock times.
    - Permission: data.read
 3. Open `/replay/traces` and replay a trace through an affected agent.
-   - Expected: The trace replay view opens for the chosen trace.
+   - Expected: The trace replay view opens for the chosen trace (checked 2026-11-03: the trace list loads and Inspect trace opens a detail panel with the span hierarchy).
    - Permission: data.read
 4. Open `/reports`.
-   - Expected: The synthetic saved reports `agents-by-version` and `agent-inventory` are listed. Opening one runs a bounded structured query under your own scope.
+   - Expected: The synthetic saved reports `agents-by-version` and `agent-inventory` are listed for the synthetic analyst persona who owns them. Checked 2026-11-03: an account that is not that persona sees "No reports are visible to you in this domain", because report visibility is per owner. Do not demo this step from another account. Opening one runs a bounded structured query under your own scope.
    - Permission: data.read (run), report.create (create)
 
 ## Permissions
