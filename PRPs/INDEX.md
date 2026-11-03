@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-26-sales-and-marketing-deliverables](active/PRP-26-sales-and-marketing-deliverables.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
 | [prp-27-explainer-video-render](backlog/PRP-27-explainer-video-render.md) |  |  | - | - | ? / ? | none |
 
 ## Blocked
