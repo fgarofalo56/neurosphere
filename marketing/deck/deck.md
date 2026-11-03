@@ -8,7 +8,7 @@ claims:
     text: "NeuroSphere is a customer-hosted AI governance platform for Azure Commercial and Azure Government."
     source: docs/index.md
   - id: C02
-    text: "Stated objectives: discover registered and observed agents, explain ownership, models, grounding and cost, surface evidence-backed recommendations, enable governed actions, give operators a live ecosystem view."
+    text: "Stated objectives: discover registered and observed agents, explain ownership, models, grounding and cost, surface evidence-backed recommendations, enable governed actions (review queue and API; chat planned), give operators a live ecosystem view."
     source: docs/PRD.md
   - id: C03
     text: "The synthetic sandbox generator produces a catalog of domains, owners, agents, model deployments, grounding sources and tools, with asserted and inferred relations."
@@ -17,7 +17,7 @@ claims:
     text: "Missing fields stay null or unknown, never zero by default; cost records distinguish estimated from invoiced spend and carry a price version."
     source: docs/PRD.md
   - id: C05
-    text: "Reference connectors are documented for Azure Monitor and Log Analytics, APIM gateway logs, Foundry discovery, Azure Cost Management exports and generic OpenTelemetry and CloudEvents; coverage and limits are published and some entries are not live-tested."
+    text: "Reference connectors are documented for Azure Monitor and Log Analytics, APIM gateway logs, Foundry discovery, Azure Cost Management exports and generic OpenTelemetry and CloudEvents; coverage and limits are published and no connector has run against a live provider (G04 open)."
     source: docs/connectors/coverage.md
   - id: C06
     text: "The Admin walkthrough injects duplicate, out-of-order and malformed events so quarantine and replay can be observed."
@@ -29,16 +29,16 @@ claims:
     text: "Consolidation candidates are always labelled candidate and never auto-merged; unused agents are agents that are active with zero telemetry for the window."
     source: docs/walkthroughs/steward.md
   - id: C09
-    text: "A decision shows the exact target and diff, rechecks permission, honors approvals, audits, and verifies the real change."
+    text: "The action executor rechecks permission, honors approvals, audits, and verifies the real change; the seeded demo intents stop at awaiting confirmation, so no change is executed in the demo."
     source: docs/walkthroughs/steward.md
   - id: C10
     text: "The MCP server exposes bounded structured tools and has no confirm, execute or approve tool; a human confirms through the same durable action executor."
     source: docs/reference/mcp.md
   - id: C11
-    text: "No LLM-generated SQL, Cypher, KQL or JavaScript; charts are a Vega-Lite subset in a sandboxed iframe; the model drafts an action and does not execute it."
+    text: "In repo: analytics adapters accept no query text, so no LLM-generated SQL reaches the engine. Copilot controls (sandboxed Vega-Lite charts, the model drafting an action without executing it) are planned."
     source: docs/security/threat-model.md
   - id: C12
-    text: "The Viewer walkthrough uses the map page to see which agents are involved in a seeded cost spike and the catalog page to read an agent entry."
+    text: "The Viewer walkthrough uses the map page to browse agents and the catalog page to read an agent entry; the agents in a seeded cost spike are read from the cost_spike recommendation."
     source: docs/walkthroughs/viewer.md
   - id: C13
     text: "Access is scoped by grants in the policy store; there is no unrestricted bypass for any role; the Viewer role has no action, export or edit path."
@@ -48,7 +48,7 @@ claims:
     source: docs/accessibility/README.md
   - id: C15
     text: "Unsupported cloud, region or feature combinations are disabled with a reason from the capability matrix, not routed to another cloud; availability, GA and authorization are separate."
-    source: docs/ARCHITECTURE.md
+    source: docs/PRD.md
   - id: C16
     text: "NeuroSphere is not FedRAMP authorized and cannot grant an agency ATO; agency authorizing officials make that decision."
     source: docs/PRD.md
@@ -63,10 +63,10 @@ claims:
     source: docs/walkthroughs/viewer.md
   - id: C20
     text: "The documentation set includes install, operations, security, migration and DR runbooks, and API, MCP and SDK references."
-    source: docs/index.md
+    source: docs/runbooks/install.md
   - id: C21
-    text: "Gate G09 (theme, brand and media review) is OPEN; the walkthroughs have not passed an independent new-user test."
-    source: docs/RESEARCH-AND-GATES.md
+    text: "Gate G09 (theme, brand and media review) is OPEN; the walkthroughs are marked DRAFT and have not passed an independent new-user test."
+    source: docs/runbooks/new-user-test.md
   - id: C22
     text: "Hidden navigation is not authorization: the API denies regardless of what the UI shows; theme is never permission."
     source: docs/security/threat-model.md
@@ -90,7 +90,7 @@ Claims: C01, C02
 - Discover registered and observed agents
 - Explain ownership, models, grounding and cost
 - Surface evidence-backed recommendations
-- Enable governed actions through chat or buttons
+- Enable governed actions (review queue and API; chat planned)
 - Give operators a live view of the AI ecosystem
 
 Notes:
@@ -103,11 +103,11 @@ Claims: C03, C12
 
 - Agents, owners, domains, models, grounding sources and tools
 - Relations are marked asserted (declared) or inferred (derived from traces)
-- Demo: the map shows which agents are involved in a seeded cost spike
+- Demo: browse agents on the map; read the spike agents from the cost_spike recommendation
 - Demo: the catalog page shows one agent entry
 
 Notes:
-The sandbox generator creates this synthetic catalog deterministically from a seed. In the Viewer walkthrough you open the map page and then the catalog page. Stay on the synthetic data and point at the isolation banner if the sandbox mode is on. Do not say anything about the size of a real customer estate.
+The sandbox generator creates this synthetic catalog deterministically from a seed. In the Viewer walkthrough you open the map page and then the catalog page; the map has no spike overlay, so read the spike agents from the cost_spike recommendation. Stay on the synthetic data and point at the isolation banner if the sandbox mode is on. Do not say anything about the size of a real customer estate.
 
 ---
 
@@ -116,7 +116,7 @@ Claims: C05, C06
 
 - Reference connectors: Azure Monitor and Log Analytics, APIM gateway logs, Foundry discovery, Cost Management exports, generic OpenTelemetry and CloudEvents
 - A coverage page publishes the documented API, granularity and limits for each connector
-- Some connectors are unit-tested and have not run against a live environment
+- No connector has run against a live provider (gate G04 open)
 - Messy input (duplicates, out-of-order, malformed) goes to quarantine and can be replayed
 
 Notes:
@@ -152,12 +152,13 @@ The Steward walkthrough uses the duplicate agent candidates scenario. Stress tha
 # One path for governed actions
 Claims: C09, C10, C11
 
-- A decision shows the exact target and diff, rechecks permission, honors approvals, audits, and verifies the real change
+- The executor rechecks permission, honors approvals, audits, and verifies the real change; the seeded demo stops before execution
 - The MCP server has no confirm, execute or approve tool: an agent can draft, a human confirms
-- No LLM-generated SQL, Cypher, KQL or JavaScript; charts are a sandboxed Vega-Lite subset
+- In repo: analytics adapters accept no query text, so no LLM-generated SQL reaches the engine
+- Planned: copilot controls (sandboxed charts, model drafts and does not execute)
 
 Notes:
-Buttons, chat and MCP share the same durable action executor, so there is one place where permission is rechecked and the outcome is verified. The threat model marks some of these controls as planned or in repository; check the threat model status column before answering detailed questions, and say what is not live-verified.
+Review-queue buttons and MCP share the same durable action executor, so there is one place where permission is rechecked and the outcome is verified; the chat route is not merged. Seeded demo intents stop at awaiting confirmation and the screen reads that nothing will be changed. The threat model marks the chart sandbox and model-drafts-action controls as planned; check the threat model status column before answering detailed questions, and say what is not live-verified.
 
 ---
 

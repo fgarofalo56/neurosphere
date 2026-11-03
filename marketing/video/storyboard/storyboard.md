@@ -14,6 +14,7 @@ claims:
   - C10
   - C11
   - C12
+  - C13
 ---
 
 # NeuroSphere explainer video: storyboard (source text)
@@ -22,7 +23,7 @@ claims:
 
 ## Production rules for every scene
 
-- Visuals come from the synthetic sandbox, never production data, with the isolation banner visible in every frame. No production data, no real names, no customers.
+- Visuals come from the synthetic sandbox, never production data, with sandbox mode switched on from the user menu (the sandbox toggle) before recording, so the isolation banner is visible in every frame. The banner is absent until sandbox mode is on. No production data, no real names, no customers.
 - Neutral visual identity. No Microsoft logo, badge or partner implication. Third-party names appear as plain text, never as logos.
 - Performance is stated as a PRD planning target and is labelled a target.
 - Government support is described as gated by the capability matrix. Availability, GA and authorization are separate gates. No FedRAMP statement, no ATO statement, no parity statement.
@@ -35,7 +36,7 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S01 Opening
 
-- Visual: Title card on a plain neutral background, then the sandbox landing view with the isolation banner visible. Synthetic sandbox data, never production data.
+- Visual: Title card on a plain neutral background, then the presenter switches sandbox mode on from the user menu and the sandbox landing view shows the isolation banner. Synthetic sandbox data, never production data.
 - Narration: NeuroSphere is a customer-hosted governance layer for AI agents. This video walks through it using a synthetic sandbox, so everything you see is generated data.
 - On-screen text: NeuroSphere | Synthetic sandbox | Source draft, not a rendered video
 - Caption: NeuroSphere is a customer-hosted governance layer for AI agents. This video uses a synthetic sandbox, so everything you see is generated data.
@@ -45,13 +46,13 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S02 Sandbox isolation
 
-- Visual: The sandbox page (`/sandbox`) with the isolation banner highlighted. Synthetic sandbox data, never production data.
-- Narration: The sandbox is isolated from real data. The banner stays on screen so you always know you are looking at synthetic content. Real ingestion needs approved connectors, and the demo never uses production data.
+- Visual: The presenter switches sandbox mode on from the user menu, then the sandbox page (`/sandbox`) with the isolation banner highlighted. Synthetic sandbox data, never production data.
+- Narration: The sandbox is isolated from real data. When sandbox mode is switched on, a banner stays on screen so you always know you are looking at synthetic content. Real ingestion is a separate path, and the demo never uses production data.
 - On-screen text: Isolation banner | Synthetic sandbox data
-- Caption: The sandbox is isolated from real data. The banner stays visible so you know the content is synthetic.
-- Claims: C02, C03
-- Sources: docs/walkthroughs/admin.md, docs/accessibility/README.md
-- Duration estimate: 15 s
+- Caption: The sandbox is isolated from real data. With sandbox mode on, a banner stays visible so you know the content is synthetic.
+- Claims: C02, C03, C13
+- Sources: docs/walkthroughs/admin.md, docs/accessibility/README.md, docs/RESEARCH-AND-GATES.md
+- Duration estimate: 17 s
 
 ### Scene S03 Viewer and a cost spike
 
@@ -75,8 +76,8 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S05 Steward review
 
-- Visual: Steward workspace, stale agents list, then the review queue with a duplicate candidate. Isolation banner visible.
-- Narration: A steward reviews consolidation candidates and unused agents. Candidates are always labelled as candidates and are never merged automatically. When the steward decides, the system shows the exact target and diff, rechecks permission, honors approvals, records an audit entry and verifies the real change.
+- Visual: Steward workspace, the recommendations list with the unused agent items, then the review queue with a duplicate candidate; the seeded intents stop at awaiting confirmation and the screen reads that nothing will be changed. Isolation banner visible.
+- Narration: A steward reviews consolidation candidates and unused agents. Candidates are always labelled as candidates and are never merged automatically. The action executor rechecks permission, honors approvals, records an audit entry and verifies the real change. In the seeded demo, decisions stop before execution.
 - On-screen text: Steward | Candidates, never auto-merged | Diff, permission recheck, audit
 - Caption: A steward reviews candidates that are never merged automatically. The system shows the exact diff, rechecks permission and audits the change.
 - Claims: C06, C07
@@ -85,7 +86,7 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S06 Admin and messy input
 
-- Visual: Admin workspace, execution control, then the comparison of the bad-event manifest against what the pipeline accepted and quarantined. Isolation banner visible.
+- Visual: Admin workspace, execution control, then (after the replay step has pushed the bad events) the comparison of the bad-event manifest against what the pipeline accepted and quarantined. Isolation banner visible.
 - Narration: An admin works with deliberately messy synthetic input: duplicate, out of order and malformed events. Quarantine and replay let the admin compare what was injected with what the pipeline accepted. Admin is a scoped role, with no unrestricted bypass.
 - On-screen text: Admin | Bad events: quarantine and replay | Scoped role
 - Caption: An admin compares injected bad events with what the pipeline accepted and quarantined. Admin is a scoped role.
@@ -95,13 +96,13 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S07 Auditor and the audit trail
 
-- Visual: Auditor workspace, `/audit`, then `/actions/detail` comparing a proposed change with the verified result. Isolation banner visible.
-- Narration: An auditor reads the audit trail. Each action records who acted, the target and version, and the outcome. The auditor can compare a proposed change with the verified result. The data is synthetic, so none of this is evidence of compliance or authorization.
+- Visual: Auditor workspace, then `/audit` with its entries. Isolation banner visible. The action screens are not shown here: the Auditor role cannot reach them.
+- Narration: An auditor reads the audit trail. Each action records who acted, the target and version, and the outcome. The data is synthetic, so none of this is evidence of compliance or authorization.
 - On-screen text: Auditor | Who, target, version, outcome | Synthetic: not compliance evidence
 - Caption: An auditor reads who acted, on what target and version, and the outcome. The data is synthetic and is not compliance evidence.
 - Claims: C10, C11
 - Sources: docs/walkthroughs/auditor.md
-- Duration estimate: 18 s
+- Duration estimate: 14 s
 
 ### Scene S08 Government and closing
 
@@ -120,6 +121,6 @@ See the computed figures in the estimates section below; they are checked by the
 ### Estimates
 
 - Scenes: 8
-- Narration words: 306
-- Estimated narration time at 150 words per minute: about 122 s (2.0 min)
-- Estimated total runtime including pauses: 132 s (sum of the scene estimates, about 2.2 min)
+- Narration words: 301
+- Estimated narration time at 150 words per minute: about 120 s (2.0 min)
+- Estimated total runtime including pauses: 130 s (sum of the scene estimates, about 2.2 min)

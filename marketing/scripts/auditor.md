@@ -19,7 +19,7 @@ Show an auditor tracing a seeded cost spike and actions through the audit trail.
 
 ## Isolation
 
-Before step 1, confirm the sandbox banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
+Sandbox mode defaults to off and the banner appears only once it is on. Before step 1, switch it on from the user menu (the sandbox toggle), then confirm the banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
 
 
 ## Setup
@@ -29,7 +29,7 @@ make dev-up
 make seed-stack SEED_PROFILE=small
 ```
 
-Sign in as the synthetic persona `auditor` (policy-store role `security_auditor`).
+Sign in as the synthetic persona `auditor` (policy-store role `security_auditor`). After sign-in, switch sandbox mode on from the user menu (the sandbox toggle) before step 1.
 
 ## Steps
 

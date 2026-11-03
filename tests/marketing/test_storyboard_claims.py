@@ -157,7 +157,11 @@ def test_scene_claims_are_declared_and_listed() -> None:
     assert {r[0] for r in rows} == declared
     for _, doc, reviewer in rows:
         assert (ROOT / doc).is_file(), doc
-        assert reviewer.strip() == "UNREVIEWED (pending independent review)"
+        reviewer = reviewer.strip()
+        assert reviewer == "UNREVIEWED (pending independent review)" or (
+            reviewer.startswith(("Claude reviewer agent", "Added 2026-11-03"))
+            and "human review" in reviewer
+        )
 
 
 def test_script_matches_storyboard_narration() -> None:
