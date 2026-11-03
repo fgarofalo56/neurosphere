@@ -28,32 +28,33 @@ Sandbox mode defaults to off and the banner appears only once it is on. Before s
 
 ## Setup
 
+For steps 1 to 4:
+
 ```bash
 make dev-up
 make seed-stack SEED_PROFILE=small
-make replay
 ```
 
-`SEED_PROFILE=small` has zero bad-event rates, so the seed alone pushes no bad events; `make replay` pushes the generator's bad events and rewrites `temp/sandbox/bad-event-manifest.json`.
+`SEED_PROFILE=small` has zero bad-event rates, so the seed alone pushes no bad events. Step 5 needs a separate run: `make replay` refuses to run when the hub already holds events (checked 2026-11-03: "hub holds 9653 events, expected 0 or 1653"), so it cannot follow `make seed-stack` on the same emulators. Run step 5 on an empty hub (`make seed-reset`, then `make replay`), which pushes the generator's bad events and rewrites `temp/sandbox/bad-event-manifest.json`. Step 5 was not completed end to end in the 2026-11-03 check.
 
 Sign in as the synthetic persona `admin` (policy-store role `admin`). After sign-in, switch sandbox mode on from the user menu (the sandbox toggle) before step 1.
 
 ## Steps
 
 1. Open `/workspaces/admin`.
-   - Expected: The Admin landing workspace loads with the sandbox banner shown.
+   - Expected: The Admin workspace loads. On the local stack (checked 2026-11-03) it shows its purpose line, "Service answered" and the text "Placeholder: this workspace is built out in later work", so present it as a placeholder, not a finished workspace.
    - Permission: data.read
 2. Open `/admin/execution-control`, then `/mcp-admin`.
-   - Expected: Both platform control pages load. Controls the role lacks are denied by the API, not just hidden.
+   - Expected: Both platform control pages load (checked 2026-11-03): execution control shows "Execution is enabled" with a Disable execution control; MCP servers lists three synthetic servers with 0 approved tools. Do not press Disable execution on stage. Controls the role lacks are denied by the API, not just hidden.
    - Permission: config.manage
 3. Open `/sandbox`.
-   - Expected: The page confirms synthetic data only and lists document counts by kind.
+   - Expected: The page confirms synthetic data only and lists document counts by kind (checked 2026-11-03: 247 documents, 24 agents, 128 relations on the small profile).
    - Permission: data.read
 4. Open `/gateways`, then `/deploy/capabilities`.
-   - Expected: The pages show which features the cloud and region allow. Unsupported combinations are disabled with a reason.
+   - Expected: `/gateways` says no gateways are registered in this domain on the local stack. `/deploy/capabilities` shows the capability matrix (checked 2026-11-03); unsupported or unverified combinations are disabled with a reason, and availability, release status and authorization scope are separate columns.
    - Permission: data.read (view), config.manage (changes)
 5. Compare counts in `temp/sandbox/bad-event-manifest.json` with what the pipeline accepted and quarantined (after `make replay`).
-   - Expected: Duplicate, out-of-order and malformed counts in the manifest line up with the accepted and quarantined counts you observe. Compare counts only: `make seed-stack` moves the epoch, so the manifest's absolute window times will not match.
+   - Expected: Duplicate, out-of-order and malformed counts in the manifest line up with the accepted and quarantined counts you observe. The ingestion worker logs a `quarantined` count per batch (`docker logs neurosphere-workers-1`); no screen in the UI shows quarantine counts (checked 2026-11-03). Compare counts only: `make seed-stack` moves the epoch, so the manifest's absolute window times will not match. Not verified end to end.
    - Permission: operator access to the local stack
 
 ## Permissions
