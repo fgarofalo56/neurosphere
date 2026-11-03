@@ -54,15 +54,15 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 - Sources: docs/walkthroughs/admin.md, docs/accessibility/README.md, docs/RESEARCH-AND-GATES.md
 - Duration estimate: 17 s
 
-### Scene S03 Viewer and a cost spike
+### Scene S03 Viewer and read-only access
 
-- Visual: Viewer workspace, then the cost dashboard at `/dashboards/cost` showing the seeded cost spike window. Isolation banner visible.
-- Narration: A viewer opens the cost dashboard and finds a seeded spike. In the synthetic data, token use was raised twelve times and volume three times inside a known window. The viewer can read, but there is no action, export or edit path.
-- On-screen text: Viewer | Seeded cost spike | Read access
-- Caption: A viewer finds a seeded cost spike on the dashboard. The viewer can read, but cannot act or edit.
+- Visual: Viewer workspace, then the recommendations list at `/recommendations` and a catalog entry at `/catalog`. Isolation banner visible.
+- Narration: A viewer browses the synthetic estate: the map, the recommendations and the catalog. The sandbox injects a cost spike, with token use raised twelve times and volume three times in a known window, but the local dashboard does not draw it. The viewer can read, and the service refuses changes.
+- On-screen text: Viewer | Read access | Changes refused
+- Caption: A viewer browses synthetic agents and recommendations. The viewer can read, but the service refuses changes.
 - Claims: C04
 - Sources: docs/walkthroughs/viewer.md
-- Duration estimate: 18 s
+- Duration estimate: 21 s
 
 ### Scene S04 Analyst and replay
 
@@ -121,6 +121,6 @@ See the computed figures in the estimates section below; they are checked by the
 ### Estimates
 
 - Scenes: 8
-- Narration words: 301
-- Estimated narration time at 150 words per minute: about 120 s (2.0 min)
-- Estimated total runtime including pauses: 130 s (sum of the scene estimates, about 2.2 min)
+- Narration words: 309
+- Estimated narration time at 150 words per minute: about 124 s (2.1 min)
+- Estimated total runtime including pauses: 133 s (sum of the scene estimates, about 2.2 min)

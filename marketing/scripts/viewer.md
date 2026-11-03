@@ -34,13 +34,13 @@ Sign in as the synthetic persona `viewer` (policy-store role `viewer`). After si
 ## Steps
 
 1. Open `/workspaces/viewer`.
-   - Expected: The Viewer landing workspace loads with the sandbox banner shown.
+   - Expected: The Viewer workspace loads with the sandbox banner shown (checked 2026-11-03). The page is a placeholder: purpose line "Read-only views of telemetry, cost and the catalog", "Service answered" and the text "Placeholder: this workspace is built out in later work". Present it as a placeholder.
    - Permission: data.read
 2. Open `/dashboards/cost` and find the spike window.
    - Expected: on the local emulator stack (checked 2026-11-03), the cost dashboard shows "unknown" cost, an "incomplete data" tag and "analytics: disabled, no analytics backend is enabled", with an empty chart. Unknown values are not shown as 0. The seeded spike is not visible here; it needs an enabled analytics backend, so do not present this screen as showing the spike on the local stack. The generator's spike window is recorded in `temp/sandbox/anomaly-manifest.json` (`make seed-stack` moves the epoch, so its absolute times will not match).
    - Permission: data.read
 3. Open `/map` to browse the agents, then open `/recommendations` and find the `cost_spike` recommendation to read the spike agents.
-   - Expected: (checked 2026-11-03) the map renders the agents and their relations; it has no spike overlay or highlight. The recommendations list has `cost_spike` entries that each name an agent (seven agents on the small profile), shown with "Projected change: unknown", "Insufficient history" and "Advisory action gates not passed". That is the way to read which agents are involved.
+   - Expected: (checked 2026-11-03) the map renders the agents and their relations; it has no spike overlay or highlight. The recommendations list has `cost_spike` entries that each name an agent (seven agents on the small profile), shown with "Projected change: unknown", "Insufficient history" and "Advisory action gates not passed". Do not present that list as the spike agent: the generator's manifest names one affected agent for the cost spike (`a-000013`), while the list shows seven agents with "Insufficient history" (checked 2026-11-03), so the list does not isolate the injected spike.
    - Permission: data.read
 4. Open `/catalog` and read one agent entry.
    - Expected: (checked 2026-11-03) the catalog lists agents and the entry shows its details and lineage. The entity page can still draw a Deprecate button, because the UI shows controls from the Entra app role in the token. If you press it and confirm, the API refuses ("The service declined this change") for a policy-store `viewer`, and the entity stays active. Do not press it on stage unless you want to show the refusal. Use an account whose Entra role is also `viewer` to avoid the button.
