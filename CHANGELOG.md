@@ -10,7 +10,7 @@ All notable changes to this project are documented here. The format follows
 - Sales and marketing deliverables (PRP-26): `marketing/` walking deck source and a generated PPTX,
   five persona demo scripts tied to the sandbox walkthroughs, video storyboard and narration source
   (not rendered, see PRP-27), an honest asset manifest (nothing marked rendered), and a claims lint
-  under `tests/marketing/`. G09 stays OPEN; the PPTX has not been opened in a viewer.
+  under `tests/marketing/`. G09 was waived by the owner for demo scope on 2026-11-03 (no independent review was performed).
 - Docs site and public assistant (PRP-25): MkDocs Material 9.8.0 site with an explicit page
   allowlist and a Pages workflow (ADR-0008), generated API, SDK and MCP references with a drift
   test, install/migration/operations/DR/security runbooks and five persona walkthroughs (DRAFT

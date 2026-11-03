@@ -217,3 +217,4 @@ Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp
   - Claims lint is a backstop, not proof; human claim review is still needed.
   - Not verified without a running stack: that the seeded `cost_spike` recommendation lists agents at runtime, and the persona script steps end to end.
   - Visual-baseline snapshots (Docker-only) were not checked against the dialog motion change.
+- 2026-11-03 owner waiver: G09 waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent brand, legal or accessibility review was performed. The manifest now marks the deck source and PPTX `rendered` (inspected for layout only); persona scripts, storyboard and claims stay `draft`; the video is not rendered (PRP-27 parked).

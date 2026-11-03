@@ -19,7 +19,7 @@ claims:
 
 # NeuroSphere explainer video: storyboard (source text)
 
-**This is source text. It is not a rendered video.** No audio, video, image or caption file exists for it. Rendering, narration audio and caption files are the budget-gated follow-up PRP-27. Every claim below is unreviewed (see `claims.md`) and the brand, legal and accessibility review (gate G09) stays OPEN.
+**This is source text. It is not a rendered video.** No audio, video, image or caption file exists for it. Rendering, narration audio and caption files are the budget-gated follow-up PRP-27. Claims have had no independent review (see `claims.md`). G09 waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent brand, legal or accessibility review was performed.
 
 ## Production rules for every scene
 

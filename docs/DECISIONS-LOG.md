@@ -4,6 +4,12 @@ Operator decisions that bind the build but are not architecture (those are ADRs
 in `docs/adr/`). Newest first. Each entry: date, decision, options considered,
 why, and what it changes.
 
+## 2026-11-03
+
+| # | Decision | Options considered | Why | Effect |
+|---|---|---|---|---|
+| D12 | **G09 waived by the owner for demo scope** | keep OPEN; waive for demo | This is a demo app; the owner does not require external brand, legal or accessibility sign-off | G09 waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent brand, legal or accessibility review was performed. Manual checklists stay unsigned, axe is not a conformance claim, no FedRAMP, ATO, parity or savings claims |
+
 ## 2026-10-08
 
 | # | Decision | Options considered | Why | Effect |

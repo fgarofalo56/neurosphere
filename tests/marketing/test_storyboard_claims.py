@@ -160,7 +160,7 @@ def test_scene_claims_are_declared_and_listed() -> None:
         reviewer = reviewer.strip()
         assert reviewer == "UNREVIEWED (pending independent review)" or (
             reviewer.startswith(("Claude reviewer agent", "Added 2026-11-03"))
-            and "human review" in reviewer
+            and "accepted by owner without independent review 2026-11-03" in reviewer
         )
 
 

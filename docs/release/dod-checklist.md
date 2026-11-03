@@ -29,7 +29,7 @@ none of them is asserted here.
 - [ ] Migrations and rollback tested against a live account: OPEN (G12), emulator-vs-live deltas are not yet measured.
 - [ ] Known limitations documented: `docs/evidence/release/<version>/known-limitations.md`.
 - [ ] Production credentials and approvals present only through approved channels: `docs/evidence/release/<version>/credential-channels.md`.
-- [ ] Docs, deck and media artefacts verified as real files: OPEN (G09).
+- [ ] Docs, deck and media artefacts verified as real files: deck and PPTX rendered; video not rendered (PRP-27). G09 waived by the owner for demo scope on 2026-11-03.
 - [ ] No FedRAMP authorization, ATO or parity claim anywhere: `docs/evidence/release/<version>/claims-scan.txt`.
 
 ## Gate-backed items that bound this release
