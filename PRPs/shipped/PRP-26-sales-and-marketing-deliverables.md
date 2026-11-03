@@ -1,7 +1,9 @@
 ---
 name: prp-26-sales-and-marketing-deliverables
-status: active
+status: shipped
 started: 2026-11-02
+shipped: 2026-11-03
+pr: 157
 branch: prp-26-marketing
 review: required
 created: 2026-10-08
@@ -198,11 +200,19 @@ Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp
 | 4 asset-manifest | merged | worktree-agent-ad52f57c43266e7d0 | sonnet | merged 586bb81; tests/marketing 86 pass; ruff clean; validate_planning PASS | 2026-11-02 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-11-03
+- Merged commits: PR #157 (prp-26-marketing into prp-25-docs-site, merge aa42f11), carried to main by PR #154 (merge 365e633). Items 2262594 (deck), 05ec851 (scripts), e0ea455 (storyboard), 586bb81 (manifest); fix-forwards 5c44e9e (storyboard vs shared lint), d89e5f9 (Auditor/reconciliation deck claim), ee6e573 (lint hardening). Gates: `verify-gates -Mode full` 4/4 PASS before the last lint commit; `pytest tests/marketing` 105 passed, 0 skipped; `validate_planning.py` PASS; independent review APPROVED, no blockers; PR #154 CI 32 pass, 4 skipping.
 - Deviations from blueprint and why:
-- Descoped items:
-- PPTX opened and reviewed (who, when):
-- Claims removed during review:
-- G09 status after this PRP (expected OPEN):
+  - Stacked on `prp-25-docs-site` because PR #154 (PRP-25) was not yet on main and the walkthroughs lived only there.
+  - PPTX built with `uv run --with python-pptx==1.0.2`, so no root `pyproject.toml` or `uv.lock` change (item 1 does not own them).
+  - Item 3 landed red when the shared claims lint became active; fixed forward by rewording the storyboard and narrowing two lint rules. A later hardening pass then closed review-found gaps (clause-scoped negation, FedRAMP level phrasing, save/percent, estimate exemption limited to duration words) and reworded six lines.
+  - Out of scope but required to unblock #154 CI: `surfaceMotion={null}` on `ChangeConfirmDialog` (b5c28a6). Axe scanned the dialog mid entrance animation and reported a transient color-contrast violation; tokens were fine.
+- Descoped items: none.
+- PPTX opened and reviewed (who, when): NOT DONE. It was only reloaded programmatically with python-pptx (13 slides, 13 notes pages, source hash check). `soffice` was unavailable and nobody opened it in PowerPoint, so layout and text fit are visually unchecked. The manifest keeps it `draft`.
+- Claims removed during review: none removed for lack of a citation. The lint caught phrasings that were reworded, and the deck's Auditor reconciliation demo claim (C07) was reworded to "a persona with data.read ... Auditor access to be verified". Every claim is still `UNREVIEWED (pending independent review)`.
+- G09 status after this PRP (expected OPEN): OPEN. Brand, legal and accessibility review and the rendered, captioned video (PRP-27) are still required.
 - Follow-ups:
+  - Open the PPTX in PowerPoint, review layout and claims, then flip the manifest row to `rendered`.
+  - Issue #156: `docs/walkthroughs/auditor.md` lists /actions, /actions/detail and /reconciliation, which `security_auditor` (audit.read and evidence.read, no data.read) likely cannot reach; verify on a running stack.
+  - Claims lint is a backstop, not proof; independent human claim review is still needed.
+  - Visual-baseline snapshots (Docker-only) were not checked against the dialog motion change.

@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-26-sales-and-marketing-deliverables](active/PRP-26-sales-and-marketing-deliverables.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -22,6 +20,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-26-sales-and-marketing-deliverables](shipped/PRP-26-sales-and-marketing-deliverables.md) | 2026-11-03 | #157 |
 | [prp-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-02 | #154 |
 | [prp-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-10-30 | #150 |
 | [prp-34-apim-gateway-manage](shipped/PRP-34-apim-gateway-manage.md) | 2026-10-30 | #149 |
