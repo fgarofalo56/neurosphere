@@ -1,8 +1,8 @@
 # Walking deck
 
 Status: DRAFT. Source of truth is `deck.md`; the PPTX is generated from it. Every claim is
-listed in `claims-checklist.md` and all of them are UNREVIEWED, so the deck cannot be
-`reviewed`. Gate G09 (brand, legal, accessibility review) stays OPEN.
+listed in `claims-checklist.md`; none had an independent review, so the deck front matter stays
+`draft`. G09 waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent brand, legal or accessibility review was performed.
 
 | File | Purpose |
 |---|---|

@@ -33,6 +33,6 @@ Automated axe re-run after the PRP-30 redesign, now across both UI styles (`ente
 
 No new findings: nothing was added to the table above for this run. `layout.spec.ts` additionally asserts that no `StatusPill` overflows its parent on home and the cost dashboard in either style.
 
-Still open and unchanged: the human keyboard and screen-reader checklists are unsigned and G09 stays OPEN. An agent has signed nothing.
+Still open and unchanged: the human keyboard and screen-reader checklists are unsigned. G09 was waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent accessibility review was performed. An agent has signed nothing.
 
 Manual tester runbook: the human pass in `tester-runbook.md` must now be repeated in both UI styles (switch style in the user menu, then repeat the keyboard and screen reader rows in `ops-console` as well as `enterprise-fluent`). The checklist sign-off blocks stay blank until a human completes both.

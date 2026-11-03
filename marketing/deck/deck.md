@@ -65,7 +65,7 @@ claims:
     text: "The documentation set includes install, operations, security, migration and DR runbooks, and API, MCP and SDK references."
     source: docs/runbooks/install.md
   - id: C21
-    text: "Gate G09 (theme, brand and media review) is OPEN; the walkthroughs are marked DRAFT and have not passed an independent new-user test."
+    text: "Gate G09 (theme, brand and media review) is waived by the owner for demo scope and no independent review was performed; the walkthroughs are marked DRAFT and have not passed an independent new-user test."
     source: docs/runbooks/new-user-test.md
   - id: C22
     text: "Hidden navigation is not authorization: the API denies regardless of what the UI shows; theme is never permission."
@@ -233,8 +233,8 @@ Claims: C16, C21
 
 - We do not claim FedRAMP authorization, an ATO, or Commercial and Government parity
 - We do not claim savings figures, uniqueness or completeness
-- Open: brand, legal and accessibility review (gate G09) and an independent new-user test
+- Waived by the owner for demo scope: brand, legal and accessibility review (gate G09); none was performed. Still open: an independent new-user test
 - Open: live runs against real provider environments need operator approval
 
 Notes:
-Close by naming what is still open. The deck stays at draft status until every row of the claims checklist has an independent reviewer. Brand and legal review of this deck has not happened.
+Close by naming what is still open. The deck front matter stays at draft status because no claims row had an independent reviewer. The owner waived gate G09 for demo scope on 2026-11-03; brand and legal review of this deck has not happened.

@@ -79,23 +79,23 @@ def test_nothing_marked_rendered_without_review() -> None:
             assert "UNREVIEWED" not in row["Review state"], row
 
 
-def test_pptx_is_draft_with_open_check_note() -> None:
+def test_pptx_is_rendered_without_independent_review() -> None:
     rows = [r for r in _main_table() if r["Path"].endswith(".pptx`")]
     assert len(rows) == 1
-    assert rows[0]["Status"] == "draft"
+    assert rows[0]["Status"] == "rendered"
     notes = rows[0]["Notes"]
-    # The open check is recorded, but rendered needs a human review, so it stays draft.
     assert "PowerPoint" in notes
-    assert "no human" in notes
+    assert "no independent brand or legal review was performed" in notes
 
 
 def test_video_row_not_rendered() -> None:
     assert "not rendered, see PRP-27" in _text()
 
 
-def test_g09_open_note() -> None:
+def test_g09_waiver_note() -> None:
     text = _text()
-    assert re.search(r"G09 \([^)]*\) is OPEN", text)
+    assert re.search(r"G09 \([^)]*\) is waived by the owner \(Frank Garofalo\) on 2026-11-03", text)
+    assert "no independent brand, legal or accessibility review was performed" in text
 
 
 def test_every_marketing_file_is_listed() -> None:

@@ -57,7 +57,7 @@ Every manual section is marked `Status: OPEN (unsigned)`. Only a human tester fi
 
 ## Gate status
 
-Gate G09 (theme, brand and media review) is tracked in [`docs/RESEARCH-AND-GATES.md`](../RESEARCH-AND-GATES.md) (row G09). It stays OPEN until Product plus legal and accessibility review complete, using the signed checklists and a cleared remediation log.
+Gate G09 (theme, brand and media review) is tracked in [`docs/RESEARCH-AND-GATES.md`](../RESEARCH-AND-GATES.md) (row G09). It was waived by the owner (Frank Garofalo) on 2026-11-03 for demo scope; no independent brand, legal or accessibility review was performed and the manual checklists remain unsigned. Axe results are automated evidence, not a conformance claim.
 
 ## UI styles and visual regression (PRP-30 item 10)
 
