@@ -120,6 +120,11 @@ def test_checklist_has_no_em_dash() -> None:
         "The analyst runs saved reports.",
         "Duration estimate: 11 s",
         "Estimated runtime 132 s (about 2.2 min).",
+        "Estimated total runtime 132 s.",
+        "We do not claim FedRAMP authorization.",
+        "no ATO claim is made",
+        "It is not slow, and we cannot say it is the best.",
+        "It is not FedRAMP High and has no IL5 status.",
     ],
 )
 def test_rules_pass_examples(text: str) -> None:
@@ -148,6 +153,20 @@ def test_rules_pass_examples(text: str) -> None:
         ("Dashboards load in 2s.", "unlabelled-number"),
         ("Availability is 99.9%.", "unlabelled-number"),
         ("Fast and good — really.", "em-dash"),
+        ("Not only fast but the best.", "best"),
+        ("It is not slow and is the only option.", "only"),
+        ("Not slow, the first choice.", "first"),
+        ("NeuroSphere supports FedRAMP High.", "fedramp-level"),
+        ("Designed for FedRAMP Moderate workloads.", "fedramp-level"),
+        ("Ready for IL4/IL5 data.", "fedramp-level"),
+        ("It is not FedRAMP authorized but covers FedRAMP Low.", "fedramp-level"),
+        ("Teams save money.", "savings"),
+        ("It will save 30 percent.", "savings"),
+        ("Reduces cost by 30 percent.", "unlabelled-number"),
+        ("Cuts latency 40 percent.", "unlabelled-number"),
+        ("Cuts spend by 12 per cent.", "unlabelled-number"),
+        ("Cuts latency to 2 s, our estimate.", "unlabelled-number"),
+        ("Scene estimate says 40%.", "unlabelled-number"),
     ],
 )
 def test_rules_fail_examples(text: str, rule: str) -> None:

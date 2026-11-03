@@ -32,7 +32,7 @@ Every factual claim in `storyboard.md` and `script.md`, mapped to the doc that s
 | C08 | The generator injects duplicate, out-of-order and malformed events so quarantine and replay can be observed | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
 | C09 | Admin is a scoped role with no unrestricted bypass | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
 | C10 | Audit entries record who, the target and version, and the outcome | docs/walkthroughs/auditor.md | UNREVIEWED (pending independent review) |
-| C11 | Seeded data is synthetic, so it is not evidence of compliance, authorization or ATO | docs/walkthroughs/auditor.md | UNREVIEWED (pending independent review) |
+| C11 | Seeded data is synthetic, so it is not evidence of ATO, compliance or authorization | docs/walkthroughs/auditor.md | UNREVIEWED (pending independent review) |
 | C12 | Government support is gated by the capability matrix; availability, GA and authorization are separate; performance numbers are planning targets; unsupported combinations are disabled | docs/RESEARCH-AND-GATES.md | UNREVIEWED (pending independent review) |
 
 Supporting docs for C12 also include `docs/PRD.md` (planning targets, section 3) and `docs/walkthroughs/admin.md` (capabilities page, unsupported combinations disabled).

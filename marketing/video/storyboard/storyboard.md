@@ -25,7 +25,7 @@ claims:
 - Visuals come from the synthetic sandbox, never production data, with the isolation banner visible in every frame. No production data, no real names, no customers.
 - Neutral visual identity. No Microsoft logo, badge or partner implication. Third-party names appear as plain text, never as logos.
 - Performance is stated as a PRD planning target and is labelled a target.
-- Government support is described as gated by the capability matrix. Availability, GA and authorization are separate gates. No FedRAMP, ATO or parity statement.
+- Government support is described as gated by the capability matrix. Availability, GA and authorization are separate gates. No FedRAMP statement, no ATO statement, no parity statement.
 
 ## Timing (estimates)
 

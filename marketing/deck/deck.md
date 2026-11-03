@@ -35,7 +35,7 @@ claims:
     text: "The MCP server exposes bounded structured tools and has no confirm, execute or approve tool; a human confirms through the same durable action executor."
     source: docs/reference/mcp.md
   - id: C11
-    text: "No LLM-generated SQL, Cypher, KQL or JavaScript; charts are a Vega-Lite subset in a sandboxed iframe; the model can only draft an action."
+    text: "No LLM-generated SQL, Cypher, KQL or JavaScript; charts are a Vega-Lite subset in a sandboxed iframe; the model drafts an action and does not execute it."
     source: docs/security/threat-model.md
   - id: C12
     text: "The Viewer walkthrough uses the map page to see which agents are involved in a seeded cost spike and the catalog page to read an agent entry."
@@ -50,7 +50,7 @@ claims:
     text: "Unsupported cloud, region or feature combinations are disabled with a reason from the capability matrix, not routed to another cloud; availability, GA and authorization are separate."
     source: docs/ARCHITECTURE.md
   - id: C16
-    text: "NeuroSphere is not FedRAMP authorized and cannot grant an agency ATO; agency authorizing officials determine ATO."
+    text: "NeuroSphere is not FedRAMP authorized and cannot grant an agency ATO; agency authorizing officials make that decision."
     source: docs/PRD.md
   - id: C17
     text: "Control mapping, SSP narratives and a POA&M template exist as documents that support, and do not make, the authorizing official's decision."
@@ -196,7 +196,7 @@ Claims: C15, C16, C17
 - Authorization support documents exist: control mapping, SSP narratives, POA&M template
 
 Notes:
-Never imply that a feature available in Azure Government is therefore available in NeuroSphere on Government, or that anything here is authorized. The authorizing official at the customer agency makes that decision. The support documents help the customer prepare; they do not make the decision.
+Never imply that a feature available in Azure Government is therefore available in NeuroSphere on Government, and never imply that anything here is authorized. The authorizing official at the customer agency makes that decision. The support documents help the customer prepare; they do not make the decision.
 
 ---
 
@@ -210,7 +210,7 @@ Claims: C18
 - Target: map freshness p95 <=10s after normalized ingestion
 
 Notes:
-These are planning targets from the requirements document. They have not been measured in a customer environment and appear here only as targets. If someone asks for measured results, say none are cited in this deck. Provider billing freshness depends on the connector and is not within these targets.
+These are planning targets from the requirements document. They have not been measured in a customer environment and are not results. If someone asks for measured results, say none are cited in this deck. Provider billing freshness depends on the connector and is not within these targets.
 
 ---
 

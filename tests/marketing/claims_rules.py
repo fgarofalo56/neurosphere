@@ -28,14 +28,17 @@ followed by whitespace. A semicolon does NOT end a sentence.
 1. Banned phrases (``BANNED_PHRASES``): authorized, ATO, FedRAMP status words, parity,
    unique, first, only, best, guaranteed, compliant, savings, completeness and superlative
    words. A match is allowed when the same sentence has a negation word BEFORE the match
-   (not, no, never, cannot, without, nor, n't), or when the sentence is a labelled
-   "We do not claim" / "Does not claim" line. This is deliberately simple: it will accept
-   "not X and Y" for both X and Y, and it will not understand double negatives.
+   (not, no, never, cannot, without, nor, n't) in the SAME CLAUSE (clauses split on commas,
+   semicolons and " but ", " and ", " yet ", " while "), or when the sentence is a labelled
+   "We do not claim" / "Does not claim" line. Double negatives are not understood.
+   Authorization levels ("FedRAMP High", "IL4/IL5") and savings forms (save, saves, saving)
+   are banned the same way.
 2. Unlabelled numbers (``NUMBER_PATTERN``): a sentence with a performance-style number
    (a percent, a duration or rate unit, or a p95 style percentile) must either contain the
    word "target" or cite an evidence path (``docs/evidence/...``). Otherwise it is flagged.
-   A duration in seconds or minutes ("11 s", "2.0 min") on a sentence containing "estimate" or
-   "estimated" is a timing estimate and is not flagged; any other number is still flagged.
+   A duration in seconds or minutes ("11 s", "2.0 min") on a sentence containing "estimate"
+   AND a runtime/duration/length/timing/narration/scene word is a timing estimate and is not
+   flagged; any other number is still flagged.
 3. Em-dashes are flagged (repo rule: no em-dashes in docs).
 """
 
@@ -54,6 +57,10 @@ BANNED_PHRASES: dict[str, re.Pattern[str]] = {
     "fedramp-status": re.compile(
         r"\bFedRAMP[\s-]+(?:compliant|authori[sz]ed|certified|approved|ready)\b", re.IGNORECASE
     ),
+    # Authorization-level phrasing: "FedRAMP High/Moderate/Low" and DoD "IL4/IL5".
+    "fedramp-level": re.compile(
+        r"\b(?i:FedRAMP)[\s-]+(?:High|Moderate|Low)\b|\bIL-?[45](?:\s*/\s*(?:IL-?)?[45])?\b"
+    ),
     "parity": re.compile(r"\bparity\b", re.IGNORECASE),
     "unique": re.compile(r"(?<![\w-])unique(?:ly|ness)?(?![\w-])", re.IGNORECASE),
     "first": re.compile(r"(?<![\w-])first(?![\w-])", re.IGNORECASE),
@@ -61,17 +68,19 @@ BANNED_PHRASES: dict[str, re.Pattern[str]] = {
     "best": re.compile(r"(?<![\w-])best(?![\w-])", re.IGNORECASE),
     "guaranteed": re.compile(r"\bguarantee[sd]?\b", re.IGNORECASE),
     "compliant": re.compile(r"\b(?:compliant|certified)\b", re.IGNORECASE),
-    # Savings CLAIMS only: "saves", "saving(s)", or "saved 30 ..." / "saved $5". The plain past
-    # participle in "saved reports" is not a claim.
-    "savings": re.compile(r"\bsav(?:es|ing|ings)\b|\bsaved\s+(?:\$\s?)?\d", re.IGNORECASE),
+    # Savings CLAIMS only: "save", "saves", "saving(s)", or "saved 30 ..." / "saved $5". The plain
+    # past participle in "saved reports" is not a claim.
+    "savings": re.compile(r"\bsav(?:es?|ing|ings)\b|\bsaved\s+(?:\$\s?)?\d", re.IGNORECASE),
     "completeness": re.compile(
         r"\b(?:complete(?:ly|ness)?|comprehensive|industry-leading|world-class)\b",
         re.IGNORECASE,
     ),
 }
 
-# A negation word that appears before the banned phrase in the same sentence exempts it.
+# A negation word that appears before the banned phrase in the SAME CLAUSE exempts it.
 NEGATION = re.compile(r"\b(?:not|no|never|cannot|without|nor)\b|n't", re.IGNORECASE)
+# Clause boundaries inside a sentence: comma, semicolon, " but ", " and ", " yet ", " while ".
+CLAUSE_SPLIT = re.compile(r"[,;]|\s(?:but|and|yet|while)\s", re.IGNORECASE)
 
 # A whole sentence that starts with one of these labels is a statement of what is NOT claimed.
 NOT_CLAIM_LABEL = re.compile(
@@ -80,7 +89,8 @@ NOT_CLAIM_LABEL = re.compile(
 
 # Performance-style numbers: percent, ms, seconds, fps, 2k style counts, p95 style percentiles.
 NUMBER_PATTERN = re.compile(
-    r"\b\d+(?:\.\d+)?\s?(?:%|ms\b|s\b|seconds?\b|fps\b|k\b)|\bp\d{2}\b", re.IGNORECASE
+    r"\b\d+(?:\.\d+)?\s?(?:%|percent\b|per\s?cent\b|ms\b|s\b|seconds?\b|fps\b|k\b)|\bp\d{2}\b",
+    re.IGNORECASE,
 )
 TARGET_WORD = re.compile(r"\btargets?\b", re.IGNORECASE)
 EVIDENCE_PATH = re.compile(r"docs/evidence/\S+")
@@ -89,6 +99,10 @@ EVIDENCE_PATH = re.compile(r"docs/evidence/\S+")
 # estimate for the asset itself (for example a video runtime), not a performance claim.
 TIMING_UNIT = re.compile(r"\d+(?:\.\d+)?\s?(?:s|seconds?|min|minutes?)", re.IGNORECASE)
 ESTIMATE_WORD = re.compile(r"\bestimate[sd]?\b", re.IGNORECASE)
+# The estimate exemption also needs a runtime/duration-style word in the sentence.
+DURATION_CONTEXT = re.compile(
+    r"\b(?:run-?times?|durations?|lengths?|timings?|narrations?|scenes?)\b", re.IGNORECASE
+)
 
 EM_DASH = "—"
 
@@ -140,9 +154,17 @@ def _sentences(text: str) -> list[tuple[int, str]]:
     return result
 
 
+def _negated(sentence: str, start: int) -> bool:
+    """True when a negation word precedes ``start`` within the same clause."""
+    clause_start = 0
+    for split in CLAUSE_SPLIT.finditer(sentence, 0, start):
+        clause_start = split.end()
+    return bool(NEGATION.search(sentence[clause_start:start]))
+
+
 def _first_unlabelled_number(sentence: str) -> re.Match[str] | None:
     """First performance-style number, skipping s/min durations on an "estimate" sentence."""
-    is_estimate = bool(ESTIMATE_WORD.search(sentence))
+    is_estimate = bool(ESTIMATE_WORD.search(sentence) and DURATION_CONTEXT.search(sentence))
     for match in NUMBER_PATTERN.finditer(sentence):
         if is_estimate and TIMING_UNIT.fullmatch(match.group(0)):
             continue
@@ -157,7 +179,7 @@ def find_violations(text: str) -> list[Violation]:
         not_claim_line = bool(NOT_CLAIM_LABEL.match(sentence))
         for rule, pattern in BANNED_PHRASES.items():
             for match in pattern.finditer(sentence):
-                if not_claim_line or NEGATION.search(sentence[: match.start()]):
+                if not_claim_line or _negated(sentence, match.start()):
                     continue
                 found.append(Violation(rule, match.group(0), sentence.strip(), line))
         number = _first_unlabelled_number(sentence)
