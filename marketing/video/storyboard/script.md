@@ -15,9 +15,9 @@ NeuroSphere is a customer-hosted governance layer for AI agents. This video walk
 
 The sandbox is isolated from real data. When sandbox mode is switched on, a banner stays on screen so you always know you are looking at synthetic content. Real ingestion is a separate path, and the demo never uses production data.
 
-## S03 Viewer and a cost spike
+## S03 Viewer and read-only access
 
-A viewer opens the cost dashboard and finds a seeded spike. In the synthetic data, token use was raised twelve times and volume three times inside a known window. The viewer can read, but there is no action, export or edit path.
+A viewer browses the synthetic estate: the map, the recommendations and the catalog. The sandbox injects a cost spike, with token use raised twelve times and volume three times in a known window, but the local dashboard does not draw it. The viewer can read, and the service refuses changes.
 
 ## S04 Analyst and replay
 

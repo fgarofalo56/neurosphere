@@ -35,7 +35,7 @@ make dev-up
 make seed-stack SEED_PROFILE=small
 ```
 
-`SEED_PROFILE=small` has zero bad-event rates, so the seed alone pushes no bad events. Step 5 needs a separate run: `make replay` refuses to run when the hub already holds events (checked 2026-11-03: "hub holds 9653 events, expected 0 or 1653"), so it cannot follow `make seed-stack` on the same emulators. Run step 5 on an empty hub (`make seed-reset`, then `make replay`), which pushes the generator's bad events and rewrites `temp/sandbox/bad-event-manifest.json`. Step 5 was not completed end to end in the 2026-11-03 check.
+`SEED_PROFILE=small` has zero bad-event rates, so the seed alone pushes no bad events. Step 5 needs a separate run: `make replay` refuses to run when the hub already holds events (checked 2026-11-03: "hub holds 9653 events, expected 0 or 1653"), so it cannot follow `make seed-stack` on the same emulators. Run step 5 on an empty hub (`make seed-reset`, then `make replay`), which pushes the generator's bad events and rewrites `temp/sandbox/bad-event-manifest.json`. Step 5 was tried on 2026-11-03 and did not work; see its note.
 
 Sign in as the synthetic persona `admin` (policy-store role `admin`). After sign-in, switch sandbox mode on from the user menu (the sandbox toggle) before step 1.
 
@@ -54,7 +54,7 @@ Sign in as the synthetic persona `admin` (policy-store role `admin`). After sign
    - Expected: `/gateways` says no gateways are registered in this domain on the local stack. `/deploy/capabilities` shows the capability matrix (checked 2026-11-03); unsupported or unverified combinations are disabled with a reason, and availability, release status and authorization scope are separate columns.
    - Permission: data.read (view), config.manage (changes)
 5. Compare counts in `temp/sandbox/bad-event-manifest.json` with what the pipeline accepted and quarantined (after `make replay`).
-   - Expected: Duplicate, out-of-order and malformed counts in the manifest line up with the accepted and quarantined counts you observe. The ingestion worker logs a `quarantined` count per batch (`docker logs neurosphere-workers-1`); no screen in the UI shows quarantine counts (checked 2026-11-03). Compare counts only: `make seed-stack` moves the epoch, so the manifest's absolute window times will not match. Not verified end to end.
+   - Expected: Duplicate, out-of-order and malformed counts in the manifest line up with the accepted and quarantined counts you observe. Checked 2026-11-03 on an empty hub with the app services running: `make replay` pushed all 1653 events, and the worker quarantined all 1653 with reason `invalid_wire` (counted in the `ns-quarantine` blob container of the local Azurite emulator); `ns-archive` stayed empty. So the manifest's duplicate (15), out-of-order (13) and malformed (5) counts could NOT be compared with accepted and quarantined counts, and this step cannot be demonstrated as written. The worker's text log prints only "batch checkpointed" without the counts, and no UI screen shows quarantine counts. Do not present this step until the replay path is fixed or the step is replaced.
    - Permission: operator access to the local stack
 
 ## Permissions

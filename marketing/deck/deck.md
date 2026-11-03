@@ -38,7 +38,7 @@ claims:
     text: "In repo: analytics adapters accept no query text, so no LLM-generated SQL reaches the engine. Copilot controls (sandboxed Vega-Lite charts, the model drafting an action without executing it) are planned."
     source: docs/security/threat-model.md
   - id: C12
-    text: "The Viewer walkthrough uses the map page to browse agents and the catalog page to read an agent entry; the agents in a seeded cost spike are read from the cost_spike recommendation."
+    text: "The Viewer walkthrough uses the map page to browse agents and the catalog page to read an agent entry; the recommendations page lists cost_spike items without singling out the seeded spike agent."
     source: docs/walkthroughs/viewer.md
   - id: C13
     text: "Access is scoped by grants in the policy store; there is no unrestricted bypass for any role; the Viewer role has no action, export or edit path."
@@ -103,11 +103,11 @@ Claims: C03, C12
 
 - Agents, owners, domains, models, grounding sources and tools
 - Relations are marked asserted (declared) or inferred (derived from traces)
-- Demo: browse agents on the map; read the spike agents from the cost_spike recommendation
+- Demo: browse agents on the map; the recommendations page lists cost_spike items
 - Demo: the catalog page shows one agent entry
 
 Notes:
-The sandbox generator creates this synthetic catalog deterministically from a seed. In the Viewer walkthrough you open the map page and then the catalog page; the map has no spike overlay, so read the spike agents from the cost_spike recommendation. Stay on the synthetic data and point at the isolation banner if the sandbox mode is on. Do not say anything about the size of a real customer estate.
+The sandbox generator creates this synthetic catalog deterministically from a seed. In the Viewer walkthrough you open the map page and then the catalog page; the map has no spike overlay. The cost_spike recommendations list several agents with unknown projected change and insufficient history, so do not present that list as identifying the seeded spike agent. Stay on the synthetic data and point at the isolation banner if the sandbox mode is on. Do not say anything about the size of a real customer estate.
 
 ---
 
