@@ -192,10 +192,10 @@ Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 1 walking-deck | in-progress | | sonnet | | 2026-11-02 |
-| 2 persona-scripts | in-progress | worktree-agent-af5704c7e2defe88d | sonnet | reported 05ec851 (17 pass); not yet verified by orchestrator | 2026-11-02 |
-| 3 video-storyboard | in-progress | worktree-agent-a9c573b58b3c1956c | sonnet | reported e0ea455 (10 pass, 1 skip pending item 1); not yet verified by orchestrator | 2026-11-02 |
-| 4 asset-manifest | todo | | sonnet | | 2026-11-02 |
+| 1 walking-deck | review | worktree-agent-ad69713f91020ffeb | sonnet | merged 2262594; 40 pass; PPTX reloaded programmatically only, no GUI open | 2026-11-02 |
+| 2 persona-scripts | review | worktree-agent-af5704c7e2defe88d | sonnet | merged 05ec851; 57 pass | 2026-11-02 |
+| 3 video-storyboard | review | worktree-agent-a9c573b58b3c1956c | sonnet | merged e0ea455 + lint fix-forward 5c44e9e; 76 pass, 0 skip | 2026-11-02 |
+| 4 asset-manifest | review | worktree-agent-ad52f57c43266e7d0 | sonnet | merged 586bb81; tests/marketing 86 pass; ruff clean; validate_planning PASS | 2026-11-02 |
 
 ## Completion note (filled at ship)
 - Date:
