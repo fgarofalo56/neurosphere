@@ -7,6 +7,29 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Docs site and public assistant (PRP-25): MkDocs Material 9.8.0 site with an explicit page
+  allowlist and a Pages workflow (ADR-0008), generated API, SDK and MCP references with a drift
+  test, install/migration/operations/DR/security runbooks and five persona walkthroughs (DRAFT
+  until an independent new-user test is recorded), and a separate rate-limited read-only docs
+  assistant service. Not done: the new-user test and the first Pages deploy are OPEN.
+- Missing UI surfaces (PRP-31, #150): twelve governed, accessible routes for capabilities that
+  were API-only (catalog explorer, entity, recertifications and stale agents; curation edge
+  decisions bound to edge version/ETag; audit trail and chain verification; FinOps forecast;
+  federation summary with currencies never summed; deploy scan, plan and capabilities with no
+  apply control; evaluation results; execution control), a shared change-confirm dialog, and a
+  small `ui_adapters` backend module with domain-path endpoints that never take scope keys or an
+  actor from the browser. Known gaps: catalog deprecate/recertify reasons are not stored yet,
+  real-API compatibility is proven against the in-memory API and the mock only, and the
+  accessibility sign-off (G09) is still OPEN.
+- APIM AI gateway, manage side (PRP-34, #149): an `apim-gateway` write connector with
+  deterministic digest-bound plans, existence re-read before every write, ownership recorded
+  per step and reverse rollback that deletes only what the run created; an audited
+  observe/manage switch with a permissions preflight; backend and pool-weight model swaps with a
+  priority-group canary cap, budget-cap changes, Grant publication and MCP server publication
+  (Entra-only, credentials stripped, deny-first) as real gateway changes; Bicep v2 SKUs, a
+  created-only diagnostics module and an optional own-MCP front; the manage UI; and the G17 manage
+  live-gate script. Not deployed: no worker or API composition registers the connector yet, and
+  the G17 manage live run is OPEN.
 - APIM AI gateway, observe side (PRP-33, #146): capability-matrix tier and feature rows
   for API Management, cloud-profile gateway suffix with ARM and Log Analytics clients,
   Azure Monitor connector source kinds for gateway and LLM token logs (bodies never

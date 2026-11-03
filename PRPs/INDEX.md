@@ -6,14 +6,12 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 10/10 (100%) | merged 10 | ? / ? | required |
+| [prp-26-sales-and-marketing-deliverables](active/PRP-26-sales-and-marketing-deliverables.md) |  | 4/4 (100%) | merged 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) |  |  | - | - | ? / ? | none |
-| [prp-26-sales-and-marketing-deliverables](backlog/PRP-26-sales-and-marketing-deliverables.md) |  |  | - | - | ? / ? | required |
 | [prp-27-explainer-video-render](backlog/PRP-27-explainer-video-render.md) |  |  | - | - | ? / ? | none |
 
 ## Blocked
@@ -24,6 +22,8 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-02 | #154 |
+| [prp-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-10-30 | #150 |
 | [prp-34-apim-gateway-manage](shipped/PRP-34-apim-gateway-manage.md) | 2026-10-30 | #149 |
 | [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-10-29 | #146 |
 | [prp-32-hosted-azure-environment](shipped/PRP-32-hosted-azure-environment.md) | 2026-10-28 | #135 |

@@ -1,6 +1,10 @@
 ---
 name: prp-25-docs-site-and-public-assistant
-status: backlog
+status: shipped
+shipped: 2026-11-02
+pr: 154
+started: 2026-10-30
+branch: prp-25-docs-site
 review: none
 created: 2026-10-08
 model: sonnet
@@ -189,11 +193,29 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 - [x] Gates are executable commands, not intentions
 - [x] All clarification questions are decided, not guessed
 
+## Execution state
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 | merged | prp-25-docs-site | sonnet | ADR-0008, mkdocs.yml, Pages workflow; `mkdocs build --strict` passes (me, 2026-11-02); tests/docs nav allowlist + ADR present pass; committed 3a4a1fc | 2026-11-02 |
+| 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
+| 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
+| 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
+
+Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch history. Gates: 96 PRP tests pass, `validate_planning.py` PASS, `mkdocs build --strict` PASS, `verify-gates -Mode full` PASS (4/4 gates; first run failed only on a broken pnpm shim under Node 26, fixed by installing pnpm@11.17.0 globally).
+
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-11-02
+- Merged commits: PR #154. Items: 1 `3a4a1fc`, 2 `b816627`, 3 `9e4917b`, 4 `168da9d`; CI fixes `5cfe9e5`; main merge `9f61d44`. Related unblock PR #155 (`dbf2d0f`).
 - Deviations from blueprint and why:
-- Descoped items:
-- Docs tool chosen (ADR 0008) and EOL handling:
-- New-user test: tester, date, result (or OPEN):
+  - Execution state table was missing at resume; rebuilt from branch history.
+  - Item 4 Dockerfile first assumed its own directory as build context; CI builds every image from the repo root, so it now copies only `services/docs-assistant/` paths from the root.
+  - Edits outside item ownership, all CI unblockers: `.gitleaksignore` (fake `sk-live` value in a negative test), and via #155 the python base pin in `services/api` and `services/workers` Dockerfiles and `frontend/scripts/update-visual-baselines.mjs` (Playwright image dropped corepack). These were main drift, not PRP-25 defects, except the gitleaks entry and the docs-assistant Dockerfile.
+  - Local pnpm 11.17.0 installed globally (machine had Node 26 and a dangling corepack shim); not a repo change.
+- Descoped items: none.
+- Docs tool chosen (ADR 0008) and EOL handling: MkDocs Material 9.8.0. Its EOL moved from 2026-11-05 to 2027-05-05, superseding ADR-0002; Zensical 0.0.x is pre-release (0.1.0 line planned 2026-11-05), so revisit before 2027-05-05.
+- New-user test: OPEN. No independent tester has followed `docs/runbooks/install.md`; `docs/runbooks/new-user-test.md` is an unfilled template and the runbooks stay labelled DRAFT.
 - Follow-ups:
+  - OPEN: independent new-user test (above).
+  - OPEN: first Pages deploy, which runs on the first push to `main` after merge; any hosted assistant deployment is an operator action.
+  - G09 (theme/brand/media review) not closed here.
+  - Pin the Playwright image by digest so its toolchain cannot drift again.

@@ -14,6 +14,7 @@ members = [
     "neurosphere-connector-otel-generic",
     "neurosphere-contracts",
     "neurosphere-core",
+    "neurosphere-docs-assistant",
     "neurosphere-workers",
     "neurosphere-workspace",
 ]
@@ -1378,6 +1379,25 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.15,<3" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15,<3" },
     { name = "pyyaml", specifier = ">=6,<7" },
+]
+
+[[package]]
+name = "neurosphere-docs-assistant"
+version = "0.0.0"
+source = { editable = "services/docs-assistant" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.143,<0.150" },
+    { name = "pydantic", specifier = ">=2.14,<3" },
+    { name = "pydantic-settings", specifier = ">=2.16,<3" },
+    { name = "uvicorn", specifier = ">=0.54,<0.55" },
 ]
 
 [[package]]

@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 142 packages
+## Python (uv.lock) - 143 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -93,6 +93,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | neurosphere-connector-otel-generic | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-contracts | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-core | 0.0.0 | first-party | first-party | workspace member |
+| neurosphere-docs-assistant | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-workers | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-workspace | 0.0.0 | first-party | first-party | workspace member |
 | nodeenv | 1.11.0 | BSD | dev-only | no EOL published locally; Dependabot tracks releases |
