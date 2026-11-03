@@ -18,7 +18,7 @@ import { ROUTE_SAMPLES } from "./route-samples.ts";
 
 // PRP-24 item 3: axe over every route in the manifest x light/dark/high-contrast, plus sandbox mode,
 // plus the explicit map-table, reduced-motion map and sandboxed-chart-iframe checks. Automated axe
-// is necessary, not sufficient (docs/accessibility/README.md); G09 stays OPEN.
+// is necessary, not sufficient (docs/accessibility/README.md); G09 is waived by the owner for demo scope (D12).
 
 const manifest = JSON.parse(
   readFileSync(
