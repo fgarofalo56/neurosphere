@@ -3,9 +3,9 @@ status: draft
 rendered: false
 ---
 
-# NeuroSphere explainer video: narration script (source only)
+# NeuroSphere explainer video: narration script (source text)
 
-This is source text only. It is not a rendered video and no audio exists for it. Each section is the narration of the scene with the same id in `storyboard.md`; edit narration there and keep this file identical. The word count is 306 and the read time is an estimate at 150 words per minute.
+This is source text, not a rendered video. It is not a rendered video and no audio exists for it. Each section is the narration of the scene with the same id in `storyboard.md`; edit narration there and keep this file identical. The word count is 306 and the read time is an estimate at 150 words per minute.
 
 ## S01 Opening
 
@@ -13,7 +13,7 @@ NeuroSphere is a customer-hosted governance layer for AI agents. This video walk
 
 ## S02 Sandbox isolation
 
-The sandbox is isolated from real data. The banner stays on screen so you always know you are looking at synthetic content. Real ingestion needs authorized connectors, and the demo never uses production data.
+The sandbox is isolated from real data. The banner stays on screen so you always know you are looking at synthetic content. Real ingestion needs approved connectors, and the demo never uses production data.
 
 ## S03 Viewer and a cost spike
 

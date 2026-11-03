@@ -16,15 +16,15 @@ claims:
   - C12
 ---
 
-# NeuroSphere explainer video: storyboard (source only)
+# NeuroSphere explainer video: storyboard (source text)
 
-**This is source only. It is not a rendered video.** No audio, video, image or caption file exists for it. Rendering, narration audio and caption files are the budget-gated follow-up PRP-27. Every claim below is unreviewed (see `claims.md`) and the brand, legal and accessibility review (gate G09) stays OPEN.
+**This is source text. It is not a rendered video.** No audio, video, image or caption file exists for it. Rendering, narration audio and caption files are the budget-gated follow-up PRP-27. Every claim below is unreviewed (see `claims.md`) and the brand, legal and accessibility review (gate G09) stays OPEN.
 
 ## Production rules for every scene
 
-- Visuals come from the synthetic sandbox only, with the isolation banner visible in every frame. No production data, no real names, no customers.
-- Neutral visual identity. No Microsoft logo, badge or partner implication. Third-party names appear as plain text only.
-- Performance is mentioned only as a PRD planning target and is labelled a target.
+- Visuals come from the synthetic sandbox, never production data, with the isolation banner visible in every frame. No production data, no real names, no customers.
+- Neutral visual identity. No Microsoft logo, badge or partner implication. Third-party names appear as plain text, never as logos.
+- Performance is stated as a PRD planning target and is labelled a target.
 - Government support is described as gated by the capability matrix. Availability, GA and authorization are separate gates. No FedRAMP, ATO or parity statement.
 
 ## Timing (estimates)
@@ -35,7 +35,7 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S01 Opening
 
-- Visual: Title card on a plain neutral background, then the sandbox landing view with the isolation banner visible. Synthetic data only.
+- Visual: Title card on a plain neutral background, then the sandbox landing view with the isolation banner visible. Synthetic sandbox data, never production data.
 - Narration: NeuroSphere is a customer-hosted governance layer for AI agents. This video walks through it using a synthetic sandbox, so everything you see is generated data.
 - On-screen text: NeuroSphere | Synthetic sandbox | Source draft, not a rendered video
 - Caption: NeuroSphere is a customer-hosted governance layer for AI agents. This video uses a synthetic sandbox, so everything you see is generated data.
@@ -45,9 +45,9 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S02 Sandbox isolation
 
-- Visual: The sandbox page (`/sandbox`) with the isolation banner highlighted. Synthetic data only.
-- Narration: The sandbox is isolated from real data. The banner stays on screen so you always know you are looking at synthetic content. Real ingestion needs authorized connectors, and the demo never uses production data.
-- On-screen text: Isolation banner | Synthetic data only
+- Visual: The sandbox page (`/sandbox`) with the isolation banner highlighted. Synthetic sandbox data, never production data.
+- Narration: The sandbox is isolated from real data. The banner stays on screen so you always know you are looking at synthetic content. Real ingestion needs approved connectors, and the demo never uses production data.
+- On-screen text: Isolation banner | Synthetic sandbox data
 - Caption: The sandbox is isolated from real data. The banner stays visible so you know the content is synthetic.
 - Claims: C02, C03
 - Sources: docs/walkthroughs/admin.md, docs/accessibility/README.md
@@ -57,7 +57,7 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 - Visual: Viewer workspace, then the cost dashboard at `/dashboards/cost` showing the seeded cost spike window. Isolation banner visible.
 - Narration: A viewer opens the cost dashboard and finds a seeded spike. In the synthetic data, token use was raised twelve times and volume three times inside a known window. The viewer can read, but there is no action, export or edit path.
-- On-screen text: Viewer | Seeded cost spike | Read only
+- On-screen text: Viewer | Seeded cost spike | Read access
 - Caption: A viewer finds a seeded cost spike on the dashboard. The viewer can read, but cannot act or edit.
 - Claims: C04
 - Sources: docs/walkthroughs/viewer.md
@@ -105,7 +105,7 @@ Narration length and scene timing are ESTIMATES, computed as words divided by 15
 
 ### Scene S08 Government and closing
 
-- Visual: Admin view of `/deploy/capabilities` showing a feature disabled with a reason, then a closing card. Isolation banner visible on the first part.
+- Visual: Admin view of `/deploy/capabilities` showing a feature disabled with a reason, then a closing card. Isolation banner visible in the opening scenes.
 - Narration: Support for Azure Government is gated by a capability matrix, and unsupported combinations are disabled rather than hidden. Availability, general availability and authorization are separate questions, and this video makes no claim about any of them. Dashboard and map speeds in the product documents are planning targets, not measured promises.
 - On-screen text: Capability matrix | Availability, GA and authorization are separate | Performance figures are targets
 - Caption: Government support is gated by a capability matrix. Availability, GA and authorization are separate. Speeds in the documents are planning targets.

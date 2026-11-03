@@ -127,7 +127,7 @@ def test_states_source_only_and_not_rendered() -> None:
     assert fm["status"] == "draft"
     assert fm["rendered"] == "false"
     assert fm["claims"]
-    assert "source only" in text.lower()
+    assert "source text" in text.lower()
     assert "not a rendered video" in text.lower()
     for path in SOURCE_FILES:
         assert "explainer video delivered" not in _read(path).lower()

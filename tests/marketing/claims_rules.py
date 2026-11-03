@@ -34,6 +34,8 @@ followed by whitespace. A semicolon does NOT end a sentence.
 2. Unlabelled numbers (``NUMBER_PATTERN``): a sentence with a performance-style number
    (a percent, a duration or rate unit, or a p95 style percentile) must either contain the
    word "target" or cite an evidence path (``docs/evidence/...``). Otherwise it is flagged.
+   A duration in seconds or minutes ("11 s", "2.0 min") on a sentence containing "estimate" or
+   "estimated" is a timing estimate and is not flagged; any other number is still flagged.
 3. Em-dashes are flagged (repo rule: no em-dashes in docs).
 """
 
@@ -59,7 +61,9 @@ BANNED_PHRASES: dict[str, re.Pattern[str]] = {
     "best": re.compile(r"(?<![\w-])best(?![\w-])", re.IGNORECASE),
     "guaranteed": re.compile(r"\bguarantee[sd]?\b", re.IGNORECASE),
     "compliant": re.compile(r"\b(?:compliant|certified)\b", re.IGNORECASE),
-    "savings": re.compile(r"\bsav(?:es|ed|ing|ings)\b", re.IGNORECASE),
+    # Savings CLAIMS only: "saves", "saving(s)", or "saved 30 ..." / "saved $5". The plain past
+    # participle in "saved reports" is not a claim.
+    "savings": re.compile(r"\bsav(?:es|ing|ings)\b|\bsaved\s+(?:\$\s?)?\d", re.IGNORECASE),
     "completeness": re.compile(
         r"\b(?:complete(?:ly|ness)?|comprehensive|industry-leading|world-class)\b",
         re.IGNORECASE,
@@ -80,6 +84,11 @@ NUMBER_PATTERN = re.compile(
 )
 TARGET_WORD = re.compile(r"\btargets?\b", re.IGNORECASE)
 EVIDENCE_PATH = re.compile(r"docs/evidence/\S+")
+
+# A duration (seconds or minutes) on a sentence that says "estimate"/"estimated" is a timing
+# estimate for the asset itself (for example a video runtime), not a performance claim.
+TIMING_UNIT = re.compile(r"\d+(?:\.\d+)?\s?(?:s|seconds?|min|minutes?)", re.IGNORECASE)
+ESTIMATE_WORD = re.compile(r"\bestimate[sd]?\b", re.IGNORECASE)
 
 EM_DASH = "—"
 
@@ -131,6 +140,16 @@ def _sentences(text: str) -> list[tuple[int, str]]:
     return result
 
 
+def _first_unlabelled_number(sentence: str) -> re.Match[str] | None:
+    """First performance-style number, skipping s/min durations on an "estimate" sentence."""
+    is_estimate = bool(ESTIMATE_WORD.search(sentence))
+    for match in NUMBER_PATTERN.finditer(sentence):
+        if is_estimate and TIMING_UNIT.fullmatch(match.group(0)):
+            continue
+        return match
+    return None
+
+
 def find_violations(text: str) -> list[Violation]:
     """Lint ``text`` and return every violation (empty list means the text passes)."""
     found: list[Violation] = []
@@ -141,12 +160,11 @@ def find_violations(text: str) -> list[Violation]:
                 if not_claim_line or NEGATION.search(sentence[: match.start()]):
                     continue
                 found.append(Violation(rule, match.group(0), sentence.strip(), line))
-        if NUMBER_PATTERN.search(sentence) and not (
+        number = _first_unlabelled_number(sentence)
+        if number is not None and not (
             TARGET_WORD.search(sentence) or EVIDENCE_PATH.search(sentence)
         ):
-            number = NUMBER_PATTERN.search(sentence)
-            phrase = number.group(0) if number else ""
-            found.append(Violation("unlabelled-number", phrase, sentence.strip(), line))
+            found.append(Violation("unlabelled-number", number.group(0), sentence.strip(), line))
         if EM_DASH in sentence:
             found.append(Violation("em-dash", EM_DASH, sentence.strip(), line))
     return found

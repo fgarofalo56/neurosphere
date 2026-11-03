@@ -117,6 +117,9 @@ def test_checklist_has_no_em_dash() -> None:
         "Measured 99.9% availability, see docs/evidence/G05/README.md.",
         "Government support is gated by the capability matrix.",
         "A station is not a ratio of anything.",
+        "The analyst runs saved reports.",
+        "Duration estimate: 11 s",
+        "Estimated runtime 132 s (about 2.2 min).",
     ],
 )
 def test_rules_pass_examples(text: str) -> None:
@@ -137,6 +140,11 @@ def test_rules_pass_examples(text: str) -> None:
         ("A compliant platform.", "compliant"),
         ("It saves 30 percent of spend.", "savings"),
         ("Complete coverage of every agent.", "completeness"),
+        ("Teams are saving money.", "savings"),
+        ("Teams saved 30 percent last quarter.", "savings"),
+        ("Dashboards load in 2 s, estimate: 40%.", "unlabelled-number"),
+        ("Cost fell 40% in the estimate.", "unlabelled-number"),
+        ("Dashboards load in 2 s.", "unlabelled-number"),
         ("Dashboards load in 2s.", "unlabelled-number"),
         ("Availability is 99.9%.", "unlabelled-number"),
         ("Fast and good — really.", "em-dash"),

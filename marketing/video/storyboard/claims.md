@@ -16,7 +16,7 @@ claims:
   - C12
 ---
 
-# Explainer video claims list (source only)
+# Explainer video claims list (source text)
 
 Every factual claim in `storyboard.md` and `script.md`, mapped to the doc that supports it. Nothing here is reviewed. The reviewer column stays `UNREVIEWED (pending independent review)` until an independent pass signs it. Gate G09 (brand, legal, accessibility review) stays OPEN.
 
@@ -25,7 +25,7 @@ Every factual claim in `storyboard.md` and `script.md`, mapped to the doc that s
 | C01 | NeuroSphere is customer-hosted AI governance for agents | docs/PRD.md | UNREVIEWED (pending independent review) |
 | C02 | The walkthrough data is generated synthetic sandbox data | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
 | C03 | The sandbox shows an isolation banner (sandbox mode banner is asserted in accessibility tests) | docs/accessibility/README.md | UNREVIEWED (pending independent review) |
-| C04 | The Viewer is read only and sees a seeded cost spike (tokens 12x, volume 3x in a window) | docs/walkthroughs/viewer.md | UNREVIEWED (pending independent review) |
+| C04 | The Viewer has read-only access and sees a seeded cost spike (tokens 12x, volume 3x in a window) | docs/walkthroughs/viewer.md | UNREVIEWED (pending independent review) |
 | C05 | The Analyst investigates a seeded latency regression, replays a trace and runs saved reports under their own scope | docs/walkthroughs/analyst.md | UNREVIEWED (pending independent review) |
 | C06 | Consolidation candidates are labelled candidate and never auto-merged | docs/walkthroughs/steward.md | UNREVIEWED (pending independent review) |
 | C07 | A decision shows exact target and diff, rechecks permission, honors approvals, audits and verifies the real change | docs/walkthroughs/steward.md | UNREVIEWED (pending independent review) |
