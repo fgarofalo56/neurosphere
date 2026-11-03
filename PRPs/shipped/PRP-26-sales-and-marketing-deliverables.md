@@ -1,7 +1,9 @@
 ---
 name: prp-26-sales-and-marketing-deliverables
-status: active
+status: shipped
 started: 2026-11-02
+shipped: 2026-11-03
+pr: 157
 branch: prp-26-marketing
 review: required
 created: 2026-10-08
@@ -198,11 +200,20 @@ Plan approved 2026-11-02. Integration branch `prp-26-marketing`, stacked on `prp
 | 4 asset-manifest | merged | worktree-agent-ad52f57c43266e7d0 | sonnet | merged 586bb81; tests/marketing 86 pass; ruff clean; validate_planning PASS | 2026-11-02 |
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
+- Date: 2026-11-03
+- Merged commits: PR #157 (prp-26-marketing into prp-25-docs-site, merge aa42f11), carried to main by PR #154 (merge 365e633). Items 2262594 (deck), 05ec851 (scripts), e0ea455 (storyboard), 586bb81 (manifest); fix-forwards 5c44e9e (storyboard vs shared lint), d89e5f9 (Auditor/reconciliation deck claim), ee6e573 (lint hardening). Gates: `verify-gates -Mode full` 4/4 PASS before the last lint commit; `pytest tests/marketing` 105 passed, 0 skipped; `validate_planning.py` PASS; independent review APPROVED, no blockers; PR #154 CI 32 pass, 4 skipping.
 - Deviations from blueprint and why:
-- Descoped items:
-- PPTX opened and reviewed (who, when):
-- Claims removed during review:
-- G09 status after this PRP (expected OPEN):
+  - Stacked on `prp-25-docs-site` because PR #154 (PRP-25) was not yet on main and the walkthroughs lived only there.
+  - PPTX built with `uv run --with python-pptx==1.0.2`, so no root `pyproject.toml` or `uv.lock` change (item 1 does not own them).
+  - Item 3 landed red when the shared claims lint became active; fixed forward by rewording the storyboard and narrowing two lint rules. A later hardening pass then closed review-found gaps (clause-scoped negation, FedRAMP level phrasing, save/percent, estimate exemption limited to duration words) and reworded six lines.
+  - Out of scope but required to unblock #154 CI: `surfaceMotion={null}` on `ChangeConfirmDialog` (b5c28a6). Axe scanned the dialog mid entrance animation and reported a transient color-contrast violation; tokens were fine.
+- Descoped items: none.
+- PPTX opened and reviewed (who, when): opened by Claude (not a human) on 2026-11-03 in desktop PowerPoint via COM, read-only; all 13 slides exported to PNG and inspected, no overflow. Done on the original build and again on the rebuild after the claims-review fixes. This is a layout and open check, not a content, brand or legal review, so no human has reviewed the deck and the manifest keeps it `draft`.
+- Claims removed during review: none removed outright. After the PR merged, a separate independent Claude reviewer agent checked every claim in the deck (22), storyboard (12) and persona scripts against docs and code. It found 8 weak deck claims, 1 wrong video claim (V03: the sandbox banner only shows after sandbox mode is switched on), 2 weak video claims, an Auditor storyboard scene that showed a screen the Auditor cannot reach, scripts that never said to switch sandbox mode on, an admin script whose setup could not produce its expected bad events, and a steward step using the wrong tool. All were confirmed against code and reworded (for example "chat planned", "no connector has run live (G04 open)", "the seeded demo stops before execution"); one claim (C13, real ingestion) was added. Reviewer cells now read that a Claude agent reviewed them. That is automated, not a human review, and human review is still pending for every claim. The earlier first-pass review that approved the PR did not catch these, so treat agent claim review as a filter, not sign-off.
+- G09 status after this PRP (expected OPEN): OPEN. Brand, legal and accessibility review and the rendered, captioned video (PRP-27) are still required.
 - Follow-ups:
+  - A human reviews the deck, scripts and storyboard (claims, brand, legal), then the manifest row can become `rendered`.
+  - Issue #156 resolved: `services/api/tests/auditor_access/` shows `security_auditor` gets 403 on all load-time calls for /actions, /actions/detail and /reconciliation, and `docs/walkthroughs/auditor.md` was corrected. Close the issue.
+  - Claims lint is a backstop, not proof; human claim review is still needed.
+  - Not verified without a running stack: that the seeded `cost_spike` recommendation lists agents at runtime, and the persona script steps end to end.
+  - Visual-baseline snapshots (Docker-only) were not checked against the dialog motion change.

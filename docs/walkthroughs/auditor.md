@@ -21,8 +21,8 @@ make seed-stack SEED_PROFILE=small
 
 1. Open `/workspaces/auditor`.
 2. Open `/audit` and inspect entries; each action records who, the target and version, and the outcome.
-3. Open `/actions` and `/actions/detail` to compare a proposed change with the verified result.
-4. Open `/reconciliation` to compare cost sources for the spike window.
+
+> **Not Auditor screens.** `/actions`, `/actions/detail` and `/reconciliation` read data and need `data.read`, which `security_auditor` does not hold (auditors read evidence, not data). Verified with real requests: the Auditor gets HTTP 403 on each of their API calls (see `services/api/tests/auditor_access/test_auditor_screen_access.py`). Use the [Steward](steward.md) or [Analyst](analyst.md) walkthrough for those screens.
 
 ## Scope
 

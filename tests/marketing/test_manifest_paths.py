@@ -83,7 +83,10 @@ def test_pptx_is_draft_with_open_check_note() -> None:
     rows = [r for r in _main_table() if r["Path"].endswith(".pptx`")]
     assert len(rows) == 1
     assert rows[0]["Status"] == "draft"
-    assert "never opened" in rows[0]["Notes"]
+    notes = rows[0]["Notes"]
+    # The open check is recorded, but rendered needs a human review, so it stays draft.
+    assert "PowerPoint" in notes
+    assert "no human" in notes
 
 
 def test_video_row_not_rendered() -> None:

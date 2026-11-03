@@ -19,7 +19,7 @@ Show an auditor tracing a seeded cost spike and actions through the audit trail.
 
 ## Isolation
 
-Before step 1, confirm the sandbox banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
+Sandbox mode defaults to off and the banner appears only once it is on. Before step 1, switch it on from the user menu (the sandbox toggle), then confirm the banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
 
 
 ## Setup
@@ -29,7 +29,7 @@ make dev-up
 make seed-stack SEED_PROFILE=small
 ```
 
-Sign in as the synthetic persona `auditor` (policy-store role `security_auditor`).
+Sign in as the synthetic persona `auditor` (policy-store role `security_auditor`). After sign-in, switch sandbox mode on from the user menu (the sandbox toggle) before step 1.
 
 ## Steps
 
@@ -46,7 +46,7 @@ Role `security_auditor`: `audit.read`, `evidence.read`. Access is scoped to gran
 
 ## Not on the demo path
 
-The walkthrough also lists `/actions`, `/actions/detail` and `/reconciliation`. In the role map the `security_auditor` role holds `audit.read` and `evidence.read` and no `data.read`, while those screens read data. Expect access-denied for the Auditor persona on them until verified against a running stack. Do not present them as Auditor capabilities. Show them with the Steward persona instead.
+The walkthrough also lists `/actions`, `/actions/detail` and `/reconciliation`. In the role map the `security_auditor` role holds `audit.read` and `evidence.read` and no `data.read`, while those screens read data. Verified with real requests through the API app: the Auditor persona receives HTTP 403 on every load-time call of those screens, and the Steward persona succeeds (`services/api/tests/auditor_access/test_auditor_screen_access.py`). Do not present them as Auditor capabilities. Show them with the Steward persona instead.
 
 ## Planned (excluded from the demo path)
 

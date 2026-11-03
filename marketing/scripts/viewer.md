@@ -8,6 +8,7 @@ claims:
   - "No action, export or edit path is offered to the Viewer"
 permissions:
   - data.read
+  - grant.read
 ---
 
 # Viewer demo script
@@ -18,7 +19,7 @@ Show a read-only user finding a seeded cost spike (tokens 12x, volume 3x inside 
 
 ## Isolation
 
-Before step 1, confirm the sandbox banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
+Sandbox mode defaults to off and the banner appears only once it is on. Before step 1, switch it on from the user menu (the sandbox toggle), then confirm the banner is visible at the top of every screen: "Sandbox mode is on. You are working with a synthetic dataset. No real data is read or changed." Run this script against the synthetic sandbox only. Stop if the banner is missing.
 
 
 ## Setup
@@ -28,7 +29,7 @@ make dev-up
 make seed-stack SEED_PROFILE=small
 ```
 
-Sign in as the synthetic persona `viewer` (policy-store role `viewer`).
+Sign in as the synthetic persona `viewer` (policy-store role `viewer`). After sign-in, switch sandbox mode on from the user menu (the sandbox toggle) before step 1.
 
 ## Steps
 
@@ -36,10 +37,10 @@ Sign in as the synthetic persona `viewer` (policy-store role `viewer`).
    - Expected: The Viewer landing workspace loads with the sandbox banner shown.
    - Permission: data.read
 2. Open `/dashboards/cost` and find the spike window.
-   - Expected: The cost dashboard shows a spike. Compare its window with `temp/sandbox/anomaly-manifest.json`; estimated and invoiced costs are shown separately and unknown values are not shown as 0.
+   - Expected: The cost dashboard shows a spike. Compare its window with `temp/sandbox/anomaly-manifest.json`; estimated and invoiced costs are shown separately and unknown values are not shown as 0. `make seed-stack` moves the generated epoch to the run time, so the manifest's absolute window times will not match what you see; compare the ratios and the affected agents, not clock times.
    - Permission: data.read
-3. Open `/map` to see which agents are involved.
-   - Expected: The map renders the agents tied to the spike.
+3. Open `/map` to browse the agents, then open `/recommendations` and find the `cost_spike` recommendation to read the spike agents.
+   - Expected: The map renders the agents and their relations; it has no spike overlay or highlight. The `cost_spike` recommendation names the agents involved.
    - Permission: data.read
 4. Open `/catalog` and read one agent entry.
    - Expected: The catalog lists agents; the entry is read-only with no edit control.
@@ -47,7 +48,7 @@ Sign in as the synthetic persona `viewer` (policy-store role `viewer`).
 
 ## Permissions
 
-Role `viewer`: `data.read`. Access is scoped to granted domains; there is no unrestricted bypass.
+Role `viewer`: `data.read`, `grant.read`. Access is scoped to granted domains; there is no unrestricted bypass.
 
 ## Planned (excluded from the demo path)
 

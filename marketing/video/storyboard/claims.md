@@ -14,25 +14,27 @@ claims:
   - C10
   - C11
   - C12
+  - C13
 ---
 
 # Explainer video claims list (source text)
 
-Every factual claim in `storyboard.md` and `script.md`, mapped to the doc that supports it. Nothing here is reviewed. The reviewer column stays `UNREVIEWED (pending independent review)` until an independent pass signs it. Gate G09 (brand, legal, accessibility review) stays OPEN.
+Every factual claim in `storyboard.md` and `script.md`, mapped to the doc that supports it. No row has had a human review. The reviewer column records an automated Claude reviewer agent pass (not a human review) and stays at that state until a person signs it. Gate G09 (brand, legal, accessibility review) stays OPEN.
 
 | ID | Claim | Doc path | Reviewer |
 |---|---|---|---|
-| C01 | NeuroSphere is customer-hosted AI governance for agents | docs/PRD.md | UNREVIEWED (pending independent review) |
-| C02 | The walkthrough data is generated synthetic sandbox data | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
-| C03 | The sandbox shows an isolation banner (sandbox mode banner is asserted in accessibility tests) | docs/accessibility/README.md | UNREVIEWED (pending independent review) |
-| C04 | The Viewer has read-only access and sees a seeded cost spike (tokens 12x, volume 3x in a window) | docs/walkthroughs/viewer.md | UNREVIEWED (pending independent review) |
-| C05 | The Analyst investigates a seeded latency regression, replays a trace and runs saved reports under their own scope | docs/walkthroughs/analyst.md | UNREVIEWED (pending independent review) |
-| C06 | Consolidation candidates are labelled candidate and never auto-merged | docs/walkthroughs/steward.md | UNREVIEWED (pending independent review) |
-| C07 | A decision shows exact target and diff, rechecks permission, honors approvals, audits and verifies the real change | docs/walkthroughs/steward.md | UNREVIEWED (pending independent review) |
-| C08 | The generator injects duplicate, out-of-order and malformed events so quarantine and replay can be observed | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
-| C09 | Admin is a scoped role with no unrestricted bypass | docs/walkthroughs/admin.md | UNREVIEWED (pending independent review) |
-| C10 | Audit entries record who, the target and version, and the outcome | docs/walkthroughs/auditor.md | UNREVIEWED (pending independent review) |
-| C11 | Seeded data is synthetic, so it is not evidence of ATO, compliance or authorization | docs/walkthroughs/auditor.md | UNREVIEWED (pending independent review) |
-| C12 | Government support is gated by the capability matrix; availability, GA and authorization are separate; performance numbers are planning targets; unsupported combinations are disabled | docs/RESEARCH-AND-GATES.md | UNREVIEWED (pending independent review) |
+| C01 | NeuroSphere is customer-hosted AI governance for agents | docs/PRD.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C02 | The walkthrough data is generated synthetic sandbox data | docs/walkthroughs/admin.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C03 | A sandbox-mode banner appears when sandbox mode is switched on, from the sandbox toggle in the user menu (the banner is asserted in accessibility tests) | docs/accessibility/README.md | Claude reviewer agent flagged, fixed 2026-11-03; human review pending |
+| C04 | The Viewer has read-only access and sees a seeded cost spike (tokens 12x, volume 3x in a window) | docs/walkthroughs/viewer.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C05 | The Analyst investigates a seeded latency regression, replays a trace and runs saved reports under their own scope | docs/walkthroughs/analyst.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C06 | Consolidation candidates are labelled candidate and never auto-merged | docs/walkthroughs/steward.md | Claude reviewer agent flagged, fixed 2026-11-03; human review pending |
+| C07 | The action executor rechecks permission, honors approvals, audits and verifies the real change; seeded demo intents stop before execution | docs/walkthroughs/steward.md | Claude reviewer agent flagged, fixed 2026-11-03; human review pending |
+| C08 | The generator injects duplicate, out-of-order and malformed events so quarantine and replay can be observed | docs/walkthroughs/admin.md | Claude reviewer agent flagged, fixed 2026-11-03; human review pending |
+| C09 | Admin is a scoped role with no unrestricted bypass | docs/walkthroughs/admin.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C10 | Audit entries record who, the target and version, and the outcome | docs/walkthroughs/auditor.md | Claude reviewer agent flagged, fixed 2026-11-03; human review pending |
+| C11 | Seeded data is synthetic, so it is not evidence of ATO, compliance or authorization | docs/walkthroughs/auditor.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C12 | Government support is gated by the capability matrix; availability, GA and authorization are separate; performance numbers are planning targets; unsupported combinations are disabled | docs/RESEARCH-AND-GATES.md | Claude reviewer agent, automated, 2026-11-03 (not a human review) |
+| C13 | Real ingestion is a supported path separate from the synthetic sandbox | docs/RESEARCH-AND-GATES.md | Added 2026-11-03 after a Claude reviewer agent finding; human review pending |
 
 Supporting docs for C12 also include `docs/PRD.md` (planning targets, section 3) and `docs/walkthroughs/admin.md` (capabilities page, unsupported combinations disabled).
