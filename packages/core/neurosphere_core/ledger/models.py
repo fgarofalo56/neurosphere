@@ -76,8 +76,13 @@ def format_time(value: datetime) -> str:
     return _fmt_time(value)
 
 
+ID_VERSION: Final = "v2"
+
+
 def sha256_hex(*parts: str) -> str:
-    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
+    """Collision-safe id: versioned, length-prefixed parts, so ("a|b", "c") != ("a", "b|c")."""
+    encoded = [ID_VERSION, *(f"{len(p.encode('utf-8'))}:{p}" for p in parts)]
+    return hashlib.sha256("\x1f".join(encoded).encode("utf-8")).hexdigest()
 
 
 def entry_id(customer_id: str, request_id: str, cost_category: str) -> str:
@@ -146,6 +151,9 @@ class Observation(_Frozen):
             raise ValueError("an estimated observation must cite price_version_id")
         if self.price_unresolved and self.amount is not None:
             raise ValueError("a price_unresolved observation has no amount")
+        if self.kind == "invoiced" and self.observation_kind != "billing":
+            # Only a billing-registered producer may win rank 0 (#27).
+            raise ValueError("an invoiced observation must come from a billing source")
         return self
 
 
