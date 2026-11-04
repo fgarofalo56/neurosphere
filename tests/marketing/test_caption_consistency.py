@@ -75,5 +75,17 @@ def test_storyboard_caption_lines_close_to_narration() -> None:
         assert coverage >= CAPTION_MIN_COVERAGE, scene.scene_id
 
 
+def test_measured_vtt_keeps_narration_and_orders_cues() -> None:
+    scenes = rv.parse_scenes()
+    measured = [rv.replace(s, duration_s=5.0 + i) for i, s in enumerate(scenes)]
+    vtt = rv.build_vtt(measured)
+    cues = _vtt_cues(vtt)
+    for scene in scenes:
+        assert cues[scene.scene_id] == _norm(scene.narration)
+    stamps = re.findall(r"(\d\d:\d\d:\d\d\.\d{3}) --> (\d\d:\d\d:\d\d\.\d{3})", vtt)
+    assert len(stamps) == 8
+    assert stamps[0] == ("00:00:00.000", "00:00:04.000")
+
+
 def test_transcript_passes_claims_lint() -> None:
     assert rv.lint_transcript(rv.transcript(rv.parse_scenes())) == []

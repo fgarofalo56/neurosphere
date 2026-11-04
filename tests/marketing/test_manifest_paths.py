@@ -106,6 +106,9 @@ def test_every_marketing_file_is_listed() -> None:
             continue
         if path.name == "MANIFEST.md" or path.name == "README.md":
             continue
+        # PRP-27 render output is gitignored local media; only captions.vtt is a listed asset.
+        if (MARKETING / "video" / "render" / "out") in path.parents and path.name != "captions.vtt":
+            continue
         if path.resolve() not in listed:
             missing.append(path.relative_to(ROOT).as_posix())
     assert not missing, missing

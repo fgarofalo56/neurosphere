@@ -24,6 +24,11 @@ Gate G09 (theme, brand and media review) is waived by the owner (Frank Garofalo)
 | Video script | `marketing/video/storyboard/script.md` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Narration source, no audio. |
 | Video storyboard claims | `marketing/video/storyboard/claims.md` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited) | Claims listed for the storyboard and script. |
 | Video render approval record | `marketing/video/APPROVAL.md` | draft | Frank Garofalo | UNSIGNED (operator has not recorded a budget) | none (operator fills in) | Template only; the render guard refuses it until every field is filled. |
+| Video captions | `marketing/video/render/out/captions.vtt` | draft | Frank Garofalo | UNREVIEWED (generated, awaiting human playback) | `python marketing/video/render/render_video.py --backend local` | Generated, awaiting human playback. Cue timing is measured from the narration audio. |
+| Video render spend log | `marketing/video/render/spend-log.md` | draft | Frank Garofalo | UNREVIEWED (generated, awaiting human playback) | `python marketing/video/render/render_video.py --backend local` | Generated spend rows (0.00 USD) and the MP4 checksum; the MP4 itself is not committed. |
+| Video capture script | `marketing/video/render/capture.mjs` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Playwright capture of the local sandbox UI; helper for the local render backend. |
+| Video capture shot list | `marketing/video/render/shots.json` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Routes and on-screen text per scene for the capture script. |
+| Video narration script | `marketing/video/render/speak.ps1` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Offline Windows System.Speech text to WAV helper; no network. |
 | Video render entry point | `marketing/video/render/render_video.py` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | `python marketing/video/render/render_video.py --backend stub` | Guarded script with a stub backend for tests; no MP4 exists. See render/README.md. |
 
 ## Not yet produced

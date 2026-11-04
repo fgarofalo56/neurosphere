@@ -5,17 +5,29 @@ Entry point: ``python marketing/video/render/render_video.py`` (function ``main`
 No paid or network call is made here. The only backend that works without operator
 involvement is ``StubBackend``. The real backend is a placeholder: the tool is chosen at
 execution time together with the operator.
+
+``LocalBackend`` runs fixed local tools (node, pnpm, powershell, ffmpeg, ffprobe) found on
+PATH with no untrusted input, hence the file-level subprocess waivers below.
 """
+
+# ruff: noqa: S603, S607
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
+import json
 import os
 import re
+import shutil
+import subprocess
 import sys
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+import tempfile
+import time
+import urllib.request
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -204,6 +216,171 @@ class RealBackend:
         )
 
 
+Runner = Callable[..., "subprocess.CompletedProcess[str]"]
+SCENE_FPS = 25
+VOICE = "Microsoft Zira Desktop"
+
+
+def _wait_http(url: str, timeout_s: float = 120.0) -> None:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=3):  # noqa: S310 (loopback only)
+                return
+        except OSError:
+            time.sleep(1.0)
+    raise GuardError(f"local server did not come up: {url}")
+
+
+def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
+    if proc.poll() is None:
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)], check=False, capture_output=True
+        )
+
+
+class LocalBackend:
+    """Zero-cost local pipeline: Playwright capture, System.Speech voice, ffmpeg assembly.
+
+    No paid service and no network media API. Only loopback servers are contacted.
+    """
+
+    name = "local"
+
+    def __init__(
+        self,
+        out_dir: Path,
+        app_port: int = 5217,
+        api_port: int = 5218,
+        runner: Runner | None = None,
+    ) -> None:
+        self.out_dir = out_dir
+        self.app_port = app_port
+        self.api_port = api_port
+        self.run_cmd: Runner = runner or subprocess.run
+        self.frames = out_dir / "frames"
+        self.audio = out_dir / "audio"
+        self.clips = out_dir / "clips"
+        self.measured: dict[str, float] = {}
+        self.shots: dict[str, list[str]] = {}
+
+    # -- helpers -------------------------------------------------------------------------
+    def _run(self, cmd: list[str], cwd: Path | None = None) -> str:
+        result = self.run_cmd(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise GuardError(f"command failed ({cmd[0]}): {(result.stderr or '')[-400:]}")
+        return result.stdout or ""
+
+    def probe_duration(self, media: Path) -> float:
+        out = self._run(
+            [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=nw=1:nk=1", str(media),
+            ]
+        )  # fmt: skip
+        return float(out.strip())
+
+    # -- capture -------------------------------------------------------------------------
+    def prepare(self) -> None:
+        """Capture every scene's frames once, against loopback servers started here."""
+        for folder in (self.frames, self.audio, self.clips):
+            folder.mkdir(parents=True, exist_ok=True)
+        frontend = ROOT / "frontend"
+        app_origin = f"http://127.0.0.1:{self.app_port}"
+        env = {
+            **os.environ,
+            "NS_MOCK_API_PORT": str(self.api_port),
+            "NS_E2E_APP_ORIGIN": app_origin,
+        }
+        pnpm = shutil.which("pnpm") or "pnpm"
+        quiet = subprocess.DEVNULL
+        procs = [
+            subprocess.Popen(
+                ["node", "tests/mock-api/server.ts"],
+                cwd=frontend,
+                env=env,
+                stdout=quiet,
+                stderr=quiet,
+            ),
+            subprocess.Popen(
+                [pnpm, "exec", "vite", "--mode", "e2e", "--host", "127.0.0.1",
+                 "--port", str(self.app_port), "--strictPort"],
+                cwd=frontend,
+                env=env,
+                stdout=quiet,
+                stderr=quiet,
+            ),
+        ]  # fmt: skip
+        try:
+            _wait_http(f"http://127.0.0.1:{self.api_port}/api/v1/health")
+            _wait_http(app_origin)
+            self._run(
+                ["node", str(VIDEO_DIR / "render" / "capture.mjs"), str(frontend),
+                 str(self.frames), str(self.app_port), str(self.api_port)]
+            )  # fmt: skip
+        finally:
+            for proc in procs:
+                _kill_tree(proc)
+        self.shots = json.loads((self.frames / "shots-result.json").read_text(encoding="utf-8"))
+
+    # -- per scene -----------------------------------------------------------------------
+    def render_scene(self, scene: Scene) -> Decimal:
+        if not self.shots:
+            self.prepare()
+        text_file = self.audio / f"{scene.scene_id}.txt"
+        wav = self.audio / f"{scene.scene_id}.wav"
+        text_file.write_text(scene.narration, encoding="utf-8")
+        self._run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+             str(VIDEO_DIR / "render" / "speak.ps1"), "-TextFile", str(text_file),
+             "-OutWav", str(wav), "-Voice", VOICE]
+        )  # fmt: skip
+        spoken = self.probe_duration(wav)
+        self.measured[scene.scene_id] = spoken
+        total = spoken + PAUSE_SECONDS
+        images = self.shots[scene.scene_id]
+        each = total / len(images)
+        listing = self.clips / f"{scene.scene_id}.txt"
+        rows = [f"file '{(self.frames / n).as_posix()}'\nduration {each:.3f}" for n in images]
+        rows.append(f"file '{(self.frames / images[-1]).as_posix()}'")
+        listing.write_text("\n".join(rows) + "\n", encoding="utf-8")
+        self._run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(listing),
+             "-i", str(wav),
+             "-vf", f"scale=1280:720,fps={SCENE_FPS},format=yuv420p",
+             "-af", f"apad=whole_dur={total:.3f}", "-t", f"{total:.3f}",
+             "-c:v", "libx264", "-c:a", "aac", "-ar", "44100", "-ac", "2",
+             str(self.clips / f"{scene.scene_id}.mp4")]
+        )  # fmt: skip
+        return Decimal("0.00")
+
+    def measured_scenes(self, scenes: list[Scene]) -> list[Scene]:
+        """Scenes whose duration is the measured narration length plus the pause."""
+        return [replace(s, duration_s=self.measured[s.scene_id] + PAUSE_SECONDS) for s in scenes]
+
+    # -- assembly ------------------------------------------------------------------------
+    def finalize(self, scenes: list[Scene], captions: Path) -> str:
+        """Join the scene clips, mux the VTT as a soft subtitle, and return the sha256 label."""
+        listing = self.clips / "all.txt"
+        listing.write_text(
+            "".join(f"file '{(self.clips / f'{s.scene_id}.mp4').as_posix()}'\n" for s in scenes),
+            encoding="utf-8",
+        )
+        joined = self.clips / "joined.mp4"
+        self._run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
+             "-i", str(listing), "-c", "copy", str(joined)]
+        )  # fmt: skip
+        final = self.out_dir / "neurosphere-explainer.mp4"
+        self._run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", str(joined), "-i", str(captions),
+             "-map", "0:v", "-map", "0:a", "-map", "1:0", "-c", "copy", "-c:s", "mov_text",
+             "-metadata:s:s:0", "language=eng", str(final)]
+        )  # fmt: skip
+        digest = hashlib.sha256(final.read_bytes()).hexdigest()
+        return f"neurosphere-explainer.mp4 sha256 {digest}"
+
+
 class SpendTracker:
     """Appends spend rows to the log and stops hard at the approved budget cap."""
 
@@ -257,6 +434,11 @@ def run(
         for scene in scenes:
             cost = backend.render_scene(scene)
             tracker.charge(scene.scene_id, cost)
+        if isinstance(backend, LocalBackend):
+            # Cue timing comes from the measured narration audio, not the estimates.
+            captions = target / "captions.vtt"
+            captions.write_text(build_vtt(backend.measured_scenes(scenes)), encoding="utf-8")
+            tracker.charge(backend.finalize(scenes, captions), Decimal("0.00"))
     except (GuardError, BudgetExceededError, NotImplementedError) as exc:
         print(f"render refused: {exc}", file=sys.stderr)
         return 2
@@ -265,10 +447,18 @@ def run(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="PRP-27 explainer video render (guarded)")
-    parser.add_argument("--backend", choices=["stub", "real"], default="stub")
+    parser.add_argument("--backend", choices=["stub", "real", "local"], default="stub")
+    parser.add_argument("--app-port", type=int, default=5217)
+    parser.add_argument("--api-port", type=int, default=5218)
     args = parser.parse_args(argv)
-    backend: Backend = StubBackend() if args.backend == "stub" else RealBackend()
-    return run(backend)
+    if args.backend == "local":
+        out = VIDEO_DIR / "render" / "out"
+        return run(LocalBackend(out, args.app_port, args.api_port))
+    if args.backend == "stub":
+        # The stub never writes into the real out dir or the real spend log.
+        scratch = Path(tempfile.mkdtemp(prefix="ns-render-stub-"))
+        return run(StubBackend(), out_dir=scratch, spend_log=scratch / "spend-log.md")
+    return run(RealBackend())
 
 
 if __name__ == "__main__":

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
+from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
 
@@ -33,9 +35,18 @@ def test_missing_file_exits_nonzero(tmp_path: Path) -> None:
     assert code != 0
 
 
-def test_shipped_template_is_refused() -> None:
+def test_template_with_todo_fields_is_refused(tmp_path: Path) -> None:
+    rows = ["| Field | Value |", "|---|---|"]
+    rows += [f"| {name} | TODO(operator) |" for name in rv.REQUIRED_FIELDS]
+    path = tmp_path / "template.md"
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
     with pytest.raises(rv.GuardError, match="TODO"):
-        rv.parse_approval(rv.APPROVAL_PATH)
+        rv.parse_approval(path)
+    assert rv.run(rv.StubBackend(), approval_path=path, out_dir=tmp_path) != 0
+
+
+def test_shipped_approval_is_complete() -> None:
+    assert rv.parse_approval(rv.APPROVAL_PATH).budget > 0
 
 
 def test_malformed_file_refused(tmp_path: Path) -> None:
@@ -101,6 +112,51 @@ def test_stops_at_budget_cap_and_log_appends(tmp_path: Path) -> None:
     assert text.startswith("| existing row |\n")
     assert "REFUSED (cap)" in text
     assert text.count("| ok |") == 2
+
+
+def _fake_runner(calls: list[list[str]]) -> Callable[..., subprocess.CompletedProcess[str]]:
+    def run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(cmd)
+        out = "4.0\n" if cmd[0] == "ffprobe" else ""
+        return subprocess.CompletedProcess(cmd, 0, stdout=out, stderr="")
+
+    return run
+
+
+def test_local_backend_requires_live_flag(tmp_path: Path) -> None:
+    path = _approval(tmp_path / "a.md")
+    backend = rv.LocalBackend(tmp_path / "out", runner=_fake_runner([]))
+    assert rv.run(backend, approval_path=path, out_dir=tmp_path, env={}) != 0
+    assert not (tmp_path / "out").exists()
+
+
+def test_local_backend_scene_uses_measured_duration_at_zero_cost(tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    backend = rv.LocalBackend(tmp_path, runner=_fake_runner(calls))
+    for folder in (backend.frames, backend.audio, backend.clips):
+        folder.mkdir(parents=True)
+    backend.shots = {"S01": ["S01_1.png", "S01_2.png"]}
+    scene = rv.Scene("S01", "Opening", "Hello there.", 11.0)
+    assert backend.render_scene(scene) == Decimal("0.00")
+    assert [c[0] for c in calls] == ["powershell", "ffprobe", "ffmpeg"]
+    assert backend.measured == {"S01": 4.0}
+    (measured,) = backend.measured_scenes([scene])
+    assert measured.duration_s == 4.0 + rv.PAUSE_SECONDS
+    vtt = rv.build_vtt([measured])
+    assert "00:00:00.000 --> 00:00:04.000" in vtt
+    assert "Hello there." in vtt
+
+
+def test_stub_cli_does_not_touch_real_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(rv.tempfile, "mkdtemp", lambda prefix="": str(tmp_path))
+    before = rv.SPEND_LOG_PATH.read_bytes() if rv.SPEND_LOG_PATH.exists() else None
+    assert rv.main(["--backend", "stub"]) == 0
+    assert (tmp_path / "captions.vtt").is_file()
+    assert (tmp_path / "spend-log.md").is_file()
+    after = rv.SPEND_LOG_PATH.read_bytes() if rv.SPEND_LOG_PATH.exists() else None
+    assert before == after
 
 
 def test_tracker_never_exceeds_cap(tmp_path: Path) -> None:
