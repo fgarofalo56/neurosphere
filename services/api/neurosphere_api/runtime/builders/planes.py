@@ -14,10 +14,13 @@ builder); publishes :data:`~neurosphere_api.runtime.builders.ACTION_SERVICE`, th
   - the default ``ReviewPolicyRegistry`` (``default_policies()``, the same deterministic table the
     data builder's ``HitlService`` resolves from);
   - write targets: a ``WriteTargetRegistry`` holding ONLY connectors that
-    ``neurosphere_core.actions.targets.ACTION_CONNECTORS`` names (``foundry-model-swap`` for
-    ``model_deployment_swap``). The API image ships no connector configuration, so production
-    composes an EMPTY registry: every intent is advisory (drafted, validated and reviewed, never
-    executed), and nothing stands in for a change: no catalog metadata edit, no pretend swap;
+    ``neurosphere_core.actions.targets.ACTION_CONNECTORS`` names (``foundry-model-swap``,
+    ``apim-gateway``), registered from ``NS_FOUNDRY_*``/``NS_APIM_*`` by
+    :mod:`~neurosphere_api.runtime.builders.write_targets` (PRP-35 item 4) only when enabled,
+    fully configured and write-capable (advisory connectors are never registered). With nothing
+    configured the registry is EMPTY: every intent is advisory (drafted, validated and reviewed,
+    never executed), and nothing stands in for a change: no catalog metadata edit, no pretend
+    swap. The API only plans (``dry_run``); the executor worker applies;
   - a ``PolicyPermissionRechecker`` bound to the composed deriver: the deriver's cloud and the
     very policy repository and revocation checker it derives scope from;
   - :class:`PolicyReviewerDirectory` (assignee lookup through the same policy repository).
@@ -94,6 +97,7 @@ from neurosphere_api.runtime.builders import (
     BuilderSpec,
     ComponentUnavailableError,
 )
+from neurosphere_api.runtime.builders.write_targets import configure_write_targets
 
 __all__ = [
     "BUILDER",
@@ -187,10 +191,17 @@ def _rechecker(ctx: BuildContext, clock: DateClock | None) -> PermissionRechecke
 
 
 def _write_targets(ctx: BuildContext) -> WriteTargetRegistry:
-    """Only shipped write connectors; production composes none (every intent advisory)."""
+    """Only shipped write connectors, and only those configured (``write_targets`` module).
+
+    Unconfigured: an empty registry (every intent advisory). Configured: the same registry is
+    filled at startup, before the app serves, with the write connectors whose flag and target
+    are set; advisory ones are never registered.
+    """
     override = _backend(ctx, "write_targets", WriteTargetRegistry)
     if override is None:
-        return WriteTargetRegistry()
+        registry = WriteTargetRegistry()
+        configure_write_targets(ctx, registry)
+        return registry
     if not set(override.names()) <= SUPPORTED_WRITE_CONNECTORS:
         raise ComponentUnavailableError("write_target_unsupported")
     return override

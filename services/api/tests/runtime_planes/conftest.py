@@ -1,4 +1,4 @@
-"""Every test starts with no composition, copilot or MCP settings in the environment.
+"""Every test starts with no composition, copilot, MCP or write-target settings in the environment.
 
 ``services/api/tests`` is on ``sys.path`` through rootdir insertion (this package's parent), so
 the PRP-06 harness (``authz.authz_helpers``) and item 1's ``runtime_api.runtime_helpers`` import.
@@ -18,6 +18,8 @@ _PREFIXES = (
     "NS_REVOCATION_",
     "NS_COPILOT_",
     "NS_MCP_",
+    "NS_FOUNDRY_",
+    "NS_APIM_",
 )
 _NAMES = ("NS_CLOUD", "NS_INGEST_PRODUCERS_FILE", "NS_SCAN_ENABLED")
 

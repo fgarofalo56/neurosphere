@@ -11,7 +11,8 @@ Role -> class:
 * ``ingestion``       ``IngestionConsumer`` (Event Hubs -> ledger/archive/outbox)
 * ``projections``     ``OutboxReader`` -> ``CatalogProjection`` (sink ``catalog``)
 * ``aggregates``      ``OutboxReader`` -> ``AggregateProjection`` (sink ``aggregates``)
-* ``actions``         ``ActionExecutorWorker`` (only intents in ``executing``)
+* ``actions``         ``ActionExecutorWorker`` (only intents in ``executing``); write targets
+                      from ``NS_FOUNDRY_*``/``NS_APIM_*`` (:func:`register_write_targets`)
 * ``hitl_timers``     ``HitlTimerWorker``
 * ``lifecycle``       ``LifecycleWorker``
 * ``recommendations`` periodic ``run_pipeline``
@@ -25,6 +26,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import socket
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
@@ -35,16 +37,19 @@ from pathlib import Path
 from typing import Any, Final
 
 import httpx
+from azure.core.credentials_async import AsyncTokenCredential
 from azure.cosmos import CosmosClient as SyncCosmosClient
 from azure.cosmos.aio import CosmosClient, DatabaseProxy
 from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from neurosphere_connector.write import WriteTargetRegistry
+from neurosphere_connector_foundry_actions import create_swap_connector
 from neurosphere_core.actions import ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
+from neurosphere_core.actions.targets import ACTION_CONNECTORS
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.repository import AuditRepository
@@ -53,6 +58,7 @@ from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
 from neurosphere_core.catalog.review_queue_cosmos import CosmosReviewQueue
 from neurosphere_core.clients import (
     ClientLifetime,
+    arm_client,
     blob_account_url,
     create_checkpoint_store,
     create_cosmos_client,
@@ -64,7 +70,7 @@ from neurosphere_core.clients.factories import (
     ENV_COSMOS_KEY,
 )
 from neurosphere_core.cloud import Settings, load_settings
-from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
+from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError, ValidationIssue
 from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
 from neurosphere_core.evaluation.judge import RecordedFixtureJudge
 from neurosphere_core.evaluation.registry import (
@@ -74,7 +80,13 @@ from neurosphere_core.evaluation.registry import (
     JudgeConfig,
     RubricVersion,
 )
-from neurosphere_core.gateway import CosmosGatewayStore, create_gateway_container
+from neurosphere_core.gateway import (
+    CosmosGatewayStore,
+    GatewayRegistration,
+    GatewayStore,
+    create_gateway_container,
+)
+from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
@@ -91,8 +103,16 @@ from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
 from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
 from neurosphere_core.stores import ensure_local_containers
+from pydantic import ValidationError
 
 from neurosphere_workers.actions import ActionExecutor, ActionExecutorWorker, ReviewItemCompletion
+from neurosphere_workers.actions.apim import (
+    ApplyRecords,
+    GatewayArm,
+    apim_record_store,
+    build_apim_gateway_connector,
+    build_http_apim_gateway_connector,
+)
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
@@ -130,15 +150,27 @@ from neurosphere_workers.runtime.identity import build_identity, build_policy_st
 from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
 from neurosphere_workers.runtime.roles import RoleConfigError
 from neurosphere_workers.runtime.settings import (
+    ApimWriteSettings,
     AuthSettings,
     EvalSettings,
+    FoundryWriteSettings,
     RecommendationSettings,
     StoreSettings,
     WorkerSettings,
 )
 from neurosphere_workers.runtime.supervisor import RoleFactory, RoleRunnable
 
-__all__ = ["BUILDERS", "RoleBuilder", "RuntimeConfig", "role_factories"]
+__all__ = [
+    "BUILDERS",
+    "SUPPORTED_WRITE_CONNECTORS",
+    "RoleBuilder",
+    "RuntimeConfig",
+    "WriteTargetSeams",
+    "WriteTargetSources",
+    "load_write_target_settings",
+    "register_write_targets",
+    "role_factories",
+]
 
 logger = logging.getLogger("neurosphere.workers.runtime")
 
@@ -423,17 +455,49 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
         revocation_checker=stack.revocation,
     )
     service = ActionService(store, auditor=auditor, rechecker=rechecker, execution_control=control)
-    # No write connector is registered here: connectors are deployment-specific and need an
-    # authorized target. An empty registry fails every intent closed with capability_unavailable
-    # (no connector call, no pretend change).
+    # Write connectors come ONLY from NS_FOUNDRY_*/NS_APIM_* (see register_write_targets). With
+    # neither configured the registry is empty and every intent fails closed with
+    # capability_unavailable (no connector call, no pretend change).
+    registry, gateways = await _action_write_targets(cfg, lifetime, cosmos)
     executor = ActionExecutor(
         service,
-        WriteTargetRegistry(),
+        registry,
         execution_control=control,
         worker_id=cfg.worker.worker_id or f"{socket.gethostname()}-{os.getpid()}",
         on_finished=ReviewItemCompletion(_hitl_service(cfg, cosmos, audit), auditor=auditor),
+        gateways=gateways,
     )
     return WorkerRole(ActionExecutorWorker(executor, store), idle_seconds=cfg.worker.poll_seconds)
+
+
+async def _action_write_targets(
+    cfg: RuntimeConfig, lifetime: ClientLifetime, cosmos: CosmosClient
+) -> tuple[WriteTargetRegistry, CosmosGatewayStore | None]:
+    """The executor's registry, plus the gateway registry its APIM binding check reads."""
+    try:
+        foundry, apim = load_write_target_settings()
+    except ValueError:
+        raise RoleConfigError("write_target_settings_invalid") from None
+    gateways: CosmosGatewayStore | None = None
+    sources = WriteTargetSources()
+    if apim.enabled:
+        gateways = CosmosGatewayStore.from_client(cosmos, database=cfg.store.database)
+
+        def records_for(registration: GatewayRegistration) -> ApplyRecords:
+            return apim_record_store(cosmos, database=cfg.store.database, registration=registration)
+
+        sources = WriteTargetSources(gateway_store=gateways, records_for=records_for)
+    registry = WriteTargetRegistry()
+    await register_write_targets(
+        registry,
+        settings=cfg.settings,
+        customer_id=cfg.auth.resolved_customer_id(cfg.settings.env),
+        lifetime=lifetime,
+        foundry=foundry,
+        apim=apim,
+        sources=sources,
+    )
+    return registry, gateways
 
 
 async def build_hitl_timers(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
@@ -664,6 +728,203 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
         connector_factory=default_connector_factory(poll.allow_unverified_government),
     )
     return _tick_role("gateway_poll", PeriodicTick(poller.tick, poll.interval_seconds), cfg)
+
+
+# --------------------------------------------------------------------------------------------
+# write targets (PRP-35 item 4; shared with the API composition, which imports these names)
+#
+# A connector reaches a WriteTargetRegistry only when its own ENABLED flag is set, its target
+# reference is complete and valid, and its factory returned the WRITE connector. Advisory
+# results (Government, a permission shortfall, manage disabled) are skipped with a logged reason
+# code and never registered; the registry's own refusal rules (``_check_capable``) still run on
+# everything that is registered. One connector per manifest name: a second connector under a
+# name already held is skipped (first wins, logged ``write_target_duplicate``), so exactly one
+# Foundry account and one APIM gateway can be managed per process.
+
+#: Manifest names a composed registry may hold (``foundry-model-swap``, ``apim-gateway``).
+SUPPORTED_WRITE_CONNECTORS: Final = frozenset(ACTION_CONNECTORS.values())
+_ARM_TIMEOUT: Final = httpx.Timeout(30.0)
+_GATEWAY_ID: Final = re.compile(GATEWAY_ID_PATTERN)
+
+
+@dataclass(frozen=True, slots=True)
+class WriteTargetSources:
+    """Where the APIM connector's registration and durable apply records come from."""
+
+    gateway_store: GatewayStore | None = None
+    records_for: Callable[[GatewayRegistration], ApplyRecords] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WriteTargetSeams:
+    """Injected collaborators (tests). Production passes none: every one is built here."""
+
+    credential: AsyncTokenCredential | None = None
+    foundry_http: httpx.AsyncClient | None = None
+    apim_arm: GatewayArm | None = None
+    apim_records: ApplyRecords | None = None
+
+
+def load_write_target_settings() -> tuple[FoundryWriteSettings, ApimWriteSettings]:
+    """``NS_FOUNDRY_*`` and ``NS_APIM_*``; a malformed value raises ``ValueError``."""
+    try:
+        return FoundryWriteSettings(), ApimWriteSettings()
+    except ValidationError:
+        raise ValueError("write target settings are invalid") from None
+
+
+def _skipped(target: str, reason: str, detail: str | None = None) -> None:
+    # Reason codes and fixed connector texts only; never a setting value or an ARM response.
+    extra: dict[str, Any] = {"event": "write_target.skipped", "target": target, "reason": reason}
+    if detail:
+        extra["detail"] = detail
+    logger.warning("write target not registered: %s (%s)", target, reason, extra=extra)
+
+
+def _register(registry: WriteTargetRegistry, target: str, connector: object) -> bool:
+    if getattr(connector, "advisory", False):
+        _skipped(target, "connector_advisory", str(getattr(connector, "reason", "")) or None)
+        return False
+    manifest = getattr(connector, "manifest", None)
+    name = getattr(manifest, "name", None)
+    if name not in SUPPORTED_WRITE_CONNECTORS:
+        _skipped(target, "write_target_unsupported")
+        return False
+    if name in registry.names():
+        _skipped(target, "write_target_duplicate")
+        return False
+    try:
+        registry.register(connector)
+    except CapabilityUnavailableError as exc:
+        _skipped(target, str(exc.reason or "write_target_refused"))
+        return False
+    logger.info(
+        "write target registered: %s",
+        name,
+        extra={"event": "write_target.registered", "target": target, "connector": name},
+    )
+    return True
+
+
+class _LazyCredential:
+    """One ``DefaultAzureCredential`` per composition, created on first use and closed with the
+    lifetime (the ``_archive_container`` pattern); never created when nothing is enabled."""
+
+    def __init__(self, settings: Settings, lifetime: ClientLifetime) -> None:
+        self._settings = settings
+        self._lifetime = lifetime
+        self._value: AsyncTokenCredential | None = None
+
+    def get(self) -> AsyncTokenCredential:
+        if self._value is None:
+            self._value = self._lifetime.register(
+                DefaultAzureCredential(authority=self._settings.cloud_profile.login_host)
+            )
+        return self._value
+
+
+async def _foundry_target(
+    foundry: FoundryWriteSettings,
+    settings: Settings,
+    lifetime: ClientLifetime,
+    seams: WriteTargetSeams,
+    credential: Callable[[], AsyncTokenCredential],
+) -> object | None:
+    if not foundry.enabled:
+        return None
+    try:
+        # The account lives in the DEPLOYMENT's cloud; Government yields the advisory connector.
+        account = foundry.account_ref(settings.cloud_profile.cloud)
+    except ValueError:
+        _skipped("foundry", "foundry_config_invalid")
+        return None
+    if account is None:
+        _skipped("foundry", "foundry_config_incomplete")
+        return None
+    http = seams.foundry_http
+    if http is None:
+        http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=_ARM_TIMEOUT))).client
+    # Reads permissions only (Permissions - List For Resource); write access unproven -> advisory.
+    return await create_swap_connector(account, seams.credential or credential(), client=http)
+
+
+async def _apim_target(
+    apim: ApimWriteSettings,
+    settings: Settings,
+    customer_id: str | None,
+    lifetime: ClientLifetime,
+    sources: WriteTargetSources,
+    seams: WriteTargetSeams,
+    credential: Callable[[], AsyncTokenCredential],
+) -> object | None:
+    if not apim.enabled:
+        return None
+    if apim.gateway_id is None or apim.domain_id is None:
+        _skipped("apim", "apim_config_incomplete")
+        return None
+    if not _GATEWAY_ID.fullmatch(apim.gateway_id):
+        _skipped("apim", "apim_config_invalid")
+        return None
+    if customer_id is None:
+        _skipped("apim", "customer_id_missing")
+        return None
+    store = sources.gateway_store
+    if store is None:
+        _skipped("apim", "gateway_store_unconfigured")
+        return None
+    registration = await store.get(customer_id, apim.domain_id, apim.gateway_id)
+    if registration is None:
+        _skipped("apim", "gateway_not_registered")
+        return None
+    if registration.cloud != settings.cloud_profile.cloud.value:
+        # Never manage a gateway in another cloud than the deployment's (no bridging).
+        _skipped("apim", "gateway_cloud_mismatch")
+        return None
+    records = seams.apim_records
+    if records is None and sources.records_for is not None:
+        records = sources.records_for(registration)
+    if records is None:
+        _skipped("apim", "apim_records_unconfigured")
+        return None
+    if seams.apim_arm is not None:
+        return build_apim_gateway_connector(
+            registration, seams.apim_arm, store=store, records=records
+        )
+    profile = settings.cloud_profile
+    http = lifetime.register(_ClosableHttp(arm_client(profile, credential())))
+    return build_http_apim_gateway_connector(
+        registration, http.client, profile=profile, store=store, records=records
+    )
+
+
+async def register_write_targets(
+    registry: WriteTargetRegistry,
+    *,
+    settings: Settings,
+    customer_id: str | None,
+    lifetime: ClientLifetime,
+    foundry: FoundryWriteSettings,
+    apim: ApimWriteSettings,
+    sources: WriteTargetSources | None = None,
+    seams: WriteTargetSeams | None = None,
+) -> tuple[str, ...]:
+    """Register the configured write connectors into ``registry``; returns its names.
+
+    Foundry first, then APIM (deterministic). Disabled targets are silent; enabled ones that
+    cannot be registered are skipped with a logged reason. Infrastructure errors from a factory
+    (ARM or the gateway registry unreachable) propagate: the worker supervisor retries the role,
+    and the API startup hook logs them and leaves the registry without that target.
+    """
+    seams = seams or WriteTargetSeams()
+    sources = sources or WriteTargetSources()
+    lazy = _LazyCredential(settings, lifetime)
+    connector = await _foundry_target(foundry, settings, lifetime, seams, lazy.get)
+    if connector is not None:
+        _register(registry, "foundry", connector)
+    connector = await _apim_target(apim, settings, customer_id, lifetime, sources, seams, lazy.get)
+    if connector is not None:
+        _register(registry, "apim", connector)
+    return registry.names()
 
 
 # --------------------------------------------------------------------------------------------
