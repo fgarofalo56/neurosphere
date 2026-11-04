@@ -77,6 +77,7 @@ stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + sa
 	NS_SANDBOX_DIR="$(if $(or $(filter /% ./% ../%,$(SANDBOX_DIR)),$(findstring :,$(SANDBOX_DIR))),$(SANDBOX_DIR),./$(SANDBOX_DIR))" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
 	NS_SANDBOX_COSMOS_ENDPOINT=http://127.0.0.1:8081 NS_SANDBOX_EVENTHUBS_CONNECTION_STRING="$$(python -c "print('Endpoint=sb://127.0.0.1;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + 'SAS_KEY' + '_VALUE;UseDevelopmentEmulator=true;')")" $(SANDBOX_CLI) seed --data-dir $(SANDBOX_DIR)
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack
+	NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile seed run --rm --build seed
 
 stack-down: ## Stop the real stack and the emulators (run dev-up to bring the emulators back)
 	docker compose --profile app down --remove-orphans
