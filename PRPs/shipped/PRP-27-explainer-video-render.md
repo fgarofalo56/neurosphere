@@ -1,9 +1,11 @@
 ---
 name: prp-27-explainer-video-render
-status: active
+status: shipped
 review: none
 created: 2026-10-08
 started: 2026-11-03
+shipped: 2026-11-03
+pr: 163
 branch: prp-27-explainer-video-render
 model: sonnet
 phase: 5
@@ -172,19 +174,12 @@ The actual render is **operator-approved, requires a recorded budget in marketin
 - [x] All clarification questions are decided, not guessed
 
 ## Completion note (filled at ship)
-- Date:
-- Merged commits:
-- Deviations from blueprint and why:
-- Descoped items:
-- Approval record: date, approver, budget (or OPEN, in which case nothing was rendered):
-- Spend vs cap:
-- MP4 and captions paths, playback reviewer:
-- G09 status after this PRP:
-- Follow-ups:
-
-## Execution state
-| Item | Status | Branch | Model | Evidence | Updated |
-|---|---|---|---|---|---|
-| 1 budget-approval-record | merged | prp-27-explainer-video-render | sonnet | 6938cbf; tests/marketing 120 passed | 2026-11-03 |
-| 2 render-pipeline | merged | prp-27-explainer-video-render | sonnet | 829f463, eb9a92f; local render done, 125 tests pass, ffprobe 140.1 s, sha256 5571a8fd...; NOT human-played | 2026-11-03 |
-| 3 manifest-update | merged | prp-27-explainer-video-render | sonnet | owner playback approved 2026-11-03; manifest, G09 row, DoD line updated; tests/marketing 125 passed, tests/release 62 passed | 2026-11-03 |
+- Date: 2026-11-03
+- Merged commits: 6938cbf, 72451db (guard, render script, tests), 5427601, ba0bd4b (approval record), 829f463, eb9a92f (local backend, captions, spend log), 3213cf5 (manifest, G09 row, DoD line). PR #163.
+- Deviations from blueprint and why: items 1 and 2 ran as one lane because the guard test needs the item 2 entry point. Manifest rows were added during items 1-2 (and rows for capture.mjs, shots.json, speak.ps1) because the manifest listing test requires every marketing file to be listed. Minimal edits to two PRP-26 tests (exclude the gitignored render/out media dir; replace the obsolete not-rendered assertion). One DoD checklist line in docs/release/dod-checklist.md was updated because it went stale. The approval cap of 25 USD is an agent-chosen ceiling (the guard rejects 0); the owner gave no figure.
+- Descoped items: none. Azure neural voice was offered and not taken.
+- Approval record: 2026-11-03, Frank Garofalo (owner) by session instruction; cap 25 USD, planned spend 0; local pipeline (Playwright, Windows System.Speech Zira voice, ffmpeg).
+- Spend vs cap: 0.00 USD of 25 USD (marketing/video/render/spend-log.md).
+- MP4 and captions paths, playback reviewer: marketing/video/render/out/neurosphere-explainer.mp4 (gitignored, outside git, sha256 5571a8fd6a1345ea2ef28ddff1d1a4c7730b712160e12f43ee402556f2d05e13, 140.1 s); marketing/video/render/out/captions.vtt (committed, 8 cues). Played back and approved by Frank Garofalo on 2026-11-03.
+- G09 status after this PRP: still WAIVED by the owner for demo scope, not closed. No independent Product or legal/accessibility review. Known gaps against the storyboard: the sandbox UI does not draw the cost spike (S03), awaiting-confirmation intents (S05) or the bad-event comparison (S06); every frame shows the Viewer account; storyboard S01 text still says not rendered (PRP-26 files).
+- Follow-ups: fix the S01 text and align narration with what the UI shows (PRP-26 rules); optional Azure neural voice; the MP4 lives only on the local machine, so move it to external storage if it must be shared; independent G09 review.
