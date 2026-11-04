@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-27-explainer-video-render](active/PRP-27-explainer-video-render.md) |  | 2/3 (66%) | todo 1, merged 2 | ? / ? | none |
+| [prp-27-explainer-video-render](active/PRP-27-explainer-video-render.md) |  | 2/3 (66%) | merged 2, blocked 1 | ? / ? | none |
 
 ## Backlog
 

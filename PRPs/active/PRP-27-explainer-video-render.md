@@ -186,5 +186,5 @@ The actual render is **operator-approved, requires a recorded budget in marketin
 | Item | Status | Branch | Model | Evidence | Updated |
 |---|---|---|---|---|---|
 | 1 budget-approval-record | merged | prp-27-explainer-video-render | sonnet | 6938cbf; tests/marketing 120 passed | 2026-11-03 |
-| 2 render-pipeline | merged | prp-27-explainer-video-render | sonnet | 72451db (stub backend only; no render run); ruff, pyright, validate_planning PASS | 2026-11-03 |
-| 3 manifest-update | todo | | sonnet | blocked on real render (needs APPROVAL.md signed by operator) | 2026-11-03 |
+| 2 render-pipeline | merged | prp-27-explainer-video-render | sonnet | 829f463, eb9a92f; local render done, 125 tests pass, ffprobe 140.1 s, sha256 5571a8fd...; NOT human-played | 2026-11-03 |
+| 3 manifest-update | blocked | | sonnet | needs human playback of out/neurosphere-explainer.mp4 + captions before marking rendered | 2026-11-03 |
