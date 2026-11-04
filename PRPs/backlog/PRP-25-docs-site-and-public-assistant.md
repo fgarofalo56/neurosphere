@@ -1,7 +1,8 @@
 ---
 name: prp-25-docs-site-and-public-assistant
-status: shipped
-shipped: 2026-11-02
+status: backlog
+priority: P1
+order: 11
 pr: 154
 started: 2026-10-30
 branch: prp-25-docs-site
@@ -219,3 +220,12 @@ Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch his
   - OPEN: first Pages deploy, which runs on the first push to `main` after merge; any hosted assistant deployment is an operator action.
   - G09 (theme/brand/media review) not closed here.
   - Pin the Playwright image by digest so its toolchain cannot drift again.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- The published docs site holds only the home page and ADRs 0001-0008: `mkdocs.yml:29-33` excludes everything else under `docs/` and `nav` (`:35-45`) lists only those. `docs/reference/`, `runbooks/` and `walkthroughs/` exist but are not built into the site.
+- Pages deploy is unproven: `.github/workflows/docs.yml` is correct as written but no run is evidenced; first deploy OPEN. Reference regeneration (`tests/docs/test_reference_coverage.py:90`) is not run by any workflow.
+- The assistant is an extractive stub: `services/docs-assistant/docs_assistant/model.py:54-59` returns `StubModel` and raises `ConfigError` if `model_endpoint` is set; no LLM is wired. Nothing deploys it: no compose, Helm, Bicep or CI job references `docs-assistant`, and `release.yml` does not publish its image. Default `docs_base_url` is `https://docs.example.invalid/`.
+- Clean-machine new-user test OPEN (`docs/runbooks/new-user-test.md` is an unfilled template); runbooks carry DRAFT banners.

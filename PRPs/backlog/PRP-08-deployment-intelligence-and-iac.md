@@ -1,8 +1,9 @@
 ---
 name: prp-08-deployment-intelligence-and-iac
-status: shipped
+status: backlog
+priority: P1
+order: 8
 started: 2026-10-16
-shipped: 2026-10-17
 pr: 43
 branch: prp-08-deployment-intelligence
 review: required
@@ -291,3 +292,12 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
   - Uninstall real removal (ArmDeleter + live inventory) never run live: OPEN (#40).
   - G12 emulator/mock limits: mocked Resource Graph cannot reproduce real subscription visibility, quota or capacity APIs (eastus2 Search capacity was only found live); the Cosmos emulator used by the register integration test has no Entra RBAC or RU accounting; Fabric adapter is stub-tested only.
 - Follow-ups: #35 tag-trusted consent skip, #36 scan in request body, #37 audit events for scan/plan/consent, #38 uninstall api-version table, #39 Government Fabric token scope, #40 live uninstall exercise, #41 record G01 findings in RESEARCH-AND-GATES, #42 frontend container shape (PRP-13).
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- No UI: nothing in `frontend/` references deploy/scan or deploy/plan; the planner is API-only, so 'show unavailable options disabled' exists only as plan JSON. The PRP is marked shipped with no descoped items although the wizard was never built.
+- Scan returns 503 unless `NS_SCAN_ENABLED` is set (`services/api/neurosphere_api/main.py:25`, opt-in bootstrap); no chart, compose file, Bicep or `.env.example` sets it.
+- Planner takes the scan result in the request body (#36); nothing feeds it from the scan service. `FabricProvisioner` (`packages/core/neurosphere_core/deploy/fabric/provisioner.py:96`) has no non-test caller.
+- `infra/scripts/uninstall.py` is standalone, never called by the API; real `ArmDeleter` never run live (#40). Audit events for scan/plan/consent missing (#37); consent-skip is tag-trusted (#35); Fabric Government token scope unverified (#39). what-if lint deliberately not in CI.

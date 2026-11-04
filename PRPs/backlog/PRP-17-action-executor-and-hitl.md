@@ -1,10 +1,11 @@
 ---
 name: prp-17-action-executor-and-hitl
-status: shipped
+status: backlog
+priority: P1
+order: 1
 review: required
 created: 2026-10-08
 started: 2026-10-20
-shipped: 2026-10-21
 pr: 83
 branch: prp-17-action-executor-and-hitl
 model: opus
@@ -279,3 +280,15 @@ Integration branch gates after all items merged (598ac77 + licence register rege
 - Descoped items: none. Out of scope by the PRP: real email/Teams delivery (stub notifiers record only), write connectors other than the Foundry swap, copilot/MCP action surfaces (PRP-19/PRP-22 reuse this executor).
 - G05 live run: NOT run; operator decision 2026-10-20 to leave G05 OPEN this PRP. Script `scripts/gates/g05_foundry_swap_live.py` refuses without `NS_LIVE_APPROVED=1` (tested); evidence README `docs/evidence/G05/README.md`; `docs/RESEARCH-AND-GATES.md` G05 row records OPEN and that production action execution stays blocked. G12: intent store proven on the Cosmos emulator only (8 tests, `integration` marker, not in CI), slice and HITL in-memory (`docs/evidence/G12/actions/README.md`). G01: Foundry write in Government unverified, disabled with reason.
 - Follow-ups: reconcile sweep for terminal intents whose review item is still `approved` (completion hook retries only on re-execute) and for intents expiring outside the executor; customer-level permission for `PUT /emergency-disable` (any single-domain `config.manage` holder can re-enable customer-wide); rejection hit by a policy outage leaves the intent `awaiting_approval` until expiry; orphan review item when `link_review_item` fails after `open_item`; Cosmos HITL store; notification outbox before real delivery; retry cap for long policy outages; a public token-free policy evaluator in `neurosphere_core.auth` to replace the mirrored rules; Foundry connector canonical-id account binding, carry remaining `DeploymentProperties`, fallback rollback without etag; UI: review 503 copy, resend after refresh (`OPEN_STATES` lacks `approved`), `self_approval_prohibited` reason mapping; mock API 401/404 as problem+json; production bootstrap of `configure_action_plane`; live G05 run in Limitlessdata when approved.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). Items 1-4 and 6 are implemented, tested and wired (`routers.py:124-131`, `runtime/builders/planes.py:240`). Gaps:
+
+- Item 5 (Foundry target changed and verified live) never ran. G05 is OPEN and `docs/evidence/G05/` holds only a README. `scripts/gates/g05_foundry_swap_live.py:3` refuses without `NS_LIVE_APPROVED=1`.
+- HITL store is in-memory only: no Cosmos HITL store, so approvals do not survive a restart. The Cosmos emulator test for the intent store is not in CI.
+- Notifiers are stubs.
+- Completion hook only fires when `execute` runs again.
+- `PUT /emergency-disable` is not customer-level.
+- A rejection during a policy outage leaves the intent stuck until expiry.
+- The "production bootstrap still to do" follow-up looks stale (`planes.py:240` calls `configure_action_plane`); confirm and close it.

@@ -1,7 +1,8 @@
 ---
 name: prp-23-ato-evidence-and-data-lifecycle
-status: shipped
-shipped: 2026-10-23
+status: backlog
+priority: P2
+order: 18
 pr: 118
 started: 2026-10-23
 branch: prp-23-ato-evidence-and-data-lifecycle
@@ -267,3 +268,12 @@ Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orche
     - align the DR drill size wording ("tens of kilobytes" vs about 478 KB) in the contingency plan and the G07 DR README
     - move the Chrome render workaround to a contributor note
   - Once those land, upgrade AU-11, CA-7, CP-2, PM-5 and SI-12 from `planned` to evidence-backed statuses.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- The lifecycle engine does nothing at runtime: `services/workers/neurosphere_workers/runtime/factories.py:452-470` (`build_lifecycle`) builds `LifecycleEngine` with an empty `TargetRegistry()` and `_NoRequestedJobs` (`:445-449`) that always returns `[]`. No delete, retention or export happens.
+- No lifecycle API exists under `services/api/neurosphere_api`, so a legal hold or deletion/export request cannot be submitted.
+- Not built (admitted follow-ups): real delete backends for catalog, archive and ledger stores, API `ConversationStore` shim, Helm, retry policy; AU-11, CA-7, CP-2, PM-5, SI-12 still `planned`. Cosmos hold/queue stores (`lifecycle/cosmos.py`) may now be durable; completion note says in-memory and looks stale.
+- Met: control mapping (64 entries), deterministic evidence collection with credential-path filtering, required-sentence check, plan documents and diagrams.

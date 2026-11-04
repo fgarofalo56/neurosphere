@@ -1,8 +1,9 @@
 ---
 name: prp-15-recommendations-engine
-status: shipped
+status: backlog
+priority: P1
+order: 13
 started: 2026-10-19
-shipped: 2026-10-19
 pr: 79
 review: none
 created: 2026-10-08
@@ -237,3 +238,12 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 - Descoped items: none. Item 1's acceptance (every injected anomaly detected) holds on dense data only; at pilot density undetected latency regressions are reported as insufficient evidence rather than detected (operator chose fix-forward D5, then ship).
 - Open gates recorded (ids and where): G12 (in-memory stores only, no Cosmos recommendation store, so RU/index/429/Entra unexercised), G04 (price-sheet source coverage recorded, gaps open), G01 (Retail Prices API is Commercial-only; Government projections need a Government-applicable sheet), all in docs/RESEARCH-AND-GATES.md; G05 untouched (PRP-17). Evidence in docs/evidence/G12/recommendations/.
 - Follow-ups: a production agent-series source (agent dimension on the PRP-11 contract and its four adapters); Cosmos `RecommendationStore` plus `app.state` production bootstrap (routes return 503 on a real deployment until it exists); the real PRP-17 `ReviewRouter`; latency false alarms at pilot density and the volume of insufficient-evidence records (54-65 per pilot run); held-out calibration of duplicate thresholds (0.75 on seed 5); keeping `openapi.json` component names stable (e.g. explicit model titles); hosting `run_pipeline` in the workers container with a `__main__`.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- Recommendations are computed only from sandbox NDJSON (`services/workers/neurosphere_workers/recommendations/pipeline.py`); nothing outside tests feeds real agent telemetry into the rules. The production agent-series source is OPEN (D1, `RecommendationCompute` cannot group by agent).
+- The worker raises `recommendations_data_dir_missing` unless `NS_WORKER_REC_DATA_DIR` is set. Compose sets it to `/data/sandbox` (`docker-compose.yml:201`); `infra/demo/main.bicep:239` says the hosted image lacks those mounts, so the hosted page is likely empty (inferred).
+- Detection quality below target: at pilot density latency detection is 0/5 on seed 3 and 3/5 on seeds 11 and 5, with 1/2/4 false alarms per run; duplicate precision 0.889 on the tuning seed but 0.75 on held-out seed 5 (target 80%), shipped anyway. Duplicates use `GraphQuery`, not `RecommendationCompute` (D2).
+- Frontend e2e runs against the mock API only. Real PRP-17 ReviewRouter now exists as `HitlReviewRouter`; follow-up on `run_pipeline` hosting open.

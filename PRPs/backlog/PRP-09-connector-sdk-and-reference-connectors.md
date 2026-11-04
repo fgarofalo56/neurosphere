@@ -1,8 +1,9 @@
 ---
 name: prp-09-connector-sdk-and-reference-connectors
-status: shipped
+status: backlog
+priority: P2
+order: 4
 started: 2026-10-17
-shipped: 2026-10-17
 pr: 45
 branch: prp-09-connector-sdk
 review: required
@@ -255,3 +256,14 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
   - G04 OPEN: no live contract run for Azure Monitor, Foundry or billing (`NS_LIVE_APPROVED=1` not used; no `docs/evidence/G04/`); Government endpoints are configuration only; unbuilt NS-09 targets open by design. Recorded in docs/RESEARCH-AND-GATES.md.
   - G12: `tests/integration/connectors/` (1 test) passed against the compose emulators locally; delta recorded — Entra producer identity is not reproducible on the Event Hubs emulator, the edge checks the producer credential instead.
 - Follow-ups: #46 (Azure Monitor watermark advances past truncated slices: data-loss path, fix before any live G04 run), #47 (WriteConnector verify strictness: type coercion, move/copy, target version enforced by PRP-17 executor), #48 (Python SDK hardening), #49 (OTel connector edge cases), #50 (TS SDK polish). Item 5 non-blocking review findings, not filed separately: billing `blobs_expected` equals blobs read so missing partitions show only via the row-count check; rows without a date are dropped (counted, not stated in the variance report); `gzip.decompress` has no size cap; `Decimal` accepts underscores and non-ASCII digits in cost cells.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). The SDK, write interface, tests and docs are real. Composition into the product is thin. Gaps:
+
+- The OTel, Foundry and billing reference connectors and `build_variance_report` have no non-test caller in `services/`, `packages/` or `scripts/`. Only the Azure Monitor connector is called (`services/workers/neurosphere_workers/ingestion/gateway_poll/poller.py:90`, wired at `runtime/factories.py:639` as the opt-in `gateway_poll` role, not part of `all`, from PRP-33). The variance report has no API, worker or UI surface.
+- The contract kit (`connectors/sdk-python/neurosphere_connector/contract_kit.py`, `check_connector_contract`) is exercised only by its own tests. The PRP-exit claim that it runs against each reference connector has no test behind it. TS `contract-kit.ts` pass/fail assertions not checked.
+- Criterion 3 (OTel push lands as TelemetryEvent with nulls): the test is real (`tests/integration/connectors/test_otel_generic_ingest.py:136-151`) but runs against compose emulators and stays out of default runs. The connector posts OTLP/CloudEvents and the ingest edge maps it. Nothing composes the exporter. Entra producer identity is untested (G12 delta).
+- Issue #46: the Azure Monitor watermark advances past truncated slices, so rows are lost. Fix before any live G04 run. G04 is correctly OPEN; `docs/evidence/G04/` does not exist.
+- Foundry connector reads REST via httpx; `azure-ai-projects` was dropped over a licence problem.
+- Met: contract kit pass/fail and credential-not-logged tests; TS/Python manifest interop; `WriteConnector` and registry (used by PRP-17 and PRP-34); Azure Monitor polling freshness, page budget and 429 handling.

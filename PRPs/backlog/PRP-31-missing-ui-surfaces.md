@@ -1,12 +1,12 @@
 ---
 name: prp-31-missing-ui-surfaces
-status: shipped
+status: backlog
 started: 2026-10-30
-shipped: 2026-10-30
 pr: 150
 branch: prp-31-missing-ui-surfaces-impl
 review: required
 priority: P1
+order: 12
 created: 2026-10-24
 model: sonnet
 phase: 5
@@ -441,3 +441,12 @@ Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists 
   - Catalog deprecate/recertify collect a required reason that is not stored: the PRP-10 endpoints take none and the PRP-06 audit `detail` is a machine code. The dialog says so. Chosen over a PRP-06 contract change.
 - Descoped items: none. The deploy pages have no apply control by design.
 - Follow-ups: store the reason on deprecate/recertify (needs an audit contract field); bump the base image digest when Python 3.12.16 ships (#151); real-API compatibility not proven end to end (in-memory API and mock only); G09 accessibility sign-off stays OPEN; Snyk code scan not run; `app.state` bootstrap (#104) not addressed; `pnpm demo` twelve-page manual check not done; one intermittent Fluent dialog test flake (hardened, may recur).
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- No page has ever run against the real API: Playwright's only web server is the mock (`frontend/playwright.config.ts:45`). All 12 surfaces are 'met in code, mock-verified only'.
+- `/catalog` search fails closed with 503 `search_unavailable`; `/deploy` scan needs `app.state.scan_service` and shows 503 on a bare API (#104); `/audit` needs the catalog and audit repositories bootstrapped, and its a11y matrix opens it as Viewer (only the Forbidden state is checked).
+- Deferred and never built: catalog create/edit/import UI, and lifecycle, ingestion and policy pages. Entity change dialog reason is not stored; stale-agents uses its own dialog not `ChangeConfirmDialog`; forecast band is dashed lines plus a table.
+- All acceptance checkboxes still `[ ]`; the `pnpm demo` 12-page manual check, G09 axe sign-off, Snyk scan and #104 bootstrap were not done; two CI image jobs were red at merge (Grype CVE, #151).

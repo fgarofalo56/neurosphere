@@ -1,6 +1,8 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: shipped
+status: backlog
+priority: P0
+order: 6
 review: required
 created: 2026-10-08
 model: opus
@@ -275,3 +277,14 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: `configure_authz` is not called from the app factory (needs production Entra, JWKS, Cosmos and vault-key settings that do not exist yet). The audit router IS mounted by default (routers.py) and returns 503 until authz is configured (tested). `extra_routers` may now replace a default router once; duplicates among callers still fail.
 - Open gates / untested live items: Government v1 issuer host only (unconfirmed: public metadata advertises sts.windows.net, allowlist uses sts.usgovcloudapi.net and fails closed; a live v1 token attempt was inconclusive). Closed after ship: audit store Cosmos emulator test; Snyk 0 issues; live Entra validation on Commercial AND Government (real v2 tokens, aud is the app GUID); live Commercial Cosmos run (audit chain, service-side refusal of replace/upsert/patch/delete on audit records via a separate tail container and a create/read-only role, policy and revocation stores). Not WORM; hash chain remains the tamper control. Not exercised live: token expiry, app-only tokens, revocation TTL expiry, Government Cosmos. Evidence: docs/evidence/PRP-06/.
 - Follow-ups: DONE in the hardening PR: (1) the audit chain_domain mapper is now mandatory (domain_from_chain_id convention, no customer-level fallback); (3) ScopeDeriver requires a revocation checker, opt-out is the explicit NoRevocationCheck(); (4) JWKS refresh-ahead before expiry (serves the unexpired cache on failure, never extends expiry); (5) audit verify is capped at 1,000,000 records and fails closed with verify_limit_exceeded. STILL OPEN, need a decision because they reopen decided clarifications: (2) block-until-lifted revocation mode (C12 decided TTL-bounded revocation by token issue time); (6) auditing pre-scope failures (401/503/revoked) and allowed reads of the audit router. Not doable yet: (7) PRP-10 must re-run tests/security/authz against the Azure AI Search implementation.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- Authorization denials are not audited in the composed app: `runtime/builders/authz.py:199` passes `denial_recorder=ctx.overrides.denial_recorder`, which defaults to `None` (`runtime/overrides.py:52`), and `authz/dependencies.py:248-249` skips recording when it is `None`. The PRP gotcha requires a denied attempt to be audited; follow-up 6 admits less than this.
+- SIEM export hook (`audit/siem.py`) is not wired: the composed `AuditRepository` (`runtime/builders/data.py:317`) takes no exporter.
+- Revocation: `builders/authz.py:154-157` registers only cache invalidators, no push closer in the composed app; live TTL expiry test not exercised (default TTL 60 s).
+- `verify_route_permissions` runs only in tests (`tests/authz/test_route_inventory.py:33-41`), not at startup. Websocket/realtime route permissions not checked.
+- Audit store is not WORM (tail pointer uses ETag-guarded `replace_item`); follow-ups (2) block-until-lifted revocation, (6), (7) re-run suite against Azure AI Search open. Government v1 issuer host unverified.
+- Met: JWKS validation with algorithm pinned from the key, dev issuer excluded from the composed app, audit repository exposes no update/delete.

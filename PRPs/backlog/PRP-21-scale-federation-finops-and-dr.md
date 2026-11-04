@@ -1,11 +1,12 @@
 ---
 name: prp-21-scale-federation-finops-and-dr
-status: shipped
+status: backlog
+priority: P2
+order: 17
 review: none
 created: 2026-10-08
 started: 2026-10-22
 branch: prp-21-scale-federation-finops-dr
-shipped: 2026-10-22
 pr: 103
 model: sonnet
 phase: 4
@@ -273,3 +274,11 @@ Enterprise and stress profile runs are operator-run against a sized environment 
   - #106: federation review follow-ups.
   - #107: ADR-0002 locust row, ingest latency target, load coverage, forecast band, DR packaging.
   - #108: G07 operator-run evidence.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- The pilot load run FAILED every threshold: `docs/evidence/G07/load/pilot-2026-10-22.json:93` has `thresholds_all_passed: false` (240 events/s vs 1000 target, 7.1% errors, p95 30 s); the 2 s ingest p95 threshold is a self-declared placeholder; it ran against local uvicorn, not the compose api.
+- Admission control is not composed: nothing outside tests imports `neurosphere_core.admission` (descoped, Clarification 5, follow-up #105), so no running endpoint throttles a noisy domain.
+- Federation is a single in-process cell (`runtime/builders/data.py:244-280`); `HttpCellClient` never composed. FinOps forecast reads a sandbox in-memory ledger with no invoiced evidence. DR drill used synthetic archive blobs and a fixture search index; real failover OPEN. No federation or finops UI.

@@ -1,6 +1,8 @@
 ---
 name: prp-05-api-worker-runtime-and-self-observability
-status: shipped
+status: backlog
+priority: P1
+order: 7
 review: none
 created: 2026-10-08
 model: sonnet
@@ -287,3 +289,12 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: none.
 - Open gates / untested live items: managed-identity access against real Cosmos and Event Hubs (Commercial and Government) has not run (fake credential only; identity-path unit test covers the Cosmos factory only); Government endpoints are unit-tested as strings only; Azure Monitor exporter path is not exercised; G12 emulator-vs-live deltas recorded here (no RU accounting, no auth enforcement, no range/composite/spatial indexes, Event Hubs SAS only) not closed; G07 SLO targets are stated as targets, measurement is PRP-21; Linux not run for the real-SIGTERM worker test (Windows only); CI not yet run (no push).
 - Follow-ups: PRP-01 contract change for 404/405/413/500 statuses; move blob suffixes into `CloudProfile`; swap health probes to clients; adjust Grafana queries to actual exported metric suffixes once an exporter exists; Pyright ignore comments in `redaction.py` are broad.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- SLO metrics, traces and OTel/Azure Monitor export are never wired: `configure_telemetry` and `SloMetrics` have no non-test caller in `services/` or `packages/core`. No request metric is recorded; `infra/observability/*.json` dashboards chart metrics nothing emits.
+- Roles `lifecycle` (`workers/runtime/factories.py:445-458`, `_NoRequestedJobs` plus empty `TargetRegistry`) and `actions` (`:427-430`, empty `WriteTargetRegistry`) are inert under `NS_WORKER_ROLES=all`.
+- Non-ingestion roles use `InMemoryCheckpointStore` (`adapters.py:69-71`), so checkpoints are not durable.
+- 404/405/500 return a minimal body with no taxonomy `code`; compose worker healthcheck is liveness only; readyz integration test does not use real `main.create`; Linux SIGTERM not run; Cosmos identity path tested with a fake credential only; CI never ran for this PRP.

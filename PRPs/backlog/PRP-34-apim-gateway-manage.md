@@ -1,12 +1,11 @@
 ---
 name: prp-34-apim-gateway-manage
-status: shipped
+status: backlog
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
 started: 2026-10-29
-shipped: 2026-10-30
 pr: 149
 branch: prp-34-apim-gateway-manage
 model: opus
@@ -267,3 +266,16 @@ Shipped 2026-10-30 as PR #149 (merge `ea346b2`, branch head `5b65c11`). Items 1,
 
 **Follow-ups**
 - Create-race `If-None-Match`; grant stale-intent replay guard; MCP `publication-record` permission (`action.propose`) vs grant (`catalog.curate`); G17 script hardening (refuse an existing resource group, distinct approver token, clear state on teardown); `WWW-Authenticate` resource-metadata hint on the MCP 401; wire the APIM connector and recorder into the deployed worker composition; per-step create/found in the dry-run API; `customMetrics` query for cost-center attribution; over-broad `action_kind_mismatch` reason; unaudited intent-fetch failure in the recorder.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). The connector library is real and tested, but nothing deploys it. Gaps:
+
+- `build_apim_gateway_connector`, `default_translators` and `PublicationRecordingExecutor` (`services/workers/neurosphere_workers/actions/apim.py`) have no non-test caller in `services/`; `neurosphere_workers/runtime/` has no apim wiring. A model swap, cap change or publication cannot reach a gateway in a deployed worker or API.
+- Item 2: `mode=None` skips the observe guard (fail-open); worker not composed.
+- Item 3: `GatewayLogs` BackendId and weight bounds unverified live.
+- Item 4: cost-center attribution NOT met (depends on PRP-33 observation carrying tags).
+- Items 5 and 6: the publication recorder in `neurosphere_workers/publication/` is not wired, so there is no production caller for the provenance record. `type: mcp` API shape unverified live.
+- Item 8: owner paths `frontend/src/pages/{gateways,actions,catalog}` do not exist (code is in `frontend/src/features/gateways/`); Playwright runs only against mock fixtures; per-step create/found is not shown, only the digest prefix and diff resources. `/catalog/publication` route and plan-preview not checked.
+- Item 9: G17 manage live gate never ran; no `docs/evidence/G17/manage-*`; the MCP echo backend is operator-supplied.
+- Depends on PRP-22 and PRP-33 being reopened first.

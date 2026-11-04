@@ -1,10 +1,11 @@
 ---
 name: prp-18-live-map-and-session-replay
-status: shipped
+status: backlog
+priority: P2
+order: 16
 review: required
 created: 2026-10-08
 started: 2026-10-21
-shipped: 2026-10-21
 pr: 85
 branch: prp-18-live-map-and-session-replay
 model: sonnet
@@ -304,3 +305,12 @@ Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D 
   - Reveal-with-audit for people.
   - Cross-replica revocation is bounded by TTL plus one interval; it is not exercised end to end.
   - The emulator-unreachable fail path was verified by reading only.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- Per-node metrics are mostly null on the shipped map: `services/api/neurosphere_api/map/service.py:202-210` sets metrics from the catalog only, so only `context_size` can be non-null; tokens/frequency/latency/health legends have no real data.
+- Viewport page of 2000 nodes takes about 15 s in memory (N+1 neighbour walks), an open follow-up.
+- 30 fps is not met in practice: mean 38-42 fps but 5th-percentile 24-30; enforcement is opt-in (`NS_MAP_PERF_ENFORCE=1`, `map-perf.spec.ts:285`); all frontend e2e runs against the mock API.
+- Replay has never run against real storage (`ArchiveTraceReader` bounded scan); cross-replica revocation not tested end to end; `test_replay_readonly.py:21-30` misses relative imports and `importlib`.

@@ -1,7 +1,8 @@
 ---
 name: prp-19-copilot-and-report-creation
-status: shipped
-shipped: 2026-10-22
+status: backlog
+priority: P1
+order: 10
 pr: 87
 started: 2026-10-21
 branch: prp-19-copilot-and-report-creation
@@ -319,3 +320,12 @@ Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D 
     - The client first-token clock includes conversation creation on the first message.
     - `useCopilotSelection` module-level store.
     - Axe excludes `[data-tabster-dummy]`.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- The copilot answers 503 `copilot_unconfigured` by default: `docker-compose.yml:147` sets `NS_COPILOT_MODE: disabled`; `infra/demo/main.bicep:224` takes `copilotMode` defaulting to disabled (`docs/deploy/hosted-demo.md:489`). Production never binds the recorded-fixture adapter, so chat is dead without an operator-configured endpoint. (It is composed by PRP-29 builders `copilot.py` and `planes.py:329-363`; the completion note is stale.)
+- `EmptyEvidenceReader` is the default, so every evidence question abstains. Save-from-chat is not built.
+- No Commercial `foundry.model_*` matrix rows (Commercial resolves disabled); Foundry wire shape unverified, live run OPEN.
+- Reports follow-ups open: `If-Match` not required on share/unshare/request-publication; no audit events for run/share/decision. Redaction misses phones, addresses and names. Copilot e2e runs against the mock API only.

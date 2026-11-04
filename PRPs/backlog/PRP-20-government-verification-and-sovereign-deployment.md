@@ -1,8 +1,9 @@
 ---
 name: prp-20-government-verification-and-sovereign-deployment
-status: shipped
+status: backlog
+priority: P1
+order: 14
 started: 2026-10-22
-shipped: 2026-10-22
 pr: 97
 branch: prp-20-government-sovereign
 review: required
@@ -234,3 +235,12 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 | 2 | merged | worktree-agent-ad2f171f638730ee5 | sonnet | 34d2deb + c5b567c (handoff-marker flip) + 3ddde6d (audience provenance fix), merge f2d2aaf; verify government_profile+infra+network 92/92, helm lint/template ok, bicep build-params ok; post-merge 92/92; review APPROVED (4 follow-ups) | 2026-10-22 |
 | 3 | merged | worktree-agent-af3ed6e509f2e314f | sonnet | de8c5cc, merge 4990f12; verify ruff/format/pyright clean, static 57/57, compose integration 41/41 (fresh stack, local only; integration marker does not run in CI); post-merge touched suites 313 passed; snyk 0; review APPROVED (4 follow-ups). In-cluster proof OPEN | 2026-10-22 |
 | 4 | merged | worktree-agent-a2d5b5afaff30879b | sonnet | b6b79a3, merge 083d5d2; verify ruff/format/pyright clean, gates 144/144, both scripts refuse exit 2 "OPEN", docs/ untouched; post-merge 144/144; review APPROVED (4 follow-ups) | 2026-10-22 |
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- `infra/bicep/params/government/sovereign-profile.yaml` (disabledOptions ~line 140, allowedRegions, egressHosts) is read by no running code: only tests, the Helm values mirror, comments and docs reference it. Disabled-with-reason at runtime comes from the capability matrix via the deploy planner (`planner.py` `_disabled_item`), whose router mounting was not confirmed in `app.py`.
+- No live Government evidence: `docs/evidence/G02/` holds only `register.yaml`; G01 has Commercial smoke files only. Several audiences recorded null/unverified (Cosmos, AI Search, Event Hubs).
+- Egress proof is partial: `tests/security/egress/test_compose_egress_blocked.py` is `integration` and not run in CI; Helm/az-bicep static tests `pytest.skip` when the tool is absent (follow-up #100); the NetworkPolicy is CIDR-only so the host allowlist is not enforced per FQDN. Bicep only refuses APIM v2 SKUs in Government (`main.bicep:48`).
+- Profile scripts (`g02_profile_aks.py`, `g02_profile_appservice.py`) are tested for refusal only; success, drift and uninstall paths never run live.
