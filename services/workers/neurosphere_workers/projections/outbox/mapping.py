@@ -119,8 +119,12 @@ def _parts(contract: CostRecord) -> AllocationParts | None:
 
 def _map_cost(
     event: NormalizedEvent, contract: CostRecord
-) -> RequestObservation | AllocationRecord:
+) -> RequestObservation | AllocationRecord | None:
     kind = event.message.observation_kind or contract.observation_source
+    if contract.kind == "invoiced" and kind != "billing":
+        # Defence in depth behind the edge check (#27): never fold a non-billing producer's
+        # "invoiced" record as invoiced (rank 0). It is not a ledger observation.
+        return None
     amount = Decimal(contract.amount.root)
     period = contract.billing_period
     period_start = date.fromisoformat(period.start_date.root) if period else None
