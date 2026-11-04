@@ -25,6 +25,12 @@ and hand the plaintext secret to the producer through your secret channel, never
 
 DEV ONLY, throwaway: the secret for that digest is `ns-dev-only-ingest-secret`, so the bearer token is `dev-ingest.ns-dev-only-ingest-secret`. It protects an emulator-only stack; never register it in a hosted environment.
 
+## Local compose worker (ingestion role and price table)
+
+The `workers` service (profile `app`, `NS_WORKER_ROLES=all`) runs the ingestion role against the emulators. Compose sets `NS_INGESTION_EVENTHUB_NAME=telemetry`, `NS_INGESTION_CONSUMER_GROUP=normalizer` (both from `infra/compose/eventhubs.config.json`), `NS_INGESTION_COSMOS_DATABASE`, `NS_INGESTION_CHECKPOINT_CONTAINER` and `NS_QUARANTINE_CONTAINER`. The Event Hubs and Azurite connection strings are built at container start by the emulator bootstrap, so none is committed. Containers are created on demand because `NS_ENV=local`.
+
+`NS_LEDGER_PRICE_TABLE_FILE` points at `infra/dev/ledger-prices.dev.json`, mounted read-only at `/etc/neurosphere/ledger-prices.json`. It is a SYNTHETIC `{"versions": [...]}` price sheet (`azure_openai` / `synthetic-model`) so local cost estimates resolve. Remove the variable and every estimate becomes `price_unresolved`. Never use it for real cost reporting. `tests/unit/compose/test_ingest_worker_wiring.py` pins this wiring.
+
 ## Helm (operator-supplied file)
 
 Both values are empty by default (ingest disabled). Set exactly one; setting both fails `helm template`.
