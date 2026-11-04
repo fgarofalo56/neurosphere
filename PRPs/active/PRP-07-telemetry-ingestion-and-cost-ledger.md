@@ -293,7 +293,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| 7 | in-progress | worktree (agent) | sonnet | compose workers NS_INGESTION_*, synthetic price table + NS_LEDGER_PRICE_TABLE_FILE, runbook (#26) | 2026-11-04 |
+| 7 | merged | worktree-agent-a29854971ce64e928 | sonnet | compose/price-table tests 18 passed, ruff clean; not run against live compose; 3d6fb41, merge b07a1f8 | 2026-11-04 |
 | 8 | in-progress | worktree (agent) | sonnet | #27 invoiced only from billing producers, #28 collision-safe doc_id, #31 request_id source | 2026-11-04 |
 | 9 | in-progress | worktree (agent) | sonnet | #29 watermark skew, #30 cloud fallback fail-closed, #32 hypothesis, #33 duplicate metric name | 2026-11-04 |
 
