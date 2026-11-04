@@ -1,9 +1,10 @@
 import copy
 import json
-import random
 from typing import Any
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from neurosphere_core.payload import (
     BODY_FIELD_NAMES,
     drop_body_fields,
@@ -141,26 +142,27 @@ def _attr(key: str, value: Any) -> dict[str, Any]:
     return {"key": key, "value": value}
 
 
-def _random_tree(rng: random.Random, depth: int) -> Any:
-    roll = rng.random()
-    if depth <= 0 or roll < 0.3:
-        return rng.choice([None, True, 7, "text"])
-    if roll < 0.55:
-        return [_random_tree(rng, depth - 1) for _ in range(rng.randint(0, 4))]
-    if roll < 0.8:
-        return {rng.choice(_KEYS): _random_tree(rng, depth - 1) for _ in range(rng.randint(0, 4))}
-    return [
-        _attr(rng.choice(_KEYS), _random_tree(rng, depth - 1)) for _ in range(rng.randint(0, 4))
-    ]
+_LEAVES = st.sampled_from([None, True, 7, "text"])
+_KEY = st.sampled_from(_KEYS)
 
 
-def test_property_drop_leaves_no_body_fields() -> None:
-    # Seeded randomized property check (hypothesis is not a dependency of this repo).
-    rng = random.Random(20260101)  # noqa: S311
-    for _ in range(500):
-        tree = _random_tree(rng, 6)
-        injected = {"prompt": "p", "inner": [tree, _attr("gen_ai.prompt", tree)]}
-        out, counts = drop_body_fields(injected)
-        assert find_body_fields(out) == []
-        assert "prompt" not in out
-        assert counts["prompt"] >= 1
+def _extend(children: st.SearchStrategy[Any]) -> st.SearchStrategy[Any]:
+    attrs = st.builds(_attr, _KEY, children)
+    return st.one_of(
+        st.lists(children, max_size=4),
+        st.dictionaries(_KEY, children, max_size=4),
+        st.lists(attrs, max_size=4),
+    )
+
+
+_TREES = st.recursive(_LEAVES, _extend, max_leaves=30)
+
+
+@settings(max_examples=500, deadline=None)
+@given(tree=_TREES)
+def test_property_drop_leaves_no_body_fields(tree: Any) -> None:
+    injected = {"prompt": "p", "inner": [tree, _attr("gen_ai.prompt", tree)]}
+    out, counts = drop_body_fields(injected)
+    assert find_body_fields(out) == []
+    assert "prompt" not in out
+    assert counts["prompt"] >= 1

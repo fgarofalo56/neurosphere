@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -15,10 +16,20 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from neurosphere_workers.ingestion.reasons import QuarantineReason
 from neurosphere_workers.runtime import BatchOutcome
 
+DOC_ID_VERSION = "v2"
+
 
 def compute_doc_id(customer_id: str, source_id: str, event_id: str) -> str:
-    """Deterministic document id: sha256 of ``customer_id|source_id|event_id`` (hex)."""
-    return hashlib.sha256(f"{customer_id}|{source_id}|{event_id}".encode()).hexdigest()
+    """Deterministic, collision-safe document id (64 hex): sha256 of a versioned JSON tuple.
+
+    JSON encoding quotes and escapes each field, so no separator inside an id can make two
+    different (customer, source, event) tuples serialize identically (issue #28; v1 joined with
+    an unescaped ``|``). The version is part of the hashed material (ids stay 64 hex, which
+    ``QuarantineRecord``/blob layouts require), so v1 and v2 ids never coincide.
+    No migration: nothing real was ingested under v1 (sandbox/emulator data is disposable).
+    """
+    material = json.dumps([DOC_ID_VERSION, customer_id, source_id, event_id], ensure_ascii=True)
+    return hashlib.sha256(material.encode()).hexdigest()
 
 
 def parse_timestamp(value: str) -> datetime:

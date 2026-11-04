@@ -13,9 +13,9 @@ the message is quarantined (``retry_budget_exhausted``) so a poison event cannot
 partition. Any other exception, and any failure of the quarantine sink itself, propagates:
 the batch is then NOT checkpointable (PRP-07 C4).
 
-TODO(follow-up, PRP-05 owned files): emit a duplicate-event metric. ``BatchResult.duplicates``
-carries the count today; new metric names are added only through the PRP-05 observability
-constants, not here.
+Duplicates are counted in ``BatchResult.duplicates`` and on the ``METRIC_INGEST_DUPLICATES``
+counter (PRP-05 observability constants). A duplicate still advances the watermark (monotonic,
+idempotent) in case the first delivery died after the marker.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ from typing import Any
 from neurosphere_contracts.cost.v1.cost_record import CostRecord
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.errors import DependencyTransientError
+from neurosphere_core.observability import METRIC_INGEST_DUPLICATES
 from neurosphere_core.payload import (
     DEFAULT_MAX_DEPTH,
     HubMessage,
@@ -40,6 +41,8 @@ from neurosphere_core.payload import (
     find_body_fields,
     raw_json_exceeds_depth,
 )
+from opentelemetry import metrics as otel_metrics
+from opentelemetry.metrics import Meter
 from pydantic import ValidationError
 
 from neurosphere_workers.ingestion.models import (
@@ -63,6 +66,7 @@ from neurosphere_workers.runtime import BackoffPolicy, BatchOutcome, retry_with_
 
 SUPPORTED_SCHEMA_MAJOR = "1"
 _MAX_ID_LENGTH = 256
+_METER_NAME = "neurosphere_workers.ingestion"
 
 
 @dataclass
@@ -75,6 +79,7 @@ class PipelineDeps:
     markers: AcceptedMarkerStore
     watermarks: WatermarkStore
     cloud: str  # this worker's configured cloud ("commercial" | "government")
+    meter: Meter | None = None  # None: the global OTel meter (a no-op until configured)
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
     rng: Callable[[], float] = random.random  # backoff jitter only
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
@@ -234,6 +239,9 @@ async def process_batch(
     newest: dict[tuple[str, str], datetime | None] = {}
     accepted = duplicates = late = 0
     quarantined: dict[QuarantineReason, int] = {}
+    duplicate_counter = (deps.meter or otel_metrics.get_meter(_METER_NAME)).create_counter(
+        METRIC_INGEST_DUPLICATES, unit="{event}"
+    )
 
     async def with_retry(op: Callable[[], Awaitable[None]]) -> None:
         await retry_with_backoff(op, policy, sleep=deps.sleep, rng=deps.rng)
@@ -250,11 +258,15 @@ async def process_batch(
             continue
 
         key = event.key
+        wm_key = (key.customer_id, key.source_id)
         if await deps.markers.is_accepted(key):
             duplicates += 1
+            duplicate_counter.add(1, {"ns.ingest.kind": event.message.kind.value})
+            # The first delivery may have died between the marker and the watermark advance
+            # (issue #29): advance is monotonic and idempotent, so repeat it for duplicates.
+            newest[wm_key] = await deps.watermarks.advance(*wm_key, event.event_time)
             continue
 
-        wm_key = (key.customer_id, key.source_id)
         if wm_key not in newest:
             newest[wm_key] = await deps.watermarks.get(*wm_key)
         seen = newest[wm_key]

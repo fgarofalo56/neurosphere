@@ -2,10 +2,12 @@
 
 from neurosphere_core.observability.jsonlog import JsonFormatter, get_logger
 from neurosphere_core.observability.metrics import (
+    INGEST_METRIC_NAMES,
     METRIC_API_REQUEST_DURATION,
     METRIC_API_REQUEST_ERRORS,
     METRIC_CATALOG_QUERY_DURATION,
     METRIC_DASHBOARD_QUERY_DURATION,
+    METRIC_INGEST_DUPLICATES,
     METRIC_MAP_FRESHNESS_LAG,
     SLO_METRIC_NAMES,
     SloMetrics,
@@ -19,10 +21,12 @@ from neurosphere_core.observability.redaction import (
 from neurosphere_core.observability.telemetry import Telemetry, configure_telemetry
 
 __all__ = [
+    "INGEST_METRIC_NAMES",
     "METRIC_API_REQUEST_DURATION",
     "METRIC_API_REQUEST_ERRORS",
     "METRIC_CATALOG_QUERY_DURATION",
     "METRIC_DASHBOARD_QUERY_DURATION",
+    "METRIC_INGEST_DUPLICATES",
     "METRIC_MAP_FRESHNESS_LAG",
     "REDACTED",
     "SLO_METRIC_NAMES",

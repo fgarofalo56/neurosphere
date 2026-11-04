@@ -20,6 +20,13 @@ def test_slo_names_are_the_contract() -> None:
     assert len(SLO_METRIC_NAMES) == len(EXPECTED)
 
 
+def test_ingest_metric_names_are_separate_from_slo_names() -> None:
+    from neurosphere_core.observability import INGEST_METRIC_NAMES
+
+    assert INGEST_METRIC_NAMES == ("ns.ingest.duplicates",)
+    assert not set(INGEST_METRIC_NAMES) & set(SLO_METRIC_NAMES)
+
+
 def test_all_slo_metrics_emitted_via_in_memory_reader() -> None:
     reader = InMemoryMetricReader()
     t = configure_telemetry(Settings(env="local"), metric_readers=[reader])

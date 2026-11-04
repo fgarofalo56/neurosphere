@@ -13,6 +13,11 @@ METRIC_DASHBOARD_QUERY_DURATION: Final = "ns.dashboard.query.duration"
 METRIC_CATALOG_QUERY_DURATION: Final = "ns.catalog.query.duration"
 METRIC_MAP_FRESHNESS_LAG: Final = "ns.map.freshness.lag"
 
+# Ingestion counters (not SLO histograms; kept out of SLO_METRIC_NAMES, which the dashboards
+# and the SLO inventory test treat as the full set emitted by SloMetrics).
+METRIC_INGEST_DUPLICATES: Final = "ns.ingest.duplicates"
+INGEST_METRIC_NAMES: Final = (METRIC_INGEST_DUPLICATES,)
+
 SLO_METRIC_NAMES: Final = (
     METRIC_API_REQUEST_DURATION,
     METRIC_API_REQUEST_ERRORS,
