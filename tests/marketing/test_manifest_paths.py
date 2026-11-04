@@ -88,8 +88,11 @@ def test_pptx_is_rendered_without_independent_review() -> None:
     assert "no independent brand or legal review was performed" in notes
 
 
-def test_video_row_not_rendered() -> None:
-    assert "not rendered, see PRP-27" in _text()
+def test_video_entry_records_path_and_checksum() -> None:
+    text = _text()
+    assert "not rendered, see PRP-27" not in text
+    assert "marketing/video/render/out/neurosphere-explainer.mp4" in text
+    assert re.search(r"sha256: [0-9a-f]{64}", text)
 
 
 def test_g09_waiver_note() -> None:

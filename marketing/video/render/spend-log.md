@@ -36,3 +36,5 @@
 | 2026-11-04T03:00:37Z | S07 | 0.00 | USD | 0.00 | ok |
 | 2026-11-04T03:00:38Z | S08 | 0.00 | USD | 0.00 | ok |
 | 2026-11-04T03:00:38Z | neurosphere-explainer.mp4 sha256 5571a8fd6a1345ea2ef28ddff1d1a4c7730b712160e12f43ee402556f2d05e13 | 0.00 | USD | 0.00 | ok |
+
+Playback: Frank Garofalo (owner) played back the MP4 and captions and approved them on 2026-11-03. Known storyboard gaps are listed in marketing/MANIFEST.md.
