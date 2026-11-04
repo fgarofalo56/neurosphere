@@ -87,6 +87,7 @@ __all__ = [
     "PUBLICATION_KINDS",
     "PUBLICATION_RECORD_FAILED",
     "PUBLICATION_RECORD_OPERATION",
+    "ApplyRecord",
     "ApplyRecords",
     "GatewayArm",
     "PublicationRecorder",

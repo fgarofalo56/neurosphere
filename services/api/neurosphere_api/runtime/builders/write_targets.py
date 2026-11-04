@@ -48,14 +48,13 @@ import logging
 from typing import Any, Final
 
 from neurosphere_connector.write import WriteTargetRegistry
-from neurosphere_connector_apim_gateway import ApplyRecord
 from neurosphere_core.gateway import (
     CosmosGatewayStore,
     GatewayRegistration,
     GatewayStore,
     InMemoryGatewayRecordStore,
 )
-from neurosphere_workers.actions.apim import ApplyRecords, apim_record_store
+from neurosphere_workers.actions.apim import ApplyRecord, ApplyRecords, apim_record_store
 from neurosphere_workers.runtime.factories import (
     SUPPORTED_WRITE_CONNECTORS,
     WriteTargetSeams,

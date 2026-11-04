@@ -44,10 +44,6 @@ output id string = empty(reuse) ? service.id : reuse
 output created bool = empty(reuse)
 
 var serviceNameInUse = empty(reuse) ? name : last(split(reuse, '/'))
-var searchSuffix = environment().name == 'AzureUSGovernment' ? '.search.azure.us' : '.search.windows.net'
 
-@description('Service name in use: the created name, or the last segment of the reused resource id.')
+@description('Service name in use: the created name, or the last segment of the reused resource id. Set NS_SEARCH_SERVICE to this; the data-plane host comes from the cloud profile in code (no literal cloud hostname in Bicep), and callers use Entra ID/managed identity.')
 output serviceName string = serviceNameInUse
-
-@description('Data-plane endpoint (host only, no key). Callers use Entra ID/managed identity; set NS_SEARCH_SERVICE to serviceName.')
-output endpoint string = 'https://${serviceNameInUse}${searchSuffix}/'
