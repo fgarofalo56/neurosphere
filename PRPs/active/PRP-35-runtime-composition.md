@@ -178,7 +178,7 @@ Feature-specific checks:
 | 1 | merged | worktree-agent-a71839effa9709cfa | sonnet | ingest+runtime_api 118 passed; helm unset/ConfigMap/both checked by agent; gitleaks entry unverified locally (CI backstop); merge of 77d94b0 | 2026-11-04 |
 | 2 | merged | worktree-agent-a25dd5f3c7224ab0e | sonnet | sandbox_stack+hosted_demo+egress+ingest 217 passed; refusal tested (hosted/gov/unset), seed image built + NS_ENV=hosted exits 2; emulator/compose run unverified (item 5); no aliases (generator has none) | 2026-11-04 |
 | 3 | merged | worktree-agent-a23041842f8782bdf | sonnet | search+runtime_data/routes/api+ingest+openapi drift 246 passed; bicep network+egress 72 passed; bicep uncompiled; #104 OPEN; deviations: no BuilderSpec (data._catalog calls search.py), lazy per-scope refresh, usgovtexas supported for ai_search.base | 2026-11-04 |
-| 4 | in-progress | worktree agent | opus | | 2026-11-04 |
+| 4 | merged | worktree-agent-a417bda8eaae43f12 | opus | combined items 1-4 suites 736 passed; agent: ruff/pyright/validate_planning clean; uv.lock hand-patched (foundry member only, fastapi kept 0.162.0 because docs-assistant pins <0.150: pre-existing lock inconsistency); images not built; #132 OPEN; no Snyk run | 2026-11-04 |
 | 5 | todo | | sonnet | | |
 
 ## Completion note (filled at ship)
