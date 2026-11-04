@@ -179,7 +179,7 @@ Feature-specific checks:
 | 2 | merged | worktree-agent-a25dd5f3c7224ab0e | sonnet | sandbox_stack+hosted_demo+egress+ingest 217 passed; refusal tested (hosted/gov/unset), seed image built + NS_ENV=hosted exits 2; emulator/compose run unverified (item 5); no aliases (generator has none) | 2026-11-04 |
 | 3 | merged | worktree-agent-a23041842f8782bdf | sonnet | search+runtime_data/routes/api+ingest+openapi drift 246 passed; bicep network+egress 72 passed; bicep uncompiled; #104 OPEN; deviations: no BuilderSpec (data._catalog calls search.py), lazy per-scope refresh, usgovtexas supported for ai_search.base | 2026-11-04 |
 | 4 | merged | worktree-agent-a417bda8eaae43f12 | opus | combined items 1-4 suites 736 passed; agent: ruff/pyright/validate_planning clean; uv.lock hand-patched (foundry member only, fastapi kept 0.162.0 because docs-assistant pins <0.150: pre-existing lock inconsistency); images not built; #132 OPEN; no Snyk run | 2026-11-04 |
-| 5 | todo | | sonnet | | |
+| 5 | merged | worktree-agent-aad2e3c1be4c2f170 | sonnet | agent-reported local run: integration 6 passed (stack up, 119 entities/127 edges seeded, re-run 0 new); orchestrator: compose+sandbox 65 passed, integration skips cleanly when stack down; full gates ruff/format/pyright/validate_planning clean; review CHANGES REQUIRED (prod Dockerfiles missing foundry-actions COPY) fixed inline, both prod images built, tests/release 62 passed | 2026-11-04 |
 
 ## Completion note (filled at ship)
 <date, merged commits, deviations from blueprint + why, descoped items, follow-ups. Record #132 and #104 state. Follow-ups to file: multiple APIM gateways per registry; PRP-06 audit holes; real-stack e2e; live gates.>

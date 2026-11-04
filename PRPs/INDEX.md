@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-35-runtime-composition](active/PRP-35-runtime-composition.md) | P0 | 4/5 (80%) | todo 1, merged 4 | opus / sonnet | required |
+| [prp-35-runtime-composition](active/PRP-35-runtime-composition.md) | P0 | 5/5 (100%) | merged 5 | opus / sonnet | required |
 
 ## Backlog
 
