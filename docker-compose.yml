@@ -153,6 +153,12 @@ services:
       NS_PROBE_TIMEOUT_SECONDS: "2"
       # Dev producer registry (sha256 digests only, see docs/runbooks/ingest.md).
       NS_INGEST_PRODUCERS_FILE: /etc/neurosphere/ingest-producers.json
+      # Catalog search (PRP-35): in-process index fed from the catalog; `azure` is hosted-only.
+      NS_SEARCH_PROVIDER: fixture
+      # Write targets (PRP-35): OFF by default, so the write registry is empty and a dry run
+      # reports "no write target". Enabling needs the target config too (docs/runbooks/runtime-composition.md).
+      NS_FOUNDRY_ENABLED: "false"
+      NS_APIM_ENABLED: "false"
     volumes:
       - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
     healthcheck:
@@ -204,6 +210,9 @@ services:
       # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
       NS_WORKER_REC_DATA_DIR: /data/sandbox
       NS_WORKER_EVAL_DATA_DIR: /data/evaluation
+      # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
+      NS_FOUNDRY_ENABLED: "false"
+      NS_APIM_ENABLED: "false"
     volumes:
       # Generated sandbox output (`make sandbox-generate`, run first by `make stack-up`).
       - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
