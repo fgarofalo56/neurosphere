@@ -8,6 +8,11 @@
   pseudonym key and policy container. Same names and semantics as the API (the key MUST be the
   same on both sides or the worker principal is unknown to the policy store).
 * ``NS_WORKER_REC_*`` / ``NS_WORKER_EVAL_*``: the two periodic jobs' inputs.
+* ``NS_FOUNDRY_*`` (:class:`FoundryWriteSettings`) and ``NS_APIM_*``
+  (:class:`ApimWriteSettings`): the write targets (PRP-35 item 4). Same names on the API, which
+  imports these classes, so one environment configures both registries. Each is OFF unless its
+  ``ENABLED`` flag is set AND its target reference is complete; neither holds a secret (the
+  credential is the workload identity, ``DefaultAzureCredential``).
 
 The Cosmos emulator endpoint and key stay ``NS_COSMOS_ENDPOINT``/``NS_COSMOS_KEY`` (local only,
 read by ``neurosphere_core.clients``).
@@ -18,15 +23,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Final
 
+from neurosphere_connector_foundry_actions import AccountRef
 from neurosphere_core.auth.scope import DEFAULT_POLICY_CONTAINER
+from neurosphere_core.cloud.profile import CloudName
 from neurosphere_core.stores import DEFAULT_DATABASE
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
     "LOCAL_DEFAULT_CUSTOMER_ID",
+    "ApimWriteSettings",
     "AuthSettings",
     "EvalSettings",
+    "FoundryWriteSettings",
     "RecommendationSettings",
     "StoreSettings",
     "WorkerSettings",
@@ -126,3 +135,69 @@ class EvalSettings(BaseSettings):
     domain_token_budget: int = Field(default=1_000_000, ge=0)
     run_cost_budget: str = "50"
     domain_cost_budget: str = "250"
+
+
+class FoundryWriteSettings(BaseSettings):
+    """``NS_FOUNDRY_*``: the ONE Foundry (Azure AI Services) account a model swap may change.
+
+    The account's cloud is ALWAYS the deployment's cloud (``NS_CLOUD``): there is no cloud
+    setting here, so a Government deployment can never be pointed at a Commercial account. A
+    Government account yields the advisory connector, which is never registered.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_FOUNDRY_", frozen=True, extra="ignore")
+
+    enabled: bool = False
+    subscription_id: str | None = None
+    resource_group: str | None = None
+    account: str | None = None
+    location: str | None = None
+
+    @field_validator("subscription_id", "resource_group", "account", "location", mode="before")
+    @classmethod
+    def _blank(cls, value: Any) -> Any:
+        return _blank_is_none(value)
+
+    @property
+    def complete(self) -> bool:
+        return None not in (self.subscription_id, self.resource_group, self.account, self.location)
+
+    def account_ref(self, cloud: CloudName) -> AccountRef | None:
+        """The account in ``cloud``; ``None`` when incomplete; ``ValueError`` when malformed."""
+        if not self.complete:
+            return None
+        return AccountRef(
+            cloud=cloud,
+            subscription_id=str(self.subscription_id),
+            resource_group=str(self.resource_group),
+            account=str(self.account),
+            location=str(self.location),
+        )
+
+
+class ApimWriteSettings(BaseSettings):
+    """``NS_APIM_*``: the ONE registered APIM gateway the gateway connector may manage.
+
+    Only a reference: the registration itself (cloud, ARM resource id, observe/manage mode) is
+    read from the gateway registry (``gateways`` container), so an unregistered gateway, or one
+    registered in another cloud, is never managed. One gateway per registry: the
+    ``WriteTargetRegistry`` keys connectors by manifest name (``apim-gateway``), so a second
+    gateway would need a registry keyed by gateway (a follow-up, not this setting).
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_APIM_", frozen=True, extra="ignore")
+
+    enabled: bool = False
+    #: ``gw-<32 hex>``: the id the gateway registry assigned at registration.
+    gateway_id: str | None = None
+    #: The domain the gateway is registered in (canonical domain id).
+    domain_id: str | None = None
+
+    @field_validator("gateway_id", "domain_id", mode="before")
+    @classmethod
+    def _blank(cls, value: Any) -> Any:
+        return _blank_is_none(value)
+
+    @property
+    def complete(self) -> bool:
+        return self.gateway_id is not None and self.domain_id is not None

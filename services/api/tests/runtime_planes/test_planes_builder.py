@@ -100,14 +100,44 @@ def test_the_rechecker_reads_the_policy_store_the_deriver_reads() -> None:
     assert check(ALICE, "action.propose") is False
 
 
-def test_production_write_targets_hold_no_connector_so_every_intent_is_advisory() -> None:
+def test_unconfigured_write_targets_are_empty_and_a_dry_run_reports_no_write_target() -> None:
+    # PRP-35 item 4: with no NS_FOUNDRY_*/NS_APIM_* the registry is EMPTY (the conftest clears
+    # both prefixes); configured targets are covered in test_write_targets.py.
     planes = compose_planes()
-    plane = get_action_plane(_request(planes.app))
-    assert isinstance(plane.write_targets, WriteTargetRegistry)
-    assert plane.write_targets.names() == ()
-    # No write connector for the model swap kind: advisory, never a metadata-only stand-in.
-    assert plane.connector_for("model_deployment_swap") is None
+    with planes.composed.client() as client:  # startup hooks run: still nothing registered
+        plane = get_action_plane(_request(planes.app))
+        assert isinstance(plane.write_targets, WriteTargetRegistry)
+        assert plane.write_targets.names() == ()
+        # No write connector for the model swap kind: advisory, never a metadata-only stand-in.
+        assert plane.connector_for("model_deployment_swap") is None
+        drafted = client.post(INTENTS, json=_swap_body(), headers=planes.auth(ALICE))
+        assert drafted.status_code == 201, drafted.text
+        intent_id = drafted.json()["intent"]["intent_id"]
+        validated = client.post(f"{INTENTS}/{intent_id}/validate", headers=planes.auth(ALICE))
+    assert validated.status_code == 200, validated.text
+    view = validated.json()
+    assert view["advisory"] is True
+    checks = {c["check_id"]: c for c in view["intent"]["prerequisite_results"]}
+    assert checks["write_connector_supported"]["status"] == "warning"
+    assert "no supported write connector" in checks["write_connector_supported"]["detail"]
+    # The dry run did NOT silently pass: there was nothing to plan against.
+    assert checks["target_dry_run"]["status"] == "not_applicable"
     assert frozenset({"foundry-model-swap", "apim-gateway"}) == SUPPORTED_WRITE_CONNECTORS
+
+
+def _swap_body() -> dict[str, Any]:
+    return {
+        "action_kind": "model_deployment_swap",
+        "target": {"canonical_id": TARGET, "entity_type": "agent"},
+        "target_version": "etag-1",
+        "proposed_diff": {
+            "format": "json_patch",
+            "operations": [{"op": "replace", "path": "/model/version", "value": "2026-06-15"}],
+        },
+        "evidence": [],
+        "idempotency_key": "idem-2026-11-04-planes-0002",
+        "channel": "rest",
+    }
 
 
 class _ForeignTargets(WriteTargetRegistry):
