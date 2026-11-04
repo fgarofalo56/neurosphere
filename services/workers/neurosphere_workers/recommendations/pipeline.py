@@ -35,6 +35,7 @@ from neurosphere_core.ledger.models import TokenCounts
 from neurosphere_core.pricing import PriceSnapshotStore
 from neurosphere_core.recommendations import RecommendationStore
 from neurosphere_core.scope import IdentityScope
+from neurosphere_core.search.fixture import FixtureSearchIndex, documents_from_catalog
 
 from neurosphere_workers.recommendations.duplicates import (
     DuplicateConfig,
@@ -115,23 +116,21 @@ async def load_sandbox_catalog(
         )
 
     repo = InMemoryCatalogRepository()
+    loaded: list[dict[str, Any]] = []
     for name in _ENTITY_FILES:
         for doc in _read_ndjson(directory / name):
             if visible(doc):
                 model = ENTITY_MODELS[doc["entity_type"]].model_validate(doc)
                 await repo.create_entity(scope, model)  # type: ignore[arg-type]
+                loaded.append(model.model_dump(mode="json"))
     for doc in _read_ndjson(directory / "relations.ndjson"):
         if visible(doc):
             edge = EDGE_MODELS[doc["relation_type"]].model_validate(doc)
             await repo.put_edge(scope, edge, None)  # type: ignore[arg-type]
-    return RepositoryGraphQuery(repo, _NoSearch()), repo  # type: ignore[arg-type]
-
-
-class _NoSearch:
-    """``GraphQuery.neighbors`` never searches; the pipeline does not either."""
-
-    async def search(self, *_args: Any, **_kwargs: Any) -> Any:
-        raise AssertionError("the recommendations pipeline must not use search")
+    # The pipeline never searches, but the graph is built over a real in-scope index (only the
+    # entities loaded above, i.e. already filtered to ``scope``) so no stub can mask a misuse.
+    index = FixtureSearchIndex(documents_from_catalog(loaded))
+    return RepositoryGraphQuery(repo, index), repo
 
 
 def _iso(day: date) -> str:
