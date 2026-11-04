@@ -1,6 +1,8 @@
 ---
 name: prp-35-runtime-composition
-status: backlog
+status: active
+started: 2026-11-04
+branch: feat/prp-35-runtime-composition
 priority: P0
 order: 1
 review: required

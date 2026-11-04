@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-35-runtime-composition](active/PRP-35-runtime-composition.md) | P0 | 0/5 (0%) | todo 5 | opus / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-35-runtime-composition](backlog/PRP-35-runtime-composition.md) | P0 | 1 | - | - | opus / sonnet | required |
 | [prp-07-telemetry-ingestion-and-cost-ledger](backlog/PRP-07-telemetry-ingestion-and-cost-ledger.md) | P0 | 5 | - | - | ? / ? | required |
 | [prp-06-identity-authz-and-audit](backlog/PRP-06-identity-authz-and-audit.md) | P0 | 6 | - | - | ? / ? | required |
 | [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) | P1 | 1 | - | - | ? / ? | required |
