@@ -37,14 +37,14 @@ from neurosphere_core.clients import (
     translating,
 )
 from neurosphere_core.clients.factories import ENV_BLOB_CONNECTION_STRING
-from neurosphere_core.cloud import CloudName, Settings
+from neurosphere_core.cloud import Settings
 from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
 from neurosphere_core.ledger import CostLedger, PriceTable, PriceVersion
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from neurosphere_workers.archive.factory import create_archive_sink
+from neurosphere_workers.archive.factory import create_archive_sink, require_sink_cloud
 from neurosphere_workers.archive.settings import ArchiveSettings
 from neurosphere_workers.ingestion.cosmos_stores import (
     CosmosAcceptedMarkerStore,
@@ -150,6 +150,7 @@ async def build_pipeline_deps(
     quarantine: QuarantineSettings | None = None,
 ) -> PipelineDeps:
     """Construct every sink and store. Raises a ``config`` error for missing infrastructure."""
+    cloud = require_sink_cloud(settings)  # fail closed before any resource is touched
     ingestion = ingestion or IngestionSettings()
     ledger = ledger or LedgerSettings()
     archive = archive or ArchiveSettings()
@@ -195,5 +196,5 @@ async def build_pipeline_deps(
         watermarks=CosmosWatermarkStore(
             database.get_container_client(ingestion.watermarks_container)
         ),
-        cloud=(settings.cloud or CloudName.COMMERCIAL).value,
+        cloud=cloud,
     )
