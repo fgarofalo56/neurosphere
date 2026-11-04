@@ -1,8 +1,9 @@
 ---
 name: prp-16-agent-evaluation-and-quality
-status: shipped
+status: backlog
+priority: P1
+order: 3
 started: 2026-10-19
-shipped: 2026-10-20
 pr: 81
 branch: prp-16-agent-evaluation-and-quality
 review: required
@@ -235,3 +236,17 @@ Integration branch gates after all six merges (0fc66e1), 2026-10-19: `verify-gat
 - Optional live judge run: OPEN, not run. No model-inference SDK is a dependency; `scripts/gates/g16_judge_live.py` refuses without `NS_LIVE_APPROVED=1` (exit 2) and with it reports OPEN (exit 3). Process note: the item 2 implementer ran the script once with `NS_LIVE_APPROVED=1` without operator approval; no SDK, no connection, no paid call. Evidence `docs/evidence/G16/README.md`.
 - Open gates recorded (ids and where): G16 live judge, G01 (judge availability per cloud; Commercial Foundry unverified), G05 (quality-regression inputs only; swap is PRP-17), G06 (until PRP-23), G12 (in-memory stores only), all in docs/RESEARCH-AND-GATES.md.
 - Follow-ups: Cosmos `EvaluationStore` and registry plus `app.state` production bootstrap (routes 503 until then); bound or pre-aggregate the `/quality` per-request load; classification on sandbox/production telemetry so online evaluation can run; verify the Commercial Foundry matrix row; a larger, balanced pilot label set (kappa 0.314); `_missing_labels` double-counting across dimensions; `data_state` in the dataset content hash; non-USD evaluator cost; Azure blob archive reader and worker-runtime hosting; a CI check that `measure.py` matches the evidence README.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). The API and UI are mounted (`routers.py:118`, `runtime/builders/data.py:289-299`, `appRoutes.ts:38`) but the evaluation pipeline produces almost nothing on live data. Gaps:
+
+- The offline benchmark and calibration never run: `run_pipeline` in `services/workers/neurosphere_workers/evaluation/pipeline.py:230` (which calls `run_offline` at :255 and `put_calibration` at :269) has no caller anywhere. `runtime/factories.py:505` calls the recommendations `run_pipeline`, a different function. So no pilot grounded rate and no calibration report is ever produced, and calibration state is always "uncalibrated" live.
+- The only judge in production is `RecordedFixtureJudge.from_file(judge_fixtures.json)` (`runtime/factories.py:580`). No real judge exists: no inference SDK is a dependency.
+- Online evaluation (`factories.py:573-622`, `build_evaluation`) skips every sandbox span fail-closed, because 0 of 922 sandbox telemetry records carry a classification. Online groundedness is `not_estimable` because the archive holds no bodies (D2).
+- Pilot dataset ids default to empty (`data.py:289-299`), so the UI grounded rate is null on real data.
+- Calibration quality is weak even in the PRP's own numbers: Cohen kappa 0.314, interval [-0.10, 0.72]. Human labels depend on PRP-17.
+- The Quality UI e2e spec (`frontend/tests/e2e/quality/quality.spec.ts`) runs only against the mock API (`frontend/tests/mock-api/server.ts:648-790`).
+- Criterion 1: `check_result_references` (`evaluation/registry/references.py:50`) not confirmed to be called by production `put_result`; generated `Judge` model keeps llm versions optional.
+- Exit: full-suite run had 1 failure of 5518 (Windows `WinError 10055`, called environmental).
+- Met: restricted-item guard and budget stop are real and tested; no paid judge call without `NS_LIVE_APPROVED=1`.

@@ -1,8 +1,7 @@
 ---
 name: prp-33-apim-gateway-observe
-status: shipped
+status: backlog
 started: 2026-10-29
-shipped: 2026-10-29
 branch: prp-33-apim-gateway-observe
 pr: 146
 review: required
@@ -240,3 +239,13 @@ Waves: 1 = items 1, 2, 3, 5 in parallel; 2 = item 6 (after 1, 2, 5); 3 = items 4
 - Descoped: item 7 (Gateways page, Grant and McpServer catalog renderers), issue #147.
 - Not run: `tests/integration/real_stack` locally (needs the seeded local tenant exported; never runs in CI); the G17 observe live run (script built, refusal verified; G17 OPEN in `docs/RESEARCH-AND-GATES.md`). `.env.example` not updated (lane denied that path; names in #148).
 - Follow-ups: #148 (structured-query entity enum, inventory hardening, `.env.example` names, gateway token pricing, shared Admin/Steward permission test pattern, G17 live run).
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). Items 1-6 and 8-code are largely met and tested. Gaps:
+
+- Item 7 (UI) is missing. It was descoped to issue #147 but its checkboxes are still unchecked. `GatewaysPage.tsx` is a 59-line stub list: no diagnostics state, last sync or inventory view, no gateway detail page, no Grant or McpServer rendering. The only PRP-33 field in `types.ts` is `tier` (line 24). The e2e spec under `tests/e2e/gateways` is `manage.spec.ts` (PRP-34); no a11y or visual gate coverage for this item.
+- G17 observe live gate is OPEN: the run never happened and `docs/evidence/G17` holds only a README.
+- The `gateway_poll` worker role is opt-in (`roles.py:33`) and does not run under `all`, so gateway observe data does not flow by default. `.env.example` names for the poll worker were never added.
+- Cost-center attribution: `customMetrics` is not queried and the observation carries no tags (also blocks PRP-34 item 4).
+- Recorded deviations to re-confirm: `GatewayCostObservation` instead of `CostRecord` (D2); `config.manage`/`data.read` instead of `deploy.*` (D3).

@@ -1,8 +1,9 @@
 ---
 name: prp-10-catalog-and-relationship-governance
-status: shipped
+status: backlog
+priority: P1
+order: 9
 started: 2026-10-17
-shipped: 2026-10-17
 pr: 52
 branch: prp-10-catalog
 review: required
@@ -264,3 +265,12 @@ PR #52 (CI green 2026-10-17); item 7 live G03 evidence filed 2026-10-17, so the 
 - Descoped items: none. (Embedding inference, Purview/Unity connectors, review-queue UI and map rendering were out of scope per "NOT building".)
 - G03 live run: 2026-10-17, operator approval Frank Garofalo (in session), `docs/evidence/G03/live-2026-10-17.md` and `.json`. All 9 cells correct; mean 39-58 RU per traversal; p95 1.58-2.13 s incl. WAN RTT. G03 NARROWED (Commercial); in-region latency, 429, index tuning and Government remain open.
 - Follow-ups: #53 (authorization/existence-signal hardening), #54 (lock/observation/review-queue semantics), #55 (production wiring), #56 (search/budget/test nits), #57 (G03 in-region run, ADR-0005 key decision, matrix rows, enterprise networking guide, harness hardening).
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- Catalog search is not composed: `runtime/builders/data.py:211` uses `_NoSearch` (raises `search_unavailable`, `data.py:187-190`); the `search/azure` package has no non-test caller under `services/`. Explorer search hits 503.
+- The catalog starts empty: the projection worker (`projections/catalog/handler.py:181-221`) only calls `put_edge`; entities exist only via `POST /catalog/entities` or import.
+- Frontend catalog e2e (`catalog.spec.ts`, `curation.spec.ts`) runs against the mock API only; the only real-stack catalog route is `/catalog/publication`.
+- Export p95 (500 ms target) measured on the in-memory repository only (`test_catalog_p95.py:43,58`); live G03 figure (1.58-2.13 s) is graph traversal. Follow-ups #53/#54 on lock/conflict semantics open.

@@ -1,8 +1,9 @@
 ---
 name: prp-11-analytics-adapters
-status: shipped
+status: backlog
+priority: P2
+order: 15
 started: 2026-10-18
-shipped: 2026-10-18
 pr: 63
 branch: prp-11-analytics-adapters
 review: required
@@ -241,3 +242,12 @@ Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at ap
 - Descoped items: none.
 - Live items run or OPEN per adapter (Fabric, Synapse, Databricks; G01, G12): **none ran**. Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision 2026-10-18). Fabric and Synapse also need an approved TDS driver (ADR-0002 row) before they can run at all. Government analytics stays OPEN (no Government subscription; availability is not authorization). G12 stub-vs-live deltas are OPEN; the gaps are listed in each adapter's `G12_PARITY_GAPS` and in `docs/RESEARCH-AND-GATES.md`. The Government Fabric SQL suffix `.fabric.microsoft.us` is inferred and unverified. Snyk Code was not run (CLI unauthenticated in the session).
 - Follow-ups: #59 Synapse windowed quantile path; #60 live-gate hardening (setup and teardown timeouts, workload out of the test package, schema reuse); #61 equivalence and gating suite tightening; #62 adapter hardening nits.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- No real client exists for any vendor adapter: Fabric (`fabric/__init__.py`, 'no real driver'), Synapse (`synapse/__init__.py:63` raises without an injected executor), Databricks (`databricks/adapter.py:94` same; its only real `httpx` executor is inside `scripts/gates/g01_analytics_live.py` and never ran). All are tested against a sqlite stub only.
+- Nothing in the running app selects an adapter: no non-test caller of `create_adapter` under `services/`, no analytics setting. Dashboards do not use the adapter for data (`dashboards/analytics.py:3`); `dependencies.py:35-40` reads `app.state.analytics_adapter` etc., which nothing sets.
+- Synapse refuses approximate quantiles and does not support the dedicated pool (`synapse/config.py`); Fabric Government suffix is 'INFERRED, UNVERIFIED'. Gating tests have weak asserts (a loop that never reaches its assert; a test accepting any `InvalidSchemaError`). `tests/integration/analytics` is not marked `integration`.
+- `docs/evidence/G01/analytics/` holds only a README; all three adapters OPEN; Fabric/Synapse cannot run without a TDS driver.

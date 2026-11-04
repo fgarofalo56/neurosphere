@@ -1,0 +1,32 @@
+# Dev image for the one-shot catalog seeder (PRP-35 item 2). Build context is the REPO ROOT:
+#   docker build -f scripts/sandbox/Dockerfile.seed .
+# Carries the seeder script, the synthetic world generator and the api + workers packages the
+# stack seed imports. Local emulators only; no secrets are baked in (the compose `seed` service
+# supplies a non-secret environment and the seeder builds its dummy emulator key at runtime).
+FROM python:3.12-slim
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY packages ./packages
+COPY services ./services
+COPY connectors/sdk-python ./connectors/sdk-python
+COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
+COPY connectors/reference/apim-gateway ./connectors/reference/apim-gateway
+COPY connectors/reference/foundry-actions ./connectors/reference/foundry-actions
+RUN uv sync --frozen --no-dev --package neurosphere-api --package neurosphere-workers
+
+COPY sandbox ./sandbox
+COPY scripts/sandbox ./scripts/sandbox
+
+RUN useradd --system --create-home --uid 10001 ns
+USER ns
+
+ENV PYTHONPATH=/app
+CMD ["python", "scripts/sandbox/sbx_seed_catalog.py"]

@@ -71,9 +71,13 @@ def test_workers_mount_sandbox_data_read_only_for_recommendations_and_evaluation
     assert mounts["/data/evaluation"].startswith("./sandbox/evaluation/data:")
 
 
-def test_there_is_no_seed_service() -> None:
-    """The seed runs from the host (`make stack-up`): sbx_guard accepts loopback hosts only."""
-    assert not [name for name in _services() if "seed" in name]
+def test_seed_service_is_profile_gated_and_shares_the_cosmos_network() -> None:
+    """PRP-35 item 2: the one-shot seeder is `--profile seed` only (a plain `up` never runs it) and
+    shares cosmos's network namespace so sbx_guard still sees a loopback endpoint."""
+    seeds = {name: svc for name, svc in _services().items() if "seed" in name}
+    assert set(seeds) == {"seed"}
+    assert seeds["seed"]["profiles"] == ["seed"]
+    assert seeds["seed"]["network_mode"] == "service:cosmos"
 
 
 def test_workers_are_isolated_and_api_also_reaches_the_internet_side() -> None:

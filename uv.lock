@@ -1178,6 +1178,7 @@ dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "neurosphere-connector" },
+    { name = "neurosphere-connector-foundry-actions" },
     { name = "neurosphere-core" },
     { name = "neurosphere-workers" },
     { name = "pydantic" },
@@ -1190,6 +1191,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "mcp", specifier = ">=2.3,<2.4" },
     { name = "neurosphere-connector", editable = "connectors/sdk-python" },
+    { name = "neurosphere-connector-foundry-actions", editable = "connectors/reference/foundry-actions" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "neurosphere-workers", editable = "services/workers" },
     { name = "pydantic", specifier = ">=2.14,<3" },
@@ -1410,6 +1412,7 @@ dependencies = [
     { name = "neurosphere-connector" },
     { name = "neurosphere-connector-apim-gateway" },
     { name = "neurosphere-connector-azure-monitor" },
+    { name = "neurosphere-connector-foundry-actions" },
     { name = "neurosphere-core" },
     { name = "pydantic" },
 ]
@@ -1421,6 +1424,7 @@ requires-dist = [
     { name = "neurosphere-connector", editable = "connectors/sdk-python" },
     { name = "neurosphere-connector-apim-gateway", editable = "connectors/reference/apim-gateway" },
     { name = "neurosphere-connector-azure-monitor", editable = "connectors/reference/azure-monitor" },
+    { name = "neurosphere-connector-foundry-actions", editable = "connectors/reference/foundry-actions" },
     { name = "neurosphere-core", editable = "packages/core" },
     { name = "pydantic", specifier = ">=2.14,<3" },
 ]

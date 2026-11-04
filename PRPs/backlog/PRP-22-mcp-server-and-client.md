@@ -1,7 +1,8 @@
 ---
 name: prp-22-mcp-server-and-client
-status: shipped
-shipped: 2026-10-23
+status: backlog
+priority: P1
+order: 1
 pr: 110
 started: 2026-10-22
 branch: prp-22-mcp-server-and-client
@@ -267,3 +268,18 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
     - Remove the silent `list(limit=500)` cap.
     - Pin 403 in `test_admin.py`.
   - Tests: the catalog fake over-counts by-id lookups.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read; no tests were run). Components and tests exist and are composed by the PRP-29 builders, but the feature is off by default and not proven live. Correction: the first pass of this audit said nothing calls the configure functions; that was wrong. `configure_mcp_admin` is called at `services/api/neurosphere_api/runtime/builders/planes.py:355` (with an `ExternalMcpClient` built at :354) and `create_mcp_server` is mounted at `runtime/builders/mcp.py:106`. Gaps:
+
+- The MCP server is disabled unless `NS_MCP_RESOURCE_SERVER_URL` is set (`runtime/builders/mcp.py:124-126`, `ctx.disabled("mcp_server")`); the stock config does not set it, so the server route does not exist by default. Never exercised against the running composed app: the admin UI (`frontend/src/features/mcp-admin/`, routed at `workspaceNav.ts:20,78`) only passed against the mock API. Needs a real-stack run with the variable set.
+- MCP tools share the composed action executor (`mcp.py:97`), whose `WriteTargetRegistry` is empty (`planes.py:189-195`), so MCP-initiated writes are advisory only (issue #132).
+- `tools/list` and `resources/list` are not scope-derived (follow-up #111).
+- Injection corpus is weak: of 78 cases only 15 exercise scope filtering; 40 deny because the tool does not exist over MCP and 13 abstains are vacuous.
+- SSRF block misses `::ffff:0:0:0/96` and `5f00::/16`.
+- OPTIONS preflight on the RFC 9728 metadata route returns 405.
+- No per-tool audit record on sync revocation.
+- Cosmos registry store is tested only against a fake container; the compose-backed roundtrip never ran.
+- Validation-gate commands point at `packages/core/tests/mcp` and `services/api/tests/mcp`; the real folders are `mcp_core/` and `mcp_api/`.
+- Follow-ups #111 to #115 remain open. `NS_MCP_*` placeholders in `.env.example` unverified.

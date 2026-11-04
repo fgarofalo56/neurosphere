@@ -18,6 +18,7 @@ _PREFIXES = (
     "NS_FEDERATION_",
     "NS_EVALUATION_",
     "NS_REALTIME_",
+    "NS_SEARCH_",
 )
 _NAMES = (
     "NS_CLOUD",

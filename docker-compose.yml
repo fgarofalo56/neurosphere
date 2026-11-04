@@ -151,6 +151,16 @@ services:
       NS_PROBE_EVENTHUBS_HOSTPORT: eventhubs:5672
       NS_PROBE_BLOB_HOSTPORT: azurite:10000
       NS_PROBE_TIMEOUT_SECONDS: "2"
+      # Dev producer registry (sha256 digests only, see docs/runbooks/ingest.md).
+      NS_INGEST_PRODUCERS_FILE: /etc/neurosphere/ingest-producers.json
+      # Catalog search (PRP-35): in-process index fed from the catalog; `azure` is hosted-only.
+      NS_SEARCH_PROVIDER: fixture
+      # Write targets (PRP-35): OFF by default, so the write registry is empty and a dry run
+      # reports "no write target". Enabling needs the target config too (docs/runbooks/runtime-composition.md).
+      NS_FOUNDRY_ENABLED: "false"
+      NS_APIM_ENABLED: "false"
+    volumes:
+      - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
       interval: 5s
@@ -200,6 +210,9 @@ services:
       # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
       NS_WORKER_REC_DATA_DIR: /data/sandbox
       NS_WORKER_EVAL_DATA_DIR: /data/evaluation
+      # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
+      NS_FOUNDRY_ENABLED: "false"
+      NS_APIM_ENABLED: "false"
     volumes:
       # Generated sandbox output (`make sandbox-generate`, run first by `make stack-up`).
       - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
@@ -219,9 +232,32 @@ services:
       eventhubs-health:
         condition: service_healthy
 
-  # Same-origin edge: nginx serves the SPA and proxies /api/ and /readyz to `api`. There is no
-  # seed service: the seed runs from the host after `up --wait` (`make stack-up`) because
-  # `sbx_guard` accepts loopback hosts only.
+  # One-shot catalog seeder (PRP-35 item 2): `docker compose run --rm seed` (profile `seed`, so a
+  # plain `up` never starts it). It shares the cosmos container's network namespace, so the
+  # emulator is 127.0.0.1:8081 and `sbx_guard` (loopback hosts only) is unchanged. It refuses
+  # unless NS_ENV=local and holds no secret: the emulator key is built at runtime by the seeder.
+  # NS_AUTH_TENANT_ID and NS_WORKER_OBJECT_ID must equal the workers' (a test pins the default).
+  seed:
+    profiles: [seed]
+    build:
+      context: .
+      dockerfile: scripts/sandbox/Dockerfile.seed
+    network_mode: "service:cosmos"
+    environment:
+      NS_ENV: local
+      NS_CLOUD: commercial
+      NS_COSMOS_ENDPOINT: http://127.0.0.1:8081
+      NS_STORE_DATABASE: neurosphere
+      NS_AUTH_TENANT_ID: ${NS_ENTRA_TENANT_ID:-}
+      NS_AUTH_CUSTOMER_ID: synthco
+      NS_WORKER_OBJECT_ID: ${NS_WORKER_OBJECT_ID:-7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6}
+    depends_on:
+      cosmos:
+        condition: service_healthy
+
+  # Same-origin edge: nginx serves the SPA and proxies /api/ and /readyz to `api`. The full stack
+  # seed still runs from the host after `up --wait` (`make stack-up`); the catalog alone is the
+  # `seed` service above.
   frontend:
     profiles: [app]
     build:

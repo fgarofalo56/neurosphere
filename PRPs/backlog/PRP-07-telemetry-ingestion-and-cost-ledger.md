@@ -1,8 +1,9 @@
 ---
 name: prp-07-telemetry-ingestion-and-cost-ledger
-status: shipped
+status: backlog
+priority: P0
+order: 5
 started: 2026-10-15
-shipped: 2026-10-16
 pr: 34
 branch: prp-07-telemetry-ingestion
 review: required
@@ -305,3 +306,13 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: none. Compose service wiring deferred to #26 by operator decision.
 - Open gates / untested live items: live Commercial run (real Event Hubs with Entra, real Cosmos partitioning and throughput) did not run, OPEN (`tests/integration/ingestion/test_live_commercial.py`, needs NS_LIVE_APPROVED=1). Government runtime behaviour untested beyond static endpoint assertions and emulator cloud isolation; Government Event Hubs data geo-replication unverified (G01). G12 narrowed with recorded emulator deltas in docs/RESEARCH-AND-GATES.md. No load or throughput claim (PRP-21).
 - Follow-ups: #26 compose wiring, #27 invoiced only from billing producers, #28 doc_id collision-safe join, #29 watermark/late-flag skew, #30 wiring cloud fallback fail-closed, #31 cost request_id source, #32 hypothesis for payload property test, #33 duplicate-event metric.
+
+## Audit 2026-11-04
+
+Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
+
+- The ingest edge is not configured in the composed stack: `services/api/neurosphere_api/ingest/bootstrap.py:46` returns False unless `NS_INGEST_PRODUCERS_FILE` is set, and no compose file, `.env.example` or Bicep file sets it (hosted `infra/demo/main.bicep:222-223` sets only the Event Hubs namespace and hub name). Every ingest route answers 503 `ingest_not_configured`.
+- Data only appears via `scripts/sandbox/sbx_seed_stack.py`, which publishes straight to Event Hubs and bypasses the edge and producer auth. The completion note defers compose wiring to #26.
+- The `ingestion` worker role starts under `NS_WORKER_ROLES=all` but needs `NS_INGESTION_*` settings; the compose `workers` service sets none (hosted Bicep does).
+- No `NS_LEDGER_PRICE_TABLE_FILE` by default (`ingestion/wiring.py:17-18`), so every cost estimate is `price_unresolved`. Follow-ups #27, #28, #31 open.
+- Entra-token producer auth not built (registered credentials only). Tests run in-process against emulators, not through compose api/workers. Outbox to projections/aggregates to dashboards link not traced.
