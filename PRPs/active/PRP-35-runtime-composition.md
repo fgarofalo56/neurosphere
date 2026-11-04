@@ -175,8 +175,8 @@ Feature-specific checks:
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | in-progress | worktree agent | sonnet | | 2026-11-04 |
-| 2 | todo | | sonnet | | |
+| 1 | merged | worktree-agent-a71839effa9709cfa | sonnet | ingest+runtime_api 118 passed; helm unset/ConfigMap/both checked by agent; gitleaks entry unverified locally (CI backstop); merge of 77d94b0 | 2026-11-04 |
+| 2 | in-progress | worktree agent | sonnet | | 2026-11-04 |
 | 3 | in-progress | worktree agent | sonnet | | 2026-11-04 |
 | 4 | in-progress | worktree agent | opus | | 2026-11-04 |
 | 5 | todo | | sonnet | | |
