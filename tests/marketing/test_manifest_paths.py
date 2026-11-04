@@ -88,8 +88,11 @@ def test_pptx_is_rendered_without_independent_review() -> None:
     assert "no independent brand or legal review was performed" in notes
 
 
-def test_video_row_not_rendered() -> None:
-    assert "not rendered, see PRP-27" in _text()
+def test_video_entry_records_path_and_checksum() -> None:
+    text = _text()
+    assert "not rendered, see PRP-27" not in text
+    assert "marketing/video/render/out/neurosphere-explainer.mp4" in text
+    assert re.search(r"sha256: [0-9a-f]{64}", text)
 
 
 def test_g09_waiver_note() -> None:
@@ -105,6 +108,9 @@ def test_every_marketing_file_is_listed() -> None:
         if not path.is_file() or "__pycache__" in path.parts:
             continue
         if path.name == "MANIFEST.md" or path.name == "README.md":
+            continue
+        # PRP-27 render output is gitignored local media; only captions.vtt is a listed asset.
+        if (MARKETING / "video" / "render" / "out") in path.parents and path.name != "captions.vtt":
             continue
         if path.resolve() not in listed:
             missing.append(path.relative_to(ROOT).as_posix())

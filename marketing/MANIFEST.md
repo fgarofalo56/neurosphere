@@ -23,12 +23,24 @@ Gate G09 (theme, brand and media review) is waived by the owner (Frank Garofalo)
 | Video storyboard | `marketing/video/storyboard/storyboard.md` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Scene source, no media. |
 | Video script | `marketing/video/storyboard/script.md` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Narration source, no audio. |
 | Video storyboard claims | `marketing/video/storyboard/claims.md` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited) | Claims listed for the storyboard and script. |
+| Video render approval record | `marketing/video/APPROVAL.md` | draft | Frank Garofalo | UNSIGNED (operator has not recorded a budget) | none (operator fills in) | Template only; the render guard refuses it until every field is filled. |
+| Video captions | `marketing/video/render/out/captions.vtt` | rendered | Frank Garofalo | Owner played back the video and captions and approved 2026-11-03; no independent brand, legal or accessibility review | `python marketing/video/render/render_video.py --backend local` | Generated, awaiting human playback. Cue timing is measured from the narration audio. |
+| Video render spend log | `marketing/video/render/spend-log.md` | draft | Frank Garofalo | UNREVIEWED (generated, awaiting human playback) | `python marketing/video/render/render_video.py --backend local` | Generated spend rows (0.00 USD) and the MP4 checksum; the MP4 itself is not committed. |
+| Video capture script | `marketing/video/render/capture.mjs` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Playwright capture of the local sandbox UI; helper for the local render backend. |
+| Video capture shot list | `marketing/video/render/shots.json` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Routes and on-screen text per scene for the capture script. |
+| Video narration script | `marketing/video/render/speak.ps1` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | none (hand-edited source) | Offline Windows System.Speech text to WAV helper; no network. |
+| Video render entry point | `marketing/video/render/render_video.py` | draft | Frank Garofalo | UNREVIEWED (pending independent review) | `python marketing/video/render/render_video.py --backend stub` | Guarded script with a stub backend for tests; no MP4 exists. See render/README.md. |
 
-## Not yet produced
+## Produced outside git
 
-These have no file on disk. They are listed here, outside the table above, so no path check applies.
+These files are not committed, so the path check does not apply to them. Each entry records its path and checksum.
 
-- Explainer video. Planned location: `marketing/video/render/` (owned by PRP-27). Status: draft.
-  Owner: Frank Garofalo. Review state: UNREVIEWED (pending independent review).
-  Build state: not rendered, see PRP-27. Rendering is budget-gated and needs operator approval; the storyboard and script above are its
-  source material.
+- Explainer video (rendered, stored outside git). Path: `marketing/video/render/out/neurosphere-explainer.mp4` (gitignored, not committed).
+  sha256: 5571a8fd6a1345ea2ef28ddff1d1a4c7730b712160e12f43ee402556f2d05e13.
+  Captions: `marketing/video/render/out/captions.vtt` (listed in the table above).
+  Build: local zero-cost render (PRP-27); owner played it back and approved it on 2026-11-03.
+  Review state: owner approval, with no independent brand, legal or accessibility review.
+  Known gaps against the storyboard: the sandbox UI does not draw the cost spike (S03),
+  the awaiting-confirmation intents (S05) or the bad-event manifest comparison (S06), and
+  every frame shows the Viewer account. The narration describes those states; the frames
+  do not show them. The storyboard S01 text still says it is not a rendered video.

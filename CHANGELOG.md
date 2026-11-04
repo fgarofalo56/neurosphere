@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Explainer video render (PRP-27): guarded render entry point (refuses without a filled
+  `marketing/video/APPROVAL.md`), a zero-cost local backend (Playwright capture, offline Windows
+  voice, ffmpeg), committed `captions.vtt` and spend log; the MP4 is stored outside git. The owner
+  played it back and approved it on 2026-11-03; G09 stays waived, with no independent review. Some
+  storyboard states are not drawn by the sandbox UI.
 - Sales and marketing deliverables (PRP-26): `marketing/` walking deck source and a generated PPTX,
   five persona demo scripts tied to the sandbox walkthroughs, video storyboard and narration source
   (not rendered, see PRP-27), an honest asset manifest (nothing marked rendered), and a claims lint

@@ -184,7 +184,13 @@ def test_timing_stated_as_estimates() -> None:
 
 def test_no_rendered_media_under_video() -> None:
     video = ROOT / "marketing" / "video"
-    found = [p for p in video.rglob("*") if p.is_file() and p.suffix.lower() in MEDIA_SUFFIXES]
+    # render/out holds the gitignored local render output (PRP-27); everything else stays strict.
+    local_out = video / "render" / "out"
+    found = [
+        p
+        for p in video.rglob("*")
+        if p.is_file() and p.suffix.lower() in MEDIA_SUFFIXES and local_out not in p.parents
+    ]
     assert not found, found
 
 

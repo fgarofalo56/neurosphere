@@ -56,3 +56,12 @@ temp/
 requirements-audit.txt
 frontend/test-results/
 frontend/playwright-report/
+
+# PRP-27 render output (MP4/WAV/frames stay local)
+marketing/video/render/out/*.mp4
+marketing/video/render/out/*.wav
+marketing/video/render/out/frames/
+marketing/video/render/out/audio/
+marketing/video/render/out/clips/
+marketing/video/render/out/*.png
+marketing/video/render/out/*.txt

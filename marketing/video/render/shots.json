@@ -1,0 +1,102 @@
+{
+  "S01": [
+    {
+      "card": [
+        "NeuroSphere",
+        "Synthetic sandbox"
+      ]
+    },
+    {
+      "path": "/sandbox",
+      "text": "NeuroSphere | Synthetic sandbox",
+      "settle": 3000
+    }
+  ],
+  "S02": [
+    {
+      "path": "/sandbox",
+      "text": "Isolation banner | Synthetic sandbox data",
+      "settle": 3000
+    }
+  ],
+  "S03": [
+    {
+      "path": "/recommendations",
+      "persona": "Viewer",
+      "text": "Viewer | Read access | Changes refused",
+      "settle": 3000
+    },
+    {
+      "path": "/catalog",
+      "persona": "Viewer",
+      "text": "Viewer | Read access | Changes refused",
+      "settle": 3000
+    }
+  ],
+  "S04": [
+    {
+      "path": "/dashboards/latency",
+      "persona": "Analyst",
+      "text": "Analyst | Latency regression | Trace replay | Saved reports",
+      "settle": 3000
+    },
+    {
+      "path": "/replay/traces",
+      "persona": "Analyst",
+      "text": "Analyst | Latency regression | Trace replay | Saved reports",
+      "settle": 3000
+    },
+    {
+      "path": "/reports",
+      "persona": "Analyst",
+      "text": "Analyst | Latency regression | Trace replay | Saved reports",
+      "settle": 3000
+    }
+  ],
+  "S05": [
+    {
+      "path": "/recommendations",
+      "persona": "Steward",
+      "text": "Steward | Candidates, never auto-merged | Diff, permission recheck, audit",
+      "settle": 3000
+    },
+    {
+      "path": "/review",
+      "persona": "Steward",
+      "text": "Steward | Candidates, never auto-merged | Diff, permission recheck, audit",
+      "settle": 3000
+    }
+  ],
+  "S06": [
+    {
+      "path": "/admin/execution-control",
+      "persona": "Admin",
+      "text": "Admin | Bad events: quarantine and replay | Scoped role",
+      "settle": 3000
+    }
+  ],
+  "S07": [
+    {
+      "path": "/audit",
+      "persona": "Auditor",
+      "text": "Auditor | Who, target, version, outcome | Synthetic: not compliance evidence",
+      "settle": 3000
+    }
+  ],
+  "S08": [
+    {
+      "path": "/deploy/capabilities",
+      "persona": "Admin",
+      "text": "Capability matrix | Availability, GA and authorization are separate | Performance figures are targets",
+      "settle": 3000
+    },
+    {
+      "card": [
+        "NeuroSphere",
+        "Capability matrix",
+        "Availability, GA and authorization are separate",
+        "Performance figures are targets"
+      ]
+    }
+  ]
+}
