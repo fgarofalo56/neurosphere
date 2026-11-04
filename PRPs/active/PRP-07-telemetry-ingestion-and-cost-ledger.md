@@ -294,7 +294,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 7 | merged | worktree-agent-a29854971ce64e928 | sonnet | compose/price-table tests 18 passed, ruff clean; not run against live compose; 3d6fb41, merge b07a1f8 | 2026-11-04 |
-| 8 | in-progress | worktree (agent) | sonnet | #27 invoiced only from billing producers, #28 collision-safe doc_id, #31 request_id source | 2026-11-04 |
+| 8 | merged | worktree-agent-aaf033b78fa7f1e5b | sonnet | ruff/pyright clean; api+core+workers 4415 passed on integration branch (item reported hypothesis too-slow flake once, unreproduced); openapi.json regenerated; af98026, merge 7293619 | 2026-11-04 |
 | 9 | merged | worktree-agent-a3dc43a0bc63e702c | sonnet | ruff/pyright clean; core+workers 2915 passed (re-run on integration branch); #28 ingestion doc id v2 no migration; f542240, merge 9e095d3 | 2026-11-04 |
 
 ## Completion note (filled at ship)

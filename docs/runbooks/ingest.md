@@ -44,3 +44,12 @@ The ConfigMap holds digests only, so it is acceptable; plaintext secrets must ne
 
 1. `curl -s localhost:8000/readyz`: `composition.ingest.disabled` is absent when configured, present when not.
 2. POST an OTLP trace to `/v1/ingest/otlp/traces` with the producer bearer token: `202` when configured, `401` for a wrong secret, `503 ingest_not_configured` when unset.
+
+## Upgrade note: v2 document ids (PRP-07 audit close-out)
+
+Ingestion marker, quarantine and archive ids (`compute_doc_id`) and ledger entry/allocation ids
+(`sha256_hex`) are now versioned (`v2`) and length-prefixed, so ids containing `|` can no longer
+collide. Existing v1 ids are NOT recognised: a redelivered event would be accepted again and its
+cost counted again next to the v1 ledger entry. This is safe only for disposable emulator and
+sandbox data. Before upgrading any environment that holds real ingested data, wipe the ingestion
+markers, ledger and outbox containers (or add a migration); do not upgrade in place.

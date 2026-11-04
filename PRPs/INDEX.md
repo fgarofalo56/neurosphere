@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-07-telemetry-ingestion-and-cost-ledger](active/PRP-07-telemetry-ingestion-and-cost-ledger.md) | P0 | 7/11 (63%) | in-progress 3, merged 7 | ? / ? | required |
+| [prp-07-telemetry-ingestion-and-cost-ledger](active/PRP-07-telemetry-ingestion-and-cost-ledger.md) | P0 | 10/11 (90%) | merged 10 | ? / ? | required |
 
 ## Backlog
 
