@@ -1,8 +1,10 @@
 ---
 name: prp-27-explainer-video-render
-status: backlog
+status: active
 review: none
 created: 2026-10-08
+started: 2026-11-03
+branch: prp-27-explainer-video-render
 model: sonnet
 phase: 5
 ns: NS-10
@@ -179,3 +181,10 @@ The actual render is **operator-approved, requires a recorded budget in marketin
 - MP4 and captions paths, playback reviewer:
 - G09 status after this PRP:
 - Follow-ups:
+
+## Execution state
+| Item | Status | Branch | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 budget-approval-record | merged | prp-27-explainer-video-render | sonnet | 6938cbf; tests/marketing 120 passed | 2026-11-03 |
+| 2 render-pipeline | merged | prp-27-explainer-video-render | sonnet | 72451db (stub backend only; no render run); ruff, pyright, validate_planning PASS | 2026-11-03 |
+| 3 manifest-update | todo | | sonnet | blocked on real render (needs APPROVAL.md signed by operator) | 2026-11-03 |
