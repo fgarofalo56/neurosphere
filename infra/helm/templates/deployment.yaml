@@ -41,11 +41,27 @@ spec:
             - name: http
               containerPort: {{ $c.port }}
           {{- $apimFront := and (eq $name "api") $.Values.mcp.apimFront.enabled }}
-          {{- if or $.Values.env $apimFront }}
+          {{- $ingestFile := "" }}
+          {{- if eq $name "api" }}
+          {{- if and $.Values.ingest.producersFile $.Values.ingest.producersConfigMap }}
+          {{- fail "set only one of ingest.producersFile or ingest.producersConfigMap" }}
+          {{- end }}
+          {{- if $.Values.ingest.producersConfigMap }}
+          {{- $ingestFile = "/etc/neurosphere/ingest/producers.json" }}
+          {{- else }}
+          {{- $ingestFile = $.Values.ingest.producersFile }}
+          {{- end }}
+          {{- end }}
+          {{- if or $.Values.env $apimFront $ingestFile }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
+            {{- end }}
+            {{- if $ingestFile }}
+            # Producer registry (digests only). Unset: ingest stays 503 ingest_not_configured.
+            - name: NS_INGEST_PRODUCERS_FILE
+              value: {{ $ingestFile | quote }}
             {{- end }}
             {{- if $apimFront }}
             # PRM resource identifier must equal the URL clients reach through the gateway.
@@ -79,6 +95,11 @@ spec:
               mountPath: /mnt/vault
               readOnly: true
             {{- end }}
+            {{- if and (eq $name "api") $.Values.ingest.producersConfigMap }}
+            - name: ingest-producers
+              mountPath: /etc/neurosphere/ingest
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
@@ -95,5 +116,10 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: {{ $.Release.Name }}-vault
+        {{- end }}
+        {{- if and (eq $name "api") $.Values.ingest.producersConfigMap }}
+        - name: ingest-producers
+          configMap:
+            name: {{ $.Values.ingest.producersConfigMap | quote }}
         {{- end }}
 {{- end }}
