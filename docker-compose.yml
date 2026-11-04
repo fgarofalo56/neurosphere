@@ -151,6 +151,10 @@ services:
       NS_PROBE_EVENTHUBS_HOSTPORT: eventhubs:5672
       NS_PROBE_BLOB_HOSTPORT: azurite:10000
       NS_PROBE_TIMEOUT_SECONDS: "2"
+      # Dev producer registry (sha256 digests only, see docs/runbooks/ingest.md).
+      NS_INGEST_PRODUCERS_FILE: /etc/neurosphere/ingest-producers.json
+    volumes:
+      - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
       interval: 5s

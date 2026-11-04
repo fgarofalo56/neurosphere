@@ -41,6 +41,17 @@ containerSecurityContext:
 # (secretProviderClass below), never from values.
 env: {}
 
+# Ingest producer registry (sha256 digests only, never plaintext secrets). Off by default: ingest
+# routes answer 503 ingest_not_configured and /readyz reports composition.ingest.disabled.
+# Set exactly one source (see docs/runbooks/ingest.md):
+#   ingest.producersFile: path inside the api pod, e.g. a vault object mounted by
+#     secretProviderClass at /mnt/vault/<object name> (add the object to secretProviderClass.objects);
+#   ingest.producersConfigMap: name of an operator-created ConfigMap with key producers.json,
+#     mounted read-only into the api pod.
+ingest:
+  producersFile: ""
+  producersConfigMap: ""
+
 # Secrets Store CSI driver + Key Vault + workload identity (optional, off by default).
 secretProviderClass:
   enabled: false

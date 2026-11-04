@@ -1,0 +1,11 @@
+{
+  "producers": [
+    {
+      "producer_id": "dev-ingest",
+      "secret_sha256": "c14ce0b3dce15c9279ebc001bdae2cecd03ee88f11deeea9dbb93476b230b514",
+      "customer_id": "synthco",
+      "cloud": "commercial",
+      "sources": { "dev-source": "application" }
+    }
+  ]
+}

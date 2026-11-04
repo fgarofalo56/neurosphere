@@ -24,3 +24,5 @@ fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:
 98aac514da1d728c4e6db521ba18c0afd3bda974:tests/unit/gates/test_g17_manage.py:generic-api-key:23
 # PRP-25 item 4: deliberately fake "sk-live-abc123" in a negative test proving the settings reject a non-env-var-name; not a credential.
 66ff1b225616d690ab3255f41af8ab9a7cede476:services/docs-assistant/tests/test_image_config_scan.py:generic-api-key:40
+# PRP-35 item 1: sha256 digest of the documented throwaway dev ingest secret in the compose dev producers file, not a credential.
+ceca49776fa7196a6d7bce79fe51b87f1c4ed9da:infra/dev/ingest-producers.dev.json:generic-api-key:5
