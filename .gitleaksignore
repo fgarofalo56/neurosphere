@@ -26,3 +26,5 @@ fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:
 66ff1b225616d690ab3255f41af8ab9a7cede476:services/docs-assistant/tests/test_image_config_scan.py:generic-api-key:40
 # PRP-35 item 1: sha256 digest of the documented throwaway dev ingest secret in the compose dev producers file, not a credential.
 ceca49776fa7196a6d7bce79fe51b87f1c4ed9da:infra/dev/ingest-producers.dev.json:generic-api-key:5
+# PRP-35 item 4: idempotency_key test fixture string, not a credential.
+8a02d07ef5cad2948a0bcde2a6912a1ebf156a59:services/api/tests/runtime_planes/test_planes_builder.py:generic-api-key:138
