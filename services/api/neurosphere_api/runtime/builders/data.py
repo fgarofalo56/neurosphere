@@ -33,9 +33,10 @@ come from each store's constants, the projection sink names and the ingestion le
 Test fakes enter through ``ctx.overrides.backend(<app.state key>)`` (and ``blob_client`` for the
 archive container), so CI composes the whole data plane with no emulator.
 
-Known gap: catalog free-text search has no Azure AI Search index to call, so ``catalog_graph``
-answers ``get``/``neighbors``/``impact`` and fails closed (503 ``search_unavailable``) on
-``search`` rather than returning an empty result that looks like "nothing matched".
+Catalog free-text search is composed by ``builders/search.py`` from ``NS_SEARCH_PROVIDER``
+(``fixture`` | ``azure``). With the provider unset ``catalog_graph`` still answers
+``get``/``neighbors``/``impact`` and fails closed (503 ``search_unavailable``) on ``search``
+rather than returning an empty result that looks like "nothing matched".
 """
 
 from __future__ import annotations
@@ -104,6 +105,7 @@ from neurosphere_api.runtime.builders import (
     ComponentUnavailableError,
 )
 from neurosphere_api.runtime.builders.blob import archive_container
+from neurosphere_api.runtime.builders.search import build_catalog_graph
 from neurosphere_api.runtime.pseudonym import resolve_pseudonym_key
 from neurosphere_api.runtime.settings import AuthSettings
 from neurosphere_api.sandbox.repository import CosmosSandboxStore, SandboxRepository
@@ -184,7 +186,7 @@ def _utc_now() -> datetime:
 
 
 class _NoSearch:
-    """No search index is composed (see the module docstring): fail closed, never empty."""
+    """``NS_SEARCH_PROVIDER`` is unset (see the module docstring): fail closed, never empty."""
 
     async def search(self, *_args: Any, **_kwargs: Any) -> Any:
         raise DependencyTransientError("search is not configured", reason="search_unavailable")
@@ -207,6 +209,8 @@ def _catalog(ctx: BuildContext) -> None:
             _database(ctx).get_container_client(DEFAULT_REVIEW_QUEUE_CONTAINER)
         )
     graph = _backend(ctx, "catalog_graph", GraphQuery)
+    if graph is None:
+        graph = build_catalog_graph(ctx, repository)
     if graph is None:
         graph = RepositoryGraphQuery(repository, _NoSearch())  # type: ignore[arg-type]
     state = ctx.app.state

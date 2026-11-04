@@ -42,3 +42,12 @@ output id string = empty(reuse) ? service.id : reuse
 
 @description('True when this module created the service.')
 output created bool = empty(reuse)
+
+var serviceNameInUse = empty(reuse) ? name : last(split(reuse, '/'))
+var searchSuffix = environment().name == 'AzureUSGovernment' ? '.search.azure.us' : '.search.windows.net'
+
+@description('Service name in use: the created name, or the last segment of the reused resource id.')
+output serviceName string = serviceNameInUse
+
+@description('Data-plane endpoint (host only, no key). Callers use Entra ID/managed identity; set NS_SEARCH_SERVICE to serviceName.')
+output endpoint string = 'https://${serviceNameInUse}${searchSuffix}/'
