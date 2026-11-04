@@ -175,10 +175,10 @@ Feature-specific checks:
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | todo | | sonnet | | |
+| 1 | in-progress | worktree agent | sonnet | | 2026-11-04 |
 | 2 | todo | | sonnet | | |
-| 3 | todo | | sonnet | | |
-| 4 | todo | | opus | | |
+| 3 | in-progress | worktree agent | sonnet | | 2026-11-04 |
+| 4 | in-progress | worktree agent | opus | | 2026-11-04 |
 | 5 | todo | | sonnet | | |
 
 ## Completion note (filled at ship)
