@@ -1,7 +1,9 @@
 ---
 name: prp-35-runtime-composition
-status: active
+status: shipped
 started: 2026-11-04
+shipped: 2026-11-04
+pr: 164
 branch: feat/prp-35-runtime-composition
 priority: P0
 order: 1
@@ -181,5 +183,22 @@ Feature-specific checks:
 | 4 | merged | worktree-agent-a417bda8eaae43f12 | opus | combined items 1-4 suites 736 passed; agent: ruff/pyright/validate_planning clean; uv.lock hand-patched (foundry member only, fastapi kept 0.162.0 because docs-assistant pins <0.150: pre-existing lock inconsistency); images not built; #132 OPEN; no Snyk run | 2026-11-04 |
 | 5 | merged | worktree-agent-aad2e3c1be4c2f170 | sonnet | agent-reported local run: integration 6 passed (stack up, 119 entities/127 edges seeded, re-run 0 new); orchestrator: compose+sandbox 65 passed, integration skips cleanly when stack down; full gates ruff/format/pyright/validate_planning clean; review CHANGES REQUIRED (prod Dockerfiles missing foundry-actions COPY) fixed inline, both prod images built, tests/release 62 passed | 2026-11-04 |
 
-## Completion note (filled at ship)
-<date, merged commits, deviations from blueprint + why, descoped items, follow-ups. Record #132 and #104 state. Follow-ups to file: multiple APIM gateways per registry; PRP-06 audit holes; real-stack e2e; live gates.>
+## Completion note
+Shipped 2026-11-04 via PR #164 (merge commit dcc59ba; a merge commit, not a squash, so the commit-scoped .gitleaksignore fingerprints stay valid). All 13 required CI checks green; admin-merged because only a review was missing.
+
+**Delivered:** ingest producers config (compose dev file, Helm value/mount, runbook); profile-gated idempotent catalog seeder (refuses unless NS_ENV=local and commercial); `NS_SEARCH_PROVIDER` fixture|azure|unset with catalog indexer, both `_NoSearch` sites replaced; Foundry model-swap and APIM gateway connectors registered in API and workers only when flag + config present (advisory/refused never registered); compose env, runbook (`docs/runbooks/runtime-composition.md`), integration smoke test.
+
+**Evidence:** combined touched suites 736 passed; ruff, ruff format, pyright, validate_planning clean; CI python job (about 9.5k tests) green after the fixes below; integration smoke 6 passed on local emulators in the implementer run (119 entities / 127 edges seeded, re-run 0 new); not run in CI and not re-run by the orchestrator.
+
+**Deviations:**
+- Search builder is a helper called from `data._catalog`, not a registered BuilderSpec (registering would break builder-order tests outside ownership); the index refreshes lazily per caller scope (default 30 s).
+- `usgovtexas` is supported for `ai_search.base`; the disabled path is tested with commercial `marscentral` (`not_verified`). Disabled Azure answers from the in-process index (no cross-cloud call).
+- No aliases seeded (the sandbox generator has no alias stream). Added `scripts/sandbox/Dockerfile.seed`.
+- The one review pass found a blocker: production Dockerfiles lacked the foundry-actions COPY. Fixed inline and both images built. CI then caught three more defects the targeted local suites missed (the API imported the APIM connector package against the single-executor-path guard; a literal commercial search host in search.bicep). Fixed by re-exporting `ApplyRecord` from the workers apim module and dropping the Bicep `endpoint` output.
+- `uv.lock` hand-patched (foundry member only) because `uv lock` would downgrade fastapi: docs-assistant pins `fastapi<0.150` while the lock holds 0.162.0 (pre-existing).
+
+**Descoped / OPEN:** live Azure AI Search and live Foundry/APIM writes (need `NS_LIVE_APPROVED=1`; not run, no paid calls). `.env.example` not updated (read and edit denied to tooling); the names are documented in the runbook. No hosted deploy performed.
+
+**Issue state:** #132 OPEN, #104 OPEN (both unchanged by this PRP).
+
+**Follow-ups to file:** `.env.example` names; Azure AI Search document-key encoding (ids contain colons) and the missing `text` index field before the live gate; worker catalog writes do not invalidate the search index, the indexer never deletes or moves documents, global sync lock; Bicep module not compiled locally; multiple APIM gateways per registry; PRP-06 audit holes; real-stack e2e; live gates; docs-assistant fastapi pin vs lock; new High `sqlite-libs` CVEs failing the non-required Grype image scans (api, workers, docs-assistant).

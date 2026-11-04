@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Runtime composition (PRP-35): ingest producers config for compose and Helm, an idempotent
+  profile-gated catalog seeder that refuses outside `NS_ENV=local`, `NS_SEARCH_PROVIDER`
+  (fixture, azure or unset) with a catalog indexer, and Foundry model-swap and APIM gateway
+  connectors registered into the write registry only when enabled and configured. Live Azure AI
+  Search and live Foundry/APIM writes are not run (open gates). See
+  `docs/runbooks/runtime-composition.md`.
 - Explainer video render (PRP-27): guarded render entry point (refuses without a filled
   `marketing/video/APPROVAL.md`), a zero-cost local backend (Playwright capture, offline Windows
   voice, ffmpeg), committed `captions.vtt` and spend log; the MP4 is stored outside git. The owner
