@@ -32,6 +32,7 @@ recorder or either store through ``CompositionOverrides``; ``main.create`` never
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -69,6 +70,7 @@ from neurosphere_core.hitl.auditing import audit_chain_for
 from neurosphere_core.scope import IdentityScope
 from pydantic import ValidationError
 
+from neurosphere_api.actions.common import audit_correlation_id
 from neurosphere_api.authz import (
     DenialRecorder,
     DeniedAttempt,
@@ -105,14 +107,19 @@ COMPONENTS: Final = ("authz", "policy_store", "revocation")
 DENIAL_CHAIN_NAME: Final = "authz-denials"
 
 _REASON_CODE: Final = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_")
+#: ``AuditRecord.correlation_id`` pattern (contracts ``audit/v1/audit-record.schema.json``).
+_CORRELATION_ID: Final = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+#: Prefix ``audit_correlation_id`` adds; also used for a generated id.
+_CORRELATION_PREFIX: Final = "corr-"
 
 
 class AuditDenialRecorder:
     """``DenialRecorder`` that appends a ``denied`` audit record (PRP-06 C11 metadata only).
 
     The record carries the actor pseudonym, principal kind and scope hash from the server-derived
-    scope, the permission as the operation, ``forbidden`` plus the deny reason code, a
-    server-assigned correlation id, and the target as a canonical-id subject with no state. A
+    scope, the permission as the operation, ``forbidden`` plus the deny reason code, the
+    request's correlation id (audit-safe form; generated when absent or unusable, see
+    :func:`_correlation_id`), and the target as a canonical-id subject with no state. A
     target that is not a valid canonical id, or that the metadata guard would reject (for
     example a GUID-shaped person id from a forged path), is left out rather than failing the
     write; the denial itself is always recorded. Request bodies, tokens and paths are never
@@ -133,7 +140,7 @@ class AuditDenialRecorder:
         scope = attempt.scope
         ctx = AuditContext.from_scope(
             scope,
-            correlation_id=f"corr-{uuid.uuid4().hex}",
+            correlation_id=_correlation_id(attempt.correlation_id),
             operation=attempt.permission,
             channel="rest",
         )
@@ -141,6 +148,25 @@ class AuditDenialRecorder:
             ctx, code="forbidden", reason=_reason_code(attempt.reason), subject=_subject(attempt)
         )
         await repository.append(_chain(scope, attempt.domain_id), draft)
+
+
+def _correlation_id(request_id: str | None) -> str:
+    """The request's correlation id in audit-safe form, else a server-generated one.
+
+    ``request_id`` is the middleware-bound id (a validated caller header or a UUID4). It is
+    converted with the same ``audit_correlation_id`` the action/HITL/catalog routes use, then
+    checked against the audit record's correlation id pattern and the metadata guard; anything
+    that would fail either (so would make the denial write fail) is replaced, never echoed.
+    """
+    if request_id is not None:
+        candidate = audit_correlation_id(request_id)
+        if (
+            candidate != _CORRELATION_PREFIX  # an empty or dashes-only id identifies nothing
+            and _CORRELATION_ID.fullmatch(candidate)
+            and not find_sensitive_content({"correlation_id": candidate})
+        ):
+            return candidate
+    return f"{_CORRELATION_PREFIX}{uuid.uuid4().hex}"
 
 
 def _reason_code(reason: str) -> str:
