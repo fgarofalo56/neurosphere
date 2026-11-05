@@ -299,6 +299,7 @@ Items 1-6 shipped 2026-10-12 and are not re-run. This run closes only the compos
 - D2: register the realtime `GatewayRegistry` as a `PushSessionRegistry` in the revocation fan-out (`runtime/builders/authz.py`); test that revocation calls `close_for_principal`. After D1.
 - D3: pass a `SiemExporter` into the composed `AuditRepository` (`runtime/builders/data.py`); test that an append emits a redacted event.
 - D4: call `verify_route_permissions` at startup in the composed app, covering realtime/WebSocket routes.
+- D5 (added 2026-11-05 at operator approval): carry the request correlation id on denial records: add `correlation_id` to `DeniedAttempt` (`authz/recorder.py`), fill it in `authz/dependencies.py` `_denial` from the request scope, use it in the composed recorder (`runtime/builders/authz.py`). Sequenced after D2. Follow-up recorded: `<customer>.authz-denials` chain is not readable via the audit routes.
 
 Left OPEN at close (not built here): block-until-lifted revocation mode (2); auditing pre-scope failures and allowed audit-router reads (6); re-run of `tests/security/authz` against Azure AI Search (7, PRP-10); WORM audit store; Government v1 issuer host; live token-expiry and revocation-TTL-expiry run (needs `NS_LIVE_APPROVED=1`).
 
@@ -306,7 +307,8 @@ Left OPEN at close (not built here): block-until-lifted revocation mode (2); aud
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| D1 | todo | | opus | | 2026-11-05 |
-| D2 | todo | | opus | | 2026-11-05 |
-| D3 | todo | | opus | | 2026-11-05 |
-| D4 | todo | | opus | | 2026-11-05 |
+| D1 | merged | worktree-agent-abebcb5859b342114 | opus | ruff clean, pyright 0 errors, 804 passed (implementer); orchestrator re-run after merge with D3: ruff clean, runtime_api+runtime_data+authz+audit 318 passed; 525cf03, merge 15d02b7. Open: record correlation id is generated, not the request's (needs authz/recorder.py + authz/dependencies.py) | 2026-11-05 |
+| D2 | merged | worktree-agent-ac3137ac3dd8d7c2a | opus | audit premise partly stale: data.py:446 already registers the websocket closer; real bug was REVOCATION_HOOKS published only inside _deriver (fixed in builders/authz.py). ruff clean, pyright 0 errors, 751 passed (implementer); orchestrator re-run: ruff clean, push-closer+runtime_api 89 passed; 1fb0a17, merge df58b7b. Open: no composed RevocationService or admin revoke route, so nothing in production calls fan_out yet | 2026-11-05 |
+| D3 | merged | worktree-agent-addaf59bf514c2889 | opus | ruff clean, pyright 0 errors, 438 passed (implementer); orchestrator re-run ruff clean, runtime_data+audit 84 passed; d9ed915, merge dc83630. New settings NS_AUDIT_SIEM_SINK (none default), NS_AUDIT_SIEM_FILE_PATH | 2026-11-05 |
+| D4 | merged | worktree-agent-aa3c08eb8b14390e3 | opus | verify_route_permissions at compose_app startup; new allowlist GATEWAY_AUTHENTICATED_WEBSOCKETS /api/v1/realtime/ws -> data.read (operator-approved 2026-11-05). ruff clean, pyright 0 errors, full services/api 1504 passed (implementer); orchestrator re-run: authz+runtime_api 244 passed; ee50b22, merge 82dc42a | 2026-11-05 |
+| D5 | merged | worktree-agent-a1af11a8eb009d39d | opus | DeniedAttempt.correlation_id; ruff clean, pyright 0 errors; combined authz/audit/runtime/realtime/core 881 passed on integration branch (orchestrator); b397934, merge b4e0fbc | 2026-11-05 |

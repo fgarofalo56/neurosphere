@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [prp-06-identity-authz-and-audit](active/PRP-06-identity-authz-and-audit.md) | P0 | 0/4 (0%) | todo 4 | ? / ? | required |
+| [prp-06-identity-authz-and-audit](active/PRP-06-identity-authz-and-audit.md) | P0 | 5/5 (100%) | merged 5 | ? / ? | required |
 
 ## Backlog
 
