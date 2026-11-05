@@ -1,8 +1,10 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: backlog
+status: active
 priority: P0
 order: 6
+started: 2026-11-05
+branch: prp-06-audit-gaps
 review: required
 created: 2026-10-08
 model: opus
@@ -288,3 +290,23 @@ Reopened after a deep audit (static read by a read-only agent; no tests were run
 - `verify_route_permissions` runs only in tests (`tests/authz/test_route_inventory.py:33-41`), not at startup. Websocket/realtime route permissions not checked.
 - Audit store is not WORM (tail pointer uses ETag-guarded `replace_item`); follow-ups (2) block-until-lifted revocation, (6), (7) re-run suite against Azure AI Search open. Government v1 issuer host unverified.
 - Met: JWKS validation with algorithm pinned from the key, dev issuer excluded from the composed app, audit repository exposes no update/delete.
+
+### Audit close-out items (added at plan approval, 2026-11-05)
+
+Items 1-6 shipped 2026-10-12 and are not re-run. This run closes only the composed-app wiring gaps above. D1 and D2 edit the same file (`runtime/builders/authz.py`), so they are sequenced; D3 and D4 run in parallel.
+
+- D1: compose a `DenialRecorder` backed by the `AuditRepository` (`runtime/builders/authz.py`, `runtime/overrides.py`); composed-app test that a 403 writes a denied audit record.
+- D2: register the realtime `GatewayRegistry` as a `PushSessionRegistry` in the revocation fan-out (`runtime/builders/authz.py`); test that revocation calls `close_for_principal`. After D1.
+- D3: pass a `SiemExporter` into the composed `AuditRepository` (`runtime/builders/data.py`); test that an append emits a redacted event.
+- D4: call `verify_route_permissions` at startup in the composed app, covering realtime/WebSocket routes.
+
+Left OPEN at close (not built here): block-until-lifted revocation mode (2); auditing pre-scope failures and allowed audit-router reads (6); re-run of `tests/security/authz` against Azure AI Search (7, PRP-10); WORM audit store; Government v1 issuer host; live token-expiry and revocation-TTL-expiry run (needs `NS_LIVE_APPROVED=1`).
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| D1 | todo | | opus | | 2026-11-05 |
+| D2 | todo | | opus | | 2026-11-05 |
+| D3 | todo | | opus | | 2026-11-05 |
+| D4 | todo | | opus | | 2026-11-05 |

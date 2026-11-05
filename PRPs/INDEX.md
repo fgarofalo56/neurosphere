@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-06-identity-authz-and-audit](active/PRP-06-identity-authz-and-audit.md) | P0 | 0/4 (0%) | todo 4 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-06-identity-authz-and-audit](backlog/PRP-06-identity-authz-and-audit.md) | P0 | 6 | - | - | ? / ? | required |
 | [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-33-apim-gateway-observe](backlog/PRP-33-apim-gateway-observe.md) | P1 | 1 | - | - | ? / ? | required |
