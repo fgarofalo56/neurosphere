@@ -1,0 +1,26 @@
+# Grype accepted-risk list. Every entry needs a reason, a date and a re-check trigger.
+# Scope each rule to one package so a new finding in another package still fails the gate.
+#
+# Added 2026-11-04: python:3.12-alpine (pinned digest e6dae589...) ships sqlite-libs
+# 3.53.4-r0, which Grype reports with four High CVEs and no fixed version. The pinned digest
+# is the current upstream tag and Alpine's repository has no newer sqlite-libs, so there is
+# nothing to bump to. Trivy (HIGH,CRITICAL) does not flag them. sqlite3 is used only by the
+# analytics stub in neurosphere_core (local sandbox data), never on untrusted SQL or files.
+# Re-check: on every base-image digest bump; delete these rules once Alpine ships a fix.
+ignore:
+  - vulnerability: CVE-2026-119586
+    package:
+      name: sqlite-libs
+      type: apk
+  - vulnerability: CVE-2026-119374
+    package:
+      name: sqlite-libs
+      type: apk
+  - vulnerability: CVE-2026-119379
+    package:
+      name: sqlite-libs
+      type: apk
+  - vulnerability: CVE-2026-119373
+    package:
+      name: sqlite-libs
+      type: apk
