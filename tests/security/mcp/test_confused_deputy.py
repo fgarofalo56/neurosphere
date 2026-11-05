@@ -171,11 +171,9 @@ async def test_the_real_client_with_a_rest_token_as_platform_credential_gets_not
         server = await registry.register(cs.MCP_RESOURCE, display_name="NS", actor=ADMIN)
         with pytest.raises(NeuroSphereError) as refused:
             await client.sync_tools(server.id)
-    # The resource server's 401 surfaces from item 2's client as a transient "unavailable".
-    assert (refused.value.code, refused.value.reason) == (
-        "dependency_transient",
-        "mcp_server_unavailable",
-    )
+    # The resource server's 401 surfaces from the client as a non-retryable auth rejection,
+    # not a transient "unavailable" (audit close-out #112: no retry storm on a bad credential).
+    assert (refused.value.code, refused.value.reason) == ("forbidden", "mcp_auth_rejected")
     stored = await registry.require(server.id)
     assert stored.tools == ()  # no manifest was obtained, nothing to approve
     assert router.sent  # the request was made and answered 401 by the resource server
