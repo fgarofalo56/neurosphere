@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-07-telemetry-ingestion-and-cost-ledger](active/PRP-07-telemetry-ingestion-and-cost-ledger.md) | P0 | 10/11 (90%) | merged 10 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -40,6 +38,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-07-telemetry-ingestion-and-cost-ledger](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) | 2026-11-04 | #166 |
 | [prp-35-runtime-composition](shipped/PRP-35-runtime-composition.md) | 2026-11-04 | #164 |
 | [prp-26-sales-and-marketing-deliverables](shipped/PRP-26-sales-and-marketing-deliverables.md) | 2026-11-03 | #157 |
 | [prp-27-explainer-video-render](shipped/PRP-27-explainer-video-render.md) | 2026-11-03 | #163 |
