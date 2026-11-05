@@ -6,6 +6,13 @@ Production wiring (no other path exists from ``main``):
   ``NS_AUTH_POLICY_CONTAINER``.
 * ``revocation``: ``CosmosRevocationStore`` on ``revocations`` behind a
   ``CachedRevocationChecker`` (``NS_REVOCATION_*``).
+* ``REVOCATION_HOOKS``: the ONE ``RevocationHookRegistry`` of the composition, published as soon
+  as the checker exists (independent of how the scope source is built), with the checker's and,
+  when composed, the deriver's ``invalidate_principal`` as cache invalidators. Push-session
+  closers register on it in LATER builders: the data builder registers the realtime
+  ``GatewayRegistry`` as push registry ``websocket`` (PRP-06 C13, PRP-18), so a revocation fan-out
+  calls its ``close_for_principal``. A composition without the realtime gateway simply has no
+  push registries; a failing closer never aborts the other hooks (``RevocationHookRegistry``).
 * ``authz``: ``create_jwt_validator`` over ``httpx`` against the tenant's Entra JWKS
   (``JwtConfig.from_settings`` with the deployment's cloud, ``NS_AUTH_TENANT_ID`` and
   ``NS_AUTH_AUDIENCES``; no other key source is configured) and a ``ScopeDeriver`` over the two
@@ -225,6 +232,7 @@ def _deriver(
     tenant_id: str,
     policy: PolicyRepository | None,
     checker: CachedRevocationChecker | None,
+    hooks: RevocationHookRegistry | None,
     clock: Clock,
 ) -> ScopeDeriver:
     if policy is None:
@@ -254,11 +262,19 @@ def _deriver(
     )
     ctx.publish(PSEUDONYMIZER, pseudonymizer)
     ctx.publish(SCOPE_DERIVER, deriver)
+    if hooks is not None:
+        hooks.register_cache_invalidator("scope-deriver", deriver.invalidate_principal)
+    return deriver
+
+
+def _revocation_hooks(
+    ctx: BuildContext, checker: CachedRevocationChecker
+) -> RevocationHookRegistry:
+    """Publish the composition's hook registry; later builders add push-session closers."""
     hooks = RevocationHookRegistry()
     hooks.register_cache_invalidator("revocation-checker", checker.invalidate_principal)
-    hooks.register_cache_invalidator("scope-deriver", deriver.invalidate_principal)
     ctx.publish(REVOCATION_HOOKS, hooks)
-    return deriver
+    return hooks
 
 
 def _authenticator(
@@ -284,6 +300,7 @@ def _authz(
     auth: AuthSettings,
     policy: PolicyRepository | None,
     checker: CachedRevocationChecker | None,
+    hooks: RevocationHookRegistry | None,
     clock: Clock,
 ) -> None:
     tenant_id = _tenant(auth)
@@ -291,7 +308,7 @@ def _authz(
     if ctx.overrides.scope_source is not None:
         scope_source = ctx.overrides.scope_source
     else:
-        scope_source = _deriver(ctx, auth, tenant_id, policy, checker, clock)
+        scope_source = _deriver(ctx, auth, tenant_id, policy, checker, hooks, clock)
     authenticator = _authenticator(ctx, auth, tenant_id, clock)
     try:
         configure_authz(
@@ -321,9 +338,11 @@ def build(ctx: BuildContext) -> None:
     if policy is not None:
         ctx.publish(POLICY_REPOSITORY, policy)
     checker = ctx.attempt("revocation", lambda: _revocation_checker(ctx, clock))
+    hooks: RevocationHookRegistry | None = None
     if checker is not None:
         ctx.publish(REVOCATION_CHECKER, checker)
-    ctx.attempt("authz", lambda: _authz(ctx, auth, policy, checker, clock))
+        hooks = _revocation_hooks(ctx, checker)
+    ctx.attempt("authz", lambda: _authz(ctx, auth, policy, checker, hooks, clock))
 
 
 BUILDER: Final = BuilderSpec("authz", COMPONENTS, build)
