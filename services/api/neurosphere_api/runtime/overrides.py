@@ -48,7 +48,9 @@ class CompositionOverrides:
     blob_client: Any | None = None
     #: A prebuilt copilot model adapter (item 8); never a live endpoint in tests.
     model_adapter: Any | None = None
-    #: Denied-attempt recorder passed to ``configure_authz``.
+    #: Replaces the denied-attempt recorder passed to ``configure_authz``. ``None`` means the
+    #: composed ``AuditDenialRecorder`` over ``AUDIT_REPOSITORY``; there is no way to compose
+    #: the app with denial recording switched off.
     denial_recorder: DenialRecorder | None = None
     #: POSIX-seconds clock for token validation, scope derivation and revocation caching.
     clock: Callable[[], float] | None = None
