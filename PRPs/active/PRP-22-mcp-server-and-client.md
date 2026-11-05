@@ -1,11 +1,11 @@
 ---
 name: prp-22-mcp-server-and-client
-status: backlog
+status: active
 priority: P1
 order: 1
 pr: 110
-started: 2026-10-22
-branch: prp-22-mcp-server-and-client
+started: 2026-11-05
+branch: prp-22-audit-closeout
 review: required
 created: 2026-10-08
 model: opus
@@ -172,7 +172,7 @@ python scripts/validate_planning.py
 ```
 Feature-specific:
 ```
-python -m pytest packages/core/tests/mcp services/api/tests/mcp
+python -m pytest packages/core/tests/mcp_core services/api/tests/mcp_api
 python -m pytest tests/security/mcp
 pnpm --filter frontend test
 pnpm --filter frontend exec playwright test frontend/tests/e2e/mcp-admin.spec.ts
@@ -223,6 +223,22 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
 | 2 | merged | worktree-agent-acefba65216e1b8dc | opus | 2bbb4b7; orchestrator re-run: only core mcp/ + core tests/mcp_core/ + api mcp/__init__ + mcp/client/ + test_client/client_fixtures touched (24), ruff + format clean, pyright 0 errors, mcp_core + mcp_api + import tests + import boundaries 297 passed; core mcp has no SDK import and no actions import; Snyk Code 0 issues (core mcp, api mcp/client); IP pinning via the SDK transport works; deviations: server id derived from normalised URL, `title` in tool hash, redirects refused (only the exact registered URL), credential port in `outbound_auth.py`, no router hook, call-time hash drift persisted (revokes globally); limits 128 tools / 4096 B description / 16 KiB schema / 256 KiB manifest, results 64 KiB; open: Cosmos store tested with a fake container only, Gov boundary live check (G01/G02); reviewer APPROVED (probe refused decimal/octal/hex/short IPv4, userinfo, backslash, percent, fullwidth dots, trailing-dot metadata and `*.localhost`; socket pinned to vetted IP with origin SNI, `trust_env=False`, exact-URL guard on every SDK request; import-graph test real); follow-ups: block `::ffff:0:0:0/96` (SIIT) and `5f00::/16`, IDNA2003 host normalisation (`faß` -> `fass`; refuse non-ASCII or use UTS-46), credential header-name CR/LF check, list/call TOCTOU into threat model, GET SSE stream path untested; merge 981a84e; post-merge mcp_core + mcp_api + test_app + openapi drift + import tests + import boundaries 366 passed, pyright 0 errors | 2026-10-22 |
 | 3 | merged | worktree-agent-a6ecef340586f9f3b | sonnet | 723cd31; reviewer APPROVED (config.manage on all 8 routes incl. known-URL 403; exemptions exact-path only, `/mcp/extra`, `/mcp-sibling`, `Mount("/mcp")` flagged; constant-time expected_hash; audit fields asserted; lifespan no-op without mount; openapi additions only: 5 paths, 10 schemas); follow-ups: tie `/mcp` exemption to the MCP endpoint not just the path, per-tool audit record (old/new hash) on sync revocation, audit blocked-hostname registration like blocked IP literals, `list(limit=500)` silent cap, pin 403 in `test_admin.py:164`; merge c52f668; post-merge mcp_api + test_app + openapi drift + authz suites + mcp_core 1419 passed, tsc clean, vitest 60 passed; orchestrator re-run: 25 files, all within item 3 + D3/D6 hookup ownership; ruff + format clean, pyright 0 errors, mcp_api + test_app + openapi drift + api authz + security authz + mcp_core 1419 passed; tsc + eslint clean, vitest mcp-admin + app 60 passed, Playwright mcp-admin + smoke + hidden-route 6 passed (ports 4391/4392); Snyk Code 0 issues (api mcp/admin, frontend mcp-admin); routes `/api/v1/mcp/admin/servers[/{id}[/sync,/tools[/{tool}/approval]]]`, all `config.manage`; metadata path in `PUBLIC_PATHS`, `/mcp` in exact-path `SELF_AUTHENTICATED_PATHS`; openapi.json additions only; NOT DONE: `.env.example` NS_MCP_* vars (read of `.env.example` denied by permission/hook for agents and orchestrator; operator action); production `configure_mcp_admin` wiring not built (#104) | 2026-10-22 |
 | 4 | merged | worktree-agent-a8323def95bf1f844 | opus | b59c250; orchestrator re-run: only tests/security/mcp/ (6) + the G08 line of docs/RESEARCH-AND-GATES.md touched; ruff + format clean, pyright 0 errors, security/mcp + security/injection + mcp_api + mcp_core 508 passed, no skip/xfail/integration markers; validate_planning PASS; Snyk Code 0 issues; suites: confused deputy 27, intent-hash parity 9, injection 3, roundtrip 6; corpus via external tool output 78/78 (65 deny, 13 abstain, 0 comply), 77 delivered as `ExternalToolResult`, 0 overscoped, 0 intents from tool output; self-reported: 13 `follow_instruction` abstains vacuous, 40 denies only because the tool does not exist over MCP; negative control: drafting bridge makes 12 cases comply; no product defect found; noted: external-server 401 surfaces as `dependency_transient`; reviewer APPROVED (real REST route + real MCP draft tool for parity, four confused-deputy cases on real paths, outcomes from observed behaviour not `case.expected`, negative control 12/12 comply for the right reason, roundtrip keeps SSRF pinning; reasons: 10 narrowed_to_scope, 5 scope_argument_refused, 40 tool_not_registered, 7 invalid_arguments, 13 vacuous abstains); follow-ups: map external 401/403 to `forbidden`/`mcp_auth_rejected` (retry-storm risk for a future retrying caller), catalog fake over-counts by-id lookups (over-reports only); orchestrator added the reviewer's honesty clause to the G08 row (only 15 cases exercise scope filtering for real); merge fd09dd1 | 2026-10-22 |
+
+### Audit close-out round (2026-11-05)
+
+Plan approved 2026-11-05; integration branch `prp-22-audit-closeout` from origin/main (PR 173 not yet merged).
+
+- A1: step 0 (orchestrator) corrected the validation-gate test paths to `mcp_core/` and `mcp_api/`.
+- A2: Lane S closes #111 (server), lane C closes #112 (client), lane M closes #113 (admin); wave A, disjoint files. Lane R (wave B, after all three) owns `tests/security/mcp/` and the G08 row: real scope-filtering corpus cases, Cosmos-emulator registry test, compose-backed roundtrip, real-stack run with `NS_MCP_RESOURCE_SERVER_URL` set (emulators only, no paid calls).
+- A3: out of scope, reported OPEN: #132 (empty WriteTargetRegistry), #114 (deployment-scoped admin role), #115 (private-network override), Government MCP (G01/G02), `.env.example` NS_MCP_* placeholders (permission-blocked for agents).
+- Models: S, C, R opus; M sonnet; every lane one reviewer pass.
+
+| Lane | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| S | todo | | opus | | 2026-11-05 |
+| C | todo | | opus | | 2026-11-05 |
+| M | todo | | sonnet | | 2026-11-05 |
+| R | todo | | opus | | 2026-11-05 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-23
