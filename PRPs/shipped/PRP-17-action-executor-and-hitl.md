@@ -1,12 +1,13 @@
 ---
 name: prp-17-action-executor-and-hitl
-status: active
+status: shipped
 priority: P1
 order: 1
 review: required
 created: 2026-10-08
 started: 2026-11-05
-pr: 83
+shipped: 2026-11-05
+pr: 173
 branch: prp-17-audit-gaps
 model: opus
 phase: 3
