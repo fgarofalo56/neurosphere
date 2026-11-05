@@ -299,7 +299,7 @@ Plan approved 2026-11-05 by the operator: lanes A+B+C plus a live G05 run (lane 
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| A reconcile-sweep | todo | | opus | | 2026-11-05 |
-| B api-hardening | todo | | opus | | 2026-11-05 |
+| A reconcile-sweep | in-progress | worktree-agent-a2e59586c7c25f640 | opus | dispatched | 2026-11-05 |
+| B api-hardening | in-progress | worktree-agent-a2d70a0732c0ef5eb | opus | dispatched | 2026-11-05 |
 | C wiring-and-close-stale | todo | | sonnet | | 2026-11-05 |
-| D g05-live-run | todo | | sonnet | | 2026-11-05 |
+| D g05-live-run | merged | prp-17-audit-gaps (orchestrator ran it directly) | n/a | live gate PASS 2026-11-05: swap gpt-5-nano to gpt-5-mini verified matched=true, rolled back, restored model re-read; evidence docs/evidence/G05/20261105T173214Z-foundry-swap-live.json; throwaway rg-ns-g05 (Limitlessdata - Main) created, torn down, account purged; docs/evidence/G05/README.md now NARROWED; register G05 row + matrix row left to lane C | 2026-11-05 |
