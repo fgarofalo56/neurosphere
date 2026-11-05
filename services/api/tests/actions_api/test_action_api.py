@@ -12,6 +12,7 @@ from action_plane_harness import (  # pyright: ignore[reportMissingImports]
     CAROL,
     CUSTOMER,
     DAVE,
+    FRANK,
     OPERATIONS,
     TARGET_VERSION,
     Api,
@@ -49,7 +50,7 @@ def _approve(api: Api, view: dict[str, Any], who: str = BOB, decision: str = "ap
 
 
 def _no_principal_ids(api: Api) -> None:
-    for who in (ALICE, BOB, CAROL, DAVE):
+    for who in (ALICE, BOB, CAROL, DAVE, FRANK):
         real = principal(who)
         for text in api.all_text():
             assert real not in text
@@ -424,14 +425,14 @@ def test_emergency_disable_read_and_change() -> None:
     assert api.call("GET", CAROL, "/emergency-disable").json()["disabled"] is False
     body = {"disabled": True, "reason": "incident_inc_42"}
     assert api.call("PUT", CAROL, "/emergency-disable", json=body).status_code == 403
-    changed = api.call("PUT", DAVE, "/emergency-disable", json=body)
+    changed = api.call("PUT", FRANK, "/emergency-disable", json=body)
     assert changed.status_code == 200, changed.text
     state = changed.json()
     assert state["disabled"] is True and state["reason"] == "incident_inc_42"
-    assert state["changed_by"] and state["changed_by"] != principal(DAVE)
+    assert state["changed_by"] and state["changed_by"] != principal(FRANK)
     records = asyncio.run(api.audit.read_range(f"{CUSTOMER}.execution-control", start=0))
     assert [r.kind for r in records] == ["before", "after"]
-    assert api.call("PUT", DAVE, "/emergency-disable", json={"disabled": True}).status_code == 422
+    assert api.call("PUT", FRANK, "/emergency-disable", json={"disabled": True}).status_code == 422
     _no_principal_ids(api)
 
 
@@ -441,14 +442,14 @@ def test_emergency_disable_blocks_execution_and_records_no_decision() -> None:
     )
     api = make_api(settings=settings)
     view = api.presented()
-    api.call("PUT", DAVE, "/emergency-disable", json={"disabled": True, "reason": "drill"})
+    api.call("PUT", FRANK, "/emergency-disable", json={"disabled": True, "reason": "drill"})
     blocked = api.step(ALICE, _id(view), "confirm", {"confirmation_hash": _hash(view)})
     assert blocked.status_code == 409
     assert problem(blocked)["reason"] == "emergency_disabled"
 
     approval = make_api()
     pending = approval.awaiting_approval()
-    approval.call("PUT", DAVE, "/emergency-disable", json={"disabled": True, "reason": "drill"})
+    approval.call("PUT", FRANK, "/emergency-disable", json={"disabled": True, "reason": "drill"})
     refused = _approve(approval, pending)
     assert refused.status_code == 409 and problem(refused)["reason"] == "emergency_disabled"
     assert asyncio.run(approval.hitl.decisions(pending["review_item_id"])) == []
