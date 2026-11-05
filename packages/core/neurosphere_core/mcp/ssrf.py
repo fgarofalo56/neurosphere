@@ -13,11 +13,14 @@ Blocked (clarification 10 plus the ranges no public MCP server can legitimately 
   172.16/12, 192.0.0/24, 192.0.2/24, 192.88.99/24, 192.168/16, 198.18/15, 198.51.100/24,
   203.0.113/24, 224/4 (multicast), 240/4 and 255.255.255.255, Azure platform 168.63.129.16, and
   anything else :attr:`ipaddress.IPv4Address.is_global` rejects.
-* IPv6: ::/128, ::1, the IPv4-compatible block ::/96, fe80::/10, fec0::/10, fc00::/7, ff00::/8,
-  100::/64, 2001::/23 (incl. Teredo), 2001:db8::/32, 2002::/16 (6to4), 64:ff9b:1::/48, and
-  anything else that is not global. IPv4-mapped addresses (``::ffff:a.b.c.d``) are judged and
-  pinned as the embedded IPv4 address; NAT64 ``64:ff9b::/96`` is refused when the embedded IPv4
-  address is blocked.
+* IPv6: ::/128, ::1, the IPv4-compatible block ::/96, the SIIT IPv4-translated block
+  ::ffff:0:0:0/96 (RFC 2765/6052), fe80::/10, fec0::/10, fc00::/7, ff00::/8, 100::/64,
+  2001::/23 (incl. Teredo), 2001:db8::/32, 2002::/16 (6to4), 64:ff9b:1::/48, the SRv6 SID block
+  5f00::/16 (RFC 9602), and anything else that is not global. IPv4-mapped addresses
+  (``::ffff:a.b.c.d``) are judged and pinned as the embedded IPv4 address, so every IPv4 rule
+  above applies to its mapped form; NAT64 ``64:ff9b::/96`` is refused when the embedded IPv4
+  address is blocked. The explicit list does not rely on :mod:`ipaddress` registry tables,
+  which differ between Python releases.
 
 There is no per-server override (private MCP servers are a recorded follow-up).
 """
@@ -83,6 +86,7 @@ _V6: Final[tuple[tuple[ipaddress.IPv6Network, str], ...]] = tuple(
         ("::/128", "unspecified"),
         ("::1/128", "loopback"),
         ("::/96", "ipv4_compatible"),
+        ("::ffff:0:0:0/96", "ipv4_translated"),
         ("fe80::/10", "link_local"),
         ("fec0::/10", "site_local"),
         ("fc00::/7", "unique_local"),
@@ -92,6 +96,7 @@ _V6: Final[tuple[tuple[ipaddress.IPv6Network, str], ...]] = tuple(
         ("2001:db8::/32", "documentation"),
         ("2002::/16", "6to4"),
         ("64:ff9b:1::/48", "nat64_local"),
+        ("5f00::/16", "srv6_sid"),
     )
 )
 _NAT64: Final = ipaddress.IPv6Network("64:ff9b::/96")

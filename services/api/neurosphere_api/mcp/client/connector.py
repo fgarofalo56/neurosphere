@@ -16,6 +16,9 @@
 5. Results come back as :class:`~neurosphere_core.mcp.ExternalToolResult`: bounded, untrusted
    data with provenance. This module does not import the action plane, so no code path turns a
    result into an action draft or confirmation.
+6. Errors keep their retry semantics: an external 401/403 is ``forbidden``
+   (``mcp_auth_rejected``, the platform credential was refused, retrying cannot help); DNS,
+   network, timeout and 5xx failures stay ``dependency_transient``.
 
 No token passthrough: no method accepts a request, header or token. Outbound credentials, if
 any, come from the injected :class:`~neurosphere_core.mcp.OutboundCredentialProvider`. The SDK
@@ -60,6 +63,7 @@ from neurosphere_core.mcp import (
     build_external_result,
     check_boundary,
     check_callable,
+    check_credential_headers,
     normalize_server_url,
     validate_manifest,
     vet_target,
@@ -70,6 +74,7 @@ from neurosphere_core.mcp.errors import (
     INVALID_TOOL_ARGUMENTS,
     INVALID_TOOL_RESULT,
     MANIFEST_TOO_LARGE,
+    MCP_AUTH_REJECTED,
     MCP_SERVER_DISABLED,
     MCP_SERVER_UNAVAILABLE,
     MISSING_DATA_READ,
@@ -129,12 +134,10 @@ def _find_ns_error(exc: BaseException) -> NeuroSphereError | None:
 
 
 def _validated_headers(headers: Mapping[str, str]) -> dict[str, str]:
-    checked: dict[str, str] = {}
-    for name, value in headers.items():
-        lowered = name.strip().lower()
-        if not lowered or lowered in _RESERVED_HEADERS or any(c in value for c in "\r\n\0"):
-            raise forbidden(MCP_EGRESS_REFUSED, "outbound credential headers are not allowed")
-        checked[lowered] = value
+    """Syntax first (``invalid_schema``: CR/LF, bad token...), then the reserved-name policy."""
+    checked = check_credential_headers(headers)
+    if any(name in _RESERVED_HEADERS for name in checked):
+        raise forbidden(MCP_EGRESS_REFUSED, "outbound credential headers are not allowed")
     return checked
 
 
@@ -184,7 +187,11 @@ class ExternalMcpClient:
     # -- session ------------------------------------------------------------------------------
 
     @asynccontextmanager
-    async def _session(self, server: RegisteredServer) -> AsyncIterator[_Session]:
+    async def _session(
+        self, server: RegisteredServer, guards: builtins.list[GuardedTransport]
+    ) -> AsyncIterator[_Session]:
+        """Open a guarded SDK session. ``guards`` receives the guard as soon as it exists, so a
+        failure during the SDK handshake (a 401 on ``initialize``) is still translated from it."""
         self._check_server(server)
         url = normalize_server_url(server.url)
         target = await vet_target(
@@ -197,6 +204,7 @@ class ExternalMcpClient:
             credential_headers=headers,
             max_response_bytes=self._limits.max_response_bytes,
         )
+        guards.append(guard)
         timeout = httpx2.Timeout(
             connect=self._limits.connect_timeout_seconds,
             read=self._limits.read_timeout_seconds,
@@ -236,6 +244,10 @@ class ExternalMcpClient:
             if kind == "egress_refused":
                 return forbidden(MCP_EGRESS_REFUSED, "the server attempted a request off its URL")
             return invalid(MCP_RESPONSE_TOO_LARGE, "the server response exceeded the size bound")
+        if guard is not None and guard.auth_rejected:
+            # 401/403 from the external server: the platform's own credential was refused.
+            # Retrying cannot help, so this is ``forbidden``, never ``dependency_transient``.
+            return forbidden(MCP_AUTH_REJECTED, "the MCP server rejected the platform credential")
         if isinstance(exc, ValidationError):
             reason = INVALID_MANIFEST if phase == "manifest" else INVALID_TOOL_RESULT
             return invalid(reason, "the server returned a malformed MCP message")
@@ -271,14 +283,13 @@ class ExternalMcpClient:
     async def fetch_manifest(self, server_id: str) -> ValidatedManifest:
         """Connect and return the server's validated live manifest (nothing is stored)."""
         server = await self._registry.require(server_id)
-        guard: GuardedTransport | None = None
+        guards: builtins.list[GuardedTransport] = []
         try:
             with anyio.fail_after(self._limits.operation_timeout_seconds):
-                async with self._session(server) as session:
-                    guard = session.guard
+                async with self._session(server, guards) as session:
                     return await self._manifest(session)
         except Exception as exc:
-            raise self._translate(exc, guard, "manifest") from None
+            raise self._translate(exc, guards[0] if guards else None, "manifest") from None
 
     async def sync_tools(self, server_id: str, *, if_match: str | None = None) -> SyncResult:
         """Fetch the live manifest and apply it (new tools pending, changed hashes revoked).
@@ -313,12 +324,11 @@ class ExternalMcpClient:
             live_hash=stored.entry.tool_hash if stored else None,
             policy=self._registry.policy,
         )
-        guard: GuardedTransport | None = None
+        guards: builtins.list[GuardedTransport] = []
         phase: Phase = "manifest"
         try:
             with anyio.fail_after(self._limits.operation_timeout_seconds):
-                async with self._session(server) as session:
-                    guard = session.guard
+                async with self._session(server, guards) as session:
                     manifest = await self._manifest(session)
                     live = manifest.by_name().get(tool_name)
                     record = await self._check_live(server, tool_name, live, manifest)
@@ -326,7 +336,7 @@ class ExternalMcpClient:
                     result = await session.client.call_tool(tool_name, payload)
                     dumped = result.model_dump(mode="json", by_alias=True)
         except Exception as exc:
-            raise self._translate(exc, guard, phase) from None
+            raise self._translate(exc, guards[0] if guards else None, phase) from None
         provenance = ExternalToolProvenance(
             server_id=server.id,
             server_url=server.url,

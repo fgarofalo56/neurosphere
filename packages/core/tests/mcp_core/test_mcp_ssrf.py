@@ -80,6 +80,12 @@ BLOCKED_ADDRESSES = [
     "2002:7f00:1::1",
     "2001::1",
     "fec0::1",
+    # SIIT IPv4-translated (::ffff:0:a.b.c.d) and SRv6 SIDs (issue #112)
+    "::ffff:0:7f00:1",
+    "::ffff:0:a9fe:a9fe",
+    "::ffff:0:5db8:d70e",  # even a translated PUBLIC address: the whole /96 is refused
+    "5f00::1",
+    "5f00:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
 ]
 
 PUBLIC_ADDRESSES = [PUBLIC_V4, "20.42.65.92", "8.8.8.8", PUBLIC_V6, "::ffff:93.184.215.14"]
@@ -292,7 +298,7 @@ def test_only_exact_https_urls_parse(url: str) -> None:
         ),
         ("https://mcp.example.com", "https://mcp.example.com/", "mcp.example.com", 443),
         (
-            "https://bücher.example/mcp",
+            "https://xn--bcher-kva.example/mcp",
             "https://xn--bcher-kva.example/mcp",
             "xn--bcher-kva.example",
             443,

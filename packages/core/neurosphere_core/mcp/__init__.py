@@ -24,7 +24,11 @@ from neurosphere_core.mcp.models import (
     ToolRecord,
     compute_tool_hash,
 )
-from neurosphere_core.mcp.outbound_auth import NoOutboundCredentials, OutboundCredentialProvider
+from neurosphere_core.mcp.outbound_auth import (
+    NoOutboundCredentials,
+    OutboundCredentialProvider,
+    check_credential_headers,
+)
 from neurosphere_core.mcp.registry import (
     HASH_CHANGED,
     apply_approval,
@@ -95,6 +99,7 @@ __all__ = [
     "build_external_result",
     "check_boundary",
     "check_callable",
+    "check_credential_headers",
     "compute_tool_hash",
     "create_mcp_server_container",
     "new_registration",
