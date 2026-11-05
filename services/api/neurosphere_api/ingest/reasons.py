@@ -24,6 +24,10 @@ class ReasonCode(StrEnum):
     INVALID_METRIC_VALUE = "invalid_metric_value"
     INVALID_CLOUDEVENT = "invalid_cloudevent"
     UNSUPPORTED_EVENT_TYPE = "unsupported_event_type"
+    # Cost data request_id disagrees with the nsrequestid extension (#31).
+    REQUEST_ID_MISMATCH = "request_id_mismatch"
+    # kind=invoiced from a producer source not registered as billing (#27).
+    INVOICED_NOT_BILLING = "invoiced_not_billing"
     # Per-item "ignored": valid input that the documented subset does not map.
     UNSUPPORTED_METRIC_TYPE = "unsupported_metric_type"
     UNMAPPED_METRIC_NAME = "unmapped_metric_name"

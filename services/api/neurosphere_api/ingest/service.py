@@ -286,6 +286,25 @@ class IngestService:
                 rejected.append(RejectedItem(index=index, reason_code=exc.reason))
         return await self._finish(messages, rejected, [], dropped)
 
+    @staticmethod
+    def _cost_request_id(event: CloudEvent, data: dict[str, Any]) -> str | None:
+        """Attribution request id of a cost event (#31). Removes ``request_id`` from ``data``
+        (the CostRecord contract has no such field).
+
+        The ``nsrequestid`` extension is canonical. A ``request_id`` inside the data that
+        disagrees with it is rejected (``request_id_mismatch``); when only the data one is
+        present it is used for attribution. A non-string or out-of-range value is
+        ``invalid_event``. See docs/runbooks/ingest-cost-attribution.md.
+        """
+        if "request_id" not in data:
+            return event.request_id
+        value = data.pop("request_id")
+        if not isinstance(value, str) or not 0 < len(value) <= 256:
+            raise om.MappingError(ReasonCode.INVALID_EVENT)
+        if event.request_id is not None and event.request_id != value:
+            raise om.MappingError(ReasonCode.REQUEST_ID_MISMATCH)
+        return value
+
     def _cloudevent_message(
         self, producer: ProducerRegistration, item: Any, received_at: str
     ) -> HubMessage:
@@ -319,15 +338,18 @@ class IngestService:
                 return self._telemetry_message(producer, scope, telemetry, received_at)
             if data.get("observation_source") not in (None, producer.sources[scope.source_id]):
                 raise _forbidden(ReasonCode.CLAIM_MISMATCH)
+            request_id = self._cost_request_id(event, data)
             cost = CostRecord.model_validate(data)
         except ValidationError as exc:
             raise om.MappingError(ReasonCode.INVALID_EVENT) from exc
+        if cost.kind == "invoiced" and producer.sources[scope.source_id] != "billing":
+            raise om.MappingError(ReasonCode.INVOICED_NOT_BILLING)
         return self._message(
             producer,
             kind=HubMessageKind.COST,
             event_id=cost.cost_id.root,
             scope=scope,
             received_at=received_at,
-            request_id=event.request_id,
+            request_id=request_id,
             data=cost.model_dump(mode="json"),
         )

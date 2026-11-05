@@ -24,6 +24,19 @@ def _config_error(pointer: str, detail: str) -> InvalidSchemaError:
     return InvalidSchemaError(detail, errors=[ValidationIssue(pointer, detail)], reason="config")
 
 
+def require_sink_cloud(settings: Settings) -> str:
+    """The cloud name sinks stamp on data; fail closed when it is unset (issue #30).
+
+    Mirrors ``Settings.cloud_profile``: only NS_ENV=local may fall back to commercial. Anywhere
+    else an unset cloud is a startup error, never a silent commercial default.
+    """
+    if settings.cloud is not None:
+        return settings.cloud.value
+    if settings.env == "local":
+        return CloudName.COMMERCIAL.value
+    raise _config_error("/cloud", "NS_CLOUD is required outside NS_ENV=local")
+
+
 def create_archive_sink(
     settings: Settings,
     archive: ArchiveSettings,
@@ -32,6 +45,7 @@ def create_archive_sink(
     credential: AsyncTokenCredential | None = None,
 ) -> BlobArchiveSink:
     """One sink for this deployment's cloud and its single archive storage account."""
+    cloud = require_sink_cloud(settings)
     if settings.env == "local":
         conn = os.environ.get(ENV_BLOB_CONNECTION_STRING)
         if not conn:
@@ -47,7 +61,6 @@ def create_archive_sink(
         url = blob_account_url(settings.cloud_profile, archive.storage_account)
         client = ContainerClient(url, archive.container, credential=credential)
     lifetime.register(client)
-    cloud = (settings.cloud or CloudName.COMMERCIAL).value
     return BlobArchiveSink(
         client, cloud=cloud, pseudonym_key=resolve_pseudonym_key(archive, env=settings.env)
     )

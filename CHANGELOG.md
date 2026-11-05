@@ -7,6 +7,9 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Telemetry ingestion and cost ledger audit close-out (PRP-07 items 7-9): compose workers wired for
+  ingestion with a synthetic price table, hardened normalizer ids and watermark, billing-only
+  `invoiced`, collision-safe ledger ids (v2 id upgrade, no migration). Live Commercial run is an open gate.
 - Runtime composition (PRP-35): ingest producers config for compose and Helm, an idempotent
   profile-gated catalog seeder that refuses outside `NS_ENV=local`, `NS_SEARCH_PROVIDER`
   (fixture, azure or unset) with a catalog indexer, and Foundry model-swap and APIM gateway

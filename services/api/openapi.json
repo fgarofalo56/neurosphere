@@ -9986,6 +9986,8 @@
           "invalid_metric_value",
           "invalid_cloudevent",
           "unsupported_event_type",
+          "request_id_mismatch",
+          "invoiced_not_billing",
           "unsupported_metric_type",
           "unmapped_metric_name",
           "unsupported_temporality"

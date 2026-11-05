@@ -1,11 +1,12 @@
 ---
 name: prp-07-telemetry-ingestion-and-cost-ledger
-status: backlog
+status: shipped
+shipped: 2026-11-04
+pr: 166
 priority: P0
 order: 5
-started: 2026-10-15
-pr: 34
-branch: prp-07-telemetry-ingestion
+started: 2026-11-04
+branch: prp-07-audit-closeout
 review: required
 created: 2026-10-08
 model: sonnet
@@ -288,7 +289,15 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 | 3 | merged | worktree-agent-a7c1d896e714f0656 | sonnet | ruff/pyright clean, workers tests 127 passed (with item 4); d8b2502, merge f5aa559 | 2026-10-15 |
 | 4 | merged | worktree-agent-a1a457d1abaa8f545 | sonnet | ruff/pyright clean, workers tests 106 passed; 0a001f5, merge 0fc911b | 2026-10-15 |
 | 5 | merged | worktree-agent-ac7e6423d9445430f | sonnet | ruff/pyright clean; combined core+api+workers 1042 passed; e46ef30, merge 6c3d666 | 2026-10-16 |
-| 6 | merged | worktree-agent-a3ff0a57803768b63 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker (retry_count/retry_amount fabricated 0 for unreported retry_attempt); rework 136f109 (merge b6c53e2) confirmed by Haiku pass; post-rework unit 1059 passed, integration 14 passed vs compose; 5 non-blocking findings -> follow-ups. Earlier: | scope expanded at operator decision 2026-10-16 (code wiring; compose service wiring is a follow-up). Orchestrator re-run on integration branch: unit 1056 passed; `pytest tests/integration/ingestion -m integration` 14 passed vs compose emulators; live 2 skipped OPEN; verify-gates full PASS 4/4; validate_planning PASS; Snyk 0 issues. c9694a4, merge 0f76227 | 2026-10-16 |
+| 6 | merged | worktree-agent-a3ff0a57803768b63 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker (retry_count/retry_amount fabricated 0 for unreported retry_attempt); rework 136f109 (merge b6c53e2) confirmed by Haiku pass; post-rework unit 1059 passed, integration 14 passed vs compose; 5 non-blocking findings -> follow-ups. Scope expanded at operator decision 2026-10-16 (code wiring; compose service wiring is a follow-up). Orchestrator re-run on integration branch: unit 1056 passed; `pytest tests/integration/ingestion -m integration` 14 passed vs compose emulators; live 2 skipped OPEN; verify-gates full PASS 4/4; validate_planning PASS; Snyk 0 issues. c9694a4, merge 0f76227 | 2026-10-16 |
+
+### Audit close-out items (added at plan approval, 2026-11-04)
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| 7 | merged | worktree-agent-a29854971ce64e928 | sonnet | compose/price-table tests 18 passed, ruff clean; not run against live compose; 3d6fb41, merge b07a1f8 | 2026-11-04 |
+| 8 | merged | worktree-agent-aaf033b78fa7f1e5b | sonnet | ruff/pyright clean; api+core+workers 4415 passed on integration branch (item reported hypothesis too-slow flake once, unreproduced); openapi.json regenerated; af98026, merge 7293619 | 2026-11-04 |
+| 9 | merged | worktree-agent-a3dc43a0bc63e702c | sonnet | ruff/pyright clean; core+workers 2915 passed (re-run on integration branch); #28 ingestion doc id v2 no migration; f542240, merge 9e095d3 | 2026-11-04 |
 
 ## Completion note (filled at ship)
 
@@ -306,6 +315,14 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: none. Compose service wiring deferred to #26 by operator decision.
 - Open gates / untested live items: live Commercial run (real Event Hubs with Entra, real Cosmos partitioning and throughput) did not run, OPEN (`tests/integration/ingestion/test_live_commercial.py`, needs NS_LIVE_APPROVED=1). Government runtime behaviour untested beyond static endpoint assertions and emulator cloud isolation; Government Event Hubs data geo-replication unverified (G01). G12 narrowed with recorded emulator deltas in docs/RESEARCH-AND-GATES.md. No load or throughput claim (PRP-21).
 - Follow-ups: #26 compose wiring, #27 invoiced only from billing producers, #28 doc_id collision-safe join, #29 watermark/late-flag skew, #30 wiring cloud fallback fail-closed, #31 cost request_id source, #32 hypothesis for payload property test, #33 duplicate-event metric.
+
+### Audit close-out (2026-11-04)
+
+- Date: 2026-11-04. PR #166 (branch prp-07-audit-closeout), CI green. Items 7-9 merged: 3d6fb41 (merge b07a1f8), f542240 (merge 9e095d3), af98026 (merge 7293619), plus 22bf9c4 (API reference regeneration, price-table mount pin, v2 id upgrade note).
+- Follow-ups addressed by the code: #26 compose wiring (item 7), #27, #28, #31 (item 8), #29, #30, #32, #33 (item 9). The GitHub issues were still OPEN at close-out and need closing against the merged commits.
+- Deviation: three image scans failed on four unfixable High sqlite-libs CVEs in the pinned Alpine base. Handled outside this PRP by PR #170 (`.grype.yaml`, scoped ignore with re-check trigger); removal tracked in #171.
+- Still OPEN: live Commercial run (needs NS_LIVE_APPROVED=1), compose wiring not run against live compose, Entra-token producer auth not built, outbox to projections to dashboards link not traced.
+- Descoped: none.
 
 ## Audit 2026-11-04
 

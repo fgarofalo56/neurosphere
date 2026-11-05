@@ -213,7 +213,17 @@ services:
       # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
       NS_FOUNDRY_ENABLED: "false"
       NS_APIM_ENABLED: "false"
+      # Ingestion role (PRP-07): names match infra/compose/eventhubs.config.json. Emulator
+      # clients come from the bootstrap-built NS_EVENTHUBS_/NS_BLOB_ connection strings.
+      NS_INGESTION_EVENTHUB_NAME: telemetry
+      NS_INGESTION_CONSUMER_GROUP: normalizer
+      NS_INGESTION_COSMOS_DATABASE: neurosphere
+      NS_INGESTION_CHECKPOINT_CONTAINER: ns-ingestion-checkpoints
+      NS_QUARANTINE_CONTAINER: ns-quarantine
+      # Synthetic price sheet; without it every estimate is price_unresolved.
+      NS_LEDGER_PRICE_TABLE_FILE: /etc/neurosphere/ledger-prices.json
     volumes:
+      - ./infra/dev/ledger-prices.dev.json:/etc/neurosphere/ledger-prices.json:ro
       # Generated sandbox output (`make sandbox-generate`, run first by `make stack-up`).
       - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
       - ./sandbox/evaluation/data:/data/evaluation:ro

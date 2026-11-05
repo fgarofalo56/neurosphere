@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 from neurosphere_core.payload import (
@@ -130,6 +131,71 @@ def test_claim_mismatch_in_batch_publishes_nothing(harness: Harness) -> None:
     resp = send(harness, batch, BATCH)
     assert resp.status_code == 403
     assert harness.publisher.messages == []
+
+
+def invoiced_data(cost_id: str, source: str) -> dict[str, Any]:
+    data = cost_data(cost_id)
+    data.update(
+        kind="invoiced",
+        observation_source=source,
+        billing_period={"start_date": "2026-10-01", "end_date": "2026-10-31"},
+    )
+    for key in ("price_version", "price_effective_date"):
+        data.pop(key)
+    return data
+
+
+def test_invoiced_from_non_billing_producer_is_rejected_per_event(harness: Harness) -> None:
+    batch = [
+        ce(CLOUDEVENT_TYPE_COST, invoiced_data("cost-inv", "application"), "ce-1"),
+        ce(CLOUDEVENT_TYPE_COST, cost_data("cost-est"), "ce-2"),
+    ]
+    resp = send(harness, batch, BATCH)
+    assert resp.status_code == 202
+    assert resp.json()["rejected"] == [{"index": 0, "reason_code": "invoiced_not_billing"}]
+    assert [m.event_id for m in harness.publisher.messages] == ["cost-est"]
+
+
+def test_invoiced_from_billing_producer_is_accepted(
+    make_harness: Callable[..., Harness],
+) -> None:
+    h = make_harness(reg={"sources": {SOURCE: "billing"}})
+    resp = send(h, ce(CLOUDEVENT_TYPE_COST, invoiced_data("cost-inv", "billing")), STRUCTURED)
+    assert resp.status_code == 202
+    assert resp.json()["accepted"] == 1
+    assert h.publisher.messages[0].observation_kind == "billing"
+
+
+def test_cost_data_request_id_mismatch_is_rejected(harness: Harness) -> None:
+    data = cost_data("cost-3")
+    data["request_id"] = "req-data"
+    event = ce(CLOUDEVENT_TYPE_COST, data, **{REQUEST_ID_EXTENSION: "req-ext"})
+    resp = send(harness, event, STRUCTURED)
+    assert resp.status_code == 202
+    assert resp.json()["rejected"] == [{"index": 0, "reason_code": "request_id_mismatch"}]
+    assert harness.publisher.messages == []
+
+
+def test_cost_data_request_id_alone_or_matching_attributes(harness: Harness) -> None:
+    only_data = cost_data("cost-4")
+    only_data["request_id"] = "req-data"
+    both = cost_data("cost-5")
+    both["request_id"] = "req-ext"
+    batch = [
+        ce(CLOUDEVENT_TYPE_COST, only_data, "ce-1"),
+        ce(CLOUDEVENT_TYPE_COST, both, "ce-2", **{REQUEST_ID_EXTENSION: "req-ext"}),
+    ]
+    resp = send(harness, batch, BATCH)
+    assert resp.json()["accepted"] == 2
+    assert [m.request_id for m in harness.publisher.messages] == ["req-data", "req-ext"]
+    assert all("request_id" not in m.data for m in harness.publisher.messages)
+
+
+def test_cost_data_request_id_wrong_type_is_invalid_event(harness: Harness) -> None:
+    data = cost_data("cost-6")
+    data["request_id"] = 5
+    resp = send(harness, ce(CLOUDEVENT_TYPE_COST, data), STRUCTURED)
+    assert resp.json()["rejected"] == [{"index": 0, "reason_code": "invalid_event"}]
 
 
 def test_media_type_and_shape_errors(harness: Harness) -> None:

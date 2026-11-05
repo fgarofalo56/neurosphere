@@ -66,7 +66,12 @@ def test_workers_mount_sandbox_data_read_only_for_recommendations_and_evaluation
     assert env["NS_WORKER_REC_DATA_DIR"] == "/data/sandbox"
     assert env["NS_WORKER_EVAL_DATA_DIR"] == "/data/evaluation"
     mounts = {v.rsplit(":", 2)[-2]: v for v in workers["volumes"]}
-    assert set(mounts) == {"/data/sandbox", "/data/evaluation"}
+    # PRP-07 audit close-out: the synthetic ledger price table is the third (read-only) mount.
+    assert set(mounts) == {
+        "/data/sandbox",
+        "/data/evaluation",
+        "/etc/neurosphere/ledger-prices.json",
+    }
     assert all(v.endswith(":ro") for v in mounts.values())
     assert mounts["/data/evaluation"].startswith("./sandbox/evaluation/data:")
 

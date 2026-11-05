@@ -1,0 +1,17 @@
+{
+  "versions": [
+    {
+      "price_version_id": "synthetic-dev-2026-01",
+      "effective_date": "2026-01-01",
+      "currency": "USD",
+      "source": "SYNTHETIC dev price sheet for the local emulator stack. Not a real price list; never use for cost reporting.",
+      "rates": [
+        {
+          "provider": "azure_openai",
+          "model": "synthetic-model",
+          "rate": { "input": "1.00", "output": "2.00", "cached": "0.50" }
+        }
+      ]
+    }
+  ]
+}

@@ -134,6 +134,28 @@ async def test_billing_without_request_id_is_a_vendor_period_allocation() -> Non
     assert [c.entity for c in changes] == ["allocation"]
 
 
+async def test_invoiced_from_non_billing_producer_is_not_folded() -> None:
+    rig = Rig()
+    harness = rig.harness()
+    gw = model_call("evt-gw")
+    fake = cost_doc("cost-fake", amount="0.01")  # kind=invoiced, stamped by an application producer
+
+    await process_batch(
+        [
+            raw_message(gw, 0, kind="telemetry", observation_kind="gateway"),
+            raw_message(fake, 1, kind="cost", observation_kind="application", request_id="req-1"),
+        ],
+        harness.deps(),
+        settings(),
+    )
+
+    stored = await _entry(rig, gw)
+    assert stored is not None
+    assert stored.entry.invoiced_amount is None
+    assert stored.entry.authoritative_kind == "estimated"
+    assert len(stored.entry.observations) == 1
+
+
 @pytest.mark.parametrize("crash_in", ["event", "ledger_change"])
 async def test_crash_between_ledger_upsert_and_outbox_write_then_redelivery(
     crash_in: str,
