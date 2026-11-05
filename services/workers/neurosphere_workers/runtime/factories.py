@@ -508,7 +508,9 @@ def actions_role(
         hitl,
         actions,
         auditor=auditor,
-        customer_id=cfg.auth.resolved_customer_id(cfg.settings.env),
+        # cfg.customer_id raises RoleConfigError rather than yielding None: the runtime must never
+        # build an unscoped (all-customer) sweep.
+        customer_id=cfg.customer_id,
     )
     return MultiWorkerRole([executor_worker, reconcile], idle_seconds=cfg.worker.poll_seconds)
 
