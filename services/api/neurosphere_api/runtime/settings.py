@@ -6,6 +6,8 @@
   The emulator endpoint and key keep ``NS_COSMOS_ENDPOINT``/``NS_COSMOS_KEY`` (local only,
   read by ``neurosphere_core.clients``).
 * ``NS_CORS_*`` (:class:`CorsSettings`): the optional exact-origin allow-list.
+* ``NS_AUDIT_SIEM_*`` (:class:`AuditSiemSettings`): the optional SIEM export sink for audit
+  records (``none`` by default; ``stdout`` or a local JSON-lines ``file``).
 
 Comma lists (``NS_AUTH_AUDIENCES``, ``NS_CORS_ALLOWED_ORIGINS``) are plain ``a,b`` strings, not
 JSON. The shared core ``Settings`` (``NS_ENV``/``NS_CLOUD``) is not extended here.
@@ -13,16 +15,18 @@ JSON. The shared core ``Settings`` (``NS_ENV``/``NS_CLOUD``) is not extended her
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Final
+from pathlib import Path
+from typing import Annotated, Any, Final, Literal, Self
 from urllib.parse import urlsplit
 
 from neurosphere_core.auth.scope import DEFAULT_POLICY_CONTAINER
 from neurosphere_core.stores import DEFAULT_DATABASE
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 __all__ = [
     "LOCAL_DEFAULT_CUSTOMER_ID",
+    "AuditSiemSettings",
     "AuthSettings",
     "CorsSettings",
     "StoreSettings",
@@ -112,3 +116,36 @@ class CorsSettings(BaseSettings):
     @classmethod
     def _exact(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(dict.fromkeys(_exact_origin(origin) for origin in value))
+
+
+class AuditSiemSettings(BaseSettings):
+    """``NS_AUDIT_SIEM_SINK`` (``none`` | ``stdout`` | ``file``) and ``NS_AUDIT_SIEM_FILE_PATH``.
+
+    Every sink receives only ``to_siem_event`` output (redacted again at export) and needs no
+    network or secret. ``file`` appends JSON lines to a local path and requires the path.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_AUDIT_SIEM_", frozen=True, extra="forbid")
+
+    sink: Literal["none", "stdout", "file"] = "none"
+    file_path: Path | None = None
+
+    @field_validator("sink", mode="before")
+    @classmethod
+    def _normalized_sink(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return value.strip().lower() or "none"
+        return value
+
+    @field_validator("file_path", mode="before")
+    @classmethod
+    def _blank_path_is_unset(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @model_validator(mode="after")
+    def _file_needs_path(self) -> Self:
+        if self.sink == "file" and self.file_path is None:
+            raise ValueError("NS_AUDIT_SIEM_SINK=file requires NS_AUDIT_SIEM_FILE_PATH")
+        return self
