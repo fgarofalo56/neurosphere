@@ -494,12 +494,26 @@ class ActionService:
             envelope_updates={"execution": ExecutionRecord(updated_at=at)},
         )
 
-    async def link_review_item(self, key: IntentKey, review_item_id: str) -> StoredIntent:
-        """Attach the maker-checker review item id (no state change; ``awaiting_approval``)."""
+    async def link_review_item(
+        self, key: IntentKey, review_item_id: str, *, only_if_unlinked: bool = False
+    ) -> StoredIntent:
+        """Attach the maker-checker review item id (no state change; ``awaiting_approval``).
+
+        ``only_if_unlinked`` (the review-reconcile sweep re-linking an orphan): refuse with
+        ``review_link_not_allowed`` when the intent already links a DIFFERENT item, so a repair
+        never replaces a link written meanwhile; the same id is a no-op. The replace stays
+        ETag-conditional either way.
+        """
         stored = await self.get(key)
         if stored.state != "awaiting_approval":
             raise ActionValidationError(
                 "review_link_not_allowed", "intent is not awaiting approval"
+            )
+        if only_if_unlinked and stored.review_item_id is not None:
+            if stored.review_item_id == review_item_id:
+                return stored
+            raise ActionValidationError(
+                "review_link_not_allowed", "intent already links another review item"
             )
         return await self._store.replace(
             stored.model_copy(update={"review_item_id": review_item_id}),

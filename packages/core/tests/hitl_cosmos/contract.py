@@ -93,6 +93,25 @@ def make_item(
     )
 
 
+def make_maker_checker(
+    *, domain: str = DOMAIN, customer: str = CUSTOMER, created: datetime = T0
+) -> ReviewItem:
+    maker = Actor.model_validate(
+        {"principal_pseudonym": "p-maker", "principal_kind": "user", "on_behalf_of": None}
+    )
+    return ReviewItem.model_validate(
+        {
+            **make_item(domain=domain, customer=customer, created=created).model_dump(mode="json"),
+            "kind": "maker_checker",
+            "action_kind": "model_swap",
+            "intent_id": new_id(),
+            "confirmation_hash": "sha256:" + hashlib.sha256(b"x").hexdigest(),
+            "maker_principal_id": f"commercial:{customer}:entra:person:psn_maker",
+            "maker": maker,
+        }
+    )
+
+
 def make_decision(
     item_id: str, decision_id: str | None = None, reason: str = "ok"
 ) -> dict[str, Any]:
@@ -267,6 +286,49 @@ class HitlStoreContract:
         assert found == created
         assert found is not None and found.maker == maker
 
+    async def test_open_maker_checker_lists_open_items_oldest_first_and_pages(
+        self, store: HitlStore
+    ) -> None:
+        made = [
+            await store.create(make_maker_checker(created=T0 + timedelta(minutes=m)))
+            for m in (3, 1, 2)
+        ]
+        other_customer = await store.create(
+            make_maker_checker(
+                domain=OTHER_CUSTOMER_DOMAIN, customer=OTHER_CUSTOMER, created=T0 + timedelta(1)
+            )
+        )
+        await store.create(make_item())  # insight kinds are never listed
+        closed = await store.create(make_maker_checker(created=T0 - timedelta(hours=1)))
+        assert closed.etag is not None
+        await store.replace(transition(closed, "expired"), if_match=closed.etag)
+        by_age = [i.item_id for i in sorted(made, key=lambda i: i.created_at)]
+        refs = await store.open_maker_checker()
+        assert [r.item_id for r in refs] == [*by_age, other_customer.item_id]
+        first = await store.open_maker_checker(limit=2)
+        assert [r.item_id for r in first] == by_age[:2]
+        rest = await store.open_maker_checker(after=first[-1].position, limit=2)
+        assert [r.item_id for r in rest] == [by_age[2], other_customer.item_id]
+        assert await store.open_maker_checker(after=rest[-1].position) == []
+        mine = await store.open_maker_checker(customer_id=CUSTOMER)
+        assert [r.item_id for r in mine] == by_age
+        for bad in (0, 501):
+            with pytest.raises(InvalidSchemaError):
+                await store.open_maker_checker(limit=bad)
+
+    async def test_open_maker_checker_keeps_approved_and_drops_final_states(
+        self, store: HitlStore
+    ) -> None:
+        created = await store.create(make_maker_checker())
+        assert created.etag is not None
+        approved = await store.replace(
+            transition(created, "approved", decided_at=T0), if_match=created.etag
+        )
+        assert [r.item_id for r in await store.open_maker_checker()] == [created.item_id]
+        assert approved.etag is not None
+        await store.replace(transition(approved, "executed"), if_match=approved.etag)
+        assert await store.open_maker_checker() == []
+
 
 class DecisionStoreContract:
     """Needs a ``rig`` fixture: ``(items, decisions)`` where ``decisions`` can resolve ``items``."""
@@ -348,6 +410,7 @@ __all__ = [
     "HitlStoreContract",
     "make_decision",
     "make_item",
+    "make_maker_checker",
     "make_scope",
     "new_id",
 ]

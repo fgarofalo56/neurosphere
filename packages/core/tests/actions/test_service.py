@@ -10,6 +10,7 @@ import pytest
 from neurosphere_core.actions import (
     ActionCaller,
     ActionService,
+    ActionValidationError,
     AuditRepositoryActionAuditor,
     ExecutionRecord,
     IntentKey,
@@ -411,6 +412,21 @@ async def test_link_review_item() -> None:
     linked = await h.service.link_review_item(waiting.key, "review-0001")
     assert linked.review_item_id == "review-0001"
     assert linked.state == "awaiting_approval"
+
+
+async def test_guarded_link_never_replaces_another_link() -> None:
+    h = Harness()
+    waiting = await h.awaiting_approval()
+    first = await h.service.link_review_item(waiting.key, "review-0001", only_if_unlinked=True)
+    assert first.review_item_id == "review-0001"
+    replaces = h.store.replace_calls
+    same = await h.service.link_review_item(waiting.key, "review-0001", only_if_unlinked=True)
+    assert same.review_item_id == "review-0001"
+    assert h.store.replace_calls == replaces  # same id: a no-op
+    with pytest.raises(ActionValidationError) as refused:
+        await h.service.link_review_item(waiting.key, "review-0002", only_if_unlinked=True)
+    assert refused.value.reason == "review_link_not_allowed"
+    assert (await h.current(waiting.key)).review_item_id == "review-0001"
 
 
 # -- execution bookkeeping (item 2 codes against this) ----------------------------------------
