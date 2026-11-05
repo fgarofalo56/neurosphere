@@ -1,13 +1,13 @@
 ---
 name: prp-17-action-executor-and-hitl
-status: backlog
+status: active
 priority: P1
 order: 1
 review: required
 created: 2026-10-08
-started: 2026-10-20
+started: 2026-11-05
 pr: 83
-branch: prp-17-action-executor-and-hitl
+branch: prp-17-audit-gaps
 model: opus
 phase: 3
 ns: NS-04, NS-06
@@ -292,3 +292,14 @@ Reopened after a deep audit (static read; no tests were run). Items 1-4 and 6 ar
 - `PUT /emergency-disable` is not customer-level.
 - A rejection during a policy outage leaves the intent stuck until expiry.
 - The "production bootstrap still to do" follow-up looks stale (`planes.py:240` calls `configure_action_plane`); confirm and close it.
+
+## Audit close-out execution (2026-11-05)
+
+Plan approved 2026-11-05 by the operator: lanes A+B+C plus a live G05 run (lane D), branch `prp-17-audit-gaps` off main. Audit claims checked against code before planning: the Cosmos HITL store exists (`neurosphere_core.hitl_cosmos`, wired in the API and worker runtimes) and `configure_action_plane` is called from `services/api/neurosphere_api/runtime/builders/planes.py`, so those two audit gaps are stale and are closed by verification in lane C. Notifiers stay stubs by design.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| A reconcile-sweep | todo | | opus | | 2026-11-05 |
+| B api-hardening | todo | | opus | | 2026-11-05 |
+| C wiring-and-close-stale | todo | | sonnet | | 2026-11-05 |
+| D g05-live-run | todo | | sonnet | | 2026-11-05 |

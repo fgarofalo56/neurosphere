@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-17-action-executor-and-hitl](active/PRP-17-action-executor-and-hitl.md) | P1 | 7/7 (100%) | merged 7 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-17-action-executor-and-hitl](backlog/PRP-17-action-executor-and-hitl.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-33-apim-gateway-observe](backlog/PRP-33-apim-gateway-observe.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
