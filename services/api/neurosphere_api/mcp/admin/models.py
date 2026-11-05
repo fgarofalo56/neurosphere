@@ -125,6 +125,9 @@ class ServerView(_Model):
 class ServerPage(_Model):
     items: list[ServerView]
     next_cursor: str | None = None
+    #: True when the registry returned its maximum scan (the store has no continuation token),
+    #: so further registrations may exist beyond the rows this listing can reach.
+    truncated: bool = False
 
 
 class ToolList(_Model):
