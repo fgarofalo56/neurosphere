@@ -12,7 +12,8 @@ Component                 ``app.state`` keys
 ``federation``            ``federation`` (this deployment's cell, served in-process)
 ``evaluation``            ``evaluation_store``, ``evaluation_pilot_dataset_ids``
 ``recommendations``       ``recommendation_store``
-``audit``                 ``audit_repository``
+``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink; an
+                          invalid setting is ``audit_siem_settings_invalid``)
 ``review_router``         ``review_router`` (HITL-backed; also builds and publishes the
                           ``HitlService``)
 ``replay``                ``trace_reader``, ``replay_payload_policy``
@@ -51,6 +52,7 @@ from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
+from neurosphere_core.audit.siem import JsonLinesFileSink, SiemExporter, SiemSink, StdoutSink
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
@@ -107,7 +109,7 @@ from neurosphere_api.runtime.builders import (
 from neurosphere_api.runtime.builders.blob import archive_container
 from neurosphere_api.runtime.builders.search import build_catalog_graph
 from neurosphere_api.runtime.pseudonym import resolve_pseudonym_key
-from neurosphere_api.runtime.settings import AuthSettings
+from neurosphere_api.runtime.settings import AuditSiemSettings, AuthSettings
 from neurosphere_api.sandbox.repository import CosmosSandboxStore, SandboxRepository
 
 __all__ = [
@@ -315,16 +317,34 @@ def _recommendations(ctx: BuildContext) -> None:
 # -- audit, HITL review router --------------------------------------------------------------
 
 
+def _siem_exporter() -> SiemExporter | None:
+    """``NS_AUDIT_SIEM_*``: the reference sink, or ``None`` (the default, no export)."""
+    try:
+        conf = AuditSiemSettings()
+    except ValidationError:
+        raise ComponentUnavailableError("audit_siem_settings_invalid") from None
+    sink: SiemSink
+    if conf.sink == "stdout":
+        sink = StdoutSink()
+    elif conf.sink == "file" and conf.file_path is not None:
+        sink = JsonLinesFileSink(conf.file_path)
+    else:
+        return None
+    return SiemExporter([sink])
+
+
 def _audit(ctx: BuildContext) -> None:
     repository = _backend(ctx, "audit_repository", AuditRepository)
     if repository is None:
+        exporter = _siem_exporter()
         repository = AuditRepository(
             CosmosAuditStore.from_client(
                 ctx.cosmos_client(),
                 database=ctx.store_settings().database,
                 container=AUDIT_CHAIN_CONTAINER,
                 tail_container=AUDIT_TAIL_CONTAINER,
-            )
+            ),
+            exporter=exporter,
         )
     ctx.app.state.audit_repository = repository
     ctx.publish(AUDIT_REPOSITORY, repository)

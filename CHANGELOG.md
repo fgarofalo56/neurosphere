@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Identity, authorization and audit close-out (PRP-06 audit gaps): denied attempts are audited in the
+  composed app with the request correlation id, the SIEM exporter is wired (`NS_AUDIT_SIEM_SINK`,
+  default `none`), the revocation hook registry no longer depends on the scope deriver, and the app
+  refuses to boot with a route that has no declared permission (websockets need an exact-path guard
+  entry). No admin revoke route yet; live token-expiry and revocation-TTL runs are open gates.
 - Telemetry ingestion and cost ledger audit close-out (PRP-07 items 7-9): compose workers wired for
   ingestion with a synthetic price table, hardened normalizer ids and watermark, billing-only
   `invoiced`, collision-safe ledger ids (v2 id upgrade, no migration). Live Commercial run is an open gate.

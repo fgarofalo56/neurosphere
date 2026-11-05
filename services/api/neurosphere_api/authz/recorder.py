@@ -25,7 +25,13 @@ SAFE_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
 
 @dataclass(frozen=True, slots=True)
 class DeniedAttempt:
-    """Metadata only (C11): no token, no body, no raw object id. ``scope`` is server-derived."""
+    """Metadata only (C11): no token, no body, no raw object id. ``scope`` is server-derived.
+
+    ``correlation_id`` is the request's correlation id as bound by ``CorrelationIdMiddleware``
+    (``correlation_id_of``), so a denied audit record can be traced to its request. It is the
+    middleware form, not yet audit-safe: a recorder that writes it must convert and validate it
+    (``AuditDenialRecorder`` does, falling back to a generated id). ``None`` means unknown.
+    """
 
     scope: IdentityScope
     permission: str
@@ -34,6 +40,7 @@ class DeniedAttempt:
     path: str
     domain_id: str | None
     resource_id: str | None
+    correlation_id: str | None = None
 
 
 @runtime_checkable

@@ -45,6 +45,7 @@ from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz.recorder import SAFE_METHODS, DeniedAttempt
 from neurosphere_api.authz.state import AuthzState, get_authz_state
+from neurosphere_api.middleware import correlation_id_of
 
 __all__ = [
     "PERMISSION_MARKER",
@@ -255,6 +256,7 @@ async def _denial(
             path=request.url.path,
             domain_id=target.domain_id if target else None,
             resource_id=target.resource_id if target else None,
+            correlation_id=correlation_id_of(request.scope),
         )
         try:
             await recorder.record_denial(attempt)

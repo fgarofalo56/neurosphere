@@ -10,6 +10,7 @@ import pytest
 from fastapi import APIRouter, Depends, FastAPI, WebSocket
 from neurosphere_api.app import create_app
 from neurosphere_api.authz import (
+    PERMISSION_MARKER,
     PRODUCER_AUTHENTICATED_PATHS,
     PUBLIC_PATHS,
     configure_authz,
@@ -20,10 +21,12 @@ from neurosphere_api.authz import (
     undeclared_routes,
     verify_route_permissions,
 )
+from neurosphere_api.authz.routes import GATEWAY_AUTHENTICATED_WEBSOCKETS
 from neurosphere_core.auth.scope import InMemoryPolicyRepository, Permission
 from neurosphere_core.cloud import Settings
 from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.scope import IdentityScope
+from starlette.requests import HTTPConnection
 
 from .authz_helpers import FakeClock, make_app, make_deriver, make_validator
 
@@ -201,6 +204,62 @@ def test_inventory_flags_routes_without_permission(
         assert info.value.reason == "route_without_permission"
     else:
         verify_route_permissions(app)
+
+
+def _marker(permission: Permission) -> Callable[[HTTPConnection], None]:
+    def marker(connection: HTTPConnection) -> None:
+        return None
+
+    setattr(marker, PERMISSION_MARKER, permission)
+    return marker
+
+
+def _websocket_app(prefix: str, *, permission: Permission | None) -> FastAPI:
+    router = APIRouter()
+    deps = [Depends(_marker(permission))] if permission else None
+
+    @router.websocket("/ws", dependencies=deps)
+    async def ws(websocket: WebSocket) -> None:
+        await websocket.close()
+
+    return make_app(routers={prefix: router})
+
+
+def test_websocket_marker_alone_is_not_enough() -> None:
+    # A permission marker cannot authorize a handshake: off the gateway allowlist it is flagged.
+    app = _websocket_app("/x", permission=Permission.DATA_READ)
+    flagged = undeclared_routes(app)
+    assert [(e.path, e.methods, e.permissions) for e in flagged] == [
+        ("/x/ws", ("WEBSOCKET",), ("data.read",))
+    ]
+
+
+def test_gateway_websocket_needs_its_declared_permission() -> None:
+    prefix = "/api/v1/realtime"
+    assert f"{prefix}/ws" in GATEWAY_AUTHENTICATED_WEBSOCKETS
+    assert undeclared_routes(_websocket_app(prefix, permission=Permission.DATA_READ)) == ()
+    for wrong in (None, Permission.CONFIG_MANAGE):
+        flagged = undeclared_routes(_websocket_app(prefix, permission=wrong))
+        assert {e.path for e in flagged} == {f"{prefix}/ws"}
+
+
+@pytest.mark.parametrize("path", ["/healthz", "/mcp"])
+def test_http_allowlists_never_cover_a_websocket(path: str) -> None:
+    app = make_app()
+
+    @app.websocket(path)
+    async def ws(websocket: WebSocket) -> None:
+        await websocket.close()
+
+    assert (path, ("WEBSOCKET",)) in {(e.path, e.methods) for e in undeclared_routes(app)}
+
+
+def test_gateway_websocket_entries_are_exact_and_reasoned() -> None:
+    for path, guard in GATEWAY_AUTHENTICATED_WEBSOCKETS.items():
+        assert path.startswith("/") and not any(c in path for c in "{}*")
+        assert isinstance(guard.permission, Permission)
+        assert guard.reason.strip()
+    assert not set(GATEWAY_AUTHENTICATED_WEBSOCKETS) & public_paths_for(FastAPI())
 
 
 def test_near_public_path_is_not_public() -> None:

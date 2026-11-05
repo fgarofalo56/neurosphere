@@ -1,8 +1,12 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: backlog
+status: shipped
+shipped: 2026-11-05
+pr: 172
 priority: P0
 order: 6
+started: 2026-11-05
+branch: prp-06-audit-gaps
 review: required
 created: 2026-10-08
 model: opus
@@ -278,6 +282,15 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Open gates / untested live items: Government v1 issuer host only (unconfirmed: public metadata advertises sts.windows.net, allowlist uses sts.usgovcloudapi.net and fails closed; a live v1 token attempt was inconclusive). Closed after ship: audit store Cosmos emulator test; Snyk 0 issues; live Entra validation on Commercial AND Government (real v2 tokens, aud is the app GUID); live Commercial Cosmos run (audit chain, service-side refusal of replace/upsert/patch/delete on audit records via a separate tail container and a create/read-only role, policy and revocation stores). Not WORM; hash chain remains the tamper control. Not exercised live: token expiry, app-only tokens, revocation TTL expiry, Government Cosmos. Evidence: docs/evidence/PRP-06/.
 - Follow-ups: DONE in the hardening PR: (1) the audit chain_domain mapper is now mandatory (domain_from_chain_id convention, no customer-level fallback); (3) ScopeDeriver requires a revocation checker, opt-out is the explicit NoRevocationCheck(); (4) JWKS refresh-ahead before expiry (serves the unexpired cache on failure, never extends expiry); (5) audit verify is capped at 1,000,000 records and fails closed with verify_limit_exceeded. STILL OPEN, need a decision because they reopen decided clarifications: (2) block-until-lifted revocation mode (C12 decided TTL-bounded revocation by token issue time); (6) auditing pre-scope failures (401/503/revoked) and allowed reads of the audit router. Not doable yet: (7) PRP-10 must re-run tests/security/authz against the Azure AI Search implementation.
 
+### Audit close-out (2026-11-05, PR #172)
+
+- Date: 2026-11-05. Branch `prp-06-audit-gaps`, PR #172 (CI green). Merges: D3 dc83630, D1 15d02b7, D2 df58b7b, D4 82dc42a, D5 b4e0fbc. Items 1-6 were not re-run.
+- Delivered: D1 audit-backed denial recorder in the composed app; D2 revocation hook registry published as soon as the checker exists (audit premise partly stale: the websocket push closer was already registered in `data.py`); D3 SIEM exporter wired (`NS_AUDIT_SIEM_SINK`, default `none`; `NS_AUDIT_SIEM_FILE_PATH`); D4 `verify_route_permissions` at `compose_app` startup plus a stricter websocket rule (one operator-approved entry, `/api/v1/realtime/ws` -> `data.read`); D5 request correlation id on denial records.
+- Evidence: `verify-gates -Mode full` 4/4 PASS (pytest 9672 passed); `tests/security/authz` 857 passed; planning validator PASS; gitleaks clean; Snyk on `services/api/neurosphere_api`: 1 medium (`TooPermissiveCors`, `mcp/server/router.py`, not in this diff). Reviewer (one pass, required): APPROVE, no blockers.
+- Deviations: D5 converts the correlation id in the recorder, not in `_denial` (import cycle through `actions/__init__`). Denial records for non-member targets go on `<customer>.authz-denials`, which no role can read via the audit routes yet. Stray commit 840d6b8 (labelled prp-35) only carries PRP-06 board edits.
+- Still OPEN (not built): no composed `RevocationService` or admin revoke route, so nothing in production calls the fan-out; block-until-lifted revocation mode (2); auditing pre-scope failures and allowed audit-router reads (6); re-run of `tests/security/authz` against Azure AI Search (7, PRP-10); WORM audit store; Government v1 issuer host; live token-expiry and revocation-TTL-expiry run (needs `NS_LIVE_APPROVED=1`).
+- Follow-ups from review (non-blocking): shard or give a retry policy to the `authz-denials` chain (flood of denied writes can return 503); move `to_siem_event` inside the exporter's `try`; check `NS_AUDIT_SIEM_FILE_PATH` writability at boot and surface sink failures in readiness.
+
 ## Audit 2026-11-04
 
 Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
@@ -288,3 +301,25 @@ Reopened after a deep audit (static read by a read-only agent; no tests were run
 - `verify_route_permissions` runs only in tests (`tests/authz/test_route_inventory.py:33-41`), not at startup. Websocket/realtime route permissions not checked.
 - Audit store is not WORM (tail pointer uses ETag-guarded `replace_item`); follow-ups (2) block-until-lifted revocation, (6), (7) re-run suite against Azure AI Search open. Government v1 issuer host unverified.
 - Met: JWKS validation with algorithm pinned from the key, dev issuer excluded from the composed app, audit repository exposes no update/delete.
+
+### Audit close-out items (added at plan approval, 2026-11-05)
+
+Items 1-6 shipped 2026-10-12 and are not re-run. This run closes only the composed-app wiring gaps above. D1 and D2 edit the same file (`runtime/builders/authz.py`), so they are sequenced; D3 and D4 run in parallel.
+
+- D1: compose a `DenialRecorder` backed by the `AuditRepository` (`runtime/builders/authz.py`, `runtime/overrides.py`); composed-app test that a 403 writes a denied audit record.
+- D2: register the realtime `GatewayRegistry` as a `PushSessionRegistry` in the revocation fan-out (`runtime/builders/authz.py`); test that revocation calls `close_for_principal`. After D1.
+- D3: pass a `SiemExporter` into the composed `AuditRepository` (`runtime/builders/data.py`); test that an append emits a redacted event.
+- D4: call `verify_route_permissions` at startup in the composed app, covering realtime/WebSocket routes.
+- D5 (added 2026-11-05 at operator approval): carry the request correlation id on denial records: add `correlation_id` to `DeniedAttempt` (`authz/recorder.py`), fill it in `authz/dependencies.py` `_denial` from the request scope, use it in the composed recorder (`runtime/builders/authz.py`). Sequenced after D2. Follow-up recorded: `<customer>.authz-denials` chain is not readable via the audit routes.
+
+Left OPEN at close (not built here): block-until-lifted revocation mode (2); auditing pre-scope failures and allowed audit-router reads (6); re-run of `tests/security/authz` against Azure AI Search (7, PRP-10); WORM audit store; Government v1 issuer host; live token-expiry and revocation-TTL-expiry run (needs `NS_LIVE_APPROVED=1`).
+
+## Execution state
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| D1 | merged | worktree-agent-abebcb5859b342114 | opus | ruff clean, pyright 0 errors, 804 passed (implementer); orchestrator re-run after merge with D3: ruff clean, runtime_api+runtime_data+authz+audit 318 passed; 525cf03, merge 15d02b7. Open: record correlation id is generated, not the request's (needs authz/recorder.py + authz/dependencies.py) | 2026-11-05 |
+| D2 | merged | worktree-agent-ac3137ac3dd8d7c2a | opus | audit premise partly stale: data.py:446 already registers the websocket closer; real bug was REVOCATION_HOOKS published only inside _deriver (fixed in builders/authz.py). ruff clean, pyright 0 errors, 751 passed (implementer); orchestrator re-run: ruff clean, push-closer+runtime_api 89 passed; 1fb0a17, merge df58b7b. Open: no composed RevocationService or admin revoke route, so nothing in production calls fan_out yet | 2026-11-05 |
+| D3 | merged | worktree-agent-addaf59bf514c2889 | opus | ruff clean, pyright 0 errors, 438 passed (implementer); orchestrator re-run ruff clean, runtime_data+audit 84 passed; d9ed915, merge dc83630. New settings NS_AUDIT_SIEM_SINK (none default), NS_AUDIT_SIEM_FILE_PATH | 2026-11-05 |
+| D4 | merged | worktree-agent-aa3c08eb8b14390e3 | opus | verify_route_permissions at compose_app startup; new allowlist GATEWAY_AUTHENTICATED_WEBSOCKETS /api/v1/realtime/ws -> data.read (operator-approved 2026-11-05). ruff clean, pyright 0 errors, full services/api 1504 passed (implementer); orchestrator re-run: authz+runtime_api 244 passed; ee50b22, merge 82dc42a | 2026-11-05 |
+| D5 | merged | worktree-agent-a1af11a8eb009d39d | opus | DeniedAttempt.correlation_id; ruff clean, pyright 0 errors; combined authz/audit/runtime/realtime/core 881 passed on integration branch (orchestrator); b397934, merge b4e0fbc | 2026-11-05 |
