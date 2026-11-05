@@ -21,7 +21,10 @@ What ``--apply`` changes (merge only, never removes; a second run sends nothing)
   principal (skipped when already assigned).
 
 App roles only drive navigation display. Authority comes from the policy store: run
-``scripts/sandbox/sbx_grant_operator.py`` as well (docs/dev/local-setup.md).
+``scripts/sandbox/sbx_grant_operator.py`` as well (docs/dev/local-setup.md). With ``--role admin``
+that grant also covers the reserved customer control domain, which the action-plane kill switch
+(``PUT /api/v1/actions/emergency-disable``) requires (403 ``customer_scope_required`` without
+it); see docs/runbooks/action-plane-kill-switch.md.
 
 The app id and tenant id are supplied by the operator and never committed (the repo is public).
 Graph calls go through ``az rest``; no token, secret or object id is read into output, printed
@@ -332,6 +335,11 @@ def main(
         if args.assign_self:
             for line in _assign_self(graph, app, args.assign_self, apply=args.apply):
                 print(line)
+            if args.assign_self == "admin":
+                print(
+                    "next: run scripts/sandbox/sbx_grant_operator.py --role admin; it also grants "
+                    "the customer control domain the action-plane kill switch needs."
+                )
     except AzError as exc:
         print(f"ERROR: {exc}; are you logged in to the right cloud and tenant?", file=sys.stderr)
         return 1
