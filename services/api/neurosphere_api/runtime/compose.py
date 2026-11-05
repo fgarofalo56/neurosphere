@@ -4,7 +4,9 @@
 ``neurosphere_api.main.create`` calls :func:`compose_app` on it. Composition:
 
 1. installs the CORS allow-list when ``NS_CORS_ALLOWED_ORIGINS`` is set (a wildcard raises);
-2. runs every builder in order (``runtime/builders``), recording one status per component;
+2. runs every builder in order (``runtime/builders``), recording one status per component,
+   then ``verify_route_permissions`` (PRP-06): a route without a declared permission or an
+   allowlist entry raises ``InvalidSchemaError`` here, so the app never boots with it;
 3. sets ``app.state.health_probes`` to the environment probes plus ``composition`` and
    ``app.state.composition`` to the status registry;
 4. wraps the lifespan: at startup, when a Cosmos client was built from settings, ``NS_ENV=local``
@@ -30,6 +32,7 @@ from neurosphere_core.clients import ClientLifetime, create_cosmos_client
 from neurosphere_core.cloud import Settings
 from neurosphere_core.stores import CONTAINERS, ensure_local_containers
 
+from neurosphere_api.authz.routes import verify_route_permissions
 from neurosphere_api.health.probes import DependencyProbe, classify, probes_from_env
 from neurosphere_api.runtime.builders import (
     BuildContext,
@@ -185,6 +188,9 @@ def compose_app(
     )
     state.cosmos_factory = lambda: _cosmos_from_settings(state)
     _run_builders(state, tuple(default_builders() if builders is None else builders))
+    # Every route (including builder-appended ones such as ``/mcp`` and WebSocket routes) is now
+    # mounted and ``configure_authz`` has installed the allowlist: an undeclared route fails boot.
+    verify_route_permissions(app)
     setattr(app.state, STATE_ATTRIBUTE, registry)
     probes = probes_from_env(env) if env_probes is None else tuple(env_probes)
     install_readiness(app, registry, probes)
