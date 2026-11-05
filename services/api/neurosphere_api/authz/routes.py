@@ -5,15 +5,23 @@ dependency tree, including router- or decorator-level ``dependencies=[...]``) or
 is on the public allowlist. The allowlist is ``/healthz`` and ``/readyz`` plus the OpenAPI
 schema and docs paths *only when the app has them configured* (non-``None`` on the app).
 
-:func:`undeclared_routes` lists violations; the test suite asserts it is empty for the real
-app, and :func:`verify_route_permissions` raises at startup for callers that want a hard stop.
+WebSocket routes follow a stricter rule. The HTTP ``require`` dependency reads a ``Request`` and
+cannot authorize a handshake, so a permission marker alone proves nothing for a WebSocket. A
+WebSocket route is compliant only when its exact path is in :data:`GATEWAY_AUTHENTICATED_WEBSOCKETS`
+(a reasoned entry naming the code that authenticates and authorizes the connection itself) AND it
+declares that entry's permission marker. The HTTP public, producer and self-authenticated
+allowlists never apply to a WebSocket route.
+
+:func:`undeclared_routes` lists violations; ``compose_app`` calls
+:func:`verify_route_permissions` after every builder ran, so an undeclared route fails app boot.
 Public routes get no blanket allow; they simply do not call ``require``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Final
 
 from fastapi import FastAPI
@@ -27,11 +35,13 @@ from neurosphere_api.authz.dependencies import PERMISSION_MARKER
 from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 
 __all__ = [
+    "GATEWAY_AUTHENTICATED_WEBSOCKETS",
     "MCP_METADATA_PATH",
     "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
     "SELF_AUTHENTICATED_PATHS",
     "RouteEntry",
+    "WebSocketGuard",
     "public_paths_for",
     "route_inventory",
     "undeclared_routes",
@@ -70,6 +80,32 @@ PRODUCER_AUTHENTICATED_PATHS: Final = frozenset(
     }
 )
 
+_WEBSOCKET: Final = ("WEBSOCKET",)
+
+
+@dataclass(frozen=True, slots=True)
+class WebSocketGuard:
+    """Why a WebSocket route is safe: the permission it enforces and where it enforces it."""
+
+    permission: Permission
+    reason: str
+
+
+#: Exact WebSocket paths whose handler authenticates the handshake and authorizes every message
+#: itself, with the permission the route must also declare by marker. No public WebSockets.
+GATEWAY_AUTHENTICATED_WEBSOCKETS: Final[Mapping[str, WebSocketGuard]] = MappingProxyType(
+    {
+        # PRP-18 item 1: ``realtime.gateway.serve`` validates the bearer token (header or
+        # ``ns.bearer`` subprotocol) with the installed authenticator and derives the scope before
+        # serving anything (4401 / 4403 / 1013 on failure, closed when authz is unconfigured),
+        # then checks ``data.read`` on the target domain for every subscribe and every delta.
+        "/api/v1/realtime/ws": WebSocketGuard(
+            Permission.DATA_READ,
+            "realtime gateway authenticates the handshake and checks data.read per domain",
+        ),
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class RouteEntry:
@@ -79,9 +115,17 @@ class RouteEntry:
     public: bool
     producer_authenticated: bool = False
     self_authenticated: bool = False
+    gateway_authenticated: bool = False
+
+    @property
+    def websocket(self) -> bool:
+        return self.methods == _WEBSOCKET
 
     @property
     def compliant(self) -> bool:
+        if self.websocket:
+            # A marker cannot authorize a handshake; only a reasoned gateway entry can.
+            return self.gateway_authenticated
         return (
             self.public
             or bool(self.permissions)
@@ -138,18 +182,19 @@ def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
     if not isinstance(dependant, Dependant):
         dependant = getattr(original, "dependant", None)
     perms = tuple(sorted(set(_permissions(dependant)))) if isinstance(dependant, Dependant) else ()
-    if isinstance(original, APIWebSocketRoute | WebSocketRoute):
-        methods: tuple[str, ...] = ("WEBSOCKET",)
+    websocket = isinstance(original, APIWebSocketRoute | WebSocketRoute)
+    if websocket:
+        methods: tuple[str, ...] = _WEBSOCKET
     else:
         methods = tuple(sorted(getattr(source, "methods", None) or ()))
     # A mounted sub-application is opaque to this check, so it is never public by default.
-    public = not isinstance(original, Mount) and path in allow
-    producer = (
-        not isinstance(original, Mount)
-        and path in PRODUCER_AUTHENTICATED_PATHS
-        and methods == ("POST",)
-    )
-    self_authenticated = not isinstance(original, Mount) and path in SELF_AUTHENTICATED_PATHS
+    # The HTTP allowlists never cover a WebSocket route.
+    http = not isinstance(original, Mount) and not websocket
+    public = http and path in allow
+    producer = http and path in PRODUCER_AUTHENTICATED_PATHS and methods == ("POST",)
+    self_authenticated = http and path in SELF_AUTHENTICATED_PATHS
+    guard = GATEWAY_AUTHENTICATED_WEBSOCKETS.get(path) if websocket else None
+    gateway = guard is not None and guard.permission.value in perms
     return RouteEntry(
         path=path,
         methods=methods,
@@ -157,6 +202,7 @@ def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
         public=public,
         producer_authenticated=producer,
         self_authenticated=self_authenticated,
+        gateway_authenticated=gateway,
     )
 
 
@@ -176,7 +222,7 @@ def route_inventory(
 def undeclared_routes(
     app: FastAPI, *, public_paths: frozenset[str] | None = None
 ) -> tuple[RouteEntry, ...]:
-    """Routes that neither declare a permission nor sit on the public allowlist."""
+    """Routes that neither declare a permission nor sit on an allowlist (see module docstring)."""
     return tuple(e for e in route_inventory(app, public_paths=public_paths) if not e.compliant)
 
 
