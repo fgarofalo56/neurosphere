@@ -102,7 +102,7 @@ jobs:
       - name: Trivy image scan (High and Critical fail)
         run: trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 "$IMAGE"
       - name: Grype image scan (High and Critical fail)
-        run: grype "$IMAGE" --fail-on high
+        run: grype "$IMAGE" --fail-on high -c .grype.yaml
 
   dependency-audit:
     name: dependency audit (High and above)
