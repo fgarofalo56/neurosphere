@@ -11,8 +11,10 @@ People (all in customer ``contoso``):
 * ALICE -- domain steward on FINANCE (the maker in most tests)
 * BOB   -- domain steward on FINANCE (the checker)
 * CAROL -- viewer on FINANCE
-* DAVE  -- admin on FINANCE (kill switch)
+* DAVE  -- admin on FINANCE only (a domain-scoped ``config.manage`` holder)
 * ERIN  -- viewer on FINANCE, steward on OPERATIONS
+* FRANK -- admin on the customer control domain (customer-level kill switch)
+* GRACE -- admin on FINANCE plus a policy naming ANOTHER customer's control domain
 
 This directory has no ``__init__.py`` (same convention as ``services/api/tests/evaluation``):
 import by module name.
@@ -32,7 +34,9 @@ from neurosphere_api.actions import (
     ActionApiSettings,
     build_router,
     configure_action_plane,
+    customer_control_domain,
 )
+from neurosphere_api.authz import DenialRecorder
 from neurosphere_api.hitl import PREFIX as REVIEW_PREFIX
 from neurosphere_api.hitl import RecheckerReviewerAuthorizer
 from neurosphere_api.hitl import build_router as build_review_router
@@ -69,9 +73,13 @@ BOB: str = helpers.BOB
 CAROL: str = helpers.CAROL
 DAVE: str = helpers.NOBODY
 ERIN: str = "a05b6c7d-8e9f-4a01-b2c3-d4e5f6a7b8c9"
+FRANK: str = "b16c7d8e-9fa0-4b12-83d4-e5f6a7b8c9d0"
+GRACE: str = "c27d8e9f-a0b1-4c23-94e5-f6a7b8c9d0e1"
 FINANCE: str = helpers.FINANCE
 OPERATIONS: str = helpers.OPERATIONS
 CUSTOMER: str = helpers.CUSTOMER
+CONTROL: str = customer_control_domain("commercial", CUSTOMER)
+OTHER_CONTROL: str = customer_control_domain("commercial", "fabrikam")
 
 TARGET_ID: Final = "commercial:contoso:foundry:model_deployment:eastus2/chat-prod"
 TARGET_VERSION: Final = "etag-0x8dce1f2a3b4c5d6"
@@ -267,6 +275,7 @@ def make_api(
     with_connector: bool = True,
     settings: ActionApiSettings | None = None,
     wire: bool = True,
+    denials: DenialRecorder | None = None,
 ) -> Api:
     h = helpers.harness(
         helpers.policy(ALICE, helpers.role(Role.DOMAIN_STEWARD, FINANCE)),
@@ -278,7 +287,18 @@ def make_api(
             helpers.role(Role.VIEWER, FINANCE),
             helpers.role(Role.DOMAIN_STEWARD, OPERATIONS),
         ),
+        helpers.policy(
+            FRANK,
+            helpers.role(Role.ADMIN, CONTROL),
+            memberships=(FINANCE, OPERATIONS, helpers.HR, CONTROL),
+        ),
+        helpers.policy(
+            GRACE,
+            helpers.role(Role.ADMIN, FINANCE, OTHER_CONTROL),
+            memberships=(FINANCE, OTHER_CONTROL),
+        ),
         routers={PREFIX: build_router(), REVIEW_PREFIX: build_review_router()},
+        denials=denials,
     )
 
     def clock() -> datetime:
