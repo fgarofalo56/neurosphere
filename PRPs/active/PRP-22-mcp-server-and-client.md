@@ -235,10 +235,10 @@ Plan approved 2026-11-05; integration branch `prp-22-audit-closeout` from origin
 
 | Lane | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
-| S | todo | | opus | | 2026-11-05 |
-| C | todo | | opus | | 2026-11-05 |
-| M | todo | | sonnet | | 2026-11-05 |
-| R | todo | | opus | | 2026-11-05 |
+| S | merged | worktree-agent-a032c2a2f454ddd90 | opus | 45f94e4; orchestrator re-run: ruff + format + pyright clean, mcp_api + security/mcp + openapi drift 216 passed, corpus 78/78; Snyk Code 2 Medium CORS * on the new OPTIONS route (accepted: same public RFC 9728 metadata policy as the first round); reviewer APPROVED (listings re-derive scope per request, fail closed, no cross-principal cache; static input schema does not weaken per-call authz; intent hash unchanged by the 15-min key window); follow-ups: runtime/cors.py shadows the preflight when NS_CORS_ALLOWED_ORIGINS is set, Mcp-Param-* 400 can name an unauthorised tool, document that clients should send an explicit idempotency_key; merge 29886f3 | 2026-11-05 |
+| C | merged | worktree-agent-aca26289add58e045 | opus | 3aa0dd1; orchestrator re-run: ruff + format + pyright clean, mcp_core + mcp_api + security/mcp 613 passed + 1 failed (stale confused-deputy 401 expectation outside the lane, fixed by orchestrator in ac390b9, then 634 passed); Snyk Code 0 issues; reviewer APPROVED (::ffff:0:0:0/96 and 5f00::/16 blocked, mapped forms collapse before rules, non-ASCII refused so xn-- is never decoded, header injection closed, 401/403 maps to forbidden/mcp_auth_rejected with a static message, guard-during-handshake keeps pinning); follow-ups: auth_rejected is sticky for the session so a 401 on the optional GET stream or teardown DELETE could turn a later timeout into forbidden (limit to POST), reserved-header list lacks accept-encoding/te/upgrade/expect, byte budget counts characters (comment); merge 72e9eaf | 2026-11-05 |
+| M | merged | worktree-agent-ac31535d3da0fb0d0 | sonnet | d375003; orchestrator re-run: ruff + format + pyright clean, test_admin + openapi drift + security/authz 926 passed; Snyk Code 0 issues; reviewer APPROVED (exemption fails closed at boot only, real composed app still passes the route check, only sha256(url)[:32] audited, 403 body identical on 8 routes); post-merge mcp_core + mcp_api + test_app + openapi drift + security/authz + security/mcp 1524 passed; follow-ups: one failed revoke audit write skips the rest of the loop, a missing tool skips the revoke with no record, the before-record is written after the store revoked, ServerPage.truncated is also true at exactly 500 rows, _unparsed_server_id hashes userinfo (strip before hashing), 403 for non-https blocked names to the API error docs, call-time drift not audited, store needs a continuation token; merge 37fe7f5 | 2026-11-05 |
+| R | in-progress | | opus | | 2026-11-05 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-23
