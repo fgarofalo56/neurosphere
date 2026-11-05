@@ -114,8 +114,12 @@ def build_router() -> APIRouter:
         cursor: Annotated[str | None, Query(pattern=r"^mcp-[0-9a-f]{32}$")] = None,
         limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
     ) -> ServerPage:
-        servers, next_cursor = await service.list_servers(after=cursor, limit=limit)
-        return ServerPage(items=[server_view(s) for s in servers], next_cursor=next_cursor)
+        servers, next_cursor, truncated = await service.list_servers(after=cursor, limit=limit)
+        return ServerPage(
+            items=[server_view(s) for s in servers],
+            next_cursor=next_cursor,
+            truncated=truncated,
+        )
 
     @router.get("/servers/{server_id}", response_model=ServerView)
     async def get_server(
