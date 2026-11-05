@@ -1,6 +1,8 @@
 ---
 name: prp-06-identity-authz-and-audit
-status: active
+status: shipped
+shipped: 2026-11-05
+pr: 172
 priority: P0
 order: 6
 started: 2026-11-05
@@ -279,6 +281,15 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - Descoped items: `configure_authz` is not called from the app factory (needs production Entra, JWKS, Cosmos and vault-key settings that do not exist yet). The audit router IS mounted by default (routers.py) and returns 503 until authz is configured (tested). `extra_routers` may now replace a default router once; duplicates among callers still fail.
 - Open gates / untested live items: Government v1 issuer host only (unconfirmed: public metadata advertises sts.windows.net, allowlist uses sts.usgovcloudapi.net and fails closed; a live v1 token attempt was inconclusive). Closed after ship: audit store Cosmos emulator test; Snyk 0 issues; live Entra validation on Commercial AND Government (real v2 tokens, aud is the app GUID); live Commercial Cosmos run (audit chain, service-side refusal of replace/upsert/patch/delete on audit records via a separate tail container and a create/read-only role, policy and revocation stores). Not WORM; hash chain remains the tamper control. Not exercised live: token expiry, app-only tokens, revocation TTL expiry, Government Cosmos. Evidence: docs/evidence/PRP-06/.
 - Follow-ups: DONE in the hardening PR: (1) the audit chain_domain mapper is now mandatory (domain_from_chain_id convention, no customer-level fallback); (3) ScopeDeriver requires a revocation checker, opt-out is the explicit NoRevocationCheck(); (4) JWKS refresh-ahead before expiry (serves the unexpired cache on failure, never extends expiry); (5) audit verify is capped at 1,000,000 records and fails closed with verify_limit_exceeded. STILL OPEN, need a decision because they reopen decided clarifications: (2) block-until-lifted revocation mode (C12 decided TTL-bounded revocation by token issue time); (6) auditing pre-scope failures (401/503/revoked) and allowed reads of the audit router. Not doable yet: (7) PRP-10 must re-run tests/security/authz against the Azure AI Search implementation.
+
+### Audit close-out (2026-11-05, PR #172)
+
+- Date: 2026-11-05. Branch `prp-06-audit-gaps`, PR #172 (CI green). Merges: D3 dc83630, D1 15d02b7, D2 df58b7b, D4 82dc42a, D5 b4e0fbc. Items 1-6 were not re-run.
+- Delivered: D1 audit-backed denial recorder in the composed app; D2 revocation hook registry published as soon as the checker exists (audit premise partly stale: the websocket push closer was already registered in `data.py`); D3 SIEM exporter wired (`NS_AUDIT_SIEM_SINK`, default `none`; `NS_AUDIT_SIEM_FILE_PATH`); D4 `verify_route_permissions` at `compose_app` startup plus a stricter websocket rule (one operator-approved entry, `/api/v1/realtime/ws` -> `data.read`); D5 request correlation id on denial records.
+- Evidence: `verify-gates -Mode full` 4/4 PASS (pytest 9672 passed); `tests/security/authz` 857 passed; planning validator PASS; gitleaks clean; Snyk on `services/api/neurosphere_api`: 1 medium (`TooPermissiveCors`, `mcp/server/router.py`, not in this diff). Reviewer (one pass, required): APPROVE, no blockers.
+- Deviations: D5 converts the correlation id in the recorder, not in `_denial` (import cycle through `actions/__init__`). Denial records for non-member targets go on `<customer>.authz-denials`, which no role can read via the audit routes yet. Stray commit 840d6b8 (labelled prp-35) only carries PRP-06 board edits.
+- Still OPEN (not built): no composed `RevocationService` or admin revoke route, so nothing in production calls the fan-out; block-until-lifted revocation mode (2); auditing pre-scope failures and allowed audit-router reads (6); re-run of `tests/security/authz` against Azure AI Search (7, PRP-10); WORM audit store; Government v1 issuer host; live token-expiry and revocation-TTL-expiry run (needs `NS_LIVE_APPROVED=1`).
+- Follow-ups from review (non-blocking): shard or give a retry policy to the `authz-denials` chain (flood of denied writes can return 503); move `to_siem_event` inside the exporter's `try`; check `NS_AUDIT_SIEM_FILE_PATH` writability at boot and surface sink failures in readiness.
 
 ## Audit 2026-11-04
 
