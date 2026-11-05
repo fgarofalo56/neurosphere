@@ -1,4 +1,7 @@
-"""The composed app audits denied attempts (PRP-06 audit close-out D1).
+"""The composed app audits denied attempts (PRP-06 audit close-out D1, D5).
+
+D5: the denied record's correlation id is the request's (audit-safe form), so a denial can be
+traced to the request that caused it; an absent or unusable id is replaced by a valid one.
 
 A refused ``require`` check in the COMPOSED app appends a ``denied`` record to the composed
 ``AuditRepository``; the default recorder is never ``None``; a missing audit store fails a
@@ -9,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any
 
 import pytest
@@ -19,7 +23,9 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     FakeClock,
     RecordingDenials,
 )
+from neurosphere_api.actions.common import audit_correlation_id
 from neurosphere_api.authz import AuthzState, DeniedAttempt
+from neurosphere_api.middleware import CORRELATION_HEADER
 from neurosphere_api.runtime.builders import AUDIT_REPOSITORY, BuildContext, BuilderSpec
 from neurosphere_api.runtime.builders.authz import DENIAL_CHAIN_NAME, AuditDenialRecorder
 from neurosphere_contracts.audit.v1.audit_record import AuditRecord
@@ -36,6 +42,8 @@ from .runtime_helpers import (
     configured_overrides,
 )
 
+#: ``corr-`` plus 32 lowercase hex: a server-generated id or a dash-stripped UUID4.
+GENERATED = re.compile(r"^corr-[0-9a-f]{32}$")
 AUDIT_RECORDS = "/api/v1/audit/chains/{chain}/records"
 EMERGENCY = "/api/v1/actions/emergency-disable"
 DENIAL_CHAIN = f"{CUSTOMER}.{DENIAL_CHAIN_NAME}"
@@ -183,6 +191,73 @@ def test_without_an_audit_store_a_mutating_denial_fails_closed(
     assert safe.status_code == 403  # still denied, never allowed
 
 
+# --------------------------------------------------------------------------- correlation (D5)
+
+
+@pytest.mark.parametrize("method", ["GET", "PUT"])
+def test_denied_record_carries_the_request_correlation_id(
+    monkeypatch: pytest.MonkeyPatch, method: str
+) -> None:
+    audit = AuditRepository(InMemoryAuditStore())
+    composed = _compose(monkeypatch, audit)
+    headers = {**composed.auth(), CORRELATION_HEADER: "trace-req-0042-abc"}
+    with composed.client() as client:
+        if method == "GET":
+            response = client.get(AUDIT_RECORDS.format(chain="contoso.finance"), headers=headers)
+        else:
+            response = client.put(EMERGENCY, json={}, headers=headers)
+    assert response.status_code == 403, response.text
+    assert response.headers[CORRELATION_HEADER] == "trace-req-0042-abc"
+    chain = "contoso.finance" if method == "GET" else DENIAL_CHAIN
+    (record,) = _records(audit, chain)
+    assert record.correlation_id == audit_correlation_id("trace-req-0042-abc")
+    assert record.correlation_id == "corr-tracereq0042abc"
+
+
+@pytest.mark.parametrize("supplied", [None, "short", "bad id with spaces!"])
+def test_without_a_valid_header_the_record_still_matches_the_request(
+    monkeypatch: pytest.MonkeyPatch, supplied: str | None
+) -> None:
+    audit = AuditRepository(InMemoryAuditStore())
+    composed = _compose(monkeypatch, audit)
+    headers = composed.auth()
+    if supplied is not None:
+        headers[CORRELATION_HEADER] = supplied
+    with composed.client() as client:
+        response = client.put(EMERGENCY, json={}, headers=headers)
+    assert response.status_code == 403, response.text
+    bound = response.headers[CORRELATION_HEADER]  # the middleware-generated UUID4
+    assert bound != supplied
+    (record,) = _records(audit, DENIAL_CHAIN)
+    # Valid for the record pattern and the metadata guard (no GUID-shaped value), and still
+    # traceable to the request through the id the middleware bound and echoed.
+    assert GENERATED.fullmatch(record.correlation_id)
+    assert record.correlation_id == audit_correlation_id(bound)
+
+
+def test_the_denied_attempt_carries_the_bound_correlation_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    denials = RecordingDenials()
+    composed = _compose(monkeypatch, None, denial_recorder=denials)
+    headers = {**composed.auth(), CORRELATION_HEADER: "trace-req-0099"}
+    with composed.client() as client:
+        client.put(EMERGENCY, json={}, headers=headers)
+    (attempt,) = denials.attempts
+    assert attempt.correlation_id == "trace-req-0099"
+
+
+def test_audit_write_failure_still_fails_closed_with_a_correlation_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    composed = _compose(monkeypatch, None)  # no AUDIT_REPOSITORY published
+    headers = {**composed.auth(), CORRELATION_HEADER: "trace-req-0100"}
+    with composed.client() as client:
+        response = client.put(EMERGENCY, json={}, headers=headers)
+    assert response.status_code == 503
+    assert response.json()["reason"] == "audit_write_failed"
+
+
 # --------------------------------------------------------------------------- recorder unit
 
 
@@ -242,6 +317,40 @@ def test_recorder_maps_a_non_code_reason_to_forbidden(monkeypatch: pytest.Monkey
     (record,) = _records(audit, DENIAL_CHAIN)
     assert record.denial is not None
     assert record.denial.reason == "forbidden"
+
+
+def test_recorder_uses_the_request_correlation_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    scope = _alice_scope(monkeypatch)
+    audit = AuditRepository(InMemoryAuditStore())
+    recorder = AuditDenialRecorder(lambda: audit)
+    asyncio.run(recorder.record_denial(_attempt(scope, correlation_id="req-trace-0001")))
+    (record,) = _records(audit, DENIAL_CHAIN)
+    assert record.correlation_id == audit_correlation_id("req-trace-0001")
+
+
+@pytest.mark.parametrize(
+    "request_id",
+    [
+        None,
+        "",
+        "--------",  # dashes only: nothing left after the audit-safe conversion
+        "has spaces and !",
+        "x" * 200,  # longer than the record pattern allows
+        "eyJhbGciOi.eyJzdWIiOi.c2lnbmF0dXJl",  # JWT-shaped: the metadata guard would reject it
+        "bearer xyz",
+    ],
+)
+def test_recorder_generates_an_id_for_a_missing_or_unusable_request_id(
+    monkeypatch: pytest.MonkeyPatch, request_id: str | None
+) -> None:
+    scope = _alice_scope(monkeypatch)
+    audit = AuditRepository(InMemoryAuditStore())
+    recorder = AuditDenialRecorder(lambda: audit)
+    asyncio.run(recorder.record_denial(_attempt(scope, correlation_id=request_id)))
+    (record,) = _records(audit, DENIAL_CHAIN)
+    assert GENERATED.fullmatch(record.correlation_id), record.correlation_id
+    if request_id:
+        assert audit_correlation_id(request_id) != record.correlation_id
 
 
 def test_recorder_without_a_repository_raises(monkeypatch: pytest.MonkeyPatch) -> None:
