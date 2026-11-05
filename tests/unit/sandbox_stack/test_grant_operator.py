@@ -127,6 +127,19 @@ def test_refuses_bad_ids_before_connecting() -> None:
     assert mod.main(["--object-id", "not-a-guid", "--role", "admin"], env=env) != 0
 
 
+def test_admin_operator_also_gets_the_customer_control_domain() -> None:
+    control = mod.control_domain_id("commercial", CUSTOMER)
+    assert control == "commercial:synthco:neurosphere:domain:customer-control"
+    admin = mod.operator_domain_ids(
+        "admin", seed=1, profile="tiny", cloud="commercial", customer=CUSTOMER
+    )
+    viewer = mod.operator_domain_ids(
+        "viewer", seed=1, profile="tiny", cloud="commercial", customer=CUSTOMER
+    )
+    assert control in admin and control not in viewer
+    assert set(admin) - {control} == set(viewer)
+
+
 def test_next_version() -> None:
     assert mod.next_version(None) == "local-1"
     assert mod.next_version("local-9") == "local-10"

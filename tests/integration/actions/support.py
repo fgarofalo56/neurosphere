@@ -28,7 +28,12 @@ from types import ModuleType
 from typing import Any, Final
 
 import authz.authz_helpers as helpers  # pyright: ignore[reportMissingImports]
-from neurosphere_api.actions import PREFIX, ActionApiSettings, configure_action_plane
+from neurosphere_api.actions import (
+    PREFIX,
+    ActionApiSettings,
+    configure_action_plane,
+    customer_control_domain,
+)
 from neurosphere_api.hitl import PREFIX as REVIEW_PREFIX
 from neurosphere_api.hitl import RecheckerReviewerAuthorizer
 from neurosphere_connector.write import WriteConnector, WriteTargetRegistry
@@ -64,6 +69,8 @@ CAROL: Final[str] = helpers.CAROL
 DAVE: Final[str] = helpers.NOBODY
 FINANCE: Final[str] = helpers.FINANCE
 CUSTOMER: Final[str] = helpers.CUSTOMER
+ERIN: Final[str] = "a05b6c7d-8e9f-4a01-b2c3-d4e5f6a7b8c9"
+CONTROL: Final[str] = customer_control_domain("commercial", CUSTOMER)
 CHAIN: Final[str] = action_audit_chain_id(CUSTOMER, FINANCE)
 
 KIND: Final = "model_deployment_swap"
@@ -280,7 +287,14 @@ def make_slice(
         ALICE: helpers.policy(ALICE, helpers.role(Role.DOMAIN_STEWARD, FINANCE)),
         BOB: helpers.policy(BOB, helpers.role(Role.DOMAIN_STEWARD, FINANCE)),
         CAROL: helpers.policy(CAROL, helpers.role(Role.VIEWER, FINANCE)),
-        DAVE: helpers.policy(DAVE, helpers.role(Role.ADMIN, FINANCE)),
+        # DAVE is the customer-level operator: admin on the reserved control domain too.
+        DAVE: helpers.policy(
+            DAVE,
+            helpers.role(Role.ADMIN, FINANCE, CONTROL),
+            memberships=(FINANCE, CONTROL),
+        ),
+        # ERIN: admin in the finance domain only; no customer-level control.
+        ERIN: helpers.policy(ERIN, helpers.role(Role.ADMIN, FINANCE)),
     }
     revocation = SetRevocation()
     h = helpers.harness(*policies.values(), routers={}, revocation_checker=revocation)
@@ -377,8 +391,10 @@ __all__ = [
     "BOB",
     "CAROL",
     "CHAIN",
+    "CONTROL",
     "CUSTOMER",
     "DAVE",
+    "ERIN",
     "FAKES",
     "FINANCE",
     "GOV_TARGET_ID",

@@ -237,6 +237,15 @@ def test_every_category_is_written_through_a_service_or_store(tmp_path: Path) ->
     assert [s.snapshot_id for s in stack.prices.list_snapshots()] == ["sandbox-prices-2026-10"]
     # grants: worker + 5 personas + operator, all in the policy store
     assert summary["seeded"]["grants"] == 7
+    # the operator (and only the operator) also holds the customer control domain (kill switch)
+    control = seed.grants.control_domain_id("commercial", "synthco")
+    operator = seed.user_principal_id(_config(), OPERATOR_OID, {})
+    held = {
+        p.principal_id
+        for p in stack.policy._principals.values()  # pyright: ignore[reportPrivateUsage]
+        if any(control in a.domain_ids for a in p.role_assignments)
+    }
+    assert held == {operator}
     # intents / reports / mcp servers are readable back from their stores
     assert summary["seeded"]["intents"] == len(seed._fixture("intents.json")["intents"])
     assert stack.intents.create_calls == summary["seeded"]["intents"]

@@ -9,10 +9,13 @@ OPEN): that real ARM accepts the documented PUT shape and that a real credential
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 from neurosphere_core.actions import IntentKey
+from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
+from neurosphere_workers.actions import ActionExecutor, ReviewReconcileWorker
 
 from .support import (
     ALICE,
@@ -21,6 +24,7 @@ from .support import (
     CHAIN,
     CUSTOMER,
     DAVE,
+    ERIN,
     FAKES,
     FINANCE,
     GOV_TARGET_ID,
@@ -202,6 +206,36 @@ def test_emergency_disable_stops_the_executor_and_resumes_cleanly() -> None:
     assert s.execute(view).outcome == "succeeded"
     assert _model(s) == ("gpt-4.1", "2025-04-14")
     assert len(s.arm.puts) == 1
+
+
+def test_domain_scoped_admin_cannot_flip_the_customer_wide_kill_switch() -> None:
+    s = make_slice()
+    # ERIN holds admin (config.manage) in the finance domain only, not on the control domain.
+    denied = s.call("PUT", ERIN, "/emergency-disable", json={"disabled": True, "reason": "x"})
+    assert denied.status_code == 403, denied.text
+    assert problem(denied)["reason"] == "customer_scope_required"
+    assert s.call("GET", CAROL, "/emergency-disable").json()["disabled"] is False
+
+
+def test_reconcile_sweep_closes_the_review_item_of_a_terminal_intent() -> None:
+    s = make_slice()
+    view = s.executing()
+    # An executor WITHOUT the completion hook: the intent ends, the review item stays approved.
+    clock = lambda: datetime.fromtimestamp(s.h.clock(), UTC)  # noqa: E731
+    hookless = ActionExecutor(
+        s.service, s.registry, execution_control=s.control, worker_id="slice-hookless", clock=clock
+    )
+    assert run(hookless.execute(s.key(view))).outcome == "succeeded"
+    assert s.review_state(view) == "approved"
+
+    sweep = ReviewReconcileWorker(
+        s.hitl, s.service, auditor=AuditRepositoryActionAuditor(s.audit), clock=clock
+    )
+    report = run(sweep.run_once())
+    assert report.count("executed") == 1, report
+    assert s.review_state(view) == "executed"
+    assert run(sweep.run_once()).changed == 0  # idempotent
+    assert len(s.arm.puts) == 1  # the sweep never touches the target
 
 
 def test_read_only_credential_is_advisory_and_changes_nothing() -> None:

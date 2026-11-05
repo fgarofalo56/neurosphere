@@ -74,6 +74,25 @@ def sandbox_domain_ids(*, seed: int, profile: str, cloud: str, customer: str) ->
     return tuple(world.domain_id(i) for i in range(len(world.domains)))
 
 
+def control_domain_id(cloud: str, customer: str) -> str:
+    """The reserved per-customer control domain the execution kill switch checks (PRP-17)."""
+    from neurosphere_api.actions import customer_control_domain
+
+    return customer_control_domain(cloud, customer)
+
+
+def operator_domain_ids(
+    role: str, *, seed: int, profile: str, cloud: str, customer: str
+) -> tuple[str, ...]:
+    """Sandbox domains, plus the customer control domain for ``admin`` so the operator can flip
+    the action-plane kill switch (``PUT /api/v1/actions/emergency-disable``, 403
+    ``customer_scope_required`` without it)."""
+    domains = sandbox_domain_ids(seed=seed, profile=profile, cloud=cloud, customer=customer)
+    if role == "admin":
+        return (*domains, control_domain_id(cloud, customer))
+    return domains
+
+
 def next_version(current: str | None) -> str:
     match = _VERSION_RE.fullmatch(current or "")
     return f"local-{int(match.group(1)) + 1}" if match else "local-1"
@@ -266,8 +285,8 @@ def _main_hosted(args: argparse.Namespace, environ: dict[str, str]) -> int:
                     os.environ.pop(name, None)
                 else:
                     os.environ[name] = old
-        domains = sandbox_domain_ids(
-            seed=args.seed, profile=args.profile, cloud="commercial", customer=customer
+        domains = operator_domain_ids(
+            args.role, seed=args.seed, profile=args.profile, cloud="commercial", customer=customer
         )
         outcome = asyncio.run(
             _run_hosted(
@@ -369,8 +388,8 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
             cloud=args.cloud,
             object_id=args.object_id,
         )
-        domains = sandbox_domain_ids(
-            seed=args.seed, profile=args.profile, cloud=args.cloud, customer=customer
+        domains = operator_domain_ids(
+            args.role, seed=args.seed, profile=args.profile, cloud=args.cloud, customer=customer
         )
         outcome = asyncio.run(
             _run_real(
