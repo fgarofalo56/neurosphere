@@ -32,6 +32,8 @@ interface Entity {
   owner_kind?: string;
   recertified_at?: string | null;
   recertify_by?: string;
+  /** Grant and McpServer fields (PRP-33 item 7); see packages/contracts catalog/v1. */
+  [extra: string]: unknown;
 }
 
 interface Edge {
@@ -90,7 +92,49 @@ function seed(): Entity[] {
   ];
 }
 
+const GRANT = `${PREFIX}grant:finance-mcp-access`;
+const MCP = `${PREFIX}mcp_server:finance-tools`;
+const EDGE_GRANTS = "commercial:e2e:edge:finance-mcp-access:grants_access_to:finance-tools";
+
+/**
+ * PRP-33 item 7: a Grant and the McpServer it grants access to. They answer entity and lineage
+ * reads by id but stay out of the paged list, so the explorer's page counts do not change.
+ */
+const DETAIL_ONLY: readonly Entity[] = [
+  entity(GRANT, "grant", "Finance MCP access", {
+    enabled: true,
+    principal: {
+      kind: "entra_group",
+      object_id: "11111111-1111-4111-8111-111111111111",
+      display: "Finance analysts",
+    },
+    target: { kind: "mcp_server", ref: MCP },
+    limits: { mcp_calls_per_minute: 60, token_quota: 100000, quota_period: "month" },
+    cost_center: "CC-1001",
+    valid_from: "2026-10-01T00:00:00Z",
+  }),
+  entity(MCP, "mcp_server", "Finance tools", {
+    url: "https://finance-tools.example.com/mcp",
+    transport: "streamable_http",
+    auth: { kind: "entra", audience: "api://finance-tools" },
+    publishable: true,
+    tools: [
+      { name: "get_ledger", annotations: { read_only_hint: true } },
+      { name: "close_period", annotations: { destructive_hint: true } },
+    ],
+  }),
+];
+
 const edges: readonly Edge[] = [
+  {
+    edge_id: EDGE_GRANTS,
+    relation_type: "grants_access_to",
+    source_id: GRANT,
+    target_id: MCP,
+    domain_id: DOMAIN,
+    status: "asserted",
+    confidence: 1,
+  },
   {
     edge_id: EDGE_USES,
     relation_type: "uses_model",
@@ -156,7 +200,7 @@ function graph(nodes: Entity[], used: Edge[], paths: unknown[] = [], truncated =
 }
 
 function byId(id: string): Entity | undefined {
-  return entities.find((e) => e.id === id);
+  return entities.find((e) => e.id === id) ?? DETAIL_ONLY.find((e) => e.id === id);
 }
 
 function listFrom(ctx: FeatureMockContext, pool: Entity[], limit: number) {
@@ -231,7 +275,7 @@ function lineage(ctx: FeatureMockContext, kind: string, body: Record<string, unk
       ctx,
       200,
       graph(
-        entities.filter((e) => ids.has(e.id)),
+        [...entities, ...DETAIL_ONLY].filter((e) => ids.has(e.id)),
         used,
       ),
     );
