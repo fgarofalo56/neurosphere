@@ -1,0 +1,103 @@
+{
+  "gate": "G17",
+  "script_version": "1.0.0",
+  "run_at": "2026-11-06T20:35:21.849885+00:00",
+  "result": "FAIL",
+  "cloud": "commercial",
+  "subscription": "<subscription:02b200b4>",
+  "location": "centralus",
+  "resource_group": "ns-g17-20261106t200914z",
+  "apim_resource_id": "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.ApiManagement/service/nsg175a497bdd",
+  "workspace_resource_id": "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.OperationalInsights/workspaces/ns-g17-20261106t200914z-law",
+  "foundry_resource_id": "/subscriptions/<subscription:02b200b4>/resourceGroups/rg-ns-g17-foundry/providers/Microsoft.CognitiveServices/accounts/ns-g17-foundry-11061403",
+  "tier": "standard_v2",
+  "paid_model_calls": 1,
+  "rbac": "applied",
+  "llm_log_row": "not_observed",
+  "phases": [
+    {
+      "phase": "1-create",
+      "status": "pass",
+      "duration_s": 169.1,
+      "provisioning_state": "Succeeded",
+      "sku": "StandardV2"
+    },
+    {
+      "phase": "2-diagnostics",
+      "status": "pass",
+      "duration_s": 3.0,
+      "categories": [
+        "GatewayLogs",
+        "GatewayLlmLogs"
+      ]
+    },
+    {
+      "phase": "3-import-api",
+      "status": "pass",
+      "duration_s": 3.9,
+      "api": "g17-llm",
+      "operation": "POST /deployments/{deployment}/chat/completions"
+    },
+    {
+      "phase": "3-rbac",
+      "status": "pass",
+      "duration_s": 10.3,
+      "role": "Cognitive Services OpenAI User"
+    },
+    {
+      "phase": "4-request",
+      "status": "pass",
+      "duration_s": 6.4,
+      "status_code": 200,
+      "correlation_id": "",
+      "attempts": 1,
+      "paid_model_calls": 1,
+      "note": "one paid chat completion, max_completion_tokens 200"
+    },
+    {
+      "phase": "5-observe",
+      "status": "fail",
+      "duration_s": 1237.4,
+      "error": "no gateway row appeared within the budget"
+    },
+    {
+      "phase": "6-teardown",
+      "status": "pass",
+      "duration_s": 134.8,
+      "deleted": [
+        "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z",
+        "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.OperationalInsights/workspaces/ns-g17-20261106t200914z-law",
+        "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.ApiManagement/service/nsg175a497bdd",
+        "/subscriptions/<subscription:02b200b4>/resourceGroups/rg-ns-g17-foundry/providers/Microsoft.CognitiveServices/accounts/ns-g17-foundry-11061403/providers/Microsoft.Authorization/roleAssignments/26954637-8cfb-4b3b-922f-988095b5fa41"
+      ]
+    }
+  ],
+  "register": [
+    {
+      "id": "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z",
+      "kind": "resource_group",
+      "ownership": "created"
+    },
+    {
+      "id": "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.OperationalInsights/workspaces/ns-g17-20261106t200914z-law",
+      "kind": "workspace",
+      "ownership": "created"
+    },
+    {
+      "id": "/subscriptions/<subscription:02b200b4>/resourceGroups/ns-g17-20261106t200914z/providers/Microsoft.ApiManagement/service/nsg175a497bdd",
+      "kind": "apim",
+      "ownership": "created"
+    },
+    {
+      "id": "/subscriptions/<subscription:02b200b4>/resourceGroups/rg-ns-g17-foundry/providers/Microsoft.CognitiveServices/accounts/ns-g17-foundry-11061403/providers/Microsoft.Authorization/roleAssignments/26954637-8cfb-4b3b-922f-988095b5fa41",
+      "kind": "role_assignment",
+      "ownership": "created"
+    }
+  ],
+  "orphans": [],
+  "gateway_key": "<key:redacted>",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public",
+    "gateway subscription key never read into evidence (<key:redacted>)"
+  ]
+}

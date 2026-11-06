@@ -17,7 +17,7 @@ Approved targets: Limitlessdata subscriptions only.
 3. Imports the `g17-llm` HTTP API (path `llm`) against `<foundry-endpoint>/openai` with the
    `authentication-managed-identity` and `llm-emit-token-metric` policies.
 4. RBAC: grants the APIM identity `Cognitive Services OpenAI User` on the Foundry resource.
-5. Sends ONE chat completion (max_tokens 8) with a subscription key read in memory only.
+5. Sends ONE chat completion (max_completion_tokens 200) with a subscription key read in memory only.
 6. Polls every 60 s: `preflight` + `read_inventory`, plus the connector `APIM_GATEWAY` query for
    the last 30 minutes, until the gateway row for the request appears or the budget ends. A
    missing `TotalTokens` is reported `llm_log_row: not_observed`, not a failure.
@@ -43,7 +43,25 @@ the orphan list (remove those manually).
 ## Cost
 
 One Standard v2 APIM instance and one Log Analytics workspace for under an hour, plus one paid
-model call (max_tokens 8).
+model call (max_completion_tokens 200).
+
+## Running it where a tag policy applies, and live-run lessons (2026-11-06)
+
+- `--tag KEY=VALUE` (repeatable) adds tags to the throwaway resource group and workspace. Limitlessdata
+  - Main requires `project` and `owner` tags on resource groups, or the create is refused by policy.
+- The Foundry endpoint must be an account the gate may grant `Cognitive Services OpenAI User` on:
+  create a dedicated throwaway AIServices account and a model deployment (gpt-5-mini, GlobalStandard)
+  and pass its `https://<name>.cognitiveservices.azure.com` endpoint. Never use another workload's.
+- Pass `--budget-minutes 45`: resource-specific log tables can take longer than 20 minutes to first
+  ingest in a new workspace.
+- The operator machine did not resolve `api.loganalytics.io` or `api.loganalytics.azure.com`, so the
+  gate queries the workspace through ARM (`<workspace>/api/query`). It proves the connector KQL against
+  real data but does not exercise the connector HTTP client.
+- Defects found only by running it live, all fixed in the script with tests: `neurosphere:` tag keys
+  break `az monitor log-analytics workspace create` unless passed as JSON; APIM answers a policy PUT
+  with XML, not JSON (and a BOM crashes `az rest` console output, so responses go through
+  `--output-file`); the first gateway call is a 401 until the role assignment propagates (retried);
+  gpt-5 models reject `max_tokens` (now `max_completion_tokens`).
 
 ## What OPEN means
 
