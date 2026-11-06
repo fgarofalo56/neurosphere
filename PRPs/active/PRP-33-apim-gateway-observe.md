@@ -261,7 +261,8 @@ Plan approved 2026-11-05 by the operator. Integration branch `prp-33-audit-gaps`
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| R-A | in-progress | worktree (agent) | sonnet | dispatched | 2026-11-05 |
-| R-B | in-progress | worktree (agent) | sonnet | dispatched | 2026-11-05 |
-| R-C | todo | | sonnet | | 2026-11-05 |
+| R-A | merged | worktree-agent-ab6a2846ebaa2621b | sonnet | 71 passed (gateway_poll + worker_roles) on branch and post-merge; ruff/pyright clean; c26f1d3, merge c918f09. Ownership deviation accepted: no-op branch is in `runtime/factories.py` (`build_gateway_poll`). Snyk NOT RUN by lane. `.env.example` NOT edited (hook denied); operator lines below | 2026-11-06 |
+| R-B | merged | worktree-agent-a26ec2802c50690c4 | sonnet | 84 passed (azure-monitor + gateway_poll) on branch; 559 passed combined post-merge (connector + workers); ruff/pyright clean; 754f920, merge d34ceb1. New `SourceKind.APIM_USAGE_METRICS`; `CostCenterIndex`; cost center posted as `nscostcenter` CloudEvent extension. Gaps: `metrics_app_id` not wired to settings (lane B2); ingest/ledger do not yet read `nscostcenter`; Government has no App Insights host; Subscription ID dimension unverified live | 2026-11-06 |
+| R-B2 | in-progress | worktree (agent) | sonnet | dispatched: wire NS_GATEWAY_POLL_METRICS_APP_ID into settings and factory | 2026-11-06 |
+| R-C | in-progress | worktree (agent) | sonnet | dispatched | 2026-11-06 |
 | R-E | todo | | sonnet | | 2026-11-05 |
