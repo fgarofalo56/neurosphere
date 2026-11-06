@@ -10,15 +10,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
 from neurosphere_workers.runtime.checkpoint import InMemoryCheckpointStore
 from neurosphere_workers.runtime.worker import Batch, BatchOutcome, Worker, WorkerRunner
 
-__all__ = ["IngestionRole", "PeriodicTick", "TickWorker", "WorkerRole"]
+__all__ = ["IngestionRole", "MultiWorkerRole", "PeriodicTick", "TickWorker", "WorkerRole"]
 
 logger = logging.getLogger("neurosphere.workers.runtime")
 
@@ -75,6 +76,33 @@ class WorkerRole:
 
     def request_shutdown(self) -> None:
         self._runner.request_shutdown()
+
+
+class MultiWorkerRole:
+    """Several ``Worker`` s of one role, each under its own ``WorkerRunner`` in one process.
+
+    Any runner ending abnormally cancels its siblings and re-raises, so the supervisor rebuilds
+    the whole role (the same crash contract as a single :class:`WorkerRole`).
+    """
+
+    def __init__(self, workers: Sequence[Worker], *, idle_seconds: float = 1.0) -> None:
+        if not workers:
+            raise ValueError("a MultiWorkerRole needs at least one worker")
+        self.workers: tuple[Worker, ...] = tuple(workers)
+        self._roles = tuple(WorkerRole(worker, idle_seconds=idle_seconds) for worker in workers)
+
+    async def run(self) -> None:
+        try:
+            async with asyncio.TaskGroup() as group:
+                for role in self._roles:
+                    group.create_task(role.run())
+        except ExceptionGroup as group_error:
+            # Surface the first real failure, not the group wrapper, like a single WorkerRole.
+            raise group_error.exceptions[0] from None
+
+    def request_shutdown(self) -> None:
+        for role in self._roles:
+            role.request_shutdown()
 
 
 class IngestionRole:

@@ -21,8 +21,14 @@ Order:
 5. A failed or expired intent marks its approved review item ``failed``.
 
 Safe recovery: when step 4 refuses WITHOUT changing the intent (kill switch flipped, policy store
-or connector outage) the item is already ``approved``. The reviewer whose decision is effective
-may resend the same decision and hash; it resumes at step 4 and records no second decision.
+or connector outage) the item is already ``approved`` or ``rejected``. The reviewer whose decision
+is effective may resend the same decision and hash; it resumes at step 4 and records no second
+decision. Rejections resume exactly like approvals (PRP-17 audit close-out): a rejection hit by a
+policy-store outage at the approver recheck converges to ``failed`` (``approval_rejected``) on
+resend instead of waiting for expiry. Nobody else can ride on a recorded decision: the resend
+must come from the effective decision's reviewer, carry the same decision and the item's exact
+hash, and ``apply_approval`` still rechecks the approver's permission and refuses the maker when
+self-approval is forbidden.
 """
 
 from __future__ import annotations
@@ -59,6 +65,8 @@ __all__ = ["DECISION_SUPERSEDED", "decide_maker_checker", "effective_decision", 
 DECISION_SUPERSEDED: Final = "decision_superseded"
 REVIEW_ITEM_MISMATCH: Final = "review_item_mismatch"
 _FINISHED: Final = frozenset({"failed", "expired"})
+#: Item states whose effective decision may be resent to resume step 4 (no new record).
+_RESUMABLE: Final = frozenset({"approved", "rejected"})
 _LOG = get_logger("neurosphere_api.actions")
 
 Decision = Literal["approved", "rejected"]
@@ -103,8 +111,10 @@ async def _record_or_resume(
     reason: str,
     confirmation_hash: str,
 ) -> tuple[ImmutableDecision, ReviewItem]:
-    if item.state_name == "approved":
-        # Resume only the effective approval, only for its own reviewer and exact hash.
+    if item.state_name in _RESUMABLE:
+        # Resume only the effective decision (approval or rejection), only for its own reviewer,
+        # the same decision and the exact hash. The intent is still ``awaiting_approval`` here
+        # (checked by the caller), so the decision was recorded but never applied.
         found = await effective_decision(plane, item)
         if (
             found is None

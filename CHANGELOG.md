@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Action executor and HITL audit close-out (PRP-17 audit gaps): a customer-scoped reconcile sweep closes
+  review items whose intent is terminal or expired, and orphan items; the kill switch
+  (`PUT /api/v1/actions/emergency-disable`) needs `config.manage` on the per-customer control domain
+  (runbook `docs/runbooks/action-plane-kill-switch.md`); a rejection that hit a policy outage is
+  resumable. The G05 live Foundry swap ran on one Commercial target (narrowed, not closed; no canary,
+  Government not covered).
 - Identity, authorization and audit close-out (PRP-06 audit gaps): denied attempts are audited in the
   composed app with the request correlation id, the SIEM exporter is wired (`NS_AUDIT_SIEM_SINK`,
   default `none`), the revocation hook registry no longer depends on the scope deriver, and the app

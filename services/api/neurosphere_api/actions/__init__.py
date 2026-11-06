@@ -9,6 +9,8 @@ Public API:
 * :func:`decide_maker_checker` -- the one maker-checker approval path (also used by the review
   queue API in :mod:`neurosphere_api.hitl`).
 * :class:`ActionApiSettings` -- per-kind ``requires_approval`` and confirmation lifetimes.
+* :func:`customer_control_domain` -- the reserved per-customer control domain on which
+  ``config.manage`` authorizes the customer-wide kill switch (``PUT /emergency-disable``).
 
 Every surface builds the same ``ActionIntent`` through these routes; nothing here calls a
 connector's ``apply`` or ``rollback`` (only the executor worker does) and nothing edits catalog
@@ -16,6 +18,11 @@ metadata to represent a change.
 """
 
 from neurosphere_api.actions.approval import decide_maker_checker
+from neurosphere_api.actions.customer_control import (
+    CUSTOMER_SCOPE_REQUIRED,
+    customer_control_domain,
+    require_customer_control,
+)
 from neurosphere_api.actions.dependencies import (
     ActionPlane,
     configure_action_plane,
@@ -35,6 +42,7 @@ from neurosphere_api.actions.router import PREFIX, build_router, register
 from neurosphere_api.actions.settings import ActionApiSettings, ActionKindPolicy
 
 __all__ = [
+    "CUSTOMER_SCOPE_REQUIRED",
     "PREFIX",
     "ActionApiSettings",
     "ActionKindPolicy",
@@ -49,7 +57,9 @@ __all__ = [
     "ExecutionView",
     "build_router",
     "configure_action_plane",
+    "customer_control_domain",
     "decide_maker_checker",
     "get_action_plane",
     "register",
+    "require_customer_control",
 ]

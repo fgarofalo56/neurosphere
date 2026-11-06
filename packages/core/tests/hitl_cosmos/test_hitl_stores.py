@@ -6,6 +6,7 @@ The emulator run of the same contract is ``tests/integration/stores_hitl`` (mark
 
 from __future__ import annotations
 
+import json
 from datetime import timedelta
 
 import pytest
@@ -35,6 +36,7 @@ from .contract import (
     HitlStoreContract,
     make_decision,
     make_item,
+    make_maker_checker,
     make_scope,
 )
 from .fake_container import FakeContainer, throttled
@@ -115,6 +117,46 @@ async def test_final_items_carry_no_due_fields() -> None:
     stored = next(iter(container.docs.values()))
     assert "due_key" not in stored and "due_ts" not in stored
     assert stored["state_name"] == "expired"
+
+
+async def test_open_maker_checker_scan_is_bounded_and_projects_the_position_only() -> None:
+    items, container = cosmos_items()
+    created = await items.create(make_maker_checker())
+    refs = await items.open_maker_checker(customer_id="contoso", limit=9)
+    assert [r.item_id for r in refs] == [created.item_id]
+    sql, params, partition = container.queries[-1]
+    assert partition is None  # the reconcile sweep scans every partition, bounded
+    assert sql.startswith("SELECT TOP @limit c.sort_key FROM c")
+    assert params["@limit"] == 9
+    assert params["@kind"] == "maker_checker"
+    assert params["@customer"] == "contoso"
+
+
+async def test_open_maker_checker_lists_a_malformed_document_whose_get_fails_alone() -> None:
+    items, container = cosmos_items()
+    good = await items.create(make_maker_checker())
+    ((slot, doc),) = container.docs.items()
+    broken = {**doc, "id": "bad-1", "sort_key": "2026-10-20T08:00:00.000000Z|bad-1"}
+    del broken["maker"]  # fails ReviewItem validation
+    container.docs[(slot[0], "bad-1")] = broken
+    refs = await items.open_maker_checker()
+    assert [r.item_id for r in refs] == ["bad-1", good.item_id]
+    with pytest.raises(DependencyTransientError) as invalid:
+        await items.get("bad-1")
+    assert invalid.value.reason == "hitl_record_invalid"
+    assert await items.get(good.item_id) == good
+
+
+async def test_in_memory_open_scan_lists_a_document_that_fails_validation() -> None:
+    store = InMemoryHitlStore()
+    good = await store.create(make_maker_checker())
+    raw = json.loads(good.model_dump_json())
+    raw.update(item_id="bad-1", created_at="2026-10-20T08:00:00Z")
+    del raw["maker"]
+    store._items["bad-1"] = json.dumps(raw)  # pyright: ignore[reportPrivateUsage]
+    store._items["junk"] = "not json"  # pyright: ignore[reportPrivateUsage]
+    refs = await store.open_maker_checker()
+    assert [r.item_id for r in refs] == ["bad-1", good.item_id]
 
 
 async def test_items_use_only_create_replace_read_and_query() -> None:

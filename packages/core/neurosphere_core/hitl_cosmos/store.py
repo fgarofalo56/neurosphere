@@ -18,6 +18,10 @@ Query shapes (all parameterized, field names fixed):
 * ``due`` is the expiry scan. The protocol carries no customer, so it is the one cross-partition
   query; it is bounded (``TOP @limit``, ``limit <= 500``) and touches only items with an active
   deadline (``IS_DEFINED(c.due_key)``), ordered by ``due_key``.
+* ``open_maker_checker`` is the review-reconcile scan: also cross-partition and bounded
+  (``TOP @limit``), filtered on ``kind`` and ``state_name``, ordered and continued by
+  ``sort_key``. It projects ``c.sort_key`` only (which embeds the item id), so a document that
+  fails validation cannot fail the scan.
 * ``get`` is unscoped by protocol (the caller authorizes the item's domain), so it is a
   cross-partition ``id`` lookup bounded to one row.
 
@@ -57,7 +61,13 @@ from neurosphere_core.errors import (
     StaleVersionError,
 )
 from neurosphere_core.hitl.models import ReviewItem, format_timestamp
-from neurosphere_core.hitl.store import decode_cursor, encode_cursor
+from neurosphere_core.hitl.store import (
+    OPEN_MAKER_CHECKER_STATES,
+    ReviewItemRef,
+    decode_cursor,
+    encode_cursor,
+    position_of,
+)
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -126,7 +136,7 @@ def _check_limit(limit: int) -> None:
 
 
 def _sort_key(item: ReviewItem) -> str:
-    return f"{format_timestamp(item.created_at)}|{item.item_id}"
+    return position_of(item.created_at, item.item_id)
 
 
 def _item_body(item: ReviewItem) -> dict[str, Any]:
@@ -256,6 +266,40 @@ class CosmosHitlStore:
             partition_key=None,
         )
         return [_item_from_row(row) for row in rows]
+
+    async def open_maker_checker(
+        self,
+        *,
+        after: str | None = None,
+        customer_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+    ) -> builtins.list[ReviewItemRef]:
+        _check_limit(limit)
+        clauses = ["c.kind = @kind", "ARRAY_CONTAINS(@states, c.state_name)"]
+        params: builtins.list[dict[str, Any]] = [
+            {"name": "@limit", "value": limit},
+            {"name": "@kind", "value": "maker_checker"},
+            {"name": "@states", "value": builtins.list(OPEN_MAKER_CHECKER_STATES)},
+        ]
+        if after is not None:
+            clauses.append("c.sort_key > @after")
+            params.append({"name": "@after", "value": after})
+        if customer_id is not None:
+            clauses.append("c.customer_id = @customer")
+            params.append({"name": "@customer", "value": customer_id})
+        # Only fixed clause text and parameter placeholders are interpolated.
+        sql = (
+            "SELECT TOP @limit c.sort_key FROM c WHERE "  # noqa: S608
+            + " AND ".join(clauses)
+            + " ORDER BY c.sort_key ASC"
+        )
+        rows = await self._query(sql, params, partition_key=None)
+        refs: builtins.list[ReviewItemRef] = []
+        for row in rows:
+            position = row.get("sort_key")
+            if isinstance(position, str) and "|" in position:
+                refs.append(ReviewItemRef(position.rsplit("|", 1)[1], position))
+        return refs
 
     async def _query(
         self,

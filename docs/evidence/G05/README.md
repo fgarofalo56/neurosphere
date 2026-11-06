@@ -1,11 +1,21 @@
-# G05 - model swap compatibility: OPEN
+# G05 - model swap compatibility: NARROWED (one Commercial target tested, 2026-11-05)
 
-**Status: OPEN. The live gate did not run.** The operator decided on 2026-10-20 that G05 stays
-OPEN in PRP-17. Nothing in this directory is evidence that a Foundry deployment was changed.
-What exists is the connector (`connectors/reference/foundry-actions/`), mock-transport tests
-that drive it against a scripted ARM, and a live script that refuses without approval.
+**Status: NARROWED, not closed.** The operator-approved live gate ran on 2026-11-05 against a
+throwaway Azure AI Services account in a dedicated resource group (Limitlessdata - Main, eastus2,
+Commercial). Evidence: `20261105T173214Z-foundry-swap-live.json` (result PASS): dry-run, five
+passing compatibility checks plus two `unknown` (context window and tool support have no documented
+field), apply (gpt-5-nano to gpt-5-mini, `GlobalStandard`), verify against the observed deployment
+state (`matched: true`), rollback, and the restored model re-read. The account and resource group
+were deleted afterwards and the account purged.
 
-## What would close it (narrowly, for the tested target only)
+What this does NOT show: it covers one Commercial target and one model pair only. There was no
+traffic-split canary (see Known limitations), no regression/quality run on the swapped model, and
+nothing about Government (G01 stays open; the Government capability row is disabled). The
+`foundry.deployment_write.commercial` matrix row stays `unverified` until the register owner
+decides how much one tested target narrows it. Production action execution is still gated by the
+register.
+
+## How the gate is run (re-run for any new target)
 
 `NS_LIVE_APPROVED=1 python scripts/gates/g05_foundry_swap_live.py --subscription ... --resource-group ... --account ... --location ... --deployment ... --target-model ... --target-version ...`
 against an operator-chosen, non-production Commercial Azure AI Services account. The script runs

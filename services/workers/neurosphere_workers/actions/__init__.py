@@ -8,6 +8,9 @@ Composition (the API's validate step only ever calls ``dry_run``; apply/rollback
     executor = ActionExecutor(service, registry, execution_control=control, worker_id="exec-1")
     worker = ActionExecutorWorker(executor, store)
     await WorkerRunner(worker, checkpoint_store).run()
+    # Review-reconcile sweep (closes review items the executor hook could not):
+    sweep = ReviewReconcileWorker(hitl_service, service, auditor=action_auditor)
+    await WorkerRunner(sweep, checkpoint_store).run()
 """
 
 from neurosphere_workers.actions.canary import CANARY_OUTCOMES, CanaryProbe, VerifyOnlyCanary
@@ -30,6 +33,15 @@ from neurosphere_workers.actions.executor import (
     ExecutionReport,
     ReportOutcome,
 )
+from neurosphere_workers.actions.reconcile import (
+    DEFAULT_ORPHAN_GRACE,
+    DEFAULT_PASS_INTERVAL,
+    DEFAULT_RECONCILE_BATCH_LIMIT,
+    RECONCILE_OPERATION,
+    ReconcileOutcome,
+    ReconcileReport,
+    ReviewReconcileWorker,
+)
 from neurosphere_workers.actions.targets import DEFAULT_ACTION_CONNECTORS, resolve_connector
 from neurosphere_workers.actions.worker import DEFAULT_BATCH_LIMIT, ActionExecutorWorker
 
@@ -44,16 +56,23 @@ __all__ = [
     "DEFAULT_LEASE",
     "DEFAULT_LEASE_RENEWAL",
     "DEFAULT_MAX_CONNECTOR_CALL",
+    "DEFAULT_ORPHAN_GRACE",
+    "DEFAULT_PASS_INTERVAL",
+    "DEFAULT_RECONCILE_BATCH_LIMIT",
     "LEASE_LOST",
+    "RECONCILE_OPERATION",
     "ROLLBACK_FAILED",
     "ActionExecutor",
     "ActionExecutorWorker",
     "CanaryProbe",
     "ExecutionReport",
     "FinishedHook",
+    "ReconcileOutcome",
+    "ReconcileReport",
     "ReportOutcome",
     "ReviewItemCompletion",
     "ReviewItemOutcomes",
+    "ReviewReconcileWorker",
     "VerifyOnlyCanary",
     "resolve_connector",
 ]

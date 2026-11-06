@@ -1,0 +1,87 @@
+{
+  "account": "nsg0512684",
+  "api_versions": {
+    "deployments": "2024-10-01",
+    "models": "2024-10-01",
+    "permissions": "2022-04-01"
+  },
+  "deployment": "g05-swap",
+  "gate": "G05",
+  "result": "PASS",
+  "run_at": "20261105T173214Z",
+  "steps": [
+    {
+      "etag": "\"39e801e9-e65f-4cf7-8ba3-618f4efbd7b2\"",
+      "model": {
+        "format": "OpenAI",
+        "name": "gpt-5-nano",
+        "version": "2025-08-07"
+      },
+      "step": "before"
+    },
+    {
+      "step": "dry_run",
+      "would_change": true
+    },
+    {
+      "checks": [
+        {
+          "check_id": "target_model_exists",
+          "detail": "listed",
+          "status": "passed"
+        },
+        {
+          "check_id": "lifecycle_not_deprecated",
+          "detail": "lifecycleStatus=GenerallyAvailable",
+          "status": "passed"
+        },
+        {
+          "check_id": "inference_not_retired",
+          "detail": "inference deprecation 2027-07-13",
+          "status": "passed"
+        },
+        {
+          "check_id": "sku_supported",
+          "detail": "deployment sku GlobalStandard vs model skus",
+          "status": "passed"
+        },
+        {
+          "check_id": "capability_keys_preserved",
+          "detail": "all present",
+          "status": "passed"
+        },
+        {
+          "check_id": "context_window",
+          "detail": "no documented field in Models - List; not evaluated (warning)",
+          "status": "unknown"
+        },
+        {
+          "check_id": "tool_support",
+          "detail": "no documented field in Models - List; not evaluated (warning)",
+          "status": "unknown"
+        }
+      ],
+      "step": "compatibility"
+    },
+    {
+      "step": "apply",
+      "version_after": "\"d05b1bbf-26c8-4516-8a14-0bea718194b2\"",
+      "version_before": "\"39e801e9-e65f-4cf7-8ba3-618f4efbd7b2\""
+    },
+    {
+      "matched": true,
+      "mismatched": [],
+      "step": "verify_after_apply"
+    },
+    {
+      "status": "rolled_back",
+      "step": "rollback",
+      "version_after": "\"c6d52c18-52b4-4349-a8f0-763129ef5f5a\""
+    },
+    {
+      "matched": true,
+      "mismatched": [],
+      "step": "verify_after_rollback"
+    }
+  ]
+}

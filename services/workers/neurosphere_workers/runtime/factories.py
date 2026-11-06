@@ -12,7 +12,9 @@ Role -> class:
 * ``projections``     ``OutboxReader`` -> ``CatalogProjection`` (sink ``catalog``)
 * ``aggregates``      ``OutboxReader`` -> ``AggregateProjection`` (sink ``aggregates``)
 * ``actions``         ``ActionExecutorWorker`` (only intents in ``executing``); write targets
-                      from ``NS_FOUNDRY_*``/``NS_APIM_*`` (:func:`register_write_targets`)
+                      from ``NS_FOUNDRY_*``/``NS_APIM_*`` (:func:`register_write_targets`),
+                      plus ``ReviewReconcileWorker`` (closes stale maker-checker items) in the
+                      same process on the same services (:func:`actions_role`)
 * ``hitl_timers``     ``HitlTimerWorker``
 * ``lifecycle``       ``LifecycleWorker``
 * ``recommendations`` periodic ``run_pipeline``
@@ -45,7 +47,7 @@ from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_connector_foundry_actions import create_swap_connector
-from neurosphere_core.actions import ActionService
+from neurosphere_core.actions import ActionAuditor, ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
@@ -105,7 +107,12 @@ from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationSt
 from neurosphere_core.stores import ensure_local_containers
 from pydantic import ValidationError
 
-from neurosphere_workers.actions import ActionExecutor, ActionExecutorWorker, ReviewItemCompletion
+from neurosphere_workers.actions import (
+    ActionExecutor,
+    ActionExecutorWorker,
+    ReviewItemCompletion,
+    ReviewReconcileWorker,
+)
 from neurosphere_workers.actions.apim import (
     ApplyRecords,
     GatewayArm,
@@ -140,7 +147,13 @@ from neurosphere_workers.projections.outbox import (
 )
 from neurosphere_workers.recommendations.pipeline import run_pipeline
 from neurosphere_workers.recommendations.projection.models import CandidatePairConfig
-from neurosphere_workers.runtime.adapters import IngestionRole, PeriodicTick, TickWorker, WorkerRole
+from neurosphere_workers.runtime.adapters import (
+    IngestionRole,
+    MultiWorkerRole,
+    PeriodicTick,
+    TickWorker,
+    WorkerRole,
+)
 from neurosphere_workers.runtime.archive_reader import (
     ArchiveReader,
     ArchiveRecordSource,
@@ -459,15 +472,47 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
     # neither configured the registry is empty and every intent fails closed with
     # capability_unavailable (no connector call, no pretend change).
     registry, gateways = await _action_write_targets(cfg, lifetime, cosmos)
+    hitl = _hitl_service(cfg, cosmos, audit)
     executor = ActionExecutor(
         service,
         registry,
         execution_control=control,
         worker_id=cfg.worker.worker_id or f"{socket.gethostname()}-{os.getpid()}",
-        on_finished=ReviewItemCompletion(_hitl_service(cfg, cosmos, audit), auditor=auditor),
+        on_finished=ReviewItemCompletion(hitl, auditor=auditor),
         gateways=gateways,
     )
-    return WorkerRole(ActionExecutorWorker(executor, store), idle_seconds=cfg.worker.poll_seconds)
+    return actions_role(
+        cfg,
+        executor_worker=ActionExecutorWorker(executor, store),
+        hitl=hitl,
+        actions=service,
+        auditor=auditor,
+    )
+
+
+def actions_role(
+    cfg: RuntimeConfig,
+    *,
+    executor_worker: ActionExecutorWorker,
+    hitl: HitlService,
+    actions: ActionService,
+    auditor: ActionAuditor,
+) -> MultiWorkerRole:
+    """The ``actions`` role: the executor plus the review-reconcile sweep, on shared services.
+
+    The sweep (PRP-17 audit close-out) closes review items the executor's completion hook could
+    not reach; it uses the very HitlService/ActionService/auditor the executor was built with and
+    never touches a target system.
+    """
+    reconcile = ReviewReconcileWorker(
+        hitl,
+        actions,
+        auditor=auditor,
+        # cfg.customer_id raises RoleConfigError rather than yielding None: the runtime must never
+        # build an unscoped (all-customer) sweep.
+        customer_id=cfg.customer_id,
+    )
+    return MultiWorkerRole([executor_worker, reconcile], idle_seconds=cfg.worker.poll_seconds)
 
 
 async def _action_write_targets(
