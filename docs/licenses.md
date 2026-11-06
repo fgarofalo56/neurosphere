@@ -97,7 +97,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | neurosphere-workers | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-workspace | 0.0.0 | first-party | first-party | workspace member |
 | nodeenv | 1.11.0 | BSD | dev-only | no EOL published locally; Dependabot tracks releases |
-| oauthlib | 4.0.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
+| oauthlib | 4.0.1 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | opentelemetry-api | 1.45.2 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | opentelemetry-instrumentation | 0.66b2 | Apache-2.0 | runtime | pre-release version; no support window recorded |
 | opentelemetry-instrumentation-asgi | 0.66b2 | Apache-2.0 | runtime | pre-release version; no support window recorded |

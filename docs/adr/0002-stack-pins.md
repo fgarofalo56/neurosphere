@@ -193,7 +193,7 @@ only when the package is dev-only (hypothesis, for example).
 | neurosphere-workers | 0.0.0 | first-party | workspace | first-party |
 | neurosphere-workspace | 0.0.0 | first-party | workspace | first-party |
 | nodeenv | 1.11.0 | BSD | https://pypi.org/project/nodeenv/ | dev-only; no EOL published locally; Dependabot tracks releases |
-| oauthlib | 4.0.0 | BSD-3-Clause | https://pypi.org/project/oauthlib/ | runtime; no EOL published locally; Dependabot tracks releases |
+| oauthlib | 4.0.1 | BSD-3-Clause | https://pypi.org/project/oauthlib/ | runtime; no EOL published locally; Dependabot tracks releases |
 | opentelemetry-api | 1.45.2 | Apache-2.0 | https://pypi.org/project/opentelemetry-api/ | runtime; no EOL published locally; Dependabot tracks releases |
 | opentelemetry-instrumentation | 0.66b2 | Apache-2.0 | https://pypi.org/project/opentelemetry-instrumentation/ | runtime; pre-release version; no support window recorded |
 | opentelemetry-instrumentation-asgi | 0.66b2 | Apache-2.0 | https://pypi.org/project/opentelemetry-instrumentation-asgi/ | runtime; pre-release version; no support window recorded |
