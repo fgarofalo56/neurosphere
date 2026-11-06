@@ -51,6 +51,16 @@ class GatewayPollSettings(BaseSettings):
         return value
 
     @property
+    def unconfigured(self) -> bool:
+        """True when neither a domain list nor a producer secret is set.
+
+        The role is part of ``all``, so a deployment with no gateway polling configured must start
+        it as a harmless no-op instead of failing. Any partial configuration (domains without a
+        secret, or the reverse) is an operator error and is still refused by the factory.
+        """
+        return not self.domains and self.producer_secret is None
+
+    @property
     def domains(self) -> tuple[str, ...]:
         raw = self.domain_ids or ""
         return tuple(dict.fromkeys(part.strip() for part in raw.split(",") if part.strip()))
