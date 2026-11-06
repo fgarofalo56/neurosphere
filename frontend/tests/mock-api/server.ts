@@ -2107,6 +2107,9 @@ function mockGateway(
       capabilities: {},
       diagnostics: {},
       last_sync_status: "ok",
+      last_sync_at: RECENT,
+      freshness_seconds: 300,
+      coverage: 0.85,
       mode: "observe",
       mode_changed_at: null,
       mode_changed_by: null,
@@ -2120,6 +2123,7 @@ function mockGateway(
 function seedGateways(): MockGateway[] {
   return [
     mockGateway(GATEWAY_OBSERVE, DOMAIN_OK, "apim-observe", {
+      diagnostics: { gateway_logs: true, gateway_llm_logs: true, gateway_mcp_logs: false },
       preflight: {
         passed: false,
         checked_at: RECENT,
@@ -2135,7 +2139,12 @@ function seedGateways(): MockGateway[] {
       preflight: { passed: true, checked_at: RECENT, required: PREFLIGHT_ACTIONS, missing: [] },
     }),
     mockGateway(GATEWAY_GOVERNMENT, DOMAIN_OK, "apim-gov", { cloud: "government" }),
-    mockGateway(GATEWAY_BUSY, DOMAIN_OK, "apim-busy"),
+    mockGateway(GATEWAY_BUSY, DOMAIN_OK, "apim-busy", {
+      last_sync_status: "never",
+      last_sync_at: null,
+      freshness_seconds: null,
+      coverage: null,
+    }),
     mockGateway(GATEWAY_VIEWER, DOMAIN_VIEWER, "apim-viewer"),
   ];
 }
@@ -2248,8 +2257,80 @@ function mockGrant(id: string, domain: string, who: string): Record<string, unkn
   };
 }
 
+const MOCK_INVENTORY_COUNTS = {
+  apis: 2,
+  operations: 3,
+  products: 1,
+  backends: 2,
+  policy_fragments: 1,
+  subscriptions: 1,
+};
+
+/** SYNTHETIC inventory snapshot: ids and names only, no keys and no policy XML. */
+function mockInventory(gatewayId: string): Record<string, unknown> {
+  return {
+    gateway_id: gatewayId,
+    taken_at: RECENT,
+    apis: [
+      {
+        id: "chat-api",
+        name: "Chat completions",
+        path: "openai",
+        protocols: ["https"],
+        api_type: "http",
+        subscription_required: true,
+      },
+      { id: "mcp-finance", name: "Finance MCP", path: "mcp/finance", protocols: ["https"] },
+    ],
+    operations: [
+      { api_id: "chat-api", id: "chat", method: "POST", url_template: "/chat/completions" },
+      { api_id: "chat-api", id: "embed", method: "POST", url_template: "/embeddings" },
+      { api_id: "mcp-finance", id: "mcp", method: "POST", url_template: "/" },
+    ],
+    products: [
+      {
+        id: "finance-analyst",
+        name: "Finance analyst",
+        state: "published",
+        subscription_required: true,
+        approval_required: false,
+      },
+    ],
+    product_api_links: [{ product_id: "finance-analyst", api_id: "chat-api" }],
+    backends: [
+      { id: "aoai-east", type: "Single", url: "https://aoai-east.example.com/openai" },
+      {
+        id: "aoai-pool",
+        type: "Pool",
+        pool_members: [
+          { backend_id: "aoai-east", weight: 3, priority: 1 },
+          { backend_id: "aoai-west", weight: 1, priority: 2 },
+        ],
+        circuit_breaker_rules: [
+          {
+            name: "trip-on-429",
+            failure_count: 3,
+            failure_interval: "PT1M",
+            trip_duration: "PT30S",
+            status_codes: ["429", "503"],
+          },
+        ],
+      },
+    ],
+    policy_fragments: [{ name: "llm-token-limit", description: "Token limit per subscription" }],
+    subscriptions: [
+      {
+        id: "sub-finance-analyst",
+        display_name: "Finance analyst subscription",
+        scope: "/products/finance-analyst",
+        state: "active",
+      },
+    ],
+  };
+}
+
 function gatewaysHandler(ctx: ActionsContext, rest: string): void {
-  const match = /^domains\/([^/]+)\/gateways(?:\/([^/]+)\/mode)?\/?$/.exec(rest);
+  const match = /^domains\/([^/]+)\/gateways(?:\/([^/]+)(?:\/(mode|inventory))?)?\/?$/.exec(rest);
   if (match === null) {
     send(ctx.res, 404, { error: "not found" }, ctx.cors);
     return;
@@ -2264,7 +2345,30 @@ function gatewaysHandler(ctx: ActionsContext, rest: string): void {
     return;
   }
   const gateway = gateways.find((g) => g.id === gatewayId);
-  if (!write || gateway === undefined) {
+  if (!write && gateway !== undefined) {
+    // PRP-33 observe reads: detail (registration + inventory counts) and the inventory snapshot.
+    if (match[3] === "inventory") {
+      // The busy gateway has never synced: no snapshot yet, which the API answers with a 404.
+      if (gateway.id === GATEWAY_BUSY) send(ctx.res, 404, { error: "not found" }, ctx.cors);
+      else send(ctx.res, 200, mockInventory(gateway.id), ctx.cors);
+      return;
+    }
+    if (match[3] === undefined) {
+      const counts = gateway.id === GATEWAY_BUSY ? null : MOCK_INVENTORY_COUNTS;
+      send(
+        ctx.res,
+        200,
+        {
+          ...gateway.body,
+          inventory_counts: counts,
+          inventory_taken_at: counts === null ? null : RECENT,
+        },
+        ctx.cors,
+      );
+      return;
+    }
+  }
+  if (!write || gateway === undefined || match[3] !== "mode") {
     send(ctx.res, 404, { error: "not found" }, ctx.cors);
     return;
   }

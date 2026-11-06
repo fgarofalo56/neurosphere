@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
 import { Panel, StatusPill, Timestamp } from "../../design-system";
 import type { ApiError } from "../../api/index.js";
+import { GatewayObserveSummary } from "./GatewayObserveSummary";
 import { useDraftModeChange } from "./hooks";
 import { canPropose } from "./permissions";
 import { gatewayRefusalText } from "./refusals";
@@ -119,6 +120,7 @@ export function GatewayModePanel({
         <dt>{M.revision}</dt>
         <dd>{gateway.mode_revision}</dd>
       </dl>
+      <GatewayObserveSummary domainId={domainId} gateway={gateway} />
       <h3>{STRINGS.preflight.title}</h3>
       <PreflightResult preflight={gateway.preflight} />
       {gateway.mode === "observe" ? <p data-testid="observe-note">{S.observeNote}</p> : null}

@@ -21,6 +21,7 @@
     "/federation",
     "/finops/forecast",
     "/gateways",
+    "/gateways/detail",
     "/map",
     "/map/table",
     "/mcp-admin",
