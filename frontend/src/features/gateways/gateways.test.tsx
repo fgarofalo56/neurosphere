@@ -165,7 +165,7 @@ function setup(routes: Record<string, Reply>) {
 
 describe("exports and permissions", () => {
   it("exports the route and a nav item", () => {
-    expect(gatewaysRoutes.map((r) => r.path)).toEqual(["gateways"]);
+    expect(gatewaysRoutes.map((r) => r.path)).toEqual(["gateways", "gateways/detail"]);
     expect(gatewaysNavItems()).toEqual([{ to: "/gateways", label: "Gateways" }]);
   });
 

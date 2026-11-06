@@ -147,6 +147,7 @@ class Rig:
         cloud: Literal["commercial", "government"] = "commercial",
         settings: GatewayPollSettings | None = None,
         store: InMemoryGatewayStore | None = None,
+        metrics_app_id: str | None = None,
     ) -> None:
         self.connector = connector
         self.api = FakeIngestApi()
@@ -169,6 +170,7 @@ class Rig:
             cloud=cloud,
             connector_factory=self._factory,
             clock=lambda: self.clock_now,
+            metrics_app_id=metrics_app_id,
         )
 
     def _factory(self, cloud: str, bounds: PollBounds) -> MonitorPort:

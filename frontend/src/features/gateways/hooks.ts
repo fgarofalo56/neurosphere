@@ -1,6 +1,26 @@
 import { createMutationHook, createQueryHook } from "../../api/index.js";
-import { gatewayModePath, gatewaysPath } from "./paths";
-import type { ActionView, GatewayList, GatewayListParams, ModeChangeVars } from "./types";
+import { gatewayInventoryPath, gatewayModePath, gatewayPath, gatewaysPath } from "./paths";
+import type {
+  ActionView,
+  GatewayDetail,
+  GatewayInventory,
+  GatewayList,
+  GatewayListParams,
+  GatewayRef,
+  ModeChangeVars,
+} from "./types";
+
+export const useGatewayDetail = createQueryHook<GatewayRef, GatewayDetail>({
+  key: "gateway-detail",
+  fetcher: (client, p, signal) =>
+    client.get<GatewayDetail>(gatewayPath(p.domainId, p.gatewayId), undefined, signal),
+});
+
+export const useGatewayInventory = createQueryHook<GatewayRef, GatewayInventory>({
+  key: "gateway-inventory",
+  fetcher: (client, p, signal) =>
+    client.get<GatewayInventory>(gatewayInventoryPath(p.domainId, p.gatewayId), undefined, signal),
+});
 
 export const useGateways = createQueryHook<GatewayListParams, GatewayList>({
   key: "gateways-list",

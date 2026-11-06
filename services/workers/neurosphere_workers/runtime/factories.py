@@ -19,7 +19,7 @@ Role -> class:
 * ``lifecycle``       ``LifecycleWorker``
 * ``recommendations`` periodic ``run_pipeline``
 * ``evaluation``      periodic online ``EvaluationService`` run
-* ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; opt-in, not in ``all``)
+* ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; idles if unconfigured)
 """
 
 from __future__ import annotations
@@ -732,7 +732,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
 
 
 # --------------------------------------------------------------------------------------------
-# gateway_poll (opt-in role: not part of ``all``)
+# gateway_poll (part of ``all``; a no-op until NS_GATEWAY_POLL_* is configured)
 
 
 class _ClosableHttp:
@@ -747,6 +747,17 @@ class _ClosableHttp:
 
 async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     poll = GatewayPollSettings()
+    if poll.unconfigured:
+        # Part of ``all``: with no gateway polling configured, idle gracefully (one info line).
+        logger.info(
+            "gateway_poll not configured; role idles",
+            extra={"event": "worker.gateway_poll_unconfigured"},
+        )
+
+        async def _noop() -> None:
+            return None
+
+        return _tick_role("gateway_poll", _noop, cfg)
     if not poll.domains:
         raise RoleConfigError("gateway_poll_domain_ids_missing")
     if poll.api_base_url is None:
@@ -758,7 +769,16 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
     if cfg.settings.env == "local":
         await create_gateway_container(_database(cfg, cosmos))
     http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    metrics_app_id = poll.metrics_app_id
+    if metrics_app_id is not None and cfg.cloud == "government":
+        # No App Insights Government host is verified, so the metrics poll stays commercial-only.
+        logger.warning(
+            "gateway_poll metrics poll skipped: unsupported in Government",
+            extra={"event": "worker.gateway_poll_metrics_government_skipped"},
+        )
+        metrics_app_id = None
     poller = GatewayPoller(
+        metrics_app_id=metrics_app_id,
         store=CosmosGatewayStore.from_client(cosmos, database=cfg.store.database),
         ingest=IngestClient(
             http.client,

@@ -8,9 +8,11 @@ from neurosphere_connector_azure_monitor.connector import (
 )
 from neurosphere_connector_azure_monitor.endpoints import ENDPOINTS, MonitorEndpoints, endpoints_for
 from neurosphere_connector_azure_monitor.gateway_mapping import (
+    CostCenterIndex,
     GatewayCostObservation,
     GatewayObservation,
     McpToolObservation,
+    cost_center_tags,
     hash_subscription_id,
     map_gateway_row,
     map_mcp_row,
@@ -20,6 +22,7 @@ from neurosphere_connector_azure_monitor.queries import MonitorSource, SourceKin
 __all__ = [
     "ENDPOINTS",
     "AzureMonitorConnector",
+    "CostCenterIndex",
     "GatewayCostObservation",
     "GatewayObservation",
     "ManagedIdentityTokenProvider",
@@ -30,6 +33,7 @@ __all__ = [
     "PollResult",
     "SourceKind",
     "TokenProvider",
+    "cost_center_tags",
     "endpoints_for",
     "hash_subscription_id",
     "map_gateway_row",

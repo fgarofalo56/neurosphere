@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-33-apim-gateway-observe](backlog/PRP-33-apim-gateway-observe.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
 | [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | - | - | ? / ? | required |
 | [prp-05-api-worker-runtime-and-self-observability](backlog/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 7 | - | - | ? / ? | none |
@@ -35,6 +34,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-11-06 | #176 |
 | [prp-06-identity-authz-and-audit](shipped/PRP-06-identity-authz-and-audit.md) | 2026-11-05 | #172 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-11-05 | #173 |
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-11-05 | #175 |
