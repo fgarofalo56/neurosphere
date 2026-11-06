@@ -117,6 +117,10 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ApiCall("/api/v1/catalog/entities", q(entity_type="mcp_server")),
     ),
     "/gateways": (*_SHELL, ApiCall("/api/v1/gateways/domains/{domain}/gateways")),
+    # PRP-33 item 7: the detail page reads one gateway and its inventory by id. No gateway is
+    # seeded in the stack, so only the list the page links from is called here; the detail and
+    # inventory endpoints are covered by services/api/tests/gateway_api.
+    "/gateways/detail": (*_SHELL, ApiCall("/api/v1/gateways/domains/{domain}/gateways")),
     "/dashboards/cost": _dashboard("cost"),
     "/dashboards/coverage": _dashboard("coverage"),
     "/dashboards/latency": _dashboard("latency"),

@@ -37,6 +37,7 @@ const DETAIL_VIA: Readonly<Record<string, { list: string; link: string }>> = {
   "/review/item": { list: "/review", link: 'a[href*="/review/item"]' },
   "/mcp-admin/server": { list: "/mcp-admin", link: 'a[href*="/mcp-admin/server"]' },
   "/catalog/entity": { list: "/catalog", link: 'a[href*="/catalog/entity"]' },
+  "/gateways/detail": { list: "/gateways", link: 'a[href*="/gateways/detail"]' },
 };
 
 /** A detail route whose id arrives in the URL and that no list page links to. */
