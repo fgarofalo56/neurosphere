@@ -2,11 +2,20 @@
 
 A registered MCP server is one exact URL. :func:`normalize_server_url` accepts only
 ``https://host[:port]/path[?query]`` with no userinfo, no fragment, no wildcard, no zone id, no
-whitespace or control characters and no backslash. The host is lowercased, IDNA-encoded (stdlib
-``idna`` codec) and stripped of one trailing dot; the default port 443 is dropped from the
-normalised form. Single-label names (``intranet``, ``metadata``) and names whose last label is
-numeric (``127.1``, ``0x7f.1``: alternate IPv4 spellings a resolver would accept) are refused
-unless the host is a canonical IP literal.
+whitespace or control characters, no backslash and no non-ASCII character anywhere. The host is
+lowercased and stripped of one trailing dot; the default port 443 is dropped from the normalised
+form.
+
+Internationalised names are refused rather than converted: the stdlib ``idna`` codec is IDNA2003
+(``faß`` becomes ``fass``) while resolvers, browsers and certificates follow IDNA2008/UTS-46
+(``faß`` is ``xn--fa-hia``), so a converted name could be checked as one host and connect to
+another. Administrators register the A-label (``xn--...``) form, which is checked, resolved and
+connected to byte for byte. A non-ASCII path is refused for the same reason: the HTTP client
+percent-encodes it, so the exact-URL guard would compare a different target.
+
+Single-label names (``intranet``, ``metadata``) and names whose last label is numeric
+(``127.1``, ``0x7f.1``: alternate IPv4 spellings a resolver would accept) are refused unless
+the host is a canonical IP literal.
 
 Every comparison is on the parsed hostname. Suffix rules always carry a leading dot and match
 whole labels; nothing here is a substring test on the URL string.
@@ -99,10 +108,10 @@ def _normalize_dns_host(host: str) -> str:
         host = host[:-1]
     if not host or host.endswith(".") or "*" in host:
         raise _bad("server host must be an exact DNS name")
-    try:
-        ascii_host = host.encode("idna").decode("ascii").lower()
-    except UnicodeError as exc:
-        raise _bad("server host is not a valid internationalised name") from exc
+    if not host.isascii():
+        # Defence in depth: normalize_server_url already refuses non-ASCII URLs (module docstring).
+        raise _bad("server host must be ASCII; register an internationalised name as xn-- labels")
+    ascii_host = host.lower()
     if len(ascii_host) > 253:
         raise _bad("server host is too long")
     labels = ascii_host.split(".")
@@ -141,6 +150,11 @@ def normalize_server_url(raw: str) -> ServerUrl:
         raise _bad(f"server URL must be 1..{MAX_URL_CHARS} characters")
     if _has_forbidden_chars(raw):
         raise _bad("server URL contains whitespace, control characters or a backslash")
+    if not raw.isascii():
+        raise _bad(
+            "server URL must be ASCII; register an internationalised host as xn-- labels "
+            "and percent-encode the path"
+        )
     if "#" in raw:
         raise _bad("server URL must not carry a fragment")
     parts = urlsplit(raw)

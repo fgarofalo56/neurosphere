@@ -224,6 +224,24 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 | D | Slow or huge external responses | Timeouts and result bounds in the client | Planned | PRP-22 |
 | E | Token passthrough; stdio exposed in a hosted deployment; SSRF via registered URL | No token forwarding; hosted server is streamable HTTP only (stdio is never authenticated, local dev only); SSRF policy in [AC-3](#ac-3-server-side-request-forgery) | Planned | PRP-22 |
 
+#### A4 residual risk: tool list/call TOCTOU (MCP client)
+
+An administrator approves an external tool against the hash of its synced definition (name,
+description, input schema, annotations). The external server controls that definition and can
+change it at any time, so the tool that was approved and the tool that is called can differ: a
+server can serve a benign description at sync time and an instruction-laden one later. The
+mitigation is the call-time hash check: every `call_tool` opens a fresh session, re-lists the
+tools, and calls only when the LIVE hash in that session equals the approved hash; on a mismatch
+the approval is revoked for everyone (`hash_changed`) and the call is refused (`forbidden`,
+`tool_hash_mismatch`) (`services/api/neurosphere_api/mcp/client/connector.py`,
+`packages/core/neurosphere_core/mcp/registry.py`). A narrow window remains inside one session
+between that re-list and the `tools/call` request: a hostile server can answer the list with
+the approved definition and then run different code. No client-side check can close that
+window, because the client cannot inspect server code. That is why results are untrusted data
+with provenance, run through the shared injection corpus, and never become an action draft
+(`tests/security/mcp/`), and why approval is per tool and per server. State: In repo (call-time
+hash check) / Accepted residual (in-session window). Owner: PRP-22 (issue #112).
+
 ### A5. Deployment intelligence: consented scan, plan, approval, IaC (additional)
 
 | | Threat | Mitigation | State | Owner |

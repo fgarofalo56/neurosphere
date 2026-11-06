@@ -13,10 +13,12 @@ Audit chain: ``<customer>.mcp-admin``. Subjects: ``<cloud>:<customer>:mcp:server
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Final, TypeVar
+from urllib.parse import urlsplit
 
 from neurosphere_contracts.audit.v1.audit_record import Subject
 from neurosphere_core.audit import (
@@ -28,6 +30,7 @@ from neurosphere_core.audit import (
     make_subject,
     run_audited_mutation,
 )
+from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.mcp import (
     RegisteredServer,
     ServerStatus,
@@ -35,8 +38,17 @@ from neurosphere_core.mcp import (
     normalize_server_url,
     server_id_for,
 )
-from neurosphere_core.mcp.errors import SERVER_MODIFIED, TOOL_NOT_FOUND, invalid, stale
+from neurosphere_core.mcp.errors import (
+    SERVER_MODIFIED,
+    SSRF_BLOCKED_HOST,
+    TOOL_NOT_FOUND,
+    forbidden,
+    invalid,
+    stale,
+)
 from neurosphere_core.mcp.service import McpRegistry
+from neurosphere_core.mcp.store import MAX_LIST_LIMIT
+from neurosphere_core.mcp.urls import blocked_hostname
 from neurosphere_core.scope import IdentityScope
 from pydantic import BaseModel
 
@@ -78,6 +90,20 @@ class _Target(BaseModel):
     server_id: str
     tool: str | None = None
     tool_hash: str | None = None
+
+
+def _raw_host(url: str) -> str | None:
+    """Lower-cased hostname of an unparseable-or-refused URL (never recorded), else ``None``."""
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return None
+    return host.lower() if host else None
+
+
+def _unparsed_server_id(url: str) -> str:
+    """Stable audit id for a refused URL that has no normalised form (a hash, never the URL)."""
+    return "mcp-" + hashlib.sha256(url.encode("utf-8")).hexdigest()[:32]
 
 
 class McpAdminService:
@@ -154,8 +180,14 @@ class McpAdminService:
 
     async def list_servers(
         self, *, after: str | None, limit: int
-    ) -> tuple[list[RegisteredServer], str | None]:
-        servers = await self._plane.registry.list(limit=500)
+    ) -> tuple[list[RegisteredServer], str | None, bool]:
+        """One page, its continuation cursor and whether the registry scan was truncated.
+
+        The store has no continuation token, so the hard bound is its maximum scan; a scan that
+        fills it is reported as ``truncated`` rather than silently dropping later rows.
+        """
+        servers = await self._plane.registry.list(limit=MAX_LIST_LIMIT)
+        truncated = len(servers) >= MAX_LIST_LIMIT
         start = 0
         if after is not None:
             ids = [s.id for s in servers]
@@ -164,7 +196,7 @@ class McpAdminService:
             start = ids.index(after) + 1
         page = servers[start : start + limit]
         more = start + limit < len(servers)
-        return page, (page[-1].id if more and page else None)
+        return page, (page[-1].id if more and page else None), truncated
 
     async def get(self, server_id: str) -> RegisteredServer:
         return await self._plane.registry.require(server_id)
@@ -187,9 +219,31 @@ class McpAdminService:
     async def register(
         self, scope: IdentityScope, correlation_id: str, *, url: str, display_name: str
     ) -> RegisteredServer:
-        # An unparseable URL is refused (invalid_schema / forbidden) before anything is recorded.
-        server_id = server_id_for(normalize_server_url(url))
         actor = self._actor(scope)
+        try:
+            server_id = server_id_for(normalize_server_url(url))
+        except InvalidSchemaError:
+            host = _raw_host(url)
+            if host is None or not blocked_hostname(host):
+                # An unparseable URL is refused (invalid_schema) before anything is recorded.
+                raise
+
+            # A blocked metadata or local name that fails normalisation (for example the
+            # single-label ``localhost``) is a refused registration of that name: audit it as
+            # such. Only a hash of the URL is recorded, never the URL or the hostname.
+            async def refuse() -> RegisteredServer:
+                raise forbidden(
+                    SSRF_BLOCKED_HOST, "server host is a blocked metadata or local name"
+                )
+
+            return await self._audited(
+                scope,
+                correlation_id,
+                _Target(operation="mcp.server.register", server_id=_unparsed_server_id(url)),
+                refuse,
+                success_detail="registered",
+                result_hash=lambda _result: None,
+            )
         return await self._audited(
             scope,
             correlation_id,
@@ -237,7 +291,41 @@ class McpAdminService:
             success_detail="synced",
             result_hash=lambda r: r.manifest_hash,
         )
-        return await self._plane.registry.require(server_id), result
+        server = await self._plane.registry.require(server_id)
+        for name in result.revoked:
+            await self._audit_hash_revocation(scope, correlation_id, server, name)
+        return server, result
+
+    async def _audit_hash_revocation(
+        self, scope: IdentityScope, correlation_id: str, server: RegisteredServer, name: str
+    ) -> None:
+        """One audit pair per tool whose approval the sync revoked because its hash changed.
+
+        The store revokes inside ``record_sync`` (core code), so the record is written here from
+        the sync result: ``approved_hash`` survives revocation and is the old hash (the ``before``
+        record's ``target_version``); the entry hash is the new one (the ``after`` record's).
+        Call-time drift is refused by the client without a store change, so it has no record.
+        """
+        record = server.tool(name)
+        if record is None:
+            return
+
+        async def noop() -> None:
+            return None
+
+        await self._audited(
+            scope,
+            correlation_id,
+            _Target(
+                operation="mcp.tool.revoke_on_sync",
+                server_id=server.id,
+                tool=name,
+                tool_hash=record.approval.approved_hash,
+            ),
+            noop,
+            success_detail="revoked_hash_changed",
+            result_hash=lambda _result: record.entry.tool_hash,
+        )
 
     async def approve(
         self,

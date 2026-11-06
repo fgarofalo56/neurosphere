@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-22-mcp-server-and-client](backlog/PRP-22-mcp-server-and-client.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-33-apim-gateway-observe](backlog/PRP-33-apim-gateway-observe.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
 | [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | - | - | ? / ? | required |
@@ -38,6 +37,7 @@ _none_
 |---|---|---|
 | [prp-06-identity-authz-and-audit](shipped/PRP-06-identity-authz-and-audit.md) | 2026-11-05 | #172 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-11-05 | #173 |
+| [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-11-05 | #175 |
 | [prp-07-telemetry-ingestion-and-cost-ledger](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) | 2026-11-04 | #166 |
 | [prp-35-runtime-composition](shipped/PRP-35-runtime-composition.md) | 2026-11-04 | #164 |
 | [prp-26-sales-and-marketing-deliverables](shipped/PRP-26-sales-and-marketing-deliverables.md) | 2026-11-03 | #157 |

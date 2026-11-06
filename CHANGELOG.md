@@ -21,6 +21,12 @@ All notable changes to this project are documented here. The format follows
 - Telemetry ingestion and cost ledger audit close-out (PRP-07 items 7-9): compose workers wired for
   ingestion with a synthetic price table, hardened normalizer ids and watermark, billing-only
   `invoiced`, collision-safe ledger ids (v2 id upgrade, no migration). Live Commercial run is an open gate.
+- MCP server and client audit close-out (PRP-22 audit gaps): `tools/list` and `resources/list` are
+  scope-derived, the RFC 9728 metadata route answers a preflight, SSRF blocks `::ffff:0:0:0/96` and
+  `5f00::/16` and refuses non-ASCII hosts, an upstream 401/403 maps to `forbidden`
+  (`mcp_auth_rejected`), sync revocations and blocked registrations are audited, and the injection
+  corpus is reported as 18 exercised for real plus 60 not applicable. oauthlib 4.0.1 (CVE-2026-49272).
+  The admin UI pass, Government MCP use and MCP-initiated writes (#132) are open gates.
 - Runtime composition (PRP-35): ingest producers config for compose and Helm, an idempotent
   profile-gated catalog seeder that refuses outside `NS_ENV=local`, `NS_SEARCH_PROVIDER`
   (fixture, azure or unset) with a catalog indexer, and Foundry model-swap and APIM gateway

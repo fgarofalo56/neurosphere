@@ -21,12 +21,14 @@ from neurosphere_core.errors import (
 
 __all__ = [
     "CLOUD_BOUNDARY_MISMATCH",
+    "INVALID_CREDENTIAL_HEADER",
     "INVALID_MANIFEST",
     "INVALID_REGISTRATION",
     "INVALID_SERVER_URL",
     "INVALID_TOOL_ARGUMENTS",
     "INVALID_TOOL_RESULT",
     "MANIFEST_TOO_LARGE",
+    "MCP_AUTH_REJECTED",
     "MCP_DNS_UNAVAILABLE",
     "MCP_REGISTRY_UNAVAILABLE",
     "MCP_SERVER_DISABLED",
@@ -60,6 +62,9 @@ CLOUD_BOUNDARY_MISMATCH: Final = "cloud_boundary_mismatch"
 TOOL_NOT_APPROVED: Final = "tool_not_approved"
 TOOL_HASH_MISMATCH: Final = "tool_hash_mismatch"
 MISSING_DATA_READ: Final = "missing_data_read"
+#: The external server rejected the platform's own outbound credential (HTTP 401/403). Not
+#: transient: retrying with the same credential cannot succeed and only adds load.
+MCP_AUTH_REJECTED: Final = "mcp_auth_rejected"
 
 # invalid_schema
 INVALID_SERVER_URL: Final = "invalid_server_url"
@@ -72,6 +77,7 @@ SERVER_ALREADY_REGISTERED: Final = "server_already_registered"
 INVALID_REGISTRATION: Final = "invalid_registration"
 TOOL_NOT_FOUND: Final = "tool_not_found"
 TOOL_NOT_APPROVABLE: Final = "tool_not_approvable"
+INVALID_CREDENTIAL_HEADER: Final = "invalid_credential_header"
 
 # stale_version
 SERVER_MODIFIED: Final = "server_modified"

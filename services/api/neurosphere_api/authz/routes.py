@@ -37,6 +37,7 @@ from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 __all__ = [
     "GATEWAY_AUTHENTICATED_WEBSOCKETS",
     "MCP_METADATA_PATH",
+    "MCP_MOUNT_STATE_ATTRIBUTE",
     "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
     "SELF_AUTHENTICATED_PATHS",
@@ -62,6 +63,11 @@ PUBLIC_PATHS: Final = frozenset({"/healthz", "/readyz", MCP_METADATA_PATH})
 #: category like :data:`PRODUCER_AUTHENTICATED_PATHS`, exact-path only, a plain route (never a
 #: ``Mount``). Equals ``neurosphere_api.mcp.server``'s ``MCP_PATH`` (a test pins that).
 SELF_AUTHENTICATED_PATHS: Final = frozenset({"/mcp"})
+
+#: ``app.state`` attribute under which ``create_mcp_server`` stores its ``McpServerMount`` (a test
+#: pins it to the server package's ``STATE_ATTRIBUTE``). The exemption above only applies to the
+#: route whose endpoint is that mount's ``asgi_app``.
+MCP_MOUNT_STATE_ATTRIBUTE: Final = "mcp_server"
 
 #: Ingest-edge paths whose *producers* authenticate by registered credential inside the ingest
 #: service (``Authorization: Bearer <producer_id>.<secret>``). Not public and not ``require``d:
@@ -167,7 +173,26 @@ def _permissions(dependant: Dependant) -> Iterator[str]:
         yield from _permissions(child)
 
 
-def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
+def _mounted_mcp_endpoint(app: FastAPI) -> object | None:
+    """The ASGI app of the MCP server mount ``create_mcp_server`` stored on ``app.state``.
+
+    Read by attribute name (authz stays leaf-level); ``None`` when no MCP server is mounted, in
+    which case no route can inherit the self-authenticated exemption.
+    """
+    mount = getattr(app.state, MCP_MOUNT_STATE_ATTRIBUTE, None)
+    return getattr(mount, "asgi_app", None)
+
+
+def _is_mcp_endpoint(original: BaseRoute, source: Any, endpoint: object | None) -> bool:
+    """True when the route's endpoint *is* the mounted MCP server app (identity, not a path)."""
+    if endpoint is None:
+        return False
+    return any(getattr(r, "endpoint", None) is endpoint for r in (original, source))
+
+
+def _entry(
+    context: RouteContext, allow: frozenset[str], mcp_endpoint: object | None = None
+) -> RouteEntry:
     original = context.original_route
     # FastAPI >= 0.143 keeps included routers unflattened. For included API routes the context
     # itself is the effective route; for other included routes (websocket, plain Starlette,
@@ -192,7 +217,13 @@ def _entry(context: RouteContext, allow: frozenset[str]) -> RouteEntry:
     http = not isinstance(original, Mount) and not websocket
     public = http and path in allow
     producer = http and path in PRODUCER_AUTHENTICATED_PATHS and methods == ("POST",)
-    self_authenticated = http and path in SELF_AUTHENTICATED_PATHS
+    # Exact path AND the route is the MCP server mount's own endpoint: a different route that
+    # merely sits at /mcp does not inherit the exemption.
+    self_authenticated = (
+        http
+        and path in SELF_AUTHENTICATED_PATHS
+        and _is_mcp_endpoint(original, source, mcp_endpoint)
+    )
     guard = GATEWAY_AUTHENTICATED_WEBSOCKETS.get(path) if websocket else None
     gateway = guard is not None and guard.permission.value in perms
     return RouteEntry(
@@ -216,7 +247,8 @@ def route_inventory(
     The allowlist defaults to the one ``configure_authz`` installed, else :func:`public_paths_for`.
     """
     allow = public_paths if public_paths is not None else _installed_allowlist(app)
-    return tuple(_entry(context, allow) for context in iter_route_contexts(app.routes))
+    endpoint = _mounted_mcp_endpoint(app)
+    return tuple(_entry(context, allow, endpoint) for context in iter_route_contexts(app.routes))
 
 
 def undeclared_routes(

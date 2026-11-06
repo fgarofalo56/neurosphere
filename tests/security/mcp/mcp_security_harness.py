@@ -33,6 +33,7 @@ if str(_MCP_API) not in sys.path:
 
 import client_fixtures as cf  # noqa: E402  # pyright: ignore[reportMissingImports]
 import conftest_server as cs  # noqa: E402  # pyright: ignore[reportMissingImports]
+import copilot_api_harness as ch  # noqa: E402  # pyright: ignore[reportMissingImports]
 import httpx2  # noqa: E402
 from neurosphere_api.mcp.client import ExternalMcpClient  # noqa: E402
 from neurosphere_core.cloud import CloudName  # noqa: E402
@@ -40,6 +41,7 @@ from neurosphere_core.mcp import (  # noqa: E402
     InMemoryMcpServerStore,
     McpClientPolicy,
     McpRegistry,
+    McpServerStore,
     OutboundCredentialProvider,
     RegisteredServer,
     TransportLimits,
@@ -56,6 +58,7 @@ __all__ = [
     "StubResolver",
     "authorization_value",
     "cf",
+    "ch",
     "cs",
     "derive_scope",
     "make_client",
@@ -124,9 +127,10 @@ def make_client(
     answers: dict[str, Sequence[Sequence[str]]] | None = None,
     credentials: OutboundCredentialProvider | None = None,
     cloud: CloudName = CloudName.COMMERCIAL,
+    store: McpServerStore | None = None,
 ) -> tuple[ExternalMcpClient, McpRegistry, Any]:
-    """Item 2's client and registry over an in-memory store, with stub DNS and ``router``."""
-    registry = McpRegistry(InMemoryMcpServerStore(), McpClientPolicy(cloud=cloud))
+    """Item 2's client and registry (in-memory store unless ``store``), stub DNS and ``router``."""
+    registry = McpRegistry(store or InMemoryMcpServerStore(), McpClientPolicy(cloud=cloud))
     resolver = StubResolver(answers if answers is not None else {cs.MCP_HOST: [[PUBLIC_V4]]})
     client = ExternalMcpClient(
         registry,
