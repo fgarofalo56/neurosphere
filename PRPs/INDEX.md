@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [prp-33-apim-gateway-observe](active/PRP-33-apim-gateway-observe.md) | P1 | 9/9 (100%) | merged 8, descoped 1 | ? / ? | required |
+_none_
 
 ## Backlog
 
@@ -36,6 +34,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-11-06 | #176 |
 | [prp-06-identity-authz-and-audit](shipped/PRP-06-identity-authz-and-audit.md) | 2026-11-05 | #172 |
 | [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-11-05 | #173 |
 | [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-11-05 | #175 |

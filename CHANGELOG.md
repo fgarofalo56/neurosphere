@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- APIM gateway observe close-out (PRP-33 audit round): the `gateway_poll` worker role now runs under `all`
+  and idles when unconfigured; gateway token usage gains cost-center attribution from App Insights
+  `customMetrics` (optional `NS_GATEWAY_POLL_METRICS_APP_ID`, Commercial only); the Gateways page shows
+  diagnostics, last sync and freshness, with a gateway detail inventory view and Grant and McpServer catalog
+  renderers. The G17 live observe run and item 7 visual baselines remain open.
 - Action executor and HITL audit close-out (PRP-17 audit gaps): a customer-scoped reconcile sweep closes
   review items whose intent is terminal or expired, and orphan items; the kill switch
   (`PUT /api/v1/actions/emergency-disable`) needs `config.manage` on the per-customer control domain

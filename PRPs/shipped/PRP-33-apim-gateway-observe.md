@@ -1,9 +1,10 @@
 ---
 name: prp-33-apim-gateway-observe
-status: active
+status: shipped
 started: 2026-11-05
+shipped: 2026-11-06
 branch: prp-33-audit-gaps
-pr: 146
+pr: 176
 review: required
 priority: P1
 order: 1
@@ -226,7 +227,7 @@ Plan approved 2026-10-29 with one delta signed off by the operator:
 | 4 | merged | worktree-agent-a81699dd472bbbe1f | sonnet | 68 passed gateway_poll + worker_roles on branch; 405 passed full worker suite post-merge; drift + gateway_api + gateway_core 58 passed; ruff/pyright clean; gateway_poll is opt-in (not in `all`); openapi.json regenerated for poll fields; `.env.example` NOT updated (lane denied on that path, operator to add NS_GATEWAY_POLL_* names); 208d34c, merge (see git log) | 2026-10-29 |
 | 5 | merged | worktree-agent-a09f858a868960b78 | opus | review APPROVE (one pass, no blockers; follow-up: structured-query contract enum still lists 12 entity types); merge + openapi regen: drift/authz/contracts/catalog/search 2185 passed; generate --check OK; tests/contracts + core catalog/auth 2306 passed; authz 150 passed; TS 118 passed; ruff/pyright clean; Snyk 0 issues; openapi.json regenerated at merge; ownership extended to search/protocol.py, catalog/router.py cap, CatalogEntity/CatalogEdge unions; a21d2bc | 2026-10-29 |
 | 6 | merged | worktree-agent-abed72718b8c8e3ce | sonnet | 58 passed core+api+drift on branch, integration 5 passed (emulator), 221 passed post-merge incl. authz; repo-wide ruff clean; review APPROVE (follow-ups: ARM id regex allows `..` RG, single-document inventory size, log swallowed failures); 6879982, merge 46ecf33 | 2026-10-29 |
-| 7 | descoped | | sonnet | per D1: PRP-31 still active at close-out; filed as follow-up issue #147 (other follow-ups in #148) | 2026-10-29 |
+| 7 | merged | audit round lane R-C | sonnet | first descoped per D1 (issue #147); delivered in the 2026-11-05 audit round, see R-C below: tsc clean, vitest 132, Playwright 22 incl. axe, CI green on PR #176; visual baselines OPEN | 2026-11-06 |
 | 8 | merged | worktree-agent-ab13d387444352ac5 | sonnet | 6 new G17 tests, 322 passed tests/unit/gates post-merge; refusal verified exit 2 with no az call; ruff/pyright clean; validate_planning PASS; G17 row added; live run NOT RUN (G17 OPEN); 81440c2 | 2026-10-29 |
 | 9 | merged | worktree-agent-a0a2d015cdc6f3029 | sonnet | added per D3; 744f497 + rework 911bd14 (`gateways` in stores CONTAINERS, cosmos-containers.json regenerated, container count 27 -> 28, NS_GATEWAY_STORE=auto always Cosmos); 113 passed builder/gateway_api/drift/hosted_demo/stores_registry on branch; ruff/pyright clean; builder order authz, data, planes, copilot, mcp, gateway, edge; merge faf4078; real-stack integration run recorded below | 2026-10-29 |
 
@@ -239,6 +240,14 @@ Waves: 1 = items 1, 2, 3, 5 in parallel; 2 = item 6 (after 1, 2, 5); 3 = items 4
 - Descoped: item 7 (Gateways page, Grant and McpServer catalog renderers), issue #147.
 - Not run: `tests/integration/real_stack` locally (needs the seeded local tenant exported; never runs in CI); the G17 observe live run (script built, refusal verified; G17 OPEN in `docs/RESEARCH-AND-GATES.md`). `.env.example` not updated (lane denied that path; names in #148).
 - Follow-ups: #148 (structured-query entity enum, inventory hardening, `.env.example` names, gateway token pricing, shared Admin/Steward permission test pattern, G17 live run).
+
+### Audit round close-out (2026-11-06)
+- Shipped on PR #176 (branch `prp-33-audit-gaps`, cut from `main`); CI green on the final run (26 pass, 1 skipped by design). Merge commits: c918f09 (R-A), d34ceb1 (R-B), d00fa3e (R-B2), a70750f (R-C); CI fix 4b90a10.
+- Delivered: `gateway_poll` runs under `all` as a safe no-op when unconfigured (R-A); cost-center attribution from App Insights `customMetrics` via `SourceKind.APIM_USAGE_METRICS`, posted as the `nscostcenter` CloudEvent extension, with optional `NS_GATEWAY_POLL_METRICS_APP_ID` (R-B, R-B2); item 7 UI: Gateways list and detail with inventory, Grant and McpServer catalog renderers, `grants_access_to` label, mock fixtures (R-C, closes #147).
+- Verified: Snyk Code 0 issues on the changed areas (run by the orchestrator); one independent review, APPROVE, no blockers (the reviewer read the connector and worker diff in full, only grepped the frontend). The first PR run failed because `/gateways/detail` was not registered in the manifest route-count test, `MANIFEST_CALLS` and the demo-audit detail table (the lanes never ran those repo-wide route-enumeration tests); fixed in 4b90a10 and re-run green.
+- Deviations: `build_gateway_poll` in `runtime/factories.py` holds the unconfigured no-op (outside the lane's owned list, accepted); R-C edited `frontend/tests/mock-api/features/catalog.ts` and `frontend/tests/e2e/a11y/route-samples.ts` additively (outside its list, accepted); D2 and D3 re-confirmed unchanged. R-B2 was added to the plan mid-round to wire the metrics app id.
+- Not run / still OPEN: G17 live observe run (item 8 unmet; script and refusal path built); item 7 visual baselines (Docker-only, none committed); two first-run axe failures in enterprise-fluent dark on the gateway pages (passed on 4+ reruns, cause not captured); `.env.example` names added by the operator via `temp/add-gateway-poll-env.sh` (agents are denied that path), unconfirmed until run.
+- New follow-ups: confirm ingest/ledger consume the `nscostcenter` extension (or add it to the contract); flag events attributed by the subscription-only fallback; `OPT_IN_ROLES` is now empty dead plumbing; no metric count for silent attribution loss; Government cost attribution has no verified App Insights host.
 
 ## Audit 2026-11-04
 
