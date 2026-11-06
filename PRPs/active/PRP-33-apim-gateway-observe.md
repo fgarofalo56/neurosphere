@@ -1,8 +1,8 @@
 ---
 name: prp-33-apim-gateway-observe
-status: backlog
-started: 2026-10-29
-branch: prp-33-apim-gateway-observe
+status: active
+started: 2026-11-05
+branch: prp-33-audit-gaps
 pr: 146
 review: required
 priority: P1
@@ -249,3 +249,19 @@ Reopened after a deep audit (static read; no tests were run). Items 1-6 and 8-co
 - The `gateway_poll` worker role is opt-in (`roles.py:33`) and does not run under `all`, so gateway observe data does not flow by default. `.env.example` names for the poll worker were never added.
 - Cost-center attribution: `customMetrics` is not queried and the observation carries no tags (also blocks PRP-34 item 4).
 - Recorded deviations to re-confirm: `GatewayCostObservation` instead of `CostRecord` (D2); `config.manage`/`data.read` instead of `deploy.*` (D3).
+
+## Audit round 2026-11-05 (execution state)
+
+Plan approved 2026-11-05 by the operator. Integration branch `prp-33-audit-gaps` cut from `main`. Scope: lanes A, B, C, E. The G17 live run stays OPEN (not run this round). Deviations D2 and D3 are re-confirmed in lane E.
+
+- Lane A (poll worker): `gateway_poll` runs by default or has a documented explicit opt-in. `.env.example` gets NS_GATEWAY_POLL_* names (the operator edits that path if the lane is denied). Owned: `services/workers/neurosphere_workers/runtime/roles.py`, `services/workers/tests/`, docs for the role.
+- Lane B (cost-center): `gateway_mapping.cost_center_tags` already maps `x-ns-cost-center` to tags. The gap is that nothing queries `customMetrics` for that dimension. Owned: `connectors/reference/azure-monitor/`, `services/workers/neurosphere_workers/ingestion/gateway_poll/`.
+- Lane C (item 7 UI, closes #147): additive-only edits to `route-manifest.json`, `workspaceNav.ts` and `mock-api/server.ts` (PRP-31 is still in the backlog). Owned: `frontend/src/features/gateways/`, `frontend/src/pages/catalog/` renderers, a new spec file under `frontend/tests/e2e/gateways/` (not `manage.spec.ts`). Runs after A and B merge.
+- Lane E (docs): PRP checkboxes, G17 status, D2/D3 re-confirmation, `prp_status.py --write`. Runs last.
+
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| R-A | todo | | sonnet | | 2026-11-05 |
+| R-B | todo | | sonnet | | 2026-11-05 |
+| R-C | todo | | sonnet | | 2026-11-05 |
+| R-E | todo | | sonnet | | 2026-11-05 |

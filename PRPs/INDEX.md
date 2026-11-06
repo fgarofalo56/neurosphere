@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [prp-33-apim-gateway-observe](active/PRP-33-apim-gateway-observe.md) | P1 | 9/9 (100%) | merged 8, descoped 1 | ? / ? | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-33-apim-gateway-observe](backlog/PRP-33-apim-gateway-observe.md) | P1 | 1 | - | - | ? / ? | required |
 | [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
 | [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | - | - | ? / ? | required |
 | [prp-05-api-worker-runtime-and-self-observability](backlog/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 7 | - | - | ? / ? | none |
