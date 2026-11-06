@@ -49,13 +49,19 @@ REPO = Path(__file__).resolve().parents[2]
 SCRIPT_VERSION = "1.0.0"
 GATE = "G17"
 DEFAULT_LOCATION = "centralus"
+ERROR_BODY_HEADER = "x-g17-error-body"
+REQUEST_RETRY_STATUSES = frozenset({401, 403, 404})
+REQUEST_RETRY_ATTEMPTS = 12
+REQUEST_RETRY_DELAY_S = 30
 CREATED_BY_TAG = "neurosphere:created-by=g17"
 GATE_TAG = "neurosphere:gate=G17"
 TAG_KEY = "neurosphere:created-by"
 TAG_VALUE = "g17"
 ARM = "https://management.azure.com"
 APIM_API_VERSION = "2024-05-01"
-CHAT_API_VERSION = "2024-10-21"
+# A version the gpt-5 family accepts (2024-10-21 is older than those models).
+CHAT_API_VERSION = "2025-04-01-preview"
+MAX_COMPLETION_TOKENS = 200
 API_ID = "g17-llm"
 API_PATH = "llm"
 OPENAI_USER_ROLE = "Cognitive Services OpenAI User"
@@ -97,6 +103,20 @@ class SubprocessAzRunner:
             env=env,
         )
         return AzResult(proc.returncode, proc.stdout, proc.stderr)
+
+
+def clean_stderr(text: str) -> str:
+    """az stderr without the extension SyntaxWarning noise that buried the real error (run 7)."""
+    keep = [
+        ln
+        for ln in text.splitlines()
+        if ln.strip()
+        and "SyntaxWarning" not in ln
+        and not ln.lstrip().startswith("az monitor data-collection")
+        and ".azure\\cliextensions" not in ln
+        and ".azure/cliextensions" not in ln
+    ]
+    return " ".join(" ".join(keep).split())
 
 
 class GateError(RuntimeError):
@@ -245,7 +265,12 @@ def _default_sender(
     import httpx
 
     resp = httpx.post(url, headers=headers, json=body, timeout=60.0)
-    return resp.status_code, {k.lower(): v for k, v in resp.headers.items()}
+    out = {k.lower(): v for k, v in resp.headers.items()}
+    if resp.status_code >= 400:
+        # The server's own error text (never our request, so never the subscription key), so a
+        # failed live run says why; a few hundred characters at most.
+        out[ERROR_BODY_HEADER] = " ".join(resp.text.split())[:300]
+    return resp.status_code, out
 
 
 @dataclass
@@ -294,7 +319,7 @@ class Gate:
         print(f"  az {' '.join(args[:4])} ...", flush=True)
         res = self.run_az([*args, "--only-show-errors"] if args[0] != "rest" else list(args))
         if res.rc != 0:
-            msg = "" if sensitive else " ".join(res.stderr.split())[:300]
+            msg = "" if sensitive else clean_stderr(res.stderr)[:300]
             raise GateError(f"az {' '.join(args[:3])} failed (rc={res.rc}) {msg}".strip())
         return res
 
@@ -311,12 +336,28 @@ class Gate:
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
                 json.dump(body, fh)
             args += ["--body", f"@{tmp}"]
+        # The payload goes to a file, never to the az console: a non-JSON response that starts with
+        # a BOM made `az rest` die printing it ('charmap' codec, cp1252; live run 2026-11-06). The
+        # bundled az runs Python in isolated mode, so PYTHONUTF8 cannot fix that from outside.
+        ofd, out_path = tempfile.mkstemp(suffix=".out", prefix="g17-resp-")
+        os.close(ofd)
+        args += ["--output-file", out_path]
         try:
             res = self.az(args, sensitive=path.endswith("listSecrets"))
+            text = Path(out_path).read_text(encoding="utf-8-sig", errors="replace")
         finally:
+            Path(out_path).unlink(missing_ok=True)
             if tmp:
                 Path(tmp).unlink(missing_ok=True)
-        return json.loads(res.stdout) if res.stdout.strip() else None
+        text = text if text.strip() else res.stdout
+        if not text.strip():
+            return None
+        try:
+            return json.loads(text)
+        except ValueError:
+            # APIM answers a policy PUT with the policy XML (a vnd.ms-azure-apim.policy content
+            # type), not JSON; the raw text is returned and no caller reads it as a mapping.
+            return text
 
     def phase(self, name: str, fn: Callable[[], dict[str, Any] | None]) -> bool:
         print(f"[phase {name}]", flush=True)
@@ -337,6 +378,15 @@ class Gate:
         )
         print(f"[phase {name}] {status}", flush=True)
         return status in ("pass", "skipped_awaiting_operator")
+
+    def tags_json(self) -> str:
+        """The gate tags as one JSON object.
+
+        `az monitor log-analytics workspace create` parses `--tags` with the shorthand syntax,
+        which rejects a colon in a key (`neurosphere:created-by=g17`); a JSON object is accepted.
+        """
+        pairs = [CREATED_BY_TAG, GATE_TAG, *self.extra_tags]
+        return json.dumps(dict(p.split("=", 1) for p in pairs), sort_keys=True)
 
     # ---- phase 1
     def create_infra(self) -> dict[str, Any]:
@@ -373,9 +423,7 @@ class Gate:
                 "--subscription",
                 self.subscription,
                 "--tags",
-                CREATED_BY_TAG,
-                GATE_TAG,
-                *self.extra_tags,
+                self.tags_json(),
             ]
         )
         self.facts["workspace_id"] = str(law["id"])
@@ -575,19 +623,39 @@ class Gate:
             f"{base.rstrip('/')}/{API_PATH}/deployments/{self.foundry_deployment}"
             f"/chat/completions?api-version={CHAT_API_VERSION}"
         )
-        body = {"messages": [{"role": "user", "content": FIXED_PROMPT}], "max_tokens": 8}
+        # gpt-5 family models reject `max_tokens`; `max_completion_tokens` is accepted by every
+        # chat model. Reasoning models spend part of it on reasoning, so it is not tiny.
+        body = {
+            "messages": [{"role": "user", "content": FIXED_PROMPT}],
+            "max_completion_tokens": MAX_COMPLETION_TOKENS,
+        }
         sender = self.sender or _default_sender
-        status, headers = sender(url, {"Ocp-Apim-Subscription-Key": self._key}, body)
+        # A role assignment (APIM identity -> OpenAI User) and a new subscription key take minutes
+        # to propagate, so 401, 403 and 404 are retried; none of them is a paid model call. Live
+        # run 5 got a 401 seconds after the grant.
+        attempts = 0
+        while True:
+            attempts += 1
+            status, headers = sender(url, {"Ocp-Apim-Subscription-Key": self._key}, body)
+            if status not in REQUEST_RETRY_STATUSES or attempts >= REQUEST_RETRY_ATTEMPTS:
+                break
+            print(f"  gateway returned {status}; retrying in {REQUEST_RETRY_DELAY_S}s", flush=True)
+            self.sleep(REQUEST_RETRY_DELAY_S)
         corr = headers.get("x-ms-request-id") or headers.get("request-id") or ""
         self.facts["request_status"] = status
+        self.facts["request_attempts"] = attempts
         self.facts["correlation_id"] = corr
         if status != 200:
-            raise GateError(f"gateway request returned HTTP {status}")
+            why = headers.get(ERROR_BODY_HEADER, "")
+            raise GateError(
+                f"gateway request returned HTTP {status} after {attempts} attempt(s) {why}".strip()
+            )
         return {
             "status_code": status,
             "correlation_id": corr,
+            "attempts": attempts,
             "paid_model_calls": 1,
-            "note": "one paid chat completion, max_tokens 8",
+            "note": f"one paid chat completion, max_completion_tokens {MAX_COMPLETION_TOKENS}",
         }
 
     # ---- phase 5
@@ -625,7 +693,11 @@ class Gate:
                 }
             if self.clock() >= deadline:
                 self.facts["llm_log_row"] = "not_observed"
-                raise GateError("no gateway row appeared within the budget")
+                note = str(self.facts.get("last_query_note", "no query result recorded"))
+                raise GateError(
+                    f"no gateway row appeared within the budget after {attempts} poll(s); "
+                    f"last query: {note}"
+                )
             self.sleep(POLL_SECONDS)
 
     # ---- phase 6
@@ -875,6 +947,25 @@ def _real_observer(gate: Gate) -> dict[str, Any]:  # pragma: no cover - live onl
     return asyncio.run(go())
 
 
+LOG_QUERY_API_VERSION = "2017-01-01-preview"
+_NOT_READY_MARKERS = ("failed to resolve table", "semanticerror", "badargumenterror")
+
+
+def is_table_not_ready_error(message: str) -> bool:
+    """True when a Log Analytics error only means the table has not been ingested yet."""
+    low = message.lower()
+    return any(marker in low for marker in _NOT_READY_MARKERS)
+
+
+def rows_from_query_response(payload: Any) -> list[dict[str, Any]]:
+    """The first table of a Log Analytics query response as a list of column-name row dicts."""
+    if not isinstance(payload, dict) or not payload.get("tables"):
+        return []
+    table = payload["tables"][0]
+    names = [str(c.get("name", "")) for c in table.get("columns", [])]
+    return [dict(zip(names, row, strict=False)) for row in table.get("rows", [])]
+
+
 def _real_row_fetcher(
     gate: Gate,
 ) -> RowFetcher:  # pragma: no cover - live only
@@ -882,22 +973,25 @@ def _real_row_fetcher(
     from neurosphere_connector_azure_monitor.queries import SourceKind, template_for
 
     def fetch(workspace_customer_id: str, minutes: int) -> list[dict[str, Any]]:
-        res = gate.az(
-            [
-                "monitor",
-                "log-analytics",
-                "query",
-                "-w",
-                workspace_customer_id,
-                "--analytics-query",
-                template_for(SourceKind.APIM_GATEWAY),
-                "--timespan",
-                f"PT{minutes}M",
-                "-o",
-                "json",
-            ]
-        )
-        rows: list[dict[str, Any]] = json.loads(res.stdout or "[]")
+        # Through ARM (management host), not `az monitor log-analytics query`: that command
+        # calls api.loganalytics.io, which did not resolve from the operator machine. The gate
+        # therefore proves the connector KQL against real data, not the connector HTTP client.
+        try:
+            payload = gate.rest(
+                "POST",
+                f"{gate.facts['workspace_id']}/api/query",
+                {"query": template_for(SourceKind.APIM_GATEWAY), "timespan": f"PT{minutes}M"},
+                LOG_QUERY_API_VERSION,
+            )
+        except GateError as exc:
+            if is_table_not_ready_error(str(exc)):
+                # A new workspace has no table until the first ingestion. Recorded so a run that
+                # times out says whether the table never appeared or just had no matching row.
+                gate.facts["last_query_note"] = f"table not ready: {str(exc)[:160]}"
+                return []
+            raise
+        rows = rows_from_query_response(payload)
+        gate.facts["last_query_note"] = f"{len(rows)} row(s) in the last {minutes} min"
         for row in rows:
             if row.get("CorrelationId"):
                 mapped = map_gateway_row(
