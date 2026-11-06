@@ -403,9 +403,9 @@ def test_producers_example_matches_the_fake_secret() -> None:
 # -- role registration --------------------------------------------------------------------------
 
 
-def test_role_is_registered_and_opt_in() -> None:
+def test_role_is_registered_and_part_of_all() -> None:
     assert "gateway_poll" in ROLE_NAMES
     assert parse_roles("gateway_poll") == ("gateway_poll",)
-    assert "gateway_poll" not in parse_roles("all")
+    assert "gateway_poll" in parse_roles("all")
     assert "gateway_poll" in parse_roles("all,gateway_poll")
     assert "gateway_poll" in BUILDERS
