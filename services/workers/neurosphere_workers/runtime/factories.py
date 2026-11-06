@@ -769,7 +769,16 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
     if cfg.settings.env == "local":
         await create_gateway_container(_database(cfg, cosmos))
     http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    metrics_app_id = poll.metrics_app_id
+    if metrics_app_id is not None and cfg.cloud == "government":
+        # No App Insights Government host is verified, so the metrics poll stays commercial-only.
+        logger.warning(
+            "gateway_poll metrics poll skipped: unsupported in Government",
+            extra={"event": "worker.gateway_poll_metrics_government_skipped"},
+        )
+        metrics_app_id = None
     poller = GatewayPoller(
+        metrics_app_id=metrics_app_id,
         store=CosmosGatewayStore.from_client(cosmos, database=cfg.store.database),
         ingest=IngestClient(
             http.client,

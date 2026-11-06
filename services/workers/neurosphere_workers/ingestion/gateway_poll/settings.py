@@ -6,6 +6,7 @@ production). It is held as a ``SecretStr`` so it never prints in a repr or a log
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
@@ -16,6 +17,7 @@ __all__ = ["DEFAULT_PRODUCER_ID", "DEFAULT_SOURCE_ID", "GatewayPollSettings"]
 DEFAULT_PRODUCER_ID = "apim-gateway-poll"
 #: The ``source_id`` stamped on every polled event; it must be a key of the producer's ``sources``.
 DEFAULT_SOURCE_ID = "apim-gateway-poll"
+_GUID = re.compile(r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}")
 
 
 class GatewayPollSettings(BaseSettings):
@@ -43,11 +45,22 @@ class GatewayPollSettings(BaseSettings):
     #: Events per ingest request.
     batch_size: int = Field(default=100, ge=1, le=500)
 
-    @field_validator("domain_ids", "api_base_url", mode="before")
+    #: Optional App Insights application id (a GUID, not a secret) enabling the best-effort
+    #: customMetrics poll that attributes a cost center. Unset means no metrics poll.
+    metrics_app_id: str | None = None
+
+    @field_validator("domain_ids", "api_base_url", "metrics_app_id", mode="before")
     @classmethod
     def _blank(cls, value: Any) -> Any:
         if isinstance(value, str):
             return value.strip() or None
+        return value
+
+    @field_validator("metrics_app_id")
+    @classmethod
+    def _guid(cls, value: str | None) -> str | None:
+        if value is not None and _GUID.fullmatch(value) is None:
+            raise ValueError("metrics_app_id must be a GUID")
         return value
 
     @property
