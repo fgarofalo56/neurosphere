@@ -51,7 +51,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.86.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.162.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.149.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | filelock | 4.2.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -97,7 +97,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | neurosphere-workers | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-workspace | 0.0.0 | first-party | first-party | workspace member |
 | nodeenv | 1.11.0 | BSD | dev-only | no EOL published locally; Dependabot tracks releases |
-| oauthlib | 4.0.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
+| oauthlib | 4.0.1 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | opentelemetry-api | 1.45.2 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | opentelemetry-instrumentation | 0.66b2 | Apache-2.0 | runtime | pre-release version; no support window recorded |
 | opentelemetry-instrumentation-asgi | 0.66b2 | Apache-2.0 | runtime | pre-release version; no support window recorded |
