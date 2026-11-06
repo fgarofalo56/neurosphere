@@ -25,6 +25,7 @@ from typing import Any, Final, Protocol
 import httpx
 from neurosphere_connector_azure_monitor import (
     AzureMonitorConnector,
+    CostCenterIndex,
     ManagedIdentityTokenProvider,
     MonitorSource,
     PollBounds,
@@ -43,6 +44,7 @@ from neurosphere_core.payload import CLOUDEVENT_TYPE_TELEMETRY
 from neurosphere_workers.ingestion.gateway_poll.settings import GatewayPollSettings
 
 __all__ = [
+    "COST_CENTER_EXTENSION",
     "STATUS_CLOUD_MISMATCH",
     "STATUS_INGEST_FAILED",
     "STATUS_OK",
@@ -64,6 +66,10 @@ STATUS_CLOUD_MISMATCH: Final = "cloud_mismatch"
 STATUS_INGEST_FAILED: Final = "ingest_failed"
 _INGEST_PATH: Final = "/api/v1/ingest/events"
 _BATCH_MEDIA_TYPE: Final = "application/cloudevents-batch+json"
+#: CloudEvents extension attribute carrying the attributed grant cost center (lowercase a-z0-9).
+#: TelemetryEvent has no tags field (contract change is out of scope), so the cost center rides the
+#: envelope; it is omitted, never invented, when no valid cost center was attributed.
+COST_CENTER_EXTENSION: Final = "nscostcenter"
 _SLICE: Final = timedelta(minutes=15)
 _PAGE_SIZE: Final = 100
 
@@ -166,9 +172,9 @@ class _Outcome:
     coverage: float | None = None
 
 
-def _cloud_event(event: TelemetryEvent) -> dict[str, Any]:
+def _cloud_event(event: TelemetryEvent, cost_center: str | None = None) -> dict[str, Any]:
     data = event.model_dump(mode="json", exclude_none=True)
-    return {
+    envelope: dict[str, Any] = {
         "specversion": "1.0",
         "id": data["event_id"],
         "source": "neurosphere/gateway-poll",
@@ -176,6 +182,9 @@ def _cloud_event(event: TelemetryEvent) -> dict[str, Any]:
         "datacontenttype": "application/json",
         "data": data,
     }
+    if cost_center is not None:
+        envelope[COST_CENTER_EXTENSION] = cost_center
+    return envelope
 
 
 class GatewayPoller:
@@ -190,7 +199,11 @@ class GatewayPoller:
         cloud: str,
         connector_factory: ConnectorFactory,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        metrics_app_id: str | None = None,
     ) -> None:
+        # Application Insights app id holding the ``llm-emit-token-metric`` customMetrics. Optional:
+        # without it gateway events carry no cost center.
+        self._metrics_app_id = metrics_app_id
         self._store = store
         self._ingest = ingest
         self._settings = settings
@@ -263,6 +276,7 @@ class GatewayPoller:
                 ],
                 watermark=watermark,
             )
+            cost_centers = await self._cost_centers(connector, gateway, watermark)
         except RateLimitedError:
             return _Outcome(status="rate_limited")
         except NeuroSphereError as exc:
@@ -270,7 +284,7 @@ class GatewayPoller:
         finally:
             await connector.close()
 
-        events = self._events(gateway, result)
+        events = self._events(gateway, result, cost_centers)
         try:
             for start in range(0, len(events), cfg.batch_size):
                 await self._ingest.post(events[start : start + cfg.batch_size])
@@ -302,20 +316,60 @@ class GatewayPoller:
             coverage=fraction,
         )
 
-    def _events(self, gateway: GatewayRegistration, result: PollResult) -> list[dict[str, Any]]:
+    async def _cost_centers(
+        self, connector: MonitorPort, gateway: GatewayRegistration, watermark: datetime
+    ) -> CostCenterIndex | None:
+        """Token-metric cost centers for the same window; best effort, never fails the poll.
+
+        Kept as its own query so a missing or throttled Application Insights app only costs the
+        cost-center tag: the gateway watermark and coverage are unaffected.
+        """
+        if self._metrics_app_id is None:
+            return None
+        try:
+            metrics = await connector.poll(
+                [MonitorSource(SourceKind.APIM_USAGE_METRICS, self._metrics_app_id)],
+                watermark=watermark,
+            )
+        except Exception as exc:  # attribution is optional
+            logger.warning(
+                "token metrics unavailable; gateway events carry no cost center",
+                extra={
+                    "event": "gateway_poll.metrics_failed",
+                    "gateway_id": gateway.id,
+                    "error": type(exc).__name__,
+                },
+            )
+            return None
+        return CostCenterIndex(
+            row
+            for row in metrics.records
+            if row.get("source_kind") == SourceKind.APIM_USAGE_METRICS.value
+        )
+
+    def _events(
+        self,
+        gateway: GatewayRegistration,
+        result: PollResult,
+        cost_centers: CostCenterIndex | None = None,
+    ) -> list[dict[str, Any]]:
         events: list[dict[str, Any]] = []
         skipped = 0
         for row in result.records:
             kind = row.get("source_kind")
+            cost_center: str | None = None
             try:
                 if kind == SourceKind.APIM_GATEWAY.value:
-                    telemetry = map_gateway_row(
+                    mapped = map_gateway_row(
                         row,
                         cloud=gateway.cloud,
                         customer_id=gateway.customer_id,
                         source_id=self._settings.source_id,
                         domain_id=gateway.domain_id,
-                    ).telemetry  # the unpriced cost side is deliberately not posted (D2)
+                        cost_centers=cost_centers,
+                    )
+                    telemetry = mapped.telemetry  # the unpriced cost side is not posted (D2)
+                    cost_center = (mapped.cost.tags or {}).get("cost_center")
                 elif kind == SourceKind.APIM_MCP.value:
                     telemetry = map_mcp_row(
                         row,
@@ -330,7 +384,7 @@ class GatewayPoller:
             except ValueError:
                 skipped += 1
                 continue
-            events.append(_cloud_event(telemetry))
+            events.append(_cloud_event(telemetry, cost_center))
         if skipped:
             logger.warning(
                 "rows skipped: unmappable",

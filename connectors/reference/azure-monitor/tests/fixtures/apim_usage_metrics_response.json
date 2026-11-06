@@ -1,0 +1,23 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {"name": "timestamp", "type": "datetime"},
+        {"name": "name", "type": "string"},
+        {"name": "value", "type": "real"},
+        {"name": "valueSum", "type": "real"},
+        {"name": "valueCount", "type": "int"},
+        {"name": "ApiId", "type": "string"},
+        {"name": "SubscriptionId", "type": "string"},
+        {"name": "x-ns-cost-center", "type": "string"}
+      ],
+      "rows": [
+        ["2026-10-29T10:00:00.0000000Z", "Prompt Tokens", 120.0, 120.0, 1, "openai-api", "sub-0001-raw-value", "CC-4410"],
+        ["2026-10-29T10:00:00.0000000Z", "Completion Tokens", 45.0, 45.0, 1, "openai-api", "sub-0001-raw-value", "CC-4410"],
+        ["2026-10-29T10:00:00.0000000Z", "Total Tokens", 165.0, 165.0, 1, "openai-api", "sub-0001-raw-value", "CC-4410"],
+        ["2026-10-29T10:00:02.0000000Z", "Total Tokens", 12.0, 12.0, 1, "echo-api", "sub-0002-raw-value", "N/A"]
+      ]
+    }
+  ]
+}
