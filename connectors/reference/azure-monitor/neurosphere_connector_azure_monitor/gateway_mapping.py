@@ -26,7 +26,7 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -40,6 +40,7 @@ from neurosphere_contracts.telemetry.v1.telemetry_event import (
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 
 __all__ = [
+    "CostCenterIndex",
     "GatewayCostObservation",
     "GatewayObservation",
     "McpToolObservation",
@@ -131,6 +132,48 @@ def cost_center_tags(row: Mapping[str, Any]) -> dict[str, str] | None:
     return {"cost_center": value}
 
 
+class CostCenterIndex:
+    """Cost centers seen on ``APIM_TOKEN_METRICS`` rows, keyed for attribution to gateway rows.
+
+    The token metric has no CorrelationId, so a gateway row is attributed by its best available
+    key: (API ID, Subscription ID) first, then Subscription ID alone. A key that saw more than one
+    distinct valid cost center is ambiguous and attributes nothing (never a guess); ``N/A``,
+    empty and out-of-pattern values are never indexed.
+    """
+
+    def __init__(self, metric_rows: Iterable[Mapping[str, Any]] = ()) -> None:
+        by_pair: dict[tuple[str, str], set[str]] = {}
+        by_subscription: dict[str, set[str]] = {}
+        for row in metric_rows:
+            tags = cost_center_tags(row)
+            subscription = _text(row, "SubscriptionId")
+            if tags is None or subscription is None:
+                continue
+            center = tags["cost_center"]
+            by_subscription.setdefault(subscription, set()).add(center)
+            api = _text(row, "ApiId")
+            if api is not None:
+                by_pair.setdefault((api, subscription), set()).add(center)
+        self._by_pair = by_pair
+        self._by_subscription = by_subscription
+
+    def __len__(self) -> int:
+        return len(self._by_subscription)
+
+    def lookup(self, row: Mapping[str, Any]) -> dict[str, str] | None:
+        """``{"cost_center": value}`` for a joined gateway row, else None."""
+        subscription = _text(row, "ApimSubscriptionId")
+        if subscription is None:
+            return None
+        api = _text(row, "ApiId")
+        candidates = self._by_pair.get((api, subscription)) if api is not None else None
+        if not candidates:
+            candidates = self._by_subscription.get(subscription)
+        if candidates is None or len(candidates) != 1:
+            return None
+        return {"cost_center": next(iter(candidates))}
+
+
 def _text(row: Mapping[str, Any], name: str) -> str | None:
     value = row.get(name)
     if value is None:
@@ -202,8 +245,13 @@ def map_gateway_row(
     customer_id: str,
     source_id: str,
     domain_id: str | None = None,
+    cost_centers: CostCenterIndex | None = None,
 ) -> GatewayObservation:
-    """Map one joined APIM_GATEWAY row; ``ValueError`` without CorrelationId or TimeGenerated."""
+    """Map one joined APIM_GATEWAY row; ``ValueError`` without CorrelationId or TimeGenerated.
+
+    The cost center comes from the row's own ``x-ns-cost-center`` dimension, else from
+    ``cost_centers`` (built from ``APIM_TOKEN_METRICS`` rows); absent when neither yields one.
+    """
     cid = _correlation_id(row)
     when = _timestamp(row)
     model = _text(row, "ModelName")
@@ -261,7 +309,7 @@ def map_gateway_row(
         total_time_ms=total_ms,
         backend_time_ms=_duration_ms(row, "BackendTime"),
         is_stream_completion=_bool(row, "IsStreamCompletion"),
-        tags=cost_center_tags(row),
+        tags=cost_center_tags(row) or (cost_centers.lookup(row) if cost_centers else None),
     )
     return GatewayObservation(telemetry=telemetry, cost=cost)
 

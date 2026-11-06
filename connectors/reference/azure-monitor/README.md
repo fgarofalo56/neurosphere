@@ -36,6 +36,15 @@ Privacy rule: the column lists above are an allowlist. Request and response bodi
 
 Mapping (`gateway_mapping.py`): `map_gateway_row` turns one joined row into one `TelemetryEvent` plus one `GatewayCostObservation`; `map_mcp_row` turns one MCP row into a `tool_call` `TelemetryEvent` plus tool name and transport. The request id and cost `dedupe_key` are the `CorrelationId`. `ApimSubscriptionId` is stored only as a sha256 hex digest. Rows with no LLM side (non-LLM APIs) still map, with token fields null.
 
+### Cost-center attribution (PRP-33 audit, PRP-34 item 4)
+
+The grant fragment's `llm-emit-token-metric` writes the `x-ns-cost-center`, `API ID` and `Subscription ID` dimensions to Application Insights `customMetrics`, not to the gateway log tables, so the joined gateway KQL never sees the cost center.
+
+- `SourceKind.APIM_USAGE_METRICS` queries `customMetrics` (names `Prompt Tokens`, `Completion Tokens`, `Total Tokens`) through the Application Insights query API (`GET {host}/v1/apps/{app id}/query`; the source id is the App Insights app id, Commercial only: no Government App Insights host is configured). Projected columns: `timestamp, name, value, valueSum, valueCount, ApiId, SubscriptionId, ['x-ns-cost-center']`. `customDimensions` is read per key and never projected whole. Fixed KQL, window in `timespan`, no body or header column.
+- The metric has no `CorrelationId`, so attribution is by dimension, not per request. `CostCenterIndex(metric_rows)` maps a gateway row by (`ApiId`, `ApimSubscriptionId`), then `ApimSubscriptionId` alone. A key with more than one distinct valid cost center is ambiguous and yields no tag. `N/A`, empty and out-of-pattern values are never indexed. Pass it as `map_gateway_row(..., cost_centers=index)`; a cost-center dimension on the row itself wins.
+- The gateway poll worker (`GatewayPoller(metrics_app_id=...)`) runs the metrics query as a separate best-effort call and puts the result on the posted CloudEvent as the `nscostcenter` extension (`TelemetryEvent` has no tags field). A metrics failure drops only the tag.
+- Gaps: not live-tested; the `Subscription ID` metric dimension is assumed to equal `ApimSubscriptionId`; attribution ignores time within the window, so a subscription that changes cost-center header mid-window is ambiguous. Source: https://learn.microsoft.com/azure/api-management/llm-emit-token-metric-policy
+
 ### Unpriced gateway cost
 
 Gateway rows carry token counts but no price, so the cost side has `amount = null`, `observation_source = "gateway"`, and no currency or price version; this module never computes a price. The shipped `CostRecord` contract requires a non-null `amount` and `currency`, so the cost side is the connector-local `GatewayCostObservation` (same field names, `amount: None`) rather than a `CostRecord`. Turning it into a ledger-bound `CostRecord` needs a contract decision (nullable amount for unpriced gateway observations); that is open and outside this connector.

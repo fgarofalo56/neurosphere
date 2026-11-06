@@ -16,6 +16,8 @@ __all__ = [
     "APIM_GATEWAY_COLUMNS",
     "APIM_LLM_COLUMNS",
     "APIM_MCP_COLUMNS",
+    "APIM_USAGE_METRICS_COLUMNS",
+    "APP_INSIGHTS_KINDS",
     "MAX_ROWS",
     "TEMPLATES",
     "MonitorSource",
@@ -32,7 +34,12 @@ class SourceKind(StrEnum):
     APP_INSIGHTS = "app_insights"
     APIM_GATEWAY = "apim_gateway"
     APIM_MCP = "apim_mcp"
+    # Application Insights ``customMetrics`` written by the ``llm-emit-token-metric`` policy.
+    APIM_USAGE_METRICS = "apim_usage_metrics"
 
+
+#: Kinds queried through the Application Insights query API (source id = App Insights app id).
+APP_INSIGHTS_KINDS: Final = frozenset({SourceKind.APP_INSIGHTS, SourceKind.APIM_USAGE_METRICS})
 
 # Workspace-based Application Insights data lives in Log Analytics tables (AppRequests).
 _LOG_ANALYTICS_QUERY: Final = (
@@ -78,11 +85,28 @@ _APIM_MCP_QUERY: Final = (
     f" | order by TimeGenerated asc | take {MAX_ROWS}"
 )
 
+# Token metrics from ``llm-emit-token-metric`` (grant fragment dimensions: API ID, Subscription ID,
+# x-ns-cost-center). The metric carries no CorrelationId, so it attributes by dimension, never per
+# request. Only the three dimension values are extracted; ``customDimensions`` itself is not
+# projected, so no other dimension (and nothing body or header shaped) can leave the query.
+APIM_USAGE_METRICS_COLUMNS: Final = (
+    "timestamp, name, value, valueSum, valueCount, ApiId, SubscriptionId, ['x-ns-cost-center']"
+)
+_APIM_USAGE_METRICS_QUERY: Final = (
+    'customMetrics | where name in ("Prompt Tokens", "Completion Tokens", "Total Tokens")'
+    ' | extend ApiId=tostring(customDimensions["API ID"]),'
+    ' SubscriptionId=tostring(customDimensions["Subscription ID"]),'
+    " ['x-ns-cost-center']=tostring(customDimensions[\"x-ns-cost-center\"])"
+    f" | project {APIM_USAGE_METRICS_COLUMNS}"
+    f" | order by timestamp asc | take {MAX_ROWS}"
+)
+
 TEMPLATES: Final = {
     SourceKind.LOG_ANALYTICS: _LOG_ANALYTICS_QUERY,
     SourceKind.APP_INSIGHTS: _APP_INSIGHTS_QUERY,
     SourceKind.APIM_GATEWAY: _APIM_GATEWAY_QUERY,
     SourceKind.APIM_MCP: _APIM_MCP_QUERY,
+    SourceKind.APIM_USAGE_METRICS: _APIM_USAGE_METRICS_QUERY,
 }
 
 
