@@ -1,5 +1,5 @@
 ---
-name: prp-25-docs-site-and-public-assistant
+name: PRP-25-docs-site-and-public-assistant
 status: backlog
 priority: P1
 order: 11
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 5
 ns: NS-10
-depends_on: PRP-09, PRP-13, PRP-22
+depends_on: [PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client]
 wave: W9
 absorbs: P5.1
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-25: Docs site and public assistant

@@ -1,5 +1,5 @@
 ---
-name: prp-35-runtime-composition
+name: PRP-35-runtime-composition
 status: shipped
 started: 2026-11-04
 shipped: 2026-11-04
@@ -15,6 +15,7 @@ model: opus
 phase: 6
 ns: NS-01, NS-02, NS-06, NS-09
 depends_on: []
+gates: []
 ---
 
 # PRP-35: Runtime composition (ingest config, write registry, search backend, catalog seeding)

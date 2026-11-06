@@ -1,5 +1,5 @@
 ---
-name: prp-10-catalog-and-relationship-governance
+name: PRP-10-catalog-and-relationship-governance
 status: backlog
 priority: P1
 order: 9
@@ -11,9 +11,12 @@ created: 2026-10-08
 model: sonnet
 phase: 1
 ns: NS-02
-depends_on: PRP-05, PRP-06, G03 live gate
+depends_on: [PRP-05-api-worker-runtime-and-self-observability, PRP-06-identity-authz-and-audit]
 wave: W5
 absorbs: P1.2
+gates: G03 live gate
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-10: Catalog and relationship governance

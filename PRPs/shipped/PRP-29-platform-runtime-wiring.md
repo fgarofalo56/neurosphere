@@ -1,5 +1,5 @@
 ---
-name: prp-29-platform-runtime-wiring
+name: PRP-29-platform-runtime-wiring
 status: shipped
 started: 2026-10-24
 shipped: 2026-10-25
@@ -11,9 +11,12 @@ created: 2026-10-24
 model: opus
 phase: 5
 ns: NS-01, NS-02, NS-03, NS-05, NS-08
-depends_on: PRP-28
+depends_on: [PRP-28-ui-shell-and-usability]
 wave: W9
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+order: 29
 ---
 
 # PRP-29: Platform runtime wiring

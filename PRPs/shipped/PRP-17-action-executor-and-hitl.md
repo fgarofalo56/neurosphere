@@ -1,5 +1,5 @@
 ---
-name: prp-17-action-executor-and-hitl
+name: PRP-17-action-executor-and-hitl
 status: shipped
 priority: P1
 order: 1
@@ -12,9 +12,11 @@ branch: prp-17-audit-gaps
 model: opus
 phase: 3
 ns: NS-04, NS-06
-depends_on: PRP-04, PRP-06, PRP-09, PRP-10
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-06-identity-authz-and-audit, PRP-09-connector-sdk-and-reference-connectors, PRP-10-catalog-and-relationship-governance]
 wave: W6
 absorbs: P3.2, P3.4, G05
+orchestrator_model: opus
+implementer_model: opus
 ---
 
 # PRP-17: Action executor and human-in-the-loop workflow

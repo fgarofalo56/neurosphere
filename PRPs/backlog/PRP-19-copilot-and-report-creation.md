@@ -1,5 +1,5 @@
 ---
-name: prp-19-copilot-and-report-creation
+name: PRP-19-copilot-and-report-creation
 status: backlog
 priority: P1
 order: 10
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 3
 ns: NS-06
-depends_on: PRP-04, PRP-10, PRP-14, PRP-17
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl]
 wave: W7
 absorbs: P3.3
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-19: Copilot and report creation

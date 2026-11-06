@@ -1,5 +1,5 @@
 ---
-name: prp-05-api-worker-runtime-and-self-observability
+name: PRP-05-api-worker-runtime-and-self-observability
 status: backlog
 priority: P1
 order: 7
@@ -8,9 +8,11 @@ created: 2026-10-08
 model: sonnet
 phase: 0/1
 ns: NS-08
-depends_on: PRP-01, PRP-03
+depends_on: [PRP-01-contracts-and-schemas, PRP-03-local-dev-environment-and-sandbox-generator]
 wave: W3
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-05: API and worker runtime, shared core, self-observability

@@ -1,5 +1,5 @@
 ---
-name: prp-08-deployment-intelligence-and-iac
+name: PRP-08-deployment-intelligence-and-iac
 status: backlog
 priority: P1
 order: 8
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 1
 ns: NS-07
-depends_on: PRP-02, PRP-05
+depends_on: [PRP-02-capability-matrix-and-feasibility-benchmark, PRP-05-api-worker-runtime-and-self-observability]
 wave: W4
 absorbs: P1.4 reuse/IaC
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-08: Deployment intelligence and IaC

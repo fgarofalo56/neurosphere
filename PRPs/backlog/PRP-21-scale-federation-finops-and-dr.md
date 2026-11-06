@@ -1,5 +1,5 @@
 ---
-name: prp-21-scale-federation-finops-and-dr
+name: PRP-21-scale-federation-finops-and-dr
 status: backlog
 priority: P2
 order: 17
@@ -11,9 +11,11 @@ pr: 103
 model: sonnet
 phase: 4
 ns: NS-07, NS-08
-depends_on: PRP-07, PRP-11, PRP-13, PRP-14
+depends_on: [PRP-07-telemetry-ingestion-and-cost-ledger, PRP-11-analytics-adapters, PRP-13-release-versioning-and-container-publishing, PRP-14-dashboards-cost-latency-coverage]
 wave: W7
 absorbs: P4.3 + P4.4, G07
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-21: Scale, federation, FinOps and DR

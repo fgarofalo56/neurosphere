@@ -1,5 +1,5 @@
 ---
-name: prp-16-agent-evaluation-and-quality
+name: PRP-16-agent-evaluation-and-quality
 status: backlog
 priority: P1
 order: 3
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 2
 ns: NS-03
-depends_on: PRP-04, PRP-07, PRP-10
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-10-catalog-and-relationship-governance]
 wave: W6
 absorbs: P2.4
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-16: Agent evaluation and quality

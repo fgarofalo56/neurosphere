@@ -1,5 +1,5 @@
 ---
-name: prp-27-explainer-video-render
+name: PRP-27-explainer-video-render
 status: shipped
 review: none
 created: 2026-10-08
@@ -10,9 +10,14 @@ branch: prp-27-explainer-video-render
 model: sonnet
 phase: 5
 ns: NS-10
-depends_on: PRP-26, budget approval
+depends_on: [PRP-26-sales-and-marketing-deliverables]
 wave: W10
 absorbs: P5.3 video (budget-gated follow-up)
+gates: budget approval
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 27
 ---
 
 # PRP-27: Explainer video render

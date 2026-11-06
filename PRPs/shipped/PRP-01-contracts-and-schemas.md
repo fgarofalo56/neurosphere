@@ -1,14 +1,19 @@
 ---
-name: prp-01-contracts-and-schemas
+name: PRP-01-contracts-and-schemas
 status: shipped
 review: required
 created: 2026-10-08
 model: opus
 phase: 0
 ns: NS-01, NS-02, NS-03, NS-04, NS-05, NS-06, NS-07, NS-08, NS-09, NS-10
-depends_on: PRP-00
+depends_on: [PRP-00-toolchain-workspaces-and-gates]
 wave: W1
 absorbs: P0.2 contracts
+orchestrator_model: opus
+implementer_model: opus
+priority: P2
+order: 1
+shipped: 2026-10-10
 ---
 
 # PRP-01: Contracts and schemas

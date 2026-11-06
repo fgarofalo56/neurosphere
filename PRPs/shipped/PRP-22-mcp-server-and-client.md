@@ -1,5 +1,5 @@
 ---
-name: prp-22-mcp-server-and-client
+name: PRP-22-mcp-server-and-client
 status: shipped
 priority: P1
 order: 1
@@ -12,9 +12,11 @@ created: 2026-10-08
 model: opus
 phase: 3
 ns: NS-09
-depends_on: PRP-06, PRP-17, PRP-19
+depends_on: [PRP-06-identity-authz-and-audit, PRP-17-action-executor-and-hitl, PRP-19-copilot-and-report-creation]
 wave: W8
 absorbs: P3.5
+orchestrator_model: opus
+implementer_model: opus
 ---
 
 # PRP-22: MCP server and client
@@ -226,6 +228,8 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
 | 4 | merged | worktree-agent-a8323def95bf1f844 | opus | b59c250; orchestrator re-run: only tests/security/mcp/ (6) + the G08 line of docs/RESEARCH-AND-GATES.md touched; ruff + format clean, pyright 0 errors, security/mcp + security/injection + mcp_api + mcp_core 508 passed, no skip/xfail/integration markers; validate_planning PASS; Snyk Code 0 issues; suites: confused deputy 27, intent-hash parity 9, injection 3, roundtrip 6; corpus via external tool output 78/78 (65 deny, 13 abstain, 0 comply), 77 delivered as `ExternalToolResult`, 0 overscoped, 0 intents from tool output; self-reported: 13 `follow_instruction` abstains vacuous, 40 denies only because the tool does not exist over MCP; negative control: drafting bridge makes 12 cases comply; no product defect found; noted: external-server 401 surfaces as `dependency_transient`; reviewer APPROVED (real REST route + real MCP draft tool for parity, four confused-deputy cases on real paths, outcomes from observed behaviour not `case.expected`, negative control 12/12 comply for the right reason, roundtrip keeps SSRF pinning; reasons: 10 narrowed_to_scope, 5 scope_argument_refused, 40 tool_not_registered, 7 invalid_arguments, 13 vacuous abstains); follow-ups: map external 401/403 to `forbidden`/`mcp_auth_rejected` (retry-storm risk for a future retrying caller), catalog fake over-counts by-id lookups (over-reports only); orchestrator added the reviewer's honesty clause to the G08 row (only 15 cases exercise scope filtering for real); merge fd09dd1 | 2026-10-22 |
 
 ### Audit close-out round (2026-11-05)
+
+## Audit round 2026-11-05 (execution state)
 
 Plan approved 2026-11-05; integration branch `prp-22-audit-closeout` from origin/main (PR 173 not yet merged).
 

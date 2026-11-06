@@ -1,5 +1,5 @@
 ---
-name: prp-33-apim-gateway-observe
+name: PRP-33-apim-gateway-observe
 status: shipped
 started: 2026-11-05
 shipped: 2026-11-06
@@ -12,9 +12,11 @@ created: 2026-10-29
 model: sonnet
 phase: 6
 ns: NS-01, NS-02, NS-07, NS-08, NS-09
-depends_on: PRP-02, PRP-07, PRP-09, PRP-10, PRP-22, PRP-29, PRP-31
+depends_on: [PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-09-connector-sdk-and-reference-connectors, PRP-10-catalog-and-relationship-governance, PRP-22-mcp-server-and-client, PRP-29-platform-runtime-wiring, PRP-31-missing-ui-surfaces]
 wave: W10
 absorbs: new (APIM AI gateway observe side; patterns from microsoft/mosaic-apim, MIT, patterns only)
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-33: APIM AI gateway, observe side
