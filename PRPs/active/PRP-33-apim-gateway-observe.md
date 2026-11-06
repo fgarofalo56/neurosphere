@@ -261,7 +261,7 @@ Plan approved 2026-11-05 by the operator. Integration branch `prp-33-audit-gaps`
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| R-A | todo | | sonnet | | 2026-11-05 |
-| R-B | todo | | sonnet | | 2026-11-05 |
+| R-A | in-progress | worktree (agent) | sonnet | dispatched | 2026-11-05 |
+| R-B | in-progress | worktree (agent) | sonnet | dispatched | 2026-11-05 |
 | R-C | todo | | sonnet | | 2026-11-05 |
 | R-E | todo | | sonnet | | 2026-11-05 |
