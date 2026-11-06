@@ -102,6 +102,32 @@ def test_refuses_government_location(monkeypatch: pytest.MonkeyPatch) -> None:
     assert az.calls == []
 
 
+def test_extra_tags_reach_the_group_and_workspace_creates() -> None:
+    az = FakeAz()
+    g = _gate(az, extra_tags=("project=neurosphere", "owner=g17-gate-operator"))
+    g.create_infra()
+    creates = [
+        c
+        for c in az.calls
+        if c[:2] == ["group", "create"] or c[:3] == ["monitor", "log-analytics", "workspace"]
+    ]
+    assert len(creates) == 2
+    for call in creates:
+        tags = call[call.index("--tags") + 1 :]
+        assert "project=neurosphere" in tags
+        assert "owner=g17-gate-operator" in tags
+        assert g17.CREATED_BY_TAG in tags
+
+
+def test_malformed_tag_is_refused_before_any_resource_is_created(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NS_LIVE_APPROVED", "1")
+    az = FakeAz()
+    assert g17.main([*ARGS, "--tag", "no-equals-sign"], runner=az) == 2
+    assert not any(c[:2] == ["group", "create"] for c in az.calls)
+
+
 def test_tokenisation_of_subscription_and_resource_ids() -> None:
     ev = {"subscription": SUB, "apim_resource_id": f"/subscriptions/{SUB}/resourceGroups/r/x"}
     out = g17.redact(ev, subscriptions=[SUB], hosts=["example.openai.azure.com"])

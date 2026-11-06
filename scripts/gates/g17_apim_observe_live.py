@@ -193,6 +193,14 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--purge", action="store_true", help="also purge the soft-deleted workspace")
     ap.add_argument("--approve-rbac", action="store_true", help="run the OpenAI User RBAC write")
     ap.add_argument("--publisher-email", default="g17-gate@example.com")
+    ap.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="extra tag on the throwaway resource group and workspace (repeatable); needed where "
+        "a tag policy requires project and owner",
+    )
     ap.add_argument("--evidence-dir", default=str(REPO / "docs" / "evidence" / "G17"))
     ap.add_argument(
         "--allow-external-evidence-dir",
@@ -253,6 +261,7 @@ class Gate:
     purge: bool = False
     approve_rbac: bool = False
     publisher_email: str = "g17-gate@example.com"
+    extra_tags: tuple[str, ...] = ()
     sender: Sender | None = None
     observer: Observer | None = None
     row_fetcher: RowFetcher | None = None
@@ -344,6 +353,7 @@ class Gate:
                 "--tags",
                 CREATED_BY_TAG,
                 GATE_TAG,
+                *self.extra_tags,
             ]
         )
         self.rg_created = True
@@ -365,6 +375,7 @@ class Gate:
                 "--tags",
                 CREATED_BY_TAG,
                 GATE_TAG,
+                *self.extra_tags,
             ]
         )
         self.facts["workspace_id"] = str(law["id"])
@@ -932,6 +943,10 @@ def main(
     if cloud.rc != 0 or cloud.stdout.strip() != "AzureCloud":
         print("REFUSED: az is not signed in to the AzureCloud (Commercial) cloud.", file=sys.stderr)
         return 2
+    bad_tags = [t for t in args.tag if "=" not in t or t.startswith("=")]
+    if bad_tags:
+        print("REFUSED: --tag must be KEY=VALUE.", file=sys.stderr)
+        return 2
     gate = Gate(
         run_az=runner,
         subscription=args.subscription,
@@ -944,6 +959,7 @@ def main(
         purge=args.purge,
         approve_rbac=args.approve_rbac,
         publisher_email=args.publisher_email,
+        extra_tags=tuple(args.tag),
     )
     if sender is not None:
         gate.sender = sender
