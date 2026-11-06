@@ -1,5 +1,5 @@
 ---
-name: prp-15-recommendations-engine
+name: PRP-15-recommendations-engine
 status: backlog
 priority: P1
 order: 13
@@ -11,9 +11,11 @@ branch: prp-15-recommendations-engine
 model: sonnet
 phase: 2
 ns: NS-03
-depends_on: PRP-10, PRP-11
+depends_on: [PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters]
 wave: W6
 absorbs: P2.3
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-15: Recommendations engine

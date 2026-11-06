@@ -31,41 +31,41 @@ Shipped 21 · Active 0 · Backlog 15 of 36. **Next ready: PRP-05 api-worker-runt
 
 | PRP | Status | Wave | Depends on | Ready | Model | Review | Note |
 |---|---|---|---|---|---|---|---|
-| [PRP-00](shipped/PRP-00-toolchain-workspaces-and-gates.md) toolchain-workspaces-and-gates | shipped | W0 | none | done | sonnet | required |  |
-| [PRP-01](shipped/PRP-01-contracts-and-schemas.md) contracts-and-schemas | shipped | W1 | PRP-00 | done | opus | required |  |
-| [PRP-02](shipped/PRP-02-capability-matrix-and-feasibility-benchmark.md) capability-matrix-and-feasibility-benchmark | shipped | W2 | PRP-01 | done | sonnet | required |  |
-| [PRP-03](shipped/PRP-03-local-dev-environment-and-sandbox-generator.md) local-dev-environment-and-sandbox-generator | shipped | W2 | PRP-01 | done | sonnet | none |  |
-| [PRP-04](shipped/PRP-04-frontend-shell-design-system-auth.md) frontend-shell-design-system-auth | shipped | W2 | PRP-01 | done | sonnet | none |  |
-| [PRP-05](backlog/PRP-05-api-worker-runtime-and-self-observability.md) api-worker-runtime-and-self-observability | backlog | W3 | PRP-01, PRP-03 | **yes** | sonnet | none | START HERE |
-| [PRP-06](shipped/PRP-06-identity-authz-and-audit.md) identity-authz-and-audit | shipped | W4 | PRP-05 | done | opus | required |  |
-| [PRP-07](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) telemetry-ingestion-and-cost-ledger | shipped | W4 | PRP-01, PRP-05 | done | sonnet | required |  |
-| [PRP-08](backlog/PRP-08-deployment-intelligence-and-iac.md) deployment-intelligence-and-iac | backlog | W4 | PRP-02, PRP-05 | blocked by PRP-05 | sonnet | required |  |
-| [PRP-09](backlog/PRP-09-connector-sdk-and-reference-connectors.md) connector-sdk-and-reference-connectors | backlog | W4 | PRP-01, PRP-05 | blocked by PRP-05 | sonnet | required |  |
-| [PRP-10](backlog/PRP-10-catalog-and-relationship-governance.md) catalog-and-relationship-governance | backlog | W5 | PRP-05, PRP-06 | blocked by PRP-05 | sonnet | required | manual: G03 live gate |
-| [PRP-11](backlog/PRP-11-analytics-adapters.md) analytics-adapters | backlog | W5 | PRP-02, PRP-07 | **yes** | sonnet | required |  |
-| [PRP-12](shipped/PRP-12-threat-model-and-security-baseline.md) threat-model-and-security-baseline | shipped | W5 | PRP-05, PRP-06, PRP-08 | done | opus | required |  |
-| [PRP-13](shipped/PRP-13-release-versioning-and-container-publishing.md) release-versioning-and-container-publishing | shipped | W5 | PRP-00, PRP-04, PRP-05 | done | sonnet | none |  |
-| [PRP-14](shipped/PRP-14-dashboards-cost-latency-coverage.md) dashboards-cost-latency-coverage | shipped | W6 | PRP-04, PRP-07, PRP-10 | done | sonnet | none |  |
-| [PRP-15](backlog/PRP-15-recommendations-engine.md) recommendations-engine | backlog | W6 | PRP-10, PRP-11 | blocked by PRP-10, PRP-11 | sonnet | none |  |
-| [PRP-16](backlog/PRP-16-agent-evaluation-and-quality.md) agent-evaluation-and-quality | backlog | W6 | PRP-04, PRP-07, PRP-10 | blocked by PRP-10 | sonnet | required |  |
-| [PRP-17](shipped/PRP-17-action-executor-and-hitl.md) action-executor-and-hitl | shipped | W6 | PRP-04, PRP-06, PRP-09, PRP-10 | done | opus | required |  |
-| [PRP-18](backlog/PRP-18-live-map-and-session-replay.md) live-map-and-session-replay | backlog | W7 | PRP-04, PRP-10, PRP-14 | blocked by PRP-10 | sonnet | required |  |
-| [PRP-19](backlog/PRP-19-copilot-and-report-creation.md) copilot-and-report-creation | backlog | W7 | PRP-04, PRP-10, PRP-14, PRP-17 | blocked by PRP-10 | sonnet | required |  |
-| [PRP-20](backlog/PRP-20-government-verification-and-sovereign-deployment.md) government-verification-and-sovereign-deployment | backlog | W7 | PRP-08, PRP-12, PRP-13 | blocked by PRP-08 | sonnet | required |  |
-| [PRP-21](backlog/PRP-21-scale-federation-finops-and-dr.md) scale-federation-finops-and-dr | backlog | W7 | PRP-07, PRP-11, PRP-13, PRP-14 | blocked by PRP-11 | sonnet | none |  |
-| [PRP-22](shipped/PRP-22-mcp-server-and-client.md) mcp-server-and-client | shipped | W8 | PRP-06, PRP-17, PRP-19 | done | opus | required |  |
-| [PRP-23](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) ato-evidence-and-data-lifecycle | backlog | W8 | PRP-12, PRP-20, PRP-21 | blocked by PRP-20, PRP-21 | sonnet | required |  |
-| [PRP-24](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) themes-sandbox-mode-and-accessibility | shipped | W8 | PRP-03, PRP-04, PRP-18, PRP-19, PRP-28 | done | sonnet | none |  |
-| [PRP-25](backlog/PRP-25-docs-site-and-public-assistant.md) docs-site-and-public-assistant | backlog | W9 | PRP-09, PRP-13, PRP-22 | blocked by PRP-09 | sonnet | none |  |
-| [PRP-26](shipped/PRP-26-sales-and-marketing-deliverables.md) sales-and-marketing-deliverables | shipped | W9 | PRP-24, PRP-25 | done | sonnet | required |  |
-| [PRP-27](shipped/PRP-27-explainer-video-render.md) explainer-video-render | shipped | W10 | PRP-26 | done | sonnet | none | manual: budget approval |
-| [PRP-28](shipped/PRP-28-ui-shell-and-usability.md) ui-shell-and-usability | shipped | W8 | PRP-04, PRP-06, PRP-14, PRP-17, PRP-18, PRP-19 | done | sonnet | required |  |
-| [PRP-29](shipped/PRP-29-platform-runtime-wiring.md) platform-runtime-wiring | shipped | W9 | PRP-28 | done | opus | required |  |
-| [PRP-30](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) visual-redesign-and-switchable-ui-styles | shipped | W9 | PRP-24, PRP-28 | done | sonnet | required |  |
-| [PRP-31](backlog/PRP-31-missing-ui-surfaces.md) missing-ui-surfaces | backlog | W9 | PRP-29, PRP-30 | **yes** | sonnet | required |  |
-| [PRP-32](shipped/PRP-32-hosted-azure-environment.md) hosted-azure-environment | shipped | W9 | PRP-29 | done | sonnet | required | manual: live approval (NS_LIVE_APPROVED=1 and per-step operator approval) |
-| [PRP-33](shipped/PRP-33-apim-gateway-observe.md) apim-gateway-observe | shipped | W10 | PRP-02, PRP-07, PRP-09, PRP-10, PRP-22, PRP-29, PRP-31 | done | sonnet | required |  |
-| [PRP-34](backlog/PRP-34-apim-gateway-manage.md) apim-gateway-manage | backlog | W10 | PRP-08, PRP-17, PRP-22, PRP-33 | blocked by PRP-08 | opus | required |  |
+| [PRP-00](shipped/PRP-00-toolchain-workspaces-and-gates.md) toolchain-workspaces-and-gates | shipped | W0 | none | done | sonnet | required | manual: [] |
+| [PRP-01](shipped/PRP-01-contracts-and-schemas.md) contracts-and-schemas | shipped | W1 | PRP-00 | done | opus | required | manual: [-toolchain-workspaces-and-gates] |
+| [PRP-02](shipped/PRP-02-capability-matrix-and-feasibility-benchmark.md) capability-matrix-and-feasibility-benchmark | shipped | W2 | PRP-01 | done | sonnet | required | manual: [-contracts-and-schemas] |
+| [PRP-03](shipped/PRP-03-local-dev-environment-and-sandbox-generator.md) local-dev-environment-and-sandbox-generator | shipped | W2 | PRP-01 | done | sonnet | none | manual: [-contracts-and-schemas] |
+| [PRP-04](shipped/PRP-04-frontend-shell-design-system-auth.md) frontend-shell-design-system-auth | shipped | W2 | PRP-01 | done | sonnet | none | manual: [-contracts-and-schemas] |
+| [PRP-05](backlog/PRP-05-api-worker-runtime-and-self-observability.md) api-worker-runtime-and-self-observability | backlog | W3 | PRP-01, PRP-03 | manual gate | sonnet | none | START HERE; manual: [-contracts-and-schemas; -local-dev-environment-and-sandbox-generator] |
+| [PRP-06](shipped/PRP-06-identity-authz-and-audit.md) identity-authz-and-audit | shipped | W4 | PRP-05 | done | opus | required | manual: [-api-worker-runtime-and-self-observability] |
+| [PRP-07](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) telemetry-ingestion-and-cost-ledger | shipped | W4 | PRP-01, PRP-05 | done | sonnet | required | manual: [-contracts-and-schemas; -api-worker-runtime-and-self-observability] |
+| [PRP-08](backlog/PRP-08-deployment-intelligence-and-iac.md) deployment-intelligence-and-iac | backlog | W4 | PRP-02, PRP-05 | blocked by PRP-05 | sonnet | required | manual: [-capability-matrix-and-feasibility-benchmark; -api-worker-runtime-and-self-observability] |
+| [PRP-09](backlog/PRP-09-connector-sdk-and-reference-connectors.md) connector-sdk-and-reference-connectors | backlog | W4 | PRP-01, PRP-05 | blocked by PRP-05 | sonnet | required | manual: [-contracts-and-schemas; -api-worker-runtime-and-self-observability] |
+| [PRP-10](backlog/PRP-10-catalog-and-relationship-governance.md) catalog-and-relationship-governance | backlog | W5 | PRP-05, PRP-06 | blocked by PRP-05 | sonnet | required | manual: [-api-worker-runtime-and-self-observability; -identity-authz-and-audit] |
+| [PRP-11](backlog/PRP-11-analytics-adapters.md) analytics-adapters | backlog | W5 | PRP-02, PRP-07 | manual gate | sonnet | required | manual: [-capability-matrix-and-feasibility-benchmark; -telemetry-ingestion-and-cost-ledger] |
+| [PRP-12](shipped/PRP-12-threat-model-and-security-baseline.md) threat-model-and-security-baseline | shipped | W5 | PRP-05, PRP-06, PRP-08 | done | opus | required | manual: [-api-worker-runtime-and-self-observability; -identity-authz-and-audit; -deployment-intelligence-and-iac] |
+| [PRP-13](shipped/PRP-13-release-versioning-and-container-publishing.md) release-versioning-and-container-publishing | shipped | W5 | PRP-00, PRP-04, PRP-05 | done | sonnet | none | manual: [-toolchain-workspaces-and-gates; -frontend-shell-design-system-auth; -api-worker-runtime-and-self-observability] |
+| [PRP-14](shipped/PRP-14-dashboards-cost-latency-coverage.md) dashboards-cost-latency-coverage | shipped | W6 | PRP-04, PRP-07, PRP-10 | done | sonnet | none | manual: [-frontend-shell-design-system-auth; -telemetry-ingestion-and-cost-ledger; -catalog-and-relationship-governance] |
+| [PRP-15](backlog/PRP-15-recommendations-engine.md) recommendations-engine | backlog | W6 | PRP-10, PRP-11 | blocked by PRP-10, PRP-11 | sonnet | none | manual: [-catalog-and-relationship-governance; -analytics-adapters] |
+| [PRP-16](backlog/PRP-16-agent-evaluation-and-quality.md) agent-evaluation-and-quality | backlog | W6 | PRP-04, PRP-07, PRP-10 | blocked by PRP-10 | sonnet | required | manual: [-frontend-shell-design-system-auth; -telemetry-ingestion-and-cost-ledger; -catalog-and-relationship-governance] |
+| [PRP-17](shipped/PRP-17-action-executor-and-hitl.md) action-executor-and-hitl | shipped | W6 | PRP-04, PRP-06, PRP-09, PRP-10 | done | opus | required | manual: [-frontend-shell-design-system-auth; -identity-authz-and-audit; -connector-sdk-and-reference-connectors; -catalog-and-relationship-governance] |
+| [PRP-18](backlog/PRP-18-live-map-and-session-replay.md) live-map-and-session-replay | backlog | W7 | PRP-04, PRP-10, PRP-14 | blocked by PRP-10 | sonnet | required | manual: [-frontend-shell-design-system-auth; -catalog-and-relationship-governance; -dashboards-cost-latency-coverage] |
+| [PRP-19](backlog/PRP-19-copilot-and-report-creation.md) copilot-and-report-creation | backlog | W7 | PRP-04, PRP-10, PRP-14, PRP-17 | blocked by PRP-10 | sonnet | required | manual: [-frontend-shell-design-system-auth; -catalog-and-relationship-governance; -dashboards-cost-latency-coverage; -action-executor-and-hitl] |
+| [PRP-20](backlog/PRP-20-government-verification-and-sovereign-deployment.md) government-verification-and-sovereign-deployment | backlog | W7 | PRP-08, PRP-12, PRP-13 | blocked by PRP-08 | sonnet | required | manual: [-deployment-intelligence-and-iac; -threat-model-and-security-baseline; -release-versioning-and-container-publishing] |
+| [PRP-21](backlog/PRP-21-scale-federation-finops-and-dr.md) scale-federation-finops-and-dr | backlog | W7 | PRP-07, PRP-11, PRP-13, PRP-14 | blocked by PRP-11 | sonnet | none | manual: [-telemetry-ingestion-and-cost-ledger; -analytics-adapters; -release-versioning-and-container-publishing; -dashboards-cost-latency-coverage] |
+| [PRP-22](shipped/PRP-22-mcp-server-and-client.md) mcp-server-and-client | shipped | W8 | PRP-06, PRP-17, PRP-19 | done | opus | required | manual: [-identity-authz-and-audit; -action-executor-and-hitl; -copilot-and-report-creation] |
+| [PRP-23](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) ato-evidence-and-data-lifecycle | backlog | W8 | PRP-12, PRP-20, PRP-21 | blocked by PRP-20, PRP-21 | sonnet | required | manual: [-threat-model-and-security-baseline; -government-verification-and-sovereign-deployment; -scale-federation-finops-and-dr] |
+| [PRP-24](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) themes-sandbox-mode-and-accessibility | shipped | W8 | PRP-03, PRP-04, PRP-18, PRP-19, PRP-28 | done | sonnet | none | manual: [-local-dev-environment-and-sandbox-generator; -frontend-shell-design-system-auth; -live-map-and-session-replay; -copilot-and-report-creation; -ui-shell-and-usability] |
+| [PRP-25](backlog/PRP-25-docs-site-and-public-assistant.md) docs-site-and-public-assistant | backlog | W9 | PRP-09, PRP-13, PRP-22 | blocked by PRP-09 | sonnet | none | manual: [-connector-sdk-and-reference-connectors; -release-versioning-and-container-publishing; -mcp-server-and-client] |
+| [PRP-26](shipped/PRP-26-sales-and-marketing-deliverables.md) sales-and-marketing-deliverables | shipped | W9 | PRP-24, PRP-25 | done | sonnet | required | manual: [-themes-sandbox-mode-and-accessibility; -docs-site-and-public-assistant] |
+| [PRP-27](shipped/PRP-27-explainer-video-render.md) explainer-video-render | shipped | W10 | PRP-26 | done | sonnet | none | manual: [-sales-and-marketing-deliverables] |
+| [PRP-28](shipped/PRP-28-ui-shell-and-usability.md) ui-shell-and-usability | shipped | W8 | PRP-04, PRP-06, PRP-14, PRP-17, PRP-18, PRP-19 | done | sonnet | required | manual: [-frontend-shell-design-system-auth; -identity-authz-and-audit; -dashboards-cost-latency-coverage; -action-executor-and-hitl; -live-map-and-session-replay; -copilot-and-report-creation] |
+| [PRP-29](shipped/PRP-29-platform-runtime-wiring.md) platform-runtime-wiring | shipped | W9 | PRP-28 | done | opus | required | manual: [-ui-shell-and-usability] |
+| [PRP-30](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) visual-redesign-and-switchable-ui-styles | shipped | W9 | PRP-24, PRP-28 | done | sonnet | required | manual: [-themes-sandbox-mode-and-accessibility; -ui-shell-and-usability] |
+| [PRP-31](backlog/PRP-31-missing-ui-surfaces.md) missing-ui-surfaces | backlog | W9 | PRP-29, PRP-30 | manual gate | sonnet | required | manual: [-platform-runtime-wiring; -visual-redesign-and-switchable-ui-styles] |
+| [PRP-32](shipped/PRP-32-hosted-azure-environment.md) hosted-azure-environment | shipped | W9 | PRP-29 | done | sonnet | required | manual: [-platform-runtime-wiring] |
+| [PRP-33](shipped/PRP-33-apim-gateway-observe.md) apim-gateway-observe | shipped | W10 | PRP-02, PRP-07, PRP-09, PRP-10, PRP-22, PRP-29, PRP-31 | done | sonnet | required | manual: [-capability-matrix-and-feasibility-benchmark; -telemetry-ingestion-and-cost-ledger; -connector-sdk-and-reference-connectors; -catalog-and-relationship-governance; -mcp-server-and-client; -platform-runtime-wiring; -missing-ui-surfaces] |
+| [PRP-34](backlog/PRP-34-apim-gateway-manage.md) apim-gateway-manage | backlog | W10 | PRP-08, PRP-17, PRP-22, PRP-33 | blocked by PRP-08 | opus | required | manual: [-deployment-intelligence-and-iac; -action-executor-and-hitl; -mcp-server-and-client; -apim-gateway-observe] |
 | [PRP-35](shipped/PRP-35-runtime-composition.md) runtime-composition | shipped |  | none | done | opus | required | manual: [] |
 <!-- prp-status:end -->
 

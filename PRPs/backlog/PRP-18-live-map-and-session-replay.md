@@ -1,5 +1,5 @@
 ---
-name: prp-18-live-map-and-session-replay
+name: PRP-18-live-map-and-session-replay
 status: backlog
 priority: P2
 order: 16
@@ -11,9 +11,11 @@ branch: prp-18-live-map-and-session-replay
 model: sonnet
 phase: 3
 ns: NS-05
-depends_on: PRP-04, PRP-10, PRP-14
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage]
 wave: W7
 absorbs: P3.1
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-18: Live map and session replay

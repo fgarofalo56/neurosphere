@@ -1,14 +1,19 @@
 ---
-name: prp-03-local-dev-environment-and-sandbox-generator
+name: PRP-03-local-dev-environment-and-sandbox-generator
 status: shipped
 review: none
 created: 2026-10-08
 model: sonnet
 phase: 0
 ns: NS-10
-depends_on: PRP-01
+depends_on: [PRP-01-contracts-and-schemas]
 wave: W2
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 3
+shipped: 2026-10-11
 ---
 
 # PRP-03: Local dev environment and sandbox generator

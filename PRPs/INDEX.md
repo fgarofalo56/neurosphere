@@ -10,21 +10,21 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [prp-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | - | - | ? / ? | required |
-| [prp-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | - | - | ? / ? | required |
-| [prp-05-api-worker-runtime-and-self-observability](backlog/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 7 | - | - | ? / ? | none |
-| [prp-08-deployment-intelligence-and-iac](backlog/PRP-08-deployment-intelligence-and-iac.md) | P1 | 8 | - | - | ? / ? | required |
-| [prp-10-catalog-and-relationship-governance](backlog/PRP-10-catalog-and-relationship-governance.md) | P1 | 9 | - | - | ? / ? | required |
-| [prp-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) | P1 | 10 | - | - | ? / ? | required |
-| [prp-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | - | - | ? / ? | none |
-| [prp-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 | 12 | - | - | ? / ? | required |
-| [prp-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | - | - | ? / ? | none |
-| [prp-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 14 | - | - | ? / ? | required |
-| [prp-09-connector-sdk-and-reference-connectors](backlog/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 4 | - | - | ? / ? | required |
-| [prp-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | - | - | ? / ? | required |
-| [prp-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | - | - | ? / ? | required |
-| [prp-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) | P2 | 17 | - | - | ? / ? | none |
-| [prp-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | P2 | 18 | - | - | ? / ? | required |
+| [PRP-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | PRP-08-deployment-intelligence-and-iac, PRP-17-action-executor-and-hitl, PRP-22-mcp-server-and-client, PRP-33-apim-gateway-observe | PRP-08-deployment-intelligence-and-iac (backlog) | sonnet / sonnet | required |
+| [PRP-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | PRP-04-frontend-shell-design-system-auth, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-10-catalog-and-relationship-governance | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
+| [PRP-05-api-worker-runtime-and-self-observability](backlog/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 7 | PRP-01-contracts-and-schemas, PRP-03-local-dev-environment-and-sandbox-generator | - | sonnet / sonnet | none |
+| [PRP-08-deployment-intelligence-and-iac](backlog/PRP-08-deployment-intelligence-and-iac.md) | P1 | 8 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-05-api-worker-runtime-and-self-observability | PRP-05-api-worker-runtime-and-self-observability (backlog) | sonnet / sonnet | required |
+| [PRP-10-catalog-and-relationship-governance](backlog/PRP-10-catalog-and-relationship-governance.md) | P1 | 9 | PRP-05-api-worker-runtime-and-self-observability, PRP-06-identity-authz-and-audit | PRP-05-api-worker-runtime-and-self-observability (backlog) | sonnet / sonnet | required |
+| [PRP-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) | P1 | 10 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
+| [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (backlog) | sonnet / sonnet | none |
+| [PRP-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 | 12 | PRP-29-platform-runtime-wiring, PRP-30-visual-redesign-and-switchable-ui-styles | - | sonnet / sonnet | required |
+| [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-10-catalog-and-relationship-governance (backlog); PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
+| [PRP-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 14 | PRP-08-deployment-intelligence-and-iac, PRP-12-threat-model-and-security-baseline, PRP-13-release-versioning-and-container-publishing | PRP-08-deployment-intelligence-and-iac (backlog) | sonnet / sonnet | required |
+| [PRP-09-connector-sdk-and-reference-connectors](backlog/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 4 | PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability | PRP-05-api-worker-runtime-and-self-observability (backlog) | sonnet / sonnet | required |
+| [PRP-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger | - | sonnet / sonnet | required |
+| [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
+| [PRP-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) | P2 | 17 | PRP-07-telemetry-ingestion-and-cost-ledger, PRP-11-analytics-adapters, PRP-13-release-versioning-and-container-publishing, PRP-14-dashboards-cost-latency-coverage | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
+| [PRP-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | P2 | 18 | PRP-12-threat-model-and-security-baseline, PRP-20-government-verification-and-sovereign-deployment, PRP-21-scale-federation-finops-and-dr | PRP-20-government-verification-and-sovereign-deployment (backlog); PRP-21-scale-federation-finops-and-dr (backlog) | sonnet / sonnet | required |
 
 ## Blocked
 
@@ -34,27 +34,27 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
-| [prp-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-11-06 | #176 |
-| [prp-06-identity-authz-and-audit](shipped/PRP-06-identity-authz-and-audit.md) | 2026-11-05 | #172 |
-| [prp-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-11-05 | #173 |
-| [prp-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-11-05 | #175 |
-| [prp-07-telemetry-ingestion-and-cost-ledger](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) | 2026-11-04 | #166 |
-| [prp-35-runtime-composition](shipped/PRP-35-runtime-composition.md) | 2026-11-04 | #164 |
-| [prp-26-sales-and-marketing-deliverables](shipped/PRP-26-sales-and-marketing-deliverables.md) | 2026-11-03 | #157 |
-| [prp-27-explainer-video-render](shipped/PRP-27-explainer-video-render.md) | 2026-11-03 | #163 |
-| [prp-32-hosted-azure-environment](shipped/PRP-32-hosted-azure-environment.md) | 2026-10-28 | #135 |
-| [prp-30-visual-redesign-and-switchable-ui-styles](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) | 2026-10-26 | #134 |
-| [prp-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |
-| [prp-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
-| [prp-28-ui-shell-and-usability](shipped/PRP-28-ui-shell-and-usability.md) | 2026-10-22 | #90 |
-| [prp-13-release-versioning-and-container-publishing](shipped/PRP-13-release-versioning-and-container-publishing.md) | 2026-10-19 | #72 |
-| [prp-14-dashboards-cost-latency-coverage](shipped/PRP-14-dashboards-cost-latency-coverage.md) | 2026-10-19 | #74 |
-| [prp-12-threat-model-and-security-baseline](shipped/PRP-12-threat-model-and-security-baseline.md) | 2026-10-18 | #65 |
-| [prp-00-toolchain-workspaces-and-gates](shipped/PRP-00-toolchain-workspaces-and-gates.md) | ? |  |
-| [prp-01-contracts-and-schemas](shipped/PRP-01-contracts-and-schemas.md) | ? |  |
-| [prp-02-capability-matrix-and-feasibility-benchmark](shipped/PRP-02-capability-matrix-and-feasibility-benchmark.md) | ? |  |
-| [prp-03-local-dev-environment-and-sandbox-generator](shipped/PRP-03-local-dev-environment-and-sandbox-generator.md) | ? |  |
-| [prp-04-frontend-shell-design-system-auth](shipped/PRP-04-frontend-shell-design-system-auth.md) | ? |  |
+| [PRP-33-apim-gateway-observe](shipped/PRP-33-apim-gateway-observe.md) | 2026-11-06 | #176 |
+| [PRP-06-identity-authz-and-audit](shipped/PRP-06-identity-authz-and-audit.md) | 2026-11-05 | #172 |
+| [PRP-17-action-executor-and-hitl](shipped/PRP-17-action-executor-and-hitl.md) | 2026-11-05 | #173 |
+| [PRP-22-mcp-server-and-client](shipped/PRP-22-mcp-server-and-client.md) | 2026-11-05 | #175 |
+| [PRP-07-telemetry-ingestion-and-cost-ledger](shipped/PRP-07-telemetry-ingestion-and-cost-ledger.md) | 2026-11-04 | #166 |
+| [PRP-35-runtime-composition](shipped/PRP-35-runtime-composition.md) | 2026-11-04 | #164 |
+| [PRP-26-sales-and-marketing-deliverables](shipped/PRP-26-sales-and-marketing-deliverables.md) | 2026-11-03 | #157 |
+| [PRP-27-explainer-video-render](shipped/PRP-27-explainer-video-render.md) | 2026-11-03 | #163 |
+| [PRP-32-hosted-azure-environment](shipped/PRP-32-hosted-azure-environment.md) | 2026-10-28 | #135 |
+| [PRP-30-visual-redesign-and-switchable-ui-styles](shipped/PRP-30-visual-redesign-and-switchable-ui-styles.md) | 2026-10-26 | #134 |
+| [PRP-29-platform-runtime-wiring](shipped/PRP-29-platform-runtime-wiring.md) | 2026-10-25 | #129 |
+| [PRP-24-themes-sandbox-mode-and-accessibility](shipped/PRP-24-themes-sandbox-mode-and-accessibility.md) | 2026-10-24 | #121 |
+| [PRP-28-ui-shell-and-usability](shipped/PRP-28-ui-shell-and-usability.md) | 2026-10-22 | #90 |
+| [PRP-13-release-versioning-and-container-publishing](shipped/PRP-13-release-versioning-and-container-publishing.md) | 2026-10-19 | #72 |
+| [PRP-14-dashboards-cost-latency-coverage](shipped/PRP-14-dashboards-cost-latency-coverage.md) | 2026-10-19 | #74 |
+| [PRP-12-threat-model-and-security-baseline](shipped/PRP-12-threat-model-and-security-baseline.md) | 2026-10-18 | #65 |
+| [PRP-04-frontend-shell-design-system-auth](shipped/PRP-04-frontend-shell-design-system-auth.md) | 2026-10-12 |  |
+| [PRP-02-capability-matrix-and-feasibility-benchmark](shipped/PRP-02-capability-matrix-and-feasibility-benchmark.md) | 2026-10-11 |  |
+| [PRP-03-local-dev-environment-and-sandbox-generator](shipped/PRP-03-local-dev-environment-and-sandbox-generator.md) | 2026-10-11 |  |
+| [PRP-01-contracts-and-schemas](shipped/PRP-01-contracts-and-schemas.md) | 2026-10-10 |  |
+| [PRP-00-toolchain-workspaces-and-gates](shipped/PRP-00-toolchain-workspaces-and-gates.md) | 2026-10-09 |  |
 
 ## Abandoned
 

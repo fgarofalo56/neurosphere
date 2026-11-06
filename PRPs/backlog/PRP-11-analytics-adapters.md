@@ -1,5 +1,5 @@
 ---
-name: prp-11-analytics-adapters
+name: PRP-11-analytics-adapters
 status: backlog
 priority: P2
 order: 15
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 2
 ns: NS-01, NS-07
-depends_on: PRP-02, PRP-07
+depends_on: [PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger]
 wave: W5
 absorbs: P2.1
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-11: Analytics adapters

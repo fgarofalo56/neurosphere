@@ -1,5 +1,5 @@
 ---
-name: prp-23-ato-evidence-and-data-lifecycle
+name: PRP-23-ato-evidence-and-data-lifecycle
 status: backlog
 priority: P2
 order: 18
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 4
 ns: NS-08
-depends_on: PRP-12, PRP-20, PRP-21
+depends_on: [PRP-12-threat-model-and-security-baseline, PRP-20-government-verification-and-sovereign-deployment, PRP-21-scale-federation-finops-and-dr]
 wave: W8
 absorbs: P4.5, G06
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-23: ATO evidence and data lifecycle

@@ -1,5 +1,5 @@
 ---
-name: prp-28-ui-shell-and-usability
+name: PRP-28-ui-shell-and-usability
 status: shipped
 shipped: 2026-10-22
 pr: 90
@@ -11,9 +11,12 @@ created: 2026-10-22
 model: sonnet
 phase: 5
 ns: NS-08, NS-10
-depends_on: PRP-04, PRP-06, PRP-14, PRP-17, PRP-18, PRP-19
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-06-identity-authz-and-audit, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl, PRP-18-live-map-and-session-replay, PRP-19-copilot-and-report-creation]
 wave: W8
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+order: 28
 ---
 
 # PRP-28: UI shell and usability

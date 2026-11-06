@@ -1,14 +1,19 @@
 ---
-name: prp-00-toolchain-workspaces-and-gates
+name: PRP-00-toolchain-workspaces-and-gates
 status: shipped
 review: required
 created: 2026-10-08
 model: sonnet
 phase: 0
 ns: NS-07, NS-08, NS-10
-depends_on: none
+depends_on: []
 wave: W0
 absorbs: P0.3 remainder, G08, G10
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 0
+shipped: 2026-10-09
 ---
 
 # PRP-00: Toolchain, workspaces and gates

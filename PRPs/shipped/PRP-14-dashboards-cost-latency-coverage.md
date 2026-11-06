@@ -1,5 +1,5 @@
 ---
-name: prp-14-dashboards-cost-latency-coverage
+name: PRP-14-dashboards-cost-latency-coverage
 status: shipped
 started: 2026-10-19
 shipped: 2026-10-19
@@ -10,9 +10,13 @@ branch: prp-14-dashboards-cost-latency-coverage
 model: sonnet
 phase: 1
 ns: NS-01, NS-07
-depends_on: PRP-04, PRP-07, PRP-10
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-10-catalog-and-relationship-governance]
 wave: W6
 absorbs: P1.4 dashboards
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 14
 ---
 
 # PRP-14: Dashboards for cost, latency and coverage

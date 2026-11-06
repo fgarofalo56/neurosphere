@@ -1,14 +1,19 @@
 ---
-name: prp-04-frontend-shell-design-system-auth
+name: PRP-04-frontend-shell-design-system-auth
 status: shipped
 review: none
 created: 2026-10-08
 model: sonnet
 phase: 0/1
 ns: NS-08, NS-10
-depends_on: PRP-01
+depends_on: [PRP-01-contracts-and-schemas]
 wave: W2
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 4
+shipped: 2026-10-12
 ---
 
 # PRP-04: Frontend shell, design system and Entra auth

@@ -1,5 +1,5 @@
 ---
-name: prp-09-connector-sdk-and-reference-connectors
+name: PRP-09-connector-sdk-and-reference-connectors
 status: backlog
 priority: P2
 order: 4
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 2
 ns: NS-01, NS-09
-depends_on: PRP-01, PRP-05
+depends_on: [PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability]
 wave: W4
 absorbs: P2.2
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-09: Connector SDK and reference connectors

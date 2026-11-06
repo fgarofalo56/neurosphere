@@ -1,5 +1,5 @@
 ---
-name: prp-31-missing-ui-surfaces
+name: PRP-31-missing-ui-surfaces
 status: backlog
 started: 2026-10-30
 pr: 150
@@ -11,9 +11,11 @@ created: 2026-10-24
 model: sonnet
 phase: 5
 ns: NS-01, NS-02, NS-03, NS-06, NS-07, NS-08, NS-10
-depends_on: PRP-29, PRP-30
+depends_on: [PRP-29-platform-runtime-wiring, PRP-30-visual-redesign-and-switchable-ui-styles]
 wave: W9
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-31: Missing UI surfaces

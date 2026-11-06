@@ -1,5 +1,5 @@
 ---
-name: prp-07-telemetry-ingestion-and-cost-ledger
+name: PRP-07-telemetry-ingestion-and-cost-ledger
 status: shipped
 shipped: 2026-11-04
 pr: 166
@@ -12,9 +12,11 @@ created: 2026-10-08
 model: sonnet
 phase: 1
 ns: NS-01
-depends_on: PRP-01, PRP-05
+depends_on: [PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability]
 wave: W4
 absorbs: P1.1
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-07: Telemetry ingestion and cost ledger
@@ -291,7 +293,7 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 | 5 | merged | worktree-agent-ac7e6423d9445430f | sonnet | ruff/pyright clean; combined core+api+workers 1042 passed; e46ef30, merge 6c3d666 | 2026-10-16 |
 | 6 | merged | worktree-agent-a3ff0a57803768b63 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker (retry_count/retry_amount fabricated 0 for unreported retry_attempt); rework 136f109 (merge b6c53e2) confirmed by Haiku pass; post-rework unit 1059 passed, integration 14 passed vs compose; 5 non-blocking findings -> follow-ups. Scope expanded at operator decision 2026-10-16 (code wiring; compose service wiring is a follow-up). Orchestrator re-run on integration branch: unit 1056 passed; `pytest tests/integration/ingestion -m integration` 14 passed vs compose emulators; live 2 skipped OPEN; verify-gates full PASS 4/4; validate_planning PASS; Snyk 0 issues. c9694a4, merge 0f76227 | 2026-10-16 |
 
-### Audit close-out items (added at plan approval, 2026-11-04)
+## Audit close-out items (added at plan approval, 2026-11-04)
 
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|

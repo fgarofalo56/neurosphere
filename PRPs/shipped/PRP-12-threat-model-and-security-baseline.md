@@ -1,5 +1,5 @@
 ---
-name: prp-12-threat-model-and-security-baseline
+name: PRP-12-threat-model-and-security-baseline
 status: shipped
 started: 2026-10-18
 shipped: 2026-10-18
@@ -10,9 +10,13 @@ created: 2026-10-08
 model: opus
 phase: 1
 ns: NS-08
-depends_on: PRP-05, PRP-06, PRP-08
+depends_on: [PRP-05-api-worker-runtime-and-self-observability, PRP-06-identity-authz-and-audit, PRP-08-deployment-intelligence-and-iac]
 wave: W5
 absorbs: new
+orchestrator_model: opus
+implementer_model: opus
+priority: P2
+order: 12
 ---
 
 # PRP-12: Threat model and security baseline

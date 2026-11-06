@@ -1,5 +1,5 @@
 ---
-name: prp-24-themes-sandbox-mode-and-accessibility
+name: PRP-24-themes-sandbox-mode-and-accessibility
 status: shipped
 shipped: 2026-10-24
 pr: 121
@@ -10,9 +10,13 @@ created: 2026-10-08
 model: sonnet
 phase: 5
 ns: NS-10
-depends_on: PRP-03, PRP-04, PRP-18, PRP-19, PRP-28
+depends_on: [PRP-03-local-dev-environment-and-sandbox-generator, PRP-04-frontend-shell-design-system-auth, PRP-18-live-map-and-session-replay, PRP-19-copilot-and-report-creation, PRP-28-ui-shell-and-usability]
 wave: W8
 absorbs: P5.2, G09
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 24
 ---
 
 # PRP-24: Themes, sandbox mode and accessibility

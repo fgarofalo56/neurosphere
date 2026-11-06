@@ -1,5 +1,5 @@
 ---
-name: prp-32-hosted-azure-environment
+name: PRP-32-hosted-azure-environment
 status: shipped
 started: 2026-10-26
 shipped: 2026-10-28
@@ -11,9 +11,13 @@ created: 2026-10-24
 model: sonnet
 phase: 5
 ns: NS-07, NS-08, NS-10
-depends_on: PRP-29, live approval (NS_LIVE_APPROVED=1 and per-step operator approval)
+depends_on: [PRP-29-platform-runtime-wiring]
 wave: W9
 absorbs: new
+gates: live approval (NS_LIVE_APPROVED=1 and per-step operator approval)
+orchestrator_model: sonnet
+implementer_model: sonnet
+order: 32
 ---
 
 # PRP-32: Hosted Azure environment (persistent demo)
