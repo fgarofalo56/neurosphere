@@ -14,7 +14,10 @@ Two layers, both below the SDK's ``httpx2.AsyncClient``:
   ``Proxy-Authorization`` and ``Cookie`` before applying only the outbound credential
   provider's headers (no token passthrough), forces ``Accept-Encoding: identity`` and refuses an
   encoded response (no decompression bomb), and caps every response body at
-  ``max_response_bytes`` (Content-Length check plus a streaming byte counter).
+  ``max_response_bytes`` (Content-Length check plus a streaming byte counter). The guard sits
+  under every request the SDK makes: the POSTs, the server-initiated GET SSE stream and its
+  resumption GETs, and the session DELETE, so the exact-URL rule and the pinned socket apply to
+  the SSE path too.
 
 Violations are recorded on the guard so the connector can report the precise reason even when
 the SDK wraps the transport exception.
@@ -33,6 +36,7 @@ import httpx2
 from neurosphere_core.mcp import ServerUrl, TransportLimits, VettedTarget
 
 __all__ = [
+    "AUTH_REJECTED_STATUSES",
     "STRIPPED_HEADERS",
     "EgressRefusedError",
     "EgressViolation",
@@ -248,10 +252,15 @@ class _BoundedStream(httpx2.AsyncByteStream):
         await self._inner.aclose()
 
 
+#: Upstream statuses meaning "the platform credential was refused" (not retryable).
+AUTH_REJECTED_STATUSES: Final = frozenset({401, 403})
+
+
 @dataclass(slots=True)
 class _GuardState:
     violations: list[EgressViolation] = field(default_factory=list[EgressViolation])
     requests: int = 0
+    auth_rejected: bool = False
 
 
 class GuardedTransport(httpx2.AsyncBaseTransport):
@@ -278,6 +287,15 @@ class GuardedTransport(httpx2.AsyncBaseTransport):
     @property
     def request_count(self) -> int:
         return self._state.requests
+
+    @property
+    def auth_rejected(self) -> bool:
+        """True once the external server answered any request with 401 or 403.
+
+        The SDK folds a non-2xx status into a generic JSON-RPC error, so the connector reads the
+        status here to report ``forbidden``/``mcp_auth_rejected`` instead of a retryable error.
+        """
+        return self._state.auth_rejected
 
     def _record(self, kind: ViolationKind, detail: str) -> None:
         self._state.violations.append(EgressViolation(kind=kind, detail=detail))
@@ -311,6 +329,8 @@ class GuardedTransport(httpx2.AsyncBaseTransport):
         for name, value in self._credential_headers.items():
             request.headers[name] = value
         response = await self._inner.handle_async_request(request)
+        if response.status_code in AUTH_REJECTED_STATUSES:
+            self._state.auth_rejected = True
         encoding = response.headers.get("content-encoding", "identity").strip().lower()
         if encoding not in ("", "identity"):
             await response.aclose()

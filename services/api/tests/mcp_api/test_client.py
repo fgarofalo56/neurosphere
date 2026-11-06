@@ -15,7 +15,7 @@ import ssl
 import subprocess
 import sys
 import uuid
-from collections.abc import AsyncIterator, Iterable, Mapping
+from collections.abc import AsyncIterator, Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -30,11 +30,14 @@ from client_fixtures import (  # pyright: ignore[reportMissingImports]
     SERVER_URL,
     Harness,
     RecordingTransport,
+    Sent,
+    default_app,
     harness,
     make_scope,
 )
 from fastapi import FastAPI, Request
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from neurosphere_api.mcp.client import (
     STRIPPED_HEADERS,
     EgressRefusedError,
@@ -630,6 +633,282 @@ async def test_outbound_credentials_come_only_from_the_provider() -> None:
         with pytest.raises(ForbiddenError):
             await h.client.sync_tools(server_id)
         assert h.sent == []
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"X-Key\r\nHost": "169.254.169.254"},
+        {"X-Key": "abc\r\nHost: 169.254.169.254"},
+        {"Authorization": "Bearer abc\n"},
+        {"X Key": "abc"},
+    ],
+)
+async def test_crlf_or_malformed_credential_headers_never_leave(headers: dict[str, str]) -> None:
+    class Provider:
+        async def headers_for(self, server: RegisteredServer) -> Mapping[str, str]:
+            return headers
+
+    async with harness(credentials=Provider()) as h:
+        server_id = await h.register()
+        with pytest.raises(InvalidSchemaError) as caught:
+            await h.client.sync_tools(server_id)
+        assert caught.value.reason == "invalid_credential_header"
+        assert h.sent == []
+
+
+# -- upstream auth rejection is forbidden, not transient ------------------------------------------
+
+
+def _status_app(status: int, *, json_rpc_error: bool = False) -> Any:
+    body = (
+        b'{"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"no"}}'
+        if json_rpc_error
+        else b"denied"
+    )
+    content_type = b"application/json" if json_rpc_error else b"text/plain"
+
+    async def app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            return
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [(b"content-type", content_type)],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+    return app
+
+
+@pytest.mark.parametrize(
+    ("status", "json_rpc_error"), [(401, False), (403, False), (401, True), (403, True)]
+)
+async def test_upstream_401_or_403_is_forbidden_auth_rejected(
+    status: int, json_rpc_error: bool
+) -> None:
+    app = _status_app(status, json_rpc_error=json_rpc_error)
+    async with harness(app_factory=lambda _server: app) as h:
+        server_id = await h.register()
+        with pytest.raises(ForbiddenError) as by_sync:
+            await h.client.sync_tools(server_id)
+        assert by_sync.value.reason == "mcp_auth_rejected"
+        assert by_sync.value.retryable is False
+        assert "denied" not in str(by_sync.value)  # the server's text is never echoed
+
+
+async def test_upstream_auth_rejection_at_call_time_is_forbidden() -> None:
+    rejecting = {"on": False}
+
+    def app_factory(server: MCPServer) -> Any:
+        real = default_app(server)
+        denied = _status_app(401)
+
+        async def app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+            await (denied if rejecting["on"] else real)(scope, receive, send)
+
+        return app
+
+    async with harness(app_factory=app_factory) as h:
+        server_id = await _approved(h)  # the credential was accepted when tools were approved
+        rejecting["on"] = True  # ...and is now revoked upstream
+        with pytest.raises(ForbiddenError) as caught:
+            await h.client.call_tool(make_scope(), server_id, "lookup", {"record_id": "1"})
+        assert caught.value.reason == "mcp_auth_rejected"
+
+
+@pytest.mark.parametrize("status", [500, 502, 503])
+async def test_upstream_5xx_stays_transient(status: int) -> None:
+    async with harness(app_factory=lambda _server: _status_app(status)) as h:
+        server_id = await h.register()
+        with pytest.raises(DependencyTransientError) as caught:
+            await h.client.sync_tools(server_id)
+        assert caught.value.reason in ("mcp_server_error", "mcp_server_unavailable")
+
+
+# -- the GET SSE stream path ----------------------------------------------------------------------
+
+_SSE_EVENT = b'event: message\ndata: {"jsonrpc":"2.0","method":"notifications/ping"}\n\n'
+
+
+class _SseBackend(_RecordingBackend):
+    """Answers every connection with a chunked ``text/event-stream`` body."""
+
+    def __init__(self, events: bytes = _SSE_EVENT, *, repeat: int = 1) -> None:
+        super().__init__()
+        chunk = f"{len(events):x}".encode() + b"\r\n" + events + b"\r\n"
+        self._response = (
+            b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n"
+            + b"Transfer-Encoding: chunked\r\n\r\n"
+            + chunk * repeat
+            + b"0\r\n\r\n"
+        )
+
+
+def _guarded_pinned(backend: httpcore2.AsyncNetworkBackend, limit: int = 4096) -> GuardedTransport:
+    inner = PinnedTransport(_target(), limits=TransportLimits(), network_backend=backend)
+    return GuardedTransport(
+        inner,
+        server_url=normalize_server_url(SERVER_URL),
+        credential_headers={"authorization": "Bearer platform"},
+        max_response_bytes=limit,
+    )
+
+
+_SSE_HEADERS = {"accept": "text/event-stream", "mcp-session-id": "s-1"}
+
+
+async def test_get_sse_stream_is_pinned_and_guarded() -> None:
+    backend = _SseBackend()
+    guard = _guarded_pinned(backend)
+    async with (
+        httpx2.AsyncClient(transport=guard) as http,
+        http.stream(
+            "GET", SERVER_URL, headers={**_SSE_HEADERS, "authorization": "Bearer inbound"}
+        ) as response,
+    ):
+        assert response.headers["content-type"] == "text/event-stream"
+        lines = [line async for line in response.aiter_lines()]
+    assert "event: message" in lines
+    assert backend.connects == [(PUBLIC_V4, 443)]  # the GET socket goes to the vetted address
+    assert backend.sni == ["mcp.example.com"]
+    assert guard.violations == () and guard.request_count == 1
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://mcp.example.com/mcp/stream",
+        "https://mcp.example.com/mcp?resume=1",
+        "https://evil.example.com/mcp",
+        "https://169.254.169.254/mcp",
+    ],
+)
+async def test_get_sse_stream_off_the_registered_url_is_refused(url: str) -> None:
+    backend = _SseBackend()
+    guard = _guarded_pinned(backend)
+    async with httpx2.AsyncClient(transport=guard) as http:
+        with pytest.raises(EgressRefusedError):
+            async with http.stream("GET", url, headers=_SSE_HEADERS):
+                pass
+    assert backend.connects == []
+    assert [v.kind for v in guard.violations] == ["egress_refused"]
+
+
+async def test_get_sse_stream_is_size_bounded() -> None:
+    backend = _SseBackend(repeat=200)
+    guard = _guarded_pinned(backend, limit=1024)
+    async with httpx2.AsyncClient(transport=guard) as http:
+        with pytest.raises(ResponseTooLargeError):
+            async with http.stream("GET", SERVER_URL, headers=_SSE_HEADERS) as response:
+                async for _ in response.aiter_bytes():
+                    pass
+    assert [v.kind for v in guard.violations] == ["response_too_large"]
+
+
+class _GetStreamTransport(RecordingTransport):
+    """Stateful MCP app for POST/DELETE; the server-initiated GET SSE stream is served here.
+
+    ``ASGITransport`` buffers whole bodies, so an open SSE stream cannot come from the app. The
+    ``tools/list`` POST is held until the SDK has opened its GET stream, so the test observes
+    the GET path deterministically.
+    """
+
+    def __init__(
+        self, app: Any, get_seen: asyncio.Event, get_response: Callable[[], httpx2.Response]
+    ) -> None:
+        super().__init__(app)
+        self._get_seen = get_seen
+        self._get_response = get_response
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        if request.method == "GET":
+            self.sent.append(Sent(request.method, str(request.url), dict(request.headers)))
+            self._get_seen.set()
+            return self._get_response()
+        if request.method == "POST" and b'"server/discover"' in request.content:
+            # A pre-2026 server: no discover probe, so the SDK falls back to the initialize
+            # handshake, gets a session id and opens the GET stream (the path under test).
+            self.sent.append(Sent(request.method, str(request.url), dict(request.headers)))
+            return httpx2.Response(404)
+        if request.method == "POST" and b'"tools/list"' in request.content:
+            await asyncio.wait_for(self._get_seen.wait(), timeout=10)
+        return await super().handle_async_request(request)
+
+
+def _stateful_app(server: MCPServer) -> Any:
+    return server.streamable_http_app(
+        stateless_http=False,
+        json_response=True,
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+    )
+
+
+async def _sdk_get_stream(
+    get_response: Callable[[], httpx2.Response],
+) -> tuple[Harness, list[Sent]]:
+    get_seen = asyncio.Event()
+    holder: list[Harness] = []
+    platform_key = "Bearer " + uuid.uuid4().hex
+
+    class Provider:
+        async def headers_for(self, server: RegisteredServer) -> Mapping[str, str]:
+            return {"Authorization": platform_key}
+
+    def factory(target: VettedTarget, limits: TransportLimits) -> httpx2.AsyncBaseTransport:
+        h = holder[0]
+        h.targets.append(target)
+        transport = _GetStreamTransport(app_ref[0], get_seen, get_response)
+        h.transports.append(transport)
+        return transport
+
+    app_ref: list[Any] = []
+
+    def app_factory(server: MCPServer) -> Any:
+        app_ref.append(_stateful_app(server))
+        return app_ref[0]
+
+    async with harness(
+        app_factory=app_factory, transport_factory=factory, credentials=Provider()
+    ) as h:
+        holder.append(h)
+        server_id = await h.register()
+        manifest = await h.client.fetch_manifest(server_id)
+        assert {t.name for t in manifest.tools} == {"lookup", "stats"}
+    gets = [s for s in h.sent if s.method == "GET"]
+    for sent in h.sent:
+        assert sent.headers.get("authorization") == platform_key
+    return h, gets
+
+
+async def test_sdk_get_sse_stream_goes_through_the_guard_to_the_exact_url() -> None:
+    def events() -> httpx2.Response:
+        return httpx2.Response(
+            200, headers={"content-type": "text/event-stream"}, content=b"retry: 60000\n\n"
+        )
+
+    h, gets = await _sdk_get_stream(events)
+    assert gets, "the SDK never opened its GET SSE stream"
+    for sent in gets:
+        assert sent.url == SERVER_URL
+        assert "text/event-stream" in sent.headers["accept"]
+        assert sent.headers.get("mcp-session-id")
+        assert sent.headers["accept-encoding"] == "identity"
+        assert "cookie" not in sent.headers
+    assert {(t.host, t.addresses) for t in h.targets} == {("mcp.example.com", (PUBLIC_V4,))}
+
+
+async def test_sdk_get_sse_redirect_is_not_followed_off_the_url() -> None:
+    def redirect() -> httpx2.Response:
+        return httpx2.Response(307, headers={"location": "/mcp/elsewhere"})
+
+    h, gets = await _sdk_get_stream(redirect)
+    assert gets
+    # The SDK follows a same-origin redirect itself; the guard refuses the second hop before it
+    # reaches the inner transport, so only the exact registered URL was ever requested.
+    assert all(s.url == SERVER_URL for s in h.sent)
 
 
 def test_call_api_accepts_no_token_headers_or_request() -> None:

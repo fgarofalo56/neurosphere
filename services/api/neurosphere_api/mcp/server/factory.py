@@ -9,6 +9,10 @@
   PRP-06 ``JwtValidator`` whose audiences are exactly the MCP audiences. Construction fails if
   they differ, or overlap the REST API audiences, or the cloud/tenant binding disagrees with the
   REST authorization state.
+* ``tools/list`` and ``resources/list`` are scope-derived too: a tool is listed only when the
+  caller's derived scope grants its permission in at least one domain, the recommendations
+  resource only with ``data.read`` somewhere. A failed derivation is a JSON-RPC error carrying
+  the 403/503 payload, never an unfiltered list.
 * Missing, invalid, expired, wrong-audience or wrong-resource token: 401 with
   ``WWW-Authenticate: Bearer ... resource_metadata="<RFC 9728 URL>"``. Valid token without the
   required scope: 403 ``insufficient_scope``. Both answered by the SDK middleware.
@@ -259,20 +263,25 @@ class _Handlers:
         self._rest_audiences = rest_audiences
         self._ports = StatePorts(app)
         manifest = build_mcp_registry(self._ports, correlation_id="manifest", clock=clock)
-        self._tools = [
-            types.Tool(
-                name=spec.name,
-                description=spec.description,
-                input_schema=spec.args_model.model_json_schema(),
-                annotations=types.ToolAnnotations(
-                    read_only_hint=ANNOTATIONS[spec.name].read_only,
-                    destructive_hint=False,
-                    idempotent_hint=ANNOTATIONS[spec.name].idempotent,
-                    open_world_hint=False,
+        # Each tool with the permission it needs; ``tools/list`` shows a tool only when the
+        # caller's derived scope grants that permission in at least one domain.
+        self._tools: tuple[tuple[types.Tool, Permission], ...] = tuple(
+            (
+                types.Tool(
+                    name=spec.name,
+                    description=spec.description,
+                    input_schema=spec.args_model.model_json_schema(),
+                    annotations=types.ToolAnnotations(
+                        read_only_hint=ANNOTATIONS[spec.name].read_only,
+                        destructive_hint=False,
+                        idempotent_hint=ANNOTATIONS[spec.name].idempotent,
+                        open_world_hint=False,
+                    ),
                 ),
+                spec.permission,
             )
             for spec in manifest.manifest()
-        ]
+        )
 
     # -- identity and scope ----------------------------------------------------------------
 
@@ -321,10 +330,55 @@ class _Handlers:
 
     # -- tools -----------------------------------------------------------------------------
 
+    async def _listing_scope(self, what: str) -> IdentityScope:
+        """The derived scope for a ``*/list`` request; any failure is an error, never a list.
+
+        List parameters carry nothing that could widen the scope: the SDK models drop unknown
+        keys (a model-supplied ``domain_id`` never reaches this handler) and only the verified
+        token and the policy store are consulted.
+        """
+        try:
+            return await self._scope()
+        except NeuroSphereError as exc:
+            _LOG.info("mcp %s denied or unavailable", what, extra={"reason": exc.reason})
+            raise MCPError(
+                code=types.INTERNAL_ERROR,
+                message=f"{what} denied or unavailable",
+                data=_error_payload(exc),
+            ) from None
+        except Exception:
+            _LOG.exception("mcp %s raised an unexpected exception", what)
+            raise MCPError(
+                code=types.INTERNAL_ERROR, message=f"{what} failed", data=dict(_INTERNAL)
+            ) from None
+
+    def _held(self, scope: IdentityScope, permissions: Iterable[Permission]) -> set[Permission]:
+        """The permissions the scope grants in at least one domain right now."""
+        now = self._clock()
+        return {p for p in set(permissions) if domains_with_permission(scope, p, now=now)}
+
     async def list_tools(
         self, ctx: ServerRequestContext[Any, Any], params: types.PaginatedRequestParams | None
     ) -> types.ListToolsResult:
-        return types.ListToolsResult(tools=list(self._tools))
+        scope = await self._listing_scope("tool listing")
+        held = self._held(scope, (permission for _, permission in self._tools))
+        return types.ListToolsResult(
+            tools=[tool for tool, permission in self._tools if permission in held],
+            cache_scope="private",
+            ttl_ms=0,
+        )
+
+    def tool_input_schema(self, name: str) -> dict[str, Any] | None:
+        """Static input schema for the SDK's header validation (no caller, no scope).
+
+        Without it the SDK runs the ``tools/list`` handler on every ``tools/call``, which would
+        derive the scope twice per call. Authorization is not decided here: ``call_tool``
+        re-derives the scope and the tool rechecks its permission.
+        """
+        for tool, _ in self._tools:
+            if tool.name == name:
+                return dict(tool.input_schema)
+        return None
 
     async def call_tool(
         self, ctx: ServerRequestContext[Any, Any], params: types.CallToolRequestParams
@@ -358,28 +412,31 @@ class _Handlers:
     async def list_resources(
         self, ctx: ServerRequestContext[Any, Any], params: types.PaginatedRequestParams | None
     ) -> types.ListResourcesResult:
-        return types.ListResourcesResult(
-            resources=[
-                types.Resource(
-                    name="about",
-                    uri=ABOUT_URI,
-                    description="What this MCP server exposes and what it does not.",
-                    mime_type="text/markdown",
-                ),
-                types.Resource(
-                    name="current-scope",
-                    uri=SCOPE_URI,
-                    description="The caller's server-derived scope (domains and permissions).",
-                    mime_type="application/json",
-                ),
+        scope = await self._listing_scope("resource listing")
+        resources = [
+            types.Resource(
+                name="about",
+                uri=ABOUT_URI,
+                description="What this MCP server exposes and what it does not.",
+                mime_type="text/markdown",
+            ),
+            types.Resource(
+                name="current-scope",
+                uri=SCOPE_URI,
+                description="The caller's server-derived scope (domains and permissions).",
+                mime_type="application/json",
+            ),
+        ]
+        if Permission.DATA_READ in self._held(scope, (Permission.DATA_READ,)):
+            resources.append(
                 types.Resource(
                     name="recent-recommendations",
                     uri=RECOMMENDATIONS_URI,
                     description="Recent recommendations in the caller's readable domains.",
                     mime_type="application/json",
-                ),
-            ]
-        )
+                )
+            )
+        return types.ListResourcesResult(resources=resources, cache_scope="private", ttl_ms=0)
 
     async def read_resource(
         self, ctx: ServerRequestContext[Any, Any], params: types.ReadResourceRequestParams
@@ -481,6 +538,7 @@ def create_mcp_server(
         version=SERVER_VERSION,
         title="NeuroSphere",
         instructions=_INSTRUCTIONS,
+        get_tool_input_schema=handlers.tool_input_schema,
         on_list_tools=handlers.list_tools,
         on_call_tool=handlers.call_tool,
         on_list_resources=handlers.list_resources,
