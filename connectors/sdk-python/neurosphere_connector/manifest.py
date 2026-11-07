@@ -50,6 +50,8 @@ WriteAction = Literal[
     "mcp_server_publish",
     "mcp_server_unpublish",
     "gateway_mode_change",
+    "deploy_plan_apply",
+    "deploy_uninstall",
 ]
 Cloud = Literal["commercial", "government"]
 

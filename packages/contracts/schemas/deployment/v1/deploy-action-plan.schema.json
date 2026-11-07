@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/deployment/v1/deploy-action-plan.schema.json",
+  "title": "DeployActionPlan",
+  "description": "Executable snapshot of an approved deployment plan, carried by the `deploy_plan_apply` action kind (PRP-08 item 12). The API derives it from the approved plan; its resource list is written into the ActionIntent proposed_diff (`add /resources/<service>` operations next to `test /plan_hash` and `test /resources_digest`), so the maker confirms and the approver decides on the exact set of resources. plan_hash is the SHA-256 of the canonical plan the approver approved; the executor refuses an apply whose plan is not approved or whose hash differs. Uninstall (`deploy_uninstall`) is dry-run only and carries no resource list. Contains no credential, secret or principal e-mail.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plan_id", "plan_hash", "deployment_id", "cloud", "resources"],
+  "properties": {
+    "schema_version": {
+      "description": "Contract version of this document (semver within major 1).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "plan_id": {
+      "description": "Identifier of the approved plan.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "plan_hash": {
+      "description": "Lowercase hex SHA-256 digest with algorithm prefix of the approved plan.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "deployment_id": {
+      "description": "Deployment the plan belongs to (ownership register key).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+    },
+    "cloud": {
+      "description": "Azure cloud of the deployment. Never routed to the other cloud.",
+      "type": "string",
+      "enum": ["commercial", "government"]
+    },
+    "resources": {
+      "description": "Resources to create or reuse, in apply order.",
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/resource_spec" }
+    }
+  },
+  "$defs": {
+    "resource_spec": {
+      "description": "One resource the apply creates or reuses. Reused resources are only recorded in the ownership register, never modified.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service",
+        "kind",
+        "disposition",
+        "name",
+        "region",
+        "sku",
+        "resource_id",
+        "subscription_id",
+        "resource_group",
+        "consent_reference"
+      ],
+      "properties": {
+        "service": {
+          "description": "Manifest service key, lowercase snake_case (for example `analytics_workspace`).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,63}$"
+        },
+        "kind": {
+          "description": "Provisioning path: Fabric capacity (ARM), Fabric workspace (Fabric REST) or another ARM resource.",
+          "type": "string",
+          "enum": ["fabric_capacity", "fabric_workspace", "arm_resource"]
+        },
+        "disposition": {
+          "type": "string",
+          "enum": ["create", "reuse"]
+        },
+        "name": {
+          "description": "Resource or display name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "region": {
+          "description": "Lowercase ARM region name.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]{2,39}$"
+        },
+        "sku": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "resource_id": {
+          "description": "ARM resource id of the resource being reused; null when it is created.",
+          "type": ["string", "null"],
+          "maxLength": 1024
+        },
+        "subscription_id": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "resource_group": {
+          "type": ["string", "null"],
+          "maxLength": 90
+        },
+        "consent_reference": {
+          "description": "Owner consent reference; required for a reused resource, null otherwise.",
+          "type": ["string", "null"],
+          "maxLength": 200
+        }
+      }
+    }
+  }
+}
