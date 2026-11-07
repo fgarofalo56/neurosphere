@@ -267,6 +267,14 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
   - Typecheck and lint clean for the feature folder.
 - Tests to write: extend `frontend/src/features/deploy/deploy.test.tsx` and `frontend/tests/e2e/deploy/deploy.spec.ts`.
 
+### Item 14 - deploy-apply-production-wiring  (added 2026-11-07 after item 12 review; review: required)
+- Deliverable: make the item-12 apply/preview routes reachable in a real deployment, opt-in and fail-closed like scan: `DEPLOY_ACTION_CONNECTORS` rows in the core targets table, `DeployConnector` registered in the worker runtime factories, `configure_apply` called from `main.py` behind an opt-in setting (unconfigured stays 503, plumbed through Helm/App Service/`.env.example` names only). Also close the reviewer follow-up: uninstall preview must be customer-scoped (register rows carry or are partitioned by customer; reading another customer's deployment id returns not-found/forbidden). Add the test that wiring `configure_apply` with no connector rows yields `write_connector_unsupported_target`, and log approval-store eviction.
+- Owned files (may edit): `packages/core/neurosphere_core/actions/targets.py` (deploy rows only), `packages/core/neurosphere_core/deploy/register/`, `services/workers/neurosphere_workers/` (runtime factory registration only), `services/api/neurosphere_api/main.py`, `services/api/neurosphere_api/deploy/apply/`, `infra/helm/`, `infra/appservice/`, `.env.example`, and tests beside each.
+- Must NOT touch: `deploy/scan/`, `deploy/plan/`, `frontend/`, `infra/bicep/`, `infra/scripts/uninstall.py` logic, `apim.py`, executor core logic, root `pyproject.toml`.
+- Depends on: Item 12.
+- Acceptance criteria: with the opt-in set, a drafted deploy intent resolves a connector (`connector_for` is not None) and apply/preview routes serve; without it they return 503; a caller in customer A cannot preview customer B's deployment; the R1 guard and dry-run-only uninstall are unchanged; route inventory and OpenAPI drift pass.
+- Tests to write: extend `services/api/tests/deployment/test_apply.py`, `packages/core/tests/deploy/test_register.py`, worker factory test, helm render test.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -321,8 +329,9 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
 | 10 | merged | worktree-agent-a65dea6badd75b5dc | sonnet | ruff/pyright clean; tests/unit/infra + tests/integration/deploy + api deployment 112 passed on branch; e54fa61. .env.example diff unverified (git read denied for that path); compose not wired | 2026-11-07 |
 | 11 | merged | worktree-agent-a5c99a59b8fa4e318 | sonnet | ruff clean, pyright 0 errors; deployment+authz+drift 220 passed, 1 expected drift fail on branch; 04e12d6. Fix-forward: regenerated openapi.json, item 10 test now attaches audit repo (item 11 fails closed w/o it); post-merge 126 passed. Deviations: scan-id errors are 422 reasons (no 404/410 type); consent now required even for created-by-tagged; audit chain readable by customer-wide audit read only | 2026-11-07 |
-| 12 | in-progress | worktree agent | sonnet | dispatched; ownership widened to workers actions + contracts (user sign-off 2026-11-07); review: required | 2026-11-07 |
-| 13 | todo | | sonnet | | 2026-11-07 |
+| 12 | merged | worktree-agent-a03c5c46ba560cc04 | sonnet | ownership widened to workers actions + contracts (user sign-off 2026-11-07). Branch: ruff clean, pyright 0 errors, 2335 + 2196 passed (agent), 169 targeted re-run by orchestrator on branch and post-merge; review (one pass): APPROVE, no blockers; 9f47814, merge 54ca646. Edited connectors/sdk-python WriteAction literal (own commit e2c03f8). NOT wired in production: ACTION_CONNECTORS rows, worker factory registration, configure_apply from main.py; approval store in-memory | 2026-11-07 |
+| 13 | todo | | sonnet | waits on item 14 (user decision 2026-11-07) | 2026-11-07 |
+| 14 | in-progress | worktree agent | sonnet | dispatched; review: required | 2026-11-07 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
