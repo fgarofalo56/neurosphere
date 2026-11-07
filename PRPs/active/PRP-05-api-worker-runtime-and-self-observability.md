@@ -333,5 +333,5 @@ Items 1-7 above shipped on 2026-10-12. This run closes the 2026-11-04 audit gaps
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
 | G1 | merged | worktree-agent-a15ba0187fa35aa9a | sonnet | ruff clean, pyright 0 errors, pytest services/api + workers runtime + core observability 1769 passed 5 deselected; merge 8ea00be | 2026-11-06 |
-| G2 | in-progress | worktree agent | sonnet | dispatched | 2026-11-06 |
-| G3 | in-progress | worktree agent | sonnet | dispatched | 2026-11-06 |
+| G2 | in-progress | worktree-agent-a1ce1de9f54f9d79c (e9f9092) + G2b fix agent | sonnet | G2 reported 663 passed; held from merge: lifecycle refusal would fail /readyz for compose (all) and infra/demo roles; user chose idle-by-config; G2b dispatched on top of e9f9092 | 2026-11-06 |
+| G3 | merged | worktree-agent-a1aa18aa3885f6ad0 | sonnet | ruff/pyright clean, 55 passed 2 deselected (health, app, middleware, openapi drift, workers runtime); docker compose config ok; emulator readyz test and compose /readyz healthcheck NOT run live; merge d39ba18 | 2026-11-06 |
