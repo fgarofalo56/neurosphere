@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-05-api-worker-runtime-and-self-observability](active/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 0/3 (0%) | todo 3 | sonnet / sonnet | none |
+| [PRP-05-api-worker-runtime-and-self-observability](active/PRP-05-api-worker-runtime-and-self-observability.md) | P1 | 3/3 (100%) | merged 3 | sonnet / sonnet | none |
 
 ## Backlog
 
