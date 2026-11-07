@@ -332,6 +332,6 @@ Items 1-7 above shipped on 2026-10-12. This run closes the 2026-11-04 audit gaps
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| G1 | todo | | sonnet | | 2026-11-06 |
-| G2 | todo | | sonnet | | 2026-11-06 |
-| G3 | todo | | sonnet | | 2026-11-06 |
+| G1 | merged | worktree-agent-a15ba0187fa35aa9a | sonnet | ruff clean, pyright 0 errors, pytest services/api + workers runtime + core observability 1769 passed 5 deselected; merge 8ea00be | 2026-11-06 |
+| G2 | in-progress | worktree agent | sonnet | dispatched | 2026-11-06 |
+| G3 | in-progress | worktree agent | sonnet | dispatched | 2026-11-06 |
