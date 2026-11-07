@@ -200,6 +200,20 @@
           "intent": {
             "$ref": "#/components/schemas/ActionIntent"
           },
+          "plan_steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PlanStepView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Steps"
+          },
           "requires_approval": {
             "title": "Requires Approval",
             "type": "boolean"
@@ -9127,6 +9141,52 @@
           "manifest"
         ],
         "title": "PlanResponse",
+        "type": "object"
+      },
+      "PlanStepView": {
+        "additionalProperties": false,
+        "description": "One planned APIM step as the connector expects to find the gateway (read-only preview).\n\n``payload_digest_prefix`` is at most 12 hex characters; the full digests stay server-side.",
+        "properties": {
+          "expected": {
+            "enum": [
+              "create",
+              "found"
+            ],
+            "title": "Expected",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "operation": {
+            "title": "Operation",
+            "type": "string"
+          },
+          "payload_digest_prefix": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Digest Prefix"
+          },
+          "resource_type": {
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "name",
+          "expected",
+          "operation"
+        ],
+        "title": "PlanStepView",
         "type": "object"
       },
       "PlannedResource": {

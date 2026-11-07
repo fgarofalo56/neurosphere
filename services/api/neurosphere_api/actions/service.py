@@ -11,7 +11,7 @@ HITL. It never calls a connector's ``apply`` or ``rollback``; the executor worke
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Final
+from typing import Any, Final
 
 from neurosphere_connector.write import WriteConnector
 from neurosphere_contracts.actions.v1.action_intent import PrerequisiteResult
@@ -75,7 +75,29 @@ class ActionApi:
     # -- reads -----------------------------------------------------------------------------
 
     async def get(self, key: IntentKey) -> ActionView:
-        return action_view(self._plane, await load_intent(self._plane, key))
+        stored = await load_intent(self._plane, key)
+        return await self._with_plan_steps(action_view(self._plane, stored), stored)
+
+    async def _with_plan_steps(self, view: ActionView, stored: StoredIntent) -> ActionView:
+        """Add the APIM per-step create/found expectations while the intent awaits confirmation.
+
+        Best effort and read-only: the steps are a preview for the confirmation dialog, never
+        hashed or enforced (the plan digest in the diff is), so any failure to plan leaves the
+        view without steps and the dialog says "not reported".
+        """
+        if stored.state != "awaiting_confirmation" or stored.advisory:
+            return view
+        connector = self._plane.connector_for(stored.intent.action_kind)
+        plan_steps: Any = getattr(connector, "plan_steps", None)
+        if plan_steps is None:
+            return view
+        try:
+            steps = await plan_steps(write_request(stored))
+        except Exception:
+            return view
+        if steps is None:
+            return view
+        return view.model_copy(update={"plan_steps": steps})
 
     async def list(
         self,
@@ -233,7 +255,7 @@ class ActionApi:
             ttl=plane.settings.confirmation_ttl_for(stored.intent.action_kind),
             now=plane.now(),
         )
-        return action_view(plane, saved)
+        return await self._with_plan_steps(action_view(plane, saved), saved)
 
     async def confirm(
         self, scope: IdentityScope, key: IntentKey, body: ConfirmBody, correlation_id: str

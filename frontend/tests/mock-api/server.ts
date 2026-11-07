@@ -1356,6 +1356,14 @@ interface MockActionView {
   self_approval_forbidden: boolean;
   review_item_id: string | null;
   execution: unknown;
+  /** Additive: APIM plan steps with the expected create or found (awaiting confirmation). */
+  plan_steps?: {
+    resource_type: string;
+    name: string;
+    expected: "create" | "found";
+    operation: string;
+    payload_digest_prefix: string | null;
+  }[];
 }
 
 interface MockDecision {
@@ -1511,7 +1519,28 @@ function seedIntents(): ActionsState["intents"] {
         state: "awaiting_approval",
       }),
     ],
-    [INTENT_PLAN, DOMAIN_OK, makeView(planIntent())],
+    [
+      INTENT_PLAN,
+      DOMAIN_OK,
+      makeView(planIntent(), {
+        plan_steps: [
+          {
+            resource_type: "product",
+            name: "products/finance-analyst",
+            expected: "create",
+            operation: "upsert",
+            payload_digest_prefix: "5d41402abc4b",
+          },
+          {
+            resource_type: "product_api_link",
+            name: "products/finance-analyst/apiLinks/finance-api",
+            expected: "found",
+            operation: "upsert",
+            payload_digest_prefix: null,
+          },
+        ],
+      }),
+    ],
     [
       INTENT_VIEWER,
       DOMAIN_VIEWER,

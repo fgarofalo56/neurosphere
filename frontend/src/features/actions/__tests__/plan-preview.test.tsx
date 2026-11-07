@@ -144,6 +144,19 @@ describe("confirmation dialog with a plan", () => {
       <ConfirmationDialog
         intent={intent}
         requiresApproval
+        planSteps={[
+          {
+            resource_type: "backend",
+            name: "backends/b-support",
+            expected: "create",
+            payload_digest_prefix: "0123456789ab",
+          },
+          {
+            resource_type: "api_operation",
+            name: "apis/finance/operations/get",
+            expected: "found",
+          },
+        ]}
         submitting={false}
         error={null}
         onSubmit={() => undefined}
@@ -153,7 +166,19 @@ describe("confirmation dialog with a plan", () => {
     const dialog = await screen.findByRole("alertdialog", { hidden: true });
     expect(within(dialog).getByTestId("plan-preview")).toBeTruthy();
     expect(within(dialog).getByTestId("plan-digest").textContent).toContain("ab12cd34ef56");
-    expect(within(dialog).getAllByTestId("plan-step")).toHaveLength(2);
+    const steps = within(dialog).getAllByTestId("plan-step");
+    expect(steps).toHaveLength(2);
+    // Text, not just colour: each step says create or found, in a list.
+    expect(within(steps[0]!).getByTestId("plan-step-expected").textContent).toBe(
+      STRINGS.plan.create,
+    );
+    expect(within(steps[1]!).getByTestId("plan-step-expected").textContent).toBe(
+      STRINGS.plan.found,
+    );
+    expect(within(steps[0]!).getByTestId("plan-step-digest").textContent).toBe("0123456789ab");
+    expect(
+      within(dialog).getByRole("list", { hidden: true, name: STRINGS.plan.title }),
+    ).toBeTruthy();
     // The exact diff is still listed in full.
     expect(within(dialog).getAllByTestId("diff-op")).toHaveLength(4);
   });
