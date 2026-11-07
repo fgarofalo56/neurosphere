@@ -20,13 +20,17 @@ from neurosphere_contracts.actions.v1.action_intent import PatchOperation, Propo
 from neurosphere_contracts.actions.v1.target_ref import TargetRef
 from neurosphere_core.clients import ClientLifetime
 from neurosphere_core.cloud import CloudName, Settings
+from neurosphere_core.deploy.register import CustomerScopedRegister, InMemoryRegisterStore
 from neurosphere_core.errors import CapabilityUnavailableError
 from neurosphere_core.gateway import InMemoryGatewayRecordStore, InMemoryGatewayStore
 from neurosphere_workers.actions import DEFAULT_ACTION_CONNECTORS, resolve_connector
 from neurosphere_workers.runtime.factories import (
     SUPPORTED_WRITE_CONNECTORS,
+    DeploySources,
+    DeployWriteSettings,
     WriteTargetSeams,
     WriteTargetSources,
+    load_deploy_write_settings,
     load_write_target_settings,
     register_write_targets,
 )
@@ -165,7 +169,85 @@ def test_settings_default_off_and_read_their_own_prefixes(
 
 
 def test_registered_names_are_the_action_connector_names() -> None:
-    assert frozenset({"foundry-model-swap", "apim-gateway"}) == SUPPORTED_WRITE_CONNECTORS
+    assert (
+        frozenset({"foundry-model-swap", "apim-gateway", "deploy-orchestrator"})
+        == SUPPORTED_WRITE_CONNECTORS
+    )
+
+
+# -- deploy (PRP-08 item 14) ----------------------------------------------------------------------
+
+
+class _Approvals:
+    async def get(self, customer_id: str, plan_id: str) -> None:
+        return None
+
+
+def test_core_deploy_rows_match_the_worker_connector_constants() -> None:
+    from neurosphere_core.actions.targets import ACTION_CONNECTORS
+    from neurosphere_core.actions.targets import DEPLOY_ACTION_CONNECTORS as CORE_ROWS
+    from neurosphere_workers.actions.deploy import DEPLOY_ACTION_CONNECTORS as WORKER_ROWS
+
+    assert dict(CORE_ROWS) == dict(WORKER_ROWS)
+    assert all(ACTION_CONNECTORS[k] == v for k, v in CORE_ROWS.items())
+
+
+async def _register_deploy(
+    deploy: DeployWriteSettings | None, sources: DeploySources | None
+) -> tuple[tuple[str, ...], WriteTargetRegistry]:
+    registry = WriteTargetRegistry()
+    async with ClientLifetime() as lifetime:
+        names = await register_write_targets(
+            registry,
+            settings=COMMERCIAL,
+            customer_id=CUSTOMER,
+            lifetime=lifetime,
+            foundry=OFF,
+            apim=APIM_OFF,
+            sources=WriteTargetSources(deploy=sources),
+            deploy=deploy,
+        )
+    return names, registry
+
+
+async def test_deploy_is_off_by_default_and_when_not_passed() -> None:
+    wired = DeploySources(approvals=_Approvals(), register=InMemoryRegisterStore())
+    assert (await _register_deploy(None, wired))[0] == ()
+    assert (await _register_deploy(DeployWriteSettings(), wired))[0] == ()
+
+
+async def test_deploy_enabled_without_collaborators_is_skipped_and_logged(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.WARNING, logger="neurosphere.workers.runtime")
+    names, registry = await _register_deploy(DeployWriteSettings(enabled=True), None)
+    assert names == ()
+    with pytest.raises(CapabilityUnavailableError):
+        resolve_connector(registry, DEFAULT_ACTION_CONNECTORS, "deploy_plan_apply")
+    assert _skips(caplog) == ["deploy_sources_unconfigured"]
+    half = DeploySources(approvals=_Approvals())  # no register
+    assert (await _register_deploy(DeployWriteSettings(enabled=True), half))[0] == ()
+
+
+async def test_deploy_enabled_and_wired_registers_a_customer_scoped_connector() -> None:
+    inner = InMemoryRegisterStore()
+    sources = DeploySources(approvals=_Approvals(), register=inner)
+    names, registry = await _register_deploy(DeployWriteSettings(enabled=True), sources)
+    assert names == ("deploy-orchestrator",)
+    connector = registry.get("deploy-orchestrator")
+    assert connector.advisory is False
+    assert isinstance(connector._register, CustomerScopedRegister)  # pyright: ignore
+    assert connector._register.customer_id == CUSTOMER  # pyright: ignore
+
+
+def test_deploy_setting_reads_its_own_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NS_DEPLOY_APPLY_ENABLED", raising=False)
+    assert load_deploy_write_settings().enabled is False
+    monkeypatch.setenv("NS_DEPLOY_APPLY_ENABLED", "true")
+    assert load_deploy_write_settings().enabled is True
+    monkeypatch.setenv("NS_DEPLOY_APPLY_ENABLED", "perhaps")
+    with pytest.raises(ValueError):
+        load_deploy_write_settings()
 
 
 # -- Foundry --------------------------------------------------------------------------------------

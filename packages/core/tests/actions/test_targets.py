@@ -9,6 +9,8 @@ import pytest
 from neurosphere_core.actions.targets import (
     ACTION_CONNECTORS,
     APIM_GATEWAY_CONNECTOR,
+    DEPLOY_ACTION_CONNECTORS,
+    DEPLOY_CONNECTOR,
     TARGET_KIND_CONNECTORS,
     WriteTargetSource,
     connector_name_for,
@@ -126,6 +128,17 @@ def test_target_kind_resolution_uses_the_registry() -> None:
     only_foundry = FakeRegistry({"foundry-model-swap": ("model_deployment_swap",)})
     assert resolve_write_target(only_foundry, "model_deployment_swap", "apim_backend") is None
     assert resolve_write_targets(only_foundry, "budget_cap_change") == {}
+
+
+def test_deploy_kinds_resolve_to_the_deploy_connector_only() -> None:
+    for kind in ("deploy_plan_apply", "deploy_uninstall"):
+        assert connector_name_for(kind) == DEPLOY_CONNECTOR == "deploy-orchestrator"
+        assert ACTION_CONNECTORS[kind] == DEPLOY_ACTION_CONNECTORS[kind]
+    assert set(DEPLOY_ACTION_CONNECTORS) == {"deploy_plan_apply", "deploy_uninstall"}
+    # Not registered (opt-in off): the resolver returns None, so the intent stays advisory.
+    registry = FakeRegistry({"foundry-model-swap": ("model_deployment_swap",)})
+    assert resolve_write_target(registry, "deploy_plan_apply") is None
+    assert resolve_write_targets(registry, "deploy_uninstall") == {}
 
 
 def test_core_table_does_not_import_the_connector_sdk() -> None:

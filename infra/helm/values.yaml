@@ -62,6 +62,16 @@ scan:
   maxPages: "" # NS_SCAN_MAX_PAGES
   maxSubscriptions: "" # NS_SCAN_MAX_SUBSCRIPTIONS (1..1000)
 
+# Deployment apply + uninstall preview (PRP-08 item 14). Off by default: /api/v1/deploy/apply
+# answers 503 apply_not_configured and deploy intents stay advisory. When enabled the api
+# container gets NS_DEPLOY_APPLY_ENABLED=true; registerContainer names the Cosmos container of the
+# ownership register (NS_DEPLOY_APPLY_REGISTER_CONTAINER, required for the API to wire it).
+# Names only: no secret. The apply approval store is per API process and the executor worker
+# does not register the deploy connector until a durable approval store exists.
+deployApply:
+  enabled: false
+  registerContainer: ""
+
 # Secrets Store CSI driver + Key Vault + workload identity (optional, off by default).
 secretProviderClass:
   enabled: false

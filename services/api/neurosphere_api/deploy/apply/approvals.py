@@ -14,6 +14,7 @@ planner provenance.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -39,6 +40,7 @@ __all__ = [
 
 DEFAULT_APPROVAL_TTL_SECONDS: Final = 24 * 3600
 _MAX_ENTRIES: Final = 1000
+_log = logging.getLogger("neurosphere_api.deploy.apply")
 _DEPLOYMENT_ID: Final = re.compile(DEPLOYMENT_ID_PATTERN)
 _FABRIC_SERVICE: Final = "analytics_workspace"
 _NAME_LIMIT: Final = 63
@@ -204,7 +206,18 @@ class PlanApprovalStore:
                     reason="plan_id_conflict",
                 )
         while len(self._records) >= _MAX_ENTRIES:
-            del self._records[next(iter(self._records))]
+            evicted = next(iter(self._records))
+            del self._records[evicted]
+            # An evicted approval makes its apply fail closed (plan_not_approved): say so. The
+            # plan id is an opaque token, never a secret; no customer id is logged.
+            _log.warning(
+                "plan approval evicted (store at capacity)",
+                extra={
+                    "event": "deploy.approval_evicted",
+                    "plan_id": evicted[1],
+                    "capacity": _MAX_ENTRIES,
+                },
+            )
         record = ApprovalRecord(
             approved=ApprovedPlan(
                 customer_id=scope.customer_id,

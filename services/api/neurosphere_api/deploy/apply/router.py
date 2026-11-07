@@ -27,7 +27,7 @@ from neurosphere_connector.write import WriteConnector, WriteRequest
 from neurosphere_contracts.deployment.v1.deploy_action_plan import DeployActionPlan
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.auth.scope import Permission
-from neurosphere_core.deploy.register import LiveInventory, RegisterStore
+from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
 from neurosphere_core.errors import (
     CapabilityUnavailableError,
     DependencyTransientError,
@@ -106,11 +106,13 @@ def _approvals(request: Request) -> PlanApprovalStore:
     return store
 
 
-def _register(request: Request) -> RegisterStore:
+def _register(request: Request, scope: IdentityScope) -> RegisterStore:
+    """The register as the caller's customer sees it: other customers' rows, and rows that
+    carry no customer, do not exist (no existence leak)."""
     store = getattr(request.app.state, "deploy_register_store", None)
     if store is None or not callable(getattr(store, "list_rows", None)):
         raise DependencyTransientError("Apply is not configured.", reason=_UNCONFIGURED)
-    return store
+    return CustomerScopedRegister(store, scope.customer_id)
 
 
 def _auditor(request: Request, scope: IdentityScope) -> ApplyAuditor:
@@ -269,7 +271,7 @@ def build_router() -> APIRouter:
     ) -> UninstallPreviewView:
         auditor = _auditor(request, scope)
         try:
-            rows = await _register(request).list_rows(body.deployment_id)
+            rows = await _register(request, scope).list_rows(body.deployment_id)
             if not rows:
                 raise InvalidSchemaError(
                     "no register rows for this deployment", reason="deployment_not_found"
