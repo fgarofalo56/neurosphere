@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- API and worker runtime audit-gap closure (PRP-05, PR #184): SLO request metrics and traces are now wired
+  into the API and worker entrypoints (exporters off in `NS_ENV=local`); non-ingestion worker roles use a
+  durable Cosmos checkpoint store; the `lifecycle` role reports an explicit `idle` state
+  (`lifecycle_no_job_source`) without failing readiness; the compose worker healthcheck probes `/readyz`.
 - APIM gateway observe close-out (PRP-33 audit round): the `gateway_poll` worker role now runs under `all`
   and idles when unconfigured; gateway token usage gains cost-center attribution from App Insights
   `customMetrics` (optional `NS_GATEWAY_POLL_METRICS_APP_ID`, Commercial only); the Gateways page shows

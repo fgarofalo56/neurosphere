@@ -1,7 +1,9 @@
 ---
 name: PRP-05-api-worker-runtime-and-self-observability
-status: active
+status: shipped
 started: 2026-11-06
+shipped: 2026-11-07
+pr: 184
 branch: prp-05-audit-gaps
 priority: P1
 order: 7
@@ -276,6 +278,16 @@ If a live item did not run, record it OPEN in the completion note and in docs/RE
 - [x] All clarification questions are decided, not guessed
 
 ## Completion note (filled at ship)
+
+**Re-shipped 2026-11-07 after audit gap closure (PR #184, merge commit f38e515, branch `prp-05-audit-gaps`).**
+
+- Merged: G1 telemetry wiring (8ea00be), G3 health and error-body tests with compose `/readyz` worker healthcheck (d39ba18), G2 durable checkpoints and idle-by-config roles (22d54db, includes fix 13e06e7). All 25 PR checks passed.
+- Evidence: `verify-gates.ps1 -Mode full` PASS 4/4; 16 integration tests passed against local emulators on rebuilt images; details in "Re-run results (2026-11-06)" above.
+- Deviations: lifecycle is idle-by-config (no job source exists in the codebase), the actions role keeps running with a warning only, workers have telemetry providers but emit no SLO metrics yet, Azure Monitor connection string read straight from the environment in two small helpers.
+- Descoped: none.
+- Open gates: 404/405/413/500 taxonomy `code` (PRP-01 contract change), a real lifecycle job source, Linux real-SIGTERM, managed identity against live Cosmos and Event Hubs, Azure Monitor exporter against a real workspace.
+
+Original ship note (2026-10-12):
 
 - Date: 2026-10-12
 - Merged commits: integrator a333c54; item merges d9c23aa (1), 08ba316 (2), 3df5211 (3), 5faba3c (4), b9d5d4d (6), 80e42cd (5), bbc51ac (7); licence follow-up 8c897cf. Branch `prp-05-api-worker-runtime`.
