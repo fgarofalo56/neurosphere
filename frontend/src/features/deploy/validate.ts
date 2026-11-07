@@ -27,6 +27,31 @@ export function checkAttestation(value: string): string | null {
   return isEmailShaped(value) ? STRINGS.attestationEmail : null;
 }
 
+const RESOURCE_GROUP = /^[\w.()-]{1,90}$/;
+const REGION = /^[a-z][a-z0-9]{2,39}$/;
+const SKU = /^[A-Za-z0-9]{1,32}$/;
+const DEPLOYMENT_ID = /^[a-z0-9][a-z0-9-]{2,62}$/;
+
+export function checkSubscriptionId(value: string): string | null {
+  return GUID.test(value.trim()) ? null : STRINGS.invalidSubscriptionId;
+}
+
+export function checkResourceGroup(value: string): string | null {
+  return RESOURCE_GROUP.test(value.trim()) ? null : STRINGS.invalidResourceGroup;
+}
+
+export function checkRegion(value: string): string | null {
+  return REGION.test(value.trim()) ? null : STRINGS.capRegionInvalid;
+}
+
+export function checkSku(value: string): string | null {
+  return SKU.test(value.trim()) ? null : STRINGS.invalidSku;
+}
+
+export function checkDeploymentId(value: string): string | null {
+  return DEPLOYMENT_ID.test(value.trim()) ? null : STRINGS.uninstallDeploymentInvalid;
+}
+
 export function isPrincipal(value: string): boolean {
   return PRINCIPAL.test(value);
 }
