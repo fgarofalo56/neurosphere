@@ -18,3 +18,5 @@ class ScanSettings(BaseSettings):
     max_pages: int = Field(default=50, gt=0)
     # Upper bound on subscriptions in one scan request.
     max_subscriptions: int = Field(default=100, gt=0, le=1000)
+    # How long a stored scan result can be referenced by a plan (scan_id).
+    result_ttl_seconds: float = Field(default=900.0, gt=0, le=86400)

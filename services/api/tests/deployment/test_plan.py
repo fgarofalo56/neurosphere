@@ -209,7 +209,7 @@ def test_granted_consent_must_name_a_pseudonymous_principal() -> None:
         _consent(KV.id, principal="someone@example.com")
 
 
-def test_neurosphere_created_resource_is_not_shared() -> None:
+def test_neurosphere_created_tag_classifies_but_is_not_consent() -> None:
     mine = _res(
         "storage",
         "Microsoft.Storage/storageAccounts",
@@ -218,8 +218,14 @@ def test_neurosphere_created_resource_is_not_shared() -> None:
     )
     plan = _plan(PlanRequest(profile=COMMERCIAL, scan=_scan(mine)), _matrix())
     item = _item(plan, "storage")
+    assert (item.status, item.shared, item.neurosphere_created) == ("needs_consent", False, True)
+    consented = _plan(
+        PlanRequest(profile=COMMERCIAL, scan=_scan(mine), consents=[_consent(mine.id)]), _matrix()
+    )
+    item = _item(consented, "storage")
     assert (item.status, item.shared, item.neurosphere_created) == ("reuse", False, True)
-    _assert_valid_manifest(plan)
+    assert item.owner_consent is not None
+    _assert_valid_manifest(consented)
 
 
 def test_unknown_checks_are_never_pass() -> None:

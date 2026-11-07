@@ -9,14 +9,17 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, Request
+from neurosphere_core.audit import AuditRepository
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz import require
+from neurosphere_api.deploy.scan.audit import DeployAuditor, correlation_for
 from neurosphere_api.deploy.scan.models import ScanRequest, ScanResponse
 from neurosphere_api.deploy.scan.service import ScanService
 from neurosphere_api.deprecation import register_with_alias
+from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
 ROUTE_PREFIX = "/api/v1/deploy/scan"
@@ -35,6 +38,16 @@ def _service(request: Request) -> ScanService:
     return service
 
 
+def auditor_for(request: Request, scope: IdentityScope) -> DeployAuditor:
+    """Per-request auditor over ``app.state.audit_repository``; fails closed when unset."""
+    repository = getattr(request.app.state, "audit_repository", None)
+    return DeployAuditor(
+        repository if isinstance(repository, AuditRepository) else None,
+        scope,
+        correlation_id=correlation_for(correlation_id_of(request.scope)),
+    )
+
+
 def build_router() -> APIRouter:
     router = APIRouter(tags=["deploy"])
 
@@ -44,7 +57,7 @@ def build_router() -> APIRouter:
         request: Request,
         scope: Annotated[IdentityScope, Depends(require(Permission.CONFIG_MANAGE))],
     ) -> ScanResponse:
-        return await _service(request).scan(body)
+        return await _service(request).scan_for(scope, body, auditor_for(request, scope))
 
     return router
 
