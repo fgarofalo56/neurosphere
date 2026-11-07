@@ -148,6 +148,7 @@ from neurosphere_workers.projections.outbox import (
 from neurosphere_workers.recommendations.pipeline import run_pipeline
 from neurosphere_workers.recommendations.projection.models import CandidatePairConfig
 from neurosphere_workers.runtime.adapters import (
+    IdleRole,
     IngestionRole,
     MultiWorkerRole,
     PeriodicTick,
@@ -467,7 +468,9 @@ def warn_if_actions_idle(registry: WriteTargetRegistry) -> bool:
     """Log one structured warning when no write target is registered; returns True if idle.
 
     An empty registry is the designed fail-closed state (per-connector ENABLED flags default off),
-    but the role must never start and silently do nothing.
+    but the role must never start and silently do nothing. Only the warning is emitted: the
+    ``actions`` role also runs the review-reconcile sweep (real work that needs no write target),
+    so the role stays ``running`` rather than ``idle``.
     """
     if registry.names():
         return False
@@ -610,13 +613,13 @@ def _lifecycle_targets() -> TargetRegistry:
 async def build_lifecycle(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     source = _lifecycle_job_source()
     if source is None:
-        # Refuse instead of idling silently: the supervisor reports the role `failed` with this
-        # reason on /healthz and readiness stays false; the other roles keep running.
-        logger.error(
-            "lifecycle role refused to start: no source of requested jobs is wired",
+        # Explicitly idle by configuration: reported `idle` with this reason on /healthz and
+        # /readyz, never polling, and not counted against readiness.
+        logger.warning(
+            "lifecycle role is idle: no source of requested jobs is wired",
             extra={"event": "worker.lifecycle_inert", "reason": _LIFECYCLE_NO_SOURCE},
         )
-        raise RoleConfigError(_LIFECYCLE_NO_SOURCE)
+        return IdleRole(_LIFECYCLE_NO_SOURCE)
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     database = cfg.store.database

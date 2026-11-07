@@ -19,7 +19,14 @@ from neurosphere_workers.ingestion.consumer import IngestionConsumer
 from neurosphere_workers.runtime.checkpoint import CheckpointStore, InMemoryCheckpointStore
 from neurosphere_workers.runtime.worker import Batch, BatchOutcome, Worker, WorkerRunner
 
-__all__ = ["IngestionRole", "MultiWorkerRole", "PeriodicTick", "TickWorker", "WorkerRole"]
+__all__ = [
+    "IdleRole",
+    "IngestionRole",
+    "MultiWorkerRole",
+    "PeriodicTick",
+    "TickWorker",
+    "WorkerRole",
+]
 
 logger = logging.getLogger("neurosphere.workers.runtime")
 
@@ -122,6 +129,24 @@ class MultiWorkerRole:
     def request_shutdown(self) -> None:
         for role in self._roles:
             role.request_shutdown()
+
+
+class IdleRole:
+    """A role that is idle by configuration: it does no work and polls nothing.
+
+    ``idle_reason`` is an enumerated code (never free text); the supervisor reports the role as
+    ``idle`` with that reason and does not count it against readiness. It only waits for shutdown.
+    """
+
+    def __init__(self, reason: str) -> None:
+        self.idle_reason = reason
+        self._stop = asyncio.Event()
+
+    async def run(self) -> None:
+        await self._stop.wait()
+
+    def request_shutdown(self) -> None:
+        self._stop.set()
 
 
 class IngestionRole:

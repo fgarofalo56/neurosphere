@@ -6,6 +6,7 @@ import asyncio
 import logging
 from typing import Any, cast
 
+import aiohttp
 import pytest
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
 from neurosphere_connector.write import WriteTargetRegistry
@@ -15,12 +16,13 @@ from neurosphere_workers.runtime import (
     Batch,
     BatchOutcome,
     CheckpointStore,
+    HealthServer,
     RoleConfigError,
     RoleSupervisor,
     Worker,
     WorkerRunner,
 )
-from neurosphere_workers.runtime.adapters import MultiWorkerRole, WorkerRole
+from neurosphere_workers.runtime.adapters import IdleRole, MultiWorkerRole, WorkerRole
 from neurosphere_workers.runtime.backoff import BackoffPolicy
 from neurosphere_workers.runtime.checkpoint import CosmosRuntimeCheckpointStore
 from neurosphere_workers.runtime.factories import (
@@ -144,31 +146,120 @@ async def test_multiworkerrole_shares_the_store_by_partition_key() -> None:
     assert await store.get("unit-worker") == "1"
 
 
-async def test_lifecycle_role_refuses_to_run_inert(caplog: pytest.LogCaptureFixture) -> None:
-    cfg = cast(RuntimeConfig, None)  # the refusal happens before any config or client is touched
-    with caplog.at_level(logging.ERROR), pytest.raises(RoleConfigError) as raised:
-        await build_lifecycle(cfg, ClientLifetime())
-    assert raised.value.reason == "lifecycle_no_job_source"
-    assert any(r.__dict__.get("event") == "worker.lifecycle_inert" for r in caplog.records)
+async def test_lifecycle_role_builds_idle_and_logs_once(caplog: pytest.LogCaptureFixture) -> None:
+    cfg = cast(RuntimeConfig, None)  # the idle path happens before any config or client is touched
+    with caplog.at_level(logging.WARNING):
+        role = await build_lifecycle(cfg, ClientLifetime())
+    assert isinstance(role, IdleRole)
+    assert role.idle_reason == "lifecycle_no_job_source"
+    events = [r for r in caplog.records if r.__dict__.get("event") == "worker.lifecycle_inert"]
+    assert len(events) == 1
+    assert events[0].__dict__["reason"] == "lifecycle_no_job_source"
 
 
-async def test_supervisor_reports_inert_lifecycle_as_failed_with_reason() -> None:
-    async def factory(lifetime: ClientLifetime) -> Any:
-        return await build_lifecycle(cast(RuntimeConfig, None), lifetime)
-
-    supervisor = RoleSupervisor({"lifecycle": factory}, policy=NO_SLEEP)
-    task = asyncio.create_task(supervisor.run())
-    for _ in range(100):
-        if supervisor.snapshot()[0]["state"] == "failed":
-            break
+async def _wait_for(supervisor: RoleSupervisor, name: str, states: set[str]) -> dict[str, Any]:
+    for _ in range(200):
+        snap = next(s for s in supervisor.snapshot() if s["name"] == name)
+        if snap["state"] in states:
+            return snap
         await asyncio.sleep(0.01)
-    snap = supervisor.snapshot()[0]
+    raise AssertionError(f"{name} never reached {states}")
+
+
+class _Running:
+    def __init__(self) -> None:
+        self._stop = asyncio.Event()
+
+    async def run(self) -> None:
+        await self._stop.wait()
+
+    def request_shutdown(self) -> None:
+        self._stop.set()
+
+
+async def _running_factory(lifetime: ClientLifetime) -> Any:
+    return _Running()
+
+
+async def _lifecycle_factory(lifetime: ClientLifetime) -> Any:
+    return await build_lifecycle(cast(RuntimeConfig, None), lifetime)
+
+
+async def _failing_factory(lifetime: ClientLifetime) -> Any:
+    raise RoleConfigError("unit_bad_config")
+
+
+async def test_idle_lifecycle_does_not_fail_readiness_and_shows_reason() -> None:
+    supervisor = RoleSupervisor(
+        {"ingestion": _running_factory, "lifecycle": _lifecycle_factory}, policy=NO_SLEEP
+    )
+    health = HealthServer(
+        lambda: supervisor.status,
+        "127.0.0.1",
+        0,
+        roles_provider=supervisor.snapshot,
+        ready_provider=lambda: supervisor.ready,
+    )
+    await health.start()
+    task = asyncio.create_task(supervisor.run())
+    try:
+        await _wait_for(supervisor, "lifecycle", {"idle"})
+        await _wait_for(supervisor, "ingestion", {"running"})
+        async with aiohttp.ClientSession() as session:
+            for path in ("/readyz", "/healthz"):
+                async with session.get(f"http://127.0.0.1:{health.bound_port}{path}") as resp:
+                    assert resp.status == 200
+                    body = await resp.json()
+                    roles = {r["name"]: r for r in body["roles"]}
+                    assert roles["lifecycle"]["state"] == "idle"
+                    assert roles["lifecycle"]["reason"] == "lifecycle_no_job_source"
+                    assert roles["lifecycle"]["live"] is True
+                    assert roles["ingestion"]["state"] == "running"
+                    if path == "/readyz":
+                        assert body["status"] == "ready"
+        assert supervisor.ready is True
+    finally:
+        supervisor.request_shutdown()
+        await task
+        await health.stop()
+
+
+async def test_failed_role_still_returns_503_next_to_idle_role() -> None:
+    supervisor = RoleSupervisor(
+        {"lifecycle": _lifecycle_factory, "bad": _failing_factory}, policy=NO_SLEEP
+    )
+    health = HealthServer(
+        lambda: supervisor.status,
+        "127.0.0.1",
+        0,
+        roles_provider=supervisor.snapshot,
+        ready_provider=lambda: supervisor.ready,
+    )
+    await health.start()
+    task = asyncio.create_task(supervisor.run())
+    try:
+        await _wait_for(supervisor, "bad", {"failed"})
+        await _wait_for(supervisor, "lifecycle", {"idle"})
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"http://127.0.0.1:{health.bound_port}/readyz") as resp:
+                assert resp.status == 503
+                body = await resp.json()
+        states = {r["name"]: (r["state"], r["reason"]) for r in body["roles"]}
+        assert states["bad"] == ("failed", "unit_bad_config")
+        assert states["lifecycle"] == ("idle", "lifecycle_no_job_source")
+    finally:
+        supervisor.request_shutdown()
+        await task
+        await health.stop()
+
+
+async def test_idle_role_drains_on_shutdown() -> None:
+    supervisor = RoleSupervisor({"lifecycle": _lifecycle_factory}, policy=NO_SLEEP)
+    task = asyncio.create_task(supervisor.run())
+    await _wait_for(supervisor, "lifecycle", {"idle"})
     supervisor.request_shutdown()
-    await task
-    assert snap["state"] == "failed"
-    assert snap["reason"] == "lifecycle_no_job_source"
-    assert snap["ready"] is False
-    assert supervisor.ready is False
+    await asyncio.wait_for(task, timeout=2)
+    assert supervisor.snapshot()[0]["state"] == "stopped"
 
 
 def test_actions_idle_warning_names_the_enabling_flags(caplog: pytest.LogCaptureFixture) -> None:
