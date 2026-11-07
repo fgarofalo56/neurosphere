@@ -718,25 +718,28 @@ async def seed_grants(
     """Worker principal, personas and (optionally) the operator. Returns slug -> principal id."""
     domains = world_domains(world)
     principals: dict[str, str] = {}
-    wanted: list[tuple[str, str, str]] = [
-        ("worker", worker_principal_id(backends, config), "viewer")
+    wanted: list[tuple[str, str, str, tuple[str, ...]]] = [
+        ("worker", worker_principal_id(backends, config), "viewer", domains)
     ]
     for persona in _fixture("personas.json")["personas"]:
         principal = user_principal_id(config, persona["object_id"], environ)
         principals[persona["slug"]] = principal
-        wanted.append((persona["slug"], principal, persona["role"]))
+        wanted.append((persona["slug"], principal, persona["role"], domains))
     if config.operator_object_id is not None:
         operator = user_principal_id(config, config.operator_object_id, environ)
         principals["operator"] = operator
-        wanted.append(("operator", operator, "admin"))
-    for slug, principal, role in wanted:
+        # The operator also holds admin on the customer control domain so they can flip the
+        # action-plane kill switch (403 customer_scope_required otherwise).
+        control = grants.control_domain_id(config.cloud, config.customer)
+        wanted.append(("operator", operator, "admin", (*domains, control)))
+    for slug, principal, role, granted in wanted:
         outcome = await grants.grant_operator(
             backends.policy,
             backends.policy_writer,
             customer_id=config.customer,
             principal_id=principal,
             role=role,
-            domain_ids=domains,
+            domain_ids=granted,
         )
         changed = outcome != "unchanged"
         tally.record("grants", created=int(changed), existing=int(not changed))

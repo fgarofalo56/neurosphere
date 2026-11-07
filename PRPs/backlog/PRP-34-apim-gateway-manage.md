@@ -1,5 +1,5 @@
 ---
-name: prp-34-apim-gateway-manage
+name: PRP-34-apim-gateway-manage
 status: backlog
 review: required
 priority: P1
@@ -11,9 +11,11 @@ branch: prp-34-apim-gateway-manage
 model: opus
 phase: 6
 ns: NS-04, NS-06, NS-07, NS-08, NS-09
-depends_on: PRP-08, PRP-17, PRP-22, PRP-33
+depends_on: [PRP-08-deployment-intelligence-and-iac, PRP-17-action-executor-and-hitl, PRP-22-mcp-server-and-client, PRP-33-apim-gateway-observe]
 wave: W10
 absorbs: new (APIM AI gateway manage side; patterns from microsoft/mosaic-apim, MIT, patterns only)
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-34: APIM AI gateway, manage side

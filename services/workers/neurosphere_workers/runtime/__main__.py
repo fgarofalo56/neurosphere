@@ -1,7 +1,7 @@
 """``python -m neurosphere_workers.runtime``: the roles in ``NS_WORKER_ROLES`` plus health.
 
 ``NS_WORKER_ROLES`` is a comma list of ingestion, projections, aggregates, actions, hitl_timers,
-lifecycle, recommendations, evaluation, gateway_poll (opt-in: not part of ``all``), or ``all``.
+lifecycle, recommendations, evaluation, gateway_poll (no-op until configured), or ``all``.
 Unset means idle (health only, ``roles: []``).
 An unknown role refuses to start (exit 2). Every role runs as a supervised task: a crash restarts
 that role with backoff and marks readiness failed without touching the others.
@@ -14,6 +14,9 @@ import logging
 import os
 import sys
 from collections.abc import Mapping
+
+from neurosphere_core.cloud import load_settings
+from neurosphere_core.observability import Telemetry, configure_telemetry
 
 from neurosphere_workers.runtime.factories import (
     BUILDERS,
@@ -69,9 +72,25 @@ async def run_roles(
     return 0
 
 
+def build_telemetry(environ: Mapping[str, str] | None = None) -> Telemetry:
+    """Providers for this process. No exporters in NS_ENV=local; Azure Monitor only when
+    ``APPLICATIONINSIGHTS_CONNECTION_STRING`` is set explicitly."""
+    env = os.environ if environ is None else environ
+    connection = env.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip() or None
+    return configure_telemetry(
+        load_settings(),
+        service_name="neurosphere-workers",
+        azure_monitor_connection_string=connection,
+    )
+
+
 async def _amain(raw_roles: str | None) -> int:
     cfg = RuntimeConfig.from_env()
-    return await run_roles(parse_roles(raw_roles), cfg)
+    telemetry = build_telemetry()
+    try:
+        return await run_roles(parse_roles(raw_roles), cfg)
+    finally:
+        telemetry.shutdown()
 
 
 def main(raw_roles: str | None = None) -> int:

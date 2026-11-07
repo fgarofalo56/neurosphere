@@ -11,6 +11,11 @@
 | POST   | ``/domains/{domain}/intents/{intent_id}/decisions``   | ``action.approve`` |
 | GET    | ``/emergency-disable``                                | ``data.read``      |
 | PUT    | ``/emergency-disable``                                | ``config.manage``  |
+|        |                                                       | (customer-level)   |
+
+``PUT /emergency-disable`` acts on the whole customer: beyond ``config.manage`` in some domain it
+requires ``config.manage`` on the customer's reserved control domain
+(:mod:`neurosphere_api.actions.customer_control`), else 403 ``customer_scope_required``.
 
 The path ``{domain}`` is the authorization TARGET, checked against the server-derived
 ``IdentityScope`` (403 outside it, 503 on a policy-store outage). ``customer_id``, ``domain_id``
@@ -31,6 +36,7 @@ from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.actions.common import audit_correlation_id
+from neurosphere_api.actions.customer_control import require_customer_control
 from neurosphere_api.actions.dependencies import ActionPlane, get_action_plane
 from neurosphere_api.actions.emergency import read_control, set_control
 from neurosphere_api.actions.models import (
@@ -76,7 +82,9 @@ ApproveScope = Annotated[
     IdentityScope, Depends(require(Permission.ACTION_APPROVE, domain_from_path("domain")))
 ]
 AnyReadScope = Annotated[IdentityScope, Depends(require(Permission.DATA_READ))]
-ConfigScope = Annotated[IdentityScope, Depends(require(Permission.CONFIG_MANAGE))]
+CustomerConfigScope = Annotated[
+    IdentityScope, Depends(require_customer_control(Permission.CONFIG_MANAGE))
+]
 Plane = Annotated[ActionPlane, Depends(get_action_plane)]
 DomainPath = Annotated[str, Path(min_length=1, max_length=512)]
 IntentPath = Annotated[
@@ -209,7 +217,7 @@ def build_router() -> APIRouter:
 
     @router.put("/emergency-disable", response_model=EmergencyDisableView)
     async def set_emergency_disable(
-        request: Request, body: EmergencyDisableBody, scope: ConfigScope, plane: Plane
+        request: Request, body: EmergencyDisableBody, scope: CustomerConfigScope, plane: Plane
     ) -> EmergencyDisableView:
         return await set_control(plane, scope, body, _correlation(request))
 

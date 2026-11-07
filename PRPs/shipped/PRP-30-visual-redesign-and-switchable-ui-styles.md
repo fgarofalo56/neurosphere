@@ -1,5 +1,5 @@
 ---
-name: prp-30-visual-redesign-and-switchable-ui-styles
+name: PRP-30-visual-redesign-and-switchable-ui-styles
 status: shipped
 started: 2026-10-26
 shipped: 2026-10-26
@@ -11,9 +11,12 @@ created: 2026-10-24
 model: sonnet
 phase: 5
 ns: NS-08, NS-10
-depends_on: PRP-24, PRP-28
+depends_on: [PRP-24-themes-sandbox-mode-and-accessibility, PRP-28-ui-shell-and-usability]
 wave: W9
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+order: 30
 ---
 
 # PRP-30: Visual redesign and switchable UI styles

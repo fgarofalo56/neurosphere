@@ -52,9 +52,9 @@ from neurosphere_core.payload import drop_body_fields
 from neurosphere_connector_azure_monitor.auth import TokenProvider
 from neurosphere_connector_azure_monitor.endpoints import MonitorEndpoints, endpoints_for
 from neurosphere_connector_azure_monitor.queries import (
+    APP_INSIGHTS_KINDS,
     MAX_ROWS,
     MonitorSource,
-    SourceKind,
     template_for,
 )
 
@@ -274,7 +274,7 @@ class AzureMonitorConnector(BaseConnector):
         ep = self._endpoints
         timespan = f"{_fmt(start)}/{_fmt(end)}"
         text = template_for(src.kind)
-        if src.kind is not SourceKind.APP_INSIGHTS:  # workspace kinds, incl. APIM gateway and MCP
+        if src.kind not in APP_INSIGHTS_KINDS:  # workspace kinds, incl. APIM gateway and MCP
             scope = ep.log_analytics_scope
             url = f"{ep.log_analytics_base}/v1/workspaces/{src.source_id}/query"
             kwargs: dict[str, Any] = {"json": {"query": text, "timespan": timespan}}

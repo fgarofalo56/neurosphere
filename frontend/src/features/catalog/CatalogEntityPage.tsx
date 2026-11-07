@@ -20,6 +20,7 @@ import {
   useRecertify,
   useReloadEntity,
 } from "./explorerHooks";
+import { EntityTypeRows, relationLabel } from "./EntityTypeDetails";
 import { EntityLink, LifecyclePill, QueryProblem, edgeHref, mapHref } from "./explorerParts";
 import { EXPLORER_STRINGS } from "./explorerStrings";
 import type { CatalogEntityView, GraphResultView } from "./explorerTypes";
@@ -78,7 +79,11 @@ function NeighborsTable({
             header: L.table.edge,
             render: (e) => <Link to={edgeHref(e.edge_id)}>{e.edge_id}</Link>,
           },
-          { key: "relation", header: L.table.relation, render: (e) => e.relation_type },
+          {
+            key: "relation",
+            header: L.table.relation,
+            render: (e) => relationLabel(e.relation_type),
+          },
           {
             key: "direction",
             header: L.table.direction,
@@ -372,6 +377,7 @@ function Detail({ entity }: { readonly entity: CatalogEntityView }): ReactElemen
         <dd>
           <Timestamp value={entity.updated_at} />
         </dd>
+        <EntityTypeRows entity={entity} />
         {entity.entity_type === "owner" ? (
           <>
             <dt>{f.ownerKind}</dt>

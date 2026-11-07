@@ -1,5 +1,5 @@
 ---
-name: prp-13-release-versioning-and-container-publishing
+name: PRP-13-release-versioning-and-container-publishing
 status: shipped
 started: 2026-10-18
 shipped: 2026-10-19
@@ -10,9 +10,13 @@ branch: prp-13-release-versioning-and-container-publishing
 model: sonnet
 phase: 1
 ns: NS-10
-depends_on: PRP-00, PRP-04, PRP-05
+depends_on: [PRP-00-toolchain-workspaces-and-gates, PRP-04-frontend-shell-design-system-auth, PRP-05-api-worker-runtime-and-self-observability]
 wave: W5
 absorbs: new
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 13
 ---
 
 # PRP-13: Release versioning and container publishing

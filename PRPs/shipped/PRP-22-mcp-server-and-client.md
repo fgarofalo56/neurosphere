@@ -1,19 +1,22 @@
 ---
-name: prp-22-mcp-server-and-client
-status: backlog
+name: PRP-22-mcp-server-and-client
+status: shipped
 priority: P1
 order: 1
-pr: 110
-started: 2026-10-22
-branch: prp-22-mcp-server-and-client
+pr: 175
+shipped: 2026-11-05
+started: 2026-11-05
+branch: prp-22-audit-closeout
 review: required
 created: 2026-10-08
 model: opus
 phase: 3
 ns: NS-09
-depends_on: PRP-06, PRP-17, PRP-19
+depends_on: [PRP-06-identity-authz-and-audit, PRP-17-action-executor-and-hitl, PRP-19-copilot-and-report-creation]
 wave: W8
 absorbs: P3.5
+orchestrator_model: opus
+implementer_model: opus
 ---
 
 # PRP-22: MCP server and client
@@ -172,7 +175,7 @@ python scripts/validate_planning.py
 ```
 Feature-specific:
 ```
-python -m pytest packages/core/tests/mcp services/api/tests/mcp
+python -m pytest packages/core/tests/mcp_core services/api/tests/mcp_api
 python -m pytest tests/security/mcp
 pnpm --filter frontend test
 pnpm --filter frontend exec playwright test frontend/tests/e2e/mcp-admin.spec.ts
@@ -224,6 +227,24 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
 | 3 | merged | worktree-agent-a6ecef340586f9f3b | sonnet | 723cd31; reviewer APPROVED (config.manage on all 8 routes incl. known-URL 403; exemptions exact-path only, `/mcp/extra`, `/mcp-sibling`, `Mount("/mcp")` flagged; constant-time expected_hash; audit fields asserted; lifespan no-op without mount; openapi additions only: 5 paths, 10 schemas); follow-ups: tie `/mcp` exemption to the MCP endpoint not just the path, per-tool audit record (old/new hash) on sync revocation, audit blocked-hostname registration like blocked IP literals, `list(limit=500)` silent cap, pin 403 in `test_admin.py:164`; merge c52f668; post-merge mcp_api + test_app + openapi drift + authz suites + mcp_core 1419 passed, tsc clean, vitest 60 passed; orchestrator re-run: 25 files, all within item 3 + D3/D6 hookup ownership; ruff + format clean, pyright 0 errors, mcp_api + test_app + openapi drift + api authz + security authz + mcp_core 1419 passed; tsc + eslint clean, vitest mcp-admin + app 60 passed, Playwright mcp-admin + smoke + hidden-route 6 passed (ports 4391/4392); Snyk Code 0 issues (api mcp/admin, frontend mcp-admin); routes `/api/v1/mcp/admin/servers[/{id}[/sync,/tools[/{tool}/approval]]]`, all `config.manage`; metadata path in `PUBLIC_PATHS`, `/mcp` in exact-path `SELF_AUTHENTICATED_PATHS`; openapi.json additions only; NOT DONE: `.env.example` NS_MCP_* vars (read of `.env.example` denied by permission/hook for agents and orchestrator; operator action); production `configure_mcp_admin` wiring not built (#104) | 2026-10-22 |
 | 4 | merged | worktree-agent-a8323def95bf1f844 | opus | b59c250; orchestrator re-run: only tests/security/mcp/ (6) + the G08 line of docs/RESEARCH-AND-GATES.md touched; ruff + format clean, pyright 0 errors, security/mcp + security/injection + mcp_api + mcp_core 508 passed, no skip/xfail/integration markers; validate_planning PASS; Snyk Code 0 issues; suites: confused deputy 27, intent-hash parity 9, injection 3, roundtrip 6; corpus via external tool output 78/78 (65 deny, 13 abstain, 0 comply), 77 delivered as `ExternalToolResult`, 0 overscoped, 0 intents from tool output; self-reported: 13 `follow_instruction` abstains vacuous, 40 denies only because the tool does not exist over MCP; negative control: drafting bridge makes 12 cases comply; no product defect found; noted: external-server 401 surfaces as `dependency_transient`; reviewer APPROVED (real REST route + real MCP draft tool for parity, four confused-deputy cases on real paths, outcomes from observed behaviour not `case.expected`, negative control 12/12 comply for the right reason, roundtrip keeps SSRF pinning; reasons: 10 narrowed_to_scope, 5 scope_argument_refused, 40 tool_not_registered, 7 invalid_arguments, 13 vacuous abstains); follow-ups: map external 401/403 to `forbidden`/`mcp_auth_rejected` (retry-storm risk for a future retrying caller), catalog fake over-counts by-id lookups (over-reports only); orchestrator added the reviewer's honesty clause to the G08 row (only 15 cases exercise scope filtering for real); merge fd09dd1 | 2026-10-22 |
 
+### Audit close-out round (2026-11-05)
+
+## Audit round 2026-11-05 (execution state)
+
+Plan approved 2026-11-05; integration branch `prp-22-audit-closeout` from origin/main (PR 173 not yet merged).
+
+- A1: step 0 (orchestrator) corrected the validation-gate test paths to `mcp_core/` and `mcp_api/`.
+- A2: Lane S closes #111 (server), lane C closes #112 (client), lane M closes #113 (admin); wave A, disjoint files. Lane R (wave B, after all three) owns `tests/security/mcp/` and the G08 row: real scope-filtering corpus cases, Cosmos-emulator registry test, compose-backed roundtrip, real-stack run with `NS_MCP_RESOURCE_SERVER_URL` set (emulators only, no paid calls).
+- A3: out of scope, reported OPEN: #132 (empty WriteTargetRegistry), #114 (deployment-scoped admin role), #115 (private-network override), Government MCP (G01/G02), `.env.example` NS_MCP_* placeholders (permission-blocked for agents).
+- Models: S, C, R opus; M sonnet; every lane one reviewer pass.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| S | merged | worktree-agent-a032c2a2f454ddd90 | opus | 45f94e4; orchestrator re-run: ruff + format + pyright clean, mcp_api + security/mcp + openapi drift 216 passed, corpus 78/78; Snyk Code 2 Medium CORS * on the new OPTIONS route (accepted: same public RFC 9728 metadata policy as the first round); reviewer APPROVED (listings re-derive scope per request, fail closed, no cross-principal cache; static input schema does not weaken per-call authz; intent hash unchanged by the 15-min key window); follow-ups: runtime/cors.py shadows the preflight when NS_CORS_ALLOWED_ORIGINS is set, Mcp-Param-* 400 can name an unauthorised tool, document that clients should send an explicit idempotency_key; merge 29886f3 | 2026-11-05 |
+| C | merged | worktree-agent-aca26289add58e045 | opus | 3aa0dd1; orchestrator re-run: ruff + format + pyright clean, mcp_core + mcp_api + security/mcp 613 passed + 1 failed (stale confused-deputy 401 expectation outside the lane, fixed by orchestrator in ac390b9, then 634 passed); Snyk Code 0 issues; reviewer APPROVED (::ffff:0:0:0/96 and 5f00::/16 blocked, mapped forms collapse before rules, non-ASCII refused so xn-- is never decoded, header injection closed, 401/403 maps to forbidden/mcp_auth_rejected with a static message, guard-during-handshake keeps pinning); follow-ups: auth_rejected is sticky for the session so a 401 on the optional GET stream or teardown DELETE could turn a later timeout into forbidden (limit to POST), reserved-header list lacks accept-encoding/te/upgrade/expect, byte budget counts characters (comment); merge 72e9eaf | 2026-11-05 |
+| M | merged | worktree-agent-ac31535d3da0fb0d0 | sonnet | d375003; orchestrator re-run: ruff + format + pyright clean, test_admin + openapi drift + security/authz 926 passed; Snyk Code 0 issues; reviewer APPROVED (exemption fails closed at boot only, real composed app still passes the route check, only sha256(url)[:32] audited, 403 body identical on 8 routes); post-merge mcp_core + mcp_api + test_app + openapi drift + security/authz + security/mcp 1524 passed; follow-ups: one failed revoke audit write skips the rest of the loop, a missing tool skips the revoke with no record, the before-record is written after the store revoked, ServerPage.truncated is also true at exactly 500 rows, _unparsed_server_id hashes userinfo (strip before hashing), 403 for non-https blocked names to the API error docs, call-time drift not audited, store needs a continuation token; merge 37fe7f5 | 2026-11-05 |
+| R | merged | worktree-agent-aee19d0b0d04d02c6 | opus | 1a9ee36; orchestrator re-run: ruff + format + pyright clean, tests/security/mcp 49 passed with no docker, validate_planning PASS; Snyk Code 0 issues; corpus now 78 cases = 18 exercised for real (all deny: 61 narrowed to scope, 25 scope_argument_refused, 2 argument_not_allowed, 1 client_refused:missing_data_read), 60 not_applicable counted separately (13 no model in loop, 13 no fetch tool, 8 no reveal tool, 7 no chart tool, 7 no query-language tool, 7 permission not exposed, 5 tool not exposed), 0 overscoped, 0 intents, negative and positive controls kept; integration-marked, run locally: Cosmos emulator registry store 1 passed, real-HTTP roundtrip 4 passed (client DNS stubbed), live-stack check 1 passed (metadata 200, preflight 204, filtered tools/list, other-audience and REST tokens 401 at /mcp, admin viewer 403 / admin 200, loopback registration refused); uvicorn ran create_app + compose_app with dev-issuer validators, not the app compose profile (that accepts only real Entra tokens); no product defect found; evidence docs/evidence/G08/prp-22-real-stack-2026-11-05.md and the G08 row only; reviewer APPROVED (outcomes from observed behaviour, negative control can fail, limits stated, no secrets); OPEN: browser UI pass (needs human Entra sign-in), resolved-address SSRF refusal at sync with real DNS (resolver sinkholes localtest.me, failed closed 503 mcp_dns_unavailable; proven with stub DNS only); follow-ups: live check accepts 403 or 503 at sync and has no stub request counter, report.summary still prints 'injection corpus: 78/78 passed' which counts the 60 not-applicable cases, call-decision counts 61/25/2/1 not asserted, regenerate docs/evidence/inventory.md with scripts/compliance/collect_evidence.py; merge 5669783; post-merge mcp_core + mcp_api + security/mcp 655 passed | 2026-11-05 |
+
 ## Completion note (filled at ship)
 - Date: 2026-10-23
 - Merged commits: PR #110, merge commit 5ab8570. Step 0 b220b0f. Item merges into `prp-22-mcp-server-and-client`: item 1 e8f298b (3efbba1), item 2 981a84e (2bbb4b7), item 3 c52f668 (723cd31), item 4 fd09dd1 (b59c250). G08 honesty clause 3e09b3f. CodeQL fix ec5f392. That commit carries the wrong message ("docs(prp-22): G08 row states which corpus cases exercise scope; board: item 4 merged") because the commit-message file write failed; its content is only the `mcp/admin/service.py` module-TypeVar fix. It was pushed before this was noticed and is not rewritten (no force-push).
@@ -268,6 +289,22 @@ Waves: 0 = step 0 (orchestrator); A = items 1, 2 in parallel; B = item 3; C = it
     - Remove the silent `list(limit=500)` cap.
     - Pin 403 in `test_admin.py`.
   - Tests: the catalog fake over-counts by-id lookups.
+
+### Audit close-out (filled 2026-11-05, PR #175; the original ship was PR #110)
+- Date: 2026-11-05. Integration branch `prp-22-audit-closeout` from origin/main; PR #175, CI green (26 checks pass; the Pages deploy and two licence-register jobs are push-only and skipped).
+- Merges: lane S (server, #111) 29886f3, lane C (client, #112) 72e9eaf, lane M (admin, #113) 37fe7f5, lane R (tests and evidence) 5669783; orchestrator fixes ac390b9 (confused-deputy 401 expectation), bf11227 (API reference stamp), 3b8aafc (oauthlib 4.0.0 -> 4.0.1, CVE-2026-49272). Every lane had one independent review: all APPROVED, no blockers.
+- Deviations: A1 gate test paths corrected to `mcp_core/` and `mcp_api/`. Lane R used uvicorn with `create_app` + `compose_app` and dev-issuer validators for the live check, not the `app` compose profile (that accepts only real Entra tokens). The oauthlib bump edited the `uv.lock` entry directly because a uv re-resolve also downgraded fastapi 0.162.0 to 0.149.0 (`neurosphere-docs-assistant` requires fastapi below 0.150). Both are outside the original ownership and were approved by the operator.
+- Audit gaps closed: `tools/list` and `resources/list` scope-derived; RFC 9728 OPTIONS preflight; draft idempotency key windowed (intent hash unchanged); SSRF blocks `::ffff:0:0:0/96` and `5f00::/16`; non-ASCII hostnames refused; credential header names validated; upstream 401/403 maps to `forbidden` / `mcp_auth_rejected`; GET SSE path tested; per-tool audit on sync revocation; blocked-name registrations audited; the silent 500-row cap now sets `truncated`; the `/mcp` exemption is bound to the mount; the injection corpus is reported honestly as 18 exercised for real (all deny) + 60 not applicable (was "78/78" with 15 real); the Cosmos registry store ran against the emulator (1 passed) and the roundtrip over real HTTP (4 passed), both integration-marked and run locally only (CI does not run `integration`); live-stack check passed (metadata 200, preflight 204, scope-filtered `tools/list`, other-audience and REST tokens 401, admin viewer 403, loopback registration refused). Evidence: `docs/evidence/G08/prp-22-real-stack-2026-11-05.md`.
+- Gates: tests 9885 passed in the local full run; the single failure (stale generated API reference stamp) was fixed in bf11227 and the full run was not repeated (docs suite 74 passed, MCP suites 655 passed after the lane R merge); lint, typecheck and build PASS. Snyk Code: 0 issues except 2 Medium CORS `*` on the public RFC 9728 metadata and its preflight (accepted, same policy as the SDK route). gitleaks clean on the pushed commits.
+- Still OPEN (not claimed):
+  - Browser UI pass of the admin UI against the real API: needs a human Entra sign-in.
+  - Resolved-address SSRF refusal at sync with real DNS: proven with stub DNS only (the local resolver sinkholed the test name; sync failed closed with 503 `mcp_dns_unavailable`).
+  - Government MCP use and live Entra audience behaviour (G01/G02); G08 stays NARROWED (spec drift).
+  - #132: the composed `WriteTargetRegistry` is empty, so MCP-initiated writes are advisory only.
+  - `.env.example` `NS_MCP_*` placeholders: unverified (the file is permission-blocked for agents).
+  - The MCP server is off by default (`NS_MCP_RESOURCE_SERVER_URL` unset); not built here.
+  - #114 (deployment-scoped admin role) and #115 (private-network override) were not part of this round and stay open. #111, #112 and #113 are addressed by PR #175 apart from the reviewer follow-ups below.
+- Reviewer follow-ups (non-blocking): `runtime/cors.py` shadows the metadata preflight when `NS_CORS_ALLOWED_ORIGINS` is set; an `Mcp-Param-*` 400 can name an unauthorised tool before authorization; document that clients should send an explicit `idempotency_key`; client `auth_rejected` is sticky for the session (limit to POST); extend the reserved-header list (accept-encoding, te, upgrade, expect); one failed revoke audit write skips the rest of the loop; a missing tool skips the revoke with no record; the revoke before-record is written after the store revoked; `ServerPage.truncated` is also true at exactly 500 rows; `_unparsed_server_id` hashes userinfo (strip first); call-time hash drift is not audited; the registry store needs a continuation token; the live check accepts 403 or 503 at sync with no stub request counter; `report.summary` still prints "injection corpus: 78/78 passed" which counts the 60 not-applicable cases; call-decision counts 61/25/2/1 are not asserted; regenerate `docs/evidence/inventory.md` with `scripts/compliance/collect_evidence.py`.
 
 ## Audit 2026-11-04
 

@@ -67,6 +67,12 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
   },
   { pattern: "/gateways", name: "gateways", url: `/gateways?${q()}`, ready: "main h1" },
   {
+    pattern: "/gateways/detail",
+    name: "gateway detail",
+    url: `/gateways/detail?${q(`&gateway_id=gw-${"1".repeat(32)}`)}`,
+    ready: "[data-testid='inventory-apis']",
+  },
+  {
     pattern: "/map",
     name: "map",
     url: `/map?${q()}`,

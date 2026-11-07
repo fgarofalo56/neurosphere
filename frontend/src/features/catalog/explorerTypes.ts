@@ -2,6 +2,19 @@
  * Hand-mirrored from services/api/neurosphere_api/catalog/models.py, ui_adapters/ and the
  * core catalog protocol (wire contract). Only the fields the explorer reads are declared.
  */
+import type { Grant, McpServer } from "@neurosphere/contracts";
+
+/** Type-specific fields the entity endpoint returns for Grant and McpServer (PRP-33 contracts). */
+export type GrantFields = Partial<
+  Pick<
+    Grant,
+    "enabled" | "principal" | "target" | "limits" | "cost_center" | "valid_from" | "valid_until"
+  >
+>;
+export type McpServerFields = Partial<
+  Pick<McpServer, "url" | "transport" | "auth" | "publishable" | "tools" | "protocol_versions">
+>;
+
 export const ENTITY_TYPES = [
   "person",
   "agent",
@@ -23,7 +36,7 @@ export type EntityTypeName = (typeof ENTITY_TYPES)[number];
 export const LIFECYCLES = ["draft", "active", "deprecated", "retired"] as const;
 export type LifecycleName = (typeof LIFECYCLES)[number];
 
-export interface CatalogEntityView {
+export interface CatalogEntityView extends GrantFields, McpServerFields {
   readonly id: string;
   readonly entity_type: EntityTypeName;
   readonly domain_id: string;

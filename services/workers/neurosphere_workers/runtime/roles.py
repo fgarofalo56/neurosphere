@@ -28,9 +28,10 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "gateway_poll",
 )
 
-#: Roles that must be named explicitly: ``all`` does not start them (they need extra
-#: configuration, e.g. a producer secret, that an existing ``all`` deployment does not have).
-OPT_IN_ROLES: Final[tuple[str, ...]] = ("gateway_poll",)
+#: Roles that must be named explicitly: ``all`` does not start them. Empty since ``gateway_poll``
+#: joined ``all``: it is a logged no-op when no gateway polling is configured, so it cannot
+#: crash a deployment that lacks its producer secret.
+OPT_IN_ROLES: Final[tuple[str, ...]] = ()
 
 
 class UnknownRoleError(ValueError):

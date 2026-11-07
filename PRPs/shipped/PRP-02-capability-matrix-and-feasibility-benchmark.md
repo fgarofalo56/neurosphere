@@ -1,14 +1,19 @@
 ---
-name: prp-02-capability-matrix-and-feasibility-benchmark
+name: PRP-02-capability-matrix-and-feasibility-benchmark
 status: shipped
 review: required
 created: 2026-10-08
 model: sonnet
 phase: 0
 ns: NS-07, NS-08
-depends_on: PRP-01
+depends_on: [PRP-01-contracts-and-schemas]
 wave: W2
 absorbs: P0.1, P0.2 ADR/benchmark, G01, G03
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 2
+shipped: 2026-10-11
 ---
 
 # PRP-02: Capability matrix and feasibility benchmark

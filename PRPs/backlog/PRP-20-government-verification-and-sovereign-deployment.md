@@ -1,5 +1,5 @@
 ---
-name: prp-20-government-verification-and-sovereign-deployment
+name: PRP-20-government-verification-and-sovereign-deployment
 status: backlog
 priority: P1
 order: 14
@@ -11,9 +11,11 @@ created: 2026-10-08
 model: sonnet
 phase: 4
 ns: NS-07, NS-08
-depends_on: PRP-08, PRP-12, PRP-13
+depends_on: [PRP-08-deployment-intelligence-and-iac, PRP-12-threat-model-and-security-baseline, PRP-13-release-versioning-and-container-publishing]
 wave: W7
 absorbs: P4.1 + P4.2, G02
+orchestrator_model: sonnet
+implementer_model: sonnet
 ---
 
 # PRP-20: Government verification and sovereign deployment

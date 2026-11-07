@@ -24,7 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Any, Final
 
 from fastapi import FastAPI
@@ -66,6 +66,7 @@ from neurosphere_api.actions.service import ActionApi
 
 __all__ = [
     "ACTION_TOOL_NAMES",
+    "DERIVED_KEY_WINDOW_SECONDS",
     "MCP_TOOL_NAMES",
     "READ_TOOL_NAMES",
     "DraftActionArgs",
@@ -113,6 +114,9 @@ _ACTION_DESCRIPTIONS: Final = {
     ),
     "get_action_status": "Current state of an action intent in the caller's readable domains.",
 }
+
+#: Width of the time window in a derived (caller-less) draft idempotency key (PRP-22 #111).
+DERIVED_KEY_WINDOW_SECONDS: Final = 15 * 60
 
 _UUID: Final = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 _FRESHNESS: Final = FreshnessPolicy()
@@ -270,9 +274,24 @@ def _entity_domain(entity: object) -> str | None:
     return None
 
 
-def _derived_idempotency_key(args: DraftActionArgs) -> str:
+def _derived_key_window(now: datetime) -> str:
+    """Start of the ``DERIVED_KEY_WINDOW_SECONDS`` window containing ``now`` (UTC, ISO 8601)."""
+    instant = now if now.tzinfo is not None else now.replace(tzinfo=UTC)
+    seconds = int(instant.timestamp())
+    start = seconds - seconds % DERIVED_KEY_WINDOW_SECONDS
+    return datetime.fromtimestamp(start, UTC).isoformat()
+
+
+def _derived_idempotency_key(args: DraftActionArgs, now: datetime) -> str:
+    """Key for a draft without a caller key: the change itself plus the time window.
+
+    Retries of the same change inside one window collapse into the first draft; the same change
+    drafted again in a later window is a new intent. Only the idempotency key carries the window:
+    the intent hash excludes ``idempotency_key`` and stays identical to the REST hash.
+    """
     digest = sha256_digest(
         {
+            "window_start": _derived_key_window(now),
             "channel": "mcp",
             "action_kind": args.action_kind,
             "target": args.target.model_dump(mode="json"),
@@ -369,7 +388,7 @@ def _action_specs(ports: StatePorts, correlation_id: str, clock: Clock) -> list[
             target_version=args.target_version,
             proposed_diff=args.proposed_diff,
             evidence=list(args.evidence),
-            idempotency_key=args.idempotency_key or _derived_idempotency_key(args),
+            idempotency_key=args.idempotency_key or _derived_idempotency_key(args, now),
             channel="mcp",
         )
         view, created = await ActionApi(ports.action_plane()).draft(

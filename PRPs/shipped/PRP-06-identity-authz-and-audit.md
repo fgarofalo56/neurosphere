@@ -1,5 +1,5 @@
 ---
-name: prp-06-identity-authz-and-audit
+name: PRP-06-identity-authz-and-audit
 status: shipped
 shipped: 2026-11-05
 pr: 172
@@ -12,9 +12,11 @@ created: 2026-10-08
 model: opus
 phase: 1
 ns: NS-08
-depends_on: PRP-05
+depends_on: [PRP-05-api-worker-runtime-and-self-observability]
 wave: W4
 absorbs: P1.3
+orchestrator_model: opus
+implementer_model: opus
 ---
 
 # PRP-06: Identity, authorization and audit

@@ -12,12 +12,14 @@ Role -> class:
 * ``projections``     ``OutboxReader`` -> ``CatalogProjection`` (sink ``catalog``)
 * ``aggregates``      ``OutboxReader`` -> ``AggregateProjection`` (sink ``aggregates``)
 * ``actions``         ``ActionExecutorWorker`` (only intents in ``executing``); write targets
-                      from ``NS_FOUNDRY_*``/``NS_APIM_*`` (:func:`register_write_targets`)
+                      from ``NS_FOUNDRY_*``/``NS_APIM_*`` (:func:`register_write_targets`),
+                      plus ``ReviewReconcileWorker`` (closes stale maker-checker items) in the
+                      same process on the same services (:func:`actions_role`)
 * ``hitl_timers``     ``HitlTimerWorker``
 * ``lifecycle``       ``LifecycleWorker``
 * ``recommendations`` periodic ``run_pipeline``
 * ``evaluation``      periodic online ``EvaluationService`` run
-* ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; opt-in, not in ``all``)
+* ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; idles if unconfigured)
 """
 
 from __future__ import annotations
@@ -45,7 +47,7 @@ from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_connector_foundry_actions import create_swap_connector
-from neurosphere_core.actions import ActionService
+from neurosphere_core.actions import ActionAuditor, ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
@@ -105,7 +107,12 @@ from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationSt
 from neurosphere_core.stores import ensure_local_containers
 from pydantic import ValidationError
 
-from neurosphere_workers.actions import ActionExecutor, ActionExecutorWorker, ReviewItemCompletion
+from neurosphere_workers.actions import (
+    ActionExecutor,
+    ActionExecutorWorker,
+    ReviewItemCompletion,
+    ReviewReconcileWorker,
+)
 from neurosphere_workers.actions.apim import (
     ApplyRecords,
     GatewayArm,
@@ -128,7 +135,7 @@ from neurosphere_workers.ingestion.gateway_poll import (
 )
 from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
-from neurosphere_workers.lifecycle.worker import LifecycleWorker, RequestedJob
+from neurosphere_workers.lifecycle.worker import JobSource, LifecycleWorker
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.outbox import (
     SINK_AGGREGATES,
@@ -140,12 +147,20 @@ from neurosphere_workers.projections.outbox import (
 )
 from neurosphere_workers.recommendations.pipeline import run_pipeline
 from neurosphere_workers.recommendations.projection.models import CandidatePairConfig
-from neurosphere_workers.runtime.adapters import IngestionRole, PeriodicTick, TickWorker, WorkerRole
+from neurosphere_workers.runtime.adapters import (
+    IdleRole,
+    IngestionRole,
+    MultiWorkerRole,
+    PeriodicTick,
+    TickWorker,
+    WorkerRole,
+)
 from neurosphere_workers.runtime.archive_reader import (
     ArchiveReader,
     ArchiveRecordSource,
     ArchiveTraceEventSource,
 )
+from neurosphere_workers.runtime.checkpoint import CheckpointStore, CosmosRuntimeCheckpointStore
 from neurosphere_workers.runtime.identity import build_identity, build_policy_stack
 from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
 from neurosphere_workers.runtime.roles import RoleConfigError
@@ -183,6 +198,7 @@ _AUDIT_CONTAINER: Final = "audit"
 _AUDIT_TAIL_CONTAINER: Final = "audit_tail"
 _LOCAL_COSMOS_DEFAULT: Final = "http://localhost:8081"
 _PRUNE_INTERVAL_SECONDS: Final = 3600.0
+_LIFECYCLE_NO_SOURCE: Final = "lifecycle_no_job_source"
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,6 +246,14 @@ async def _cosmos(cfg: RuntimeConfig, lifetime: ClientLifetime) -> CosmosClient:
 
 def _database(cfg: RuntimeConfig, client: CosmosClient) -> DatabaseProxy:
     return client.get_database_client(cfg.store.database)
+
+
+def _runtime_checkpoints(cfg: RuntimeConfig, client: CosmosClient) -> CosmosRuntimeCheckpointStore:
+    """Durable checkpoints for batch roles: the shared ``outbox-checkpoints`` container."""
+    return CosmosRuntimeCheckpointStore(
+        _database(cfg, client).get_container_client(_OUTBOX_CHECKPOINT_CONTAINER),
+        customer_id=cfg.customer_id,
+    )
 
 
 def _archive_container(cfg: RuntimeConfig, lifetime: ClientLifetime) -> ContainerClient:
@@ -440,6 +464,27 @@ def _hitl_service(cfg: RuntimeConfig, cosmos: CosmosClient, audit: AuditReposito
     )
 
 
+def warn_if_actions_idle(registry: WriteTargetRegistry) -> bool:
+    """Log one structured warning when no write target is registered; returns True if idle.
+
+    An empty registry is the designed fail-closed state (per-connector ENABLED flags default off),
+    but the role must never start and silently do nothing. Only the warning is emitted: the
+    ``actions`` role also runs the review-reconcile sweep (real work that needs no write target),
+    so the role stays ``running`` rather than ``idle``.
+    """
+    if registry.names():
+        return False
+    logger.warning(
+        "actions role is idle by configuration: no write target is enabled; "
+        "set NS_FOUNDRY_ENABLED and/or NS_APIM_ENABLED (with their target settings)",
+        extra={
+            "event": "worker.actions_idle_by_config",
+            "enable_flags": ["NS_FOUNDRY_ENABLED", "NS_APIM_ENABLED"],
+        },
+    )
+    return True
+
+
 async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     cosmos = await _cosmos(cfg, lifetime)
     stack = build_policy_stack(
@@ -459,15 +504,54 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
     # neither configured the registry is empty and every intent fails closed with
     # capability_unavailable (no connector call, no pretend change).
     registry, gateways = await _action_write_targets(cfg, lifetime, cosmos)
+    hitl = _hitl_service(cfg, cosmos, audit)
     executor = ActionExecutor(
         service,
         registry,
         execution_control=control,
         worker_id=cfg.worker.worker_id or f"{socket.gethostname()}-{os.getpid()}",
-        on_finished=ReviewItemCompletion(_hitl_service(cfg, cosmos, audit), auditor=auditor),
+        on_finished=ReviewItemCompletion(hitl, auditor=auditor),
         gateways=gateways,
     )
-    return WorkerRole(ActionExecutorWorker(executor, store), idle_seconds=cfg.worker.poll_seconds)
+    warn_if_actions_idle(registry)
+    return actions_role(
+        cfg,
+        executor_worker=ActionExecutorWorker(executor, store),
+        hitl=hitl,
+        actions=service,
+        auditor=auditor,
+        checkpoints=_runtime_checkpoints(cfg, cosmos),
+    )
+
+
+def actions_role(
+    cfg: RuntimeConfig,
+    *,
+    executor_worker: ActionExecutorWorker,
+    hitl: HitlService,
+    actions: ActionService,
+    auditor: ActionAuditor,
+    checkpoints: CheckpointStore | None = None,
+) -> MultiWorkerRole:
+    """The ``actions`` role: the executor plus the review-reconcile sweep, on shared services.
+
+    The sweep (PRP-17 audit close-out) closes review items the executor's completion hook could
+    not reach; it uses the very HitlService/ActionService/auditor the executor was built with and
+    never touches a target system.
+    """
+    reconcile = ReviewReconcileWorker(
+        hitl,
+        actions,
+        auditor=auditor,
+        # cfg.customer_id raises RoleConfigError rather than yielding None: the runtime must never
+        # build an unscoped (all-customer) sweep.
+        customer_id=cfg.customer_id,
+    )
+    return MultiWorkerRole(
+        [executor_worker, reconcile],
+        idle_seconds=cfg.worker.poll_seconds,
+        checkpoints=checkpoints,
+    )
 
 
 async def _action_write_targets(
@@ -503,24 +587,44 @@ async def _action_write_targets(
 async def build_hitl_timers(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     cosmos = await _cosmos(cfg, lifetime)
     service = _hitl_service(cfg, cosmos, _audit(cfg, cosmos))
-    return WorkerRole(HitlTimerWorker(service), idle_seconds=cfg.worker.poll_seconds)
+    return WorkerRole(
+        HitlTimerWorker(service),
+        idle_seconds=cfg.worker.poll_seconds,
+        checkpoints=_runtime_checkpoints(cfg, cosmos),
+    )
 
 
-class _NoRequestedJobs:
-    """Requests reach the engine through the API/engine ``submit``; the queue is processed."""
+def _lifecycle_job_source() -> JobSource | None:
+    """Where requested lifecycle jobs come from; ``None`` when no store holds them.
 
-    async def next_jobs(self, checkpoint: str | None, limit: int) -> list[RequestedJob]:
-        return []
+    The Cosmos request queue only holds requests the engine already blocked (it is drained by
+    ``process_queue``); nothing persists a freshly *requested* job for a worker to pick up, and
+    inventing that contract is out of scope. Until one exists the role cannot do any work.
+    """
+    return None
+
+
+def _lifecycle_targets() -> TargetRegistry:
+    """Lifecycle targets (catalog, archive, ledger, conversations) bound by the owning deployment;
+    none are bound by the runtime today, so every request would fail closed."""
+    return TargetRegistry()
 
 
 async def build_lifecycle(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    source = _lifecycle_job_source()
+    if source is None:
+        # Explicitly idle by configuration: reported `idle` with this reason on /healthz and
+        # /readyz, never polling, and not counted against readiness.
+        logger.warning(
+            "lifecycle role is idle: no source of requested jobs is wired",
+            extra={"event": "worker.lifecycle_inert", "reason": _LIFECYCLE_NO_SOURCE},
+        )
+        return IdleRole(_LIFECYCLE_NO_SOURCE)
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     database = cfg.store.database
     engine = LifecycleEngine(
-        # Lifecycle targets (catalog, archive, ledger, conversations) are bound by the
-        # deployment that owns those stores; an empty registry fails requests closed.
-        targets=TargetRegistry(),
+        targets=_lifecycle_targets(),
         holds=CosmosHoldRegistry.from_client(cosmos, database=database, customer_id=customer),
         queue=CosmosRequestQueue.from_client(cosmos, database=database, customer_id=customer),
         audit=_audit(cfg, cosmos),
@@ -530,7 +634,9 @@ async def build_lifecycle(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleR
         mappings=CosmosMappingStore.from_client(cosmos, database=database, customer_id=customer),
     )
     return WorkerRole(
-        LifecycleWorker(engine, _NoRequestedJobs()), idle_seconds=cfg.worker.poll_seconds
+        LifecycleWorker(engine, source),
+        idle_seconds=cfg.worker.poll_seconds,
+        checkpoints=_runtime_checkpoints(cfg, cosmos),
     )
 
 
@@ -687,7 +793,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
 
 
 # --------------------------------------------------------------------------------------------
-# gateway_poll (opt-in role: not part of ``all``)
+# gateway_poll (part of ``all``; a no-op until NS_GATEWAY_POLL_* is configured)
 
 
 class _ClosableHttp:
@@ -702,6 +808,17 @@ class _ClosableHttp:
 
 async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     poll = GatewayPollSettings()
+    if poll.unconfigured:
+        # Part of ``all``: with no gateway polling configured, idle gracefully (one info line).
+        logger.info(
+            "gateway_poll not configured; role idles",
+            extra={"event": "worker.gateway_poll_unconfigured"},
+        )
+
+        async def _noop() -> None:
+            return None
+
+        return _tick_role("gateway_poll", _noop, cfg)
     if not poll.domains:
         raise RoleConfigError("gateway_poll_domain_ids_missing")
     if poll.api_base_url is None:
@@ -713,7 +830,16 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
     if cfg.settings.env == "local":
         await create_gateway_container(_database(cfg, cosmos))
     http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    metrics_app_id = poll.metrics_app_id
+    if metrics_app_id is not None and cfg.cloud == "government":
+        # No App Insights Government host is verified, so the metrics poll stays commercial-only.
+        logger.warning(
+            "gateway_poll metrics poll skipped: unsupported in Government",
+            extra={"event": "worker.gateway_poll_metrics_government_skipped"},
+        )
+        metrics_app_id = None
     poller = GatewayPoller(
+        metrics_app_id=metrics_app_id,
         store=CosmosGatewayStore.from_client(cosmos, database=cfg.store.database),
         ingest=IngestClient(
             http.client,

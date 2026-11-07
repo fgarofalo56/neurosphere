@@ -1,19 +1,22 @@
 ---
-name: prp-17-action-executor-and-hitl
-status: backlog
+name: PRP-17-action-executor-and-hitl
+status: shipped
 priority: P1
 order: 1
 review: required
 created: 2026-10-08
-started: 2026-10-20
-pr: 83
-branch: prp-17-action-executor-and-hitl
+started: 2026-11-05
+shipped: 2026-11-05
+pr: 173
+branch: prp-17-audit-gaps
 model: opus
 phase: 3
 ns: NS-04, NS-06
-depends_on: PRP-04, PRP-06, PRP-09, PRP-10
+depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-06-identity-authz-and-audit, PRP-09-connector-sdk-and-reference-connectors, PRP-10-catalog-and-relationship-governance]
 wave: W6
 absorbs: P3.2, P3.4, G05
+orchestrator_model: opus
+implementer_model: opus
 ---
 
 # PRP-17: Action executor and human-in-the-loop workflow
@@ -292,3 +295,21 @@ Reopened after a deep audit (static read; no tests were run). Items 1-4 and 6 ar
 - `PUT /emergency-disable` is not customer-level.
 - A rejection during a policy outage leaves the intent stuck until expiry.
 - The "production bootstrap still to do" follow-up looks stale (`planes.py:240` calls `configure_action_plane`); confirm and close it.
+
+## Audit close-out execution (2026-11-05)
+
+Plan approved 2026-11-05 by the operator: lanes A+B+C plus a live G05 run (lane D), branch `prp-17-audit-gaps` off main. Audit claims checked against code before planning: the Cosmos HITL store exists (`neurosphere_core.hitl_cosmos`, wired in the API and worker runtimes) and `configure_action_plane` is called from `services/api/neurosphere_api/runtime/builders/planes.py`, so those two audit gaps are stale and are closed by verification in lane C. Notifiers stay stubs by design.
+
+| Item | Status | Branch | Model | Evidence | Updated |
+|------|--------|--------|-------|----------|---------|
+| A reconcile-sweep | merged | worktree-agent-a2e59586c7c25f640 | opus | e9bd322; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, 907 passed; reviewer APPROVED (no blockers; follow-ups: after-audit failure only logged, Cosmos emulator test for open_maker_checker not in CI, approved orphan with live intent only logged each pass, 5 min orphan grace and 1 min pass interval are guesses); merge acb3e52; wiring for lane C: `ReviewReconcileWorker(hitl_service, action_service, auditor=action_auditor, customer_id=None)` under `WorkerRunner` partition_key action-review-reconcile | 2026-11-05 |
+| B api-hardening | merged | worktree-agent-a2d70a0732c0ef5eb | opus | 956d46f; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, actions_api + hitl_api + security/actions 71 passed (agent's wider services/api run: 1569 passed, 1 WinError 10055 flake that passed on rerun); reviewer APPROVED (no blockers; follow-ups: document operator procedure for the control-domain role, add a test for a rejection resend by a different reviewer returning 409); operator decision 2026-11-05: reserved per-customer control domain accepted for customer-level kill switch (config.manage on <cloud>:<customer>:neurosphere:domain:customer-control, 403 customer_scope_required); chain-name collision <customer>.execution-control not fixed (needs repo-wide reservation); post-merge 921ece9: ruff clean, pyright 0 errors, 333 passed; known red: tests/integration/actions test_emergency_disable_stops_the_executor_and_resumes_cleanly (seed user lacks control role), fix-forward in lane C | 2026-11-05 |
+| C wiring-and-close-stale | merged | worktree-agent-a19ca2037b43a9ba4 + worktree-agent-a5f329c3d5e4039fc | sonnet | 4f60990 + rework d01ad7b; reviewer CHANGES REQUIRED then confirmed: blocker was the reconcile sweep built with a nullable customer id (None = sweep all customers) when NS_AUTH_CUSTOMER_ID unset outside local, fixed by using cfg.customer_id (raises customer_id_missing) + 2 tests; Haiku CONFIRMED; orchestrator re-run on rework branch: ruff clean, pyright 0 errors, workers + tests/integration/actions + security/actions 516 passed, validate_planning PASS; follow-ups: ReviewReconcileWorker constructor still defaults customer_id=None, write-target nullable pattern in factories.py (pre-existing), MultiWorkerRole keeps siblings running if one ends normally; stale audit claims verified false: CosmosHitlStore wired (api data.py:374, workers factories.py), configure_action_plane called (api planes.py:251); runbook docs/runbooks/action-plane-kill-switch.md, G05 row NARROWED, G12 row corrected; merge 1433a8f | 2026-11-05 |
+| D g05-live-run | merged | prp-17-audit-gaps (orchestrator ran it directly) | n/a | live gate PASS 2026-11-05: swap gpt-5-nano to gpt-5-mini verified matched=true, rolled back, restored model re-read; evidence docs/evidence/G05/20261105T173214Z-foundry-swap-live.json; throwaway rg-ns-g05 (Limitlessdata - Main) created, torn down, account purged; docs/evidence/G05/README.md now NARROWED; register G05 row + matrix row left to lane C | 2026-11-05 |
+
+## Audit close-out completion note (2026-11-05)
+- Branch `prp-17-audit-gaps` off main. Lanes: A reconcile sweep (acb3e52), B API hardening (merge of 956d46f), C wiring and close-out (merge 1433a8f incl. rework d01ad7b), D live G05 run (012f525). Every lane independently re-verified; A, B, C each had one reviewer pass (C: CHANGES REQUIRED then confirmed).
+- Gates on the integration branch: `verify-gates -Mode full` PASS (lint, typecheck, build, tests 9730 passed, 283 deselected); `validate_planning.py` PASS; Snyk code scans of the changed action/HITL directories: 0 issues at medium or above.
+- Audit gaps closed: reconcile sweep for terminal intents with open review items and for intents expired outside the executor (`ReviewReconcileWorker`, run in the `actions` worker role, customer-scoped, fails closed without a customer id); orphan review item after a failed `link_review_item`; `PUT /emergency-disable` now needs `config.manage` on the per-customer reserved control domain (operator-approved design, runbook `docs/runbooks/action-plane-kill-switch.md`, sandbox seed scripts grant it to the operator persona); a rejection that hit a policy outage is resumable. Audit claims verified STALE: the Cosmos HITL store exists and is wired (`packages/core/neurosphere_core/hitl_cosmos/store.py`, api `runtime/builders/data.py`, workers `runtime/factories.py`) and `configure_action_plane` is called from the production bootstrap (`services/api/neurosphere_api/runtime/builders/planes.py:251`).
+- G05: live run PASSED 2026-11-05 on one Commercial target (gpt-5-nano -> gpt-5-mini, verified `matched: true`, rolled back, restored model re-read), throwaway RG created and deleted, account purged. Evidence `docs/evidence/G05/20261105T173214Z-foundry-swap-live.json`. G05 is NARROWED, not closed: one target, no traffic-split canary, no regression/quality run, Government not covered (G01 open), production action execution still blocked per the register.
+- Still open / follow-ups: notifiers remain stubs by design; kill-switch audit chain name `<customer>.execution-control` can collide with a domain of that name (needs a repo-wide reservation of `<customer>.<suffix>` chains); `ReviewReconcileWorker` constructor still accepts `customer_id=None` (runtime never passes it); write-target nullable customer id pattern in worker `factories.py`; Cosmos emulator tests (intent store, `open_maker_checker`) do not run in CI (`integration` marker); approved orphan with a live intent is only logged; `MultiWorkerRole` keeps siblings running if one worker exits normally; UI items from the original completion note; reviewer-suggested test for a rejection resend by a different reviewer returning 409.

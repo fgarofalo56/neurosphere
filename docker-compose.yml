@@ -228,7 +228,7 @@ services:
       - ${NS_SANDBOX_DIR:-./temp/sandbox}:/data/sandbox:ro
       - ./sandbox/evaluation/data:/data/evaluation:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/healthz', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/readyz', timeout=3)"]
       interval: 5s
       timeout: 5s
       retries: 24

@@ -1,5 +1,5 @@
 ---
-name: prp-26-sales-and-marketing-deliverables
+name: PRP-26-sales-and-marketing-deliverables
 status: shipped
 started: 2026-11-02
 shipped: 2026-11-03
@@ -10,9 +10,13 @@ created: 2026-10-08
 model: sonnet
 phase: 5
 ns: NS-10
-depends_on: PRP-24, PRP-25
+depends_on: [PRP-24-themes-sandbox-mode-and-accessibility, PRP-25-docs-site-and-public-assistant]
 wave: W9
 absorbs: P5.3 deck + scripts
+orchestrator_model: sonnet
+implementer_model: sonnet
+priority: P2
+order: 26
 ---
 
 # PRP-26: Sales and marketing deliverables

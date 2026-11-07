@@ -1,6 +1,7 @@
 """APIM gateway log polling (PRP-33 item 4): Log Analytics rows -> TelemetryEvents -> ingest API."""
 
 from neurosphere_workers.ingestion.gateway_poll.poller import (
+    COST_CENTER_EXTENSION,
     STATUS_CLOUD_MISMATCH,
     STATUS_INGEST_FAILED,
     STATUS_OK,
@@ -20,6 +21,7 @@ from neurosphere_workers.ingestion.gateway_poll.settings import (
 )
 
 __all__ = [
+    "COST_CENTER_EXTENSION",
     "DEFAULT_PRODUCER_ID",
     "DEFAULT_SOURCE_ID",
     "STATUS_CLOUD_MISMATCH",

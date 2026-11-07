@@ -6,6 +6,11 @@ operations only: ``create`` is create-only (``create_item``), ``replace`` is an 
 query on ``/customer_id`` + ``/domain_id`` with a continuation cursor, and ``due`` is a query
 on the stored ``next_deadline`` field. There is no delete.
 
+``open_maker_checker`` (PRP-17 audit close-out) is the review-reconcile sweep's scan: ids of
+``maker_checker`` items still in :data:`OPEN_MAKER_CHECKER_STATES`, across partitions, oldest
+first, strictly after an opaque ``after`` position. It returns references, not documents, so one
+malformed document cannot fail the scan; the caller ``get``s each item and isolates the failure.
+
 Every failure of the backing store surfaces as ``dependency_transient`` (reason
 ``hitl_store_unavailable``) so callers fail closed (503).
 """
@@ -14,11 +19,12 @@ from __future__ import annotations
 
 import base64
 import binascii
+import builtins
 import json
 import uuid
 from collections.abc import Callable
 from datetime import datetime
-from typing import Protocol, runtime_checkable
+from typing import Any, Final, NamedTuple, Protocol, runtime_checkable
 
 from neurosphere_core.errors import (
     DependencyTransientError,
@@ -30,7 +36,32 @@ from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
 
-__all__ = ["HitlStore", "InMemoryHitlStore", "decode_cursor", "encode_cursor"]
+__all__ = [
+    "OPEN_MAKER_CHECKER_STATES",
+    "HitlStore",
+    "InMemoryHitlStore",
+    "ReviewItemRef",
+    "decode_cursor",
+    "encode_cursor",
+    "position_of",
+]
+
+#: ``maker_checker`` states whose item may still need closing once its action ends.
+#: ``approved`` is final for a DECISION but still moves to ``executed``/``failed``.
+OPEN_MAKER_CHECKER_STATES: Final[tuple[str, ...]] = ("pending", "assigned", "escalated", "approved")
+
+
+class ReviewItemRef(NamedTuple):
+    """One row of :meth:`HitlStore.open_maker_checker`: an item id and its scan position."""
+
+    item_id: str
+    position: str
+    """Opaque, totally ordered (``<created_at>|<item_id>``); pass it back as ``after``."""
+
+
+def position_of(created_at: datetime, item_id: str) -> str:
+    """Scan position of an item: fixed-width UTC timestamp, then id (sorts lexically)."""
+    return f"{format_timestamp(created_at)}|{item_id}"
 
 
 @runtime_checkable
@@ -72,6 +103,20 @@ class HitlStore(Protocol):
 
     async def due(self, now: datetime, limit: int = 100) -> list[ReviewItem]:
         """Non-final items whose earliest active stored deadline is ``<= now``, earliest first."""
+        ...
+
+    async def open_maker_checker(
+        self,
+        *,
+        after: str | None = None,
+        customer_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+    ) -> builtins.list[ReviewItemRef]:
+        """``maker_checker`` items in :data:`OPEN_MAKER_CHECKER_STATES`, all partitions.
+
+        Oldest first by position, strictly after ``after``; optionally one customer only. A bad
+        ``limit`` is ``invalid_schema``. References only: callers ``get`` each item.
+        """
         ...
 
 
@@ -201,3 +246,40 @@ class InMemoryHitlStore:
                 found.append((deadline, item.item_id, item))
         found.sort(key=lambda row: (row[0], row[1]))
         return [row[2] for row in found[:limit]]
+
+    async def open_maker_checker(
+        self,
+        *,
+        after: str | None = None,
+        customer_id: str | None = None,
+        limit: int = DEFAULT_PAGE_SIZE,
+    ) -> builtins.list[ReviewItemRef]:
+        self._check()
+        if not 1 <= limit <= MAX_PAGE_SIZE:
+            raise InvalidSchemaError(f"limit must be 1..{MAX_PAGE_SIZE}", reason="invalid_limit")
+        refs: builtins.list[ReviewItemRef] = []
+        for item_id, raw in self._items.items():
+            # Read only the query fields (like the Cosmos projection): a document that fails
+            # full validation is still listed, and its ``get`` fails on its own.
+            position = _open_position(item_id, raw, customer_id)
+            if position is not None and (after is None or position > after):
+                refs.append(ReviewItemRef(item_id, position))
+        refs.sort(key=lambda ref: ref.position)
+        return refs[:limit]
+
+
+def _open_position(item_id: str, raw: str, customer_id: str | None) -> str | None:
+    try:
+        document: Any = json.loads(raw)
+        if not isinstance(document, dict):
+            return None
+        fields: dict[str, Any] = document  # pyright: ignore[reportUnknownVariableType]
+        if fields.get("kind") != "maker_checker":
+            return None
+        if fields.get("state") not in OPEN_MAKER_CHECKER_STATES:
+            return None
+        if customer_id is not None and fields.get("customer_id") != customer_id:
+            return None
+        return position_of(datetime.fromisoformat(str(fields.get("created_at"))), item_id)
+    except ValueError:
+        return None

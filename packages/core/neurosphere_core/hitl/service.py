@@ -402,6 +402,47 @@ class HitlService:
         await self._guard(ctx, item, check)
         return await self._replace(ctx, item, transition(item, target), detail=f"review_{target}")
 
+    async def mark_expired(
+        self,
+        item_id: str,
+        now: datetime,
+        *,
+        correlation_id: str,
+        actor: Actor = SYSTEM_ACTOR,
+        scope_hash: str = SYSTEM_SCOPE_HASH,
+    ) -> ReviewItem:
+        """Close an UNDECIDED ``maker_checker`` item whose action can no longer run -> ``expired``.
+
+        For the review-reconcile sweep: the intent ended (expired, failed) before a decision, or
+        the item is an orphan no decision can reach. Audited like :meth:`mark_failed`; an item
+        that is not ``maker_checker`` or no longer decidable is refused (``denied`` audit).
+        """
+        item = await self._require(item_id)
+        ctx = audit_context(
+            actor=actor,
+            scope_hash=scope_hash,
+            correlation_id=correlation_id,
+            operation="hitl.review.expired",
+            channel="worker",
+            intent_id=item.intent_id,
+        )
+
+        async def check() -> None:
+            if item.kind != "maker_checker":
+                raise InvalidSchemaError(
+                    "only maker_checker items are closed for their action",
+                    reason="not_maker_checker",
+                )
+            if item.state_name not in DECIDABLE_STATES:
+                raise StaleVersionError(
+                    f"review item is {item.state_name}, not open",
+                    reason="invalid_review_transition",
+                )
+
+        await self._guard(ctx, item, check)
+        closed = transition(item, "expired", **_UNASSIGNED)
+        return await self._replace(ctx, item, closed, detail="review_expired")
+
     # -- timers ----------------------------------------------------------------------------
 
     async def apply_timers(
