@@ -288,7 +288,7 @@ Plan approved 2026-11-07 by the operator. Integration branch `prp-34-audit-gaps`
 
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| R-A | todo | | sonnet | | 2026-11-07 |
+| R-A | merged | worktree-agent-adb41f6deadd0c1ab | sonnet | f245f78, merged into prp-34-audit-gaps; reviewed APPROVE (no rework); action_executor 181 passed, workers+apim connector 802 passed, ruff, pyright clean. Real Cosmos/Entra path in `_publication_recorder` untested (fakes only). Follow-ups: runbook line that APIM-enabled actions workers need NS_WORKER_OBJECT_ID; confirm worker principal holds catalog.curate in publishing domains; keep compose_action_executor private | 2026-11-07 |
 | R-B | todo | | sonnet | | 2026-11-07 |
 | R-C | todo | | sonnet | | 2026-11-07 |
 | R-D | todo | | sonnet | | 2026-11-07 |
