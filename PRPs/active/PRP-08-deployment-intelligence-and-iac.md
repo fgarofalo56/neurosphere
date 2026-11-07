@@ -247,7 +247,7 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
 
 ### Item 12 - apply-and-uninstall-api  (added 2026-11-07; review: required)
 - Deliverable: an approve-plan -> apply action and an uninstall dry-run endpoint, both through the existing durable action executor (confirm exact target/version/diff, recheck permission, audit, verify actual change). `FabricProvisioner` gets its first non-test caller, gated by the capability matrix. The R1 live-inventory guard before any RG delete stays mandatory.
-- Owned files (may edit): `services/api/neurosphere_api/deploy/apply/` (new), `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `services/api/tests/deployment/test_apply.py` (new).
+- Owned files (may edit): `services/api/neurosphere_api/deploy/apply/` (new), `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `services/api/tests/deployment/test_apply.py` (new). Widened at sign-off 2026-11-07: new deploy target adapter files in `services/workers/neurosphere_workers/actions/` (new files plus its single registration line only; do not modify `apim.py`, `executor.py` logic), the deploy intent kind/contract it needs under `packages/contracts/` (edit schema sources and regenerate; never hand-edit generated models), and matching tests under `services/workers/tests/` and `packages/contracts/tests/`.
 - Must NOT touch: `services/api/neurosphere_api/deploy/scan/`, `.../deploy/plan/`, `packages/core/neurosphere_core/deploy/register/` (call only), `infra/scripts/uninstall.py` (call only), `infra/bicep/`, root `pyproject.toml`.
 - Depends on: Item 11.
 - Acceptance criteria:
@@ -321,7 +321,7 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
 | 10 | merged | worktree-agent-a65dea6badd75b5dc | sonnet | ruff/pyright clean; tests/unit/infra + tests/integration/deploy + api deployment 112 passed on branch; e54fa61. .env.example diff unverified (git read denied for that path); compose not wired | 2026-11-07 |
 | 11 | merged | worktree-agent-a5c99a59b8fa4e318 | sonnet | ruff clean, pyright 0 errors; deployment+authz+drift 220 passed, 1 expected drift fail on branch; 04e12d6. Fix-forward: regenerated openapi.json, item 10 test now attaches audit repo (item 11 fails closed w/o it); post-merge 126 passed. Deviations: scan-id errors are 422 reasons (no 404/410 type); consent now required even for created-by-tagged; audit chain readable by customer-wide audit read only | 2026-11-07 |
-| 12 | todo | | sonnet | | 2026-11-07 |
+| 12 | in-progress | worktree agent | sonnet | dispatched; ownership widened to workers actions + contracts (user sign-off 2026-11-07); review: required | 2026-11-07 |
 | 13 | todo | | sonnet | | 2026-11-07 |
 
 ## Completion note (filled at ship)
