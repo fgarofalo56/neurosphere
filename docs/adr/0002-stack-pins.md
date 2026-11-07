@@ -147,7 +147,7 @@ only when the package is dev-only (hypothesis, for example).
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | https://pypi.org/project/cyclonedx-python-lib/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.86.0 | MIT | https://pypi.org/project/datamodel-code-generator/ | dev-only; 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | https://pypi.org/project/defusedxml/ | dev-only; 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.162.0 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.149.0 | MIT | https://pypi.org/project/fastapi/ | runtime; 0.x: minor releases may break; no support window recorded |
 | filelock | 4.2.4 | MIT | https://pypi.org/project/filelock/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | https://pypi.org/project/frozenlist/ | runtime; no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | https://pypi.org/project/genson/ | dev-only; no EOL published locally; Dependabot tracks releases |
