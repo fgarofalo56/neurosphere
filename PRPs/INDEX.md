@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-08-deployment-intelligence-and-iac](active/PRP-08-deployment-intelligence-and-iac.md) | P1 | 14/15 (93%) | in-progress 1, merged 14 | sonnet / sonnet | required |
+| [PRP-08-deployment-intelligence-and-iac](active/PRP-08-deployment-intelligence-and-iac.md) | P1 | 15/15 (100%) | merged 15 | sonnet / sonnet | required |
 
 ## Backlog
 
