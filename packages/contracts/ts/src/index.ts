@@ -85,6 +85,8 @@ export type { CostRecord } from "./cost/v1/cost-record.js";
 export type * as CostCostRecordV1 from "./cost/v1/cost-record.js";
 export type { CapabilityMatrixEntry } from "./deployment/v1/capability-matrix-entry.js";
 export type * as DeploymentCapabilityMatrixEntryV1 from "./deployment/v1/capability-matrix-entry.js";
+export type { DeployActionPlan } from "./deployment/v1/deploy-action-plan.js";
+export type * as DeploymentDeployActionPlanV1 from "./deployment/v1/deploy-action-plan.js";
 export type { DeploymentManifest } from "./deployment/v1/deployment-manifest.js";
 export type * as DeploymentDeploymentManifestV1 from "./deployment/v1/deployment-manifest.js";
 export type { ProblemDetails } from "./errors/v1/problem-details.js";

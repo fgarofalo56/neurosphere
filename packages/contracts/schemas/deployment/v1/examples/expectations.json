@@ -370,6 +370,41 @@
         "instance_path": "/sku"
       },
       "why": "sku has no wildcard; use null"
+    },
+    {
+      "schema": "../deploy-action-plan.schema.json",
+      "file": "deploy-action-plan/valid/fabric-create-and-reuse.json",
+      "valid": true
+    },
+    {
+      "schema": "../deploy-action-plan.schema.json",
+      "file": "deploy-action-plan/invalid/plan-hash-not-sha256.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "pattern",
+        "instance_path": "/plan_hash"
+      },
+      "why": "the plan hash is a sha256: digest"
+    },
+    {
+      "schema": "../deploy-action-plan.schema.json",
+      "file": "deploy-action-plan/invalid/unknown-resource-kind.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/resources/0/kind"
+      },
+      "why": "only the three provisioning paths exist; there is no delete kind"
+    },
+    {
+      "schema": "../deploy-action-plan.schema.json",
+      "file": "deploy-action-plan/invalid/cloud-not-a-single-cloud.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/cloud"
+      },
+      "why": "one cloud per deployment"
     }
   ]
 }

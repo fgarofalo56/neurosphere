@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "plan_id": "plan-0123456789abcdef0123456789abcdef",
+  "plan_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "deployment_id": "demo-eastus2",
+  "cloud": "commercial",
+  "resources": [
+    {
+      "service": "analytics_workspace",
+      "kind": "fabric_capacity",
+      "disposition": "create",
+      "name": "nsfdemo",
+      "region": "eastus2",
+      "sku": "F2",
+      "resource_id": null,
+      "subscription_id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "resource_group": "rg-neurosphere",
+      "consent_reference": null
+    },
+    {
+      "service": "key_vault",
+      "kind": "arm_resource",
+      "disposition": "reuse",
+      "name": "kv-shared",
+      "region": "eastus2",
+      "sku": null,
+      "resource_id": "/subscriptions/aaaaaaaa-0000-4000-8000-000000000001/resourceGroups/rg-shared/providers/Microsoft.KeyVault/vaults/kv-shared",
+      "subscription_id": null,
+      "resource_group": null,
+      "consent_reference": "consent-owner-0001"
+    }
+  ]
+}
