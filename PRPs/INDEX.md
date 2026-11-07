@@ -6,13 +6,13 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
+| [PRP-34-apim-gateway-manage](active/PRP-34-apim-gateway-manage.md) | P1 | 11/11 (100%) | merged 11 | sonnet / sonnet | required |
 | [PRP-08-deployment-intelligence-and-iac](active/PRP-08-deployment-intelligence-and-iac.md) | P1 | 15/15 (100%) | merged 15 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | PRP-08-deployment-intelligence-and-iac, PRP-17-action-executor-and-hitl, PRP-22-mcp-server-and-client, PRP-33-apim-gateway-observe | PRP-08-deployment-intelligence-and-iac (active) | sonnet / sonnet | required |
 | [PRP-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | PRP-04-frontend-shell-design-system-auth, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-10-catalog-and-relationship-governance | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
 | [PRP-10-catalog-and-relationship-governance](backlog/PRP-10-catalog-and-relationship-governance.md) | P1 | 9 | PRP-05-api-worker-runtime-and-self-observability, PRP-06-identity-authz-and-audit | - | sonnet / sonnet | required |
 | [PRP-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) | P1 | 10 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |

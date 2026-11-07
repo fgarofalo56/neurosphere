@@ -1,13 +1,13 @@
 ---
 name: PRP-34-apim-gateway-manage
-status: backlog
+status: active
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
-started: 2026-10-29
+started: 2026-11-07
 pr: 149
-branch: prp-34-apim-gateway-manage
+branch: prp-34-audit-gaps
 model: opus
 phase: 6
 ns: NS-04, NS-06, NS-07, NS-08, NS-09
@@ -281,3 +281,14 @@ Reopened after a deep audit (static read; no tests were run). The connector libr
 - Item 8: owner paths `frontend/src/pages/{gateways,actions,catalog}` do not exist (code is in `frontend/src/features/gateways/`); Playwright runs only against mock fixtures; per-step create/found is not shown, only the digest prefix and diff resources. `/catalog/publication` route and plan-preview not checked.
 - Item 9: G17 manage live gate never ran; no `docs/evidence/G17/manage-*`; the MCP echo backend is operator-supplied.
 - Depends on PRP-22 and PRP-33 being reopened first.
+
+## Audit round 2026-11-07 (execution state)
+
+Plan approved 2026-11-07 by the operator. Integration branch `prp-34-audit-gaps` cut from `main` (00eeaf2). The G17 manage live run stays OPEN (not run this round). Lanes: A wires `PublicationRecordingExecutor` into the worker runtime (`runtime/factories.py:515` builds a plain `ActionExecutor`) and proves the observe guard fails closed; B reports per-step create/found in the dry-run API and the confirmation dialog and corrects the item 8 owner paths; C carries `nscostcenter` from the gateway poller through ingest into cost tags (after B); D close-out.
+
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| R-A | todo | | sonnet | | 2026-11-07 |
+| R-B | todo | | sonnet | | 2026-11-07 |
+| R-C | todo | | sonnet | | 2026-11-07 |
+| R-D | todo | | sonnet | | 2026-11-07 |
