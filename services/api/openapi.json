@@ -8912,6 +8912,18 @@
                 "type": "null"
               }
             ]
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "pattern": "^scan-[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
           }
         },
         "required": [
@@ -11519,6 +11531,17 @@
           "consent_id": {
             "title": "Consent Id",
             "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
           },
           "scanned_at": {
             "format": "date-time",

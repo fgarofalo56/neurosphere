@@ -319,8 +319,8 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
 | 9 | merged | worktree-agent-a8afc23ef8c652947 | sonnet | ruff/pyright clean; api suite 312 passed (branch + post-merge); full suite 3896 passed on branch; opt-in NS_SCAN_ENABLED, DefaultAzureCredential excluding env secrets outside local; 08a246b, merge 0982ed0 | 2026-10-16 |
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
-| 10 | todo | | sonnet | | 2026-11-07 |
-| 11 | todo | | sonnet | | 2026-11-07 |
+| 10 | merged | worktree-agent-a65dea6badd75b5dc | sonnet | ruff/pyright clean; tests/unit/infra + tests/integration/deploy + api deployment 112 passed on branch; e54fa61. .env.example diff unverified (git read denied for that path); compose not wired | 2026-11-07 |
+| 11 | merged | worktree-agent-a5c99a59b8fa4e318 | sonnet | ruff clean, pyright 0 errors; deployment+authz+drift 220 passed, 1 expected drift fail on branch; 04e12d6. Fix-forward: regenerated openapi.json, item 10 test now attaches audit repo (item 11 fails closed w/o it); post-merge 126 passed. Deviations: scan-id errors are 422 reasons (no 404/410 type); consent now required even for created-by-tagged; audit chain readable by customer-wide audit read only | 2026-11-07 |
 | 12 | todo | | sonnet | | 2026-11-07 |
 | 13 | todo | | sonnet | | 2026-11-07 |
 

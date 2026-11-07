@@ -36,6 +36,7 @@ from neurosphere_api.deploy.scan import (
 from neurosphere_api.deploy.scan import (
     build_router as build_scan_router,
 )
+from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope import Role
 from neurosphere_core.capabilities import DeploymentProfile
 
@@ -87,6 +88,7 @@ def stack() -> tuple[Harness, MockResourceGraph]:
         policy(BOB, role(Role.ADMIN, FINANCE)),
         routers={"/v1/deploy/scan": build_scan_router(), "/v1/deploy/plan": build_plan_router()},
     )
+    h.app.state.audit_repository = AuditRepository(InMemoryAuditStore())
     reader = MockResourceGraph()
     configure_scan(h.app, ScanService(reader))
     return h, reader
