@@ -27,12 +27,14 @@ from neurosphere_core.deploy.register.models import (
     ResourceRow,
     normalize_id,
 )
+from neurosphere_core.deploy.register.scoped import CustomerScopedRegister
 from neurosphere_core.deploy.register.store import InMemoryRegisterStore, RegisterStore
 
 __all__ = [
     "Action",
     "ConsentAuditSink",
     "ConsentRecord",
+    "CustomerScopedRegister",
     "InMemoryRegisterStore",
     "LiveInventory",
     "NoOpConsentAuditSink",

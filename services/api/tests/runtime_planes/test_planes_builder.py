@@ -122,7 +122,10 @@ def test_unconfigured_write_targets_are_empty_and_a_dry_run_reports_no_write_tar
     assert "no supported write connector" in checks["write_connector_supported"]["detail"]
     # The dry run did NOT silently pass: there was nothing to plan against.
     assert checks["target_dry_run"]["status"] == "not_applicable"
-    assert frozenset({"foundry-model-swap", "apim-gateway"}) == SUPPORTED_WRITE_CONNECTORS
+    assert (
+        frozenset({"foundry-model-swap", "apim-gateway", "deploy-orchestrator"})
+        == SUPPORTED_WRITE_CONNECTORS
+    )
 
 
 def _swap_body() -> dict[str, Any]:

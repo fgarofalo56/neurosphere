@@ -59,6 +59,10 @@ class ResourceRow(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     deployment_id: str
+    #: Owning customer. Rows without one (written before this field existed) are visible to no
+    #: customer through a ``CustomerScopedRegister`` (fail closed); the operator-run uninstall
+    #: script reads the store directly and is unaffected.
+    customer_id: str | None = None
     resource_id: str
     service: str = Field(min_length=1, max_length=64)
     ownership: Ownership
@@ -73,6 +77,11 @@ class ResourceRow(BaseModel):
     @classmethod
     def _v_tokens(cls, v: str) -> str:
         return _check_token(v)
+
+    @field_validator("customer_id")
+    @classmethod
+    def _v_customer(cls, v: str | None) -> str | None:
+        return None if v is None else _check_token(v)
 
     @field_validator("resource_id")
     @classmethod

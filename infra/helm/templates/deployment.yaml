@@ -53,7 +53,8 @@ spec:
           {{- end }}
           {{- end }}
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
-          {{- if or $.Values.env $apimFront $ingestFile $scan }}
+          {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
+          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -82,6 +83,15 @@ spec:
             {{- end }}
             {{- with $.Values.scan.maxSubscriptions }}
             - name: NS_SCAN_MAX_SUBSCRIPTIONS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $deployApply }}
+            # Opt-in deploy apply / uninstall preview; unset keeps /api/v1/deploy/apply failing closed (503).
+            - name: NS_DEPLOY_APPLY_ENABLED
+              value: "true"
+            {{- with $.Values.deployApply.registerContainer }}
+            - name: NS_DEPLOY_APPLY_REGISTER_CONTAINER
               value: {{ . | quote }}
             {{- end }}
             {{- end }}

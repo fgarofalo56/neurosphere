@@ -7,6 +7,7 @@ see ZERO calls: the API only drafts, and the executor worker applies. Nothing li
 
 from __future__ import annotations
 
+import logging
 import sys
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -47,6 +48,7 @@ from neurosphere_core.deploy.fabric import (
     fabric_endpoints_for,
 )
 from neurosphere_core.deploy.register import (
+    CustomerScopedRegister,
     InMemoryRegisterStore,
     Ownership,
     ResourceRow,
@@ -54,7 +56,6 @@ from neurosphere_core.deploy.register import (
 )
 from neurosphere_core.errors import ForbiddenError
 from neurosphere_workers.actions.deploy import (
-    DEPLOY_ACTION_CONNECTORS,
     DeployConnector,
     FabricHttpObserver,
 )
@@ -114,7 +115,7 @@ class Setup:
         connector = DeployConnector(
             cloud=CloudName.COMMERCIAL,
             approvals=self.approvals,
-            register=self.register,
+            register=CustomerScopedRegister(self.register, CUSTOMER),
             fabric=FabricProvisioner(self.http, endpoints),
             observer=FabricHttpObserver(self.http, endpoints),
         )
@@ -137,14 +138,16 @@ class Setup:
             {"plan_id": plan_id, "plan_hash": plan_hash_value, "idempotency_key": key},
         )
 
-    async def seed_register(self, *, with_group: bool = False) -> None:
+    async def seed_register(
+        self, *, with_group: bool = False, customer: str | None = CUSTOMER
+    ) -> None:
         rows = [
-            _row(OWN, Ownership.CREATED),
-            _row(REUSED, Ownership.REUSED),
-            _row(SHARED, Ownership.SHARED),
+            _row(OWN, Ownership.CREATED, customer),
+            _row(REUSED, Ownership.REUSED, customer),
+            _row(SHARED, Ownership.SHARED, customer),
         ]
         if with_group:
-            rows.append(_row(RG, Ownership.CREATED))
+            rows.append(_row(RG, Ownership.CREATED, customer))
         for row in rows:
             await self.register.put_row(row)
 
@@ -154,11 +157,12 @@ def _apply_package_source() -> str:
     return "\n".join(p.read_text(encoding="utf-8") for p in package.glob("*.py"))
 
 
-def _row(rid: str, ownership: Ownership) -> ResourceRow:
+def _row(rid: str, ownership: Ownership, customer: str | None = CUSTOMER) -> ResourceRow:
     created = ownership is Ownership.CREATED
     return ResourceRow.model_validate(
         {
             "deployment_id": DEPLOYMENT,
+            "customer_id": customer,
             "resource_id": rid,
             "service": "storage",
             "ownership": ownership,
@@ -172,14 +176,8 @@ def _row(rid: str, ownership: Ownership) -> ResourceRow:
 
 
 @pytest.fixture
-def setup(monkeypatch: pytest.MonkeyPatch) -> Iterator[Setup]:
-    # The core action table is the one place a kind maps to its connector (not owned by this
-    # item); the test extends it the way the production wiring must.
-    monkeypatch.setattr(
-        core_targets,
-        "ACTION_CONNECTORS",
-        MappingProxyType({**core_targets.ACTION_CONNECTORS, **DEPLOY_ACTION_CONNECTORS}),
-    )
+def setup() -> Iterator[Setup]:
+    # The deploy kinds resolve through the real core action table (PRP-08 item 14): no patching.
     yield Setup(make_api())
 
 
@@ -401,12 +399,7 @@ def test_config_manage_is_required_on_every_route(
     assert setup.http.calls == []
 
 
-def test_unconfigured_apply_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        core_targets,
-        "ACTION_CONNECTORS",
-        MappingProxyType({**core_targets.ACTION_CONNECTORS, **DEPLOY_ACTION_CONNECTORS}),
-    )
+def test_unconfigured_apply_fails_closed() -> None:
     api = make_api()
     api.h.app.include_router(build_router(), prefix=ROUTE_PREFIX)
     response = api._send(  # pyright: ignore[reportPrivateUsage]
@@ -433,3 +426,82 @@ def test_the_router_is_registered_by_default() -> None:
     registry = RouterRegistry()
     register_default_routers(registry)
     assert ROUTE_PREFIX in registry.prefixes
+
+
+# -- production wiring (PRP-08 item 14) ---
+
+
+def test_deploy_kinds_resolve_through_the_real_action_table(setup: Setup) -> None:
+    assert core_targets.connector_name_for("deploy_plan_apply") == "deploy-orchestrator"
+    assert core_targets.connector_name_for("deploy_uninstall") == "deploy-orchestrator"
+    digest = setup.approve().json()["plan_hash"]
+    applied = setup.apply(digest)
+    assert applied.status_code == 201, applied.text
+    assert applied.json()["action"]["advisory"] is False  # a connector resolved
+
+
+def test_configure_apply_without_connector_rows_is_unsupported_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """configure_apply alone is not enough: without ACTION_CONNECTORS rows no connector resolves,
+    and apply refuses with ``write_connector_unsupported_target`` (never a pretend draft)."""
+    without = MappingProxyType(
+        {k: v for k, v in core_targets.ACTION_CONNECTORS.items() if not k.startswith("deploy_")}
+    )
+    monkeypatch.setattr(core_targets, "ACTION_CONNECTORS", without)
+    bare = Setup(make_api())
+    digest = bare.approve().json()["plan_hash"]
+    applied = bare.apply(digest)
+    assert applied.status_code == 409, applied.text
+    assert "write_connector_unsupported_target" in applied.text
+
+
+async def test_uninstall_preview_is_customer_scoped_and_leaks_no_existence(setup: Setup) -> None:
+    await setup.seed_register(customer="fabrikam")  # another customer's deployment, same id
+    body = {"deployment_id": DEPLOYMENT, "idempotency_key": "idem-deploy-uninstall-05"}
+    foreign = setup.post("/uninstall/preview", body)
+    unknown = setup.post(
+        "/uninstall/preview",
+        {"deployment_id": "nope-nope", "idempotency_key": "idem-deploy-uninstall-06"},
+    )
+    assert foreign.status_code == unknown.status_code == 422
+    assert foreign.json()["reason"] == unknown.json()["reason"] == "deployment_not_found"
+    assert foreign.json()["detail"] == unknown.json()["detail"]
+    assert OWN not in foreign.text and REUSED not in foreign.text
+
+
+async def test_rows_without_a_customer_are_visible_to_no_one(setup: Setup) -> None:
+    await setup.seed_register(customer=None)  # written before the field existed
+    response = setup.post(
+        "/uninstall/preview",
+        {"deployment_id": DEPLOYMENT, "idempotency_key": "idem-deploy-uninstall-07"},
+    )
+    assert response.status_code == 422 and response.json()["reason"] == "deployment_not_found"
+
+
+async def test_preview_sees_only_the_callers_rows_of_a_shared_deployment_id(setup: Setup) -> None:
+    await setup.seed_register()
+    theirs = f"{RG}/providers/Microsoft.Storage/storageAccounts/theirs"
+    await setup.register.put_row(_row(theirs, Ownership.CREATED, "fabrikam"))
+    response = setup.post(
+        "/uninstall/preview",
+        {"deployment_id": DEPLOYMENT, "idempotency_key": "idem-deploy-uninstall-08"},
+    )
+    assert response.status_code == 201, response.text
+    assert "theirs" not in response.text
+
+
+def test_approval_store_logs_eviction_without_secrets(
+    setup: Setup, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from neurosphere_api.deploy.apply import approvals as approvals_module
+
+    monkeypatch.setattr(approvals_module, "_MAX_ENTRIES", 1)
+    first, second = "plan-0123456789abcdef0123456789abcde1", "plan-0123456789abcdef0123456789abcde2"
+    with caplog.at_level(logging.WARNING, logger="neurosphere_api.deploy.apply"):
+        assert setup.approve(_plan(plan_id=first)).status_code == 201
+        assert setup.approve(_plan(plan_id=second)).status_code == 201
+    evictions = [r for r in caplog.records if getattr(r, "event", "") == "deploy.approval_evicted"]
+    assert len(evictions) == 1
+    assert evictions[0].plan_id == first  # type: ignore[attr-defined]  # pyright: ignore
+    assert SUB not in caplog.text and CUSTOMER not in caplog.text

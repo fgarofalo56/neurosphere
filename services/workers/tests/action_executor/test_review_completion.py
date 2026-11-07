@@ -226,6 +226,8 @@ def test_worker_uses_the_one_core_action_kind_table() -> None:
         "mcp_server_publish": "apim-gateway",
         "mcp_server_unpublish": "apim-gateway",
         "gateway_mode_change": "apim-gateway",
+        "deploy_plan_apply": "deploy-orchestrator",
+        "deploy_uninstall": "deploy-orchestrator",
     }
     assert ACTION_KIND in DEFAULT_ACTION_CONNECTORS
     assert FAKE_CONNECTOR not in DEFAULT_ACTION_CONNECTORS.values()

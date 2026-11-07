@@ -72,6 +72,7 @@ from neurosphere_core.clients.factories import (
     ENV_COSMOS_KEY,
 )
 from neurosphere_core.cloud import Settings, load_settings
+from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError, ValidationIssue
 from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
 from neurosphere_core.evaluation.judge import RecordedFixtureJudge
@@ -106,6 +107,7 @@ from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
 from neurosphere_core.stores import ensure_local_containers
 from pydantic import ValidationError
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from neurosphere_workers.actions import (
     ActionExecutor,
@@ -120,6 +122,7 @@ from neurosphere_workers.actions.apim import (
     build_apim_gateway_connector,
     build_http_apim_gateway_connector,
 )
+from neurosphere_workers.actions.deploy import DeployConnector, PlanApprovals
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
@@ -178,11 +181,15 @@ from neurosphere_workers.runtime.supervisor import RoleFactory, RoleRunnable
 __all__ = [
     "BUILDERS",
     "SUPPORTED_WRITE_CONNECTORS",
+    "DeploySources",
+    "DeployWriteSettings",
     "RoleBuilder",
     "RuntimeConfig",
     "WriteTargetSeams",
     "WriteTargetSources",
+    "load_deploy_write_settings",
     "load_write_target_settings",
+    "register_deploy_target",
     "register_write_targets",
     "role_factories",
 ]
@@ -560,6 +567,7 @@ async def _action_write_targets(
     """The executor's registry, plus the gateway registry its APIM binding check reads."""
     try:
         foundry, apim = load_write_target_settings()
+        deploy = load_deploy_write_settings()
     except ValueError:
         raise RoleConfigError("write_target_settings_invalid") from None
     gateways: CosmosGatewayStore | None = None
@@ -580,6 +588,9 @@ async def _action_write_targets(
         foundry=foundry,
         apim=apim,
         sources=sources,
+        # No durable PlanApprovals exists yet (the approval store is per API process), so an
+        # enabled deploy target is skipped here with `deploy_sources_unconfigured`: fail closed.
+        deploy=deploy,
     )
     return registry, gateways
 
@@ -879,6 +890,7 @@ class WriteTargetSources:
 
     gateway_store: GatewayStore | None = None
     records_for: Callable[[GatewayRegistration], ApplyRecords] | None = None
+    deploy: DeploySources | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -889,6 +901,37 @@ class WriteTargetSeams:
     foundry_http: httpx.AsyncClient | None = None
     apim_arm: GatewayArm | None = None
     apim_records: ApplyRecords | None = None
+
+
+class DeployWriteSettings(BaseSettings):
+    """``NS_DEPLOY_APPLY_ENABLED`` (PRP-08 item 14): opt-in for the deploy write connector.
+
+    OFF by default. Even when set, the connector is registered only when its collaborators
+    (:class:`DeploySources`) are supplied; there is no secret in this setting.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_DEPLOY_APPLY_", frozen=True, extra="ignore")
+
+    enabled: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class DeploySources:
+    """Collaborators of the deploy connector. ``approvals`` must be readable by the process that
+    executes (a per-process in-memory store is only valid where API and executor share it);
+    ``register`` is wrapped to the deployment's customer here, never used unscoped."""
+
+    approvals: PlanApprovals | None = None
+    register: RegisterStore | None = None
+    inventory: LiveInventory | None = None
+
+
+def load_deploy_write_settings() -> DeployWriteSettings:
+    """``NS_DEPLOY_APPLY_*``; a malformed value raises ``ValueError``."""
+    try:
+        return DeployWriteSettings()
+    except ValidationError:
+        raise ValueError("deploy write settings are invalid") from None
 
 
 def load_write_target_settings() -> tuple[FoundryWriteSettings, ApimWriteSettings]:
@@ -1023,6 +1066,39 @@ async def _apim_target(
     )
 
 
+def register_deploy_target(
+    registry: WriteTargetRegistry,
+    *,
+    settings: Settings,
+    customer_id: str | None,
+    deploy: DeployWriteSettings,
+    sources: DeploySources | None,
+) -> bool:
+    """Register the deploy connector when opted in and fully wired; True when registered.
+
+    Fail closed: disabled is silent; enabled without a customer or without approvals/register
+    collaborators is skipped with a logged reason (the deploy intents stay advisory and nothing
+    acts). The register is wrapped to ``customer_id`` so the connector can neither read nor write
+    another customer's rows. No Fabric/ARM provisioner is supplied here, so an apply of a
+    resource that needs one stays ``capability_unavailable``; uninstall is dry-run only.
+    """
+    if not deploy.enabled:
+        return False
+    if customer_id is None:
+        _skipped("deploy", "customer_id_missing")
+        return False
+    if sources is None or sources.approvals is None or sources.register is None:
+        _skipped("deploy", "deploy_sources_unconfigured")
+        return False
+    connector = DeployConnector(
+        cloud=settings.cloud_profile.cloud,
+        approvals=sources.approvals,
+        register=CustomerScopedRegister(sources.register, customer_id),
+        inventory=sources.inventory,
+    )
+    return _register(registry, "deploy", connector)
+
+
 async def register_write_targets(
     registry: WriteTargetRegistry,
     *,
@@ -1033,13 +1109,15 @@ async def register_write_targets(
     apim: ApimWriteSettings,
     sources: WriteTargetSources | None = None,
     seams: WriteTargetSeams | None = None,
+    deploy: DeployWriteSettings | None = None,
 ) -> tuple[str, ...]:
     """Register the configured write connectors into ``registry``; returns its names.
 
-    Foundry first, then APIM (deterministic). Disabled targets are silent; enabled ones that
-    cannot be registered are skipped with a logged reason. Infrastructure errors from a factory
-    (ARM or the gateway registry unreachable) propagate: the worker supervisor retries the role,
-    and the API startup hook logs them and leaves the registry without that target.
+    Foundry first, then APIM, then deploy (deterministic; ``deploy`` None = off). Disabled
+    targets are silent; enabled ones that cannot be registered are skipped with a logged reason.
+    Infrastructure errors from a factory (ARM or the gateway registry unreachable) propagate:
+    the worker supervisor retries the role, and the API startup hook logs them and leaves the
+    registry without that target.
     """
     seams = seams or WriteTargetSeams()
     sources = sources or WriteTargetSources()
@@ -1050,6 +1128,14 @@ async def register_write_targets(
     connector = await _apim_target(apim, settings, customer_id, lifetime, sources, seams, lazy.get)
     if connector is not None:
         _register(registry, "apim", connector)
+    if deploy is not None:
+        register_deploy_target(
+            registry,
+            settings=settings,
+            customer_id=customer_id,
+            deploy=deploy,
+            sources=sources.deploy,
+        )
     return registry.names()
 
 
