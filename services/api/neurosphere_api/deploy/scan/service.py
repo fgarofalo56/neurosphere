@@ -7,8 +7,10 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from neurosphere_core.errors import ForbiddenError
+from neurosphere_core.errors import ForbiddenError, NeuroSphereError
+from neurosphere_core.scope import IdentityScope
 
+from neurosphere_api.deploy.scan.audit import ENTITY_SCAN, OP_SCAN, DeployAuditor, opaque_id
 from neurosphere_api.deploy.scan.graph import SCAN_QUERY, TYPE_CATEGORY, ResourceGraphReader
 from neurosphere_api.deploy.scan.models import (
     ConsentRecord,
@@ -18,6 +20,7 @@ from neurosphere_api.deploy.scan.models import (
     SubscriptionScan,
 )
 from neurosphere_api.deploy.scan.settings import ScanSettings
+from neurosphere_api.deploy.scan.store import ScanStore
 
 _NOT_VISIBLE_NOTE = "Not readable by the calling identity; nothing was scanned."
 
@@ -66,6 +69,47 @@ class ScanService:
         self._reader = reader
         self._settings = settings or ScanSettings()
         self._clock = clock
+        self._store = ScanStore(self._settings.result_ttl_seconds, clock)
+
+    def stored_scan(self, scope: IdentityScope, scan_id: str) -> ScanResponse:
+        """A scan this caller created (forbidden for another caller; typed error if gone)."""
+        return self._store.get(scope, scan_id)
+
+    async def scan_for(
+        self, scope: IdentityScope, request: ScanRequest, auditor: DeployAuditor
+    ) -> ScanResponse:
+        """Scan, audit (consent decision + scan), and store the result under a scan id."""
+        consent_ref = opaque_id("consent", request.consent.consent_id) if request.consent else None
+        try:
+            result = await self.scan(request)
+        except NeuroSphereError as exc:
+            if consent_ref is not None and exc.reason == "consent_not_covering":
+                await auditor.consent_decision(
+                    request.consent.consent_id if request.consent else "",
+                    granted=False,
+                    state={"subscriptions": sorted(request.subscription_ids)},
+                )
+            await auditor.refused(OP_SCAN, exc, target=None, entity=ENTITY_SCAN)
+            raise
+        stored = self._store.issue(scope, result)
+        scan_id = stored.scan_id or ""
+        await auditor.consent_decision(
+            result.consent_id,
+            granted=True,
+            state={"subscriptions": sorted(request.subscription_ids)},
+        )
+        await auditor.scan_completed(
+            scan_id,
+            {
+                "consent": consent_ref,
+                "requested": sorted(request.subscription_ids),
+                "visible": sorted(
+                    s.subscription_id for s in result.subscriptions if s.status == "visible"
+                ),
+                "resources": sum(len(s.resources) for s in result.subscriptions),
+            },
+        )
+        return stored
 
     async def scan(self, request: ScanRequest) -> ScanResponse:
         consent = _check_consent(request)
