@@ -51,7 +51,7 @@ from neurosphere_core.actions import ActionAuditor, ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
-from neurosphere_core.actions.targets import ACTION_CONNECTORS
+from neurosphere_core.actions.targets import ACTION_CONNECTORS, APIM_GATEWAY_CONNECTOR
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.repository import AuditRepository
@@ -118,6 +118,8 @@ from neurosphere_workers.actions import (
 from neurosphere_workers.actions.apim import (
     ApplyRecords,
     GatewayArm,
+    PublicationRecorder,
+    PublicationRecordingExecutor,
     apim_record_store,
     build_apim_gateway_connector,
     build_http_apim_gateway_connector,
@@ -148,6 +150,7 @@ from neurosphere_workers.projections.outbox import (
     OutboxReader,
     SinkHandler,
 )
+from neurosphere_workers.publication import CatalogPublicationRecorder, CosmosApplyRecordLookup
 from neurosphere_workers.recommendations.pipeline import run_pipeline
 from neurosphere_workers.recommendations.projection.models import CandidatePairConfig
 from neurosphere_workers.runtime.adapters import (
@@ -164,7 +167,7 @@ from neurosphere_workers.runtime.archive_reader import (
     ArchiveTraceEventSource,
 )
 from neurosphere_workers.runtime.checkpoint import CheckpointStore, CosmosRuntimeCheckpointStore
-from neurosphere_workers.runtime.identity import build_identity, build_policy_stack
+from neurosphere_workers.runtime.identity import PolicyStack, build_identity, build_policy_stack
 from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
 from neurosphere_workers.runtime.roles import RoleConfigError
 from neurosphere_workers.runtime.settings import (
@@ -187,6 +190,7 @@ __all__ = [
     "RuntimeConfig",
     "WriteTargetSeams",
     "WriteTargetSources",
+    "compose_action_executor",
     "load_deploy_write_settings",
     "load_write_target_settings",
     "register_deploy_target",
@@ -512,9 +516,11 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
     # capability_unavailable (no connector call, no pretend change).
     registry, gateways = await _action_write_targets(cfg, lifetime, cosmos)
     hitl = _hitl_service(cfg, cosmos, audit)
-    executor = ActionExecutor(
+    executor = compose_action_executor(
         service,
         registry,
+        auditor=auditor,
+        recorder=_publication_recorder(cfg, cosmos, audit, stack, registry),
         execution_control=control,
         worker_id=cfg.worker.worker_id or f"{socket.gethostname()}-{os.getpid()}",
         on_finished=ReviewItemCompletion(hitl, auditor=auditor),
@@ -528,6 +534,49 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
         actions=service,
         auditor=auditor,
         checkpoints=_runtime_checkpoints(cfg, cosmos),
+    )
+
+
+def compose_action_executor(
+    service: ActionService,
+    registry: WriteTargetRegistry,
+    *,
+    auditor: ActionAuditor,
+    recorder: PublicationRecorder | None,
+    **options: Any,
+) -> ActionExecutor:
+    """The plain executor, or (with a ``recorder``) the one that hands a succeeded, verified
+    Grant/McpServer publication to the catalog after the executor has returned (PRP-34 item 10)."""
+    if recorder is None:
+        return ActionExecutor(service, registry, **options)
+    return PublicationRecordingExecutor(
+        service, registry, recorder=recorder, auditor=auditor, **options
+    )
+
+
+def _publication_recorder(
+    cfg: RuntimeConfig,
+    cosmos: CosmosClient,
+    audit: AuditRepository,
+    stack: PolicyStack,
+    registry: WriteTargetRegistry,
+) -> CatalogPublicationRecorder | None:
+    """The catalog recorder, only when an APIM gateway connector is registered.
+
+    The recorder writes with the worker's OWN derived workload scope (it needs ``catalog.curate``
+    in the entity's domain); ``RoleConfigError`` when that identity is not configured, so a
+    publishing worker never silently runs without its provenance hand-off.
+    """
+    if APIM_GATEWAY_CONNECTOR not in registry.names():
+        return None
+    identity = build_identity(
+        cfg.settings, stack=stack, worker=cfg.worker, customer_id=cfg.customer_id
+    )
+    return CatalogPublicationRecorder(
+        CosmosCatalogRepository(_database(cfg, cosmos).get_container_client(_CATALOG_CONTAINER)),
+        audit,
+        identity.scope_provider,
+        records=CosmosApplyRecordLookup(cosmos, database=cfg.store.database),
     )
 
 

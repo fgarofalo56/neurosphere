@@ -33,6 +33,11 @@ stored intent to an injected recorder (the catalog side,
 failure never changes the intent, the gateway or the outcome: it is audited
 (``catalog.publication_record`` ``failed``), logged, and surfaced on the report as reason
 ``publication_record_failed``, and the catalog routes stay the manual retry path.
+
+Wired in production: the ``actions`` role (``runtime.factories.build_actions``) builds this
+executor with a ``CatalogPublicationRecorder`` (the worker's own workload scope, the catalog
+container, the audit chain and the ``gateways`` apply records) whenever an APIM gateway connector
+is registered; with none registered it keeps the plain ``ActionExecutor``.
 """
 
 from __future__ import annotations
