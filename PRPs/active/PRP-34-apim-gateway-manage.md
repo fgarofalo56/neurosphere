@@ -289,6 +289,6 @@ Plan approved 2026-11-07 by the operator. Integration branch `prp-34-audit-gaps`
 | Item | Status | Branch / worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
 | R-A | merged | worktree-agent-adb41f6deadd0c1ab | sonnet | f245f78, merged into prp-34-audit-gaps; reviewed APPROVE (no rework); action_executor 181 passed, workers+apim connector 802 passed, ruff, pyright clean. Real Cosmos/Entra path in `_publication_recorder` untested (fakes only). Follow-ups: runbook line that APIM-enabled actions workers need NS_WORKER_OBJECT_ID; confirm worker principal holds catalog.curate in publishing domains; keep compose_action_executor private | 2026-11-07 |
-| R-B | todo | | sonnet | | 2026-11-07 |
-| R-C | todo | | sonnet | | 2026-11-07 |
+| R-B | merged | worktree-agent-a3c60017052c29473 | sonnet | c6e1a4e, merged; reviewed APPROVE (no rework); actions_api+gateway_api+openapi drift+connector 357 passed, post-merge 239 passed; frontend 1042 passed, tsc, eslint, Playwright gateways 15 passed, ruff, pyright, validate_planning PASS. Real owner paths are `frontend/src/features/actions/` and `services/api/neurosphere_api/actions/`. Steps show only when the connector plan() reads a registered manage-mode gateway (fakes, not live ARM). Follow-ups: get() adds ARM reads per poll of an awaiting_confirmation intent (cache or restrict); silent except in `_with_plan_steps` needs a class-only debug log | 2026-11-07 |
+| R-C | in-progress | | sonnet | | 2026-11-07 |
 | R-D | todo | | sonnet | | 2026-11-07 |
