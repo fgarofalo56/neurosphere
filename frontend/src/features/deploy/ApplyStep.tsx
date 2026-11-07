@@ -532,7 +532,7 @@ export function ApplyStep({ plan, domainId }: ApplyStepProps): ReactElement {
   if (domainId === "") {
     return (
       <div data-testid="apply-domain-required">
-        <EmptyState title={STRINGS.applyNeedDomain} />
+        <Text>{STRINGS.applyNeedDomain}</Text>
       </div>
     );
   }
@@ -540,7 +540,7 @@ export function ApplyStep({ plan, domainId }: ApplyStepProps): ReactElement {
     <div className={styles.stack}>
       {plan === null ? (
         <div data-testid="apply-plan-required">
-          <EmptyState title={STRINGS.applyNeedPlan} />
+          <Text>{STRINGS.applyNeedPlan}</Text>
         </div>
       ) : (
         <Approve key={plan.plan.plan_id} plan={plan.plan} domainId={domainId} />

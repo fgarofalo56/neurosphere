@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `37fe7f5386d7dbf975c6fff973a06494d29fe6ff`. Generated: 2026-11-05.
+> Source commit: `9f478146f48423dcba141896c421bc587829d999`. Generated: 2026-11-07.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 136 operations on 121 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 139 operations on 124 paths.
 
 ## Status and verification
 
@@ -99,6 +99,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | copilot | DELETE | `/api/v1/copilot/conversations/{conversation_id}` | Delete Conversation |
 | copilot | POST | `/api/v1/copilot/conversations/{conversation_id}/messages` | Post Message |
 | dashboards | GET | `/api/v1/dashboards/domains/{domain}/{metric}` | Get Dashboard |
+| deploy | POST | `/api/v1/deploy/apply/domains/{domain}/plans/apply` | Apply Plan |
+| deploy | POST | `/api/v1/deploy/apply/domains/{domain}/plans/approve` | Approve Plan |
+| deploy | POST | `/api/v1/deploy/apply/domains/{domain}/uninstall/preview` | Preview Uninstall |
 | deploy | POST | `/api/v1/deploy/plan` | Plan |
 | deploy | POST | `/api/v1/deploy/scan` | Scan |
 | deploy | POST | `/v1/deploy/plan` | Plan |
@@ -747,6 +750,32 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Responses: `200` `DashboardResponse`; `422` `HTTPValidationError`
 
 ### Tag: deploy
+
+#### POST `/api/v1/deploy/apply/domains/{domain}/plans/apply`
+
+- Operation id: `apply_plan_api_v1_deploy_apply_domains__domain__plans_apply_post`
+- Summary: Apply Plan
+- Parameters: `domain` (path, required)
+- Request body: application/json: `ApplyBody` (required)
+- Responses: `201` `ApplyView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/deploy/apply/domains/{domain}/plans/approve`
+
+- Operation id: `approve_plan_api_v1_deploy_apply_domains__domain__plans_approve_post`
+- Summary: Approve Plan
+- Parameters: `domain` (path, required)
+- Request body: application/json: `ApprovePlanBody` (required)
+- Responses: `201` `ApprovedPlanView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/deploy/apply/domains/{domain}/uninstall/preview`
+
+**Preview/unverified**
+
+- Operation id: `preview_uninstall_api_v1_deploy_apply_domains__domain__uninstall_preview_post`
+- Summary: Preview Uninstall
+- Parameters: `domain` (path, required)
+- Request body: application/json: `UninstallPreviewBody` (required)
+- Responses: `201` `UninstallPreviewView`; `422` `HTTPValidationError`
 
 #### POST `/api/v1/deploy/plan`
 
