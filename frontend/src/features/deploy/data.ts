@@ -1,12 +1,26 @@
 import { createMutationHook, createQueryHook } from "../../api/index.js";
-import { capabilitiesPath, deployPlanPath, deployScanPath } from "./paths";
+import {
+  applyPlanPath,
+  approvePlanPath,
+  capabilitiesPath,
+  deployPlanPath,
+  deployScanPath,
+  uninstallPreviewPath,
+} from "./paths";
 import type {
+  ApplyRequest,
+  ApplyView,
+  ApprovedPlanView,
+  ApprovePlanRequest,
   CapabilityMatrixView,
   CapabilityRow,
+  DomainVars,
   PlanRequest,
   PlanResponse,
   ScanRequest,
   ScanResponse,
+  UninstallPreviewRequest,
+  UninstallPreviewView,
 } from "./types";
 
 export const useScan = createMutationHook<ScanRequest, ScanResponse>({
@@ -15,6 +29,22 @@ export const useScan = createMutationHook<ScanRequest, ScanResponse>({
 
 export const usePlan = createMutationHook<PlanRequest, PlanResponse>({
   mutate: (client, body) => client.post<PlanResponse>(deployPlanPath(), body),
+});
+
+export const useApprovePlan = createMutationHook<DomainVars<ApprovePlanRequest>, ApprovedPlanView>({
+  mutate: (client, v) => client.post<ApprovedPlanView>(approvePlanPath(v.domainId), v.body),
+});
+
+export const useApplyPlan = createMutationHook<DomainVars<ApplyRequest>, ApplyView>({
+  mutate: (client, v) => client.post<ApplyView>(applyPlanPath(v.domainId), v.body),
+});
+
+export const useUninstallPreview = createMutationHook<
+  DomainVars<UninstallPreviewRequest>,
+  UninstallPreviewView
+>({
+  mutate: (client, v) =>
+    client.post<UninstallPreviewView>(uninstallPreviewPath(v.domainId), v.body),
 });
 
 export interface CapabilityFilter {

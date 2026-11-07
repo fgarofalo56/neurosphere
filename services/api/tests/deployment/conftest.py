@@ -23,6 +23,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 )
 from azure.core.credentials import AccessToken
 from fastapi import APIRouter
+from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope import Role
 
 #: Holds ``config.manage`` (admin role).
@@ -59,11 +60,13 @@ def mount() -> Callable[[dict[str, APIRouter]], Harness]:
     """Build an authz-configured app with an admin and a viewer, mounting ``routers``."""
 
     def build(routers: dict[str, APIRouter]) -> Harness:
-        return harness(
+        h = harness(
             policy(ADMIN, role(Role.ADMIN, FINANCE)),
             policy(VIEWER, role(Role.VIEWER, FINANCE)),
             routers=routers,
         )
+        h.app.state.audit_repository = AuditRepository(InMemoryAuditStore())
+        return h
 
     return build
 

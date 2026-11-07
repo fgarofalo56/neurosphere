@@ -75,6 +75,8 @@ class ScanResponse(BaseModel):
 
     visibility_limited: Literal[True] = True
     visibility_note: str = VISIBILITY_NOTE
+    #: Server-issued id the planner can consume (None for a scan not stored server-side).
+    scan_id: str | None = None
     consent_id: str
     scanned_at: datetime
     subscriptions: list[SubscriptionScan]

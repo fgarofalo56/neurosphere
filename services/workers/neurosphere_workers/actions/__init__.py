@@ -19,6 +19,7 @@ from neurosphere_workers.actions.completion import (
     ReviewItemCompletion,
     ReviewItemOutcomes,
 )
+from neurosphere_workers.actions.deploy import DEPLOY_ACTION_CONNECTORS, DeployConnector
 from neurosphere_workers.actions.executor import (
     APPLY_FAILED_RESTORE_FAILED,
     APPLY_FAILED_RESTORED,
@@ -59,12 +60,14 @@ __all__ = [
     "DEFAULT_ORPHAN_GRACE",
     "DEFAULT_PASS_INTERVAL",
     "DEFAULT_RECONCILE_BATCH_LIMIT",
+    "DEPLOY_ACTION_CONNECTORS",
     "LEASE_LOST",
     "RECONCILE_OPERATION",
     "ROLLBACK_FAILED",
     "ActionExecutor",
     "ActionExecutorWorker",
     "CanaryProbe",
+    "DeployConnector",
     "ExecutionReport",
     "FinishedHook",
     "ReconcileOutcome",

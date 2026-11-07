@@ -1,11 +1,11 @@
 ---
 name: PRP-08-deployment-intelligence-and-iac
-status: backlog
+status: active
 priority: P1
 order: 8
-started: 2026-10-16
+started: 2026-11-07
 pr: 43
-branch: prp-08-deployment-intelligence
+branch: prp-08-audit-gap-closure
 review: required
 created: 2026-10-08
 model: sonnet
@@ -223,6 +223,58 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
 - Acceptance criteria: with the opt-in setting the app serves scan through `HttpxResourceGraphReader` using the cloud profile's management host and a managed-identity/default credential (no secrets); without it the route returns 503; credential/client closed on shutdown.
 - Tests to write: `services/api/tests/deployment/test_scan_bootstrap.py`.
 
+### Item 10 - scan-enablement-and-e2e  [P] (added at re-plan approval 2026-11-07, audit gap closure)
+- Deliverable: deployments actually serve the scan route: `NS_SCAN_ENABLED` and the scan settings exposed as Helm values, App Service app settings, `.env.example` (names only) and compose; an API-level scan-to-plan test against mock Resource Graph.
+- Owned files (may edit): `infra/helm/`, `infra/appservice/`, `.env.example`, `tests/integration/deploy/test_scan_to_plan.py` (new).
+- Must NOT touch: `services/`, `packages/`, `infra/bicep/`, `infra/scripts/`, root `pyproject.toml`, `docker-compose.yml` (sequence separately if compose change is needed), `.github/workflows/`.
+- Depends on: none.
+- Acceptance criteria:
+  - Helm and App Service render the scan opt-in from one values key, default off (fail closed, 503 unchanged); `helm lint`/`helm template` still pass and `test_helm_render` extended.
+  - Scan-to-plan test: authorized subscriptions A and B only, plan consumes the scan result and marks unconsented shared services `needs_consent`.
+  - No secret literal; `.env.example` has names only.
+- Tests to write: extend `tests/unit/infra/test_helm_render.py`, new `tests/integration/deploy/test_scan_to_plan.py`.
+
+### Item 11 - audit-and-consent-hardening  [P] (added 2026-11-07; closes #35, #36, #37)
+- Deliverable: consent is never inferred from resource tags (#35); scan, plan and consent decisions emit audit events through the PRP-06 audit interface (#37); the plan accepts a server-side scan id issued by the scan service, with the body-supplied scan kept as a validated fallback (#36).
+- Owned files (may edit): `services/api/neurosphere_api/deploy/scan/`, `services/api/neurosphere_api/deploy/plan/`, `services/api/tests/deployment/`.
+- Must NOT touch: `services/api/neurosphere_api/routers.py`, `openapi.json` (item 12 regenerates), `packages/`, `infra/`, root `pyproject.toml`.
+- Depends on: none.
+- Acceptance criteria:
+  - A resource tagged as owner-consented without a recorded consent reference is `needs_consent`.
+  - Scan, plan build and consent each produce one audit event carrying actor, scope and target; no event contains a credential or subscription secret.
+  - A plan referencing a scan id the caller did not create returns `forbidden`; an expired or unknown id returns a typed 404/410.
+- Tests to write: extend `services/api/tests/deployment/test_scan.py`, `test_plan.py`.
+
+### Item 12 - apply-and-uninstall-api  (added 2026-11-07; review: required)
+- Deliverable: an approve-plan -> apply action and an uninstall dry-run endpoint, both through the existing durable action executor (confirm exact target/version/diff, recheck permission, audit, verify actual change). `FabricProvisioner` gets its first non-test caller, gated by the capability matrix. The R1 live-inventory guard before any RG delete stays mandatory.
+- Owned files (may edit): `services/api/neurosphere_api/deploy/apply/` (new), `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `services/api/tests/deployment/test_apply.py` (new). Widened at sign-off 2026-11-07: new deploy target adapter files in `services/workers/neurosphere_workers/actions/` (new files plus its single registration line only; do not modify `apim.py`, `executor.py` logic), the deploy intent kind/contract it needs under `packages/contracts/` (edit schema sources and regenerate; never hand-edit generated models), and matching tests under `services/workers/tests/` and `packages/contracts/tests/`.
+- Must NOT touch: `services/api/neurosphere_api/deploy/scan/`, `.../deploy/plan/`, `packages/core/neurosphere_core/deploy/register/` (call only), `infra/scripts/uninstall.py` (call only), `infra/bicep/`, root `pyproject.toml`.
+- Depends on: Item 11.
+- Acceptance criteria:
+  - Apply without an approved plan or with a changed plan hash is refused; the executor rechecks permission at execution.
+  - Uninstall endpoint is dry-run only through the API: it lists `reused`/`shared` as untouched and cannot reach a delete path for them.
+  - Fabric unavailable per matrix -> `capability_unavailable`, zero HTTP calls; no paid or live call in tests.
+  - Route inventory (`undeclared_routes`) stays empty; OpenAPI drift test passes.
+- Tests to write: `services/api/tests/deployment/test_apply.py`.
+
+### Item 13 - deploy-ui-apply-step  (added 2026-11-07)
+- Deliverable: Apply and Uninstall-preview step in the existing deploy wizard showing exact target, version and diff, disabled options with reasons, and approval state.
+- Owned files (may edit): `frontend/src/features/deploy/`, `frontend/tests/mock-api/features/deploy.ts`, `frontend/tests/e2e/deploy/`.
+- Must NOT touch: `services/`, `packages/`, `infra/`, `frontend/src/app/` (routes already registered), root configs.
+- Depends on: Item 12.
+- Acceptance criteria:
+  - Vitest and the deploy e2e spec pass; no hidden-navigation-as-authorization (API denies).
+  - Typecheck and lint clean for the feature folder.
+- Tests to write: extend `frontend/src/features/deploy/deploy.test.tsx` and `frontend/tests/e2e/deploy/deploy.spec.ts`.
+
+### Item 14 - deploy-apply-production-wiring  (added 2026-11-07 after item 12 review; review: required)
+- Deliverable: make the item-12 apply/preview routes reachable in a real deployment, opt-in and fail-closed like scan: `DEPLOY_ACTION_CONNECTORS` rows in the core targets table, `DeployConnector` registered in the worker runtime factories, `configure_apply` called from `main.py` behind an opt-in setting (unconfigured stays 503, plumbed through Helm/App Service/`.env.example` names only). Also close the reviewer follow-up: uninstall preview must be customer-scoped (register rows carry or are partitioned by customer; reading another customer's deployment id returns not-found/forbidden). Add the test that wiring `configure_apply` with no connector rows yields `write_connector_unsupported_target`, and log approval-store eviction.
+- Owned files (may edit): `packages/core/neurosphere_core/actions/targets.py` (deploy rows only), `packages/core/neurosphere_core/deploy/register/`, `services/workers/neurosphere_workers/` (runtime factory registration only), `services/api/neurosphere_api/main.py`, `services/api/neurosphere_api/deploy/apply/`, `infra/helm/`, `infra/appservice/`, `.env.example`, and tests beside each.
+- Must NOT touch: `deploy/scan/`, `deploy/plan/`, `frontend/`, `infra/bicep/`, `infra/scripts/uninstall.py` logic, `apim.py`, executor core logic, root `pyproject.toml`.
+- Depends on: Item 12.
+- Acceptance criteria: with the opt-in set, a drafted deploy intent resolves a connector (`connector_for` is not None) and apply/preview routes serve; without it they return 503; a caller in customer A cannot preview customer B's deployment; the R1 guard and dry-run-only uninstall are unchanged; route inventory and OpenAPI drift pass.
+- Tests to write: extend `services/api/tests/deployment/test_apply.py`, `packages/core/tests/deploy/test_register.py`, worker factory test, helm render test.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -275,6 +327,11 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
 | 9 | merged | worktree-agent-a8afc23ef8c652947 | sonnet | ruff/pyright clean; api suite 312 passed (branch + post-merge); full suite 3896 passed on branch; opt-in NS_SCAN_ENABLED, DefaultAzureCredential excluding env secrets outside local; 08a246b, merge 0982ed0 | 2026-10-16 |
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
+| 10 | merged | worktree-agent-a65dea6badd75b5dc | sonnet | ruff/pyright clean; tests/unit/infra + tests/integration/deploy + api deployment 112 passed on branch; e54fa61. .env.example diff unverified (git read denied for that path); compose not wired | 2026-11-07 |
+| 11 | merged | worktree-agent-a5c99a59b8fa4e318 | sonnet | ruff clean, pyright 0 errors; deployment+authz+drift 220 passed, 1 expected drift fail on branch; 04e12d6. Fix-forward: regenerated openapi.json, item 10 test now attaches audit repo (item 11 fails closed w/o it); post-merge 126 passed. Deviations: scan-id errors are 422 reasons (no 404/410 type); consent now required even for created-by-tagged; audit chain readable by customer-wide audit read only | 2026-11-07 |
+| 12 | merged | worktree-agent-a03c5c46ba560cc04 | sonnet | ownership widened to workers actions + contracts (user sign-off 2026-11-07). Branch: ruff clean, pyright 0 errors, 2335 + 2196 passed (agent), 169 targeted re-run by orchestrator on branch and post-merge; review (one pass): APPROVE, no blockers; 9f47814, merge 54ca646. Edited connectors/sdk-python WriteAction literal (own commit e2c03f8). NOT wired in production: ACTION_CONNECTORS rows, worker factory registration, configure_apply from main.py; approval store in-memory | 2026-11-07 |
+| 13 | merged | worktree-agent-a8ad14fab578c95cb | sonnet | vitest deploy 22 passed, tsc clean, eslint clean (re-run by orchestrator on branch and post-merge); agent e2e tests/e2e/deploy 10 passed (ports 5391/5392); 37851c4, merge 0ff44f1. UI reflects real API state: 503 apply_not_configured, dry-run only, success shown only on succeeded + verify_matched | 2026-11-07 |
+| 14 | merged | worktree-agent-a398790022a6fb494 | sonnet | ruff clean, pyright 0 errors; 640 passed (core/api/workers/infra/integration) on branch and post-merge by orchestrator; review (one pass): APPROVE, no blockers; b9a6150, merge c719e01. NOT end-to-end: no durable PlanApprovals, so worker skips DeployConnector (deploy_sources_unconfigured); no ARM/Fabric provisioner wired; API connector dry-run only. Follow-ups: durable approvals + provisioners, register etag/concurrency, target-customer mismatch test, operator backfill for customer-less rows | 2026-11-07 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
@@ -294,6 +351,16 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
   - Uninstall real removal (ArmDeleter + live inventory) never run live: OPEN (#40).
   - G12 emulator/mock limits: mocked Resource Graph cannot reproduce real subscription visibility, quota or capacity APIs (eastus2 Search capacity was only found live); the Cosmos emulator used by the register integration test has no Entra RBAC or RU accounting; Fabric adapter is stub-tested only.
 - Follow-ups: #35 tag-trusted consent skip, #36 scan in request body, #37 audit events for scan/plan/consent, #38 uninstall api-version table, #39 Government Fabric token scope, #40 live uninstall exercise, #41 record G01 findings in RESEARCH-AND-GATES, #42 frontend container shape (PRP-13).
+
+## Audit gap closure 2026-11-07 (items 10-14)
+
+Branch `prp-08-audit-gap-closure`. Closed: scan opt-in exposed in Helm/App Service/`.env.example` (item 10); consent no longer tag-trusted (#35), plan can use a server-side scan id (#36), audit events for scan/plan/consent (#37) (item 11); apply approval + apply + dry-run uninstall preview through the durable action executor, with a deploy intent contract and a worker `DeployConnector` (item 12, reviewed APPROVE); opt-in production wiring in the API, core connector table rows and customer-scoped register reads (item 14, reviewed APPROVE); deploy wizard approve/apply/uninstall-preview step (item 13).
+
+**Not end-to-end, stated plainly:** real apply cannot run. The plan approval store is per API process, so the worker skips registering `DeployConnector` (`deploy_sources_unconfigured`); no ARM or Fabric provisioner is wired; the API-side connector is dry-run only; uninstall is dry-run only through the API. Without the opt-in the apply routes return 503. The UI shows exactly this state and claims applied only on a verified result.
+
+Still OPEN / follow-ups (to be filed as issues): durable `PlanApprovals` + wired provisioners (needed before any real apply); register optimistic concurrency (etag) on `CustomerScopedRegister.put_row`; test that a target whose customer differs from the connector-bound customer is refused; operator backfill for register rows with no customer; Fabric workspace-to-capacity assignment and workspace register rows; docker-compose does not set `NS_SCAN_ENABLED` / `NS_DEPLOY_APPLY_ENABLED`; `.env.example` diff for items 10 and 14 not independently inspected (git read denied); #38 api-version table, #39 Government Fabric token scope, #40 live uninstall run; G01 Government and G02 remain OPEN; no live or paid calls were made in this round (G12: mocks/stubs only).
+
+Edited outside item ownership with sign-off: workers actions + contracts (item 12 widening); `connectors/sdk-python` `WriteAction` literal in its own commit `e2c03f8`.
 
 ## Audit 2026-11-04
 

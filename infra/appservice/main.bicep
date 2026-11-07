@@ -88,6 +88,12 @@ param workersAppSettings object = {}
 @description('Settings for the frontend site (NS_UI_*). The common backend settings are not applied to the frontend.')
 param frontendAppSettings object = {}
 
+@description('Opt in to the deployment resource scan route (NS_SCAN_ENABLED on the API site). Off by default: POST /v1/deploy/scan stays 503 scan_not_configured. Same meaning as scan.enabled in the Helm chart.')
+param scanEnabled bool = false
+
+@description('Opt in to deploy apply and uninstall preview (NS_DEPLOY_APPLY_ENABLED on the API site only). Off by default: /api/v1/deploy/apply stays 503 apply_not_configured. Same meaning as deployApply.enabled in the Helm chart. Name the register container with the NS_DEPLOY_APPLY_REGISTER_CONTAINER key in apiAppSettings.')
+param deployApplyEnabled bool = false
+
 @description('Resource tags.')
 param tags object = {}
 
@@ -123,6 +129,8 @@ var kvRefSettings = reduce(
 var plainSettings = [for item in items(commonAppSettings): { name: item.key, value: string(item.value) }]
 var kvSettings = [for item in items(kvRefSettings): { name: item.key, value: string(item.value) }]
 
+var scanSettings = scanEnabled ? [{ name: 'NS_SCAN_ENABLED', value: 'true' }] : []
+var deployApplySettings = deployApplyEnabled ? [{ name: 'NS_DEPLOY_APPLY_ENABLED', value: 'true' }] : []
 var apiExtraSettings = [for item in items(apiAppSettings): { name: item.key, value: string(item.value) }]
 var workersExtraSettings = [for item in items(workersAppSettings): { name: item.key, value: string(item.value) }]
 var frontendExtraSettings = [for item in items(frontendAppSettings): { name: item.key, value: string(item.value) }]
@@ -169,6 +177,8 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
         ],
         plainSettings,
         kvSettings,
+        scanSettings,
+        deployApplySettings,
         apiExtraSettings
       )
     }

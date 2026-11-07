@@ -14,6 +14,7 @@ from neurosphere_core.cloud import load_settings
 from neurosphere_core.observability import configure_telemetry
 
 from neurosphere_api.app import create_app
+from neurosphere_api.deploy.apply.bootstrap import configure_apply_from_settings
 from neurosphere_api.deploy.scan.bootstrap import configure_scan_from_settings
 from neurosphere_api.ingest.bootstrap import configure_ingest_from_settings
 from neurosphere_api.middleware import azure_monitor_connection_string
@@ -31,5 +32,6 @@ def create() -> FastAPI:
     app = create_app(settings, telemetry=telemetry)
     configure_ingest_from_settings(app, settings)  # opt-in: NS_INGEST_PRODUCERS_FILE
     configure_scan_from_settings(app, settings)  # opt-in: NS_SCAN_ENABLED
+    configure_apply_from_settings(app, settings)  # opt-in: NS_DEPLOY_APPLY_ENABLED
     compose_app(app, settings)  # readiness names every component that could not be built
     return app

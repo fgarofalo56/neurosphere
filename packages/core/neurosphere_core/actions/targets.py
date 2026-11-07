@@ -27,6 +27,8 @@ from typing import Final, Protocol, runtime_checkable
 __all__ = [
     "ACTION_CONNECTORS",
     "APIM_GATEWAY_CONNECTOR",
+    "DEPLOY_ACTION_CONNECTORS",
+    "DEPLOY_CONNECTOR",
     "FOUNDRY_SWAP_CONNECTOR",
     "TARGET_KIND_CONNECTORS",
     "WriteTargetSource",
@@ -39,9 +41,23 @@ __all__ = [
 FOUNDRY_SWAP_CONNECTOR: Final = "foundry-model-swap"
 APIM_GATEWAY_CONNECTOR: Final = "apim-gateway"
 
+DEPLOY_CONNECTOR: Final = "deploy-orchestrator"
+
+#: PRP-08 item 14: deploy apply / uninstall-preview kinds -> the deploy write connector. A test
+#: pins these strings to ``neurosphere_workers.actions.deploy`` (core never imports workers). The
+#: connector is registered only when ``NS_DEPLOY_APPLY_ENABLED`` is set; otherwise these intents
+#: stay advisory.
+DEPLOY_ACTION_CONNECTORS: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        "deploy_plan_apply": DEPLOY_CONNECTOR,
+        "deploy_uninstall": DEPLOY_CONNECTOR,
+    }
+)
+
 #: action_kind -> write connector manifest name. Add a row only for a shipped write connector.
 ACTION_CONNECTORS: Final[Mapping[str, str]] = MappingProxyType(
     {
+        **DEPLOY_ACTION_CONNECTORS,
         "model_deployment_swap": FOUNDRY_SWAP_CONNECTOR,
         # PRP-34: the APIM AI gateway write connector (Clarification 10) and the audited
         # observe -> manage switch (item 2).

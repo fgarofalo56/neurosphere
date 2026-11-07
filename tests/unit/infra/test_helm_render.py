@@ -129,6 +129,58 @@ def test_no_secret_objects_or_literals() -> None:
     assert values["image"]["registry"] == ""  # nothing cloud-specific baked in
 
 
+def _env(container: dict[str, Any]) -> dict[str, str]:
+    return {e["name"]: e["value"] for e in container.get("env", [])}
+
+
+def test_scan_opt_in_is_off_by_default_and_api_only_when_enabled() -> None:
+    values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
+    assert values["scan"]["enabled"] is False
+    for container in _containers(_render()).values():
+        assert _env(container).get("NS_SCAN_ENABLED", "false") != "true"
+    enabled = _containers(_render("--set", "scan.enabled=true", "--set", "scan.pageSize=500"))
+    assert _env(enabled["api"])["NS_SCAN_ENABLED"] == "true"
+    assert _env(enabled["api"])["NS_SCAN_PAGE_SIZE"] == "500"
+    assert "NS_SCAN_MAX_PAGES" not in _env(enabled["api"])  # unset tuning keys are not rendered
+    for other in ("workers", "frontend"):
+        assert "NS_SCAN_ENABLED" not in _env(enabled[other])
+
+
+def test_app_service_scan_opt_in_is_one_default_off_parameter() -> None:
+    text = (APPSERVICE / "main.bicep").read_text(encoding="utf-8")
+    assert "param scanEnabled bool = false" in text
+    assert "scanEnabled ? [{ name: 'NS_SCAN_ENABLED', value: 'true' }] : []" in text
+
+
+def test_deploy_apply_opt_in_is_off_by_default_and_api_only_when_enabled() -> None:
+    values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
+    assert values["deployApply"]["enabled"] is False
+    for container in _containers(_render()).values():
+        assert "NS_DEPLOY_APPLY_ENABLED" not in _env(container)
+    enabled = _containers(
+        _render(
+            "--set",
+            "deployApply.enabled=true",
+            "--set",
+            "deployApply.registerContainer=deploy-register",
+        )
+    )
+    assert _env(enabled["api"])["NS_DEPLOY_APPLY_ENABLED"] == "true"
+    assert _env(enabled["api"])["NS_DEPLOY_APPLY_REGISTER_CONTAINER"] == "deploy-register"
+    for other in ("workers", "frontend"):
+        assert not [k for k in _env(enabled[other]) if k.startswith("NS_DEPLOY_APPLY_")]
+    bare = _containers(_render("--set", "deployApply.enabled=true"))
+    assert "NS_DEPLOY_APPLY_REGISTER_CONTAINER" not in _env(bare["api"])  # unset is not rendered
+
+
+def test_app_service_deploy_apply_opt_in_is_one_default_off_parameter() -> None:
+    text = (APPSERVICE / "main.bicep").read_text(encoding="utf-8")
+    assert "param deployApplyEnabled bool = false" in text
+    expected = "deployApplyEnabled ? [{ name: 'NS_DEPLOY_APPLY_ENABLED', value: 'true' }] : []"
+    assert expected in text
+    assert text.count("deployApplySettings,") == 1  # the api site only
+
+
 def test_registry_is_required() -> None:
     helm = _helm()
     client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"

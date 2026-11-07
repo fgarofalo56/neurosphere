@@ -4,21 +4,22 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-08-deployment-intelligence-and-iac](active/PRP-08-deployment-intelligence-and-iac.md) | P1 | 15/15 (100%) | merged 15 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | PRP-08-deployment-intelligence-and-iac, PRP-17-action-executor-and-hitl, PRP-22-mcp-server-and-client, PRP-33-apim-gateway-observe | PRP-08-deployment-intelligence-and-iac (backlog) | sonnet / sonnet | required |
+| [PRP-34-apim-gateway-manage](backlog/PRP-34-apim-gateway-manage.md) | P1 | 2 | PRP-08-deployment-intelligence-and-iac, PRP-17-action-executor-and-hitl, PRP-22-mcp-server-and-client, PRP-33-apim-gateway-observe | PRP-08-deployment-intelligence-and-iac (active) | sonnet / sonnet | required |
 | [PRP-16-agent-evaluation-and-quality](backlog/PRP-16-agent-evaluation-and-quality.md) | P1 | 3 | PRP-04-frontend-shell-design-system-auth, PRP-07-telemetry-ingestion-and-cost-ledger, PRP-10-catalog-and-relationship-governance | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
-| [PRP-08-deployment-intelligence-and-iac](backlog/PRP-08-deployment-intelligence-and-iac.md) | P1 | 8 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-05-api-worker-runtime-and-self-observability | - | sonnet / sonnet | required |
 | [PRP-10-catalog-and-relationship-governance](backlog/PRP-10-catalog-and-relationship-governance.md) | P1 | 9 | PRP-05-api-worker-runtime-and-self-observability, PRP-06-identity-authz-and-audit | - | sonnet / sonnet | required |
 | [PRP-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) | P1 | 10 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |
 | [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (backlog) | sonnet / sonnet | none |
 | [PRP-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 | 12 | PRP-29-platform-runtime-wiring, PRP-30-visual-redesign-and-switchable-ui-styles | - | sonnet / sonnet | required |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-10-catalog-and-relationship-governance (backlog); PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
-| [PRP-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 14 | PRP-08-deployment-intelligence-and-iac, PRP-12-threat-model-and-security-baseline, PRP-13-release-versioning-and-container-publishing | PRP-08-deployment-intelligence-and-iac (backlog) | sonnet / sonnet | required |
+| [PRP-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 14 | PRP-08-deployment-intelligence-and-iac, PRP-12-threat-model-and-security-baseline, PRP-13-release-versioning-and-container-publishing | PRP-08-deployment-intelligence-and-iac (active) | sonnet / sonnet | required |
 | [PRP-09-connector-sdk-and-reference-connectors](backlog/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 4 | PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability | - | sonnet / sonnet | required |
 | [PRP-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger | - | sonnet / sonnet | required |
 | [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage | PRP-10-catalog-and-relationship-governance (backlog) | sonnet / sonnet | required |

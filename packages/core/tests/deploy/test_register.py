@@ -9,6 +9,7 @@ import pytest
 from neurosphere_core.deploy.register import (
     Action,
     ConsentRecord,
+    CustomerScopedRegister,
     InMemoryRegisterStore,
     Ownership,
     RegisterExport,
@@ -339,3 +340,73 @@ def test_consent_requires_resources_and_pseudonymous_owner() -> None:
             granted_at=NOW,
             plan_id="p",
         )
+
+
+# -- customer scoping (PRP-08 item 14) ---
+
+
+def test_row_customer_is_optional_validated_and_unknown_fields_still_forbidden() -> None:
+    assert row("a").customer_id is None
+    assert row("a", customer_id="acme").customer_id == "acme"
+    with pytest.raises(ValidationError):
+        row("a", customer_id="not a token!")
+    with pytest.raises(ValidationError):
+        row("a", surprise="x")
+
+
+async def test_scoped_register_shows_only_the_bound_customers_rows() -> None:
+    inner = InMemoryRegisterStore()
+    await inner.put_row(row("mine", customer_id="acme"))
+    await inner.put_row(row("theirs", customer_id="globex"))
+    await inner.put_row(row("legacy"))  # no customer: visible to nobody (fail closed)
+    acme = CustomerScopedRegister(inner, "acme")
+    assert [r.resource_id for r in await acme.list_rows(DEP)] == [rid("mine")]
+    assert await acme.get_row(DEP, rid("theirs")) is None
+    assert await acme.get_row(DEP, rid("legacy")) is None
+    assert await acme.get_row(DEP, rid("mine")) is not None
+    # Another customer's deployment and an unknown deployment are indistinguishable.
+    globex = CustomerScopedRegister(inner, "globex")
+    assert await globex.list_rows("unknown") == []
+    assert [r.resource_id for r in await globex.list_rows(DEP)] == [rid("theirs")]
+
+
+async def test_scoped_register_stamps_writes_and_refuses_foreign_or_unowned_overwrites() -> None:
+    inner = InMemoryRegisterStore()
+    acme = CustomerScopedRegister(inner, "acme")
+    await acme.put_row(row("a"))
+    stored = await inner.get_row(DEP, rid("a"))
+    assert stored is not None and stored.customer_id == "acme"
+    with pytest.raises(ForbiddenError):
+        await acme.put_row(row("a", customer_id="globex"))
+    await inner.put_row(row("legacy"))
+    with pytest.raises(ForbiddenError):
+        await acme.put_row(row("legacy"))  # cannot adopt a row that belongs to nobody
+    await inner.put_row(row("theirs", customer_id="globex"))
+    with pytest.raises(ForbiddenError):
+        await acme.put_row(row("theirs"))
+    unchanged = await inner.get_row(DEP, rid("theirs"))
+    assert unchanged is not None and unchanged.customer_id == "globex"
+
+
+async def test_scoped_register_consents_follow_row_visibility() -> None:
+    inner = InMemoryRegisterStore()
+    await inner.put_row(row("theirs", customer_id="globex"))
+    consent = ConsentRecord(
+        deployment_id=DEP,
+        consent_id="consent-1",
+        owner="principal:x1",
+        resource_ids=(rid("theirs"),),
+        granted_at=NOW,
+        plan_id="p",
+    )
+    await inner.put_consent(consent)
+    acme = CustomerScopedRegister(inner, "acme")
+    assert await acme.list_consents(DEP) == []
+    with pytest.raises(ForbiddenError):
+        await acme.put_consent(consent)
+    assert await CustomerScopedRegister(inner, "globex").list_consents(DEP) == [consent]
+
+
+def test_scoped_register_requires_a_customer() -> None:
+    with pytest.raises(ValueError):
+        CustomerScopedRegister(InMemoryRegisterStore(), "")

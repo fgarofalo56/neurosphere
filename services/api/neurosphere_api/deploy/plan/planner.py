@@ -7,9 +7,10 @@ Rules (each is enforced in code and covered by ``tests/deployment/test_plan.py``
 
 1. *Shared* rule: a discovered resource is **NeuroSphere-created** only when it carries the tag
    ``neurosphere:created-by`` with value ``neurosphere`` (``CREATED_BY_TAG``); every other
-   discovered resource is *shared*. Reusing a shared resource needs a **granted** consent record
-   naming a pseudonymous owner principal and listing that resource id; otherwise the item is
-   ``needs_consent``, never ``reuse``.
+   discovered resource is *shared*. The tag only classifies; it is never consent (#35). Reusing
+   any discovered resource needs a **granted** consent record naming a pseudonymous owner
+   principal and listing that resource id; otherwise the item is ``needs_consent``, never
+   ``reuse``.
 2. *Residency*: reuse needs the resource location to be one of the profile regions (which the
    profile validator already pins to the profile cloud). A Government profile therefore can never
    reuse a Commercial-region resource. On failure the item falls back to the operator's
@@ -277,40 +278,40 @@ def _plan_service(
         )
 
     created = is_neurosphere_created(resource)
-    shared = not created
-    if shared:
-        consent = _consent_for(resource, request.consents)
-        if consent is None:
-            return PlanItem(
-                service=service,
-                status="needs_consent",
-                existing_resource_id=resource.id,
-                shared=True,
-                checks=checks,
-                notes=[
-                    "shared resource: a granted owner-consent record naming an owner "
-                    "principal and covering this resource id is required before reuse"
-                ],
-                cost_implication=_no_cost("Nothing is provisioned until owner consent is granted."),
-            )
+    # Consent is never derived from resource tags (#35): the created-by tag is an unauthenticated
+    # claim anyone with write access to the resource can set, so it only classifies the resource.
+    # Reuse of any discovered resource needs a recorded, granted consent naming its owner.
+    consent = _consent_for(resource, request.consents)
+    if consent is None:
         return PlanItem(
             service=service,
-            status="reuse",
+            status="needs_consent",
             existing_resource_id=resource.id,
-            shared=True,
+            shared=not created,
+            neurosphere_created=created,
             checks=checks,
-            owner_consent=consent,
-            cost_implication=_no_cost("Reuses an existing shared resource."),
+            notes=[
+                "a granted owner-consent record naming an owner principal and covering this "
+                "resource id is required before reuse; resource tags are never treated as consent"
+            ],
+            cost_implication=_no_cost("Nothing is provisioned until owner consent is granted."),
         )
     return PlanItem(
         service=service,
         status="reuse",
         existing_resource_id=resource.id,
-        shared=False,
-        neurosphere_created=True,
+        shared=not created,
+        neurosphere_created=created,
         checks=checks,
-        notes=["resource is tagged as NeuroSphere-created; no foreign owner consent applies"],
-        cost_implication=_no_cost("Reuses a NeuroSphere-created resource."),
+        owner_consent=consent,
+        notes=["resource carries the NeuroSphere created-by tag (a claim, not consent)"]
+        if created
+        else [],
+        cost_implication=_no_cost(
+            "Reuses a NeuroSphere-tagged resource."
+            if created
+            else "Reuses an existing shared resource."
+        ),
     )
 
 

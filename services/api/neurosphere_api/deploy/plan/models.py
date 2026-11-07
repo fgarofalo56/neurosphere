@@ -9,7 +9,7 @@ from neurosphere_contracts.deployment.v1.deployment_manifest import DeploymentMa
 from neurosphere_core.capabilities import DeploymentProfile
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from neurosphere_api.deploy.scan import ScanResponse
+from neurosphere_api.deploy.scan import SCAN_ID_PATTERN, ScanResponse
 
 #: Manifest service names (the ``service_plan.service`` enum of the PRP-01 contract).
 ManifestService = Literal[
@@ -104,6 +104,9 @@ class PlanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     profile: DeploymentProfile
+    #: Preferred: id of a scan this caller ran (server-side result). Wins over ``scan``.
+    scan_id: Annotated[str, StringConstraints(pattern=SCAN_ID_PATTERN)] | None = None
+    #: Fallback: a scan result supplied in the body; validated for internal consistency.
     scan: ScanResponse | None = None
     choices: dict[ManifestService, ServiceChoice] = Field(default_factory=dict)
     consents: list[OwnerConsentRecord] = Field(default_factory=list, max_length=1000)
