@@ -1,3 +1,5 @@
+import type { ActionView } from "../actions/types";
+
 /** Wire shapes of the deploy scan/plan/capabilities endpoints (services/api deploy/*, ui_adapters). */
 export interface ConsentRecord {
   readonly consent_id: string;
@@ -127,11 +129,92 @@ export interface PlanResponse {
   readonly plan: {
     readonly plan_id: string;
     readonly deployment_id: string;
+    /** Echoed back verbatim to the approve route: the approver attests to exactly this plan. */
+    readonly profile?: DeploymentProfile;
     readonly items: readonly PlanItem[];
     readonly capability_warnings: readonly string[];
+    readonly consents?: readonly unknown[];
     readonly created_at: string;
   };
   readonly manifest: unknown;
+}
+
+/** Wire shapes of the apply routes (services/api deploy/apply/models.py, PRP-08 item 12). */
+export interface ApplyTarget {
+  readonly subscription_id: string;
+  readonly resource_group: string;
+  readonly region: string;
+  readonly capacity_sku: string;
+}
+
+export interface ApprovePlanRequest {
+  /** The plan exactly as the plan route returned it. */
+  readonly plan: PlanResponse["plan"];
+  readonly target: ApplyTarget;
+}
+
+export interface PlannedResource {
+  readonly service: string;
+  readonly kind: "fabric_capacity" | "fabric_workspace" | "arm_resource";
+  readonly disposition: "create" | "reuse";
+  readonly name: string;
+  readonly region: string;
+  readonly sku: string | null;
+  readonly resource_id: string | null;
+}
+
+export interface ApprovedPlanView {
+  readonly plan_id: string;
+  readonly plan_hash: string;
+  readonly resources_digest: string;
+  readonly deployment_id: string;
+  readonly cloud: "commercial" | "government";
+  readonly resources: readonly PlannedResource[];
+  readonly approved_at: string;
+  readonly expires_at: string;
+}
+
+export interface ApplyRequest {
+  readonly plan_id: string;
+  readonly plan_hash: string;
+  readonly idempotency_key: string;
+  readonly channel: "button";
+}
+
+export interface ApplyView {
+  readonly plan_id: string;
+  readonly plan_hash: string;
+  readonly resources: readonly PlannedResource[];
+  readonly action: ActionView;
+}
+
+export interface UninstallPreviewRequest {
+  readonly deployment_id: string;
+  readonly idempotency_key: string;
+  readonly channel: "button";
+  readonly verify_live: boolean;
+}
+
+export interface UninstallEntry {
+  readonly resource_id: string;
+  readonly service: string | null;
+  readonly ownership: string | null;
+  readonly reason: string | null;
+}
+
+export interface UninstallPreviewView {
+  readonly deployment_id: string;
+  readonly dry_run: true;
+  readonly register_digest: string;
+  readonly removable: readonly UninstallEntry[];
+  readonly untouched: readonly UninstallEntry[];
+  readonly action: ActionView;
+}
+
+/** Route variables: the domain is a path segment (the authorization target), never body/query. */
+export interface DomainVars<T> {
+  readonly domainId: string;
+  readonly body: T;
 }
 
 export interface CapabilityRow {

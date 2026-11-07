@@ -16,6 +16,17 @@ export const DEPLOY_VISIBILITY_NOTE =
 export const DEPLOY_APIM_ID = `/subscriptions/${DEPLOY_SUB_VISIBLE}/resourceGroups/rg-shared/providers/Microsoft.ApiManagement/service/apim-shared`;
 export const DEPLOY_VAULT_ID = `/subscriptions/${DEPLOY_SUB_VISIBLE}/resourceGroups/rg-ns/providers/Microsoft.KeyVault/vaults/kv-ns`;
 
+// PRP-08 item 13: the apply routes. The domain path segment selects the variant, so a spec can
+// reach each state with `?domain_id=`: not configured (503 apply_not_configured), denied (403) or
+// a refused apply (422 plan_hash_mismatch). Any other domain behaves like an enabled deployment
+// whose apply only DRAFTS an intent (state "drafted", no execution): nothing is ever "applied".
+export const DEPLOY_APPLY_OFF_DOMAIN = "ns-apply-not-configured";
+export const DEPLOY_APPLY_DENIED_DOMAIN = "ns-apply-denied";
+export const DEPLOY_APPLY_REFUSED_DOMAIN = "ns-apply-refused";
+export const DEPLOY_PLAN_ID = `plan-${"a1b2c3d4".repeat(4)}`;
+export const DEPLOY_PLAN_HASH = `sha256:${"0123456789abcdef".repeat(4)}`;
+export const DEPLOY_RESOURCES_DIGEST = `sha256:${"fedcba9876543210".repeat(4)}`;
+
 const SOURCE =
   "https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure";
 const GOV_REGION = /^(usgov|usdod)/;
@@ -193,7 +204,7 @@ function planFor(body: PlanBody) {
   });
   return {
     plan: {
-      plan_id: "plan-mock-0001",
+      plan_id: DEPLOY_PLAN_ID,
       deployment_id: "deploy-mock",
       profile: body.profile,
       items,
@@ -290,6 +301,180 @@ function speaks(r: Row, region: string): boolean {
   return r.cloud === "government" ? GOV_REGION.test(region) : !GOV_REGION.test(region);
 }
 
+interface MockPlanItem {
+  service: string;
+  status: string;
+  existing_resource_id: string | null;
+}
+interface ApproveBody {
+  plan?: { plan_id?: string; deployment_id?: string; items?: MockPlanItem[] };
+  target?: { region?: string; capacity_sku?: string };
+}
+
+function plannedResources(body: ApproveBody) {
+  const region = body.target?.region ?? "eastus";
+  return (body.plan?.items ?? [])
+    .filter((i) => i.status === "create" || i.status === "reuse")
+    .map((i) => ({
+      service: i.service,
+      kind: "arm_resource",
+      disposition: i.status,
+      name: `ns-${i.service.replace(/_/g, "-")}`,
+      region,
+      sku: i.status === "create" ? (body.target?.capacity_sku ?? "F2") : null,
+      resource_id: i.status === "reuse" ? i.existing_resource_id : null,
+    }));
+}
+
+/** A freshly drafted intent: never executed, so the UI must not call it applied. */
+function draftedAction(kind: string, targetId: string, version: string, dryRun: boolean) {
+  return {
+    intent: {
+      schema_version: "1.0.0",
+      intent_id: "11111111-2222-4333-8444-555555555555",
+      action_kind: kind,
+      actor: { principal_pseudonym: "p-mock", principal_kind: "user", on_behalf_of: null },
+      target: { canonical_id: targetId, entity_type: "deployment" },
+      target_version: version,
+      proposed_diff: {
+        format: "json_patch",
+        operations: [
+          {
+            op: "add",
+            path: "/resources/0",
+            value: { service: "key_vault", disposition: "create" },
+          },
+        ],
+      },
+      prerequisite_results: [],
+      evidence: [],
+      confirmation_hash: null,
+      confirmation_expires_at: null,
+      idempotency_key: "mock-key-mock-key-0001",
+      channel: "button",
+      state: "drafted",
+      status_reason: null,
+      dry_run: dryRun,
+      correlation_id: "corr-mock",
+      created_at: "2026-10-15T12:10:00Z",
+      state_changed_at: "2026-10-15T12:10:00Z",
+    },
+    advisory: false,
+    requires_approval: true,
+    self_approval_forbidden: true,
+    review_item_id: null,
+    execution: null,
+  };
+}
+
+const APPLY_ROUTE =
+  /^\/api\/v1\/deploy\/apply\/domains\/([^/]+)\/(plans\/approve|plans\/apply|uninstall\/preview)$/;
+
+function handleApply(ctx: Parameters<FeatureMockHandler>[0], domain: string, op: string): void {
+  const send = (status: number, body: unknown): void => {
+    ctx.res.writeHead(status, { "content-type": "application/json", ...ctx.cors });
+    ctx.res.end(JSON.stringify(body));
+  };
+  if (domain === DEPLOY_APPLY_OFF_DOMAIN) {
+    ctx.problem(503, "dependency_transient", "apply_not_configured", "Apply is not configured.");
+    return;
+  }
+  if (domain === DEPLOY_APPLY_DENIED_DOMAIN) {
+    ctx.problem(403, "forbidden", "insufficient_permission", "config.manage is required.");
+    return;
+  }
+  void ctx.readBody().then((raw) => {
+    if (op === "plans/approve") {
+      const body = JSON.parse(raw) as ApproveBody;
+      if ((body.plan?.items ?? []).some((i) => i.status === "needs_consent")) {
+        ctx.problem(
+          422,
+          "invalid_schema",
+          "plan_has_unresolved_items",
+          "The plan has items waiting for owner consent.",
+        );
+        return;
+      }
+      send(201, {
+        plan_id: body.plan?.plan_id ?? DEPLOY_PLAN_ID,
+        plan_hash: DEPLOY_PLAN_HASH,
+        resources_digest: DEPLOY_RESOURCES_DIGEST,
+        deployment_id: body.plan?.deployment_id ?? "deploy-mock",
+        cloud: "commercial",
+        resources: plannedResources(body),
+        approved_at: "2026-10-15T12:08:00Z",
+        expires_at: "2026-10-15T13:08:00Z",
+      });
+      return;
+    }
+    if (op === "plans/apply") {
+      const body = JSON.parse(raw) as { plan_id?: string; plan_hash?: string };
+      if (domain === DEPLOY_APPLY_REFUSED_DOMAIN || body.plan_hash !== DEPLOY_PLAN_HASH) {
+        ctx.problem(
+          422,
+          "invalid_schema",
+          "plan_hash_mismatch",
+          "The plan changed since it was approved.",
+        );
+        return;
+      }
+      send(201, {
+        plan_id: body.plan_id ?? DEPLOY_PLAN_ID,
+        plan_hash: DEPLOY_PLAN_HASH,
+        resources: [],
+        action: draftedAction(
+          "deploy_plan_apply",
+          "commercial:mock:deploy:plan",
+          DEPLOY_PLAN_HASH,
+          false,
+        ),
+      });
+      return;
+    }
+    const body = JSON.parse(raw) as { deployment_id?: string };
+    if (body.deployment_id !== "deploy-mock") {
+      ctx.problem(
+        422,
+        "invalid_schema",
+        "deployment_not_found",
+        "No register rows for this deployment.",
+      );
+      return;
+    }
+    const digest = `sha256:${"abcdef0123456789".repeat(4)}`;
+    send(201, {
+      deployment_id: body.deployment_id,
+      dry_run: true,
+      register_digest: digest,
+      removable: [
+        {
+          resource_id:
+            "/subscriptions/x/resourceGroups/rg-ns/providers/Microsoft.KeyVault/vaults/kv-ns",
+          service: "key_vault",
+          ownership: "created",
+          reason: "Created by NeuroSphere for this deployment",
+        },
+      ],
+      untouched: [
+        {
+          resource_id: DEPLOY_APIM_ID,
+          service: "api_management",
+          ownership: "reused",
+          reason: "Reused existing resource: never removed",
+        },
+        {
+          resource_id:
+            "/subscriptions/x/resourceGroups/rg-shared/providers/Microsoft.Storage/storageAccounts/stshared",
+          service: "storage",
+          ownership: "shared",
+          reason: "Shared with other workloads: never removed",
+        },
+      ],
+      action: draftedAction("deploy_uninstall", "commercial:mock:deploy:deploy-mock", digest, true),
+    });
+  });
+}
+
 export const handle: FeatureMockHandler = (ctx) => {
   // Registry tests pass an empty context to prove placeholders stay inert; stay inert too.
   const url = (ctx as { url?: URL }).url;
@@ -324,6 +509,12 @@ export const handle: FeatureMockHandler = (ctx) => {
 
   if (url.pathname === "/api/v1/deploy/plan" && method === "POST") {
     void ctx.readBody().then((raw) => send(planFor(JSON.parse(raw) as PlanBody)));
+    return true;
+  }
+
+  const apply = APPLY_ROUTE.exec(url.pathname);
+  if (apply !== null && method === "POST") {
+    handleApply(ctx, decodeURIComponent(apply[1] ?? ""), apply[2] ?? "");
     return true;
   }
   return false;

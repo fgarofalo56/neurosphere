@@ -123,10 +123,12 @@ export function downloadManifest(manifest: unknown, deploymentId: string): void 
 export interface PlanStepProps {
   readonly scan: ScanResponse | null;
   readonly draft: ChoicesDraft;
+  /** Called with each plan the API returns, so the apply step works on exactly that plan. */
+  readonly onPlanned?: (plan: PlanResponse) => void;
 }
 
 /** Step 3. There is deliberately no apply, provision or delete control: the plan is advisory. */
-export function PlanStep({ scan, draft }: PlanStepProps): ReactElement {
+export function PlanStep({ scan, draft, onPlanned }: PlanStepProps): ReactElement {
   const styles = useStyles();
   const mutation = usePlan();
   const result: PlanResponse | undefined = mutation.data;
@@ -145,7 +147,7 @@ export function PlanStep({ scan, draft }: PlanStepProps): ReactElement {
       choices: buildChoices(draft.services),
       consents: draft.consents,
     };
-    mutation.mutate(request);
+    mutation.mutate(request, { onSuccess: (r) => onPlanned?.(r) });
   }
 
   const error = mutation.isError ? mutation.error : null;

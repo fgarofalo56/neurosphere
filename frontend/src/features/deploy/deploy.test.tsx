@@ -4,7 +4,15 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { QueryProvider, createApiClient } from "../../api/index.js";
 import { CapabilitiesPage } from "./CapabilitiesPage";
 import { DeployPage } from "./DeployPage";
-import { capabilitiesPath, deployPlanPath, deployScanPath } from "./paths";
+import { outcomeText } from "./ApplyStep";
+import {
+  applyPlanPath,
+  approvePlanPath,
+  capabilitiesPath,
+  deployPlanPath,
+  deployScanPath,
+  uninstallPreviewPath,
+} from "./paths";
 import { STRINGS } from "./strings";
 import { isEmailShaped } from "./validate";
 
@@ -62,7 +70,7 @@ function useApi(handlers: Record<string, (url: URL, body: unknown) => Response>)
   return seen;
 }
 
-function renderUi(ui: React.ReactElement) {
+function renderUi(ui: React.ReactElement, entry = "/") {
   const client = createApiClient({
     baseUrl: API,
     getToken: () => Promise.resolve("test-credential"),
@@ -71,7 +79,7 @@ function renderUi(ui: React.ReactElement) {
   });
   return render(
     <QueryProvider client={client}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>{ui}</MemoryRouter>
     </QueryProvider>,
   );
 }
@@ -288,6 +296,411 @@ describe("DeployPage", () => {
     fireEvent.click(screen.getByRole("radio", { name: "government" }));
     expect(screen.queryByRole("radio", { name: "eastus" })).toBeNull();
     expect(screen.getByRole("radio", { name: "usgovvirginia" })).toBeTruthy();
+  });
+});
+
+const DOMAIN = "commercial:contoso:catalog:domain:finance";
+const DOMAIN_ENTRY = `/?domain_id=${encodeURIComponent(DOMAIN)}`;
+const PLAN_ID = `plan-${"a1b2c3d4".repeat(4)}`;
+const PLAN_HASH = `sha256:${"0123456789abcdef".repeat(4)}`;
+const DIGEST = `sha256:${"fedcba9876543210".repeat(4)}`;
+const SUB_TARGET = guid("000000000099");
+const CONSENT_REASON = "Reusing a shared resource needs a granted owner consent.";
+
+function problem(status: number, code: string, reason: string, title: string): Response {
+  return json({ code, reason, title, correlation_id: "corr-1", retryable: false }, status);
+}
+
+const APPLY_PLAN = {
+  ...PLAN,
+  plan: {
+    ...PLAN.plan,
+    plan_id: PLAN_ID,
+    profile: {
+      cloud: "commercial",
+      regions: ["eastus"],
+      hosting: "aks",
+      analytics: "fabric",
+      features: [],
+      allow_preview: false,
+    },
+    consents: [],
+  },
+};
+
+const APPROVED = {
+  plan_id: PLAN_ID,
+  plan_hash: PLAN_HASH,
+  resources_digest: DIGEST,
+  deployment_id: "deploy-1",
+  cloud: "commercial",
+  resources: [
+    {
+      service: "key_vault",
+      kind: "arm_resource",
+      disposition: "reuse",
+      name: "kv-ns",
+      region: "eastus",
+      sku: null,
+      resource_id: "/subscriptions/x/vaults/kv-ns",
+    },
+    {
+      service: "storage",
+      kind: "arm_resource",
+      disposition: "create",
+      name: "ns-storage",
+      region: "eastus",
+      sku: "Standard",
+      resource_id: null,
+    },
+  ],
+  approved_at: "2026-10-15T12:08:00Z",
+  expires_at: "2026-10-15T13:08:00Z",
+};
+
+function actionView(over: { state?: string; execution?: unknown; reason?: string | null } = {}) {
+  return {
+    intent: {
+      intent_id: "11111111-2222-4333-8444-555555555555",
+      action_kind: "deploy_plan_apply",
+      target: { canonical_id: "commercial:contoso:deploy:plan", entity_type: "deployment" },
+      target_version: PLAN_HASH,
+      proposed_diff: {
+        format: "json_patch",
+        operations: [{ op: "add", path: "/resources/0", value: { service: "storage" } }],
+      },
+      state: over.state ?? "drafted",
+      status_reason: over.reason ?? null,
+      dry_run: false,
+    },
+    advisory: false,
+    requires_approval: true,
+    self_approval_forbidden: true,
+    review_item_id: null,
+    execution: over.execution ?? null,
+  };
+}
+
+const APPLIED = { plan_id: PLAN_ID, plan_hash: PLAN_HASH, resources: [], action: actionView() };
+
+/** Scan -> choices -> plan, then to step 4. */
+async function reachApplyStep(): Promise<void> {
+  fillScanForm();
+  fireEvent.click(screen.getByTestId("scan-run"));
+  await screen.findByTestId("visibility-note");
+  fireEvent.click(screen.getByTestId("step-next"));
+  fireEvent.click(screen.getByTestId("step-next"));
+  fireEvent.click(screen.getByTestId("plan-build"));
+  await screen.findAllByTestId("plan-row");
+  fireEvent.click(screen.getByTestId("step-next"));
+}
+
+function fillTarget(): void {
+  typeInto(/Subscription id(?!s)/, SUB_TARGET);
+  typeInto(/Resource group/, "rg-ns");
+  typeInto(/Fabric capacity SKU/, "F2");
+}
+
+function baseHandlers(extra: Record<string, (url: URL, body: unknown) => Response>) {
+  return {
+    [deployScanPath()]: () => json(SCAN),
+    [deployPlanPath()]: () => json(APPLY_PLAN),
+    ...extra,
+  };
+}
+
+describe("outcomeText", () => {
+  it("claims applied only for a succeeded intent whose verification matched", () => {
+    const base = actionView({ state: "succeeded" });
+    expect(
+      outcomeText({
+        ...base,
+        execution: { phase: "done", canary: null, verify_matched: true, rolled_back: false },
+      } as never).applied,
+    ).toBe(true);
+    expect(outcomeText({ ...base, execution: null } as never).applied).toBe(false);
+    expect(
+      outcomeText({
+        ...base,
+        execution: { phase: "done", canary: null, verify_matched: false, rolled_back: false },
+      } as never).applied,
+    ).toBe(false);
+    expect(outcomeText(actionView({ state: "drafted" }) as never).applied).toBe(false);
+    expect(
+      outcomeText(actionView({ state: "failed", reason: "stale_version" }) as never).text,
+    ).toContain("stale_version");
+  });
+});
+
+describe("DeployPage step 4: approve, apply, uninstall preview", () => {
+  it("needs a plan and a domain before offering anything", async () => {
+    useApi({});
+    renderUi(<DeployPage />);
+    expect(screen.getByTestId("apply-domain-required")).toBeTruthy();
+    cleanup();
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    expect(screen.getByTestId("apply-plan-required")).toBeTruthy();
+    // The uninstall preview stays available without a plan.
+    expect(screen.getByTestId("uninstall-run")).toBeTruthy();
+  });
+
+  it("lists disabled and consent-pending items with their reasons and blocks approval", async () => {
+    const waiting = {
+      ...APPLY_PLAN,
+      plan: {
+        ...APPLY_PLAN.plan,
+        items: [
+          ...APPLY_PLAN.plan.items,
+          planItem({
+            service: "storage",
+            status: "needs_consent",
+            disabled_reason: CONSENT_REASON,
+          }),
+        ],
+      },
+    };
+    const seen = useApi({
+      [deployScanPath()]: () => json(SCAN),
+      [deployPlanPath()]: () => json(waiting),
+    });
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    const items = screen.getAllByTestId("apply-blocked-item");
+    expect(items.map((i) => i.getAttribute("data-status")).sort()).toEqual([
+      "disabled",
+      "needs_consent",
+    ]);
+    const blockedList = screen.getByTestId("apply-blocked");
+    expect(blockedList.textContent).toContain(DISABLED_REASON);
+    expect(blockedList.textContent).toContain(CONSENT_REASON);
+    const approve = screen.getByTestId("approve-run") as HTMLButtonElement;
+    expect(approve.disabled).toBe(true);
+    expect(screen.getByTestId("approve-blocked")).toBeTruthy();
+    fireEvent.click(approve);
+    expect(seen.urls.map((u) => u.pathname)).not.toContain(approvePlanPath(DOMAIN));
+  });
+
+  it("validates the target before calling the API", async () => {
+    const seen = useApi(baseHandlers({}));
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    const calls = seen.urls.length;
+    fireEvent.click(screen.getByTestId("approve-run"));
+    expect(await screen.findByText(STRINGS.invalidSubscriptionId)).toBeTruthy();
+    expect(seen.urls.length).toBe(calls);
+  });
+
+  it("shows the approval from the API, drafts the apply and never calls a draft applied", async () => {
+    const seen = useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () => json(APPROVED, 201),
+        [applyPlanPath(DOMAIN)]: () => json(APPLIED, 201),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    expect(screen.getByTestId("approval-status").textContent).toBe(STRINGS.notApproved);
+    expect((screen.getByTestId("apply-run") as HTMLButtonElement).disabled).toBe(true);
+
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    await waitFor(() =>
+      expect(screen.getByTestId("approval-status").textContent).toBe(STRINGS.approvedStatus),
+    );
+    const state = screen.getByTestId("approval-state");
+    expect(state.textContent).toContain(PLAN_HASH);
+    expect(state.textContent).toContain(DIGEST);
+    expect(state.textContent).toContain(SUB_TARGET);
+    const resources = screen.getAllByTestId("approved-resource");
+    expect(resources.map((r) => r.getAttribute("data-disposition"))).toEqual(["reuse", "create"]);
+
+    const approveBody = seen.bodies.at(-1) as {
+      plan: { plan_id: string };
+      target: Record<string, string>;
+    };
+    expect(approveBody.plan.plan_id).toBe(PLAN_ID);
+    expect(approveBody.target).toEqual({
+      subscription_id: SUB_TARGET,
+      resource_group: "rg-ns",
+      region: "eastus",
+      capacity_sku: "F2",
+    });
+    expect(seen.urls.at(-1)?.pathname).toBe(approvePlanPath(DOMAIN));
+    expect(JSON.stringify(seen.bodies)).not.toMatch(/domain_id|customer_id/);
+
+    fireEvent.click(screen.getByTestId("apply-run"));
+    const result = await screen.findByTestId("apply-result");
+    expect(seen.bodies.at(-1)).toMatchObject({
+      plan_id: PLAN_ID,
+      plan_hash: PLAN_HASH,
+      channel: "button",
+    });
+    expect(seen.urls.at(-1)?.pathname).toBe(applyPlanPath(DOMAIN));
+    expect(result.textContent).toContain(PLAN_HASH);
+    expect(result.textContent).toContain("commercial:contoso:deploy:plan");
+    expect(screen.getByTestId("apply-diff").textContent).toContain("add /resources/0");
+    const outcome = screen.getByTestId("apply-outcome");
+    expect(outcome.getAttribute("data-applied")).toBe("false");
+    expect(outcome.textContent).toMatch(/Not applied/);
+    expect(screen.queryByText(STRINGS.outcomeApplied)).toBeNull();
+  });
+
+  it("shows applied only when the executor state says succeeded and verified", async () => {
+    const done = {
+      ...APPLIED,
+      action: actionView({
+        state: "succeeded",
+        execution: { phase: "done", canary: null, verify_matched: true, rolled_back: false },
+      }),
+    };
+    useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () => json(APPROVED, 201),
+        [applyPlanPath(DOMAIN)]: () => json(done, 201),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    await waitFor(() =>
+      expect((screen.getByTestId("apply-run") as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId("apply-run"));
+    const outcome = await screen.findByTestId("apply-outcome");
+    expect(outcome.getAttribute("data-applied")).toBe("true");
+    expect(outcome.textContent).toBe(STRINGS.outcomeApplied);
+  });
+
+  it("shows a refused apply with the API reason and no success", async () => {
+    useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () => json(APPROVED, 201),
+        [applyPlanPath(DOMAIN)]: () =>
+          problem(403, "forbidden", "plan_not_approved", "The plan is not approved"),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    await waitFor(() =>
+      expect((screen.getByTestId("apply-run") as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId("apply-run"));
+    const denied = await screen.findByTestId("apply-forbidden");
+    expect(denied.textContent).toContain("plan_not_approved");
+    expect(denied.textContent).toContain("corr-1");
+    expect(screen.queryByTestId("apply-result")).toBeNull();
+    expect(screen.queryByTestId("apply-outcome")).toBeNull();
+  });
+
+  it("shows a changed plan hash refusal", async () => {
+    useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () => json(APPROVED, 201),
+        [applyPlanPath(DOMAIN)]: () =>
+          problem(422, "invalid_schema", "plan_hash_mismatch", "The plan changed"),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    await waitFor(() =>
+      expect((screen.getByTestId("apply-run") as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByTestId("apply-run"));
+    const refused = await screen.findByTestId("apply-error");
+    expect(refused.textContent).toContain("plan_hash_mismatch");
+  });
+
+  it("shows 503 apply_not_configured as not enabled in this deployment", async () => {
+    useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () =>
+          problem(503, "dependency_transient", "apply_not_configured", "Apply is not configured."),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    const off = await screen.findByTestId("apply-not-enabled");
+    expect(off.textContent).toContain(STRINGS.notEnabledTitle);
+    expect(screen.getByTestId("approval-status").textContent).toBe(STRINGS.notApproved);
+    expect(screen.queryByTestId("approve-error")).toBeNull();
+  });
+
+  it("shows a 403 as a denial; the UI grants nothing", async () => {
+    useApi(
+      baseHandlers({
+        [approvePlanPath(DOMAIN)]: () =>
+          problem(403, "forbidden", "insufficient_permission", "config.manage is required"),
+      }),
+    );
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    await reachApplyStep();
+    fillTarget();
+    fireEvent.click(screen.getByTestId("approve-run"));
+    const denied = await screen.findByTestId("apply-forbidden");
+    expect(denied.textContent).toContain("insufficient_permission");
+    expect(screen.getByTestId("approval-status").textContent).toBe(STRINGS.notApproved);
+  });
+
+  it("previews an uninstall: reused and shared stay untouched and nothing can be deleted", async () => {
+    const entry = (over: Record<string, unknown>) => ({
+      resource_id: "/subscriptions/x/r",
+      service: "storage",
+      ownership: "created",
+      reason: "r",
+      ...over,
+    });
+    const view = {
+      deployment_id: "deploy-1",
+      dry_run: true,
+      register_digest: DIGEST,
+      removable: [entry({ resource_id: "/subscriptions/x/created", reason: "Created by us" })],
+      untouched: [
+        entry({ resource_id: "/subscriptions/x/reused", ownership: "reused", reason: "Reused" }),
+        entry({ resource_id: "/subscriptions/x/shared", ownership: "shared", reason: "Shared" }),
+      ],
+      action: actionView(),
+    };
+    const seen = useApi({ [uninstallPreviewPath(DOMAIN)]: () => json(view, 201) });
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    expect(screen.getByText(STRINGS.uninstallTitle)).toBeTruthy();
+    typeInto(/Deployment id to preview/, "deploy-1");
+    fireEvent.click(screen.getByTestId("uninstall-run"));
+    const result = await screen.findByTestId("uninstall-result");
+    expect(seen.bodies[0]).toMatchObject({
+      deployment_id: "deploy-1",
+      channel: "button",
+      verify_live: false,
+    });
+    expect(JSON.stringify(seen.bodies[0])).not.toMatch(/dry_run/);
+    expect(result.textContent).toContain(STRINGS.uninstallDryRun);
+    expect(screen.getAllByTestId("uninstall-removable")).toHaveLength(1);
+    const untouched = screen.getAllByTestId("uninstall-untouched");
+    expect(untouched.map((r) => r.getAttribute("data-ownership"))).toEqual(["reused", "shared"]);
+    // No control may delete or remove anything.
+    for (const b of within(screen.getByTestId("uninstall")).getAllByRole("button", {
+      hidden: true,
+    })) {
+      expect(b.textContent ?? "").not.toMatch(/delete|remove|destroy|uninstall now/i);
+    }
+  });
+
+  it("shows apply_not_configured for the uninstall preview too", async () => {
+    useApi({
+      [uninstallPreviewPath(DOMAIN)]: () =>
+        problem(503, "dependency_transient", "apply_not_configured", "Apply is not configured."),
+    });
+    renderUi(<DeployPage />, DOMAIN_ENTRY);
+    typeInto(/Deployment id to preview/, "deploy-1");
+    fireEvent.click(screen.getByTestId("uninstall-run"));
+    expect(await screen.findByTestId("apply-not-enabled")).toBeTruthy();
+    expect(screen.queryByTestId("uninstall-result")).toBeNull();
   });
 });
 

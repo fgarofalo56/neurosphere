@@ -1,11 +1,13 @@
 import { Button, Text, makeStyles, tokens } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
+import { useSelectedDomain } from "../../app/domain";
 import { PageTemplate } from "../../design-system";
+import { ApplyStep } from "./ApplyStep";
 import { ChoicesStep, initialDraft, type ChoicesDraft } from "./ChoicesStep";
 import { PlanStep } from "./PlanStep";
 import { ScanStep } from "./ScanStep";
 import { STRINGS } from "./strings";
-import type { ScanResponse } from "./types";
+import type { PlanResponse, ScanResponse } from "./types";
 
 const useStyles = makeStyles({
   stack: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalL },
@@ -22,15 +24,18 @@ const useStyles = makeStyles({
 });
 
 /**
- * Scan -> choices -> plan. The scan result and every draft live in component state only: nothing
- * is written to localStorage, sessionStorage or the URL. All three panels stay mounted so going
- * back keeps what was typed. There is no apply control; the plan is advisory.
+ * Scan -> choices -> plan -> approve/apply. The scan result, plan and every draft live in
+ * component state only: nothing is written to localStorage, sessionStorage or the URL. All panels
+ * stay mounted so going back keeps what was typed. The plan is advisory; step 4 only talks to the
+ * apply API, which authorizes and fails closed.
  */
 export function DeployPage(): ReactElement {
   const styles = useStyles();
   const [step, setStep] = useState(0);
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [draft, setDraft] = useState<ChoicesDraft>(initialDraft);
+  const [plan, setPlan] = useState<PlanResponse | null>(null);
+  const { domainId } = useSelectedDomain();
   const name = STRINGS.steps[step] ?? "";
 
   return (
@@ -63,13 +68,16 @@ export function DeployPage(): ReactElement {
           <ChoicesStep scan={scan} draft={draft} onChange={setDraft} />
         </div>
         <div hidden={step !== 2}>
-          <PlanStep scan={scan} draft={draft} />
+          <PlanStep scan={scan} draft={draft} onPlanned={setPlan} />
+        </div>
+        <div hidden={step !== 3}>
+          <ApplyStep plan={plan} domainId={domainId} />
         </div>
         <div className={styles.nav}>
           <Button disabled={step === 0} onClick={() => setStep(step - 1)} data-testid="step-back">
             {STRINGS.back}
           </Button>
-          {step < 2 ? (
+          {step < 3 ? (
             <Button
               appearance="primary"
               disabled={step === 0 && scan === null}
