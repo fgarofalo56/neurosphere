@@ -1,6 +1,8 @@
 ---
 name: PRP-05-api-worker-runtime-and-self-observability
-status: backlog
+status: active
+started: 2026-11-06
+branch: prp-05-audit-gaps
 priority: P1
 order: 7
 review: none
@@ -300,3 +302,47 @@ Reopened after a deep audit (static read by a read-only agent; no tests were run
 - Roles `lifecycle` (`workers/runtime/factories.py:445-458`, `_NoRequestedJobs` plus empty `TargetRegistry`) and `actions` (`:427-430`, empty `WriteTargetRegistry`) are inert under `NS_WORKER_ROLES=all`.
 - Non-ingestion roles use `InMemoryCheckpointStore` (`adapters.py:69-71`), so checkpoints are not durable.
 - 404/405/500 return a minimal body with no taxonomy `code`; compose worker healthcheck is liveness only; readyz integration test does not use real `main.create`; Linux SIGTERM not run; Cosmos identity path tested with a fake credential only; CI never ran for this PRP.
+
+## Audit gap closure (2026-11-06 re-run)
+
+Items 1-7 above shipped on 2026-10-12. This run closes the 2026-11-04 audit gaps only. Each item first re-verifies its gap against current `main` (PRP-29/35 landed after the audit) and descopes anything already fixed.
+
+### Item G1 - telemetry-wiring
+- Deliverable: call `configure_telemetry` at API startup (`neurosphere_api.main.create`) and in the worker runtime entrypoint; request-metric middleware recording `ns.api.request.duration` and `ns.api.request.errors`; `ns.correlation_id` span attribute; exporters off when `NS_ENV=local`.
+- Owned files: `services/api/neurosphere_api/middleware/` (new `telemetry.py`), `services/api/neurosphere_api/app.py`, `services/api/neurosphere_api/main.py`, `services/workers/neurosphere_workers/runtime/__main__.py`, `services/workers/neurosphere_workers/runtime/supervisor.py`, matching tests.
+- Must NOT touch: `packages/contracts/**`, `docker-compose.yml`, `infra/bicep/**`, `.github/workflows/**`, root `pyproject.toml`.
+- Depends on: none.
+- Acceptance: a request through `create()` records the SLO metrics (in-memory exporter test); metric names emitted match those charted in `infra/observability/*.json` (test); no network call when `NS_ENV=local`.
+
+### Item G2 - worker-roles-durability
+- Deliverable: `lifecycle` and `actions` roles get real job sources / registries or are disabled with an explicit reason under `NS_WORKER_ROLES=all`; non-ingestion roles use a durable `CheckpointStore` (Cosmos-backed) instead of `InMemoryCheckpointStore`.
+- Owned files: `services/workers/neurosphere_workers/runtime/factories.py`, `adapters.py`, `checkpoint.py`, `services/workers/tests/runtime/`.
+- Must NOT touch: `packages/contracts/**`, `services/api/**`, `docker-compose.yml`, shared list.
+- Depends on: G1 (shared runtime entrypoint, sequenced).
+- Acceptance: no role silently runs inert; a restart resumes from the committed checkpoint (test); checkpoint advances only after durable accept.
+
+### Item G3 - health-and-errors
+- Deliverable: compose worker healthcheck becomes readiness; `/readyz` integration test through real `main.create`; non-contract parts of 404/405/500 handling. The taxonomy `code` for 404/405/413/500 needs a PRP-01 contract change and is a follow-up, not built here.
+- Owned files: `docker-compose.yml` (worker healthcheck only), `services/api/tests/health/`, `services/api/neurosphere_api/middleware/problem.py`, `services/api/neurosphere_api/app.py` (after G1 merges).
+- Must NOT touch: `packages/contracts/**`, `services/workers/**` except the health endpoint if needed.
+- Depends on: G1.
+- Acceptance: readiness check fails when a worker dependency is down (integration, local emulators on 127.0.0.1); readyz test uses real `create()`.
+
+## Execution state
+
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| G1 | merged | worktree-agent-a15ba0187fa35aa9a | sonnet | ruff clean, pyright 0 errors, pytest services/api + workers runtime + core observability 1769 passed 5 deselected; merge 8ea00be | 2026-11-06 |
+| G2 | merged | worktree-agent-a1ce1de9f54f9d79c (e9f9092) + worktree-agent-a7c29bc5167340246 (13e06e7, idle-by-config fix) | sonnet | ruff clean, pyright 0 errors, services/workers 665 passed 1 deselected (re-run by orchestrator); lifecycle reports idle (lifecycle_no_job_source) so /readyz stays 200 under all; actions role keeps running (reconcile sweep) with warning only; merge 22d54db | 2026-11-06 |
+| G3 | merged | worktree-agent-a1aa18aa3885f6ad0 | sonnet | ruff/pyright clean, 55 passed 2 deselected (health, app, middleware, openapi drift, workers runtime); docker compose config ok; merge d39ba18; emulator readyz test and compose /readyz healthcheck later run live by orchestrator, see re-run results | 2026-11-06 |
+
+## Re-run results (2026-11-06, audit gap closure)
+
+Branch `prp-05-audit-gaps`; G1 8ea00be, G3 d39ba18, G2 22d54db. Not pushed, no PR yet, CI not run.
+
+- Gates: `verify-gates.ps1 -Mode full` PASS 4/4 (lint, typecheck, tests, build), exit 0.
+- Integration (local emulators, 127.0.0.1, images rebuilt from the merged code): `pytest -m integration tests/integration/compose tests/integration/health tests/integration/clients services/api/tests/health/test_readyz_emulator.py` 16 passed. `docker compose --profile app up -d --wait` healthy for api, workers, frontend; `down` leaves no orphans.
+- Closed: SLO metrics and traces now wired in the API and worker entrypoint (G1); lifecycle and actions roles no longer silently inert, lifecycle reports `idle` with `lifecycle_no_job_source` without failing readiness, non-ingestion roles use durable Cosmos checkpoints (G2); compose worker healthcheck probes `/readyz`, `/readyz` tested through real `main.create` (G3).
+- Deviations: lifecycle has no job source in the codebase (nothing persists freshly requested jobs), so it is idle-by-config, not functional. The actions role keeps running (it also runs the review-reconcile sweep) with a `worker.actions_idle_by_config` warning only, no idle status. Workers get telemetry providers but no worker code emits SLO metrics yet. The Azure Monitor connection string is read straight from the environment in the API and worker entrypoints (two small duplicated helpers) because Settings is outside this PRP's files.
+- Local-run gotchas: compose needs `NS_ENTRA_TENANT_ID` and `NS_ENTRA_CLIENT_ID` set, otherwise projections, actions and recommendations report `tenant_id_missing` and readiness is 503 (placeholder GUIDs used, emulators have no auth); a foreign aiohttp process held host port 8080, so the compose tests ran with `NS_FRONTEND_PORT=18080`; `docker compose up` without `--build` reuses stale images.
+- Open gates: 404/405/413/500 taxonomy `code` (needs a PRP-01 contract change, follow-up); a real lifecycle job source; Linux real-SIGTERM; managed-identity against live Cosmos and Event Hubs; Azure Monitor exporter against a real workspace; CI.

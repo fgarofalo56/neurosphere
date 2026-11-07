@@ -4,7 +4,8 @@ Each role is built by a factory (given its own ``ClientLifetime`` for the attemp
 :class:`RoleRunnable` and run until it stops. A crash (any exception, or an unexpected clean
 return) marks the role ``backoff`` (readiness false), waits a jittered exponential delay and
 builds the role again from scratch; it never touches another role. A ``RoleConfigError`` is
-terminal for that role only (``failed``). A role that stayed up for ``stable_seconds`` resets its
+terminal for that role only (``failed``). A runnable exposing ``idle_reason`` is reported ``idle``
+with that code and stays ready. A role that stayed up for ``stable_seconds`` resets its
 failure streak. ``crash_looping`` is reported once the streak reaches ``crash_loop_threshold``.
 """
 
@@ -29,7 +30,7 @@ __all__ = ["RoleFactory", "RoleRunnable", "RoleState", "RoleSupervisor"]
 
 logger = logging.getLogger("neurosphere.workers.supervisor")
 
-RoleState = Literal["pending", "starting", "running", "backoff", "failed", "stopped"]
+RoleState = Literal["pending", "starting", "running", "idle", "backoff", "failed", "stopped"]
 DEFAULT_CRASH_LOOP_THRESHOLD: Final = 3
 DEFAULT_STABLE_SECONDS: Final = 30.0
 DEFAULT_DRAIN_SECONDS: Final = 30.0
@@ -87,7 +88,8 @@ class RoleSupervisor:
 
     def _role_ready(self, role: _Role) -> bool:
         # A crash-looping role is briefly ``running`` between restarts; it is never ready.
-        return role.state == "running" and role.streak < self._threshold
+        # ``idle`` (idle by configuration, with an enumerated reason) does not block readiness.
+        return role.state in ("running", "idle") and role.streak < self._threshold
 
     @property
     def ready(self) -> bool:
@@ -144,8 +146,10 @@ class RoleSupervisor:
                     role.runnable = await factory(lifetime)
                     if self._stop.is_set():
                         role.runnable.request_shutdown()
-                    role.state = "running"
-                    role.reason = None
+                    # An idle-by-config role (``idle_reason`` set) is reported honestly as ``idle``.
+                    idle_reason = getattr(role.runnable, "idle_reason", None)
+                    role.state = "idle" if idle_reason else "running"
+                    role.reason = idle_reason or None
                     await role.runnable.run()
                 if self._stop.is_set():
                     return

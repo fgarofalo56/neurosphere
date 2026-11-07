@@ -15,6 +15,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from neurosphere_core.cloud import Settings
 from neurosphere_core.errors import InvalidSchemaError, NeuroSphereError, ValidationIssue
+from neurosphere_core.observability import Telemetry
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
@@ -22,6 +23,7 @@ from neurosphere_api.middleware import (
     DEFAULT_MAX_REQUEST_BYTES,
     CorrelationIdMiddleware,
     RequestSizeLimitMiddleware,
+    TelemetryMiddleware,
     correlation_id_of,
     generic_problem_response,
     problem_response,
@@ -74,11 +76,16 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     from neurosphere_api.mcp.server import STATE_ATTRIBUTE, McpServerMount
 
     mount = getattr(app.state, STATE_ATTRIBUTE, None)
-    if isinstance(mount, McpServerMount):
-        async with mount.session_manager.run():
+    try:
+        if isinstance(mount, McpServerMount):
+            async with mount.session_manager.run():
+                yield
+        else:
             yield
-    else:
-        yield
+    finally:
+        telemetry = getattr(app.state, "telemetry", None)
+        if isinstance(telemetry, Telemetry):
+            telemetry.shutdown()  # flush exporters (none when NS_ENV=local)
 
 
 def create_app(
@@ -86,17 +93,23 @@ def create_app(
     *,
     max_request_bytes: int = DEFAULT_MAX_REQUEST_BYTES,
     extra_routers: Mapping[str, APIRouter] | None = None,
+    telemetry: Telemetry | None = None,
 ) -> FastAPI:
     app = FastAPI(title=API_TITLE, version=API_VERSION, lifespan=_lifespan)
     app.state.settings = settings
+    if telemetry is not None:
+        app.state.telemetry = telemetry
 
     app.add_exception_handler(NeuroSphereError, _on_neurosphere_error)
     app.add_exception_handler(RequestValidationError, _on_validation_error)
     app.add_exception_handler(StarletteHTTPException, _on_http_exception)
     app.add_exception_handler(Exception, _on_unhandled)
 
-    # Last added is outermost: correlation wraps size limit so every response carries the id.
+    # Last added is outermost: correlation wraps telemetry wraps size limit, so every response
+    # (including 413s) carries the id, is measured, and the span can read the bound id.
     app.add_middleware(RequestSizeLimitMiddleware, max_bytes=max_request_bytes)
+    if telemetry is not None:
+        app.add_middleware(TelemetryMiddleware, telemetry=telemetry)
     app.add_middleware(CorrelationIdMiddleware)
 
     registry = RouterRegistry()

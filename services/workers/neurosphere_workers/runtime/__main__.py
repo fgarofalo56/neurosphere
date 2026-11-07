@@ -15,6 +15,9 @@ import os
 import sys
 from collections.abc import Mapping
 
+from neurosphere_core.cloud import load_settings
+from neurosphere_core.observability import Telemetry, configure_telemetry
+
 from neurosphere_workers.runtime.factories import (
     BUILDERS,
     RoleBuilder,
@@ -69,9 +72,25 @@ async def run_roles(
     return 0
 
 
+def build_telemetry(environ: Mapping[str, str] | None = None) -> Telemetry:
+    """Providers for this process. No exporters in NS_ENV=local; Azure Monitor only when
+    ``APPLICATIONINSIGHTS_CONNECTION_STRING`` is set explicitly."""
+    env = os.environ if environ is None else environ
+    connection = env.get("APPLICATIONINSIGHTS_CONNECTION_STRING", "").strip() or None
+    return configure_telemetry(
+        load_settings(),
+        service_name="neurosphere-workers",
+        azure_monitor_connection_string=connection,
+    )
+
+
 async def _amain(raw_roles: str | None) -> int:
     cfg = RuntimeConfig.from_env()
-    return await run_roles(parse_roles(raw_roles), cfg)
+    telemetry = build_telemetry()
+    try:
+        return await run_roles(parse_roles(raw_roles), cfg)
+    finally:
+        telemetry.shutdown()
 
 
 def main(raw_roles: str | None = None) -> int:
