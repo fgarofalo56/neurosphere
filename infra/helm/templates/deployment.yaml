@@ -52,7 +52,8 @@ spec:
           {{- $ingestFile = $.Values.ingest.producersFile }}
           {{- end }}
           {{- end }}
-          {{- if or $.Values.env $apimFront $ingestFile }}
+          {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
+          {{- if or $.Values.env $apimFront $ingestFile $scan }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -62,6 +63,27 @@ spec:
             # Producer registry (digests only). Unset: ingest stays 503 ingest_not_configured.
             - name: NS_INGEST_PRODUCERS_FILE
               value: {{ $ingestFile | quote }}
+            {{- end }}
+            {{- if $scan }}
+            # Opt-in resource scan; unset keeps POST /v1/deploy/scan failing closed (503).
+            - name: NS_SCAN_ENABLED
+              value: "true"
+            {{- with $.Values.scan.requestTimeoutSeconds }}
+            - name: NS_SCAN_REQUEST_TIMEOUT_SECONDS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.scan.pageSize }}
+            - name: NS_SCAN_PAGE_SIZE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.scan.maxPages }}
+            - name: NS_SCAN_MAX_PAGES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.scan.maxSubscriptions }}
+            - name: NS_SCAN_MAX_SUBSCRIPTIONS
+              value: {{ . | quote }}
+            {{- end }}
             {{- end }}
             {{- if $apimFront }}
             # PRM resource identifier must equal the URL clients reach through the gateway.
