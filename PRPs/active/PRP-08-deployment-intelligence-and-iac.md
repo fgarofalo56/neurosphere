@@ -1,11 +1,11 @@
 ---
 name: PRP-08-deployment-intelligence-and-iac
-status: backlog
+status: active
 priority: P1
 order: 8
-started: 2026-10-16
+started: 2026-11-07
 pr: 43
-branch: prp-08-deployment-intelligence
+branch: prp-08-audit-gap-closure
 review: required
 created: 2026-10-08
 model: sonnet
@@ -223,6 +223,50 @@ Ship the deployment path for a customer-hosted NeuroSphere: per-cloud Bicep modu
 - Acceptance criteria: with the opt-in setting the app serves scan through `HttpxResourceGraphReader` using the cloud profile's management host and a managed-identity/default credential (no secrets); without it the route returns 503; credential/client closed on shutdown.
 - Tests to write: `services/api/tests/deployment/test_scan_bootstrap.py`.
 
+### Item 10 - scan-enablement-and-e2e  [P] (added at re-plan approval 2026-11-07, audit gap closure)
+- Deliverable: deployments actually serve the scan route: `NS_SCAN_ENABLED` and the scan settings exposed as Helm values, App Service app settings, `.env.example` (names only) and compose; an API-level scan-to-plan test against mock Resource Graph.
+- Owned files (may edit): `infra/helm/`, `infra/appservice/`, `.env.example`, `tests/integration/deploy/test_scan_to_plan.py` (new).
+- Must NOT touch: `services/`, `packages/`, `infra/bicep/`, `infra/scripts/`, root `pyproject.toml`, `docker-compose.yml` (sequence separately if compose change is needed), `.github/workflows/`.
+- Depends on: none.
+- Acceptance criteria:
+  - Helm and App Service render the scan opt-in from one values key, default off (fail closed, 503 unchanged); `helm lint`/`helm template` still pass and `test_helm_render` extended.
+  - Scan-to-plan test: authorized subscriptions A and B only, plan consumes the scan result and marks unconsented shared services `needs_consent`.
+  - No secret literal; `.env.example` has names only.
+- Tests to write: extend `tests/unit/infra/test_helm_render.py`, new `tests/integration/deploy/test_scan_to_plan.py`.
+
+### Item 11 - audit-and-consent-hardening  [P] (added 2026-11-07; closes #35, #36, #37)
+- Deliverable: consent is never inferred from resource tags (#35); scan, plan and consent decisions emit audit events through the PRP-06 audit interface (#37); the plan accepts a server-side scan id issued by the scan service, with the body-supplied scan kept as a validated fallback (#36).
+- Owned files (may edit): `services/api/neurosphere_api/deploy/scan/`, `services/api/neurosphere_api/deploy/plan/`, `services/api/tests/deployment/`.
+- Must NOT touch: `services/api/neurosphere_api/routers.py`, `openapi.json` (item 12 regenerates), `packages/`, `infra/`, root `pyproject.toml`.
+- Depends on: none.
+- Acceptance criteria:
+  - A resource tagged as owner-consented without a recorded consent reference is `needs_consent`.
+  - Scan, plan build and consent each produce one audit event carrying actor, scope and target; no event contains a credential or subscription secret.
+  - A plan referencing a scan id the caller did not create returns `forbidden`; an expired or unknown id returns a typed 404/410.
+- Tests to write: extend `services/api/tests/deployment/test_scan.py`, `test_plan.py`.
+
+### Item 12 - apply-and-uninstall-api  (added 2026-11-07; review: required)
+- Deliverable: an approve-plan -> apply action and an uninstall dry-run endpoint, both through the existing durable action executor (confirm exact target/version/diff, recheck permission, audit, verify actual change). `FabricProvisioner` gets its first non-test caller, gated by the capability matrix. The R1 live-inventory guard before any RG delete stays mandatory.
+- Owned files (may edit): `services/api/neurosphere_api/deploy/apply/` (new), `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`, `services/api/tests/deployment/test_apply.py` (new).
+- Must NOT touch: `services/api/neurosphere_api/deploy/scan/`, `.../deploy/plan/`, `packages/core/neurosphere_core/deploy/register/` (call only), `infra/scripts/uninstall.py` (call only), `infra/bicep/`, root `pyproject.toml`.
+- Depends on: Item 11.
+- Acceptance criteria:
+  - Apply without an approved plan or with a changed plan hash is refused; the executor rechecks permission at execution.
+  - Uninstall endpoint is dry-run only through the API: it lists `reused`/`shared` as untouched and cannot reach a delete path for them.
+  - Fabric unavailable per matrix -> `capability_unavailable`, zero HTTP calls; no paid or live call in tests.
+  - Route inventory (`undeclared_routes`) stays empty; OpenAPI drift test passes.
+- Tests to write: `services/api/tests/deployment/test_apply.py`.
+
+### Item 13 - deploy-ui-apply-step  (added 2026-11-07)
+- Deliverable: Apply and Uninstall-preview step in the existing deploy wizard showing exact target, version and diff, disabled options with reasons, and approval state.
+- Owned files (may edit): `frontend/src/features/deploy/`, `frontend/tests/mock-api/features/deploy.ts`, `frontend/tests/e2e/deploy/`.
+- Must NOT touch: `services/`, `packages/`, `infra/`, `frontend/src/app/` (routes already registered), root configs.
+- Depends on: Item 12.
+- Acceptance criteria:
+  - Vitest and the deploy e2e spec pass; no hidden-navigation-as-authorization (API denies).
+  - Typecheck and lint clean for the feature folder.
+- Tests to write: extend `frontend/src/features/deploy/deploy.test.tsx` and `frontend/tests/e2e/deploy/deploy.spec.ts`.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -275,6 +319,10 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 8 | merged | worktree-agent-a8b04f271346df95a | sonnet | api suite 304 passed (route inventory + openapi drift) on branch and post-merge; full suite 3829 passed on branch; local bicep build/build-params/lint rc=0 and helm 4.3.0 lint/template ok; validate_planning PASS; b7cbd21, merge c5573b9. Scan stays 503 until configured (production bootstrap needs main.py, unowned; follow-up) | 2026-10-16 |
 | 9 | merged | worktree-agent-a8afc23ef8c652947 | sonnet | ruff/pyright clean; api suite 312 passed (branch + post-merge); full suite 3896 passed on branch; opt-in NS_SCAN_ENABLED, DefaultAzureCredential excluding env secrets outside local; 08a246b, merge 0982ed0 | 2026-10-16 |
 | R1 | merged | worktree-agent-a2db5bf7a28e8cfe7 | sonnet | PRP review (one pass): CHANGES REQUIRED, 1 blocker: uninstall RG delete cascades to unregistered live resources (infra/scripts/uninstall.py ArmDeleter; guard only checks register rows). Rework 90cd84d (merge 9935cae): LiveInventory check before every RG delete, fail closed on listing error; confirmed RESOLVED by Haiku pass; core deploy + unit/infra pass post-merge, integration 3 passed. 5 non-blocking -> follow-ups | 2026-10-16 |
+| 10 | todo | | sonnet | | 2026-11-07 |
+| 11 | todo | | sonnet | | 2026-11-07 |
+| 12 | todo | | sonnet | | 2026-11-07 |
+| 13 | todo | | sonnet | | 2026-11-07 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
