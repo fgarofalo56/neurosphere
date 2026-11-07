@@ -75,6 +75,7 @@ from neurosphere_core.gateway.mode import MODE_CHANGE_KIND, require_manage
 from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry
 
+from neurosphere_api.actions.models import PlanStepView
 from neurosphere_api.actions.settings import ActionApiSettings
 
 __all__ = [
@@ -98,6 +99,16 @@ def _never_executes() -> CapabilityUnavailableError:
     return CapabilityUnavailableError(
         _API_NEVER_EXECUTES, "the API only plans; the executor worker changes targets"
     )
+
+
+_DIGEST_PREFIX_LENGTH: Final = 12
+
+
+def _digest_prefix(digest: object) -> str | None:
+    """First hex characters of a ``sha256:`` payload digest; the full digest is never shown."""
+    if not isinstance(digest, str):
+        return None
+    return digest.removeprefix("sha256:")[:_DIGEST_PREFIX_LENGTH]
 
 
 def _gateway_id(connector: object, canonical_id: str) -> str:
@@ -166,6 +177,32 @@ class _PlanningConnector:
             if self._kind != MODE_CHANGE_KIND:
                 await self._require_manage(connector, request)
         return await connector.dry_run(request)
+
+    async def plan_steps(self, request: WriteRequest) -> list[PlanStepView] | None:
+        """Per-step expectations of an APIM plan (reads only), or ``None`` when the kind has no
+        step plan (a mode switch, a Foundry swap). Same refusals as :meth:`dry_run`."""
+        name = connector_name_for(self._kind, request.target.entity_type)
+        connector = None if name is None else self._connectors.get(name)
+        plan_of: Any = getattr(connector, "plan", None)
+        if name != APIM_GATEWAY_CONNECTOR or connector is None or plan_of is None:
+            return None
+        if self._kind == MODE_CHANGE_KIND:
+            return None
+        check = getattr(connector, "check_action", None)
+        if callable(check):
+            check(self._kind, request)
+        await self._require_manage(connector, request)
+        plan = await plan_of(request)
+        return [
+            PlanStepView(
+                resource_type=str(step.resource_type),
+                name=step.name,
+                expected=step.expected,
+                operation=step.operation,
+                payload_digest_prefix=_digest_prefix(step.payload_digest),
+            )
+            for step in plan.steps
+        ]
 
     # The write path is refused outright (NoReturn satisfies the WriteConnector signatures
     # without this module naming the apply-path result types).

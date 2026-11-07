@@ -33,6 +33,17 @@ export interface ActionView {
   self_approval_forbidden: boolean;
   review_item_id: string | null;
   execution: ExecutionView | null;
+  /** APIM plan steps with the expected create or found, while the intent awaits confirmation. */
+  plan_steps?: readonly PlanStepWire[] | null;
+}
+
+/** One planned APIM step as the API reports it (`payload_digest_prefix` is at most 12 hex). */
+export interface PlanStepWire {
+  resource_type: string;
+  name: string;
+  expected: "create" | "found";
+  operation: string;
+  payload_digest_prefix?: string | null;
 }
 
 export interface ActionListResponse {

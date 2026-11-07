@@ -15,6 +15,8 @@ export interface PlanStepView {
   readonly resource_type: string;
   readonly name: string;
   readonly expected: PlanExpected;
+  /** At most 12 hex characters of the step's payload digest. */
+  readonly payload_digest_prefix?: string | null | undefined;
 }
 
 export interface PlanRow {
@@ -22,6 +24,7 @@ export interface PlanRow {
   readonly name: string;
   readonly operation: string;
   readonly expected: PlanExpected | null;
+  readonly payloadDigest: string | null;
 }
 
 export interface ParsedPlan {
@@ -74,6 +77,7 @@ export function parsePlan(
       name,
       operation: op.op,
       expected: reported?.expected ?? null,
+      payloadDigest: reported?.payload_digest_prefix ?? null,
     });
   }
   return { digest, rows };
@@ -128,6 +132,14 @@ export function PlanPreview({
                     />
                   </span>
                 )}
+                {row.payloadDigest !== null ? (
+                  <>
+                    {" "}
+                    <code data-testid="plan-step-digest" title={P.digestHelp}>
+                      {row.payloadDigest}
+                    </code>
+                  </>
+                ) : null}
               </li>
             ))}
           </ol>

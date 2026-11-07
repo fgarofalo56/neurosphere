@@ -21,7 +21,7 @@ import {
 } from "../../api/index.js";
 import { ErrorState, HealthIndicator, StatusPill, type StatusTone } from "../../design-system";
 import { useEmergencyDisable } from "./hooks";
-import { PlanPreview } from "./PlanPreview";
+import { PlanPreview, type PlanStepView } from "./PlanPreview";
 import { STRINGS, orUnknown } from "./strings";
 import type { ActionIntent, ActionState, ExecutionView, ProposedDiff } from "./types";
 
@@ -264,6 +264,8 @@ export function formatRemaining(ms: number): string {
 export interface ConfirmationDialogProps {
   readonly intent: ActionIntent;
   readonly requiresApproval: boolean;
+  /** Per-step create or found expectations the API reported for an APIM plan, if any. */
+  readonly planSteps?: readonly PlanStepView[] | null | undefined;
   readonly submitting: boolean;
   readonly error: ApiError | null;
   /** Receives the server-issued hash exactly as the intent carried it. */
@@ -278,7 +280,7 @@ export interface ConfirmationDialogProps {
  * change is announced, through a polite live region.
  */
 export function ConfirmationDialog(props: ConfirmationDialogProps): ReactElement {
-  const { intent, requiresApproval, submitting, error, onSubmit, onClose } = props;
+  const { intent, requiresApproval, planSteps, submitting, error, onSubmit, onClose } = props;
   const countdown = useCountdown(intent.confirmation_expires_at);
   const hash = intent.confirmation_hash;
   const canSubmit = !countdown.expired && hash !== null && !submitting;
@@ -304,7 +306,7 @@ export function ConfirmationDialog(props: ConfirmationDialogProps): ReactElement
               <dd>
                 <DiffView diff={intent.proposed_diff} />
               </dd>
-              <PlanPreview diff={intent.proposed_diff} />
+              <PlanPreview diff={intent.proposed_diff} steps={planSteps ?? undefined} />
               <dt>{C.expires}</dt>
               <dd data-testid="confirm-expiry">{orUnknown(intent.confirmation_expires_at)}</dd>
               <dt>{C.remaining}</dt>

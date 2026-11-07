@@ -34,6 +34,7 @@ __all__ = [
     "EmergencyDisableBody",
     "EmergencyDisableView",
     "ExecutionView",
+    "PlanStepView",
 ]
 
 _HASH = r"^sha256:[0-9a-f]{64}$"
@@ -108,6 +109,21 @@ class ExecutionView(BaseModel):
     rolled_back: bool
 
 
+class PlanStepView(BaseModel):
+    """One planned APIM step as the connector expects to find the gateway (read-only preview).
+
+    ``payload_digest_prefix`` is at most 12 hex characters; the full digests stay server-side.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    resource_type: str
+    name: str
+    expected: Literal["create", "found"]
+    operation: str
+    payload_digest_prefix: Annotated[str | None, Field(max_length=12)] = None
+
+
 class ActionView(BaseModel):
     """Wire-contract ``ActionView``: the intent plus derived flags, never the envelope."""
 
@@ -119,6 +135,9 @@ class ActionView(BaseModel):
     self_approval_forbidden: bool
     review_item_id: str | None
     execution: ExecutionView | None
+    #: Additive: per-step create/found expectations of an APIM plan, set only while the intent
+    #: awaits confirmation (never hashed; the confirmation hash binds the diff and plan digest).
+    plan_steps: list[PlanStepView] | None = None
 
     @classmethod
     def build(
