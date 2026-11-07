@@ -16,7 +16,7 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
-from neurosphere_workers.runtime.checkpoint import InMemoryCheckpointStore
+from neurosphere_workers.runtime.checkpoint import CheckpointStore, InMemoryCheckpointStore
 from neurosphere_workers.runtime.worker import Batch, BatchOutcome, Worker, WorkerRunner
 
 __all__ = ["IngestionRole", "MultiWorkerRole", "PeriodicTick", "TickWorker", "WorkerRole"]
@@ -68,8 +68,17 @@ class PeriodicTick:
 
 
 class WorkerRole:
-    def __init__(self, worker: Worker, *, idle_seconds: float = 1.0) -> None:
-        self._runner = WorkerRunner(worker, InMemoryCheckpointStore(), idle_seconds=idle_seconds)
+    def __init__(
+        self,
+        worker: Worker,
+        *,
+        idle_seconds: float = 1.0,
+        checkpoints: CheckpointStore | None = None,
+    ) -> None:
+        # Roles whose worker has batches pass a durable store; the in-memory default is only for
+        # tick workers (they never have a batch) and tests.
+        store = checkpoints if checkpoints is not None else InMemoryCheckpointStore()
+        self._runner = WorkerRunner(worker, store, idle_seconds=idle_seconds)
 
     async def run(self) -> None:
         await self._runner.run(handle_signals=False)
@@ -85,11 +94,21 @@ class MultiWorkerRole:
     the whole role (the same crash contract as a single :class:`WorkerRole`).
     """
 
-    def __init__(self, workers: Sequence[Worker], *, idle_seconds: float = 1.0) -> None:
+    def __init__(
+        self,
+        workers: Sequence[Worker],
+        *,
+        idle_seconds: float = 1.0,
+        checkpoints: CheckpointStore | None = None,
+    ) -> None:
         if not workers:
             raise ValueError("a MultiWorkerRole needs at least one worker")
         self.workers: tuple[Worker, ...] = tuple(workers)
-        self._roles = tuple(WorkerRole(worker, idle_seconds=idle_seconds) for worker in workers)
+        # One shared store is safe: every worker owns a distinct partition key.
+        self._roles = tuple(
+            WorkerRole(worker, idle_seconds=idle_seconds, checkpoints=checkpoints)
+            for worker in workers
+        )
 
     async def run(self) -> None:
         try:
