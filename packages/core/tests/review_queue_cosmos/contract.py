@@ -49,6 +49,7 @@ def make_item(
     domain: str = FINANCE,
     at: str = "2026-10-17T10:00:00Z",
     customer: str = "contoso",
+    override_id: str = "commercial:contoso:neurosphere:edge_override:lock-1",
 ) -> ReviewItem:
     return ReviewItem(
         id=item_id,
@@ -58,7 +59,7 @@ def make_item(
         customer_id=customer,
         domain_id=domain,
         reason="conflicts_with_lock",
-        governing_override_id="commercial:contoso:neurosphere:edge_override:lock-1",
+        governing_override_id=override_id,
         observed_confidence=0.2,
         presented_confidence=0.82,
         new_evidence_ids=["trace:new-0001"],
@@ -95,9 +96,33 @@ class ReviewQueueContract:
 
     async def test_list_open_is_oldest_first_scoped_and_clamped(self, queue: ReviewQueue) -> None:
         both = make_scope([FINANCE, RETAIL])
-        await queue.enqueue(both, make_item("review:b", FINANCE, "2026-10-17T11:00:00Z"))
-        await queue.enqueue(both, make_item("review:a", RETAIL, "2026-10-17T10:00:00Z"))
-        await queue.enqueue(both, make_item("review:c", FINANCE, "2026-10-17T12:00:00Z"))
+        await queue.enqueue(
+            both,
+            make_item(
+                "review:b",
+                FINANCE,
+                "2026-10-17T11:00:00Z",
+                override_id="commercial:contoso:neurosphere:edge_override:lock-b",
+            ),
+        )
+        await queue.enqueue(
+            both,
+            make_item(
+                "review:a",
+                RETAIL,
+                "2026-10-17T10:00:00Z",
+                override_id="commercial:contoso:neurosphere:edge_override:lock-a",
+            ),
+        )
+        await queue.enqueue(
+            both,
+            make_item(
+                "review:c",
+                FINANCE,
+                "2026-10-17T12:00:00Z",
+                override_id="commercial:contoso:neurosphere:edge_override:lock-c",
+            ),
+        )
         listed = await queue.list_open(both)
         assert [i.id for i in listed] == ["review:a", "review:b", "review:c"]
         assert [i.id for i in await queue.list_open(both, limit=2)] == ["review:a", "review:b"]
