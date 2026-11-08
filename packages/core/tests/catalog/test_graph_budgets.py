@@ -100,9 +100,9 @@ async def test_hub_fanout_is_capped_per_node() -> None:
     assert result.truncated_reason == "max_edges"
     hub_edges = [e for e in result.edges if e.source_id == nid("hub")]
     assert len(hub_edges) == 5
-    # 1 hub page + 5 spoke pages + 5 depth probes; every page asks for at most limit + 1 rows
+    # 1 hub page + 5 spoke pages + 5 depth probes; every page is one bounded full-page over-fetch
     assert len(repo.edge_pages) == 11
-    assert max(repo.edge_pages) == 6
+    assert max(repo.edge_pages) == 500
     assert len(result.nodes) <= 1 + 5 + 5
 
 

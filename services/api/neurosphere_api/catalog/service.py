@@ -229,10 +229,17 @@ class CatalogService:
     def _prepare_new(self, scope: IdentityScope, doc: Doc) -> CatalogEntity:
         """Contract-validate a new entity document with server-owned fields applied.
 
-        Raises ``InvalidSchemaError`` for a contract violation and ``ForbiddenError`` when the
-        document's domain is not one the caller may curate. Caller-supplied cloud, customer,
+        Raises ``ForbiddenError`` when the document's domain is not one the caller may curate
+        (checked BEFORE the contract, so 403 never leaks schema feedback) and
+        ``InvalidSchemaError`` for a contract violation. Caller-supplied cloud, customer,
         version, etag and timestamps are overwritten, never trusted.
         """
+        # Authorization first: an out-of-scope caller gets 403 without any schema feedback.
+        # The raw document's domain is only ever compared with the caller's curate domains.
+        raw_domain = doc.get("domain_id")
+        raw_domain = doc.get("id") if doc.get("entity_type") == "domain" else raw_domain
+        if not isinstance(raw_domain, str) or raw_domain not in self._curate_domains(scope):
+            raise ForbiddenError("the target domain is outside the caller's scope")
         now = format_timestamp(self._clock())
         payload: Doc = dict(doc)
         payload.update(
@@ -251,6 +258,8 @@ class CatalogService:
             )
         entity = parse_entity(payload)
         domain = entity_domain(dump(entity))
+        if domain != raw_domain:  # pragma: no cover - the contract cannot rewrite the domain
+            raise ForbiddenError("the target domain is outside the caller's scope")
         if domain is None or domain not in self._curate_domains(scope):
             raise ForbiddenError("the target domain is outside the caller's scope")
         return entity
@@ -544,8 +553,9 @@ class CatalogService:
         """Active agents in the caller's curate domains with no observation inside the window.
 
         An agent's last observation is the newest ``last_observed`` of the edges touching it
-        (first edge page, scope-filtered); with no edges it is the agent's creation time. Agents
-        already marked stale are skipped. Returns ``(candidates, truncated)``.
+        (every edge page up to ``MAX_SCAN_PAGES``, scope-filtered); with no edges it is the
+        agent's creation time. Agents already marked stale are skipped. Returns
+        ``(candidates, truncated)``.
         """
         domains = sorted(self._curate_domains(scope))
         if not domains:
@@ -580,11 +590,27 @@ class CatalogService:
         return candidates, True
 
     async def _last_observed(self, scope: IdentityScope, agent: CatalogEntity) -> datetime:
-        edges = await self._repo.list_edges_by_node(
-            scope, agent.id, "both", EdgeFilter(), PageRequest(page_size=MAX_PAGE_SIZE)
-        )
-        stamps = [parse_timestamp(e.last_observed.root) for e in edges.items]
-        return max(stamps) if stamps else parse_timestamp(agent.created_at.root)
+        """Newest ``last_observed`` over ALL the agent's edges (paged, bounded).
+
+        The repository orders edges by ID, not by time, so the first page proves nothing. If the
+        page bound is reached before the edges run out, the agent cannot be proven stale and is
+        reported as observed now (never a candidate).
+        """
+        stamps: list[datetime] = []
+        cursor: str | None = None
+        for _ in range(MAX_SCAN_PAGES):
+            edges = await self._repo.list_edges_by_node(
+                scope,
+                agent.id,
+                "both",
+                EdgeFilter(),
+                PageRequest(page_size=MAX_PAGE_SIZE, cursor=cursor),
+            )
+            stamps.extend(parse_timestamp(e.last_observed.root) for e in edges.items)
+            cursor = edges.next_cursor
+            if cursor is None:
+                return max(stamps) if stamps else parse_timestamp(agent.created_at.root)
+        return self._clock()
 
     async def stale_plan(self, scope: IdentityScope, window_days: int) -> StaleAgentPlan:
         """Dry run: the agents that would be marked stale now. Changes nothing."""

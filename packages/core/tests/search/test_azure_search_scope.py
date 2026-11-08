@@ -12,8 +12,9 @@ from typing import Any
 import pytest
 from neurosphere_contracts.query.v1.budget import Budget
 from neurosphere_contracts.scope.v1.identity_scope import IdentityScope
+from neurosphere_core.auth.scope.hashing import compute_scope_hash
 from neurosphere_core.capabilities import CapabilityResult, matrix_from_rows
-from neurosphere_core.errors import CapabilityUnavailableError
+from neurosphere_core.errors import CapabilityUnavailableError, DependencyTransientError
 from neurosphere_core.search import SearchFilters, SearchRequest
 from neurosphere_core.search.azure import (
     AzureAuthorizedSearch,
@@ -23,6 +24,7 @@ from neurosphere_core.search.azure import (
     cache_key,
     require_azure_search,
 )
+from neurosphere_core.search.azure.filters import _drop_none, scope_hash_of
 from neurosphere_core.search.fixture import FixtureSearchIndex, documents_from_catalog
 from neurosphere_core.search.fixture.index import SearchDocument, tokenize
 
@@ -336,6 +338,42 @@ def test_budget_maps_to_top_and_timeout_is_partial() -> None:
     fake.delay = 0.5
     result = asyncio.run(svc.search(make_scope([ALPHA]), _req(timeout_ms=50)))
     assert result.partial and result.partial_reason == "timeout_ms"
+
+
+class _SdkTimeoutClient:
+    async def search(self, search_text: str | None = None, **kwargs: Any) -> Any:
+        raise TimeoutError("sdk read timeout")
+
+
+def test_sdk_timeout_is_a_dependency_error_not_the_budget_partial() -> None:
+    svc = AzureAuthorizedSearch(_SdkTimeoutClient(), cloud="commercial")
+    with pytest.raises(DependencyTransientError) as info:
+        asyncio.run(svc.search(make_scope([ALPHA]), _req(timeout_ms=5000)))
+    assert info.value.reason == "search_backend_timeout"
+
+
+def _derived_scope() -> IdentityScope:
+    """A scope built the way ``ScopeDeriver`` builds one: hash over the document, then validate."""
+    base = make_scope([ALPHA], grants=[cid("agent", "a1")])
+    doc = _drop_none(base.model_dump(mode="json"))
+    doc["scope_hash"] = compute_scope_hash(doc)
+    return IdentityScope.model_validate(doc)
+
+
+def test_scope_hash_of_matches_the_derived_scope_hash() -> None:
+    scope = _derived_scope()
+    assert scope_hash_of(scope) == scope.scope_hash
+
+
+def test_cache_key_is_built_on_the_scope_cache_key_layout() -> None:
+    from neurosphere_api.authz import cache_key_prefix, scope_cache_key
+    from neurosphere_core.scope import IdentityScope as CoreScope
+
+    scope = _derived_scope()
+    key = cache_key(scope, _req())
+    api_scope = CoreScope._from_verified_contract(scope)
+    assert key.startswith(cache_key_prefix(api_scope))  # per-customer invalidation prefix
+    assert key.startswith(scope_cache_key(api_scope, namespace="search") + ":")
 
 
 # ------------------------------------------------------------ fixture parity

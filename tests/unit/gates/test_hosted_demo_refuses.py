@@ -663,7 +663,7 @@ def test_guids_are_redacted_in_written_evidence(env: Env) -> None:
 def _template_params() -> dict[str, bool]:
     text = TEMPLATE.read_text(encoding="utf-8")
     found: dict[str, bool] = {}
-    for m in re.finditer(r"^param\s+(\w+)\s+[^\n=]+?(=)?\s*(?:[^\n]*)$", text, re.MULTILINE):
+    for m in re.finditer(r"^param\s+(\w+)\s+[^\n=]+(=)?", text, re.MULTILINE):
         found[m.group(1)] = m.group(2) is not None
     return found
 

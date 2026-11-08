@@ -21,6 +21,11 @@ from neurosphere_workers.projections.catalog.mapping import (
     model_call_candidate,
     tool_call_candidates,
 )
+from neurosphere_workers.projections.catalog.quarantine import (
+    CandidateQuarantine,
+    CandidateQuarantineRecord,
+    InMemoryCandidateQuarantine,
+)
 from neurosphere_workers.projections.catalog.scope import (
     ClaimsSource,
     ScopeProvider,
@@ -39,10 +44,13 @@ __all__ = [
     "INFERENCE_VERSION",
     "MAX_STALE_RETRIES",
     "AliasModelResolver",
+    "CandidateQuarantine",
+    "CandidateQuarantineRecord",
     "CatalogProjection",
     "ClaimsSource",
     "DeterministicModelResolver",
     "EdgeCandidate",
+    "InMemoryCandidateQuarantine",
     "InMemoryTraceEventSource",
     "LoadedEvent",
     "ModelDeploymentResolver",

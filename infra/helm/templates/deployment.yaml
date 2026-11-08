@@ -54,7 +54,8 @@ spec:
           {{- end }}
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
           {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
-          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply }}
+          {{- $search := and (eq $name "api") $.Values.search.provider }}
+          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply $search }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -92,6 +93,23 @@ spec:
               value: "true"
             {{- with $.Values.deployApply.registerContainer }}
             - name: NS_DEPLOY_APPLY_REGISTER_CONTAINER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $search }}
+            # Catalog search; unset provider keeps catalog search failing closed (503 search_unavailable).
+            - name: NS_SEARCH_PROVIDER
+              value: {{ $.Values.search.provider | quote }}
+            {{- with $.Values.search.service }}
+            - name: NS_SEARCH_SERVICE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.search.index }}
+            - name: NS_SEARCH_INDEX
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.search.region }}
+            - name: NS_SEARCH_REGION
               value: {{ . | quote }}
             {{- end }}
             {{- end }}

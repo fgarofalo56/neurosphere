@@ -8,11 +8,16 @@ Budgets (every walk is bounded; nothing is unlimited):
 
 * depth: nodes at ``budget.max_depth`` are returned but never added beyond it; one probe
   query per frontier node decides whether anything lies further out (``max_depth``).
-* fan-out: at most ``budget.limit`` edges are taken per expanded node; one more edge in the
-  store means the node was truncated. The protocol has no fan-out reason, so it is reported
-  as ``max_edges`` (a high-degree hub cannot cause an unbounded walk).
+* fan-out: at most ``budget.limit`` edges are taken per expanded node. The edges are fetched
+  with headroom (one full page), filtered by endpoint scope FIRST, and only then counted: a
+  node is truncated when more than ``limit`` IN-SCOPE edges exist, so hidden out-of-scope edges
+  never influence ``truncated``. If even the full page is not exhausted the node cannot be
+  proven complete and is reported truncated too. The protocol has no fan-out reason, so it is
+  reported as ``max_edges`` (a high-degree hub cannot cause an unbounded walk).
 * nodes / edges: ``budget.max_nodes`` / ``budget.max_edges`` (server defaults when absent).
-* time: an injected monotonic clock is checked before every repository call (``timeout_ms``).
+* time: an injected monotonic clock is checked before every repository call (``timeout_ms``),
+  including the root read and the override batch; a walk that is out of time before it has a
+  root returns an empty, truncated (``timeout_ms``) result.
 
 Over budget the partial result is returned with ``truncated=True``; the walk stops at once
 for edge and time budgets.
@@ -22,8 +27,10 @@ requires the OTHER endpoint to resolve through ``get_entity`` (scope-filtered). 
 node outside the scope is dropped, so a path through such a node is cut there and never
 bridged. Presented lineage runs every edge through ``rules.present_edge`` with its overrides;
 rejected edges are hidden and not traversed. The ``raw`` view skips curation and requires an
-Auditor scope: ``list_observations`` raising ``ForbiddenError`` is surfaced, never turned into
-an empty result.
+Auditor scope, checked explicitly with ``repo.engine.auditor_domains`` (no probe call through
+the unknown-edge fallback of ``list_observations``): a non-auditor request raises
+``ForbiddenError``, never an empty result, and so does an edge in a non-audited domain.
+An edge whose lock has expired is presented with its newest observation (``graph.latest``).
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ from typing import Literal
 from neurosphere_contracts.query.v1.budget import Budget
 
 from neurosphere_core.catalog import rules
+from neurosphere_core.catalog.graph.latest import LatestObservationReader, wants_latest
 from neurosphere_core.catalog.protocol import (
     CatalogEdge,
     CatalogEntity,
@@ -51,6 +59,8 @@ from neurosphere_core.catalog.protocol import (
     NeighborsRequest,
     PresentedEdge,
 )
+from neurosphere_core.catalog.repo.engine import auditor_domains
+from neurosphere_core.errors.taxonomy import ForbiddenError
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.paging.models import MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -66,6 +76,14 @@ DEFAULT_MAX_NODES = 1000
 """Server policy default when ``budget.max_nodes`` is absent (never unbounded)."""
 DEFAULT_MAX_EDGES = 5000
 """Server policy default when ``budget.max_edges`` is absent (never unbounded)."""
+
+
+class _OutOfTimeError(Exception):
+    """The time budget ran out before the walk had a root."""
+
+
+_RAW_DENIED = "raw observations require a security auditor scope"
+_TIMED_OUT = GraphResult(nodes=[], edges=[], truncated=True, truncated_reason="timeout_ms")
 
 
 @dataclass
@@ -160,21 +178,27 @@ class RepositoryGraphQuery:
     # ------------------------------------------------------------------ traversals
 
     async def neighbors(self, scope: IdentityScope, request: NeighborsRequest) -> GraphResult:
-        walk = await self._walk(
-            scope,
-            request.node_id,
-            request.direction,
-            request.filters,
-            request.budget,
-            request.view,
-        )
+        try:
+            walk = await self._walk(
+                scope,
+                request.node_id,
+                request.direction,
+                request.filters,
+                request.budget,
+                request.view,
+            )
+        except _OutOfTimeError:
+            return _TIMED_OUT.model_copy(deep=True)
         return self._result(walk, with_paths=False)
 
     async def impact_paths(self, scope: IdentityScope, request: ImpactRequest) -> GraphResult:
         direction: Direction = "out" if request.direction == "downstream" else "in"
-        walk = await self._walk(
-            scope, request.node_id, direction, request.filters, request.budget, request.view
-        )
+        try:
+            walk = await self._walk(
+                scope, request.node_id, direction, request.filters, request.budget, request.view
+            )
+        except _OutOfTimeError:
+            return _TIMED_OUT.model_copy(deep=True)
         return self._result(walk, with_paths=True)
 
     # ------------------------------------------------------------------ internals
@@ -216,10 +240,12 @@ class RepositoryGraphQuery:
         view: GraphView,
     ) -> _Walk | None:
         deadline = self._clock() + budget.timeout_ms / 1000.0
+        if view == "raw" and not auditor_domains(scope, self._now()):
+            # Explicit, so a non-Auditor scope is refused even when the node has no edges.
+            raise ForbiddenError(_RAW_DENIED)
+        if self._clock() >= deadline:  # budget check before the root read
+            raise _OutOfTimeError
         root = await self._repo.get_entity(scope, node_id)
-        if view == "raw":
-            # Surfaces ForbiddenError for a non-Auditor scope even when the node has no edges.
-            await self._repo.list_observations(scope, node_id, PageRequest(page_size=1))
         if root is None:
             return None
         walk = _Walk(
@@ -232,7 +258,7 @@ class RepositoryGraphQuery:
         walk.nodes[root.id] = root
         walk.depth[root.id] = 0
         walk.scope_cache[root.id] = root
-        audited: set[str] = set()
+        audited = frozenset(auditor_domains(scope, self._now())) if view == "raw" else frozenset()
         frontier = [root.id]
         for depth in range(1, budget.max_depth + 2):
             nxt: list[str] = []
@@ -284,36 +310,43 @@ class RepositoryGraphQuery:
         direction: Direction,
         flt: EdgeFilter,
         view: GraphView,
-        audited: set[str],
+        audited: frozenset[str],
         nxt: list[str],
         max_depth: int,
     ) -> None:
         if self._expired(walk):
             return
         page = await self._repo.list_edges_by_node(
-            scope, current, direction, flt, PageRequest(page_size=walk.fan_out + 1)
+            scope, current, direction, flt, PageRequest(page_size=MAX_PAGE_SIZE)
         )
         edges: list[CatalogEdge] = sorted(page.items, key=lambda e: e.id)
-        if len(edges) > walk.fan_out:
-            walk.truncate("max_edges")
-            edges = edges[: walk.fan_out]
 
-        candidates: list[tuple[CatalogEdge, str]] = []
+        # Scope first, budget second: an out-of-scope endpoint is cut here and must not count
+        # toward (or reveal itself through) the fan-out truncation.
+        visible: list[tuple[CatalogEdge, str]] = []
         for edge in edges:
-            if edge.id in walk.edges:
-                continue
             other = edge.target_id if edge.source_id == current else edge.source_id
             if await self._in_scope(scope, walk, other) is None:
                 if walk.stopped:
                     return
                 continue  # out-of-scope endpoint: cut here, never bridged
+            visible.append((edge, other))
+        if len(visible) > walk.fan_out or (page.next_cursor is not None and edges):
+            walk.truncate("max_edges")
+            visible = visible[: walk.fan_out]
+
+        candidates: list[tuple[CatalogEdge, str]] = []
+        for edge, other in visible:
+            if edge.id in walk.edges:
+                continue
             if view == "raw" and edge.domain_id.root not in audited:
-                await self._repo.list_observations(scope, edge.id, PageRequest(page_size=1))
-                audited.add(edge.domain_id.root)
+                raise ForbiddenError(_RAW_DENIED)
             candidates.append((edge, other))
         if not candidates:
             return
 
+        if view == "presented" and self._expired(walk):
+            return
         overrides = (
             await self._repo.list_overrides_for_edges(scope, [e.id for e, _ in candidates])
             if view == "presented"
@@ -321,7 +354,17 @@ class RepositoryGraphQuery:
         )
         now = self._now()
         for edge, other in candidates:
-            presented = rules.present_edge(edge, overrides.get(edge.id, ()), now)
+            held = overrides.get(edge.id, ())
+            latest = None
+            if (
+                view == "presented"
+                and isinstance(self._repo, LatestObservationReader)
+                and wants_latest(edge, held, now)
+            ):
+                if self._expired(walk):
+                    return
+                latest = await self._repo.latest_observation(scope, edge.id)
+            presented = rules.present_edge(edge, held, now, latest)
             if presented.hidden:
                 continue  # a curated reject hides the edge; it is not traversed either
             is_new = other not in walk.nodes

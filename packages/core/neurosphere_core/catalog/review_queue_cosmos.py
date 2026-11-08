@@ -122,6 +122,8 @@ class CosmosReviewQueue:
     async def enqueue(self, scope: IdentityScope, item: ReviewItem) -> bool:
         if not _visible(scope, item):
             raise ForbiddenError("review item is outside the caller's scope")
+        if await self._open_duplicate(scope, item):
+            return False
         try:
             await self._container.create_item(body=_body(item))
         except CosmosResourceExistsError:
@@ -129,6 +131,26 @@ class CosmosReviewQueue:
         except Exception as exc:
             _raise_mapped(exc)
         return True
+
+    async def _open_duplicate(self, scope: IdentityScope, item: ReviewItem) -> bool:
+        """A still-open item for the same edge, reason and governing decision exists."""
+        sql = (
+            "SELECT TOP 1 c.id FROM c WHERE c.status = @status AND c.edge_id = @edge AND "  # noqa: S608
+            "c.reason = @reason AND c.domain_id = @domain AND "
+            "c.governing_override_id = @governing AND " + _SCOPE_CLAUSES
+        )
+        rows = await self._query(
+            sql,
+            [
+                {"name": "@status", "value": "open"},
+                {"name": "@edge", "value": item.edge_id},
+                {"name": "@reason", "value": item.reason},
+                {"name": "@domain", "value": item.domain_id},
+                {"name": "@governing", "value": item.governing_override_id},
+            ],
+            scope,
+        )
+        return bool(rows)
 
     async def get(self, scope: IdentityScope, item_id: str) -> ReviewItem | None:
         found = await self._get_row(scope, item_id)

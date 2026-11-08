@@ -289,6 +289,14 @@ class CatalogRepository(Protocol):
         """
         ...
 
+    async def list_edges_by_domain(
+        self, scope: IdentityScope, domain_id: str, flt: EdgeFilter, page: PageRequest
+    ) -> Page[CatalogEdge]:
+        """Stored edges whose own ``domain_id`` is ``domain_id``, ordered by ID, one bounded
+        page. An empty page when the domain is outside ``scope`` (same answer as empty).
+        """
+        ...
+
     async def record_observation(self, scope: IdentityScope, observation: EdgeObservation) -> bool:
         """Store a raw observation; return False when ``observation.id`` already exists.
 

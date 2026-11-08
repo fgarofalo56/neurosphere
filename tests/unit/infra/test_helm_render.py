@@ -181,6 +181,44 @@ def test_app_service_deploy_apply_opt_in_is_one_default_off_parameter() -> None:
     assert text.count("deployApplySettings,") == 1  # the api site only
 
 
+def test_search_provider_is_set_on_the_api_container_only() -> None:
+    values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
+    assert values["search"]["provider"] == "fixture"
+    default = _containers(_render())
+    assert _env(default["api"])["NS_SEARCH_PROVIDER"] == "fixture"
+    assert "NS_SEARCH_SERVICE" not in _env(default["api"])  # unset names are not rendered
+    azure = _containers(
+        _render(
+            "--set",
+            "search.provider=azure",
+            "--set",
+            "search.service=ns-search",
+            "--set",
+            "search.region=eastus",
+        )
+    )
+    env = _env(azure["api"])
+    assert (env["NS_SEARCH_PROVIDER"], env["NS_SEARCH_SERVICE"], env["NS_SEARCH_REGION"]) == (
+        "azure",
+        "ns-search",
+        "eastus",
+    )
+    for other in ("workers", "frontend"):
+        assert not [k for k in _env(azure[other]) if k.startswith("NS_SEARCH_")]
+    unset = _containers(_render("--set", "search.provider="))
+    assert "NS_SEARCH_PROVIDER" not in _env(unset["api"])
+
+
+def test_bicep_sets_the_search_provider_on_the_api_site_only() -> None:
+    text = (APPSERVICE / "main.bicep").read_text(encoding="utf-8")
+    assert "param searchProvider string = 'fixture'" in text
+    assert "{ name: 'NS_SEARCH_PROVIDER', value: searchProvider }" in text
+    assert text.count("searchSettings,") == 1  # the api site only
+    demo = (ROOT / "infra" / "demo" / "main.bicep").read_text(encoding="utf-8")
+    assert "param searchProvider string = 'fixture'" in demo
+    assert demo.count("searchProvider: searchProvider") == 2  # bootstrap and final pass
+
+
 def test_registry_is_required() -> None:
     helm = _helm()
     client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"

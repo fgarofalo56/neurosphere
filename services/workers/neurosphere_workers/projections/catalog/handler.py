@@ -13,7 +13,18 @@ crash between any two of them.
 
 The worker writes only inside its derived ``IdentityScope``: an event whose cloud, customer or
 domain the scope does not cover is skipped and counted, never written and never an exception that
-would wedge the checkpoint.
+would wedge the checkpoint. Such a candidate is written to a ``CandidateQuarantine`` record
+before the entry is acknowledged, then counted in ``skipped_out_of_scope``.
+
+Entity discovery: before an edge is written, the entities it references (Agent, ModelDeployment,
+Tool) are created if absent, as ``draft`` entities marked ``attributes.discovered_from =
+"telemetry"``. Create-if-absent only: an existing declared or curated entity is never read back
+into an update, and a create conflict is success, so replays are idempotent. The telemetry event
+carries no agent version, so no AgentVersion entity is discovered.
+
+Outbox scope: the outbox is per customer and the worker scope is for exactly one customer. An
+entry for a foreign customer raises ``ForbiddenError`` and wedges this sink's checkpoint BY
+DESIGN: a mis-routed entry is a configuration fault to surface, never to skip silently.
 """
 
 from __future__ import annotations
@@ -27,9 +38,15 @@ from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.catalog.protocol import AliasKey, CatalogRepository
 from neurosphere_core.catalog.review_queue import ReviewQueue
 from neurosphere_core.catalog.rules import MergeOutcome, format_timestamp, merge_observation
-from neurosphere_core.errors import DependencyTransientError, ForbiddenError, StaleVersionError
+from neurosphere_core.errors import (
+    DependencyTransientError,
+    ForbiddenError,
+    InvalidSchemaError,
+    StaleVersionError,
+)
 from neurosphere_core.scope import IdentityScope
 
+from neurosphere_workers.projections.catalog.discovery import build_entity, referenced_entity_ids
 from neurosphere_workers.projections.catalog.mapping import (
     EdgeCandidate,
     build_edge,
@@ -39,6 +56,12 @@ from neurosphere_workers.projections.catalog.mapping import (
     model_call_candidate,
     slug,
     tool_call_candidates,
+)
+from neurosphere_workers.projections.catalog.quarantine import (
+    REASON_OUT_OF_SCOPE,
+    CandidateQuarantine,
+    CandidateQuarantineRecord,
+    InMemoryCandidateQuarantine,
 )
 from neurosphere_workers.projections.catalog.scope import ScopeProvider
 from neurosphere_workers.projections.catalog.source import LoadedEvent, TraceEventSource
@@ -95,6 +118,8 @@ class ProjectionStats:
     observations_replayed: int = 0
     review_items: int = 0
     skipped_out_of_scope: int = 0
+    entities_created: int = 0
+    entities_existing: int = 0
     stale_retries: int = 0
     by_rule: dict[str, int] = field(default_factory=dict)
 
@@ -114,6 +139,7 @@ class CatalogProjection:
         source: TraceEventSource,
         scope_provider: ScopeProvider,
         model_resolver: ModelDeploymentResolver | None = None,
+        quarantine: CandidateQuarantine | None = None,
         clock: Callable[[], datetime] = _utcnow,
         max_stale_retries: int = MAX_STALE_RETRIES,
     ) -> None:
@@ -124,6 +150,7 @@ class CatalogProjection:
         self._source = source
         self._scopes = scope_provider
         self._models = model_resolver or DeterministicModelResolver()
+        self.quarantine: CandidateQuarantine = quarantine or InMemoryCandidateQuarantine()
         self._clock = clock
         self._max_attempts = max_stale_retries
         self.stats = ProjectionStats()
@@ -147,7 +174,7 @@ class CatalogProjection:
             self.stats.no_candidates += 1
             return
         for candidate in candidates:
-            await self._apply(scope, candidate)
+            await self._apply(scope, candidate, entry.id)
 
     async def __call__(self, entry: OutboxEntry) -> None:
         await self.handle(entry)
@@ -178,15 +205,31 @@ class CatalogProjection:
 
     # ------------------------------------------------------------------ durable write
 
-    async def _apply(self, scope: IdentityScope, candidate: EdgeCandidate) -> None:
+    async def _apply(self, scope: IdentityScope, candidate: EdgeCandidate, entry_id: str) -> None:
         if (
             candidate.cloud != scope.cloud
             or candidate.customer_id != scope.customer_id
             or candidate.domain_id not in scope.allowed_domains
         ):
+            await self.quarantine.write(
+                CandidateQuarantineRecord(
+                    id=candidate.edge_id,
+                    reason=REASON_OUT_OF_SCOPE,
+                    relation_type=candidate.relation_type,
+                    source_id=candidate.source_id,
+                    target_id=candidate.target_id,
+                    cloud=candidate.cloud,
+                    customer_id=candidate.customer_id,
+                    domain_id=candidate.domain_id,
+                    rule=candidate.rule,
+                    outbox_entry_id=entry_id,
+                    quarantined_at=self._clock(),
+                )
+            )
             self.stats.skipped_out_of_scope += 1
             return
         now = self._clock()
+        await self._ensure_entities(scope, candidate, format_timestamp(now))
         outcome = await self._store_edge(scope, candidate, now)
         if await self._repo.record_observation(scope, outcome.observation):
             self.stats.observations_recorded += 1
@@ -197,6 +240,27 @@ class CatalogProjection:
         ):
             self.stats.review_items += 1
         self.stats.by_rule[candidate.rule] = self.stats.by_rule.get(candidate.rule, 0) + 1
+
+    async def _ensure_entities(
+        self, scope: IdentityScope, candidate: EdgeCandidate, now_text: str
+    ) -> None:
+        """Create-if-absent the endpoints of ``candidate``; never updates an existing entity."""
+        for entity_id in dict.fromkeys(referenced_entity_ids(candidate)):
+            if await self._repo.get_entity(scope, entity_id) is not None:
+                self.stats.entities_existing += 1
+                continue
+            entity = build_entity(entity_id, candidate, now_text)
+            if entity is None:
+                continue
+            try:
+                await self._repo.create_entity(scope, entity)
+                self.stats.entities_created += 1
+            except InvalidSchemaError:
+                # "already exists" (a concurrent or earlier create) is success; anything else
+                # leaves the entity absent and must fail the entry so the checkpoint holds.
+                if await self._repo.get_entity(scope, entity_id) is None:
+                    raise
+                self.stats.entities_existing += 1
 
     async def _store_edge(
         self, scope: IdentityScope, candidate: EdgeCandidate, now: datetime

@@ -76,6 +76,7 @@ async def test_get_with_one_allowed_domain_is_a_point_read() -> None:
     queue, container = cosmos_queue()
     scope = make_scope([FINANCE])
     await queue.enqueue(scope, make_item())
+    container.queries.clear()  # the assertion is about get, not the enqueue dedup query
     assert (await queue.get(scope, "review:one")) is not None
     assert await queue.get(scope, "review:missing") is None
     assert container.queries == []

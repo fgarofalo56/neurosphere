@@ -15,6 +15,14 @@ Two deliberate exceptions use an unscoped-by-domain existence check (cloud and c
 still apply): ID uniqueness on create (entity, edge, observation) and alias-key uniqueness. A
 duplicate ID or alias key in another domain of the same customer would make an ID resolve in
 two places, so it is refused; the refusal reveals only that the ID is taken.
+
+Non-disclosure: whether the clash is in the caller's domain or in another one, the error type
+and message are identical (one message per kind, see ``_TAKEN``), so a refusal cannot be used to
+probe other domains. ``put_override`` and the alias ID check use the same unscoped existence check.
+
+Person documents: the repository refuses an entity without ``domain_id`` (``InvalidSchemaError``),
+and that includes a ``Person`` -- a person is catalogued inside the domain that owns it; there is
+no domain-less entity, whatever the contract allows.
 """
 
 from __future__ import annotations
@@ -22,7 +30,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Final
 
 from neurosphere_contracts.catalog.v1.alias import Alias
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
@@ -56,6 +64,15 @@ from neurosphere_core.scope import IdentityScope
 
 AUDITOR_ROLE = "security_auditor"
 
+#: One message per kind of "ID is already used". Used for a clash in the caller's own domain AND
+#: for one in another domain, so the answer never reveals which it was.
+_TAKEN: Final = {
+    "entity": "an entity with this ID already exists",
+    "alias": "an alias with this ID already exists",
+    "override": "overrides are immutable; this ID is already taken",
+    "alias_key": "the alias already resolves to a different canonical ID",
+}
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
@@ -75,6 +92,23 @@ def _alias_eq(key: AliasKey) -> tuple[tuple[Field, str], ...]:
         ("alias_value", key.alias_value),
         ("alias_status", "active"),
     )
+
+
+def auditor_domains(scope: IdentityScope, now: datetime) -> tuple[str, ...]:
+    """Domains where ``scope`` holds an unexpired ``security_auditor`` role (and can read).
+
+    The one definition of "may read raw observations": ``list_observations`` enforces it and
+    ``GraphQuery``'s raw view asks it explicitly instead of probing with an unknown edge ID.
+    """
+    granted: dict[str, None] = {}
+    for assignment in require_scope(scope).to_contract().roles:
+        if assignment.role != AUDITOR_ROLE:
+            continue
+        if docs.is_expired(assignment.expires_at.root if assignment.expires_at else None, now):
+            continue
+        for domain in assignment.domain_ids:
+            granted.setdefault(domain.root)
+    return tuple(d for d in scope.allowed_domains if d in granted)
 
 
 def new_etag() -> str:
@@ -207,12 +241,12 @@ class CatalogEngine:
         self._check_write(scope, str(body["cloud"]), str(body["customer_id"]), domain)
         ref = str(body["id"])
         if await self._find(scope, "entity", ref, scoped=False) is not None:
-            raise InvalidSchemaError("an entity with this ID already exists")
+            raise InvalidSchemaError(_TAKEN["entity"])
         body["version"] = 1
         body["etag"] = new_etag()
         saved = docs.parse_entity(body)
         if not await self._insert(self._entity_doc(body, domain)):
-            raise InvalidSchemaError("an entity with this ID already exists")
+            raise InvalidSchemaError(_TAKEN["entity"])
         return saved
 
     async def update_entity(
@@ -305,17 +339,19 @@ class CatalogEngine:
         own = await self._find(scope, "alias", parsed.id)
         if own is not None:
             return await self._update_alias(own, body, domain)
+        if await self._find(scope, "alias", parsed.id, scoped=False) is not None:
+            raise InvalidSchemaError(_TAKEN["alias"])  # taken in another domain: same answer
         if parsed.status == "active":
             clashes = await self._active_aliases(cloud, customer, key)
             if clashes:
                 if all(c["body"]["canonical_id"] == parsed.canonical_id for c in clashes):
                     return Alias.model_validate(clashes[0]["body"])  # idempotent for the mapping
-                raise InvalidSchemaError("the alias already resolves to a different canonical ID")
+                raise InvalidSchemaError(_TAKEN["alias_key"])
         body["version"] = 1
         body["etag"] = new_etag()
         saved = Alias.model_validate(body)
         if not await self._insert(self._alias_doc(body, domain)):
-            raise InvalidSchemaError("an alias with this ID already exists")
+            raise InvalidSchemaError(_TAKEN["alias"])
         return saved
 
     def _alias_doc(self, body: dict[str, Any], domain: str) -> dict[str, Any]:
@@ -350,7 +386,7 @@ class CatalogEngine:
         if saved.status == "active":
             clashes = await self._active_aliases(saved.cloud.root, saved.customer_id.root, key)
             if any(c["ref"] != stored["ref"] for c in clashes):
-                raise InvalidSchemaError("the alias already resolves to a different canonical ID")
+                raise InvalidSchemaError(_TAKEN["alias_key"])
         await self._replace(self._alias_doc(body, domain), stored)
         return saved
 
@@ -501,6 +537,28 @@ class CatalogEngine:
             items=tuple(docs.parse_edge(r["body"]) for r in kept), next_cursor=cursor
         )
 
+    async def list_edges_by_domain(
+        self, scope: IdentityScope, domain_id: str, flt: EdgeFilter, page: PageRequest
+    ) -> Page[CatalogEdge]:
+        scope = require_scope(scope)
+        docs.id_segments(domain_id)
+        scoped = self._filter(scope, (domain_id,))
+        if not scoped.domains:
+            return Page[CatalogEdge](items=())
+        any_of: list[tuple[Field, tuple[str, ...]]] = []
+        if flt.relation_types is not None:
+            any_of.append(("relation_type", tuple(flt.relation_types)))
+        if flt.statuses is not None:
+            any_of.append(("edge_status", tuple(flt.statuses)))
+        limit, after = self._page_args(page)
+        rows = await self._backend.query(
+            Query("edge", scoped, limit, any_of=tuple(any_of), order="ref", after=after)
+        )
+        kept, cursor = self._split(rows, page.page_size, "ref")
+        return Page[CatalogEdge](
+            items=tuple(docs.parse_edge(r["body"]) for r in kept), next_cursor=cursor
+        )
+
     # ----------------------------------------------------------------- observations
 
     async def record_observation(self, scope: IdentityScope, observation: EdgeObservation) -> bool:
@@ -525,16 +583,7 @@ class CatalogEngine:
         return await self._insert(doc)
 
     def _auditor_domains(self, scope: IdentityScope) -> tuple[str, ...]:
-        now = self._clock()
-        granted: dict[str, None] = {}
-        for assignment in scope.to_contract().roles:
-            if assignment.role != AUDITOR_ROLE:
-                continue
-            if docs.is_expired(assignment.expires_at.root if assignment.expires_at else None, now):
-                continue
-            for domain in assignment.domain_ids:
-                granted.setdefault(domain.root)
-        return tuple(d for d in scope.allowed_domains if d in granted)
+        return auditor_domains(scope, self._clock())
 
     async def list_observations(
         self, scope: IdentityScope, edge_id: str, page: PageRequest
@@ -566,6 +615,32 @@ class CatalogEngine:
             next_cursor=cursor,
         )
 
+    async def latest_observation(
+        self, scope: IdentityScope, edge_id: str
+    ) -> EdgeObservation | None:
+        """The newest observation of an in-scope edge, for presented lineage (not the raw view).
+
+        Scope-filtered like every read but NOT auditor-gated: callers use only its confidence
+        and validity (what the edge itself shows), never its evidence. Not on the protocol; see
+        ``neurosphere_core.catalog.graph.latest``.
+        """
+        scope = require_scope(scope)
+        docs.id_segments(edge_id)
+        flt = self._filter(scope)
+        if not flt.domains:
+            return None
+        rows = await self._backend.query(
+            Query(
+                "observation",
+                flt,
+                1,
+                eq=(("edge_ref", edge_id),),
+                order="sort_key",
+                descending=True,
+            )
+        )
+        return EdgeObservation.model_validate(rows[0]["body"]) if rows else None
+
     # ----------------------------------------------------------------- overrides
 
     async def put_override(self, scope: IdentityScope, override: EdgeOverride) -> EdgeOverride:
@@ -585,7 +660,9 @@ class CatalogEngine:
         if existing is not None:
             if existing["body"] == body:
                 return EdgeOverride.model_validate(existing["body"])
-            raise InvalidSchemaError("overrides are immutable; this ID holds a different decision")
+            raise InvalidSchemaError(_TAKEN["override"])
+        if await self._find(scope, "override", parsed.id, scoped=False) is not None:
+            raise InvalidSchemaError(_TAKEN["override"])  # taken in another domain: same answer
         edge = await self._find(scope, "edge", parsed.edge_id)
         if edge is None or str(edge["domain_id"]) != domain:
             raise InvalidSchemaError("the edge does not exist")
@@ -606,7 +683,7 @@ class CatalogEngine:
             sort_key=docs.override_sort_key(parsed),
         )
         if not await self._insert(doc):
-            raise InvalidSchemaError("overrides are immutable; this ID is already taken")
+            raise InvalidSchemaError(_TAKEN["override"])
         return parsed
 
     async def list_overrides(self, scope: IdentityScope, edge_id: str) -> tuple[EdgeOverride, ...]:

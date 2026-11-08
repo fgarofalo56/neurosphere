@@ -108,7 +108,9 @@ async def test_resolve_closes_item_and_orders_by_age() -> None:
     queue = InMemoryReviewQueue()
     scope = make_scope([FINANCE])
     await queue.enqueue(scope, make_item("review:b", at="2026-10-17T10:00:00Z"))
-    await queue.enqueue(scope, make_item("review:a", at="2026-10-17T09:00:00Z"))
+    other_conflict = make_item("review:a", at="2026-10-17T09:00:00Z")
+    other_conflict.reason = "conflicts_with_reject"
+    await queue.enqueue(scope, other_conflict)
     assert [i.id for i in await queue.list_open(scope)] == ["review:a", "review:b"]
     resolved = await queue.resolve(
         scope,
@@ -180,6 +182,11 @@ class _FakeRepo:
 
     async def list_edges_by_node(
         self, scope: IdentityScope, node_id: str, direction: str, flt: EdgeFilter, page: PageRequest
+    ) -> Page[CatalogEdge]:
+        return Page[CatalogEdge](items=())
+
+    async def list_edges_by_domain(
+        self, scope: IdentityScope, domain_id: str, flt: EdgeFilter, page: PageRequest
     ) -> Page[CatalogEdge]:
         return Page[CatalogEdge](items=())
 

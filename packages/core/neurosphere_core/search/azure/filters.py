@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 from typing import Any, Final
+from urllib.parse import quote
 
 from neurosphere_contracts.scope.v1.identity_scope import IdentityScope
 
@@ -40,6 +41,8 @@ FIELD_CLOUD: Final = "cloud"
 FIELD_CUSTOMER: Final = "customer_id"
 FIELD_DOMAIN: Final = "domain_id"
 
+_KEY_ROOT: Final = "ns"  # == neurosphere_api.authz.cache_key.CACHE_KEY_PREFIX
+_NAMESPACE: Final = "search"
 _DELIM: Final = "|"
 _ID_RE: Final = re.compile(
     r"^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+\Z"
@@ -130,14 +133,25 @@ def _drop_none(value: Any) -> Any:
     return value
 
 
+def _scope_prefix(scope: IdentityScope) -> str:
+    """``ns:<cloud>:<customer_id>:`` -- the sanctioned per-customer invalidation prefix."""
+    return f"{_KEY_ROOT}:{quote(scope.cloud, safe='')}:{quote(scope.customer_id, safe='')}:"
+
+
 def cache_key(scope: IdentityScope, request: SearchRequest) -> str:
     """Cache key for a search result: includes the scope hash so scopes never share entries.
 
-    The timeout is excluded (it changes only whether a result is partial); the limit is
-    included because it changes the result.
+    Built on the ``scope_cache_key`` layout (``neurosphere_api.authz.cache_key``)::
+
+        ns:<cloud>:<customer_id>:search:pv=<policy_version>:<scope_hash>:<request digest>
+
+    so per-customer prefix invalidation covers search entries. The core package cannot import the
+    API layer, so the layout is mirrored here with the scope hash recomputed from the members
+    (the declared field is not trusted); a parity test pins it to ``scope_cache_key``. The
+    timeout is excluded (it changes only whether a result is partial); the limit is included
+    because it changes the result.
     """
     payload = {
-        "scope": scope_hash_of(scope),
         "text": build_search_text(request.term),
         "entities": sorted(request.filters.entities)
         if request.filters.entities is not None
@@ -150,4 +164,5 @@ def cache_key(scope: IdentityScope, request: SearchRequest) -> str:
     digest = hashlib.sha256(
         json.dumps(_drop_none(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
-    return f"search:v1:{digest}"
+    policy = quote(scope.policy_version, safe="")
+    return f"{_scope_prefix(scope)}{_NAMESPACE}:pv={policy}:{scope_hash_of(scope)}:{digest}"
