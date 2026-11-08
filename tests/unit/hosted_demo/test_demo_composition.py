@@ -38,6 +38,8 @@ PARAMETERS = [
     "copilotEndpoint",
     "copilotDeployment",
     "copilotMode",
+    "searchProvider",
+    "searchService",
     "budgetAmount",
     "budgetStartDate",
     "budgetContactEmails",
