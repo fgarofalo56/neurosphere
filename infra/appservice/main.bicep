@@ -94,6 +94,19 @@ param scanEnabled bool = false
 @description('Opt in to deploy apply and uninstall preview (NS_DEPLOY_APPLY_ENABLED on the API site only). Off by default: /api/v1/deploy/apply stays 503 apply_not_configured. Same meaning as deployApply.enabled in the Helm chart. Name the register container with the NS_DEPLOY_APPLY_REGISTER_CONTAINER key in apiAppSettings.')
 param deployApplyEnabled bool = false
 
+@description('Catalog search provider on the API site (NS_SEARCH_PROVIDER). fixture: in-process index; azure: Azure AI Search via managed identity (needs searchService and searchRegion; the host comes from the cloud profile in code). Same meaning as search.provider in the Helm chart.')
+@allowed([
+  'fixture'
+  'azure'
+])
+param searchProvider string = 'fixture'
+
+@description('Azure AI Search service name (NS_SEARCH_SERVICE); name only, never a host or key. Used when searchProvider is azure.')
+param searchService string = ''
+
+@description('Region for the ai_search.base capability lookup (NS_SEARCH_REGION). Used when searchProvider is azure.')
+param searchRegion string = ''
+
 @description('Resource tags.')
 param tags object = {}
 
@@ -131,6 +144,11 @@ var kvSettings = [for item in items(kvRefSettings): { name: item.key, value: str
 
 var scanSettings = scanEnabled ? [{ name: 'NS_SCAN_ENABLED', value: 'true' }] : []
 var deployApplySettings = deployApplyEnabled ? [{ name: 'NS_DEPLOY_APPLY_ENABLED', value: 'true' }] : []
+var searchSettings = concat(
+  [{ name: 'NS_SEARCH_PROVIDER', value: searchProvider }],
+  empty(searchService) ? [] : [{ name: 'NS_SEARCH_SERVICE', value: searchService }],
+  empty(searchRegion) ? [] : [{ name: 'NS_SEARCH_REGION', value: searchRegion }]
+)
 var apiExtraSettings = [for item in items(apiAppSettings): { name: item.key, value: string(item.value) }]
 var workersExtraSettings = [for item in items(workersAppSettings): { name: item.key, value: string(item.value) }]
 var frontendExtraSettings = [for item in items(frontendAppSettings): { name: item.key, value: string(item.value) }]
@@ -179,6 +197,7 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
         kvSettings,
         scanSettings,
         deployApplySettings,
+        searchSettings,
         apiExtraSettings
       )
     }

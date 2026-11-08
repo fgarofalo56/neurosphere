@@ -72,6 +72,16 @@ param copilotDeployment string = 'mini'
 ])
 param copilotMode string = 'disabled'
 
+@description('Catalog search provider (NS_SEARCH_PROVIDER). The demo deploys no AI Search, so it defaults to the in-process fixture; set azure with searchService when an existing service is referenced.')
+@allowed([
+  'fixture'
+  'azure'
+])
+param searchProvider string = 'fixture'
+
+@description('Existing Azure AI Search service name (NS_SEARCH_SERVICE); name only. Used when searchProvider is azure; the region is the deployment location.')
+param searchService string = ''
+
 @description('Monthly budget amount for the resource group, in the billing currency.')
 @minValue(1)
 param budgetAmount int = 200
@@ -285,6 +295,9 @@ module appServiceBootstrap '../appservice/main.bicep' = {
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
     apiAppSettings: apiSettings
+    searchProvider: searchProvider
+    searchService: searchService
+    searchRegion: location
     workersAppSettings: workersBaseSettings
     frontendAppSettings: frontendSettings
     virtualNetworkSubnetId: integrationSubnetId
@@ -312,6 +325,9 @@ module appService '../appservice/main.bicep' = {
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
     apiAppSettings: union(apiSettings, apiProbeSettings)
+    searchProvider: searchProvider
+    searchService: searchService
+    searchRegion: location
     workersAppSettings: union(workersBaseSettings, {
       NS_WORKER_OBJECT_ID: appServiceBootstrap.outputs.workersPrincipalId
     })
