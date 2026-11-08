@@ -501,6 +501,28 @@ class CatalogEngine:
             items=tuple(docs.parse_edge(r["body"]) for r in kept), next_cursor=cursor
         )
 
+    async def list_edges_by_domain(
+        self, scope: IdentityScope, domain_id: str, flt: EdgeFilter, page: PageRequest
+    ) -> Page[CatalogEdge]:
+        scope = require_scope(scope)
+        docs.id_segments(domain_id)
+        scoped = self._filter(scope, (domain_id,))
+        if not scoped.domains:
+            return Page[CatalogEdge](items=())
+        any_of: list[tuple[Field, tuple[str, ...]]] = []
+        if flt.relation_types is not None:
+            any_of.append(("relation_type", tuple(flt.relation_types)))
+        if flt.statuses is not None:
+            any_of.append(("edge_status", tuple(flt.statuses)))
+        limit, after = self._page_args(page)
+        rows = await self._backend.query(
+            Query("edge", scoped, limit, any_of=tuple(any_of), order="ref", after=after)
+        )
+        kept, cursor = self._split(rows, page.page_size, "ref")
+        return Page[CatalogEdge](
+            items=tuple(docs.parse_edge(r["body"]) for r in kept), next_cursor=cursor
+        )
+
     # ----------------------------------------------------------------- observations
 
     async def record_observation(self, scope: IdentityScope, observation: EdgeObservation) -> bool:

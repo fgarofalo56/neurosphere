@@ -133,13 +133,21 @@ def _wrap(items: Iterable[str]) -> list[common.EvidenceId]:
 
 
 def present_edge(
-    observed: CatalogEdge, overrides: Iterable[EdgeOverride], now: datetime
+    observed: CatalogEdge,
+    overrides: Iterable[EdgeOverride],
+    now: datetime,
+    latest_observation: EdgeObservation | None = None,
 ) -> PresentedEdge:
     """Presented lineage for one edge at ``now``.
 
     Only decisions for ``observed.id`` that were made at or before ``now`` are considered.
     Evidence and security evidence are the union of the edge's and every decision's
     ``add_evidence_ids``; nothing removes them.
+
+    While a lock is active the stored confidence/validity are frozen. Once it has expired
+    (or none exists) ``latest_observation`` - the newest recorded observation of the edge,
+    when the caller has it - supplies confidence and validity, so presented lineage does
+    not keep showing the pre-lock inference until the next observation arrives.
     """
     mine = [o for o in overrides if o.edge_id == observed.id]
     ordered = _ordered(mine, now)
@@ -149,14 +157,20 @@ def present_edge(
     validity = observed.validity
     override_ids: list[str] = []
 
-    if lock_decision is not None:
-        for decision in _lock_chain(ordered):
-            if decision.decision in ("override", "lock"):
-                if decision.set_confidence is not None:
-                    confidence = float(decision.set_confidence.root)
-                if decision.set_validity is not None:
-                    validity = decision.set_validity
-            override_ids.append(decision.id)
+    if lock_decision is None:
+        if latest_observation is not None and parse_timestamp(
+            latest_observation.observed_at.root
+        ) >= parse_timestamp(observed.last_observed.root):
+            confidence = float(latest_observation.confidence)
+            validity = latest_observation.validity
+    else:
+        # Only the governing (active) lock applies; an earlier lock's values never carry over.
+        if lock_decision.decision in ("override", "lock"):
+            if lock_decision.set_confidence is not None:
+                confidence = float(lock_decision.set_confidence.root)
+            if lock_decision.set_validity is not None:
+                validity = lock_decision.set_validity
+        override_ids.append(lock_decision.id)
 
     visibility = [o for o in ordered if o.decision in ("accept", "reject")]
     latest_visibility = visibility[-1] if visibility else None
@@ -252,15 +266,31 @@ class MergeOutcome(BaseModel):
     review_item: ReviewItem | None = None
 
 
-def review_item_id(edge_id: str, reason: str, governing_override_id: str) -> str:
-    """Deterministic ID so a replayed batch yields the same (deduplicated) review item."""
-    digest = hashlib.sha256(f"{edge_id}|{reason}|{governing_override_id}".encode()).hexdigest()
-    return f"review:{digest[:40]}"
+def review_item_id(
+    edge_id: str, reason: str, governing_override_id: str, generation: str = ""
+) -> str:
+    """Deterministic ID so a replayed batch yields the same (deduplicated) review item.
+
+    ``generation`` is the conflicting observation's time: a later conflict after a steward
+    resolved the earlier one gets a new ID, while a replay of the same one does not.
+    """
+    material = f"{edge_id}|{reason}|{governing_override_id}"
+    if generation:
+        material += f"|{generation}"
+    return f"review:{hashlib.sha256(material.encode()).hexdigest()[:40]}"
 
 
-def observation_id(edge_id: str, evidence_ids: Iterable[str], observed_at: str) -> str:
-    """Deterministic observation ID (idempotent replay of the same observation)."""
-    material = "|".join([edge_id, observed_at, *sorted(set(evidence_ids))])
+def observation_id(
+    edge_id: str, evidence_ids: Iterable[str], observed_at: str, confidence: float = 0.0
+) -> str:
+    """Deterministic observation ID (idempotent replay of the same observation).
+
+    Confidence is part of the identity: the same time and evidence at a different
+    confidence is a different observation.
+    """
+    material = "|".join(
+        [edge_id, observed_at, f"c={float(confidence)!r}", *sorted(set(evidence_ids))]
+    )
     return f"obs:{hashlib.sha256(material.encode()).hexdigest()[:40]}"
 
 
@@ -322,7 +352,10 @@ def merge_observation(
             ),
             "updated_at": common.Timestamp(root=now_text),
         }
-        if lock_decision is None:
+        newer = parse_timestamp(new_observation.last_observed.root) >= parse_timestamp(
+            existing.last_observed.root
+        )
+        if lock_decision is None and newer:
             update["confidence"] = new_observation.confidence
             update["validity"] = new_observation.validity.model_copy(deep=True)
         stored = existing.model_copy(update=update, deep=True)
@@ -332,6 +365,7 @@ def merge_observation(
             new_observation.id,
             _roots(new_observation.evidence_ids),
             new_observation.last_observed.root,
+            float(new_observation.confidence),
         ),
         edge_id=new_observation.id,
         relation_type=new_observation.relation_type,
@@ -386,7 +420,9 @@ def _conflict(
     else:
         return None
     return ReviewItem(
-        id=review_item_id(new_observation.id, reason, governing.id),
+        id=review_item_id(
+            new_observation.id, reason, governing.id, new_observation.last_observed.root
+        ),
         edge_id=new_observation.id,
         relation_type=new_observation.relation_type,
         cloud=new_observation.cloud.root,

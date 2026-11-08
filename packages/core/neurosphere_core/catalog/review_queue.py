@@ -5,8 +5,11 @@ curated state, still stores the observation, and emits a ``ReviewItem`` here. Th
 workflow and UI are PRP-17; this module only defines the item, the queue protocol and an
 in-memory implementation for tests and the sandbox.
 
-Items are idempotent by ``id`` (derived from the edge, the conflict reason and the governing
-curation decision), so replaying the same outbox batch never duplicates a review item.
+Items are idempotent by ``id`` (derived from the edge, the conflict reason, the governing
+curation decision and the conflicting observation time), so replaying the same outbox batch
+never duplicates a review item. A new observation of a conflict that is still open is also
+refused (one open item per edge, reason and governing decision); once a steward resolves it,
+a later conflict is enqueued under its own ID.
 Every method takes the server-derived ``IdentityScope`` first and only ever exposes items of
 domains in that scope.
 """
@@ -98,6 +101,16 @@ def _visible(scope: IdentityScope, item: ReviewItem) -> bool:
     )
 
 
+def _same_open_conflict(existing: ReviewItem, item: ReviewItem) -> bool:
+    """True when ``existing`` is a still-open item for the same conflict as ``item``."""
+    return (
+        existing.status == "open"
+        and existing.edge_id == item.edge_id
+        and existing.reason == item.reason
+        and existing.governing_override_id == item.governing_override_id
+    )
+
+
 class InMemoryReviewQueue:
     """Process-local ``ReviewQueue`` (tests, sandbox). Not shared across processes."""
 
@@ -108,6 +121,8 @@ class InMemoryReviewQueue:
         if not _visible(scope, item):
             raise ForbiddenError("review item is outside the caller's scope")
         if item.id in self._items:
+            return False
+        if any(_same_open_conflict(i, item) for i in self._items.values()):
             return False
         self._items[item.id] = item.model_copy(deep=True)
         return True
