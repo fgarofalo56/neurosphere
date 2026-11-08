@@ -25,9 +25,12 @@ with `ApimGatewayConnector.register_translator`; the planner and applier stay sh
 
 ## Default translators and the `grant` dispatcher (PRP-34 item 10)
 
-**Status: not wired into a deployed worker or the API image yet.** `runtime/factories.py` registers
-no APIM write connector, so none of this runs in a deployment until a worker composition binds a
-gateway and ARM configuration; it is exercised by the tests only.
+**Status: wired into the worker.** When `NS_APIM_ENABLED` registers the APIM write connector, the
+`actions` role (`build_actions` in `runtime/factories.py`) runs a `PublicationRecordingExecutor`
+with a `CatalogPublicationRecorder`, so a succeeded, verified Grant or McpServer publish records
+its provenance on the catalog entity (a recording failure is audited and never changes the
+intent). With no APIM connector registered it keeps the plain executor. Live ARM behaviour still
+needs an approved environment.
 
 `dispatch.default_translators(records=..., paths=...)` is the set a production composition
 registers (the worker's `build_apim_gateway_connector` does): `BackendSwapTranslator`

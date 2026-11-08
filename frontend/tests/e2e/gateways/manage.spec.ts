@@ -45,8 +45,11 @@ test.describe("plan preview in the confirmation dialog", () => {
     await expect(steps.nth(0).getByTestId("plan-step-type")).toHaveText("product");
     await expect(steps.nth(0).getByTestId("plan-step-name")).toHaveText("products/finance-analyst");
     await expect(steps.nth(1).getByTestId("plan-step-type")).toHaveText("product_api_link");
-    // The API does not report create or found yet: the dialog says so instead of guessing.
-    await expect(steps.nth(0).getByTestId("plan-step-expected")).toContainText("Not reported yet");
+    // The API reports create or found per step, shown as text (not colour alone) in a list.
+    await expect(dialog.getByRole("list", { name: "Gateway plan" })).toBeVisible();
+    await expect(steps.nth(0).getByTestId("plan-step-expected")).toHaveText("create");
+    await expect(steps.nth(1).getByTestId("plan-step-expected")).toHaveText("found");
+    await expect(steps.nth(0).getByTestId("plan-step-digest")).toHaveText("5d41402abc4b");
     // The exact diff (digest test operation plus the resources) is still listed in full.
     await expect(dialog.getByTestId("diff-op")).toHaveCount(3);
   });

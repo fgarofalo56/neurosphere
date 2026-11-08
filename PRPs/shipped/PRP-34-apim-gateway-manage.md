@@ -1,13 +1,14 @@
 ---
 name: PRP-34-apim-gateway-manage
-status: backlog
+status: shipped
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
-started: 2026-10-29
-pr: 149
-branch: prp-34-apim-gateway-manage
+started: 2026-11-07
+shipped: 2026-11-07
+pr: 191
+branch: prp-34-audit-gaps
 model: opus
 phase: 6
 ns: NS-04, NS-06, NS-07, NS-08, NS-09
@@ -269,6 +270,12 @@ Shipped 2026-10-30 as PR #149 (merge `ea346b2`, branch head `5b65c11`). Items 1,
 **Follow-ups**
 - Create-race `If-None-Match`; grant stale-intent replay guard; MCP `publication-record` permission (`action.propose`) vs grant (`catalog.curate`); G17 script hardening (refuse an existing resource group, distinct approver token, clear state on teardown); `WWW-Authenticate` resource-metadata hint on the MCP 401; wire the APIM connector and recorder into the deployed worker composition; per-step create/found in the dry-run API; `customMetrics` query for cost-center attribution; over-broad `action_kind_mismatch` reason; unaudited intent-fetch failure in the recorder.
 
+### Audit round closed 2026-11-07 (PR #191)
+
+Lanes R-A (wire `PublicationRecordingExecutor` into the actions worker role, f245f78) and R-B (APIM plan steps with create/found in the dry-run API and confirmation dialog, c6e1a4e) merged, each with one independent review (APPROVE, no rework). R-C (cost-center attribution through ingest) was **descoped** to issue #190: `CostRecord` has no `tags` field, the telemetry contracts are `extra="forbid"`, and the poller posts no cost record (PRP-33 D2), so it needs an additive contract revision. R-D recorded the outcome. Gates on lanes: action_executor 181, workers+connector 802, actions_api/gateway_api/openapi drift/connector 357, frontend 1042 plus Playwright gateways 15, ruff, pyright, validate_planning PASS. PR #191 CI green apart from one trivial 'discover production images' job still pending at close time; main merged into the branch to resolve generated INDEX/MASTER conflicts from the PRP-08 close.
+
+Still open, not claimed: G17 manage live run (never run; needs `NS_LIVE_APPROVED=1`); Government manage disabled with reason; the real Cosmos/Entra path in `_publication_recorder` is tested with fakes only; cost-center attribution (#190); runbook line that APIM-enabled actions workers need `NS_WORKER_OBJECT_ID` and that the worker principal needs `catalog.curate` in publishing domains; `get()` adds ARM reads per poll of an awaiting_confirmation intent.
+
 ## Audit 2026-11-04
 
 Reopened after a deep audit (static read; no tests were run). The connector library is real and tested, but nothing deploys it. Gaps:
@@ -281,3 +288,19 @@ Reopened after a deep audit (static read; no tests were run). The connector libr
 - Item 8: owner paths `frontend/src/pages/{gateways,actions,catalog}` do not exist (code is in `frontend/src/features/gateways/`); Playwright runs only against mock fixtures; per-step create/found is not shown, only the digest prefix and diff resources. `/catalog/publication` route and plan-preview not checked.
 - Item 9: G17 manage live gate never ran; no `docs/evidence/G17/manage-*`; the MCP echo backend is operator-supplied.
 - Depends on PRP-22 and PRP-33 being reopened first.
+
+## Audit round 2026-11-07 (execution state)
+
+Plan approved 2026-11-07 by the operator. Integration branch `prp-34-audit-gaps` cut from `main` (00eeaf2). The G17 manage live run stays OPEN (not run this round). Lanes: A wires `PublicationRecordingExecutor` into the worker runtime (`runtime/factories.py:515` builds a plain `ActionExecutor`) and proves the observe guard fails closed; B reports per-step create/found in the dry-run API and the confirmation dialog and corrects the item 8 owner paths; C carries `nscostcenter` from the gateway poller through ingest into cost tags (after B); D close-out.
+
+| Item | Status | Branch / worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| R-A | merged | worktree-agent-adb41f6deadd0c1ab | sonnet | f245f78, merged into prp-34-audit-gaps; reviewed APPROVE (no rework); action_executor 181 passed, workers+apim connector 802 passed, ruff, pyright clean. Real Cosmos/Entra path in `_publication_recorder` untested (fakes only). Follow-ups: runbook line that APIM-enabled actions workers need NS_WORKER_OBJECT_ID; confirm worker principal holds catalog.curate in publishing domains; keep compose_action_executor private | 2026-11-07 |
+| R-B | merged | worktree-agent-a3c60017052c29473 | sonnet | c6e1a4e, merged; reviewed APPROVE (no rework); actions_api+gateway_api+openapi drift+connector 357 passed, post-merge 239 passed; frontend 1042 passed, tsc, eslint, Playwright gateways 15 passed, ruff, pyright, validate_planning PASS. Real owner paths are `frontend/src/features/actions/` and `services/api/neurosphere_api/actions/`. Steps show only when the connector plan() reads a registered manage-mode gateway (fakes, not live ARM). Follow-ups: get() adds ARM reads per poll of an awaiting_confirmation intent (cache or restrict); silent except in `_with_plan_steps` needs a class-only debug log | 2026-11-07 |
+| R-C | descoped | worktree-agent-aa722b8a2e4351210 (no commits) | sonnet | Stopped by the implementer, confirmed by the operator 2026-11-07: `CostRecord` has no `tags` field (the manifest line "tags already in contract" is wrong), `TelemetryEvent` and `HubMessage` are `extra="forbid"`, and the poller posts no cost record (PRP-33 D2). Cost-center attribution needs an additive CostRecord `tags` revision plus reversing D2. `metrics_app_id` is already wired (`NS_GATEWAY_POLL_METRICS_APP_ID`). Follow-up issue #190 | 2026-11-07 |
+| R-D | merged | integration branch | sonnet | PRP notes updated, G17 manage stays OPEN | 2026-11-07 |
+
+### Audit round 2026-11-07 outcome
+- Closed: the publication recorder is composed into the `actions` worker role (`compose_action_executor`, APIM-enabled workers now need `NS_WORKER_OBJECT_ID`); the connector refuses `mode=None` (test added); the confirmation dialog and `ActionView.plan_steps` show per-step `create`/`found` with a digest prefix; item 8 owner paths are `frontend/src/features/actions/` and `frontend/src/features/gateways/`, not `frontend/src/pages/`.
+- Still open: cost-center attribution (item 4; needs a CostRecord contract revision and reversing PRP-33 D2); G17 manage live run (never run, needs `NS_LIVE_APPROVED=1` and per-step approval); Government manage (v2 tiers unverified); `type: mcp` API shape, `GatewayLogs` `BackendId` meaning and pool weight bounds unverified live; real Cosmos/Entra path of the recorder tested with fakes only.
+- Follow-ups from review: runbook line for `NS_WORKER_OBJECT_ID`; confirm the worker principal holds `catalog.curate` in publishing domains; `get()` plan reads on every poll of an awaiting intent (cache or restrict); class-only debug log in `_with_plan_steps`; keep `compose_action_executor` private.

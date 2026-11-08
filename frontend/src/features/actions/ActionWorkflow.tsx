@@ -106,6 +106,7 @@ export function ActionWorkflow({ domainId, view, onView }: ActionWorkflowProps):
         <ConfirmationDialog
           intent={view.intent}
           requiresApproval={view.requires_approval}
+          planSteps={view.plan_steps}
           submitting={confirm.isPending}
           error={error}
           onClose={closeDialog}

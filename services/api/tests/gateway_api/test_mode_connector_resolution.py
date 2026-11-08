@@ -206,6 +206,62 @@ async def test_missing_registry_and_unknown_customer_fail_closed() -> None:
     assert apim.dry_runs == []
 
 
+class PlanningFake(FakeConnector):
+    """Offers ``plan`` like the APIM connector: two steps, one new and one existing."""
+
+    async def plan(self, request: WriteRequest) -> Any:
+        digest = "sha256:" + "ab" * 32
+
+        def step(name: str, expected: str) -> Any:
+            return type(
+                "Step",
+                (),
+                {
+                    "resource_type": "product",
+                    "name": name,
+                    "expected": expected,
+                    "operation": "upsert",
+                    "payload_digest": digest,
+                },
+            )()
+
+        return type(
+            "Plan", (), {"steps": (step("products/a", "create"), step("products/b", "found"))}
+        )()
+
+
+async def test_plan_steps_report_create_or_found_with_a_digest_prefix_only() -> None:
+    apim = PlanningFake("apim-gateway", ["budget_cap_change"], GW)
+    registry = WriteTargetRegistry()
+    registry.register(apim)
+    plane = _plane(registry, await _store("manage"))
+    view = plane.connector_for("budget_cap_change")
+    assert view is not None
+    steps = await view.plan_steps(_request("grant", "commercial:contoso:apim:grant:g1"))  # type: ignore[attr-defined]
+    assert steps is not None
+    assert [(s.name, s.expected) for s in steps] == [
+        ("products/a", "create"),
+        ("products/b", "found"),
+    ]
+    assert all(s.payload_digest_prefix == "ab" * 6 for s in steps)
+
+
+async def test_plan_steps_refuse_observe_mode_and_skip_the_mode_switch() -> None:
+    apim = PlanningFake("apim-gateway", ["budget_cap_change", "gateway_mode_change"], GW)
+    registry = WriteTargetRegistry()
+    registry.register(apim)
+    observe = _plane(registry, await _store("observe"))
+    capped = observe.connector_for("budget_cap_change")
+    assert capped is not None
+    with pytest.raises(CapabilityUnavailableError) as info:
+        await capped.plan_steps(_request("grant", "commercial:contoso:apim:grant:g1"))  # type: ignore[attr-defined]
+    assert info.value.reason == "gateway_observe_mode"
+    switch = observe.connector_for("gateway_mode_change")
+    assert switch is not None
+    mode = _request("apim_gateway_mode", f"commercial:contoso:apim:apim_gateway_mode:{GW}")
+    assert await switch.plan_steps(mode) is None  # type: ignore[attr-defined]
+
+
 async def test_the_planning_view_never_executes() -> None:
     registry, _, _ = _registry()
     view = _plane(registry, await _store("manage")).connector_for("budget_cap_change")
