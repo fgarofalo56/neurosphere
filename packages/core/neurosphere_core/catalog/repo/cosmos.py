@@ -107,10 +107,38 @@ def build_sql(query: Query) -> tuple[str, list[dict[str, Any]]]:
     return sql, params
 
 
+_DEFAULT_RETRY_AFTER_SECONDS = 1
+_MAX_RETRY_AFTER_SECONDS = 60
+
+
+def _retry_after_seconds(exc: CosmosHttpResponseError) -> int:
+    """Whole seconds to wait, from Cosmos' ``x-ms-retry-after-ms`` (or ``Retry-After``).
+
+    Rounded up, at least 1 and capped; a missing or unparseable header falls back to the default.
+    """
+    headers: Any = getattr(exc, "headers", None)
+    if not headers:
+        headers = getattr(getattr(exc, "response", None), "headers", None)
+    millis: float | None = None
+    if headers is not None:
+        try:
+            raw_ms = headers.get("x-ms-retry-after-ms")
+            raw_s = headers.get("Retry-After")
+            if raw_ms is not None:
+                millis = float(raw_ms)
+            elif raw_s is not None:
+                millis = float(raw_s) * 1000.0
+        except (TypeError, ValueError, AttributeError):
+            millis = None
+    if millis is None or millis != millis or millis <= 0:
+        return _DEFAULT_RETRY_AFTER_SECONDS
+    return max(1, min(_MAX_RETRY_AFTER_SECONDS, -int(-millis // 1000)))
+
+
 def _translate(exc: CosmosHttpResponseError) -> Exception:
     status = exc.status_code
     if status == 429:
-        return RateLimitedError(1)
+        return RateLimitedError(_retry_after_seconds(exc))
     if status in _TRANSIENT:
         return DependencyTransientError(reason="cosmos_unavailable")
     return exc

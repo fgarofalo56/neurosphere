@@ -11,8 +11,9 @@ schema's conditional requirements are checked explicitly):
 * The decision time is the SERVER clock; a caller-supplied ``decided_at`` is replaced so a decision
   cannot be back-dated to reorder history. The target domain, customer and cloud must equal the
   stored edge.
-* The ``actor`` is the authenticated principal: it is stamped from the scope, and a different
-  client value is refused with ``forbidden`` (reason ``actor_mismatch``) and audited as a denial.
+* The ``actor`` AND ``lock.actor`` are the authenticated principal: both are stamped from the
+  scope, and a different client value in either is refused with ``forbidden`` (reason
+  ``actor_mismatch``) and audited as a denial (decision: reject on mismatch, not silent replace).
 * Evidence is append-only: ``add_evidence_ids`` can add, the model has no way to remove, and the
   presented union is computed by ``rules.present_edge``. Locks change presented lineage only;
   observations are always stored (``apply_inference``).
@@ -45,8 +46,8 @@ from neurosphere_core.catalog import (
     format_timestamp,
     merge_observation,
     parse_timestamp,
-    present_edge,
 )
+from neurosphere_core.catalog.graph.latest import present_with_latest
 from neurosphere_core.catalog.rules import MergeOutcome
 from neurosphere_core.errors import (
     ForbiddenError,
@@ -112,8 +113,17 @@ def _stamp_actor(scope: IdentityScope, decision: EdgeOverride) -> EdgeOverride:
     principal = scope.to_contract().principal.principal_id.root
     if decision.actor.root != principal:
         raise ForbiddenError("actor must be the authenticated principal", reason="actor_mismatch")
-    actor = type(decision.actor).model_validate(principal)
-    return decision.model_copy(update={"actor": actor})
+    update: dict[str, object] = {"actor": type(decision.actor).model_validate(principal)}
+    lock = decision.lock
+    if lock is not None and lock.actor is not None:
+        # ``lock.actor`` is persisted too; it gets the same check as the decision actor.
+        if lock.actor.root != principal:
+            raise ForbiddenError(
+                "lock actor must be the authenticated principal", reason="actor_mismatch"
+            )
+        update_lock = lock.model_copy(update={"actor": type(lock.actor).model_validate(principal)})
+        update["lock"] = update_lock
+    return decision.model_copy(update=update)
 
 
 def _edge_changed(before: CatalogEdge, after: CatalogEdge) -> bool:
@@ -139,7 +149,7 @@ class CurationService:
 
     async def presented(self, scope: IdentityScope, edge: CatalogEdge) -> PresentedEdge:
         overrides = await self._repo.list_overrides(scope, edge.id)
-        return present_edge(edge, overrides, self._clock())
+        return await present_with_latest(self._repo, scope, edge, overrides, self._clock())
 
     async def overrides(self, scope: IdentityScope, edge_id: str) -> tuple[EdgeOverride, ...]:
         return await self._repo.list_overrides(scope, edge_id)
@@ -164,7 +174,9 @@ class CurationService:
             scope, correlation_id=correlation_id, operation="catalog.curate", channel=channel
         )
         chain = audit_chain_id(edge)
-        before = present_edge(edge, await self._repo.list_overrides(scope, edge.id), now)
+        before = await present_with_latest(
+            self._repo, scope, edge, await self._repo.list_overrides(scope, edge.id), now
+        )
         subject = make_subject(
             edge.id,
             _ENTITY_TYPE,
@@ -186,7 +198,10 @@ class CurationService:
                 raise InvalidSchemaError(
                     "stored decision could not be read back", reason="unverified"
                 )
-            return DecisionResult(override=stored, presented=present_edge(edge, current, now))
+            return DecisionResult(
+                override=stored,
+                presented=await present_with_latest(self._repo, scope, edge, current, now),
+            )
 
         def failed(exc: BaseException) -> AuditDraft:
             return build_after(ctx, subject, result="failed", verified=False, detail=_refusal(exc))
