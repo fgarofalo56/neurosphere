@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Deployment intelligence audit-gap closure (PRP-08, PRs #186 and #188): scan opt-in (`NS_SCAN_ENABLED`) exposed in
+  Helm, App Service and `.env.example`; consent no longer trusted from resource tags; scan, plan and consent audited;
+  plans can reference a server-side `scan_id`; plan approval, apply and dry-run uninstall preview routes through the
+  durable action executor (new `deploy_plan_apply` / `deploy_uninstall` kinds and `DeployConnector`), opt-in via
+  `NS_DEPLOY_APPLY_ENABLED` and customer-scoped; deploy wizard Approve/Apply/Uninstall-preview step. Real apply is not
+  end-to-end yet (no durable approval store or provisioners wired; routes return 503 unless enabled).
 - API and worker runtime audit-gap closure (PRP-05, PR #184): SLO request metrics and traces are now wired
   into the API and worker entrypoints (exporters off in `NS_ENV=local`); non-ingestion worker roles use a
   durable Cosmos checkpoint store; the `lifecycle` role reports an explicit `idle` state
