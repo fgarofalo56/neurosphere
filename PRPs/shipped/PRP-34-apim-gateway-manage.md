@@ -1,12 +1,13 @@
 ---
 name: PRP-34-apim-gateway-manage
-status: active
+status: shipped
 review: required
 priority: P1
 order: 2
 created: 2026-10-29
 started: 2026-11-07
-pr: 149
+shipped: 2026-11-07
+pr: 191
 branch: prp-34-audit-gaps
 model: opus
 phase: 6
@@ -268,6 +269,12 @@ Shipped 2026-10-30 as PR #149 (merge `ea346b2`, branch head `5b65c11`). Items 1,
 
 **Follow-ups**
 - Create-race `If-None-Match`; grant stale-intent replay guard; MCP `publication-record` permission (`action.propose`) vs grant (`catalog.curate`); G17 script hardening (refuse an existing resource group, distinct approver token, clear state on teardown); `WWW-Authenticate` resource-metadata hint on the MCP 401; wire the APIM connector and recorder into the deployed worker composition; per-step create/found in the dry-run API; `customMetrics` query for cost-center attribution; over-broad `action_kind_mismatch` reason; unaudited intent-fetch failure in the recorder.
+
+### Audit round closed 2026-11-07 (PR #191)
+
+Lanes R-A (wire `PublicationRecordingExecutor` into the actions worker role, f245f78) and R-B (APIM plan steps with create/found in the dry-run API and confirmation dialog, c6e1a4e) merged, each with one independent review (APPROVE, no rework). R-C (cost-center attribution through ingest) was **descoped** to issue #190: `CostRecord` has no `tags` field, the telemetry contracts are `extra="forbid"`, and the poller posts no cost record (PRP-33 D2), so it needs an additive contract revision. R-D recorded the outcome. Gates on lanes: action_executor 181, workers+connector 802, actions_api/gateway_api/openapi drift/connector 357, frontend 1042 plus Playwright gateways 15, ruff, pyright, validate_planning PASS. PR #191 CI green apart from one trivial 'discover production images' job still pending at close time; main merged into the branch to resolve generated INDEX/MASTER conflicts from the PRP-08 close.
+
+Still open, not claimed: G17 manage live run (never run; needs `NS_LIVE_APPROVED=1`); Government manage disabled with reason; the real Cosmos/Entra path in `_publication_recorder` is tested with fakes only; cost-center attribution (#190); runbook line that APIM-enabled actions workers need `NS_WORKER_OBJECT_ID` and that the worker principal needs `catalog.curate` in publishing domains; `get()` adds ARM reads per poll of an awaiting_confirmation intent.
 
 ## Audit 2026-11-04
 

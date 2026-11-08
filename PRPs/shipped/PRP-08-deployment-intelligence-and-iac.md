@@ -1,10 +1,11 @@
 ---
 name: PRP-08-deployment-intelligence-and-iac
-status: active
+status: shipped
 priority: P1
 order: 8
 started: 2026-11-07
-pr: 43
+shipped: 2026-11-07
+pr: 186
 branch: prp-08-audit-gap-closure
 review: required
 created: 2026-10-08
@@ -334,6 +335,7 @@ NS_LIVE_APPROVED=1 python scripts/gates/g01_deploy_smoke.py    # operator-approv
 | 14 | merged | worktree-agent-a398790022a6fb494 | sonnet | ruff clean, pyright 0 errors; 640 passed (core/api/workers/infra/integration) on branch and post-merge by orchestrator; review (one pass): APPROVE, no blockers; b9a6150, merge c719e01. NOT end-to-end: no durable PlanApprovals, so worker skips DeployConnector (deploy_sources_unconfigured); no ARM/Fabric provisioner wired; API connector dry-run only. Follow-ups: durable approvals + provisioners, register etag/concurrency, target-customer mismatch test, operator backfill for customer-less rows | 2026-11-07 |
 
 ## Completion note (filled at ship)
+- Round 2 (audit gap closure), 2026-11-07: items 10-14 merged via PR #186 (squash `50c8960`) plus CI fix-forward PR #188 (`00eeaf2`; #186 was merged while docs-reference and deploy e2e CI were red, #188 green with 26 checks passed). Reviews: items 12 and 14 APPROVE, no blockers. Apply is NOT end-to-end: no durable plan approval store (worker skips `DeployConnector`), no ARM/Fabric provisioner wired, API connector and uninstall are dry-run only; routes return 503 unless the opt-in is set. No live or paid calls (G01 Government, G02, live uninstall, G12 stay OPEN). Follow-ups are listed in "Audit gap closure 2026-11-07". Round 1 below.
 - Date: 2026-10-17
 - Merged commits: items 2 ce671f5, 6 a9f7ee2, 1 3ad6ac0, 3 00c1259, 4 f58a522, 8 c5573b9, 5 d7c9d5f, 7 2f5d890, 9 0982ed0, review rework 9935cae; fix-forwards 9b940ab (test package rename), 68eb575 and 974ad2c (G01 script), 8c2c777 (CodeQL error/warning). PR #43, merged as c9054df with all 16 checks green.
 - Deviations from blueprint and why:
