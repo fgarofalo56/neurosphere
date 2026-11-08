@@ -203,3 +203,22 @@ def test_azure_supported_region_queries_azure_with_a_server_side_scope_filter(
     # the indexer pushed only the in-scope entity
     uploaded = [d["id"] for batch in azure.uploads for d in batch]
     assert uploaded == [f"commercial:{CUSTOMER}:foundry:agent:support-bot"]
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {"NS_SEARCH_PROVIDER": "azure"},
+        {"NS_SEARCH_PROVIDER": "azure", "NS_SEARCH_REGION": "marscentral"},
+    ],
+)
+def test_government_azure_search_unavailable_is_reported_not_faked(
+    monkeypatch: pytest.MonkeyPatch, env: dict[str, str]
+) -> None:
+    azure = FakeAzure()
+    composed, _ = _compose(monkeypatch, {"NS_CLOUD": "government", **env}, azure)
+    status = composed.registry.get("catalog")
+    assert status.state == "failed"
+    assert (status.reason or "").startswith("search_")
+    assert getattr(composed.app.state, "search_runtime", None) is None
+    assert azure.searches == [] and azure.uploads == []

@@ -72,6 +72,17 @@ deployApply:
   enabled: false
   registerContainer: ""
 
+# Catalog search (PRP-10 item 11) on the api container only. provider: fixture (in-process index,
+# the default) | azure (Azure AI Search via workload identity; set service and region) | "" (unset:
+# catalog search answers 503 search_unavailable). Names only: no key, connection string or host
+# (the host comes from the cloud profile in code). In a Government cloud, provider azure with a
+# disabled capability row or no service fails the catalog readiness check instead of falling back.
+search:
+  provider: fixture
+  service: "" # NS_SEARCH_SERVICE
+  index: "" # NS_SEARCH_INDEX (empty = neurosphere-catalog)
+  region: "" # NS_SEARCH_REGION
+
 # Secrets Store CSI driver + Key Vault + workload identity (optional, off by default).
 secretProviderClass:
   enabled: false

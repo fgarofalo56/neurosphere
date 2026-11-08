@@ -17,6 +17,10 @@ no component and no entry to the fixed builder order.
 ``NS_SEARCH_REFRESH_SECONDS``  per-scope re-index interval (default 30).
 ======================  ===========================================================================
 
+Government guard: with ``azure`` in a Government cloud, a disabled capability row or a missing
+region/service never falls back to the in-process fixture; the catalog component fails with
+reason ``search_<cause>`` (visible on ``/readyz``). Commercial keeps the fixture fallback.
+
 Freshness: the indexer enumerates the catalog only **with the calling principal's own scope**
 (there is no unscoped listing), so the index is refreshed lazily at search time, per scope, at most
 every ``NS_SEARCH_REFRESH_SECONDS``, and immediately after ``SearchRuntime.invalidate()`` (call it
@@ -220,6 +224,11 @@ def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> Gra
             search = wrapper
             if azure_enabled:
                 sink = CompositeIndexSink(store, AzureIndexSink(backend))
+        if reason is not None and ctx.settings.cloud_profile.cloud.value == "government":
+            # Never answer a Government caller from an empty in-process fixture in place of
+            # Azure: the catalog component reports the reason on /readyz instead.
+            _log.warning("azure search unavailable in government (%s); catalog degraded", reason)
+            raise ComponentUnavailableError(f"search_{reason}"[:64])
         if reason is not None:
             _log.warning("azure search disabled (%s); the in-process index answers", reason)
 

@@ -20,7 +20,7 @@ from azure.search.documents.aio import SearchClient
 from neurosphere_contracts.scope.v1.identity_scope import IdentityScope
 
 from neurosphere_core.cloud import CloudName, CloudProfile, profile_for
-from neurosphere_core.errors import CapabilityUnavailableError
+from neurosphere_core.errors import CapabilityUnavailableError, DependencyTransientError
 from neurosphere_core.search.azure.filters import (
     FIELD_CLOUD,
     FIELD_CUSTOMER,
@@ -89,8 +89,9 @@ class AzureAuthorizedSearch:
         timed_out = False
         allowed = {d.root for d in scope.allowed_domains}
         granted = {g.resource_id.root for g in scope.allowed_resources if "read" in g.permissions}
+        budget = asyncio.timeout(request.budget.timeout_ms / 1000.0)
         try:
-            async with asyncio.timeout(request.budget.timeout_ms / 1000.0):
+            async with budget:
                 pager = await self._backend.search(
                     text,
                     filter=odata_filter,
@@ -109,6 +110,11 @@ class AzureAuthorizedSearch:
                 count = await pager.get_count() if hasattr(pager, "get_count") else None
                 matched = count if isinstance(count, int) else len(collected)
         except TimeoutError:
+            if not budget.expired():
+                # A timeout raised inside the SDK is a dependency failure, not our budget.
+                raise DependencyTransientError(
+                    "search backend timed out", reason="search_backend_timeout"
+                ) from None
             timed_out = True
             matched = len(collected)
 
