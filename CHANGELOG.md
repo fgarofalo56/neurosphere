@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Catalog audit-gap closure (PRP-10, PR #192): the catalog projection now creates the agent, model-deployment and
+  tool entities a trace references, so a real stack's catalog fills from telemetry (proved on the compose emulators
+  through the ingest edge); lock-expiry lineage refresh, review-queue generations and replay ordering (#54);
+  authorization and existence-signal hardening (#53: server-stamped curation actors, non-disclosing duplicate-ID
+  errors, scope 403 before schema 422 on create); search hardening, a Government no-silent-fixture guard and
+  `NS_SEARCH_PROVIDER` in hosted Bicep and Helm; scoped export p95 measured on the Cosmos emulator (bounded
+  feasibility only). Live export p95 and in-region G03 stay open (#57); follow-ups #193-#195.
 - APIM gateway manage audit-gap closure (PRP-34, PR #191): the actions worker role now wraps the executor in the
   publication recorder so grant and MCP publications record provenance after a verified apply; the dry-run API and
   confirmation dialog show per-step create/found for APIM plans. Cost-center attribution is descoped to #190 and the
