@@ -73,7 +73,9 @@ def test_create_duplicate_and_malformed_are_invalid_schema() -> None:
     duplicate = api.post(STEWARD_FINANCE, "/entities", agent_doc("fin-bot", FINANCE))
     assert duplicate.status_code == 422
     assert duplicate.json()["code"] == "invalid_schema"
-    broken = api.post(STEWARD_FINANCE, "/entities", {"entity_type": "agent", "id": "nope"})
+    broken = api.post(
+        STEWARD_FINANCE, "/entities", {"entity_type": "agent", "id": "nope", "domain_id": FINANCE}
+    )
     assert broken.json()["code"] == "invalid_schema"
     retired = api.post(
         STEWARD_FINANCE, "/entities", agent_doc("r-bot", FINANCE, lifecycle_status="retired")

@@ -158,6 +158,19 @@ class FakeCatalogRepo:
     ) -> Page[CatalogEdge]:
         return Page[CatalogEdge](items=())
 
+    async def list_edges_by_domain(
+        self, scope: IdentityScope, domain_id: str, flt: EdgeFilter, page: PageRequest
+    ) -> Page[CatalogEdge]:
+        found = sorted(
+            (
+                e
+                for e in self.edges.values()
+                if e.domain_id.root == domain_id and self._visible(scope, e)
+            ),
+            key=lambda e: e.id,
+        )
+        return Page[CatalogEdge](items=tuple(found[: page.page_size]))
+
     async def record_observation(self, scope: IdentityScope, observation: EdgeObservation) -> bool:
         if any(o.id == observation.id for o in self.observations):
             return False
