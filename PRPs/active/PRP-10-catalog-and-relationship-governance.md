@@ -230,7 +230,7 @@ Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-07 agai
 - Must NOT touch: `packages/core/neurosphere_core/catalog/rules.py` / review queue (item 9), `services/api/neurosphere_api/routers.py`, `openapi.json` (orchestrator regenerates), `packages/contracts/`.
 - Depends on: Item 9 (shares `repo/`).
 - Acceptance criteria: one negative/regression test per bullet; cross-domain duplicate-ID response byte-identical to the in-domain one apart from the requested ID.
-- Tests to write: `packages/core/tests/catalog/test_hardening_round2.py`, `services/api/tests/catalog/test_hardening_round2.py`.
+- Tests to write: `packages/core/tests/catalog/test_hardening_round2.py`, `services/api/tests/catalog/test_catalog_api_hardening.py`.
 
 ### Item 11 - search-hardening-and-hosted-wiring  [P] (search parts of #56, #55 Gov guard)
 - Deliverable: `search/azure/filters.py` cache key wraps `scope_cache_key`; test that `scope_hash_of(scope) == scope.scope_hash` for a derived scope; a TimeoutError raised inside the Azure SDK is not reported as `partial_reason="timeout_ms"`; in a Government cloud with Azure Search disabled/unconfigured the search builder reports degraded (readiness reason) instead of silently answering from an empty fixture; hosted config sets `NS_SEARCH_PROVIDER` (and `NS_SEARCH_SERVICE`/`NS_SEARCH_REGION` when a search service is deployed) in `infra/demo/main.bicep`, `infra/appservice/main.bicep` where the API env is defined, and the Helm chart.
@@ -302,10 +302,10 @@ PR #52 (CI green 2026-10-17); item 7 live G03 evidence filed 2026-10-17, so the 
 | 5 | merged | worktree-agent-a50db6271c68287de | sonnet | ca03b8e; ruff/format/pyright clean; services/api 390 passed, load 1 passed (re-run on branch); Snyk Code 0 (run by orchestrator); p95 in-memory sandbox (200 agents, 8 domains; bounded feasibility, not live): get 0.31 ms, list 0.93, search 2.07, neighbors d3 120.9, impact d3 16.0; review APPROVE (non-blocking: stale-agent _last_observed reads first edge page only, unkeyed plan digest, 422-before-403 ordering on create); merge d3c0b51; orchestrator wired /catalog in routers.py + regenerated openapi.json; full default suite 4338 passed | 2026-10-17 |
 | 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
 | 7 | merged | worktree-agent-a4dbe5c8fb2d6deca | sonnet | harness delta 457904d (control-plane provisioning via az; offline 80 passed, emulator smoke 1 passed, Snyk 0; review APPROVE, merge e47672a); evidence writer fix (live disclaimer + Live account section; 82 passed, Snyk 0, Haiku APPROVE); live run 2026-10-17 operator-approved (Frank Garofalo), serverless Entra-only account in Limitlessdata - DMLZ centralus via private endpoint + P2S VPN: all 9 cells correct, mean 39-58 RU/traversal, p95 1.58-2.13 s incl. WAN RTT; evidence docs/evidence/G03/live-2026-10-17.{md,json}; RG deleted, DNS records gone. First attempt blocked by landing-zone policy (public access forced off) | 2026-10-17 |
-| 8 | todo | | sonnet | | 2026-11-07 |
-| 9 | todo | | sonnet | | 2026-11-07 |
+| 8 | review | worktree-agent-ac283b3eafd2c1099 | sonnet | c083aaf; re-run on branch: ruff/format/pyright clean, workers projections + core catalog 125 passed; Snyk Code 0. Deviations: no AgentVersion (no version field), entities draft + attributes.discovered_from=telemetry, quarantine in-memory default (durable sink NOT wired in runtime) | 2026-11-08 |
+| 9 | in-progress | worktree (implementer) | sonnet | dispatched | 2026-11-08 |
 | 10 | todo | | sonnet | | 2026-11-07 |
-| 11 | todo | | sonnet | | 2026-11-07 |
+| 11 | in-progress | worktree (implementer) | sonnet | dispatched | 2026-11-08 |
 | 12 | todo | | sonnet | | 2026-11-07 |
 | 13 | todo | | sonnet | | 2026-11-07 |
 
