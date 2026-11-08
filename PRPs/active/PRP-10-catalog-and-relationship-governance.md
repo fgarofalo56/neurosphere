@@ -1,11 +1,11 @@
 ---
 name: PRP-10-catalog-and-relationship-governance
-status: backlog
+status: active
 priority: P1
 order: 9
-started: 2026-10-17
+started: 2026-11-07
 pr: 52
-branch: prp-10-catalog
+branch: prp-10-audit-gap-closure
 review: required
 created: 2026-10-08
 model: sonnet
@@ -205,6 +205,54 @@ Ship the operational catalog on Cosmos DB NoSQL: a versioned `CatalogRepository`
 - Pattern references: PRP-02 evidence format.
 - Tests to write: none (evidence artifact); `tests/unit/gates/test_g03_live_refuses.py` already owned by PRP-02.
 
+### Round 2: audit gap closure (items 8-13, added 2026-11-07)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-07 against main 2b97e06: catalog search is composed by PRP-35 item 3 (`NS_SEARCH_PROVIDER`, compose sets `fixture`) but no hosted config sets it; compose seeds the sandbox (PRP-35 item 2) but a real stack's catalog stays empty because the projection worker only calls `put_edge` and `put_edge` does not require endpoint entities, so trace edges dangle and scope filtering hides them; #55 is mostly closed by PRP-29/35 (`ArchiveTraceEventSource`, `EnvClaimsSource`, composition root); the #53 "denied `require()` unaudited" bullet is closed by PRP-06 D1-D5 (`authz/dependencies.py` denied-attempt audit). User decisions 2026-11-07: all items 8-13; live runs stay OPEN (emulator only); item 12 is the API-level compose test only.
+
+### Item 8 - trace-entity-discovery  [P] (review: required)
+- Deliverable: the catalog projection creates, if absent, the Agent / AgentVersion / ModelDeployment / Tool entities a trace references (canonical IDs from `mapping.py`, domain from the event, inside the worker's derived scope), before writing the edges that point at them; never updates or overwrites an existing (declared/curated) entity; idempotent on replay. Out-of-scope candidates are recorded to a quarantine record with a `skipped_out_of_scope` counter instead of only being dropped (#55); the per-customer outbox assumption is documented in the module docstring (#55).
+- Owned files (may edit): `services/workers/neurosphere_workers/projections/catalog/`, `services/workers/tests/projections/`.
+- Must NOT touch: `packages/core/neurosphere_core/catalog/` (items 9, 10), `packages/contracts/`, `services/workers/neurosphere_workers/runtime/` (report if wiring is needed).
+- Depends on: none.
+- Acceptance criteria: a sandbox trace into an empty repository yields the agent and model-deployment entities and the INVOKES/USES_MODEL edges between them, all visible through `RepositoryGraphQuery.neighbors` for an in-scope caller; a replay creates no duplicates and no update to a pre-existing entity; an out-of-scope candidate produces a quarantine record and counter, and the checkpoint still advances only after durable write or quarantine.
+- Tests to write: `services/workers/tests/projections/test_catalog_entity_discovery.py`.
+
+### Item 9 - lock-observation-review-semantics  [P] (#54)
+- Deliverable: presented lineage refreshes from the newest observation after a lock expires; `ReviewItem` id includes a generation/evidence component so a later conflict after resolution is enqueued; an expired lock's `set_confidence` does not carry into a replacement lock; observation id includes confidence; merging an older observation after a newer one does not regress confidence or `last_observed` (ordered by observation time, not arrival); a protocol + memory + Cosmos method lists edges by domain.
+- Owned files (may edit): `packages/core/neurosphere_core/catalog/rules.py`, `review_queue.py`, `review_queue_cosmos.py`, `protocol.py`, `repo/` (domain edge listing and observation id only), `packages/core/tests/catalog/`.
+- Must NOT touch: `packages/core/neurosphere_core/catalog/graph/`, `services/`, `packages/contracts/`.
+- Depends on: none.
+- Acceptance criteria: one regression test per #54 bullet (stale-agent paging moves to item 10).
+- Tests to write: `packages/core/tests/catalog/test_semantics_round2.py`.
+
+### Item 10 - authz-and-existence-hardening  (review: required; #53 + core/api parts of #56)
+- Deliverable: curation `EdgeOverride.actor` / `lock.actor` stamped server-side from the scope principal (mismatch rejected); duplicate-ID and alias-clash errors identical whether the ID is taken in the caller's domain or another; `put_override` uniqueness checked unscoped; fan-out truncation computed after the endpoint scope filter; raw-view root probe uses an explicit repo method, not the unknown-edge fallback; create checks scope (403) before contract validation (422); stale-agent reconcile pages all edges (or relies on enforced newest-first ordering); `RateLimitedError` uses the response retry-after; time budget checked before root/raw/override fetches; stale-agent plan digest keyed (HMAC with the existing pseudonym/plan key source); `services/api/tests/{audit,catalog}` collect when run alone; Person-needs-domain stated in contract docs.
+- Owned files (may edit): `packages/core/neurosphere_core/catalog/repo/`, `packages/core/neurosphere_core/catalog/graph/`, `services/api/neurosphere_api/catalog/` (incl. `curation/`), `packages/core/tests/catalog/`, `services/api/tests/catalog/`, `services/api/tests/audit/` (collection fix only).
+- Must NOT touch: `packages/core/neurosphere_core/catalog/rules.py` / review queue (item 9), `services/api/neurosphere_api/routers.py`, `openapi.json` (orchestrator regenerates), `packages/contracts/`.
+- Depends on: Item 9 (shares `repo/`).
+- Acceptance criteria: one negative/regression test per bullet; cross-domain duplicate-ID response byte-identical to the in-domain one apart from the requested ID.
+- Tests to write: `packages/core/tests/catalog/test_hardening_round2.py`, `services/api/tests/catalog/test_hardening_round2.py`.
+
+### Item 11 - search-hardening-and-hosted-wiring  [P] (search parts of #56, #55 Gov guard)
+- Deliverable: `search/azure/filters.py` cache key wraps `scope_cache_key`; test that `scope_hash_of(scope) == scope.scope_hash` for a derived scope; a TimeoutError raised inside the Azure SDK is not reported as `partial_reason="timeout_ms"`; in a Government cloud with Azure Search disabled/unconfigured the search builder reports degraded (readiness reason) instead of silently answering from an empty fixture; hosted config sets `NS_SEARCH_PROVIDER` (and `NS_SEARCH_SERVICE`/`NS_SEARCH_REGION` when a search service is deployed) in `infra/demo/main.bicep`, `infra/appservice/main.bicep` where the API env is defined, and the Helm chart.
+- Owned files (may edit): `packages/core/neurosphere_core/search/azure/`, `packages/core/tests/search/`, `services/api/neurosphere_api/runtime/builders/search.py`, its tests, `infra/demo/main.bicep`, `infra/appservice/main.bicep`, `infra/helm/templates/deployment.yaml`, `infra/helm/values*.yaml`, and their existing infra tests.
+- Must NOT touch: `packages/core/neurosphere_core/search/fixture/`, `services/api/neurosphere_api/runtime/builders/data.py`, `packages/core/neurosphere_core/catalog/`.
+- Depends on: none.
+- Acceptance criteria: one test per bullet; `az bicep build` (or the repo's bicep test) clean on edited templates; `helm template` renders the env vars.
+
+### Item 12 - catalog-compose-verification
+- Deliverable: a compose-backed integration test (`pytest.mark.integration`) that posts a sandbox trace through the ingest edge, lets the catalog projection run, and asserts over HTTP that the discovered entities, the edges and a search hit appear for an in-scope caller and not for an out-of-scope one. Browser real-stack specs are out of scope (re-plan step 4 PRP).
+- Owned files (may edit): `tests/integration/catalog/`.
+- Must NOT touch: product code; report gaps instead.
+- Depends on: Items 8, 11.
+- Acceptance criteria: passes locally against `docker compose up -d --wait` (emulators, 127.0.0.1); output recorded as evidence; never runs in CI (integration marker).
+
+### Item 13 - export-p95-on-cosmos
+- Deliverable: `tests/load/catalog_latency` gains a Cosmos emulator backend (labelled bounded feasibility, G12) and a live mode that refuses without `NS_LIVE_APPROVED=1`; results written to `temp/` and summarised in `docs/evidence/G03/catalog-export-emulator-<date>.md`. The live run stays OPEN this round.
+- Owned files (may edit): `tests/load/catalog_latency/`, `docs/evidence/G03/catalog-export-emulator-*.md`.
+- Must NOT touch: `scripts/gates/g03_live.py`, `tests/load/graph_benchmark/`, product code.
+- Depends on: Item 10.
+- Acceptance criteria: emulator run produces p50/p95 for scoped export/list/get with the "not a live claim" label; live mode refusal test; no latency assertion.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -254,6 +302,14 @@ PR #52 (CI green 2026-10-17); item 7 live G03 evidence filed 2026-10-17, so the 
 | 5 | merged | worktree-agent-a50db6271c68287de | sonnet | ca03b8e; ruff/format/pyright clean; services/api 390 passed, load 1 passed (re-run on branch); Snyk Code 0 (run by orchestrator); p95 in-memory sandbox (200 agents, 8 domains; bounded feasibility, not live): get 0.31 ms, list 0.93, search 2.07, neighbors d3 120.9, impact d3 16.0; review APPROVE (non-blocking: stale-agent _last_observed reads first edge page only, unkeyed plan digest, 422-before-403 ordering on create); merge d3c0b51; orchestrator wired /catalog in routers.py + regenerated openapi.json; full default suite 4338 passed | 2026-10-17 |
 | 6 | merged | worktree-agent-a187807cc8b320819 | sonnet | 844b3ac; ruff/format/pyright clean; 71 passed (re-run on branch); Snyk Code 0; review APPROVE (4 non-blocking: Gov silent-empty fixture fallback needs composition-root guard, cache_key not on scope_cache_key layout, scope_hash agreement test, SDK TimeoutError read as partial); merge e62bcfd, search 71 passed + pyright clean post-merge | 2026-10-17 |
 | 7 | merged | worktree-agent-a4dbe5c8fb2d6deca | sonnet | harness delta 457904d (control-plane provisioning via az; offline 80 passed, emulator smoke 1 passed, Snyk 0; review APPROVE, merge e47672a); evidence writer fix (live disclaimer + Live account section; 82 passed, Snyk 0, Haiku APPROVE); live run 2026-10-17 operator-approved (Frank Garofalo), serverless Entra-only account in Limitlessdata - DMLZ centralus via private endpoint + P2S VPN: all 9 cells correct, mean 39-58 RU/traversal, p95 1.58-2.13 s incl. WAN RTT; evidence docs/evidence/G03/live-2026-10-17.{md,json}; RG deleted, DNS records gone. First attempt blocked by landing-zone policy (public access forced off) | 2026-10-17 |
+| 8 | todo | | sonnet | | 2026-11-07 |
+| 9 | todo | | sonnet | | 2026-11-07 |
+| 10 | todo | | sonnet | | 2026-11-07 |
+| 11 | todo | | sonnet | | 2026-11-07 |
+| 12 | todo | | sonnet | | 2026-11-07 |
+| 13 | todo | | sonnet | | 2026-11-07 |
+
+Round 2 (audit gap closure, items 8-13): plan approved 2026-11-07, integration branch `prp-10-audit-gap-closure` from main 2b97e06. Waves: (8, 9, 11) → 10 → (12, 13). Live runs stay OPEN this round (user decision); item 12 is the API compose test only (browser real-stack specs go to the re-plan step 4 PRP).
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
