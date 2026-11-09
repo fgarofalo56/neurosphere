@@ -24,6 +24,7 @@ __all__ = [
     "ResultsList",
     "Trend",
     "TrendPoint",
+    "Truncation",
 ]
 
 PILOT_TARGET: Final = 0.9
@@ -101,9 +102,19 @@ class DriftAlertOut(_Model):
     threshold: float
 
 
+class Truncation(_Model):
+    """The ``/quality`` read hit its row cap: only the newest ``limit`` results inside the last
+    ``window_days`` days were aggregated; older matching results were left out."""
+
+    limit: int
+    window_days: int
+
+
 class QualityResponse(_Model):
     trends: list[Trend]
     coverage: list[CoveragePoint]
     missing_labels: MissingLabels
     pilot_grounded_rate: PilotGroundedRate
     drift_alerts: list[DriftAlertOut]
+    # null = the aggregation covered every result in the window (not truncated).
+    truncated: Truncation | None = None

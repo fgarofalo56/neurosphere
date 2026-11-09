@@ -179,13 +179,25 @@ def pilot_grounded_rate(
 def _missing_labels(
     results: Sequence[EvaluationResult], reports: Iterable[CalibrationReport]
 ) -> MissingLabels:
-    rows = [r.overall_coverage for r in reports]
-    if rows:
-        return MissingLabels(
-            judged=sum(c.judged for c in rows),
-            labelled=sum(c.labelled for c in rows),
-            missing=sum(c.missing for c in rows),
-        )
+    """Judged / labelled / missing counts, per distinct (item, dimension) pair.
+
+    An item judged in several dimensions counts once per dimension (each dimension is a separate
+    judgement that needs its own label), never once per report: a dimension can have several
+    reports (one per judge config version), and they cover the same items, so only the newest
+    report per dimension is used. ``labelled`` is clamped to ``judged`` and ``missing`` is
+    ``judged - labelled`` (never negative). Without any report, ``judged`` is the sum of LLM-judged
+    score sample sizes (one score = one dimension of the sampled items) and the rest is unknown
+    (null, never 0).
+    """
+    newest: dict[str, CalibrationReport] = {}
+    for report in reports:
+        current = newest.get(report.dimension)
+        if current is None or report.calibrated_at >= current.calibrated_at:
+            newest[report.dimension] = report
+    if newest:
+        judged = sum(r.overall_coverage.judged for r in newest.values())
+        labelled = min(judged, sum(r.overall_coverage.labelled for r in newest.values()))
+        return MissingLabels(judged=judged, labelled=labelled, missing=judged - labelled)
     judged = sum(
         s.sample_size
         for r in results

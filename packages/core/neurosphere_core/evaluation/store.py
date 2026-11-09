@@ -19,7 +19,8 @@ from __future__ import annotations
 import base64
 import binascii
 from collections.abc import Iterable
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Final, Literal, Protocol, runtime_checkable
 
 from neurosphere_contracts.evaluation.v1.evaluation_result import EvaluationResult, Judge
@@ -32,15 +33,37 @@ from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
+    "DEFAULT_QUALITY_MAX_RESULTS",
+    "DEFAULT_QUALITY_WINDOW_DAYS",
     "EvaluationConflictError",
     "EvaluationStore",
     "InMemoryEvaluationStore",
     "SamplingCoverage",
+    "WindowedResults",
+    "completed_key",
     "judge_config_key",
 ]
 
 Cloud = Literal["commercial", "government"]
 _ID: Final = r"^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$"
+
+# Bounded aggregation read used by ``GET .../quality``: results completed in the last
+# ``DEFAULT_QUALITY_WINDOW_DAYS`` days, at most ``DEFAULT_QUALITY_MAX_RESULTS`` rows (newest first).
+DEFAULT_QUALITY_WINDOW_DAYS: Final = 90
+DEFAULT_QUALITY_MAX_RESULTS: Final = 5_000
+
+
+@dataclass(frozen=True)
+class WindowedResults:
+    """Newest-first results of a bounded read; ``truncated`` is true when the cap cut rows off."""
+
+    items: tuple[EvaluationResult, ...]
+    truncated: bool
+
+
+def completed_key(moment: datetime) -> str:
+    """Fixed-width UTC timestamp so string order is time order (also stored on Cosmos docs)."""
+    return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 class EvaluationConflictError(StaleVersionError):
@@ -117,6 +140,21 @@ class EvaluationStore(Protocol):
         self, scope: IdentityScope, domain: str, subject_id: str | None = None
     ) -> tuple[EvaluationResult, ...]:
         """All of the scope's results in ``domain`` (ordered by id) for aggregation."""
+        ...
+
+    async def results_window(
+        self,
+        scope: IdentityScope,
+        domain: str,
+        subject_id: str | None = None,
+        *,
+        since: datetime,
+        limit: int = DEFAULT_QUALITY_MAX_RESULTS,
+    ) -> WindowedResults:
+        """The newest at most ``limit`` results with ``completed_at >= since``, newest first.
+
+        ``truncated`` is true when more than ``limit`` rows matched (the oldest are dropped).
+        """
         ...
 
     async def calibrations(
@@ -248,6 +286,34 @@ class InMemoryEvaluationStore:
             for _, r in sorted(self._results.items())
             if _visible(scope, domain, r)
             and (subject_id is None or r.subject_id.root == subject_id)
+        )
+
+    async def results_window(
+        self,
+        scope: IdentityScope,
+        domain: str,
+        subject_id: str | None = None,
+        *,
+        since: datetime,
+        limit: int = DEFAULT_QUALITY_MAX_RESULTS,
+    ) -> WindowedResults:
+        if limit < 1:
+            raise InvalidSchemaError("limit must be >= 1", reason="invalid_limit")
+        floor = completed_key(since)
+        matched = sorted(
+            (
+                (completed_key(datetime.fromisoformat(r.completed_at.root)), rid, r)
+                for rid, r in self._results.items()
+                if _visible(scope, domain, r)
+                and (subject_id is None or r.subject_id.root == subject_id)
+            ),
+            key=lambda t: (t[0], t[1]),
+            reverse=True,
+        )
+        inside = [t for t in matched if t[0] >= floor]
+        return WindowedResults(
+            items=tuple(t[2].model_copy(deep=True) for t in inside[:limit]),
+            truncated=len(inside) > limit,
         )
 
     async def calibrations(
