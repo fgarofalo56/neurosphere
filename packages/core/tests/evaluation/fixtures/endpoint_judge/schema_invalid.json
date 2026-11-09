@@ -1,0 +1,16 @@
+{
+  "id": "chatcmpl-rec-schema-invalid",
+  "object": "chat.completion",
+  "model": "gpt-judge",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"abstain\": false, \"score\": 7, \"reason\": \"out of range\"}"
+      }
+    }
+  ],
+  "usage": {"prompt_tokens": 81, "completion_tokens": 10, "total_tokens": 91}
+}
