@@ -1,0 +1,16 @@
+{
+  "id": "chatcmpl-rec-pass",
+  "object": "chat.completion",
+  "model": "gpt-judge",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"abstain\": false, \"score\": 1.0, \"reason\": \"grounded\"}"
+      }
+    }
+  ],
+  "usage": {"prompt_tokens": 123, "completion_tokens": 17, "total_tokens": 140}
+}

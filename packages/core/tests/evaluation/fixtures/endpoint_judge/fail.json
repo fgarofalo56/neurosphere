@@ -1,0 +1,16 @@
+{
+  "id": "chatcmpl-rec-fail",
+  "object": "chat.completion",
+  "model": "gpt-judge",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "{\"abstain\": false, \"score\": 0.0, \"reason\": \"unsupported claim\"}"
+      }
+    }
+  ],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 15, "total_tokens": 135}
+}
