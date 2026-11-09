@@ -283,14 +283,16 @@ def test_the_commercial_judge_is_disabled_by_the_shipped_matrix_and_nothing_is_j
     assert commercial.summary.calibration_skipped
 
 
-async def test_sandbox_telemetry_carries_no_classification_so_online_is_fully_skipped(
+async def test_sandbox_telemetry_classified_spans_reach_the_judge_restricted_never_do(
     s: sp.Slice, tmp_path: Path
 ) -> None:
-    """Fail-closed rules: a missing classification is restricted, so against an LLM judge every
-    online item built from the sandbox telemetry is skipped. This is reported, not changed."""
+    """Round 2 item 9: sandbox telemetry carries a per-agent classification (some agents stay
+    null). Classified, approved spans are evaluated; restricted and unclassified spans (null fails
+    closed to restricted) are skipped ``judge_not_approved`` and never reach the judge."""
     path = sp.generate_government_telemetry(tmp_path / "telemetry-out")
     lines = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    assert lines and all('"classification"' not in ln for ln in lines)
+    assert any('"classification"' in ln for ln in lines)
+    assert any('"classification"' not in ln for ln in lines)
     registry = sp.build_registry()
     registry.datasets.register(sp.frame_dataset())
     double = sp.CountingLlm()
@@ -300,5 +302,9 @@ async def test_sandbox_telemetry_carries_no_classification_so_online_is_fully_sk
     config = sp.online_config(registry, run_id="online-sandbox", llm=True)
     report = await service.run_online(NdjsonRecordSource(path), config)
     assert report.sampled_total > 0
-    assert report.skip_counts == {"judge_not_approved": report.sampled_total}
-    assert report.evaluated_total == 0 and not double.calls and report.results == ()
+    assert report.evaluated_total > 0 and double.calls
+    assert all(req.classification not in (None, "restricted") for req in double.calls)
+    restricted = [o for o in report.outcomes if o.stratum.endswith("/restricted")]
+    assert restricted
+    assert all(o.status == "skipped" and o.reason == "judge_not_approved" for o in restricted)
+    assert set(report.skip_counts) <= {"judge_not_approved"}
