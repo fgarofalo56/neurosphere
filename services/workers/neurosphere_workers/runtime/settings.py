@@ -21,7 +21,7 @@ read by ``neurosphere_core.clients``).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, Literal
 
 from neurosphere_connector_foundry_actions import AccountRef
 from neurosphere_core.auth.scope import DEFAULT_POLICY_CONTAINER
@@ -135,6 +135,34 @@ class EvalSettings(BaseSettings):
     domain_token_budget: int = Field(default=1_000_000, ge=0)
     run_cost_budget: str = "50"
     domain_cost_budget: str = "250"
+    #: ``fixture`` replays ``judge_fixtures.json``; ``endpoint`` calls the approved chat-completions
+    #: endpoint below with the worker's managed identity (never a key).
+    judge: Literal["fixture", "endpoint"] = "fixture"
+    judge_endpoint: str | None = None
+    judge_deployment: str | None = None
+    judge_api_version: str | None = None
+    #: Offline pilot + calibration: comma-separated registered dataset ids (empty = idle).
+    pilot_dataset_ids: str = ""
+    #: Canonical domain / subject ids the pilot results are stored under.
+    pilot_domain_id: str | None = None
+    pilot_subject_id: str | None = None
+    offline_interval_seconds: float = Field(default=86_400.0, gt=0)
+    #: Calibration sample opened as review items per offline run.
+    calibration_sample_cap: int = Field(default=20, ge=0)
+
+    @field_validator("judge_endpoint", "judge_deployment", "judge_api_version", mode="before")
+    @classmethod
+    def _blank_optional(cls, value: Any) -> Any:
+        return _blank_is_none(value)
+
+    @field_validator("pilot_domain_id", "pilot_subject_id", mode="before")
+    @classmethod
+    def _blank_ids(cls, value: Any) -> Any:
+        return _blank_is_none(value)
+
+    @property
+    def pilot_ids(self) -> tuple[str, ...]:
+        return tuple(p for p in (part.strip() for part in self.pilot_dataset_ids.split(",")) if p)
 
 
 class FoundryWriteSettings(BaseSettings):

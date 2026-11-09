@@ -30,8 +30,8 @@ import logging
 import os
 import re
 import socket
-from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
 from functools import partial
@@ -72,17 +72,22 @@ from neurosphere_core.clients.factories import (
     ENV_COSMOS_KEY,
 )
 from neurosphere_core.cloud import Settings, load_settings
+from neurosphere_core.copilot.models.endpoints import AdapterConfig, endpoint_problem
 from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError, ValidationIssue
+from neurosphere_core.evaluation.calibration import LabelSet, ingest_labels
 from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
-from neurosphere_core.evaluation.judge import RecordedFixtureJudge
+from neurosphere_core.evaluation.endpoint_judge import EndpointJudge
+from neurosphere_core.evaluation.judge import Judge, RecordedFixtureJudge
 from neurosphere_core.evaluation.registry import (
     DatasetItem,
     DatasetVersion,
+    Dimension,
     EvaluationRegistry,
     JudgeConfig,
     RubricVersion,
 )
+from neurosphere_core.evaluation.store import EvaluationStore
 from neurosphere_core.gateway import (
     CosmosGatewayStore,
     GatewayRegistration,
@@ -105,6 +110,7 @@ from neurosphere_core.pricing import InMemoryPriceSnapshotStore
 from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
 from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
+from neurosphere_core.scope import IdentityScope
 from neurosphere_core.stores import ensure_local_containers
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -129,7 +135,25 @@ from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
 from neurosphere_workers.evaluation.budget import BudgetLedger, BudgetLimits
-from neurosphere_workers.evaluation.service import EvaluationService, OnlineRunConfig
+from neurosphere_workers.evaluation.labels import (
+    HitlLabelSource,
+    SampleConfig,
+    open_calibration_sample,
+)
+from neurosphere_workers.evaluation.models import ItemOutcome
+from neurosphere_workers.evaluation.pipeline import (
+    CalibrationSettings,
+    OfflineStage,
+    PipelineSummary,
+)
+from neurosphere_workers.evaluation.pipeline import (
+    run_pipeline as run_evaluation_pipeline,
+)
+from neurosphere_workers.evaluation.service import (
+    EvaluationService,
+    OfflineRunConfig,
+    OnlineRunConfig,
+)
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
 from neurosphere_workers.ingestion.gateway_poll import (
@@ -800,16 +824,185 @@ def _evaluation_registry(
     return registry, rubric, judge
 
 
+def _evaluation_judge(
+    cfg: RuntimeConfig,
+    evaluation: EvalSettings,
+    directory: Path,
+    credential: Callable[[], AsyncTokenCredential],
+) -> Judge:
+    """The judge for both stages. ``endpoint`` fails closed (never falls back to fixtures) and
+    builds the credential only when selected; no request is made at build time."""
+    if evaluation.judge == "fixture":
+        try:
+            return RecordedFixtureJudge.from_file(directory / "judge_fixtures.json")
+        except (OSError, ValueError):
+            raise RoleConfigError("evaluation_fixtures_invalid") from None
+    cloud: Any = cfg.cloud
+    problem = endpoint_problem(cloud, evaluation.judge_endpoint)
+    if problem is not None:
+        raise RoleConfigError(f"evaluation_judge_{problem[0]}")
+    try:
+        adapter = AdapterConfig(
+            kind="approved_endpoint",
+            endpoint=evaluation.judge_endpoint,
+            deployment=evaluation.judge_deployment,
+            api_version=evaluation.judge_api_version,
+        )
+    except ValidationError:
+        raise RoleConfigError("evaluation_judge_config_invalid") from None
+    try:
+        return EndpointJudge(adapter, cloud=cloud, credential=credential())
+    except CapabilityUnavailableError as exc:
+        raise RoleConfigError(f"evaluation_judge_{exc.reason or 'unavailable'}") from None
+
+
+def _pilot_datasets(registry: EvaluationRegistry, evaluation: EvalSettings) -> list[DatasetVersion]:
+    """Registered pilot datasets (latest version each); misconfiguration fails the role build."""
+    ids = evaluation.pilot_ids
+    if not ids:
+        return []
+    if evaluation.pilot_domain_id is None:
+        raise RoleConfigError("evaluation_pilot_domain_missing")
+    if evaluation.pilot_subject_id is None:
+        raise RoleConfigError("evaluation_pilot_subject_missing")
+    found: list[DatasetVersion] = []
+    for ident in ids:
+        dataset = registry.datasets.latest(ident)
+        if dataset is None:
+            raise RoleConfigError("evaluation_pilot_dataset_unregistered")
+        found.append(dataset)
+    return found
+
+
+@dataclass(frozen=True)
+class _OfflineEvaluation:
+    """Offline pilot + calibration + HITL label loop for the ``evaluation`` role (PRP-16 item 10).
+
+    Per dataset: run the pipeline with a fresh ledger; the labels come from the SAME run's
+    per-item outcomes (decided calibration review items); afterwards a new calibration sample is
+    opened so the next run has items to label. Everything is authorized under the worker scope.
+    """
+
+    registry: EvaluationRegistry
+    rubric: RubricVersion
+    judge_config: JudgeConfig
+    judge: Judge
+    store: EvaluationStore
+    hitl: HitlService
+    datasets: tuple[DatasetVersion, ...]
+    settings: EvalSettings
+    customer_id: str
+    cloud: str
+    clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
+
+    def _ledger(self) -> BudgetLedger:
+        ev = self.settings
+        return BudgetLedger(
+            run_limits=BudgetLimits(tokens=ev.run_token_budget, cost=Decimal(ev.run_cost_budget)),
+            domain_limits=BudgetLimits(
+                tokens=ev.domain_token_budget, cost=Decimal(ev.domain_cost_budget)
+            ),
+        )
+
+    def _require_scope(self, scope: IdentityScope) -> str:
+        domain = self.settings.pilot_domain_id
+        if (
+            domain is None
+            or scope.customer_id != self.customer_id
+            or domain not in set(scope.allowed_domains)
+        ):
+            raise RoleConfigError("evaluation_pilot_domain_out_of_scope")
+        return domain
+
+    async def run(self, scope: IdentityScope) -> list[PipelineSummary]:
+        domain = self._require_scope(scope)
+        subject = self.settings.pilot_subject_id
+        if subject is None:
+            raise RoleConfigError("evaluation_pilot_subject_missing")
+        now = self.clock()
+        return [
+            await self._run_dataset(scope, domain, subject, f"offline-{now:%Y%m%dt%H%M%Sz}-{n}", d)
+            for n, d in enumerate(self.datasets)
+        ]
+
+    async def _run_dataset(
+        self, scope: IdentityScope, domain: str, subject: str, run_id: str, dataset: DatasetVersion
+    ) -> PipelineSummary:
+        judges: dict[Dimension, JudgeConfig] = {
+            d: self.judge_config for d in dataset.dimensions if d in self.rubric.dimensions
+        }
+        sources: list[HitlLabelSource] = []
+
+        async def labels_for(outcomes: Sequence[ItemOutcome]) -> LabelSet | None:
+            source = await HitlLabelSource(
+                scope=scope, outcomes=outcomes, rubric=self.rubric, hitl=self.hitl
+            ).load()
+            sources.append(source)
+            return ingest_labels(source) if source.labels() else None
+
+        summary = await run_evaluation_pipeline(
+            registry=self.registry,
+            judge=self.judge,
+            matrix=load_matrix(),
+            store=self.store,
+            ledger=self._ledger(),
+            clock=self.clock,
+            offline=OfflineStage(
+                dataset=dataset,
+                config=OfflineRunConfig(
+                    run_id=run_id,
+                    cloud=self.cloud,  # type: ignore[arg-type]
+                    rubric=self.rubric,
+                    judges=judges,
+                    customer_id=self.customer_id,
+                    domain_id=domain,
+                    subject_id=subject,
+                ),
+            ),
+            labels_for=labels_for,
+            calibration=CalibrationSettings(seed=self.settings.seed),
+        )
+        sample = await open_calibration_sample(
+            scope=scope,
+            outcomes=summary.offline.outcomes,
+            rubric=self.rubric,
+            hitl=self.hitl,
+            clock=self.clock,
+            config=SampleConfig(
+                seed=self.settings.seed,
+                max_per_call=self.settings.calibration_sample_cap,
+                per_stratum=self.settings.calibration_sample_cap,
+            ),
+        )
+        logger.info(
+            "offline evaluation finished",
+            extra={
+                "event": "worker.evaluation_offline",
+                "dataset": dataset.dataset_id,
+                "status": summary.offline.status,
+                "results_stored": summary.results_stored,
+                "calibrations_stored": summary.calibrations_stored,
+                "uncalibrated_judges": len(summary.uncalibrated_judges),
+                "labels": len(sources[0].labels()) if sources else 0,
+                "labels_unmatched": sources[0].unmatched if sources else 0,
+                "sample_eligible": sample.eligible,
+                "sample_opened": len(sample.opened),
+                "sample_already_open": sample.already_open,
+            },
+        )
+        return summary
+
+
 async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     evaluation = EvalSettings()
     if evaluation.data_dir is None:
         raise RoleConfigError("evaluation_data_dir_missing")
     directory = evaluation.data_dir
     registry, rubric, judge_config = _evaluation_registry(directory, evaluation)
-    try:
-        judge = RecordedFixtureJudge.from_file(directory / "judge_fixtures.json")
-    except (OSError, ValueError):
-        raise RoleConfigError("evaluation_fixtures_invalid") from None
+    judge = _evaluation_judge(
+        cfg, evaluation, directory, _LazyCredential(cfg.settings, lifetime).get
+    )
+    pilot = _pilot_datasets(registry, evaluation)
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     results = CosmosEvaluationStore.from_client(cosmos, database=cfg.store.database)
@@ -817,7 +1010,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     matrix = load_matrix()
     cloud = cfg.cloud
 
-    async def job() -> None:
+    async def online_job() -> None:
         # A fresh ledger per run: the run budget is the bound; the domain budget is per process.
         ledger = BudgetLedger(
             run_limits=BudgetLimits(
@@ -849,7 +1042,48 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
             extra={"event": "worker.evaluation", "status": report.status},
         )
 
-    return _tick_role("evaluation", PeriodicTick(job, evaluation.interval_seconds), cfg)
+    online_tick = PeriodicTick(online_job, evaluation.interval_seconds)
+    if not pilot:
+        logger.info(
+            "offline evaluation stage idles: no pilot datasets configured",
+            extra={"event": "worker.evaluation_offline_idle"},
+        )
+        return _tick_role("evaluation", online_tick, cfg)
+
+    stack = build_policy_stack(
+        cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
+    )
+    identity = build_identity(cfg.settings, stack=stack, worker=cfg.worker, customer_id=customer)
+    offline = _OfflineEvaluation(
+        registry=registry,
+        rubric=rubric,
+        judge_config=judge_config,
+        judge=judge,
+        store=results,
+        hitl=_hitl_service(cfg, cosmos, _audit(cfg, cosmos)),
+        datasets=tuple(pilot),
+        settings=evaluation,
+        customer_id=customer,
+        cloud=cloud,
+    )
+
+    async def offline_job() -> None:
+        await offline.run(await identity.scope_provider.get())
+
+    offline_tick = PeriodicTick(offline_job, evaluation.offline_interval_seconds)
+
+    async def tick() -> None:
+        # Independent stages: one failing must not starve the other; the first error surfaces.
+        failure: Exception | None = None
+        for stage in (online_tick, offline_tick):
+            try:
+                await stage()
+            except Exception as exc:
+                failure = failure or exc
+        if failure is not None:
+            raise failure
+
+    return _tick_role("evaluation", tick, cfg)
 
 
 # --------------------------------------------------------------------------------------------
