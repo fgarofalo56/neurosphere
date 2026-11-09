@@ -1,11 +1,11 @@
 ---
 name: PRP-16-agent-evaluation-and-quality
-status: backlog
+status: active
 priority: P1
 order: 3
-started: 2026-10-19
+started: 2026-11-08
 pr: 81
-branch: prp-16-agent-evaluation-and-quality
+branch: prp-16-round2
 review: required
 created: 2026-10-08
 model: sonnet
@@ -161,6 +161,60 @@ Ship the quality-evaluation half of NS-03: versioned benchmark datasets, rubrics
 - Pattern references: router per module; `IdentityScope` on every query; Fluent UI v9 components.
 - Tests to write: `services/api/tests/evaluation/test_quality_api.py`, `frontend/src/features/quality/quality.test.tsx`, `frontend/tests/e2e/quality.spec.ts`.
 
+### Round 2: audit gap closure (items 7-13, added 2026-11-08)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-08 against main bbef358: the `evaluation` worker role (`runtime/factories.py::build_evaluation`) runs `run_online` only, with `RecordedFixtureJudge`; the offline pilot + calibration path (`evaluation/pipeline.py::run_pipeline`) is called only by `scripts/sandbox/sbx_seed_stack.py` and `tests/integration/evaluation/support.py`; `sandbox/traces.py` never stamps a telemetry `classification`, so every online span skips fail-closed; compose sets `NS_EVALUATION_PILOT_DATASET_IDS=sbx-groundedness-pilot` but nothing produces pilot results live; nothing turns HITL decisions into human labels (PRP-17 has the `evaluation_dispute` review kind, approve/reject only); hosted Bicep leaves `evaluation` out of `NS_WORKER_ROLES` because the image has no evaluation data dir; a real model client exists (`copilot/models/approved_endpoint.py`, cloud-checked, redacting). Criterion 1 is closed for the worker path (`evaluation/results.py:238` checks every emitted result); item 10 pins it with a test. User decisions 2026-11-08: all items 7-13; the endpoint judge is built and tested on recorded HTTP fixtures, the live G16 run stays OPEN; human labels come from a seeded calibration sample opened as `evaluation_dispute` review items (reject = judge correct, approve = judge wrong, binary dimensions only); the benchmark registry is baked into the workers image and `evaluation` is enabled in hosted templates (template change only, nothing deployed).
+
+### Item 7 - endpoint-judge  [P] (review: required)
+- Deliverable: `EndpointJudge` implementing `neurosphere_core.evaluation.judge.Judge` over an approved Azure OpenAI-style chat-completions endpoint (non-streaming, JSON rubric verdict), reusing the copilot endpoint rules (`require_endpoint`, `token_scope`, `bearer_headers`, `error_for_status`, redaction); endpoint must belong to the deployment cloud (Government never calls Commercial); reports prompt/completion token usage so the budget ledger is charged from actuals; an unparseable verdict is an abstention with reason, never a fabricated score; transport injectable. `scripts/gates/g16_judge_live.py` uses it under `NS_LIVE_APPROVED=1` (still refuses without; the live run stays OPEN).
+- Owned files (may edit): `packages/core/neurosphere_core/evaluation/endpoint_judge.py` (new), `packages/core/tests/evaluation/test_endpoint_judge.py` (new), `packages/core/tests/evaluation/fixtures/endpoint_judge/` (new), `scripts/gates/g16_judge_live.py`, its existing refusal test, `docs/evidence/G16/README.md`.
+- Must NOT touch: `evaluation/judge.py`, `evaluation/registry/`, `evaluation/calibration/`, `copilot/` (import only), `services/`, `pyproject.toml`.
+- Depends on: none.
+- Acceptance criteria: recorded-HTTP-fixture tests for a pass, a fail, an abstention, a malformed body, a 429/5xx mapped through the error taxonomy, a wrong-cloud endpoint refused before any request; usage parsed; no socket opened in tests.
+
+### Item 8 - calibration-label-loop  [P] (review: required)
+- Deliverable: worker module that (a) selects a seeded, stratified random calibration sample of stored judged results per (judge config, binary dimension), capped per tick, and opens one `evaluation_dispute` review item per sampled result through `HitlService.open_item` (idempotent: re-running opens nothing new); (b) `HitlLabelSource` (a `LabelSource`) that reads decided items and yields `HumanLabelRecord`s: rejected (judge correct) = judge value, approved (judge wrong) = inverted value; non-binary dimensions are never sampled; expired/undecided items yield nothing; `label_set_version` derived deterministically. The labeler is the deciding principal (pseudonymous id).
+- Owned files (may edit): `services/workers/neurosphere_workers/evaluation/labels.py` (new), `services/workers/tests/evaluation_worker/test_hitl_labels.py` (new).
+- Must NOT touch: `packages/core/neurosphere_core/hitl/`, `hitl_cosmos/`, `evaluation/calibration/`, `evaluation/pipeline.py`, `runtime/`.
+- Depends on: none.
+- Acceptance criteria: sample is reproducible for a seed and never includes restricted items whose result could not be shown to the reviewer's scope; opening is idempotent; label mapping tested for approve/reject/expired; uses the real in-memory HITL service, not a mock.
+
+### Item 9 - sandbox-telemetry-classification  [P]
+- Deliverable: the sandbox trace generator stamps the telemetry `classification` field from a deterministic per-agent assignment covering public, internal, cui and restricted, with a small share left null (fail-closed path stays exercised); the PRP-07 redaction/archive path keeps the field.
+- Owned files (may edit): `sandbox/traces.py`, `sandbox/world.py` (assignment only), `sandbox/tests/`, and any committed sandbox output or golden count that changes as a result (report each).
+- Must NOT touch: `packages/contracts/`, `services/`, `sandbox/evaluation/`.
+- Depends on: none.
+- Acceptance criteria: every class appears in a default generation; output validates against the telemetry contract; determinism test (same seed, same output) passes; every test importing `sandbox` still passes (grep for importers).
+
+### Item 10 - evaluation-role-wiring  (review: required)
+- Deliverable: `build_evaluation` gains `NS_WORKER_EVAL_JUDGE=fixture|endpoint` (endpoint config from settings, cloud-checked, fail closed with `RoleConfigError`), runs the offline pilot + calibration (`run_pipeline` over the registered pilot datasets in `NS_WORKER_EVAL_PILOT_DATASET_IDS`) on its own cadence, runs the item 8 label loop each tick (open sample, ingest labels into `LabelSet`), stores results and calibration reports (`put_calibration`, key convention from item 4) via `CosmosEvaluationStore`; budgets per run as today; a pinning test that every stored result passed `check_result_references`.
+- Owned files (may edit): `services/workers/neurosphere_workers/runtime/factories.py` (evaluation section only), `services/workers/neurosphere_workers/runtime/settings.py` (`EvalSettings` only), `services/workers/neurosphere_workers/evaluation/pipeline.py`, the workers runtime tests for the evaluation role.
+- Must NOT touch: `evaluation/labels.py` (item 8), `endpoint_judge.py` (item 7), API, infra.
+- Depends on: Items 7, 8.
+- Acceptance criteria: role tests show offline results + calibration reports stored and the label loop invoked; `endpoint` selection with a wrong-cloud endpoint fails closed; an LLM judge stays `uncalibrated` (no results emitted) until labels reach the minimum, then emits.
+
+### Item 11 - quality-api-hardening  [P]
+- Deliverable: bound the `/quality` per-request load (window + hard result cap pushed into the store query, truncation reported in the response as a nullable field, never silently); fix `_missing_labels` double-counting items labelled in several dimensions; wire `EvaluationStore` protocol + in-memory + Cosmos for the bounded read.
+- Owned files (may edit): `services/api/neurosphere_api/evaluation/`, `services/api/tests/evaluation/`, `packages/core/neurosphere_core/evaluation/store.py`, `packages/core/neurosphere_core/evaluation/cosmos_store.py`, their core tests.
+- Must NOT touch: `services/api/openapi.json` (orchestrator regenerates), `frontend/` (any new optional field is consumed later), `routers.py`.
+- Depends on: none.
+- Acceptance criteria: a store holding more than the cap returns a truncated, flagged response; missing-label counts correct for a multi-dimension fixture; scoped negative tests still pass.
+
+### Item 12 - hosted-wiring
+- Deliverable: workers image carries the synthetic benchmark registry (`sandbox/evaluation/data` copied to a fixed path, labelled synthetic); `infra/demo/main.bicep`, `infra/appservice/main.bicep` (where the worker env is defined) and the Helm chart add `evaluation` to `NS_WORKER_ROLES`, set `NS_WORKER_EVAL_DATA_DIR` and the pilot ids for workers and `NS_EVALUATION_PILOT_DATASET_IDS` for the API; fixture judge by default. Nothing is deployed.
+- Owned files (may edit): `services/workers/Dockerfile`, `infra/demo/main.bicep`, `infra/appservice/main.bicep`, `infra/helm/templates/`, `infra/helm/values*.yaml`, their existing infra tests.
+- Must NOT touch: product code.
+- Depends on: Item 10.
+- Acceptance criteria: `az bicep build` clean on edited templates; `helm template` renders the env vars; workers image builds and the data dir exists in it.
+
+### Item 13 - evaluation-compose-verification
+- Deliverable: compose-backed integration test (`pytest.mark.integration`): seed sandbox traces (with item 9 classifications) through the ingest edge, run the evaluation role tick in-process against the emulators, decide calibration review items over the HITL API, tick again, and assert over HTTP that `/quality` returns a non-null pilot grounded rate with an interval, non-zero online coverage, a calibration state for the judge config, and nothing for an out-of-scope caller.
+- Owned files (may edit): `tests/integration/real_stack/test_evaluation_loop.py` (new).
+- Must NOT touch: product code; report gaps instead.
+- Depends on: Items 9, 10.
+- Acceptance criteria: passes locally against `docker compose up -d --wait` (127.0.0.1); output recorded as evidence; never runs in CI (integration marker).
+
+Waves (round 2): 1 = items 7, 8, 9, 11 in parallel; 2 = item 10; 3 = items 12, 13 in parallel.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -226,6 +280,13 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 | 4 | merged | worktree-agent-a4078f235b572f80a | sonnet | 002b5a2; reviewer APPROVED (no blockers; follow-ups: `_missing_labels` may double-count items labelled in several dimensions, `_point` averages without a scale check, pilot successes = round(value * n) assumes a pass proportion, `/quality` loads all domain results per request (bound or pre-aggregate with Cosmos), Cosmos store OPEN); orchestrator re-run on branch: ruff + format clean, pyright 0 errors, core evaluation + services/api 463 passed; routes `require(Permission.DATA_READ, domain_from_path("domain"))`; app.state `evaluation_store` (503 `evaluation_unconfigured` when absent), `evaluation_pilot_dataset_ids` (empty: rate null, `not_estimable`); pilot method `wilson_score`; decisions: calibration key `judge_config_key` = (judge_model_id, model_version+prompt_version), which item 6 must use when storing reports; trend point = one judge per UTC day, sample-size-weighted, bounds averaged only at a shared level (conservative, not a pooled CI); added `quality.py`; api test dir has conftest, no `__init__` | 2026-10-19 |
 | 5 | merged | worktree-agent-a711b2606a4b74a75 | sonnet | 5c747bc; reviewer APPROVED (no blockers; follow-ups: reason text could cite n, hardcoded "Quality filters" aria-label, routes wiring unchecked); merge 113d9c6 plus orchestrator fix (trend row key `bucket_start|judge`: the API emits one point per judge per day, so the bucket alone collided); post-fix eslint + tsc clean, vitest 205 passed, prettier clean; orchestrator re-run on branch: eslint + tsc clean, vitest 205 passed, build ok, prettier clean; exports `QualityPage`, `qualityRoutes` (`quality`), `qualityNavItems()` (`/quality`); `?domain_id=` + `?subject_id=` search params; trends as accessible tables (no chart); `/quality` response types hand-mirrored from `models.py`; `/results` not consumed; `QueryErrorState` copied from recommendations | 2026-10-19 |
 | 6 | merged | worktree-agent-a35cc7e810178537a | sonnet | e58b7fe; reviewer APPROVED (no blockers; Government harness uses real create_app/authz/JWT/scope derivation, only cloud + policy repo differ; follow-ups: bound `/quality` per-request load before Cosmos, production bootstrap of `app.state.evaluation_store`, CI check that `measure.py` matches README numbers); orchestrator re-run on branch: ruff clean, api + core/workers evaluation + slice 598 passed, validate_planning exit 0, eslint + tsc clean, vitest 205, build ok, Playwright 42 passed (incl. axe); measured (synthetic, in-memory): Government pilot 50 items, 42 judged, 8 restricted skipped `judge_not_approved` with zero judge calls, grounded rate 0.875 (35/40, 2 abstained), Wilson 95% [0.739, 0.945]; calibration accuracy 0.85 but Cohen kappa 0.314 [-0.10, 0.72] (7/50 ungrounded, high chance agreement; `calibrated` only means the 20-label minimum was met); drift PSI 0.006 stable / 0.73 seeded (1 alert); 6000-token budget run 23 judged, 20 unevaluated, `budget_exhausted`; Commercial pilot 50/50 `judge_unavailable` (shipped Commercial Foundry row `unverified`, not rerouted); sandbox telemetry 0/922 records carry a classification, so all 451 sampled online spans skip fail-closed; synthetic classified archive fixture 160 sampled via a test-only programmatic scorer; openapi: 2 paths, components `Uncertainty`/`Window` renamed module-qualified (wire JSON unchanged); deviations: Government-bound app copy in the slice support (shared authz harness is Commercial-only), `measure.py`, G16 row added; item 6 reported 6 repo-wide pyright errors in items 1-3 test files, orchestrator fix 8fc29d0 on the integration branch (per-item gates had type-checked source only) | 2026-10-19 |
+| 7 | todo | | sonnet | | 2026-11-08 |
+| 8 | todo | | sonnet | | 2026-11-08 |
+| 9 | todo | | sonnet | | 2026-11-08 |
+| 10 | todo | | sonnet | | 2026-11-08 |
+| 11 | todo | | sonnet | | 2026-11-08 |
+| 12 | todo | | sonnet | | 2026-11-08 |
+| 13 | todo | | sonnet | | 2026-11-08 |
 
 Integration branch gates after all six merges (0fc66e1), 2026-10-19: `verify-gates -Mode full` lint PASS, typecheck PASS (pyright 0 errors repo-wide), build PASS, tests FAIL with 1 failed / 5517 passed: a Windows `WinError 10055` (socket buffer exhaustion) in an untouched authz test. Re-runs failed one different untouched test each time, same error (5518 passed; and 5503 passed with `tests/integration/evaluation` ignored); each failing test passes alone. Root cause is environmental: on Windows asyncio emulates `socketpair` over loopback TCP, `tests/security/authz` alone creates ~4,440 socketpairs per run on both this branch and `main`, and back-to-back runs raised TIME_WAIT from 1,460 to 14,500; `tests/security/authz` on `main` then failed with the same 10055. A probe plugin showed the new evaluation suites leave 0 sockets open (116 socketpairs total). The clean full-suite run is CI (Linux, AF_UNIX socketpairs). Touched suites pass locally: api + core/workers evaluation + slice 598 passed; validate_planning PASS; eslint + tsc clean, vitest 205 passed, Playwright 42 passed (incl. axe).
 
