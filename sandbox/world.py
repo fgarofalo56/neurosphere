@@ -24,6 +24,22 @@ from sandbox.ids import canonical_id, rng_for
 
 DAY_MS = 86_400_000
 
+# Vocabulary shared with sandbox/evaluation/data/datasets.json; two of twelve slots unlabelled.
+CLASSIFICATION_CYCLE: tuple[str | None, ...] = (
+    "public",
+    "public",
+    "public",
+    "internal",
+    "internal",
+    "internal",
+    "cui",
+    "cui",
+    "restricted",
+    "restricted",
+    None,
+    None,
+)
+
 
 @dataclass(slots=True)
 class DomainPlan:
@@ -68,6 +84,7 @@ class AgentPlan:
     versions: int
     activity: float
     unused: bool = False
+    classification: str | None = None  # telemetry data classification; None = unlabelled
 
 
 @dataclass(frozen=True, slots=True)
@@ -257,7 +274,19 @@ class World:
                 if rng_for(self.seed, "decl", a.idx, c).random() < 0.67:
                     a.declared_children.append(c)
 
+        self._assign_classifications()
         self._plan_anomalies(rng_for(self.seed, "anomalies"))
+
+    def _assign_classifications(self) -> None:
+        """Deterministic per-agent data classification (own RNG stream, nothing else shifts).
+
+        A seed-shuffled cycle keeps every class and a small unlabelled share present in every
+        profile. Unlabelled agents keep the online-evaluation fail-closed path exercised.
+        """
+        cycle = list(CLASSIFICATION_CYCLE)
+        rng_for(self.seed, "classification").shuffle(cycle)
+        for a in self.agents:
+            a.classification = cycle[a.idx % len(cycle)]
 
     def _plan_anomalies(self, rng: random.Random) -> None:
         p = self.cfg.profile
