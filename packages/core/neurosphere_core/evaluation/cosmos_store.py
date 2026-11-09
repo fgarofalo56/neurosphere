@@ -49,6 +49,7 @@ from neurosphere_core.errors import (
     RateLimitedError,
 )
 from neurosphere_core.evaluation.calibration import CalibrationReport, DriftAlert
+from neurosphere_core.evaluation.samples import CalibrationSample
 from neurosphere_core.evaluation.store import (
     DEFAULT_QUALITY_MAX_RESULTS,
     Cloud,
@@ -83,6 +84,7 @@ RESULT_BY_ID_QUERY: Final = "SELECT * FROM c WHERE c.id = @id"
 CALIBRATION_DOC_TYPE: Final = "calibration"
 DRIFT_DOC_TYPE: Final = "drift_alert"
 COVERAGE_DOC_TYPE: Final = "coverage"
+SAMPLE_DOC_TYPE: Final = "calibration_sample"
 MAX_AGGREGATE_RESULTS: Final = 10_000
 MAX_RECORDS: Final = 1_000
 _CALIBRATION_ATTEMPTS: Final = 4
@@ -396,6 +398,23 @@ class CosmosEvaluationStore:
             )
         )
 
+    async def put_calibration_sample(self, sample: CalibrationSample) -> None:
+        document = self._run_doc(
+            SAMPLE_DOC_TYPE,
+            _hash_id("smp", sample.subject_ref),
+            sample.cloud,
+            sample.customer_id,
+            sample.domain_id,
+            sample.model_dump(mode="json"),
+            subject_ref=sample.subject_ref,
+        )
+        try:
+            await self._runs.create_item(body=document)  # create-only: the first write wins
+        except CosmosResourceExistsError:
+            return
+        except Exception as exc:
+            _raise_mapped(exc)
+
     # -- reads ----------------------------------------------------------------------------------
 
     @staticmethod
@@ -538,6 +557,28 @@ class CosmosEvaluationStore:
             + f" ORDER BY {order}"
         )
         return await self._query(self._runs, sql, params, [scope.customer_id, domain])
+
+    async def get_calibration_sample(
+        self, scope: IdentityScope, domain: str, subject_ref: str
+    ) -> CalibrationSample | None:
+        if domain not in scope.allowed_domains:
+            return None
+        # Point read: the id is derived from the subject_ref and the partition key from the scope.
+        try:
+            row = await self._runs.read_item(
+                item=_hash_id("smp", subject_ref), partition_key=[scope.customer_id, domain]
+            )
+        except CosmosResourceNotFoundError:
+            return None
+        except Exception as exc:
+            _raise_mapped(exc)
+        try:
+            sample = CalibrationSample.model_validate(_body(row))
+        except ValidationError as exc:
+            raise _invalid() from exc
+        if row.get("doc_type") != SAMPLE_DOC_TYPE or sample.cloud != scope.cloud:
+            return None
+        return sample
 
     async def calibrations(
         self, scope: IdentityScope, domain: str

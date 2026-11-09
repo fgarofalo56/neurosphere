@@ -28,6 +28,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from neurosphere_core.errors import InvalidSchemaError, StaleVersionError
 from neurosphere_core.evaluation.calibration import CalibrationReport, DriftAlert
+from neurosphere_core.evaluation.samples import CalibrationSample
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -124,6 +125,16 @@ class EvaluationStore(Protocol):
         """Upsert keyed by run id + stratum."""
         ...
 
+    async def put_calibration_sample(self, sample: CalibrationSample) -> None:
+        """Idempotent insert keyed by ``subject_ref`` (the first record wins)."""
+        ...
+
+    async def get_calibration_sample(
+        self, scope: IdentityScope, domain: str, subject_ref: str
+    ) -> CalibrationSample | None:
+        """The scope's sample for ``subject_ref`` in ``domain``; ``None`` if absent/out of scope."""
+        ...
+
     async def list_results(
         self,
         scope: IdentityScope,
@@ -203,6 +214,7 @@ class InMemoryEvaluationStore:
         self._calibrations: dict[tuple[_Key, str | None, str | None, str], CalibrationReport] = {}
         self._alerts: dict[tuple[_Key, str, str, str], DriftAlert] = {}
         self._coverage: dict[tuple[_Key, str, str], SamplingCoverage] = {}
+        self._samples: dict[tuple[_Key, str], CalibrationSample] = {}
         for result in results:
             self._put_result(result)
 
@@ -251,6 +263,18 @@ class InMemoryEvaluationStore:
             coverage.stratum,
         )
         self._coverage[key] = coverage.model_copy(deep=True)
+
+    async def put_calibration_sample(self, sample: CalibrationSample) -> None:
+        key = ((sample.cloud, sample.customer_id, sample.domain_id), sample.subject_ref)
+        self._samples.setdefault(key, sample.model_copy(deep=True))
+
+    async def get_calibration_sample(
+        self, scope: IdentityScope, domain: str, subject_ref: str
+    ) -> CalibrationSample | None:
+        if domain not in scope.allowed_domains:
+            return None
+        found = self._samples.get(((scope.cloud, scope.customer_id, domain), subject_ref))
+        return found.model_copy(deep=True) if found is not None else None
 
     async def list_results(
         self,

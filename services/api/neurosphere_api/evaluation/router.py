@@ -4,6 +4,7 @@
 |--------|-----------------------------------|-------------|
 | GET    | ``/domains/{domain}/results``     | ``data.read`` |
 | GET    | ``/domains/{domain}/quality``     | ``data.read`` |
+| GET    | ``/domains/{domain}/calibration-samples?subject_ref=`` | ``data.read`` |
 
 The path ``{domain}`` is the addressed resource and the authorization TARGET, checked against the
 derived ``IdentityScope`` (403 outside it, 503 on a policy-store outage). ``customer_id`` and
@@ -15,7 +16,7 @@ No ``from __future__ import annotations``: FastAPI inspects these signatures.
 from datetime import datetime
 from typing import Annotated, Final, Literal
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.evaluation.store import EvaluationStore
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
@@ -27,7 +28,12 @@ from neurosphere_api.evaluation.dependencies import (
     get_pilot_dataset_ids,
     get_quality_window,
 )
-from neurosphere_api.evaluation.models import QualityResponse, ResultsList, Truncation
+from neurosphere_api.evaluation.models import (
+    CalibrationSampleOut,
+    QualityResponse,
+    ResultsList,
+    Truncation,
+)
 from neurosphere_api.evaluation.quality import compute_quality
 from neurosphere_api.routers import RouterRegistry
 
@@ -94,6 +100,35 @@ def build_router() -> APIRouter:
         if windowed.truncated:
             response.truncated = Truncation(limit=max_results, window_days=window_days)
         return response
+
+    @router.get("/domains/{domain}/calibration-samples", response_model=CalibrationSampleOut)
+    async def calibration_sample(
+        domain: DomainPath,
+        scope: ReadScope,
+        store: Store,
+        subject_ref: Annotated[str, Query(min_length=1, max_length=512)],
+    ) -> CalibrationSampleOut:
+        sample = await store.get_calibration_sample(scope, domain, subject_ref)
+        if sample is None:
+            raise HTTPException(status_code=404, detail="calibration sample not found")
+        return CalibrationSampleOut(
+            subject_ref=sample.subject_ref,
+            domain_id=sample.domain_id,
+            dataset_id=sample.dataset_id,
+            dataset_version=sample.dataset_version,
+            item_id=sample.item_id,
+            dimension=sample.dimension,
+            classification=sample.classification,
+            judge_config_id=sample.judge_config_id,
+            judge_config_version=sample.judge_config_version,
+            value=sample.value,
+            rubric_id=sample.rubric_id,
+            rubric_version=sample.rubric_version,
+            opened_at=sample.opened_at.isoformat(),
+            payload=sample.payload,
+            payload_withheld=sample.payload_withheld,
+            withheld_reason=sample.withheld_reason,
+        )
 
     return router
 
