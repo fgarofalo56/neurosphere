@@ -50,11 +50,14 @@ from neurosphere_core.errors import (
 )
 from neurosphere_core.evaluation.calibration import CalibrationReport, DriftAlert
 from neurosphere_core.evaluation.store import (
+    DEFAULT_QUALITY_MAX_RESULTS,
     Cloud,
     EvaluationConflictError,
     SamplingCoverage,
+    WindowedResults,
     _decode_cursor,  # pyright: ignore[reportPrivateUsage]
     _encode_cursor,  # pyright: ignore[reportPrivateUsage]
+    completed_key,
 )
 from neurosphere_core.paging import Page
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
@@ -84,7 +87,7 @@ MAX_AGGREGATE_RESULTS: Final = 10_000
 MAX_RECORDS: Final = 1_000
 _CALIBRATION_ATTEMPTS: Final = 4
 _SAFE_ID: Final = re.compile(r"^[A-Za-z0-9._:=-]{1,200}$")
-_RESULT_SYSTEM_FIELDS: Final = frozenset({"id", "doc_type", "sort_key"})
+_RESULT_SYSTEM_FIELDS: Final = frozenset({"id", "doc_type", "sort_key", "completed_key"})
 
 
 async def create_evaluation_results_container(
@@ -267,6 +270,10 @@ class CosmosEvaluationStore:
         body["id"] = _doc_id(raw_id)
         body["doc_type"] = RESULT_DOC_TYPE
         body["sort_key"] = raw_id
+        # Fixed-width UTC copy of ``completed_at`` so the windowed read can range-filter and order
+        # on a string whose order is time order (offsets in ``completed_at`` would break that).
+        # Documents written before this field existed are not returned by ``results_window``.
+        body["completed_key"] = completed_key(datetime.fromisoformat(result.completed_at.root))
         # ``evaluation_id`` is caller-supplied and not derived from the domain, so the same id can
         # arrive under another customer/domain. The in-memory store keys results by id alone, so a
         # differing re-put anywhere is a conflict: look the id up across partitions first.
@@ -459,6 +466,54 @@ class CosmosEvaluationStore:
         if len(rows) > MAX_AGGREGATE_RESULTS:
             raise _too_large()
         return tuple(_result_from_row(row) for row in rows)
+
+    @staticmethod
+    def window_query(
+        scope: IdentityScope,
+        domain: str,
+        subject_id: str | None,
+        since: datetime,
+        limit: int,
+    ) -> tuple[str, list[dict[str, Any]]]:
+        """The parameterised windowed query: the window floor and the TOP cap are bound parameters.
+
+        Asks for ``limit + 1`` rows (newest first) so truncation is detectable. One ORDER BY
+        property on purpose (several would need a composite index): ties at the cap boundary are
+        arbitrary.
+        """
+        clauses, params = CosmosEvaluationStore._scope_clauses(scope, domain, RESULT_DOC_TYPE)
+        clauses.append("c.completed_key >= @since")
+        params.append({"name": "@since", "value": completed_key(since)})
+        params.append({"name": "@limit", "value": limit + 1})
+        extra_clauses, extra_params = CosmosEvaluationStore._result_filters(subject_id, None)
+        clauses += extra_clauses
+        params += extra_params
+        sql = (
+            "SELECT TOP @limit * FROM c WHERE "  # noqa: S608
+            + " AND ".join(clauses)
+            + " ORDER BY c.completed_key DESC"
+        )
+        return sql, params
+
+    async def results_window(
+        self,
+        scope: IdentityScope,
+        domain: str,
+        subject_id: str | None = None,
+        *,
+        since: datetime,
+        limit: int = DEFAULT_QUALITY_MAX_RESULTS,
+    ) -> WindowedResults:
+        if limit < 1:
+            raise InvalidSchemaError("limit must be >= 1", reason="invalid_limit")
+        if domain not in scope.allowed_domains:
+            return WindowedResults(items=(), truncated=False)
+        sql, params = self.window_query(scope, domain, subject_id, since, limit)
+        rows = await self._query(self._results, sql, params, [scope.customer_id, domain])
+        return WindowedResults(
+            items=tuple(_result_from_row(row) for row in rows[:limit]),
+            truncated=len(rows) > limit,
+        )
 
     async def _run_rows(
         self,

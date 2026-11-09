@@ -10240,6 +10240,16 @@
             },
             "title": "Trends",
             "type": "array"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Truncation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -14067,6 +14077,26 @@
           "calibration_state"
         ],
         "title": "TrendPoint",
+        "type": "object"
+      },
+      "Truncation": {
+        "additionalProperties": false,
+        "description": "The ``/quality`` read hit its row cap: only the newest ``limit`` results inside the last\n``window_days`` days were aggregated; older matching results were left out.",
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "window_days"
+        ],
+        "title": "Truncation",
         "type": "object"
       },
       "TurnView": {

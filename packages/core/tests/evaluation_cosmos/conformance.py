@@ -351,6 +351,44 @@ async def check_same_id_under_another_domain_is_a_conflict(store: EvaluationStor
     assert await store.results(scope, OPERATIONS) == ()
 
 
+def _done(n: int, moment: datetime) -> EvaluationResult:
+    return make_result(
+        n,
+        started_at=(moment - timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        completed_at=moment.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
+async def check_results_window_excludes_older_and_orders_newest_first(
+    store: EvaluationStore,
+) -> None:
+    for n, days_ago in ((1, 100), (2, 10), (3, 1), (4, 30)):
+        await store.put_result(_done(n, T - timedelta(days=days_ago)))
+    scope = make_scope()
+    window = await store.results_window(scope, FINANCE, since=T - timedelta(days=90), limit=100)
+    assert eval_ids(window.items) == ["eval:r-0003", "eval:r-0002", "eval:r-0004"]
+    assert window.truncated is False
+    other_domain = make_scope(domains=(FINANCE, OPERATIONS))
+    empty = await store.results_window(other_domain, OPERATIONS, since=T - timedelta(days=90))
+    assert empty.items == () and empty.truncated is False
+
+
+async def check_results_window_cap_keeps_the_newest_and_flags_truncation(
+    store: EvaluationStore,
+) -> None:
+    for n in range(1, 6):
+        await store.put_result(_done(n, T - timedelta(days=10 - n)))
+    scope = make_scope()
+    since = T - timedelta(days=90)
+    capped = await store.results_window(scope, FINANCE, since=since, limit=3)
+    assert eval_ids(capped.items) == ["eval:r-0005", "eval:r-0004", "eval:r-0003"]
+    assert capped.truncated is True
+    exact = await store.results_window(scope, FINANCE, since=since, limit=5)
+    assert len(exact.items) == 5 and exact.truncated is False
+    with pytest.raises(InvalidSchemaError):
+        await store.results_window(scope, FINANCE, since=since, limit=0)
+
+
 CHECKS: dict[str, Check] = {
     name.removeprefix("check_"): fn
     for name, fn in sorted(globals().items())
