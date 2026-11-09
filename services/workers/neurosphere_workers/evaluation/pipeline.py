@@ -20,7 +20,7 @@ so the two numbers always agree (a skipped stratum shows 0 evaluated, never a hi
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
@@ -47,7 +47,7 @@ from neurosphere_core.evaluation.registry import (
 from neurosphere_core.evaluation.store import EvaluationStore, SamplingCoverage
 
 from neurosphere_workers.evaluation.budget import BudgetLedger
-from neurosphere_workers.evaluation.models import RunReport
+from neurosphere_workers.evaluation.models import ItemOutcome, RunReport
 from neurosphere_workers.evaluation.service import (
     EvaluationService,
     OfflineRunConfig,
@@ -58,6 +58,7 @@ from neurosphere_workers.evaluation.source import RecordSource
 __all__ = [
     "CalibrationSettings",
     "DriftCheck",
+    "LabelsFor",
     "OfflineStage",
     "OnlineStage",
     "PipelineSummary",
@@ -66,6 +67,10 @@ __all__ = [
 ]
 
 Metric = Literal["cohen_kappa", "spearman", "accuracy"]
+
+LabelsFor = Callable[[Sequence[ItemOutcome]], Awaitable[LabelSet | None]]
+"""Builds the ``LabelSet`` from THIS run's per-item outcomes (the human labels are bound to the
+exact verdicts shown, so they can only be derived after the offline run). ``None`` = no labels."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +242,7 @@ async def run_pipeline(
     clock: Callable[[], datetime],
     offline: OfflineStage,
     labels: LabelSet | None = None,
+    labels_for: LabelsFor | None = None,
     online: OnlineStage | None = None,
     drift_checks: Sequence[DriftCheck] = (),
     calibration: CalibrationSettings = CalibrationSettings(),  # noqa: B008 - frozen value object
@@ -246,6 +252,9 @@ async def run_pipeline(
     A budget stop is not an error: the returned reports carry ``budget_exhausted`` and the
     coverage achieved. An LLM judge without a calibrated report emits no result and is listed in
     ``uncalibrated_judges``.
+
+    ``labels_for`` (optional) is awaited after the offline run with its per-item outcomes and
+    before calibration; a non-``None`` result replaces ``labels``.
     """
     service = EvaluationService(
         judge=judge, matrix=matrix, registry=registry, ledger=ledger, clock=clock
@@ -253,6 +262,10 @@ async def run_pipeline(
     now = clock()
 
     raw = await service.run_offline(offline.dataset, offline.config)
+    if labels_for is not None:
+        derived = await labels_for(raw.outcomes)
+        if derived is not None:
+            labels = derived
     cal_reports, cal_skipped = _calibrate_all(raw, offline.config.judges, labels, calibration, now)
     offline_report = service.attach_calibrations(raw, cal_reports)
 
