@@ -973,6 +973,10 @@ class _OfflineEvaluation:
                 max_per_call=self.settings.calibration_sample_cap,
                 per_stratum=self.settings.calibration_sample_cap,
             ),
+            # Item 14: one CalibrationSample per newly opened review item, so the reviewer sees
+            # the dataset item and the verdict instead of an opaque subject_ref.
+            samples=self.store,
+            dataset=dataset,
         )
         logger.info(
             "offline evaluation finished",

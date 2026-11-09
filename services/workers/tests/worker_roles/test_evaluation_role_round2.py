@@ -150,6 +150,11 @@ async def test_llm_judge_stays_uncalibrated_until_labels_reach_the_minimum() -> 
     assert first.uncalibrated_judges
     opened = await _dispute_ids(hitl, scope)
     assert len(opened) == 30
+    # Item 14 wiring: every opened review item has its calibration context recorded.
+    items = (await hitl.store.list(scope, DOMAIN, kind=DISPUTE_KIND)).items
+    for item in items:
+        sample = await store.get_calibration_sample(scope, DOMAIN, item.subject_ref)
+        assert sample is not None and sample.dataset_id is not None
 
     # Below the minimum (20): still uncalibrated, no pilot results, no matter the label count.
     for item_id in opened[:19]:

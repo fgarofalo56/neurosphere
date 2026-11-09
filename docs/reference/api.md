@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `50c89605250a45b053b5e2a5ea4a74c08ace9ceb`. Generated: 2026-11-07.
+> Source commit: `e54c74a03e2568abca7e27e86ed97fe8c1d32f4c`. Generated: 2026-11-08.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 139 operations on 124 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 140 operations on 125 paths.
 
 ## Status and verification
 
@@ -106,6 +106,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | deploy | POST | `/api/v1/deploy/scan` | Scan |
 | deploy | POST | `/v1/deploy/plan` | Plan |
 | deploy | POST | `/v1/deploy/scan` | Scan |
+| evaluation | GET | `/api/v1/evaluation/domains/{domain}/calibration-samples` | Calibration Sample |
 | evaluation | GET | `/api/v1/evaluation/domains/{domain}/quality` | Quality |
 | evaluation | GET | `/api/v1/evaluation/domains/{domain}/results` | List Results |
 | federation | GET | `/api/v1/federation/cell-summary` | Cell Summary |
@@ -810,6 +811,13 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Responses: `200` `ScanResponse`; `422` `HTTPValidationError`
 
 ### Tag: evaluation
+
+#### GET `/api/v1/evaluation/domains/{domain}/calibration-samples`
+
+- Operation id: `calibration_sample_api_v1_evaluation_domains__domain__calibration_samples_get`
+- Summary: Calibration Sample
+- Parameters: `domain` (path, required), `subject_ref` (query, required)
+- Responses: `200` `CalibrationSampleOut`; `422` `HTTPValidationError`
 
 #### GET `/api/v1/evaluation/domains/{domain}/quality`
 

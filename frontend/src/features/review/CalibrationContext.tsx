@@ -21,8 +21,8 @@ const useStyles = makeStyles({
 /** 1 = pass, 0 = fail. The verdict is spelled out; any other value is shown as is. */
 export function verdictWords(value: number): string {
   const D = STRINGS.dispute;
-  if (value === 1) return D.pass;
-  if (value === 0) return D.fail;
+  if (value === 1) return D.verdictPass;
+  if (value === 0) return D.verdictFail;
   return String(value);
 }
 
