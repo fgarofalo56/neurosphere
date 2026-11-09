@@ -789,6 +789,59 @@ function qualityHandler(
   send(res, 200, qualityBody(domain), { ...cors, "server-timing": "app;dur=1.0" });
 }
 
+// ---- PRP-16 item 14: GET /api/v1/evaluation/domains/{domain}/calibration-samples?subject_ref=.
+// DOMAIN_OK serves the dispute item's sample (SYNTHETIC content), any other subject_ref there 404s,
+// any other domain 403s. The shape is CalibrationSampleOut.
+const EVALUATION_SAMPLES = /^\/api\/v1\/evaluation\/domains\/([^/]+)\/calibration-samples\/?$/;
+
+function calibrationSampleBody(): Record<string, unknown> {
+  return {
+    subject_ref: DISPUTE_SUBJECT,
+    domain_id: DOMAIN_OK,
+    dataset_id: "pilot-grounded-qa",
+    dataset_version: "3",
+    item_id: "item-0007",
+    dimension: "groundedness",
+    classification: "internal",
+    judge_config_id: QUALITY_JUDGE_MODEL,
+    judge_config_version: "2026-08-01+7",
+    value: 1,
+    rubric_id: "groundedness-binary",
+    rubric_version: "2",
+    opened_at: RECENT,
+    payload: {
+      question: "What is the refund limit for a standard order?",
+      answer: "Standard orders can be refunded up to 500 USD.",
+      sources: ["policy/refunds#standard"],
+    },
+    payload_withheld: false,
+    withheld_reason: null,
+  };
+}
+
+function calibrationSampleHandler(
+  res: ServerResponse,
+  req: IncomingMessage,
+  url: URL,
+  domainSegment: string,
+  cors: Record<string, string>,
+  correlationId: string,
+): void {
+  if (roleFromAuthorization(req.headers.authorization) === undefined) {
+    send(res, 401, { error: "missing or unrecognised token" }, cors);
+    return;
+  }
+  if (decodeURIComponent(domainSegment) !== DOMAIN_OK) {
+    send(res, 403, problem(correlationId, url.pathname), cors, "application/problem+json");
+    return;
+  }
+  if (url.searchParams.get("subject_ref") !== DISPUTE_SUBJECT) {
+    send(res, 404, { error: "not found" }, cors);
+    return;
+  }
+  send(res, 200, calibrationSampleBody(), cors);
+}
+
 // ---- PRP-18 fixtures: GET /api/v1/map/domains/{domain}/viewport and
 // GET /api/v1/replay/domains/{domain}/traces[/{trace_id}]. Shapes are generated from the shipped
 // Python models (map/models.py, replay/models.py), not from memory. DOMAIN_OK and DOMAIN_MAP_PERF
@@ -1320,6 +1373,9 @@ export const ITEM_MAKER_CHECKER = "bbbbbbbb-0000-4000-8000-000000000001";
 export const ITEM_SUPERSEDED = "bbbbbbbb-0000-4000-8000-000000000002";
 export const ITEM_INSIGHT = "bbbbbbbb-0000-4000-8000-000000000003";
 export const ITEM_VIEWER = "bbbbbbbb-0000-4000-8000-000000000004";
+/** PRP-16 item 14: an evaluation_dispute item whose calibration sample is served below. */
+export const ITEM_DISPUTE = "bbbbbbbb-0000-4000-8000-000000000005";
+export const DISPUTE_SUBJECT = `commercial:e2e:evaluation:dispute:${"c".repeat(40)}`;
 
 interface MockPrincipal {
   principal_pseudonym: string;
@@ -1633,6 +1689,14 @@ function seedItems(): ActionsState["items"] {
       makeItem(ITEM_INSIGHT, DOMAIN_OK, {
         kind: "recommendation",
         subject_ref: "commercial:e2e:sandbox:agent:support-bot",
+      }),
+    ],
+    [
+      ITEM_DISPUTE,
+      DOMAIN_OK,
+      makeItem(ITEM_DISPUTE, DOMAIN_OK, {
+        kind: "evaluation_dispute",
+        subject_ref: DISPUTE_SUBJECT,
       }),
     ],
     [
@@ -2752,6 +2816,11 @@ export function createMockApi(options: MockApiOptions): Server {
     const quality = EVALUATION_QUALITY.exec(url.pathname);
     if (quality !== null) {
       qualityHandler(res, req, url, quality[1] ?? "", cors, correlationId);
+      return;
+    }
+    const sample = EVALUATION_SAMPLES.exec(url.pathname);
+    if (sample !== null) {
+      calibrationSampleHandler(res, req, url, sample[1] ?? "", cors, correlationId);
       return;
     }
     const reconciliation = RECONCILIATION_PATH.exec(url.pathname);

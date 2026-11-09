@@ -19,7 +19,13 @@ from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope.permissions import Permission
 from neurosphere_core.capabilities import load_matrix
 from neurosphere_core.evaluation.calibration import LabelSource, ingest_labels
-from neurosphere_core.evaluation.registry import Criterion, RubricVersion
+from neurosphere_core.evaluation.registry import (
+    Criterion,
+    DatasetItem,
+    DatasetVersion,
+    RubricVersion,
+)
+from neurosphere_core.evaluation.samples import CalibrationSample
 from neurosphere_core.evaluation.store import InMemoryEvaluationStore
 from neurosphere_core.hitl import (
     DecisionLog,
@@ -496,3 +502,113 @@ async def test_hitl_labels_join_real_calibration_in_the_pipeline() -> None:
     assert report.overall_coverage.labelled == 9
     assert report.agreement_sample_size == 9
     assert second.offline.judged_items == first.offline.judged_items
+
+
+# -- PRP-16 round 2 item 14: calibration review context -------------------------------------------
+
+
+def _dataset(classifications: dict[int, str]) -> DatasetVersion:
+    items = tuple(
+        DatasetItem(
+            item_id=f"item-{n:04d}",
+            dimension="groundedness",
+            classification=cls,  # type: ignore[arg-type]
+            payload={"question": f"q{n}"},
+        )
+        for n, cls in classifications.items()
+    )
+    return DatasetVersion.build(
+        dataset_id="ds-1",
+        version="3",
+        kind="offline_benchmark",
+        dimensions=("groundedness",),
+        items=items,
+        data_state="synthetic",
+        created_at="2026-10-01T00:00:00Z",
+    )
+
+
+class _CountingSink:
+    def __init__(self, inner: InMemoryEvaluationStore) -> None:
+        self._inner = inner
+        self.puts = 0
+
+    async def put_calibration_sample(self, sample: CalibrationSample) -> None:
+        self.puts += 1
+        await self._inner.put_calibration_sample(sample)
+
+
+async def test_sink_records_one_sample_per_newly_opened_item_and_none_on_rerun() -> None:
+    hitl = build_hitl()
+    store = InMemoryEvaluationStore()
+    sink = _CountingSink(store)
+    scope = make_scope()
+    outcomes = [make_outcome(n, float(n % 2)) for n in (1, 2, 3)]
+    dataset = _dataset({1: "internal", 2: "restricted", 3: "public"})
+    cfg = SampleConfig(seed=0, max_per_call=50, per_stratum=50)
+    first = await open_calibration_sample(
+        scope=scope,
+        outcomes=outcomes,
+        rubric=RUBRIC,
+        hitl=hitl,
+        clock=Clock(),
+        config=cfg,
+        samples=sink,
+        dataset=dataset,
+    )
+    assert len(first.opened) == 3
+    assert sink.puts == 3
+    got = {
+        o.item_id: await store.get_calibration_sample(
+            scope, FINANCE, dispute_subject_ref("commercial", "contoso", o)
+        )
+        for o in outcomes
+    }
+    one = got["item-0001"]
+    assert one is not None
+    assert (one.dataset_id, one.dataset_version) == ("ds-1", "3")
+    assert (one.judge_config_id, one.judge_config_version, one.value) == ("judge-a", "7", 1.0)
+    assert (one.rubric_id, one.rubric_version, one.dimension) == ("rubric-t", "1", "groundedness")
+    assert one.payload == {"question": "q1"}
+    assert one.payload_withheld is False
+    two = got["item-0002"]
+    assert two is not None
+    assert two.payload is None
+    assert two.withheld_reason == "restricted"
+
+    second = await open_calibration_sample(
+        scope=scope,
+        outcomes=outcomes,
+        rubric=RUBRIC,
+        hitl=hitl,
+        clock=Clock(),
+        config=cfg,
+        samples=sink,
+        dataset=dataset,
+    )
+    assert second.opened == ()
+    assert second.already_open == 3
+    assert sink.puts == 3
+
+
+async def test_without_a_dataset_the_sample_has_no_payload() -> None:
+    store = InMemoryEvaluationStore()
+    scope = make_scope()
+    outcome = make_outcome(1, 0.0)
+    await open_calibration_sample(
+        scope=scope,
+        outcomes=[outcome],
+        rubric=RUBRIC,
+        hitl=build_hitl(),
+        clock=Clock(),
+        config=SampleConfig(),
+        samples=store,
+    )
+    got = await store.get_calibration_sample(
+        scope, FINANCE, dispute_subject_ref("commercial", "contoso", outcome)
+    )
+    assert got is not None
+    assert got.payload is None
+    assert got.payload_withheld is True
+    assert got.dataset_id is None
+    assert got.classification is None

@@ -31,6 +31,7 @@ from .conformance import (
     make_cov,
     make_report,
     make_result,
+    make_sample,
     make_scope,
     other_customer_result,
 )
@@ -251,6 +252,8 @@ async def test_outages_map_to_taxonomy_errors_without_echoing_sdk_text(
         store.calibrations(scope, FINANCE),
         store.drift_alerts(scope, FINANCE),
         store.coverage(scope, FINANCE),
+        store.put_calibration_sample(make_sample()),
+        store.get_calibration_sample(scope, FINANCE, make_sample().subject_ref),
     ):
         with pytest.raises(expected) as raised:
             await call

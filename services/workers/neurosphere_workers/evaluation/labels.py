@@ -45,11 +45,12 @@ import random
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Final
+from typing import Final, Protocol
 
 from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.evaluation.calibration import HumanLabelRecord
-from neurosphere_core.evaluation.registry import RubricVersion
+from neurosphere_core.evaluation.registry import DatasetVersion, RubricVersion
+from neurosphere_core.evaluation.samples import CalibrationSample, build_calibration_sample
 from neurosphere_core.hitl import HitlService, ReviewItem
 from neurosphere_core.paging.models import MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -58,6 +59,7 @@ from neurosphere_workers.evaluation.models import ItemOutcome
 
 __all__ = [
     "DISPUTE_KIND",
+    "CalibrationSampleSink",
     "DisputeCandidate",
     "HitlLabelSource",
     "SampleConfig",
@@ -229,9 +231,20 @@ async def open_calibration_sample(
     clock: Callable[[], datetime],
     config: SampleConfig,
     correlation_id: str = "evaluation-calibration-sample",
+    samples: CalibrationSampleSink | None = None,
+    dataset: DatasetVersion | None = None,
 ) -> SampleReport:
-    """Draw the sample and open one ``evaluation_dispute`` item per not-yet-opened verdict."""
+    """Draw the sample and open one ``evaluation_dispute`` item per not-yet-opened verdict.
+
+    ``samples`` (optional) records one :class:`CalibrationSample` per NEWLY opened item, so a
+    reviewer sees the item and verdict, not a hash. ``dataset`` supplies the dataset id/version, the
+    item classification and the redacted payload; without it the sample has no dataset ids, a null
+    classification and therefore NO payload (fail closed).
+    """
     sample, eligible = select_sample(outcomes, rubric, scope, config)
+    dataset_items = (
+        {(i.item_id, i.dimension): i for i in dataset.items} if dataset is not None else {}
+    )
     existing = {item.subject_ref for item in await _dispute_items(scope, hitl)}
     now = clock()
     opened: list[str] = []
@@ -251,9 +264,37 @@ async def open_calibration_sample(
         )
         existing.add(item.subject_ref)
         opened.append(item.item_id)
+        if samples is not None:
+            source = dataset_items.get((cand.outcome.item_id, cand.dimension))
+            await samples.put_calibration_sample(
+                build_calibration_sample(
+                    subject_ref=cand.subject_ref,
+                    cloud=cand.cloud,  # type: ignore[arg-type]
+                    customer_id=cand.customer_id,
+                    domain_id=cand.domain_id,
+                    dataset_id=dataset.dataset_id if dataset is not None else None,
+                    dataset_version=dataset.version if dataset is not None else None,
+                    item_id=cand.outcome.item_id,
+                    dimension=cand.dimension,
+                    classification=source.classification if source is not None else None,
+                    judge_config_id=cand.judge_config_id,
+                    judge_config_version=cand.judge_config_version,
+                    value=cand.judge_value,
+                    rubric_id=rubric.rubric_id,
+                    rubric_version=rubric.version,
+                    opened_at=now,
+                    payload=source.payload if source is not None else None,
+                )
+            )
     return SampleReport(
         eligible=eligible, selected=len(sample), opened=tuple(opened), already_open=already
     )
+
+
+class CalibrationSampleSink(Protocol):
+    """Where :func:`open_calibration_sample` records review context (an ``EvaluationStore``)."""
+
+    async def put_calibration_sample(self, sample: CalibrationSample) -> None: ...
 
 
 class HitlLabelSource:

@@ -71,6 +71,35 @@ export interface ItemParams {
   itemId: string;
 }
 
+export interface CalibrationParams {
+  domainId: string;
+  subjectRef: string;
+}
+
+/**
+ * Hand-mirrored from services/api/neurosphere_api/evaluation/models.py (CalibrationSampleOut):
+ * the context of an `evaluation_dispute` review item. `value` is the judge's verdict (1 pass,
+ * 0 fail); approving the item means the judge was wrong.
+ */
+export interface CalibrationSampleView {
+  subject_ref: string;
+  domain_id: string;
+  dataset_id: string | null;
+  dataset_version: string | null;
+  item_id: string;
+  dimension: string;
+  classification: string | null;
+  judge_config_id: string;
+  judge_config_version: string;
+  value: number;
+  rubric_id: string;
+  rubric_version: string;
+  opened_at: string;
+  payload: Record<string, unknown> | null;
+  payload_withheld: boolean;
+  withheld_reason: string | null;
+}
+
 export interface IntentParams {
   domainId: string;
   intentId: string;
