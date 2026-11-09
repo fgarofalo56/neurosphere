@@ -137,11 +137,51 @@ async def test_unparseable_verdict_is_abstention_never_a_score(name: str) -> Non
     assert response.input_tokens > 0
 
 
-async def test_non_json_body_is_abstention() -> None:
+async def test_non_json_body_raises_never_zero_cost() -> None:
     judge, _ = _judge(lambda _r: httpx.Response(200, content=b"<html>oops</html>"))
+    with pytest.raises(DependencyTransientError) as info:
+        await judge.score(_request())
+    assert "oops" not in str(info.value)
+
+
+def _with_usage(usage: object) -> Any:
+    doc = _recorded("pass")
+    if usage is _MISSING:
+        del doc["usage"]
+    else:
+        doc["usage"] = usage
+    return lambda _r: httpx.Response(200, json=doc)
+
+
+_MISSING = object()
+
+
+@pytest.mark.parametrize(
+    "usage",
+    [
+        _MISSING,
+        "n/a",
+        {},
+        {"prompt_tokens": 5},
+        {"prompt_tokens": "5", "completion_tokens": 3},
+        {"prompt_tokens": 5.5, "completion_tokens": 3},
+        {"prompt_tokens": -1, "completion_tokens": 3},
+        {"prompt_tokens": 5, "completion_tokens": -3},
+        {"prompt_tokens": True, "completion_tokens": 3},
+        {"prompt_tokens": 5, "completion_tokens": False},
+    ],
+)
+async def test_unreadable_usage_raises(usage: object) -> None:
+    judge, _ = _judge(_with_usage(usage))
+    with pytest.raises(DependencyTransientError):
+        await judge.score(_request())
+
+
+async def test_malformed_verdict_with_valid_usage_abstains_with_that_usage() -> None:
+    judge, _ = _judge(_replay("malformed"))
     response = await judge.score(_request())
     assert response.abstained is True
-    assert judge.abstention_reasons == ["response body is not JSON"]
+    assert (response.input_tokens, response.output_tokens) == (80, 9)
 
 
 async def test_usage_is_parsed() -> None:

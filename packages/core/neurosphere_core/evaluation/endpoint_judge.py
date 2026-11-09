@@ -12,7 +12,8 @@ reason, never a fabricated score. HTTP errors go through the error taxonomy (``e
 and are never scored.
 
 Usage reaches the budget ledger through ``JudgeResponse.input_tokens`` / ``output_tokens``, taken
-from the response ``usage`` block (zero when the endpoint reports none).
+from the response ``usage`` block. A successful call whose usage cannot be read raises a taxonomy
+error (the service then settles the full reservation); unknown cost is never zero.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from neurosphere_core.copilot.models.endpoints import (
     require_endpoint,
     token_scope,
 )
+from neurosphere_core.copilot.models.normalize import invalid_response
 from neurosphere_core.copilot.models.redaction import redact_value
 from neurosphere_core.copilot.models.rest import REQUEST_TIMEOUT, bearer_headers, error_for_status
 from neurosphere_core.errors import CapabilityUnavailableError
@@ -42,6 +44,7 @@ _log = logging.getLogger(__name__)
 
 DEFAULT_API_VERSION: Final = "2024-10-21"
 MAX_COMPLETION_TOKENS: Final = 400
+_UNREADABLE_USAGE: Final = "judge response usage is missing or unreadable"
 
 SYSTEM_PROMPT: Final = (
     "You are an evaluation judge. Score the submitted agent output against the named rubric "
@@ -136,8 +139,8 @@ class EndpointJudge:
             raise error_for_status(response)
         try:
             doc: Any = response.json()
-        except ValueError:
-            return self._abstain("response body is not JSON", 0, 0)
+        except ValueError as exc:
+            raise invalid_response(_UNREADABLE_USAGE) from exc
         input_tokens, output_tokens = _usage(doc)
         content = _message_content(doc)
         if content is None:
@@ -159,14 +162,17 @@ class EndpointJudge:
 
 
 def _usage(doc: Any) -> tuple[int, int]:
+    """Token usage from a successful call; unreadable usage raises (unknown cost is never 0)."""
     usage = doc.get("usage") if isinstance(doc, dict) else None
     if not isinstance(usage, dict):
-        return 0, 0
+        raise invalid_response(_UNREADABLE_USAGE)
     return _count(usage.get("prompt_tokens")), _count(usage.get("completion_tokens"))  # pyright: ignore[reportUnknownMemberType]
 
 
 def _count(value: object) -> int:
-    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    raise invalid_response(_UNREADABLE_USAGE)
 
 
 def _message_content(doc: Any) -> str | None:
