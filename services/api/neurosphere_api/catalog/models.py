@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, Strict
 __all__ = [
     "MAX_IMPORT_ITEMS",
     "MAX_STALE_CANDIDATES",
+    "DeprecateRequest",
     "ExportPage",
     "ImportItemResult",
     "ImportRequest",
@@ -27,6 +28,7 @@ __all__ = [
     "LineageImpactRequest",
     "LineageNeighborsRequest",
     "PlanRef",
+    "ReasonCode",
     "RecertificationItem",
     "RecertificationPage",
     "RecertifyRequest",
@@ -111,10 +113,30 @@ class ExportPage(_Model):
 # --------------------------------------------------------------------------- recertification
 
 
+ReasonCode = Literal[
+    "superseded",
+    "no_longer_used",
+    "owner_changed",
+    "owner_left",
+    "security_issue",
+    "quality_issue",
+    "periodic_review",
+    "other",
+]
+"""Closed list of why a lifecycle action was taken; recorded in the audit ``detail``."""
+
+
+class DeprecateRequest(_Model):
+    """Optional body of a deprecation: a closed reason code, never free text."""
+
+    reason_code: ReasonCode | None = None
+
+
 class RecertifyRequest(_Model):
     """Record a recertification of an owner; it is valid for ``valid_for_days`` from now."""
 
     valid_for_days: Annotated[StrictInt, Field(ge=1, le=730)]
+    reason_code: ReasonCode | None = None
 
 
 class RecertificationItem(_Model):
