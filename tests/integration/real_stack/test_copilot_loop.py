@@ -42,6 +42,7 @@ from fastapi import FastAPI
 from neurosphere_api.app import create_app
 from neurosphere_api.runtime import CompositionOverrides, compose_app
 from neurosphere_api.runtime.pseudonym import local_dev_pseudonym_key
+from neurosphere_contracts.evaluation.v1.evaluation_result import EvaluationResult
 from neurosphere_contracts.recommendations.v1.recommendation import Recommendation
 from neurosphere_contracts.scope.v1.identity_scope import IdentityScope as ContractScope
 from neurosphere_core.auth.jwt import JwtValidator
@@ -236,6 +237,8 @@ class World:
     agent_a2: str
     agent_b1: str
     rec_id: str
+    eval_a: str
+    eval_b: str
 
     @classmethod
     def new(cls) -> World:
@@ -251,6 +254,8 @@ class World:
             agent_a2=agent % "a2",
             agent_b1=agent % "b1",
             rec_id=f"commercial:{CUSTOMER}:neurosphere:recommendation:loop-{run}",
+            eval_a=f"eval:loop-a-{run}",
+            eval_b=f"eval:loop-b-{run}",
         )
 
     @property
@@ -262,6 +267,8 @@ class World:
             "A2": self.agent_a2,
             "B1": self.agent_b1,
             "REC": self.rec_id,
+            "EVAL_A": self.eval_a,
+            "EVAL_B": self.eval_b,
         }
 
     @property
@@ -354,6 +361,12 @@ def _recommendation(world: World) -> Recommendation:
         cloud="commercial",
     )
     return Recommendation.model_validate(raw)
+
+
+def _evaluation(evaluation_id: str, domain: str) -> EvaluationResult:
+    raw = _example("evaluation/v1/examples/valid/evaluation-result.offline-llm-judge.json")
+    raw.update(evaluation_id=evaluation_id, domain_id=domain, customer_id=CUSTOMER)
+    return EvaluationResult.model_validate(raw)
 
 
 # -- HTTP helpers -----------------------------------------------------------------------------
@@ -510,10 +523,17 @@ async def test_copilot_to_report_loop_on_the_emulators(
         await catalog.create_entity(seed_scope, _agent(entity_id, domain, name))
     recommendation = _recommendation(world)
     await app.state.recommendation_store.put(recommendation)
+    eval_a = _evaluation(world.eval_a, world.domain_a)
+    eval_b = _evaluation(world.eval_b, world.domain_b)
+    await app.state.evaluation_store.put_result(eval_a)
+    await app.state.evaluation_store.put_result(eval_b)
     stored_a1 = await catalog.get_entity(seed_scope, world.agent_a1)
     stored_rec = await app.state.recommendation_store.get(seed_scope, world.domain_a, world.rec_id)
     assert stored_a1 is not None and stored_rec is not None
-    report.facts["seeded"] = "3 agents (2 in domain A, 1 in domain B), 1 recommendation in domain A"
+    report.facts["seeded"] = (
+        "3 agents (2 in domain A, 1 in domain B), 1 recommendation in domain A, "
+        "1 evaluation result each in A and B"
+    )
 
     a, b, c, d = (stand_in_token(oid) for oid in (USER_A, USER_B, USER_C, USER_D))
     principal_b = _principal(USER_B)
@@ -575,19 +595,19 @@ async def test_copilot_to_report_loop_on_the_emulators(
         report.turns.append(("3 evidence question", evidence_turn))
         assert evidence_turn.terminal == "done", evidence_turn.events
         ev_citations = evidence_turn.of("citation")
-        assert [cit["record_id"] for cit in ev_citations] == [world.rec_id], ev_citations
-        assert ev_citations[0]["kind"] == "evidence" and ev_citations[0]["freshness"] != "unknown"
-        assert ev_citations[0]["as_of"] == stored_rec.created_at.root, ev_citations
+        by_record = {cit["record_id"]: cit for cit in ev_citations}
+        assert set(by_record) == {world.rec_id, world.eval_a}, ev_citations
+        assert world.eval_b not in json.dumps(evidence_turn.events), evidence_turn.events
+        rec_cit, eval_cit = by_record[world.rec_id], by_record[world.eval_a]
+        assert rec_cit["kind"] == "evidence" and rec_cit["freshness"] != "unknown"
+        assert rec_cit["as_of"] == stored_rec.created_at.root, ev_citations
+        assert eval_cit["as_of"] == eval_a.completed_at.root, eval_cit
+        assert eval_cit["freshness"] != "unknown", eval_cit
         report.step(
             "3 evidence question",
-            f"recommendation cited via get_evidence, as_of == Cosmos created_at "
-            f"({ev_citations[0]['freshness']}); evaluation evidence NOT seeded "
-            "(the EvaluationStore protocol has no by-id read)",
-        )
-        report.gaps.append(
-            "evaluation_result evidence is not exercised: `StoreEvidenceReader` omits that kind "
-            "because the shipped `EvaluationStore` protocol has no by-id read "
-            "(`services/api/neurosphere_api/copilot/evidence.py::_evaluation`)."
+            f"recommendation and evaluation result cited via get_evidence, as_of == Cosmos "
+            f"created_at / completed_at ({eval_cit['as_of']}); the domain B eval id was "
+            "requested and NOT cited",
         )
 
         # 4. an action suggestion drafts an intent; it is neither confirmed nor executed
