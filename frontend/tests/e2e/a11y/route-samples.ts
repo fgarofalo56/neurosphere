@@ -6,6 +6,7 @@ import {
   REC_RIGHT_SIZING,
   TRACE_COMPLETE,
 } from "../../mock-api/server.ts";
+import { AUDIT_DOMAIN_FINANCE } from "../../mock-api/features/audit.ts";
 
 // PRP-24 item 3: one or more concrete URLs for EVERY pattern in src/app/route-manifest.json. The
 // spec fails when a manifest pattern has no sample here (or a sample names a pattern that is not
@@ -194,7 +195,8 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
   {
     pattern: "/audit",
     name: "audit log",
-    url: `/audit?audit_domain=${domain}`,
+    // audit_domain must be one of the mock audit domains, not the caller's data domain.
+    url: `/audit?audit_domain=${encodeURIComponent(AUDIT_DOMAIN_FINANCE)}`,
     ready: "main h1",
     persona: "auditor",
   },
