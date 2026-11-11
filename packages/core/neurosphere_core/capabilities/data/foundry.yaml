@@ -492,3 +492,227 @@
   notes: Disabled until verified. Foundry deployment write (model swap) support in Azure Government is
     unverified (G01); the connector refuses Government targets with capability_unavailable and never
     routes to a Commercial endpoint.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.brazilsouth.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: brazilsouth
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in brazilsouth per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.canadaeast.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: canadaeast
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in canadaeast per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.centralus.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: centralus
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in centralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.eastus.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: eastus
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in eastus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.eastus2.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: eastus2
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in eastus2 per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.northcentralus.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: northcentralus
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in northcentralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.southcentralus.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: southcentralus
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in southcentralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.westus.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: westus
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in westus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.westus3.global-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: westus3
+  sku: Global Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Global Standard in westus3 per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.centralus.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: centralus
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in centralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.eastus.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: eastus
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in eastus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.eastus2.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: eastus2
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in eastus2 per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.northcentralus.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: northcentralus
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in northcentralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.southcentralus.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: southcentralus
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in southcentralus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.westus.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: westus
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in westus per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.
+- schema_version: 1.1.0
+  id: foundry.model_gpt_4_1_mini.commercial.westus3.data-zone-standard
+  service: foundry
+  feature: model_gpt_4_1_mini
+  cloud: commercial
+  region: westus3
+  sku: Data Zone Standard
+  availability: available
+  ga_status: ga
+  authorization_scope: none_claimed
+  source_url: https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability
+  observed_on: '2026-11-11'
+  notes: gpt-4.1-mini version 2025-04-14 on Data Zone Standard in westus3 per the Commercial region availability page; quota
+    is not captured. Availability only; no authorization is claimed.

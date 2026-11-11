@@ -144,7 +144,15 @@ services:
       NS_COSMOS_ENDPOINT: http://cosmos:8081
       NS_ARCHIVE_CONTAINER: ns-archive
       NS_CORS_ALLOWED_ORIGINS: ""
-      NS_COPILOT_MODE: disabled
+      # Copilot is off by default. A containerized API has no az login: see docs/runbooks/copilot.md.
+      NS_COPILOT_MODE: ${NS_COPILOT_MODE:-disabled}
+      NS_COPILOT_ENDPOINT: ${NS_COPILOT_ENDPOINT:-}
+      NS_COPILOT_DEPLOYMENT: ${NS_COPILOT_DEPLOYMENT:-}
+      NS_COPILOT_API_VERSION: ${NS_COPILOT_API_VERSION:-}
+      NS_COPILOT_REGION: ${NS_COPILOT_REGION:-}
+      NS_COPILOT_MODEL_FEATURE: ${NS_COPILOT_MODEL_FEATURE:-}
+      NS_COPILOT_SKU: ${NS_COPILOT_SKU:-}
+      NS_COPILOT_OAUTH_SCOPE: ${NS_COPILOT_OAUTH_SCOPE:-}
       NS_FEDERATION_CELL_ID: local
       NS_EVALUATION_PILOT_DATASET_IDS: sbx-groundedness-pilot
       NS_PROBE_COSMOS_URL: http://cosmos:8081/
