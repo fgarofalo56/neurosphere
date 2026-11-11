@@ -115,9 +115,17 @@ async def test_server_domains_outside_the_scope_are_ignored() -> None:
 async def test_absent_stores_omit_their_kind_and_never_raise() -> None:
     found = await StoreEvidenceReader().get_many(_auditor(), [FINANCE], [FIN_REC, EVAL_ID, "x"])
     assert found == ()
-    # The shipped evaluation store has no by-id read: that kind is omitted, not scanned.
-    plain = StoreEvidenceReader(evaluations=InMemoryEvaluationStore([_evaluation()]))
-    assert await plain.get_many(_auditor(), [FINANCE], [EVAL_ID]) == ()
+    # A store without a by-id read omits the kind instead of scanning.
+    no_point_read = StoreEvidenceReader(evaluations=object())
+    assert await no_point_read.get_many(_auditor(), [FINANCE], [EVAL_ID]) == ()
+
+
+async def test_the_shipped_evaluation_store_resolves_by_point_read() -> None:
+    # Item 16 gave the shipped store a scoped ``get_result``; evaluation evidence now resolves.
+    shipped = StoreEvidenceReader(evaluations=InMemoryEvaluationStore([_evaluation()]))
+    found = await shipped.get_many(_auditor(), [FINANCE], [EVAL_ID])
+    assert [(r.evidence_id, r.kind) for r in found] == [(EVAL_ID, "evaluation_result")]
+    assert await shipped.get_many(_auditor(), [OPERATIONS], [EVAL_ID]) == ()
 
 
 class _Raising:
