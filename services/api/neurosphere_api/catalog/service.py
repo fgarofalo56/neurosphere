@@ -152,6 +152,7 @@ class CatalogService:
         customer_id: str,
         before: CatalogEntity | None,
         action: Callable[[], Awaitable[CatalogEntity]],
+        reason_code: str | None = None,
     ) -> CatalogEntity:
         ctx = AuditContext.from_scope(
             scope, correlation_id=correlation_id, operation=operation, channel=channel
@@ -173,6 +174,9 @@ class CatalogService:
                 )
             return stored
 
+        token = operation.rsplit(".", 1)[-1]
+        success_detail = token if reason_code is None else f"{token}:reason={reason_code}"
+
         def succeeded(result: CatalogEntity) -> AuditDraft:
             return build_after(
                 ctx,
@@ -184,7 +188,7 @@ class CatalogService:
                 ),
                 result="succeeded",
                 verified=True,
-                detail=operation.rsplit(".", 1)[-1],
+                detail=success_detail,
             )
 
         def failed(exc: BaseException) -> AuditDraft:
@@ -340,6 +344,7 @@ class CatalogService:
         *,
         correlation_id: str,
         channel: Channel = "rest",
+        reason_code: str | None = None,
     ) -> CatalogEntity:
         """Lifecycle deprecation: a state, not a deletion (edges and history remain)."""
         operation = "catalog.entity_deprecate"
@@ -356,6 +361,7 @@ class CatalogService:
             correlation_id,
             channel,
             lambda: self._repo.deprecate_entity(scope, stored.id, expected_etag),
+            reason_code=reason_code,
         )
 
     async def recertify(
@@ -367,6 +373,7 @@ class CatalogService:
         *,
         correlation_id: str,
         channel: Channel = "rest",
+        reason_code: str | None = None,
     ) -> CatalogEntity:
         """Record an ownership recertification now, valid for ``valid_for_days``."""
         operation = "catalog.owner_recertify"
@@ -391,6 +398,7 @@ class CatalogService:
             correlation_id,
             channel,
             lambda: self._repo.update_entity(scope, entity, expected_etag),
+            reason_code=reason_code,
         )
 
     async def _guarded(
@@ -401,6 +409,7 @@ class CatalogService:
         correlation_id: str,
         channel: Channel,
         action: Callable[[], Awaitable[CatalogEntity]],
+        reason_code: str | None = None,
     ) -> CatalogEntity:
         domain = entity_domain(dump(stored)) or ""
         return await self._mutate(
@@ -414,6 +423,7 @@ class CatalogService:
             customer_id=stored.customer_id.root,
             before=stored,
             action=action,
+            reason_code=reason_code,
         )
 
     # -- import ----------------------------------------------------------------------------
