@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Evaluation audit-gap closure (PRP-16, PR #200): the evaluation worker now runs the offline pilot and calibration on a
+  schedule, opens HITL `evaluation_dispute` review items for a seeded calibration sample (approve = the judge was wrong,
+  reject = the judge was right) and turns decisions into human labels; reviewers see the item, the verdict and the
+  rubric (`GET /api/v1/evaluation/domains/{domain}/calibration-samples`, restricted content withheld); an
+  `EndpointJudge` for approved chat-completions endpoints (`NS_WORKER_EVAL_JUDGE=endpoint`, cloud-checked, unreadable
+  usage charged at the full reservation; the live G16 run is still OPEN); sandbox telemetry carries a classification;
+  `/quality` reads a bounded window and flags truncation; the Commercial Foundry base capability row is verified
+  (availability only, no authorization claim). Proved on the compose emulators with synthetic data (pilot grounded rate
+  0.719, 95% interval [0.546, 0.844], a pilot-set target, not a guarantee); nothing deployed.
 - Catalog audit-gap closure (PRP-10, PR #192): the catalog projection now creates the agent, model-deployment and
   tool entities a trace references, so a real stack's catalog fills from telemetry (proved on the compose emulators
   through the ingest edge); lock-expiry lineage refresh, review-queue generations and replay ordering (#54);

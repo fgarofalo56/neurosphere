@@ -1,10 +1,11 @@
 ---
 name: PRP-16-agent-evaluation-and-quality
-status: active
+status: shipped
 priority: P1
 order: 3
 started: 2026-11-08
-pr: 81
+shipped: 2026-11-11
+pr: 200
 branch: prp-16-round2
 review: required
 created: 2026-10-08
@@ -309,6 +310,14 @@ The domain is a path segment, authorized against the server-derived `IdentitySco
 Integration branch gates after all six merges (0fc66e1), 2026-10-19: `verify-gates -Mode full` lint PASS, typecheck PASS (pyright 0 errors repo-wide), build PASS, tests FAIL with 1 failed / 5517 passed: a Windows `WinError 10055` (socket buffer exhaustion) in an untouched authz test. Re-runs failed one different untouched test each time, same error (5518 passed; and 5503 passed with `tests/integration/evaluation` ignored); each failing test passes alone. Root cause is environmental: on Windows asyncio emulates `socketpair` over loopback TCP, `tests/security/authz` alone creates ~4,440 socketpairs per run on both this branch and `main`, and back-to-back runs raised TIME_WAIT from 1,460 to 14,500; `tests/security/authz` on `main` then failed with the same 10055. A probe plugin showed the new evaluation suites leave 0 sockets open (116 socketpairs total). The clean full-suite run is CI (Linux, AF_UNIX socketpairs). Touched suites pass locally: api + core/workers evaluation + slice 598 passed; validate_planning PASS; eslint + tsc clean, vitest 205 passed, Playwright 42 passed (incl. axe).
 
 ## Completion note (filled at ship)
+
+### Round 2 (audit gap closure, items 7-15)
+- Date: 2026-11-11
+- Merged: PR #200 squash-merged as 1567294 (admin merge under the standing authorization; CI 32 pass / 2 skipping on head d99dc93, including the full python job, frontend e2e shards, CodeQL, full-history gitleaks, contracts drift, bicep build, helm lint). Item merges into `prp-16-round2`: 8 fc48cc6, 7 2fb39f7, 9 7ac7f48, 11 8189a09, 10 3fed981, 14 87ad5d8, 12 30e2bb2, 15 6d176a1, 13 e8e14a3; orchestrator fix-forwards cbef72e, 86d8129, 0577046, 726f5fe; `.env.example` lines d99dc93 (operator-run script).
+- Deviations: item 14 (reviewer context) and item 15 (Commercial Foundry matrix row) added by user decision mid-flight; item 12 gained `docker-compose.yml`; items 7 and 8 each had one rework round (zero-charge usage; labels built from aggregate results); item 14 updated one route-pin test outside its ownership; Helm workers stay idle by default (orchestrator reverted the implementer's role-list default). Details in "Audit gap closure 2026-11-11".
+- Descoped: none. OPEN: G16 live judge run (operator decision), hosted pilot domain/subject params unset (offline idle in hosted), browser real-stack specs (re-plan step 4).
+
+### Round 1
 - Date: 2026-10-20
 - Merged commits: PR #81 merged as b0a2a2b (CI 21/21 green on 165cd74, including CodeQL, full-history gitleaks, contracts drift, planning, python and frontend). Item merges into the integration branch: 3 7499937, 1 02cd66f, 4 6725c18, 5 113d9c6 (+ fix b8fd884), 2 7b4c17b (4303e76 + rework 0b6abd8), 6 0fc66e1; orchestrator fixes da6a0d2 (worker eval tests renamed to `evaluation_worker`, package-name clash) and 8fc29d0 (6 repo-wide pyright errors in items 1-3 test files). Before the PR: `verify-gates -Mode full` lint PASS, pyright 0 errors, build PASS, tests 1 failed / 5517 passed (Windows `WinError 10055` in an untouched authz test, environmental, reproduced on `main`; see Execution state); touched suites 598 passed, vitest 205, Playwright 42 (incl. axe), validate_planning PASS.
 - Measured results (synthetic sandbox, in-memory stores; `docs/evidence/G12/evaluation/README.md`): Government pilot set 50 items, 42 judged, 8 restricted skipped with zero judge calls; grounded-answer rate 0.875 (35/40, 2 abstained), Wilson 95% [0.739, 0.945], shown as a pilot-set target, not a guarantee; judge vs human accuracy 0.85 but Cohen kappa 0.314 [-0.10, 0.72] (imbalanced pilot set; `calibrated` only means the 20-label minimum was met); drift PSI 0.006 stable (no alert) vs 0.73 seeded (alert); a 6000-token budget run stopped `budget_exhausted` after 23 judged; Commercial pilot 50/50 `judge_unavailable` (shipped Commercial Foundry row `unverified`, not rerouted); sandbox telemetry 0/922 records carry a classification, so every online span skips fail-closed.
