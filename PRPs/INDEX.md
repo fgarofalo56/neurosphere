@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 13/15 (86%) | todo 1, in-progress 1, merged 13 | sonnet / sonnet | required |
+| [PRP-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 13/15 (86%) | in-progress 2, merged 13 | sonnet / sonnet | required |
 
 ## Backlog
 
