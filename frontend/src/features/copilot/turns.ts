@@ -20,7 +20,7 @@ export function newTurn(key: string, userText: string): AssistantTurn {
 /**
  * Folds one event into the turn. A turn that already ended ignores further events.
  *
- * `abstain` and `denied` DISCARD everything streamed so far (tokens, citations, charts,
+ * `abstain`, `denied` and `error` DISCARD everything streamed so far (tokens, citations, charts,
  * suggestions): the contract says text streamed before them is never an answer, so the UI shows
  * only the abstention or denial message with its reason.
  */
@@ -61,8 +61,25 @@ export function applyEvent(
     case "denied":
       return discard(turn, "denied", event.data);
     case "error":
-      return { ...turn, status: "error", failure: event.data };
+      return discardOnError(turn, event.data);
   }
+}
+
+/** An `error` terminal discards partial output too: only the error message is shown. */
+function discardOnError(
+  turn: AssistantTurn,
+  failure: NonNullable<AssistantTurn["failure"]>,
+): AssistantTurn {
+  return {
+    ...turn,
+    status: "error",
+    text: "",
+    citations: [],
+    charts: [],
+    chartQuerySpecs: [],
+    suggestions: [],
+    failure,
+  };
 }
 
 function discard(
@@ -84,5 +101,5 @@ function discard(
 
 export function failTurn(turn: AssistantTurn, code: string, detail: string): AssistantTurn {
   if (turn.status !== "streaming") return turn;
-  return { ...turn, status: "error", failure: { code, detail } };
+  return discardOnError(turn, { code, detail });
 }

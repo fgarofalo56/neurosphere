@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { Outlet, RouterProvider, createMemoryRouter, useLocation } from "react-router";
@@ -9,8 +9,13 @@ import { detailHref } from "../actions/ActionsPage";
 import { CopilotDock } from "./CopilotDock";
 import { actionDetailHref, displayText } from "./components";
 import { buildMessageContext, timeRangeFromParams } from "./requestContext";
-import { setCopilotSelection, useCopilotSelection } from "./selection";
+import {
+  CopilotSelectionProvider,
+  useCopilotSelection,
+  useCurrentCopilotSelection,
+} from "./selection";
 import { STRINGS } from "./strings";
+import { useCopilotChat } from "./useChat";
 import { SseParser, parseEvent, streamMessage, type StreamTransport } from "./stream";
 import { CopilotTransportProvider } from "./transport";
 
@@ -25,7 +30,6 @@ beforeAll(() => {
 });
 afterEach(() => {
   cleanup();
-  setCopilotSelection([]);
 });
 
 // ---- fixtures: the SSE shapes of frontend/tests/mock-api/copilot.ts ---------------------------
@@ -131,13 +135,24 @@ interface Call {
 }
 
 /** A fetch stub: the first call per path family is conversation create, the rest are messages. */
-function stubFetch(messages: (n: number, init: RequestInit) => Response | Promise<Response>) {
+function stubFetch(
+  messages: (n: number, init: RequestInit) => Response | Promise<Response>,
+  status: { state: string; reason_code: string | null } = { state: "ready", reason_code: null },
+) {
   const calls: Call[] = [];
   let n = 0;
   const impl = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const request = init ?? {};
     calls.push({ url, init: request });
+    if (url.endsWith("/api/v1/copilot/status")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(status), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    }
     if (url.endsWith("/api/v1/copilot/conversations")) return Promise.resolve(created());
     n += 1;
     return Promise.resolve(messages(n, request));
@@ -187,7 +202,9 @@ function mount(
   return render(
     <QueryProvider client={client}>
       <CopilotTransportProvider transport={transport}>
-        <RouterProvider router={router} />
+        <CopilotSelectionProvider>
+          <RouterProvider router={router} />
+        </CopilotSelectionProvider>
       </CopilotTransportProvider>
     </QueryProvider>,
   );
@@ -498,7 +515,9 @@ describe("action handoff", () => {
     expect(actionDetailHref("domain-a", "intent-1")).toBe(detailHref("domain-a", "intent-1"));
 
     // Only conversation create and message post were ever called: no confirm, no execute.
-    const paths = calls.map((c) => new URL(c.url).pathname);
+    const paths = calls
+      .map((c) => new URL(c.url).pathname)
+      .filter((p) => !p.endsWith("/copilot/status"));
     expect(paths.every((p) => p.startsWith("/api/v1/copilot/conversations"))).toBe(true);
     expect(paths.some((p) => /confirm|execute|intents/.test(p))).toBe(false);
   });
@@ -601,6 +620,138 @@ describe("dock accessibility", () => {
     await act(async () => {});
     const results = await axe(view.container, { rules: { "color-contrast": { enabled: false } } });
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  });
+});
+
+describe("error terminal", () => {
+  it("discards streamed text and shows only the error message", async () => {
+    const { impl } = stubFetch(() =>
+      sse([
+        ["context", ECHO],
+        ["token", { text: "A half-formed answer" }],
+        ["error", { code: "dependency_transient", detail: "The model endpoint failed." }],
+      ]),
+    );
+    mount(impl);
+    await ask();
+    expect(await screen.findByTestId("turn-error")).toHaveTextContent("The model endpoint failed.");
+    expect(screen.queryByTestId("answer-text")).toBeNull();
+    expect(screen.queryByText(/half-formed/)).toBeNull();
+  });
+});
+
+describe("first-token clock", () => {
+  it("starts at the message POST, after conversation creation", async () => {
+    let clock = 1000;
+    const now = (): number => clock;
+    const impl = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/v1/copilot/conversations")) {
+        clock += 5000; // creation is slow, and must not count
+        return Promise.resolve(created());
+      }
+      if (url.endsWith("/messages")) {
+        clock += 40;
+        return Promise.resolve(sse(ANSWERED));
+      }
+      return Promise.resolve(new Response("{}", { status: 404 }));
+    }) as unknown as typeof fetch;
+    const transport: StreamTransport = {
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("t"),
+      fetchImpl: impl,
+    };
+    const { result } = renderHook(() => useCopilotChat(transport, now));
+    await act(async () => {
+      await result.current.send(
+        "hi",
+        buildMessageContext({ pathname: "/", search: "", selection: [] }),
+      );
+    });
+    expect(result.current.turns[0]?.firstTokenMs).toBe(40);
+  });
+});
+
+describe("selection provider", () => {
+  it("does not share a selection between separately rendered providers", () => {
+    function Publisher(): null {
+      useCopilotSelection(["only-in-a"]);
+      return null;
+    }
+    function Probe({ id }: { id: string }): ReactElement {
+      return <output data-testid={id}>{useCurrentCopilotSelection().join(",")}</output>;
+    }
+    render(
+      <>
+        <CopilotSelectionProvider>
+          <Publisher />
+          <Probe id="a" />
+        </CopilotSelectionProvider>
+        <CopilotSelectionProvider>
+          <Probe id="b" />
+        </CopilotSelectionProvider>
+      </>,
+    );
+    expect(screen.getByTestId("a")).toHaveTextContent("only-in-a");
+    expect(screen.getByTestId("b")).toHaveTextContent("");
+  });
+
+  it("publishes nothing without a provider", () => {
+    function Publisher(): ReactElement {
+      useCopilotSelection(["x"]);
+      return <output data-testid="p">{useCurrentCopilotSelection().length}</output>;
+    }
+    render(<Publisher />);
+    expect(screen.getByTestId("p")).toHaveTextContent("0");
+  });
+});
+
+describe("assistant status", () => {
+  it.each([
+    ["disabled", "copilot_unconfigured"],
+    ["failed", "copilot_endpoint_invalid"],
+  ] as const)("shows the configured message and no composer when %s", async (state, reason) => {
+    const { impl } = stubFetch(() => sse(ANSWERED), { state, reason_code: reason });
+    mount(impl);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: STRINGS.open }));
+    const box = await screen.findByTestId("copilot-not-configured");
+    expect(box).toHaveTextContent(STRINGS.notConfigured.message);
+    expect(box).toHaveTextContent(reason);
+    expect(box).toHaveTextContent(STRINGS.notConfigured.hint);
+    expect(box).not.toHaveTextContent(/try again/i);
+    expect(screen.queryByRole("textbox", { name: STRINGS.inputLabel })).toBeNull();
+    expect(screen.queryByRole("button", { name: STRINGS.send })).toBeNull();
+  });
+
+  it("shows the composer when ready", async () => {
+    const { impl, calls } = stubFetch(() => sse(ANSWERED));
+    mount(impl);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: STRINGS.open }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/copilot/status"))).toBe(true));
+    expect(screen.getByRole("textbox", { name: STRINGS.inputLabel })).toBeInTheDocument();
+    expect(screen.queryByTestId("copilot-not-configured")).toBeNull();
+  });
+
+  it("maps a 503 copilot_unconfigured POST to the configured message, not try again", async () => {
+    const { impl } = stubFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            code: "dependency_transient",
+            title: "x",
+            retryable: true,
+            reason: "copilot_unconfigured",
+          }),
+          { status: 503, headers: { "content-type": "application/problem+json" } },
+        ),
+    );
+    mount(impl);
+    await ask();
+    const alert = await screen.findByTestId("turn-error");
+    expect(alert).toHaveTextContent(STRINGS.notConfigured.message);
+    expect(alert).not.toHaveTextContent(/try again/i);
   });
 });
 

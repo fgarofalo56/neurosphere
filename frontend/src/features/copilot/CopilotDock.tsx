@@ -19,9 +19,13 @@ import { useLocation } from "react-router";
 import { useUiStyle } from "../../design-system";
 import { AssistantTurnView, ContextChip } from "./components";
 import { buildMessageContext } from "./requestContext";
-import { useCurrentCopilotSelection } from "./selection";
+import {
+  CopilotSelectionProvider,
+  useCurrentCopilotSelection,
+  useHasCopilotSelectionProvider,
+} from "./selection";
 import { STRINGS } from "./strings";
-import { useCopilotTransport } from "./transport";
+import { useCopilotStatus, useCopilotTransport } from "./transport";
 import { useCopilotChat } from "./useChat";
 
 // No animation or transition is used anywhere in the dock, so reduced-motion preferences are
@@ -86,6 +90,7 @@ const useStyles = makeStyles({
     rowGap: tokens.spacingVerticalM,
     minHeight: "120px",
   },
+  muted: { color: tokens.colorNeutralForeground3, margin: 0 },
   form: { display: "flex", flexDirection: "column", rowGap: tokens.spacingVerticalXS },
 });
 
@@ -95,6 +100,19 @@ const useStyles = makeStyles({
  * in-flight stream.
  */
 export function CopilotDock(): ReactElement {
+  // Publishers in the routed page share the provider the app shell mounts above both. With none
+  // above, the dock owns one so it still works (with an empty selection).
+  const shared = useHasCopilotSelectionProvider();
+  return shared ? (
+    <CopilotDockInner />
+  ) : (
+    <CopilotSelectionProvider>
+      <CopilotDockInner />
+    </CopilotSelectionProvider>
+  );
+}
+
+function CopilotDockInner(): ReactElement {
   const styles = useStyles();
   const { id: styleId } = useUiStyle();
   const ops = styleId === "ops-console";
@@ -104,6 +122,8 @@ export function CopilotDock(): ReactElement {
   const transport = useCopilotTransport();
   const chat = useCopilotChat(transport);
   const [open, setOpen] = useState(false);
+  const status = useCopilotStatus(transport, open);
+  const notConfigured = status !== null && status.state !== "ready";
   const [draft, setDraft] = useState("");
   const toggleRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -190,36 +210,46 @@ export function CopilotDock(): ReactElement {
               />
             ))}
           </div>
-          <form
-            className={styles.form}
-            aria-label={STRINGS.inputLabel}
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
-          >
-            <Field label={STRINGS.inputLabel}>
-              <Textarea
-                ref={inputRef}
-                value={draft}
-                placeholder={STRINGS.inputPlaceholder}
-                resize="vertical"
-                maxLength={8000}
-                onChange={(_e, data) => setDraft(data.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    submit();
-                  }
-                }}
-              />
-            </Field>
-            <div>
-              <Button type="submit" appearance="primary" disabled={draft.trim() === ""}>
-                {STRINGS.send}
-              </Button>
+          {notConfigured ? (
+            <div data-testid="copilot-not-configured" role="status">
+              <p>{STRINGS.notConfigured.message}</p>
+              {status.reason_code !== null ? (
+                <p className={styles.muted}>{STRINGS.notConfigured.reason(status.reason_code)}</p>
+              ) : null}
+              <p className={styles.muted}>{STRINGS.notConfigured.hint}</p>
             </div>
-          </form>
+          ) : (
+            <form
+              className={styles.form}
+              aria-label={STRINGS.inputLabel}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
+            >
+              <Field label={STRINGS.inputLabel}>
+                <Textarea
+                  ref={inputRef}
+                  value={draft}
+                  placeholder={STRINGS.inputPlaceholder}
+                  resize="vertical"
+                  maxLength={8000}
+                  onChange={(_e, data) => setDraft(data.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
+                />
+              </Field>
+              <div>
+                <Button type="submit" appearance="primary" disabled={draft.trim() === ""}>
+                  {STRINGS.send}
+                </Button>
+              </div>
+            </form>
+          )}
         </section>
       ) : null}
     </>

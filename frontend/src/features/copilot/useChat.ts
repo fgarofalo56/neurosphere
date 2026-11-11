@@ -13,6 +13,10 @@ export interface CopilotChat {
   readonly send: (text: string, context: MessageContext) => Promise<void>;
 }
 
+function defaultNow(): number {
+  return performance.now();
+}
+
 function mark(name: string): void {
   if (typeof performance !== "undefined" && typeof performance.mark === "function") {
     performance.mark(name);
@@ -30,6 +34,13 @@ function measure(name: string, start: string, end: string): void {
 }
 
 function describe(error: unknown): { code: string; detail: string } {
+  if (
+    isApiError(error) &&
+    error.status === 503 &&
+    error.problem?.reason === "copilot_unconfigured"
+  ) {
+    return { code: "copilot_unconfigured", detail: STRINGS.notConfigured.message };
+  }
   if (isApiError(error)) {
     const detail = STRINGS.httpErrors[error.code] ?? STRINGS.httpErrors["unexpected_response"];
     return { code: error.code, detail: detail ?? STRINGS.httpErrors["unexpected_response"] ?? "" };
@@ -42,7 +53,10 @@ function describe(error: unknown): { code: string; detail: string } {
  * flight, and unmounting aborts too. Nothing here can execute an action: the only endpoints
  * touched are conversation create and message post.
  */
-export function useCopilotChat(transport: StreamTransport | null): CopilotChat {
+export function useCopilotChat(
+  transport: StreamTransport | null,
+  now: () => number = defaultNow,
+): CopilotChat {
   const [turns, setTurns] = useState<AssistantTurn[]>([]);
   const [echo, setEcho] = useState<ContextEcho | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,13 +99,14 @@ export function useCopilotChat(transport: StreamTransport | null): CopilotChat {
         return;
       }
       const startMark = `copilot:send:${n}`;
-      mark(startMark);
-      const startedAt = performance.now();
       let sawToken = false;
       try {
         if (conversationId.current === null) {
           conversationId.current = (await createConversation(transport, controller.signal)).id;
         }
+        // The first-token clock starts at the message POST, after conversation creation.
+        mark(startMark);
+        const startedAt = now();
         for await (const event of streamMessage(
           transport,
           conversationId.current,
@@ -103,7 +118,7 @@ export function useCopilotChat(transport: StreamTransport | null): CopilotChat {
           let firstTokenMs: number | null = null;
           if (event.name === "token" && !sawToken) {
             sawToken = true;
-            firstTokenMs = performance.now() - startedAt;
+            firstTokenMs = now() - startedAt;
             mark(`copilot:first-token:${n}`);
             measure(`copilot:first-token-latency:${n}`, startMark, `copilot:first-token:${n}`);
           }
@@ -122,7 +137,7 @@ export function useCopilotChat(transport: StreamTransport | null): CopilotChat {
         }
       }
     },
-    [transport, patch],
+    [transport, patch, now],
   );
 
   return { turns, echo, busy, send };
