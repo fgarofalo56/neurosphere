@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-19-copilot-and-report-creation](active/PRP-19-copilot-and-report-creation.md) | P1 | 7/15 (46%) | todo 8, merged 7 | sonnet / sonnet | required |
+| [PRP-19-copilot-and-report-creation](active/PRP-19-copilot-and-report-creation.md) | P1 | 8/16 (50%) | todo 4, in-progress 2, review 2, merged 8 | sonnet / sonnet | required |
 
 ## Backlog
 

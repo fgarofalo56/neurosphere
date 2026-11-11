@@ -329,6 +329,19 @@ User decisions 2026-11-11:
 - Depends on: Items 8, 9, 10, 11.
 - Acceptance criteria: passes locally against `docker compose up -d --wait`; never runs in CI.
 
+### Item 16 - evaluation-result-point-read  [P] (added 2026-11-11, user decision)
+Why: `EvaluationStore` has no by-id read (only list, scan and window reads). As a result the item 9 reader omits every `evaluation_result` evidence id in production.
+- Deliverable: a scope-filtered `get_result(scope, domain, evaluation_id) -> EvaluationResult | None` on the `EvaluationStore` protocol, plus the in-memory and Cosmos implementations.
+  - It must be a point read: the Cosmos partition key and id, never a query scan.
+  - An out-of-scope domain or a cloud mismatch returns None. It never raises a "not found vs forbidden" distinction.
+- Owned files: `packages/core/neurosphere_core/evaluation/store.py`, `packages/core/neurosphere_core/evaluation/cosmos_store.py`, and their core tests.
+- Must NOT touch: `services/`, `evaluation/pipeline.py`, `packages/contracts/`.
+- Acceptance criteria:
+  - Get-by-id returns the result for an in-scope caller.
+  - It returns None for an unknown id, another domain, or another customer or cloud.
+  - The Cosmos store uses `read_item`, shown by a unit test with a fake container.
+  - The item 9 reader resolves `eval:` ids through it once merged (orchestrator re-runs the item 9 tests).
+
 Waves (round 2): 1 = items 9, 10, 11, 14; 2 = items 8, 12, then 13 after item 10 merges; 3 = item 15 (the only compose lane).
 
 Orchestrator seams:
@@ -408,13 +421,14 @@ Round 2 (items 8-15) approved 2026-11-11 as written: integration branch `prp-19-
 | 6 | merged | worktree-agent-abbe4fd3d153e829d | sonnet | feb036c; orchestrator re-run: only copilot feature + e2e spec + tests/e2e/copilot + docs/evidence/G07/copilot touched, tsc + eslint clean, ruff + format + pyright clean, first token unmarked test 1 passed (re-run p50 62 ms, p95 69 ms, max 139 ms; committed evidence run p50 119 ms, p95 140 ms, max 296 ms, n=30, recorded fixtures, provider excluded, target <= 3 s printed not asserted), collection 255 no clash, build ok, full Playwright 83 passed; full vitest flaked 1 in 5 (reports sharing / actions button flow: Fluent dialog `findByRole` past the 1 s default under parallel load; integration branch without item 6 0 in 5) -> orchestrator seam fix 44b5fe7 (Testing Library asyncUtilTimeout 5 s in frontend/tests/setup.ts); handoff navigates to `/actions/detail?domain_id=&intent_id=` (PRP-17 Validate -> Request confirmation -> dialog), chat calls only conversation create + message post; reviewer CHANGES REQUIRED (blocker: Save as report paired the chat chart with a hardcoded daily cost query, undisclosed) -> rework round 1 2731e1a (save offered only when the `chart` event carries `query_spec`, never sent today; saveQuery.ts deleted); orchestrator re-run: tsc + eslint clean, vitest copilot + reports + app 75 passed (1 intermittent failure on the branch without 44b5fe7, then 3/3 green), Playwright copilot + smoke 8 passed; haiku confirmation CONFIRMED FIXED; follow-ups: add `query_spec` to the `chart` event contract to re-enable save from chat, discard streamed text on `error` terminal, client first-token clock includes conversation creation on the first message, `useCopilotSelection` module-level store leaks across sessions/tests, axe excludes `[data-tabster-dummy]`; merge 83baac1; post-merge full vitest 8/8 runs 389 passed | 2026-10-22 |
 | 7 | merged | worktree-agent-a218c4a7a119cb3bd | sonnet | dc95aba; orchestrator re-run: only item 7 owned files, ruff + pyright clean, core copilot + charts + copilot_api + reports + tests/integration/copilot + test_app + openapi drift + actions_api 416 passed 7 deselected; corpus with REAL chart validator 78/78, 0 overscoped (deny:chart_plan_rejected=7); Cosmos emulator `-m integration tests/integration/copilot` 3 passed; licences PASS (603); tsc + eslint clean, full vitest 34 files 361 passed, build ok, Playwright smoke + chart-sandbox + actions 26 passed; openapi +10 paths +46 components, NOT purely additive (7 module-qualified renames: DecisionBody, TimeRange, Lock-*, Timestamp-Input, Validity-*); no container provisioning precedent (stores create containers in code); httpx >=0.28,<0.29 declared in packages/core; mock fixtures answered/abstain/denied/action_suggestion/error via `?fixture=` > `fixture:<name>` text > keywords; CopilotDock mounted in Layout (routes.tsx) inside ErrorBoundary; open: production app.state bootstrap still absent (composition tests stand in); reviewer APPROVED (follow-ups: wrapper `exclude_unset=True` drops schema defaults from emitted plans, re-export `validate_chart_plan_mapping`, check mock SSE tool names vs contract when item 6 lands, call out the 7 OpenAPI renames in the PR); merge 8b71985; post-merge 416 passed 7 deselected, tsc clean, vitest app + reports + charts 67 passed | 2026-10-21 |
 | 8 | todo | | sonnet | | 2026-11-11 |
-| 9 | todo | | sonnet | | 2026-11-11 |
-| 10 | todo | | sonnet | | 2026-11-11 |
-| 11 | todo | | sonnet | | 2026-11-11 |
+| 9 | review | worktree-agent-a67baa0caec1c9674 | sonnet | c665eb1; orchestrator re-run: ruff + pyright clean, copilot_api + runtime_planes + runtime_api 260 passed; StoreEvidenceReader (eval: prefix -> evaluation, 5-segment recommendation id -> recommendation, else catalog; cap 50; observed_at from record); evaluation kind omitted in production (no EvaluationStore get_result -> item 16); reviewer CHANGES REQUIRED (blocker: except Exception turns store outages into absent evidence, not fail-closed) -> rework round 1 dispatched | 2026-11-11 |
+| 10 | review | worktree-agent-a57884b80eaa44193 | sonnet | d75ffd5; orchestrator re-run: ruff + pyright clean, copilot_api + reports + test_app 163 passed (corpus 78/78); query_spec attached only when exactly one recorded query tool call's result ids equal the chart record_id set and it passes StructuredQuery + ReportBody + validate_chart_plan; GET /copilot/status from the composition registry; openapi drift expected (orchestrator regenerates); reviewer dispatched | 2026-11-11 |
+| 11 | in-progress | (wave 1 worktree) | sonnet | dispatched | 2026-11-11 |
 | 12 | todo | | sonnet | | 2026-11-11 |
 | 13 | todo | | sonnet | | 2026-11-11 |
-| 14 | todo | | sonnet | | 2026-11-11 |
+| 14 | merged | worktree-agent-aa47edf72fd10f9b2 | sonnet | b2ed8ae; orchestrator re-run: ruff + format clean, pyright 0, core copilot 168 passed, corpus + tests/security/mcp 53 passed; propose_action refuses unresolved evidence refs (ForbiddenError evidence_ref_unresolved, count-only log), empty in/eq filter values refused (ToolBudgetError empty_filter_values; contract already rejects values: [] so the gap was in/eq with neither value nor values), real InMemoryCatalogRepository hides unreadable entity (no get_entity tool exists; tested via propose_action + search_catalog); reviewer APPROVED (follow-ups: split branchy empty-in test, document all-or-nothing evidence refusal in the tool description, MCP-path test for evidence refusal); merge 56659cb; post-merge core copilot 168 passed | 2026-11-11 |
 | 15 | todo | | sonnet | | 2026-11-11 |
+| 16 | in-progress | (worktree) | sonnet | dispatched | 2026-11-11 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-22
