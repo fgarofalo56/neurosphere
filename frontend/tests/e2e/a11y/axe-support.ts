@@ -93,9 +93,25 @@ export async function seedPreferences(
 
 /** Opens the sample and waits for the state the page settles in. */
 export async function openSample(page: Page, sample: RouteSample): Promise<void> {
+  if (sample.persona) {
+    // The stub session carries the Viewer role and the mock API reads the caller's role from the
+    // fake token suffix (stubMsal.ts), so the sample's persona is applied by rewriting the bearer
+    // on every API call, the same way audit.spec.ts does for /audit. Registered before navigation.
+    const token = `ns-e2e-fake-token.${sample.persona.charAt(0).toUpperCase()}${sample.persona.slice(1)}`;
+    await page.route("**/api/v1/**", (route) =>
+      route.continue({
+        headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
+      }),
+    );
+  }
   await page.goto(sample.url);
   await expect(page.locator(sample.ready).first()).toBeVisible({ timeout: 30_000 });
   await page.waitForLoadState("networkidle");
+  if (sample.persona === "auditor" && sample.pattern === "/audit") {
+    // Without the persona the page settles in the ForbiddenState, which also has an h1.
+    await expect(page.getByTestId("forbidden-state")).toHaveCount(0);
+    await expect(page.getByTestId("audit-row").first()).toBeVisible();
+  }
 }
 
 export interface AnalyzeOutcome {

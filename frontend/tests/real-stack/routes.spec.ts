@@ -25,7 +25,7 @@ interface Expected {
 interface Entry {
   readonly route: string;
   /** Open this route by following a link from a list route (detail pages need an id). */
-  readonly via?: { readonly list: string; readonly link: string };
+  readonly via?: { readonly list: string; readonly link: string; readonly then?: string };
   /** `data-testid` of a row that must be visible when the page has data. */
   readonly rows?: string;
   readonly expected?: readonly Expected[];
@@ -44,6 +44,16 @@ const workspace = (persona: string): Entry => ({
 
 const ENTRIES: readonly Entry[] = [
   { route: "/" },
+  {
+    route: "/admin/execution-control",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/actions/emergency-disable",
+        why: "reading the switch needs config.manage, which the operator may not hold; the page then shows its forbidden state",
+      },
+    ],
+  },
   { route: "/actions", rows: "action-row" },
   {
     route: "/actions/detail",
@@ -53,11 +63,59 @@ const ENTRIES: readonly Entry[] = [
     route: "/actions/propose",
     via: { list: "/actions", link: "a[href^='/actions/propose']" },
   },
+  {
+    route: "/audit",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/audit/",
+        why: "the audit log needs the Auditor or Admin role, which the operator may not hold; the page then shows its forbidden state",
+      },
+    ],
+  },
+  { route: "/catalog", rows: "entity-row" },
+  {
+    // Two hops: catalog list -> entity -> a relationship link on the entity page. An entity with
+    // no relationship has no edge link, so the test reports OPEN when no seeded entity has one.
+    route: "/catalog/edge",
+    via: {
+      list: "/catalog",
+      link: "a[href^='/catalog/entity']",
+      then: "a[href^='/catalog/edge']",
+    },
+  },
+  {
+    route: "/catalog/entity",
+    via: { list: "/catalog", link: "a[href^='/catalog/entity']" },
+  },
   { route: "/catalog/publication" },
+  { route: "/catalog/recertifications" },
+  { route: "/catalog/stale-agents" },
   { route: "/dashboards/cost" },
   { route: "/dashboards/coverage" },
   { route: "/dashboards/latency" },
+  {
+    route: "/deploy",
+    // No API call until a scan is submitted, so there is nothing to expect.
+  },
+  { route: "/deploy/capabilities" },
+  { route: "/evaluations", rows: "evaluation-row" },
+  {
+    route: "/federation",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/federation",
+        why: "the federation summary is permission-scoped; without it the page shows its forbidden state",
+      },
+    ],
+  },
+  { route: "/finops/forecast" },
   { route: "/gateways" },
+  {
+    route: "/gateways/detail",
+    via: { list: "/gateways", link: "a[href^='/gateways/detail']" },
+  },
   { route: "/map" },
   { route: "/map/table" },
   { route: "/mcp-admin", rows: "server-row" },
@@ -130,6 +188,24 @@ function unexpected(answers: readonly ApiAnswer[], expected: readonly Expected[]
     .map((a) => `${a.method} ${a.path} -> ${a.status}`);
 }
 
+/** Opens up to 10 first-hop links in turn until one page offers the second-hop link; clicks it. */
+async function secondHop(page: Page, first: string, second: string): Promise<boolean> {
+  const hrefs = await page
+    .locator(first)
+    .evaluateAll((els) => els.slice(0, 10).map((el) => el.getAttribute("href") ?? ""));
+  for (const href of new Set(hrefs.filter((h) => h !== ""))) {
+    await page.goto(href);
+    await page.locator("main h1").first().waitFor();
+    await page.waitForLoadState("networkidle");
+    const next = page.locator(second).first();
+    if ((await next.count()) > 0) {
+      await next.click();
+      return true;
+    }
+  }
+  return false;
+}
+
 test("the entries cover exactly the route manifest", () => {
   expect(ENTRIES.map((e) => e.route).sort()).toEqual([...manifest.routes].sort());
 });
@@ -152,7 +228,11 @@ for (const entry of ENTRIES) {
         await page.locator(`${entry.via.link}, [data-testid='empty-state']`).first().waitFor();
         const link = page.locator(entry.via.link).first();
         if ((await link.count()) === 0) continue;
-        await link.click();
+        if (entry.via.then === undefined) {
+          await link.click();
+        } else if (!(await secondHop(page, entry.via.link, entry.via.then))) {
+          continue;
+        }
       } else {
         await page.goto(withDomain(entry.route, domain));
         if (entry.rows !== undefined) {
