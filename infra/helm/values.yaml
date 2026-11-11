@@ -144,8 +144,10 @@ workers:
   replicas: 1
   repository: neurosphere/workers
   port: 8090
-  # NS_WORKER_ROLES, same list as the hosted demo (infra/demo/main.bicep). Empty = unset (idle).
-  roles: "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation"
+  # NS_WORKER_ROLES. Empty = unset (idle), the chart's historical default; set it explicitly to run
+  # roles, e.g. the hosted demo list
+  # "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation".
+  roles: ""
   probes:
     readiness: /healthz
     liveness: /healthz

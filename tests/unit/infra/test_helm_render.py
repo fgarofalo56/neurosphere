@@ -183,7 +183,10 @@ def test_app_service_deploy_apply_opt_in_is_one_default_off_parameter() -> None:
 
 def test_evaluation_env_reaches_workers_and_api_pilot_ids() -> None:
     """PRP-16 item 12: the workers run the evaluation role from the image's synthetic registry."""
-    default = _containers(_render())
+    # The chart keeps workers idle by default (no NS_WORKER_ROLES); roles are opted into.
+    assert "NS_WORKER_ROLES" not in _env(_containers(_render())["workers"])
+    roles = "ingestion\\,projections\\,aggregates\\,actions\\,hitl_timers\\,lifecycle\\,evaluation"
+    default = _containers(_render("--set", f"workers.roles={roles}"))
     workers = _env(default["workers"])
     assert "evaluation" in workers["NS_WORKER_ROLES"].split(",")
     assert workers["NS_WORKER_EVAL_DATA_DIR"] == "/app/evaluation-data"
