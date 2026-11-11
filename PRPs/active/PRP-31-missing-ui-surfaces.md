@@ -536,11 +536,11 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 8 | merged | worktree-agent-ac458121c2dffb894 | sonnet | tsc+eslint clean; vitest 4f/17t; e2e admin 7 pass (me); merged 72af36a | 2026-10-30 |
 | 2b | merged | worktree-agent-a85f80e3eeced77f2 | sonnet | ruff+pyright clean (agent); 514 pass ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi additive +82/-0; GET returns {edge, edge_version:int, edge_etag:str}+ETag header, matches 4b; merged 2dddb18 | 2026-10-30 |
 | 4b | merged | worktree-agent-a54f8d0bd1a262200 | sonnet | tsc+eslint clean; vitest 3f/25t; e2e curation 6 pass (me); merged 0ca8443 | 2026-10-30 |
-| 9 | review | worktree-agent-a42dfa66c2fb047c6 | sonnet | ruff+pyright clean, 375+179 pass (agent); catalog 98 pass (me); detail `<op>:reason=<code>`; 4ab2eda | 2026-11-11 |
-| 10 | todo | | sonnet | | 2026-11-11 |
+| 9 | merged | worktree-agent-a42dfa66c2fb047c6 | sonnet | ruff+pyright clean, 375+179 pass (agent); catalog 98 pass (me); detail `<op>:reason=<code>`; review APPROVED (non-blocking: service type narrowed to ReasonCode by orchestrator); merged 8427ecc | 2026-11-11 |
+| 10 | in-progress | worktree (agent) | sonnet | dispatched wave 2 against item 13 contract | 2026-11-11 |
 | 11 | merged | worktree-agent-aaee7ceb1027a9c2a | sonnet | tsc+eslint clean; a11y+audit 517/518 (1 keyboard flake, green alone; agent); audit subset 28 pass (me); real-stack --list 42 tests, ENTRIES==manifest 41; merged e94157c | 2026-11-11 |
 | 12 | todo | | sonnet | | 2026-11-11 |
-| 13 | in-progress | worktree (agent) | opus | dispatched wave 1 | 2026-11-11 |
+| 13 | review | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); d548135 | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
 
