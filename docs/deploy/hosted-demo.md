@@ -483,13 +483,15 @@ month, run `status`, decide whether the demo is still wanted, and if so extend t
 - Workers never report healthy. They need `NS_WORKER_HEALTH_HOST=0.0.0.0`; the template sets it.
 - Workers run six roles only. The recommendations and evaluation roles read compose-mounted data the
   hosted image lacks, so those records are written by the seeder instead.
-- Copilot shows disabled. Expected until a dated Commercial `centralus` capability row exists for the
-  chosen model (decision 5) and S4 ran. `NS_COPILOT_MODEL_FEATURE` and `NS_COPILOT_SKU` are set from
-  the chosen model but are unverified until a live answer proves them. The template parameter
-  `copilotMode` defaults to `disabled` (`NS_COPILOT_MODE`). With `approved_endpoint` and no matching
-  capability row the copilot builder fails and blocks `/readyz`. `deploy` passes every template
-  parameter from its own flags (not from `main.bicepparam`), so once the decision 5 row exists the
-  operator re-runs `plan` and `deploy` with `--copilot-mode approved_endpoint`.
+- Copilot shows disabled. That is the default (`copilotMode` is `disabled`, `NS_COPILOT_MODE`). The
+  Commercial `centralus` `model_gpt_4_1_mini` / `Global Standard` capability row now exists (observed
+  2026-11-11, availability only), so the copilot can be enabled: re-run `plan` and `deploy` with
+  `--copilot-mode approved_endpoint` plus the endpoint and deployment flags (`deploy` passes every
+  template parameter from its own flags, not from `main.bicepparam`). The API's managed identity needs
+  `Cognitive Services OpenAI User` on the account. `NS_COPILOT_MODEL_FEATURE` and `NS_COPILOT_SKU` stay
+  unverified until a live answer proves them (OPEN). With `approved_endpoint` and no matching row the
+  copilot builder fails and blocks `/readyz`. Variables, role and every reason code are in the
+  [copilot runbook](../runbooks/copilot.md).
 - The API's `/readyz` probes (`NS_PROBE_COSMOS_URL`, `NS_PROBE_EVENTHUBS_HOSTPORT`,
   `NS_PROBE_BLOB_HOSTPORT`) default to the local emulators on `localhost`. The template sets them
   to the deployment's private Cosmos, Event Hubs (AMQPS 5671) and blob hosts from the module

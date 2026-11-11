@@ -191,7 +191,7 @@ export function ShareDialog({ report }: { readonly report: ReportView }): ReactE
                 const value = principalId.trim();
                 if (value === "") return;
                 share.mutate(
-                  { ...params, principalId: value },
+                  { ...params, principalId: value, etag: report.etag },
                   {
                     onSuccess: () => {
                       setPrincipalId("");
@@ -225,7 +225,7 @@ export function ShareDialog({ report }: { readonly report: ReportView }): ReactE
                       disabled={unshare.isPending}
                       onClick={() =>
                         unshare.mutate(
-                          { ...params, principalId: id },
+                          { ...params, principalId: id, etag: report.etag },
                           { onSuccess: () => void invalidate() },
                         )
                       }
@@ -270,7 +270,7 @@ export function RequestPublication({
         disabled={request.isPending}
         onClick={() =>
           request.mutate(
-            { domainId: report.domain_id, reportId: report.id },
+            { domainId: report.domain_id, reportId: report.id, etag: report.etag },
             { onSuccess: () => void invalidate() },
           )
         }

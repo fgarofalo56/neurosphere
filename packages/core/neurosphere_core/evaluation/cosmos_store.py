@@ -433,6 +433,31 @@ class CosmosEvaluationStore:
             params.append({"name": "@dimension", "value": dimension})
         return clauses, params
 
+    async def get_result(
+        self, scope: IdentityScope, domain: str, evaluation_id: str
+    ) -> EvaluationResult | None:
+        if domain not in scope.allowed_domains:
+            return None
+        # Point read: id derived as in ``put_result``, partition key from the scope + domain.
+        try:
+            row = await self._results.read_item(
+                item=_doc_id(evaluation_id), partition_key=[scope.customer_id, domain]
+            )
+        except CosmosResourceNotFoundError:
+            return None
+        except Exception as exc:
+            _raise_mapped(exc)
+        if row.get("doc_type") != RESULT_DOC_TYPE:
+            return None
+        result = _result_from_row(row)
+        if (
+            result.cloud != scope.cloud
+            or result.customer_id != scope.customer_id
+            or result.domain_id.root != domain
+        ):
+            return None
+        return result
+
     async def list_results(
         self,
         scope: IdentityScope,

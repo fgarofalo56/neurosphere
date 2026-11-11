@@ -88,7 +88,11 @@ def check_report_runs_per_viewer_scope(wired: Wiring) -> None:
     assert wired.reports("POST", CAROL, f"/{report_id}/run").status_code == 404
 
     shared = wired.reports(
-        "POST", ALICE, f"/{report_id}/shares", json={"principal_id": principal(CAROL)}
+        "POST",
+        ALICE,
+        f"/{report_id}/shares",
+        json={"principal_id": principal(CAROL)},
+        headers={"If-Match": created.json()["etag"]},
     )
     assert shared.status_code == 200, shared.text
 

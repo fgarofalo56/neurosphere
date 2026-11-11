@@ -30,6 +30,7 @@ __all__ = [
     "ConversationList",
     "ConversationSummary",
     "ConversationView",
+    "CopilotStatus",
     "DeniedEvent",
     "DoneEvent",
     "ErrorEvent",
@@ -173,6 +174,17 @@ class CitationEvent(CitationView):
 
 class ChartEvent(_Model):
     chart_plan: dict[str, object]
+    query_spec: dict[str, object] | None = None
+    """The exact ``StructuredQuery`` of the one tool call that supplied the chart's rows, only
+    when it is report-runnable. Set by the server from its own record of tool calls; never by the
+    model. Omitted from the wire when absent."""
+
+
+class CopilotStatus(_Model):
+    """``GET /api/v1/copilot/status``: the copilot component state, never any configuration."""
+
+    state: Literal["ready", "disabled", "failed"]
+    reason_code: str | None = None
 
 
 class ActionSuggestionEvent(_Model):
@@ -241,8 +253,13 @@ class SseEvent(BaseModel):
     payload: EventPayload
 
     def encode(self) -> bytes:
+        exclude = (
+            {"query_spec"}
+            if isinstance(self.payload, ChartEvent) and self.payload.query_spec is None
+            else None
+        )
         data = json.dumps(
-            self.payload.model_dump(mode="json", by_alias=True),
+            self.payload.model_dump(mode="json", by_alias=True, exclude=exclude),
             separators=(",", ":"),
             ensure_ascii=False,
         )

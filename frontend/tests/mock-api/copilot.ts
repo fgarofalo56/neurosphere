@@ -28,6 +28,7 @@ export const FIXTURE_NAMES = [
   "denied",
   "action_suggestion",
   "error",
+  "chart_saveable",
 ] as const;
 export type FixtureName = (typeof FIXTURE_NAMES)[number];
 
@@ -412,7 +413,7 @@ async function streamFixture(
     res.end();
     return;
   }
-  // answered
+  // answered (`chart_saveable` is the same answer whose chart carries the server's query_spec)
   sse(res, "tool", { name: "get_cost_summary", status: "started" });
   sse(res, "tool", { name: "get_cost_summary", status: "ok" });
   for (const [i, part] of ANSWER_TOKENS.entries()) {
@@ -431,7 +432,13 @@ async function streamFixture(
     { record_id: "r3", kind: "cost_record", source: "billing", as_of: null, freshness: "unknown" },
   ];
   for (const c of citations) sse(res, "citation", c);
-  sse(res, "chart", { chart_plan: barPlan() });
+  sse(
+    res,
+    "chart",
+    fixture === "chart_saveable"
+      ? { chart_plan: barPlan(), query_spec: querySpec() }
+      : { chart_plan: barPlan() },
+  );
   sse(res, "done", { message_id: messageId, status: "answered" });
   turn("answered", null, ANSWER_TOKENS.join(""));
   res.end();
@@ -454,6 +461,22 @@ export function copilotHandler(
 ): void {
   if (!admit(ctx)) return;
   const { req } = ctx;
+  if (/^status\/?$/.test(rest)) {
+    // GET /api/v1/copilot/status: state only. `?state=disabled|failed` selects the variant.
+    if (req.method !== "GET") {
+      json(ctx, 405, { error: "method not allowed" });
+      return;
+    }
+    const wanted = ctx.url.searchParams.get("state");
+    if (wanted === "disabled") {
+      json(ctx, 200, { state: "disabled", reason_code: "copilot_unconfigured" });
+    } else if (wanted === "failed") {
+      json(ctx, 200, { state: "failed", reason_code: "copilot_endpoint_invalid" });
+    } else {
+      json(ctx, 200, { state: "ready", reason_code: null });
+    }
+    return;
+  }
   const match = /^conversations(?:\/([^/]+)(?:\/(messages))?)?\/?$/.exec(rest);
   if (match === null) {
     json(ctx, 404, { error: "not found" });

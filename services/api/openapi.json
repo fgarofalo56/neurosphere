@@ -2567,6 +2567,37 @@
         "title": "ConversationView",
         "type": "object"
       },
+      "CopilotStatus": {
+        "additionalProperties": false,
+        "description": "``GET /api/v1/copilot/status``: the copilot component state, never any configuration.",
+        "properties": {
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "disabled",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "CopilotStatus",
+        "type": "object"
+      },
       "CorrelationId": {
         "pattern": "^[A-Za-z0-9._-]{1,128}$",
         "title": "CorrelationId",
@@ -19052,6 +19083,27 @@
         ]
       }
     },
+    "/api/v1/copilot/status": {
+      "get": {
+        "operationId": "copilot_status_api_v1_copilot_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Copilot Status",
+        "tags": [
+          "copilot"
+        ]
+      }
+    },
     "/api/v1/dashboards/domains/{domain}/{metric}": {
       "get": {
         "operationId": "get_dashboard_api_v1_dashboards_domains__domain___metric__get",
@@ -21659,19 +21711,12 @@
           {
             "in": "header",
             "name": "If-Match",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 300,
-                  "minLength": 1,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "If-Match"
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
             }
           }
         ],
@@ -21860,19 +21905,12 @@
           {
             "in": "header",
             "name": "If-Match",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 300,
-                  "minLength": 1,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "If-Match"
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
             }
           }
         ],
@@ -21954,19 +21992,12 @@
           {
             "in": "header",
             "name": "If-Match",
-            "required": false,
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 300,
-                  "minLength": 1,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "If-Match"
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
             }
           }
         ],

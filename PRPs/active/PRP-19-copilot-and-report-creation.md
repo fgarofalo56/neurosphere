@@ -1,11 +1,11 @@
 ---
 name: PRP-19-copilot-and-report-creation
-status: backlog
+status: active
 priority: P1
 order: 10
-pr: 87
-started: 2026-10-21
-branch: prp-19-copilot-and-report-creation
+pr: 202
+started: 2026-11-11
+branch: prp-19-round2
 review: required
 created: 2026-10-08
 model: sonnet
@@ -196,6 +196,159 @@ PRD planning target (to be measured, not guaranteed): copilot first token <=3s, 
 - Pattern references: Fluent UI v9; typed API client; streaming handling with typed errors.
 - Tests to write: `frontend/src/features/copilot/copilot.test.tsx`, `frontend/tests/e2e/copilot.spec.ts`, `tests/e2e/copilot/test_first_token.py`.
 
+### Round 2: audit gap closure (items 8-15, added 2026-11-11)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-11 against main 6d93f15:
+- `NS_COPILOT_MODE` defaults to `disabled` in compose (`docker-compose.yml:147`), in `infra/demo/main.bicepparam` and in `runtime/builders/copilot.py`.
+- `foundry.yaml` has only Government `foundry.model_*` rows, so a Commercial copilot (hosted: centralus, `model_gpt_4_1_mini`, `Global Standard`) resolves disabled.
+- `EmptyEvidenceReader` is wired in `runtime/builders/planes.py:333` and is the `copilot/dependencies.py:114` default.
+- The `chart` SSE event never carries `query_spec`; the frontend `stream.ts` already handles it.
+- Reports `If-Match` is optional on share, unshare and request-publication, and `reports/service.py` emits no audit events.
+- `copilot/models/redaction.py` has no phone, address or "password is" patterns.
+- The chat shows "unavailable right now, try again" for a deployment that is simply unconfigured.
+- No real-stack copilot test exists.
+
+Learn, observed 2026-11-11 (https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability): gpt-4.1-mini 2025-04-14 is available on Global Standard in brazilsouth, canadaeast, centralus, eastus, eastus2, northcentralus, southcentralus, westus and westus3 (not canadacentral), and on Data Zone Standard in centralus, eastus, eastus2, northcentralus, southcentralus, westus and westus3.
+
+User decisions 2026-11-11:
+- A real endpoint plus Commercial matrix rows. No fake or sandbox model mode.
+- The default stays `disabled`, with a clear reason and a runbook.
+- The live model run stays OPEN.
+- Include save-from-chat, reports hardening, redaction hardening, and the chat UI and tool fixes.
+
+### Item 8 - commercial-copilot-config  [P]
+- Deliverable:
+  - Commercial `foundry.model_gpt_4_1_mini` matrix rows:
+    - `Global Standard` in the nine regions above;
+    - `Data Zone Standard` in the seven US regions above;
+    - each row `availability: available`, `ga_status: ga`, `authorization_scope: none_claimed`, `observed_on: '2026-11-11'`, `source_url` = the page above.
+  - `docker-compose.yml` passes `NS_COPILOT_MODE` (default `disabled`), `_ENDPOINT`, `_DEPLOYMENT`, `_API_VERSION`, `_REGION`, `_MODEL_FEATURE`, `_SKU` and `_OAUTH_SCOPE` through from the operator environment. There are no credential variables (the builder refuses them).
+  - New runbook `docs/runbooks/copilot.md`:
+    - choosing a model and region from the matrix;
+    - creating the deployment;
+    - granting the API identity `Cognitive Services OpenAI User`;
+    - the env vars;
+    - running the API on the host with `az login` for local real-model use;
+    - every readiness reason code and its fix.
+  - Update the `docs/deploy/hosted-demo.md` "Copilot shows disabled" paragraph and the G01 row note in `docs/RESEARCH-AND-GATES.md`.
+- Owned files: `packages/core/neurosphere_core/capabilities/data/foundry.yaml` (new rows only), the tests that pin "Commercial copilot disabled", `docker-compose.yml` (API copilot env only), `docs/runbooks/copilot.md` (new), `docs/deploy/hosted-demo.md` (copilot paragraph), the `docs/RESEARCH-AND-GATES.md` G01 note.
+- Must NOT touch: other matrix rows, product code, `infra/`.
+- Acceptance criteria:
+  - Matrix validation passes.
+  - `resolve_adapters(cloud=commercial, region=centralus, model_gpt_4_1_mini, Global Standard)` enables `approved_endpoint`.
+  - canadacentral and a Government region with a Commercial endpoint stay disabled with a reason.
+  - `docker compose config -q` passes and compose still defaults to `disabled`.
+
+### Item 9 - evidence-reader  [P] (review: required)
+- Deliverable: a production `EvidenceReader` that resolves ids over existing scope-filtered stores: recommendations, evaluation results and catalog entities.
+  - Lookups are point reads restricted to the server-derived domain ids.
+  - An unknown, unreadable or out-of-domain id is omitted; existence is never leaked.
+  - `observed_at` comes from the record, so citations carry real freshness.
+  - Kinds without a store are omitted and documented.
+  - Wire it in the copilot builder by setting `app.state.copilot_evidence_reader`.
+- Owned files: `services/api/neurosphere_api/copilot/evidence.py` (new), `services/api/neurosphere_api/runtime/builders/copilot.py`, `services/api/tests/copilot_api/test_evidence_reader.py` (new), the copilot builder tests.
+- Must NOT touch: other files in `services/api/neurosphere_api/copilot/` (item 10), `runtime/builders/planes.py` (the orchestrator wires it after items 9 and 11), `packages/core/`.
+- Acceptance criteria:
+  - Cross-domain and unknown ids are omitted.
+  - Each kind resolves from a real in-memory store, not a mock.
+  - Freshness is populated.
+  - An evidence question through the engine with a seeded recommendation answers with a citation instead of abstaining.
+
+### Item 10 - save-from-chat-and-status  [P] (review: required)
+- Deliverable:
+  - The `chart` SSE event carries `query_spec`: the exact `StructuredQuery` of the tool call whose records filled the chart. It is attached only when the reports service's query validation accepts that query; otherwise it is omitted. The model never authors `query_spec`.
+  - `GET /api/v1/copilot/status` returns `{state: ready|disabled|failed, reason_code}`. It requires authentication, has no permission beyond sign-in, and never exposes the endpoint URL.
+  - A mock-api chart fixture with `query_spec`.
+- Owned files: `services/api/neurosphere_api/copilot/` (except `evidence.py`), `services/api/tests/copilot_api/` (except `test_evidence_reader.py`), copilot fixtures in `frontend/tests/mock-api/`.
+- Must NOT touch: `reports/`, `packages/core/`, `frontend/src/`, `openapi.json` (the orchestrator regenerates it).
+- Acceptance criteria:
+  - The emitted `query_spec` is accepted by `POST .../reports` and runs under the viewer's scope.
+  - A chart built from several tool calls, or from no tool call, carries none.
+  - The injection corpus stays 78/78 with 0 overscoped.
+  - The status route covers disabled, failed and ready.
+
+### Item 11 - reports-hardening  [P] (review: required)
+- Deliverable:
+  - `If-Match` is required on share, unshare and request-publication. Missing returns 422 and stale returns 409 `stale_version`, matching decision.
+  - Audit events through `neurosphere_core.audit` for run, share, unshare, publication request and decision, including denials.
+  - Principal ids are normalized (strip, casefold) before the share and self-approval comparisons.
+  - A RunCache scope-hash test.
+  - The reports UI sends the viewed ETag on those calls.
+- Owned files: `services/api/neurosphere_api/reports/`, `services/api/tests/reports/`, `frontend/src/features/reports/`, `services/api/neurosphere_api/runtime/builders/planes.py` (`_reports` only: pass the audit repository).
+- Must NOT touch: `copilot/`, `charts/`, `openapi.json`.
+- Acceptance criteria:
+  - Missing and stale ETag tests pass for all three routes.
+  - Audit rows are asserted per action, including a denied one.
+  - A mixed-case self-approval is refused.
+  - The same dashboard with two viewer scopes yields two cache keys.
+  - Vitest for the reports feature passes.
+
+### Item 12 - redaction-hardening  [P]
+- Deliverable: `copilot/models/redaction.py` masks:
+  - phone numbers (US and E.164);
+  - street addresses (house number plus street suffix);
+  - "password is/:", "pwd", "passcode" and similar phrasing;
+  - `key=value` secrets.
+
+  Ids and dates must not be over-redacted. `tool_call_id` is shape-validated (an opaque token, otherwise refused). `tool_name` stays allowlist-checked, not redacted, because redacting it breaks function calling. Person names remain a documented limit (no NER).
+- Owned files: `packages/core/neurosphere_core/copilot/models/redaction.py`, `packages/core/tests/copilot/test_redaction*.py`.
+- Must NOT touch: `copilot/tools/`, adapter files other than a call-site line if `tool_call_id` validation needs one (report it).
+- Acceptance criteria: positive and negative cases for each pattern; the adapter contract tests stay green.
+
+### Item 13 - chat-ui-fixes
+- Deliverable:
+  - Discard streamed text on an `error` terminal.
+  - The first-token clock starts after conversation creation.
+  - The module-level `useCopilotSelection` store becomes a provider, so nothing leaks across sessions or tests.
+  - The dock reads `/copilot/status` and shows "The assistant is not configured in this deployment" with the reason code when disabled or failed (an operator hint, never "try again"), and hides the composer.
+- Owned files: `frontend/src/features/copilot/`.
+- Must NOT touch: `frontend/src/api/`, `features/actions/`, `features/reports/`, `services/`.
+- Depends on: Item 10.
+- Acceptance criteria: Vitest covers each fix; tsc and eslint are clean; the copilot Playwright spec passes against the mock API.
+
+### Item 14 - tool-fixes  [P] (review: required)
+- Deliverable:
+  - `propose_action` refuses evidence refs that the `EvidenceReader` cannot resolve in scope (deny, logged).
+  - `lifecycle_status in []`, and any empty `in` list, is refused, not treated as no filter.
+  - A contract test that the real catalog repository's `get_entity` hides unreadable entities.
+- Owned files: `packages/core/neurosphere_core/copilot/tools/`, `packages/core/tests/copilot/test_tool_*.py`.
+- Must NOT touch: `copilot/models/`, `services/`.
+- Acceptance criteria: the tests above pass; the core copilot suite and the injection corpus stay green.
+
+### Item 15 - copilot-real-stack-loop
+- Deliverable: `tests/integration/real_stack/test_copilot_loop.py` (`pytest.mark.integration`, compose emulators at 127.0.0.1).
+  - Setup: the composed API, with the real `ApprovedEndpointAdapter` over a recorded HTTP transport (no network, no fixture adapter) and seeded catalog and recommendations.
+  - Flow:
+    1. Ask a question; the tool call returns citations with freshness from Cosmos records, and evidence resolves through item 9.
+    2. An action suggestion drafts through the real action plane.
+    3. The chat chart is saved as a report through item 10's `query_spec`.
+    4. A second user runs the shared report under their own scope.
+    5. After the share is revoked, the next run is denied.
+  - Output is recorded in `docs/evidence/G12/copilot/`.
+- Owned files: that test, `docs/evidence/G12/copilot/`.
+- Must NOT touch: product code; report gaps instead.
+- Depends on: Items 8, 9, 10, 11.
+- Acceptance criteria: passes locally against `docker compose up -d --wait`; never runs in CI.
+
+### Item 16 - evaluation-result-point-read  [P] (added 2026-11-11, user decision)
+Why: `EvaluationStore` has no by-id read (only list, scan and window reads). As a result the item 9 reader omits every `evaluation_result` evidence id in production.
+- Deliverable: a scope-filtered `get_result(scope, domain, evaluation_id) -> EvaluationResult | None` on the `EvaluationStore` protocol, plus the in-memory and Cosmos implementations.
+  - It must be a point read: the Cosmos partition key and id, never a query scan.
+  - An out-of-scope domain or a cloud mismatch returns None. It never raises a "not found vs forbidden" distinction.
+- Owned files: `packages/core/neurosphere_core/evaluation/store.py`, `packages/core/neurosphere_core/evaluation/cosmos_store.py`, and their core tests.
+- Must NOT touch: `services/`, `evaluation/pipeline.py`, `packages/contracts/`.
+- Acceptance criteria:
+  - Get-by-id returns the result for an in-scope caller.
+  - It returns None for an unknown id, another domain, or another customer or cloud.
+  - The Cosmos store uses `read_item`, shown by a unit test with a fake container.
+  - The item 9 reader resolves `eval:` ids through it once merged (orchestrator re-runs the item 9 tests).
+
+Waves (round 2): 1 = items 9, 10, 11, 14; 2 = items 8, 12, then 13 after item 10 merges; 3 = item 15 (the only compose lane).
+
+Orchestrator seams:
+- Swap the reports registry's `EmptyEvidenceReader` in `planes.py` to the item 9 reader once items 9 and 11 have merged.
+- Regenerate `openapi.json` and `docs/reference`.
+- Write the OPEN notes in RESEARCH-AND-GATES.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -256,6 +409,8 @@ Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D 
 - Terminal semantics: `denied` = a policy boundary refused something in the turn (unregistered tool or argument, scope-shaped argument, missing permission, banned chart plan, raw query, disclosure of system prompt/secrets); `abstain` = no authorized evidence supports an answer (no tool records, or the model's text cites ids no tool result produced, or the model only tried to change its own behaviour). Text tokens already streamed before an `abstain`/`denied` are discarded by the UI and never persisted as an answer.
 - Reports (item 5): `POST/GET /api/v1/reports/domains/{domain_id}/reports`, `GET/PUT/DELETE .../reports/{report_id}`, `POST .../reports/{report_id}/run` (re-validates plan + re-authorizes as the viewer every run), `POST .../reports/{report_id}/shares` `{principal_id}` / `DELETE .../shares/{principal_id}`, `POST .../reports/{report_id}/publication` (request add-to-UI, `report.create`) and `POST .../reports/{report_id}/publication/decision` `{decision: approve|reject}` (different principal with `config.manage`; self-approval refused). Stored report = `{id, domain_id, owner, title, chart_plan, query_spec, shares[], publication: {state: none|pending|approved|rejected, ...}, etag}`; never stored result data.
 
+Round 2 (items 8-15) approved 2026-11-11 as written: integration branch `prp-19-round2` from main 6d93f15; reviews on items 9, 10, 11, 14; Haiku rework confirmations.
+
 | Item | Status | Branch | Model | Evidence | Updated |
 |------|--------|--------|-------|----------|---------|
 | 1 | merged | worktree-agent-acec59f7281c6b9a0 | sonnet | ed89a6f; orchestrator re-run: only copilot/__init__ + copilot/tools/ + conftest + test_tool_scope + test_tool_allowlist touched, ruff + format clean, pyright 0 errors, core copilot + import boundaries 78 passed; decisions: D6 scope-shaped args refused (key-normalised), unsupported StructuredQuery clauses (sort/group_by/fields/cursor/traversal) refused not dropped, limit cap 100, timeout cap 10 s; no core evidence service, item 2 must supply an `EvidenceReader`; reviewer APPROVED (follow-ups: empty `lifecycle_status in []` likely means no filter, model-supplied evidence refs on propose_action not existence-checked, contract test that real `get_entity` hides unreadable entities); merge 52e2255 (copilot/__init__ auto-merged with item 3); post-merge core copilot + import boundaries 159 passed | 2026-10-21 |
@@ -265,6 +420,15 @@ Waves: A = items 1, 3, 4 in parallel; B = items 2, 5 in parallel; C = item 7; D 
 | 5 | merged | worktree-agent-aa9a3fcd231240a36 | sonnet | e1bbb38; orchestrator re-run: only reports/ (api, tests, frontend) touched, ruff + format clean, pyright 0 errors, reports + charts + test_app + openapi drift 128 passed 3 deselected (Cosmos integration), tsc + eslint clean, vitest reports + charts + app 67 passed; additive: ReportView `is_owner`/`can_decide_publication`, optional `metric`, `?publication_state=`, approved publication readable/runnable by `data.read` holders under their own scope, stored plan is a template (`data.values` emptied, refilled + re-validated per run, `no_data` status); reviewer CHANGES REQUIRED (blocker: publication decision If-Match optional, owner edit + re-request race lets a reviewer approve an unseen definition) -> rework round 1 a8655d6 (decision route requires If-Match, missing -> 422, stale -> 409 `stale_version`, UI sends viewed ETag, race test); orchestrator re-run: ruff + pyright clean, reports + charts + test_app + openapi drift 130 passed 3 deselected, tsc + eslint clean, vitest 67 passed; haiku confirmation CONFIRMED FIXED (note: `_check_etag` None guard still present but unreachable for decisions); follow-ups: If-Match optional on share/unshare/request-publication, principal-id normalization for self-approval compare, RunCache scope-hash test, raw principal ids (no directory lookup), no audit events for run/share/decision, unsupported stored query fails only at run (422); merge 6bc3efe; post-merge reports + copilot_api + core copilot + charts + import boundaries + test_app + openapi drift 378 passed 4 deselected, tsc clean, vitest 67 passed | 2026-10-21 |
 | 6 | merged | worktree-agent-abbe4fd3d153e829d | sonnet | feb036c; orchestrator re-run: only copilot feature + e2e spec + tests/e2e/copilot + docs/evidence/G07/copilot touched, tsc + eslint clean, ruff + format + pyright clean, first token unmarked test 1 passed (re-run p50 62 ms, p95 69 ms, max 139 ms; committed evidence run p50 119 ms, p95 140 ms, max 296 ms, n=30, recorded fixtures, provider excluded, target <= 3 s printed not asserted), collection 255 no clash, build ok, full Playwright 83 passed; full vitest flaked 1 in 5 (reports sharing / actions button flow: Fluent dialog `findByRole` past the 1 s default under parallel load; integration branch without item 6 0 in 5) -> orchestrator seam fix 44b5fe7 (Testing Library asyncUtilTimeout 5 s in frontend/tests/setup.ts); handoff navigates to `/actions/detail?domain_id=&intent_id=` (PRP-17 Validate -> Request confirmation -> dialog), chat calls only conversation create + message post; reviewer CHANGES REQUIRED (blocker: Save as report paired the chat chart with a hardcoded daily cost query, undisclosed) -> rework round 1 2731e1a (save offered only when the `chart` event carries `query_spec`, never sent today; saveQuery.ts deleted); orchestrator re-run: tsc + eslint clean, vitest copilot + reports + app 75 passed (1 intermittent failure on the branch without 44b5fe7, then 3/3 green), Playwright copilot + smoke 8 passed; haiku confirmation CONFIRMED FIXED; follow-ups: add `query_spec` to the `chart` event contract to re-enable save from chat, discard streamed text on `error` terminal, client first-token clock includes conversation creation on the first message, `useCopilotSelection` module-level store leaks across sessions/tests, axe excludes `[data-tabster-dummy]`; merge 83baac1; post-merge full vitest 8/8 runs 389 passed | 2026-10-22 |
 | 7 | merged | worktree-agent-a218c4a7a119cb3bd | sonnet | dc95aba; orchestrator re-run: only item 7 owned files, ruff + pyright clean, core copilot + charts + copilot_api + reports + tests/integration/copilot + test_app + openapi drift + actions_api 416 passed 7 deselected; corpus with REAL chart validator 78/78, 0 overscoped (deny:chart_plan_rejected=7); Cosmos emulator `-m integration tests/integration/copilot` 3 passed; licences PASS (603); tsc + eslint clean, full vitest 34 files 361 passed, build ok, Playwright smoke + chart-sandbox + actions 26 passed; openapi +10 paths +46 components, NOT purely additive (7 module-qualified renames: DecisionBody, TimeRange, Lock-*, Timestamp-Input, Validity-*); no container provisioning precedent (stores create containers in code); httpx >=0.28,<0.29 declared in packages/core; mock fixtures answered/abstain/denied/action_suggestion/error via `?fixture=` > `fixture:<name>` text > keywords; CopilotDock mounted in Layout (routes.tsx) inside ErrorBoundary; open: production app.state bootstrap still absent (composition tests stand in); reviewer APPROVED (follow-ups: wrapper `exclude_unset=True` drops schema defaults from emitted plans, re-export `validate_chart_plan_mapping`, check mock SSE tool names vs contract when item 6 lands, call out the 7 OpenAPI renames in the PR); merge 8b71985; post-merge 416 passed 7 deselected, tsc clean, vitest app + reports + charts 67 passed | 2026-10-21 |
+| 8 | merged | worktree-agent-a1dba54c780fad516 | sonnet | b074c20; 16 rows foundry.model_gpt_4_1_mini.commercial.<region>.global-standard (brazilsouth, canadaeast, centralus, eastus, eastus2, northcentralus, southcentralus, westus, westus3) and .data-zone-standard (7 US regions), GA, none_claimed, observed 2026-11-11 (Learn verified by orchestrator); compose NS_COPILOT_* passthrough default disabled; docs/runbooks/copilot.md; hosted-demo + G01 note; tests: gating commercial (centralus GS enabled, canadacentral GS + brazilsouth DZS disabled, Gov + Commercial endpoint endpoint_cloud_mismatch), loader row count 646 -> 662 and TODAY 2026-11-11; orchestrator found item 14's bare 'from conftest import _agent' failed deterministically with tests/contracts in-session -> fix e8bd39c (agent_factory fixture); orchestrator re-run: capabilities + contracts matrix + core copilot 245 passed, compose config ok, validate_planning exit 0; merge 67ba291; post-merge runtime_planes + copilot_api 178 passed; operator: .env.example NS_COPILOT_* lines owed | 2026-11-11 |
+| 9 | merged | worktree-agent-a67baa0caec1c9674+worktree-agent-a60fea91e1390a58d | sonnet | c665eb1 + rework 4d90451; StoreEvidenceReader (eval: prefix -> evaluation get_result, 5-segment recommendation id -> recommendation, else catalog; cap 50; observed_at from record; catches only ForbiddenError/InvalidSchemaError per id, everything else propagates); orchestrator re-run: copilot_api + runtime_planes 165 passed; reviewer CHANGES REQUIRED (except Exception masked outages) -> rework round 1; Haiku CONFIRMED FIXED (11 passed); merge b37ea57; post-merge 1 failure = item 9 test pinning 'shipped evaluation store omits eval evidence', obsoleted by item 16 -> orchestrator fix-forward fafc1c4 (shipped store now resolves eval: ids; absent point read still omits); reports registry keeps EmptyEvidenceReader by design (report runs only execute tool_for tools), documented in planes.py | 2026-11-11 |
+| 10 | merged | worktree-agent-a57884b80eaa44193 | sonnet | d75ffd5; orchestrator re-run: ruff + pyright clean, copilot_api + reports + test_app 163 passed (corpus 78/78); query_spec only when exactly one recorded query tool call's result ids equal the chart record_id set and it passes StructuredQuery + ReportBody + validate_chart_plan (cost metric default only); model-supplied query_spec popped; GET /copilot/status from the composition registry (falls back to get_copilot); reviewer APPROVED (follow-ups: is_reason_code guard on fallback reason, debug log on unsaveable chart, docs note that rows without record_id are never saveable); merge 20326bf; post-merge copilot_api + reports + test_app + runtime_planes 226 passed, core copilot 168 passed; openapi drift expected (orchestrator regenerates) | 2026-11-11 |
+| 11 | merged | worktree-agent-a76dc3dfffc6b9d78 | sonnet | 7dffb28; orchestrator re-run: reports + runtime_planes + authz + test_app + tests/integration/copilot 301 passed; If-Match required (422 missing / 409 stale) on share/unshare/request-publication; ReportAuditor report.run/share/unshare/publication.request/publication.decide incl. denials (report_not_visible same for missing/invisible, self_approval_refused); normalize_principal strip+casefold at compare and write; composition fails closed without an audit repo; outside ownership (accepted): tests/integration/copilot scenarios/support If-Match, test_planes_builder assertion; reviewer APPROVED (follow-ups: bound URL report_id length in denied audit, audit-write failure turns 404 into 500, legacy shares normalized only on next write); merge cac4546; post-merge reports + copilot_api + runtime + authz + test_app + integration/copilot 515 passed | 2026-11-11 |
+| 12 | merged | worktree-agent-a034bd62310dc89f2 | sonnet | f6927fa; [phone] (E.164 needs +, US needs separators, before the card rule), [address] (number + 1-4 words + bounded suffix list), credential phrasing keeps the label and masks the value (behaviour change: the old rule replaced the label too), generic key=value rule for credential-named keys (max_tokens untouched), safe_call_id in redact_request (non-matching tool_call_id -> call_ + sha256 prefix, applied to call and result so pairing survives), tool_name validated not redacted (mismatch raises ValueError), person names documented as a limit; no fixture or adapter change; orchestrator re-run: ruff + pyright clean, core copilot + evaluation + capabilities + contracts matrix 444 passed, copilot_api 114 passed (corpus 78/78); merge 8de002e; post-merge core copilot + evaluation 379 passed | 2026-11-11 |
+| 13 | merged | worktree-agent-a10a427e21ec4ad59 | sonnet | 1344ae8; error terminal (and client-side failTurn) discards partial text; first-token clock after conversation create (injectable now); CopilotSelectionProvider per-provider store, dock wraps itself, module-level setCopilotSelection removed (no product page publishes a selection; Shell.tsx must wrap Outlet + dock for pages to publish: follow-up); useCopilotStatus on open: disabled/failed shows 'not configured' + reason + runbook hint, no composer; 503 copilot_unconfigured same message; implementer: Playwright copilot 7 passed; orchestrator re-run: tsc + eslint clean, vitest copilot + app 119 passed; merge dcaef7a; post-merge vitest copilot + reports + app 154 passed | 2026-11-11 |
+| 14 | merged | worktree-agent-aa47edf72fd10f9b2 | sonnet | b2ed8ae; orchestrator re-run: ruff + format clean, pyright 0, core copilot 168 passed, corpus + tests/security/mcp 53 passed; propose_action refuses unresolved evidence refs (ForbiddenError evidence_ref_unresolved, count-only log), empty in/eq filter values refused (ToolBudgetError empty_filter_values; contract already rejects values: [] so the gap was in/eq with neither value nor values), real InMemoryCatalogRepository hides unreadable entity (no get_entity tool exists; tested via propose_action + search_catalog); reviewer APPROVED (follow-ups: split branchy empty-in test, document all-or-nothing evidence refusal in the tool description, MCP-path test for evidence refusal); merge 56659cb; post-merge core copilot 168 passed | 2026-11-11 |
+| 15 | merged | worktree-agent-ac3b8a8c00215ab0d+worktree-agent-a02724a52165ee950 | sonnet | f59e3ed + 9721bc8; tests/integration/real_stack/test_copilot_loop.py (integration marker, compose emulators, real authz/data/planes/action/reports/copilot builders, REAL ApprovedEndpointAdapter enabled by the item 8 matrix row (commercial centralus model_gpt_4_1_mini Global Standard) over a sequential recorded-HTTP transport + static fake credential); 9 steps PASS: status ready; chart turn context/tool ok/3 citations (as_of = Cosmos updated_at)/chart with query_spec/done; evidence turn cites recommendation + evaluation result (item 16 get_result; as_of = completed_at; domain B eval id not cited); action_suggestion intent drafted not executed; chart saved as report, owner run 3 rows; shared viewer B 2 of 3 rows; unshare with If-Match -> B 404; user C denied domain_out_of_scope / abstain no_authorized_evidence, user D 403; Cosmos audit report.run (after + denied), share, unshare; follow-up 9721bc8 replaced a stale 'no by-id read' claim with a seeded eval citation and fixed the evidence.py docstring; freshness stale (example timestamps old); evidence docs/evidence/G12/copilot/real-stack-loop-2026-11-11.md; orchestrator re-run: 1 passed 8.53 s, default selection 1 deselected; merge 826e8fe, post-merge 1 passed 8.30 s; never runs in CI; not exercised: live model, Playwright UI, Government | 2026-11-11 |
+| 16 | merged | worktree-agent-aa228e82cd7b7e00e | sonnet | 6a2a03b; get_result(scope, domain, evaluation_id) on protocol + memory + Cosmos (read_item, pk [customer, domain], doc id _doc_id; None for out-of-scope domain before any read, 404, wrong doc_type, cloud/customer/domain mismatch; other errors mapped via _raise_mapped); orchestrator re-run: ruff + pyright clean, core evaluation 159 passed; implementer: api evaluation + evaluation_worker 112 passed; merge 72dd5c0; emulator conformance not run | 2026-11-11 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-22

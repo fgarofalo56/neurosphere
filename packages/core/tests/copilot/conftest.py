@@ -287,6 +287,13 @@ def scope_factory() -> Callable[[list[tuple[str, list[str]]], list[str]], Identi
 
 
 @pytest.fixture
+def agent_factory() -> Callable[[str, str], Agent]:
+    """``_agent`` as a fixture: a bare ``from conftest import`` resolves to whichever
+    ``conftest`` module pytest imported first (``tests/contracts`` breaks it)."""
+    return _agent
+
+
+@pytest.fixture
 def query_args() -> Callable[..., dict[str, Any]]:
     """Builds a minimal valid StructuredQuery payload (the ``query`` argument of a read tool)."""
 

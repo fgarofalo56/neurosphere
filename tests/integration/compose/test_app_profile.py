@@ -108,7 +108,10 @@ def test_api_and_workers_env_names() -> None:
     ):
         assert name in api, name
     assert api["NS_CORS_ALLOWED_ORIGINS"] == ""
-    assert api["NS_COPILOT_MODE"] == "disabled"
+    # PRP-19 r2 item 8: operator passthrough, still disabled unless the operator opts in.
+    assert api["NS_COPILOT_MODE"] == "${NS_COPILOT_MODE:-disabled}"
+    copilot_env = [name for name in api if name.startswith("NS_COPILOT_")]
+    assert not [n for n in copilot_env if any(m in n for m in ("KEY", "SECRET", "PASSWORD"))]
     for name in (
         "NS_ENV",
         "NS_WORKER_ROLES",

@@ -192,7 +192,8 @@ class Wiring:
 
     def reports(self, method: str, who: str, path: str = "", **kwargs: Any) -> Any:
         url = f"{REPORTS_PREFIX}/domains/{FINANCE}/reports{path}"
-        return self.client.request(method, url, headers=self.headers(who), **kwargs)
+        headers = {**self.headers(who), **kwargs.pop("headers", {})}
+        return self.client.request(method, url, headers=headers, **kwargs)
 
 
 def compose(

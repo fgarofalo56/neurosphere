@@ -42,6 +42,11 @@ export const STRINGS = {
     title: "Request refused",
     prefix: "This request was refused:",
   },
+  notConfigured: {
+    message: "The assistant is not configured in this deployment.",
+    hint: "An administrator can enable it; see the copilot runbook.",
+    reason: (code: string) => `Reason: ${code}`,
+  },
   errorTitle: "Something went wrong",
   citations: {
     label: "Sources",

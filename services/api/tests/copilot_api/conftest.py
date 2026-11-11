@@ -11,6 +11,6 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 _API_TESTS = _HERE.parent
 _REPO_TESTS = _HERE.parents[3] / "tests"
-for _path in (_REPO_TESTS, _API_TESTS / "actions_api", _API_TESTS, _HERE):
+for _path in (_REPO_TESTS, _API_TESTS / "actions_api", _API_TESTS / "reports", _API_TESTS, _HERE):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))

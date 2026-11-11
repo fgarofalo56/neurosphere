@@ -17,7 +17,7 @@ from neurosphere_core.errors import (
 )
 from neurosphere_core.paging import Page
 
-from neurosphere_api.reports.models import PublicationState, StoredReport
+from neurosphere_api.reports.models import PublicationState, StoredReport, normalize_principal
 
 __all__ = [
     "DEFAULT_LIMIT",
@@ -72,9 +72,10 @@ def sort_key(report: StoredReport) -> str:
 
 def visible_to(report: StoredReport, principal_id: str) -> bool:
     """Owner, share principal, or published (approved add-to-UI)."""
+    me = normalize_principal(principal_id)
     return (
-        report.owner == principal_id
-        or principal_id in report.shares
+        normalize_principal(report.owner) == me
+        or me in {normalize_principal(p) for p in report.shares}
         or report.publication.state == "approved"
     )
 

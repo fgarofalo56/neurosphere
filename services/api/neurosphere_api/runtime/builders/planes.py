@@ -330,6 +330,9 @@ def _tool_registry(ctx: BuildContext, clock: DateClock | None) -> ToolRegistry:
             catalog=catalog,
             metrics=metrics,
             recommendations=_StateRecommendations(ctx),
+            # Deliberate: a report run only executes ``reports.service.tool_for`` tools
+            # (search_catalog / get_cost_summary / list_recommendations), never get_evidence. The
+            # copilot's store-backed reader is wired in the copilot builder (PRP-19 r2 item 9).
             evidence=EmptyEvidenceReader(),
             drafter=_NoDrafter(),
             **extra,
@@ -344,7 +347,13 @@ def _reports(ctx: BuildContext) -> None:
     if store is None:
         client, database = _database(ctx)
         store = CosmosReportStore.from_client(client, database=database)
-    configure_reports(ctx.app, store=store, tool_registry=registry, clock=clock)
+    configure_reports(
+        ctx.app,
+        store=store,
+        tool_registry=registry,
+        clock=clock,
+        audit=ctx.shared(AUDIT_REPOSITORY),
+    )
     try:
         get_report_service(_state_request(ctx))
     except DependencyTransientError:

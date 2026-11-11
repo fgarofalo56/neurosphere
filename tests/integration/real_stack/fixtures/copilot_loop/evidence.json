@@ -1,0 +1,24 @@
+{
+  "scenario": "evidence",
+  "authored": "Hand-authored provider-format stream; NOT captured from a live model.",
+  "passes": [
+    {
+      "request_body": {"pass": 1},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"tool_calls": [{"index": 0, "id": "call_evidence", "type": "function", "function": {"name": "get_evidence", "arguments": {"evidence_ids": ["{{REC}}", "{{EVAL_A}}", "{{EVAL_B}}"], "budget": {"timeout_ms": 2000, "limit": 10, "max_depth": 0}}}}]}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+        {"choices": [], "usage": {"prompt_tokens": 300, "completion_tokens": 40}},
+        "[DONE]"
+      ]
+    },
+    {
+      "request_body": {"pass": 2},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"content": "The recommendation is backed by the stored record [cite:r1] and the evaluation result [cite:r2]."}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
+        {"choices": [], "usage": {"prompt_tokens": 380, "completion_tokens": 20}},
+        "[DONE]"
+      ]
+    }
+  ]
+}
