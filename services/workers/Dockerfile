@@ -33,6 +33,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apk upgrade --no-cache && adduser -S -H -D -u 10001 -s /sbin/nologin ns
 COPY --from=builder /app/.venv /app/.venv
+# SYNTHETIC benchmark registry (datasets, rubrics, judge configs, judge fixtures) for the
+# `evaluation` role: NS_WORKER_EVAL_DATA_DIR=/app/evaluation-data. Sandbox data only, no real
+# or production content. Nothing else from sandbox/ is copied.
+COPY sandbox/evaluation/data /app/evaluation-data
 
 WORKDIR /tmp
 USER 10001

@@ -55,7 +55,9 @@ spec:
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
           {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
           {{- $search := and (eq $name "api") $.Values.search.provider }}
-          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply $search }}
+          {{- $evalApi := and (eq $name "api") $.Values.evaluation.pilotDatasetIds }}
+          {{- $evalWorker := and (eq $name "workers") (or $.Values.workers.roles $.Values.evaluation.dataDir) }}
+          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply $search $evalApi $evalWorker }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -111,6 +113,34 @@ spec:
             {{- with $.Values.search.region }}
             - name: NS_SEARCH_REGION
               value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if $evalApi }}
+            # Evaluation pilot datasets read by /quality (names only).
+            - name: NS_EVALUATION_PILOT_DATASET_IDS
+              value: {{ $.Values.evaluation.pilotDatasetIds | quote }}
+            {{- end }}
+            {{- if eq $name "workers" }}
+            {{- with $.Values.workers.roles }}
+            - name: NS_WORKER_ROLES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.evaluation.dataDir }}
+            # SYNTHETIC benchmark registry baked into the workers image.
+            - name: NS_WORKER_EVAL_DATA_DIR
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.evaluation.judge }}
+            - name: NS_WORKER_EVAL_JUDGE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if and $.Values.evaluation.pilotDomainId $.Values.evaluation.pilotSubjectId }}
+            - name: NS_WORKER_EVAL_PILOT_DATASET_IDS
+              value: {{ $.Values.evaluation.pilotDatasetIds | quote }}
+            - name: NS_WORKER_EVAL_PILOT_DOMAIN_ID
+              value: {{ $.Values.evaluation.pilotDomainId | quote }}
+            - name: NS_WORKER_EVAL_PILOT_SUBJECT_ID
+              value: {{ $.Values.evaluation.pilotSubjectId | quote }}
             {{- end }}
             {{- end }}
             {{- if $apimFront }}
