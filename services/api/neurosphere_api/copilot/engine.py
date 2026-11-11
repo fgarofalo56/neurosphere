@@ -31,6 +31,8 @@ from datetime import UTC, datetime
 from typing import Any, Final
 from uuid import uuid4
 
+from neurosphere_contracts.query.v1.structured_query import StructuredQuery
+from neurosphere_core.charts import validate_chart_plan
 from neurosphere_core.copilot.models import (
     ActionSuggestion,
     Completed,
@@ -89,6 +91,8 @@ from neurosphere_api.copilot.models import (
 )
 from neurosphere_api.copilot.settings import CopilotSettings
 from neurosphere_api.copilot.store import TurnStatus
+from neurosphere_api.reports.models import ReportBody
+from neurosphere_api.reports.service import tool_for
 
 __all__ = [
     "CHART_TOOL",
@@ -188,10 +192,23 @@ class _Collected:
     calls: list[ToolCallRequested] = field(default_factory=list[ToolCallRequested])
 
 
+@dataclass(frozen=True, slots=True)
+class _QueryCall:
+    """The server's record of one executed query tool call: the arguments that actually ran."""
+
+    tool: str
+    arguments: Mapping[str, object]
+    result: ToolResult
+
+
+_QUERY_TOOLS: Final = frozenset({"search_catalog", "get_cost_summary", "list_recommendations"})
+
+
 @dataclass
 class _Run:
     """Mutable state of one turn."""
 
+    queries: list[_QueryCall] = field(default_factory=list[_QueryCall])
     results: list[ToolResult] = field(default_factory=list[ToolResult])
     charts: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])
     aliases: dict[str, str] = field(default_factory=dict[str, str])
@@ -255,6 +272,55 @@ def _tool_content(result: ToolResult, state: _Run) -> str:
         state.aliases[handle] = str(record["record_id"])
         record["cite_as"] = handle
     return redact_text(json.dumps(payload, ensure_ascii=False, default=str))
+
+
+def _chart_record_ids(plan: Mapping[str, Any]) -> set[str] | None:
+    """The ``record_id`` of every inline data row, or ``None`` when any row has none."""
+    spec = plan.get("spec")
+    data = spec.get("data") if isinstance(spec, Mapping) else None
+    values = data.get("values") if isinstance(data, Mapping) else None
+    if not isinstance(values, list) or not values:
+        return None
+    ids: set[str] = set()
+    for row in values:
+        record_id = row.get("record_id") if isinstance(row, Mapping) else None
+        if not isinstance(record_id, str) or not record_id:
+            return None
+        ids.add(record_id)
+    return ids
+
+
+def _saveable_query(plan: Mapping[str, Any], state: _Run) -> dict[str, Any] | None:
+    """The ``StructuredQuery`` a chat chart can be saved with, or ``None``.
+
+    Provenance comes from the server's record of this turn's query tool calls: exactly ONE call
+    whose result records are exactly the records behind the chart's rows. Several matching calls,
+    none, or a chart whose rows no single call supplied yield ``None``. The query is the one that
+    ran (never model text) and must pass the validation the reports create path applies.
+    """
+    ids = _chart_record_ids(plan)
+    if ids is None:
+        return None
+    matches = [q for q in state.queries if {r.record_id for r in q.result.records} == ids]
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    raw = match.arguments.get("query")
+    if not isinstance(raw, Mapping):
+        return None
+    try:
+        query = StructuredQuery.model_validate(raw)
+        spec = query.model_dump(mode="json", by_alias=True, exclude_none=True)
+        metric = match.arguments.get("metric", "cost")
+        if metric != "cost" or tool_for(spec) != match.tool:
+            return None  # a saved report could not re-run it as the same tool
+        body = ReportBody.model_validate(
+            {"title": "chat chart", "chart_plan": dict(plan), "query_spec": spec}
+        )
+        validate_chart_plan(body.chart_plan)
+    except Exception:
+        return None
+    return spec
 
 
 class CopilotEngine:
@@ -499,6 +565,8 @@ class CopilotEngine:
             if has_raw_query(args):  # query text instead of a structured query
                 raise _DeniedError("raw_query_refused") from None
             raise
+        if call.tool_name in _QUERY_TOOLS:
+            state.queries.append(_QueryCall(call.tool_name, dict(args), result))
         return result, _tool_content(result, state)
 
     def _chart(self, arguments: Mapping[str, Any], state: _Run) -> str:
@@ -509,7 +577,9 @@ class CopilotEngine:
             validated = self._chart_validator(plan)  # pyright: ignore[reportUnknownArgumentType]
         except Exception:
             raise _DeniedError("chart_plan_rejected") from None
-        state.charts.append(dict(validated))
+        accepted = dict(validated)
+        accepted.pop("query_spec", None)  # a query is attached by the server only, never the model
+        state.charts.append(accepted)
         return json.dumps({"status": "chart_accepted"})
 
     # -- terminal -------------------------------------------------------------------------------
@@ -591,7 +661,10 @@ class CopilotEngine:
         for citation in citations:
             yield SseEvent(name="citation", payload=CitationEvent(**citation.model_dump()))
         for plan in state.charts:
-            yield SseEvent(name="chart", payload=ChartEvent(chart_plan=plan))
+            yield SseEvent(
+                name="chart",
+                payload=ChartEvent(chart_plan=plan, query_spec=_saveable_query(plan, state)),
+            )
         for draft in drafter.drafted:
             yield SseEvent(
                 name="action_suggestion",

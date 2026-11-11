@@ -46,6 +46,7 @@ from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.actions.dependencies import ActionPlane, get_action_plane
 from neurosphere_api.copilot.engine import ChartPlanValidator, CopilotEngine, ToolPorts
+from neurosphere_api.copilot.models import CopilotStatus
 from neurosphere_api.copilot.settings import CopilotSettings
 from neurosphere_api.copilot.store import ConversationStore
 
@@ -55,6 +56,7 @@ __all__ = [
     "configure_copilot",
     "get_copilot",
     "get_optional_action_plane",
+    "read_copilot_status",
     "validate_chart_plan_mapping",
 ]
 
@@ -129,6 +131,29 @@ def get_copilot(request: Request) -> CopilotRuntime:
         clock=clock,
     )
     return CopilotRuntime(engine=engine, store=store, settings=settings, clock=clock)
+
+
+def read_copilot_status(request: Request) -> CopilotStatus:
+    """The copilot component state for the UI. Never carries configuration, hosts or text.
+
+    Source: the runtime composition's record for ``copilot`` (``ok`` -> ready, ``failed`` -> failed
+    with its reason code, ``disabled`` / ``not_built`` -> disabled). An app composed without the
+    registry (tests, embedded use) falls back to what :func:`get_copilot` would do.
+    """
+    registry = getattr(request.app.state, "composition", None)
+    if registry is not None and callable(getattr(registry, "reported", None)):
+        if registry.reported("copilot"):
+            component = registry.get("copilot")
+            if component.state == "ok":
+                return CopilotStatus(state="ready")
+            if component.state == "failed":
+                return CopilotStatus(state="failed", reason_code=component.reason)
+            return CopilotStatus(state="disabled", reason_code=component.state)
+    try:
+        get_copilot(request)
+    except DependencyTransientError as exc:
+        return CopilotStatus(state="disabled", reason_code=exc.reason or _UNCONFIGURED)
+    return CopilotStatus(state="ready")
 
 
 def get_optional_action_plane(request: Request) -> ActionPlane | None:
