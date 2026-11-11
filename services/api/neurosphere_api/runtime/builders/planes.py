@@ -330,6 +330,9 @@ def _tool_registry(ctx: BuildContext, clock: DateClock | None) -> ToolRegistry:
             catalog=catalog,
             metrics=metrics,
             recommendations=_StateRecommendations(ctx),
+            # Deliberate: a report run only executes ``reports.service.tool_for`` tools
+            # (search_catalog / get_cost_summary / list_recommendations), never get_evidence. The
+            # copilot's store-backed reader is wired in the copilot builder (PRP-19 r2 item 9).
             evidence=EmptyEvidenceReader(),
             drafter=_NoDrafter(),
             **extra,

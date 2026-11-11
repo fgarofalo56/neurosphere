@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `e54c74a03e2568abca7e27e86ed97fe8c1d32f4c`. Generated: 2026-11-08.
+> Source commit: `b2ed8aecc9f07859448121b1652261ae170cb183`. Generated: 2026-11-11.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 140 operations on 125 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 141 operations on 126 paths.
 
 ## Status and verification
 
@@ -98,6 +98,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | copilot | GET | `/api/v1/copilot/conversations/{conversation_id}` | Get Conversation |
 | copilot | DELETE | `/api/v1/copilot/conversations/{conversation_id}` | Delete Conversation |
 | copilot | POST | `/api/v1/copilot/conversations/{conversation_id}/messages` | Post Message |
+| copilot | GET | `/api/v1/copilot/status` | Copilot Status |
 | dashboards | GET | `/api/v1/dashboards/domains/{domain}/{metric}` | Get Dashboard |
 | deploy | POST | `/api/v1/deploy/apply/domains/{domain}/plans/apply` | Apply Plan |
 | deploy | POST | `/api/v1/deploy/apply/domains/{domain}/plans/approve` | Approve Plan |
@@ -741,6 +742,12 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Request body: application/json: `MessageBody` (required)
 - Responses: `200` no body; `422` `HTTPValidationError`
 
+#### GET `/api/v1/copilot/status`
+
+- Operation id: `copilot_status_api_v1_copilot_status_get`
+- Summary: Copilot Status
+- Responses: `200` `CopilotStatus`
+
 ### Tag: dashboards
 
 #### GET `/api/v1/dashboards/domains/{domain}/{metric}`
@@ -1139,7 +1146,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `request_publication_api_v1_reports_domains__domain_id__reports__report_id__publication_post`
 - Summary: Request Publication
-- Parameters: `domain_id` (path, required), `report_id` (path, required), `If-Match` (header)
+- Parameters: `domain_id` (path, required), `report_id` (path, required), `If-Match` (header, required)
 - Responses: `200` `ReportView`; `422` `HTTPValidationError`
 
 #### POST `/api/v1/reports/domains/{domain_id}/reports/{report_id}/publication/decision`
@@ -1161,7 +1168,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `share_report_api_v1_reports_domains__domain_id__reports__report_id__shares_post`
 - Summary: Share Report
-- Parameters: `domain_id` (path, required), `report_id` (path, required), `If-Match` (header)
+- Parameters: `domain_id` (path, required), `report_id` (path, required), `If-Match` (header, required)
 - Request body: application/json: `ShareBody` (required)
 - Responses: `200` `ReportView`; `422` `HTTPValidationError`
 
@@ -1169,7 +1176,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `unshare_report_api_v1_reports_domains__domain_id__reports__report_id__shares__principal_id__delete`
 - Summary: Unshare Report
-- Parameters: `domain_id` (path, required), `report_id` (path, required), `principal_id` (path, required), `If-Match` (header)
+- Parameters: `domain_id` (path, required), `report_id` (path, required), `principal_id` (path, required), `If-Match` (header, required)
 - Responses: `200` `ReportView`; `422` `HTTPValidationError`
 
 ### Tag: review
