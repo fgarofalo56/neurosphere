@@ -1,0 +1,35 @@
+{
+  "scenario": "chart",
+  "authored": "Hand-authored in the Azure OpenAI streaming chat-completions format; NOT captured from a live model. Each pass is one HTTP response to one model invocation of the turn. tool_calls[].function.arguments may be an object here; the test loader serializes it to the JSON string the provider sends and splits it over two deltas. {{NAME}} placeholders are substituted with run-specific ids.",
+  "passes": [
+    {
+      "request_body": {"pass": 1, "expects": "system + user turn; tools offered"},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"content": "Looking up the agents you can read."}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {"tool_calls": [{"index": 0, "id": "call_search", "type": "function", "function": {"name": "search_catalog", "arguments": {"query": {"schema_version": "1.0.0", "operation": "list", "entity": "agent", "budget": {"timeout_ms": 2000, "limit": 20, "max_depth": 0}}}}}]}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+        {"choices": [], "usage": {"prompt_tokens": 410, "completion_tokens": 62}},
+        "[DONE]"
+      ]
+    },
+    {
+      "request_body": {"pass": 2, "expects": "assistant tool call + tool message with the search records"},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"tool_calls": [{"index": 0, "id": "call_chart", "type": "function", "function": {"name": "render_chart", "arguments": {"chart_plan": {"schema_version": "1.0.0", "citations": [{"evidence_id": "ev:agents", "as_of": "2026-11-11T09:00:00Z"}], "spec": {"title": "Agents by version", "data": {"values": [{"record_id": "{{A1}}", "display_name": "Agent A1", "version": 1}, {"record_id": "{{A2}}", "display_name": "Agent A2", "version": 1}, {"record_id": "{{B1}}", "display_name": "Agent B1", "version": 1}]}, "mark": "bar", "encoding": {"x": {"field": "display_name", "type": "nominal"}, "y": {"field": "version", "type": "quantitative"}}}}}}}]}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+        {"choices": [], "usage": {"prompt_tokens": 780, "completion_tokens": 190}},
+        "[DONE]"
+      ]
+    },
+    {
+      "request_body": {"pass": 3, "expects": "chart_accepted tool message"},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"content": "You can read three agents "}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {"content": "[cite:r1] [cite:r2] [cite:r3]; the chart shows them."}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
+        {"choices": [], "usage": {"prompt_tokens": 820, "completion_tokens": 30}},
+        "[DONE]"
+      ]
+    }
+  ]
+}

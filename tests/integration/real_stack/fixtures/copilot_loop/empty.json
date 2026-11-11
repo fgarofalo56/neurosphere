@@ -1,0 +1,24 @@
+{
+  "scenario": "empty",
+  "authored": "A search with no domain filter, then a plain answer: for a caller whose readable domains hold no data the tool returns no records and the turn must abstain.",
+  "passes": [
+    {
+      "request_body": {"pass": 1},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"tool_calls": [{"index": 0, "id": "call_empty", "type": "function", "function": {"name": "search_catalog", "arguments": {"query": {"schema_version": "1.0.0", "operation": "list", "entity": "agent", "budget": {"timeout_ms": 2000, "limit": 20, "max_depth": 0}}}}}]}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+        {"choices": [], "usage": {"prompt_tokens": 300, "completion_tokens": 50}},
+        "[DONE]"
+      ]
+    },
+    {
+      "request_body": {"pass": 2},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"content": "There are agents in the catalog."}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
+        {"choices": [], "usage": {"prompt_tokens": 360, "completion_tokens": 10}},
+        "[DONE]"
+      ]
+    }
+  ]
+}

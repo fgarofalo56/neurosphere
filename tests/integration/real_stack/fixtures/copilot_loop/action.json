@@ -1,0 +1,24 @@
+{
+  "scenario": "action",
+  "authored": "Hand-authored provider-format stream; NOT captured from a live model. suggest_action is the reserved tool the adapter normalizes to an action suggestion.",
+  "passes": [
+    {
+      "request_body": {"pass": 1},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"tool_calls": [{"index": 0, "id": "call_suggest", "type": "function", "function": {"name": "suggest_action", "arguments": {"action_type": "model_deployment_swap", "target_ref": "{{A1}}", "rationale": "A cheaper model fits this agent.", "parameters": {"entity_type": "agent", "target_version": "{{ETAG}}", "proposed_diff": {"format": "json_patch", "operations": [{"op": "replace", "path": "/model/version", "value": "2026-06-15"}]}}}}}]}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+        {"choices": [], "usage": {"prompt_tokens": 320, "completion_tokens": 70}},
+        "[DONE]"
+      ]
+    },
+    {
+      "request_body": {"pass": 2},
+      "stream": [
+        {"choices": [{"index": 0, "delta": {"content": "I drafted a swap for you to review and confirm [cite:r1]."}, "finish_reason": null}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]},
+        {"choices": [], "usage": {"prompt_tokens": 400, "completion_tokens": 24}},
+        "[DONE]"
+      ]
+    }
+  ]
+}

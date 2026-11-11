@@ -7,8 +7,8 @@ kind                   store / read
 =====================  ========================================================================
 ``recommendation``     ``RecommendationStore.get(scope, domain, id)``; ``observed_at`` = created_at
 ``evaluation_result``  ``EvaluationStore.get_result(scope, domain, id)`` when the store exposes it
-                       (the shipped ``EvaluationStore`` protocol has no by-id read, so the kind is
-                       omitted until it does; no scan fallback); ``observed_at`` = completed_at
+                       (the shipped store has ``get_result`` since item 16; a store without it
+                       omits the kind; no scan fallback); ``observed_at`` = completed_at
 ``catalog_entity``     ``CatalogRepository.get_entity(scope, id)`` (domain checked against
                        ``domain_ids``); ``observed_at`` = updated_at
 =====================  ========================================================================
