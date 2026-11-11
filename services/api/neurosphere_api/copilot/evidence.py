@@ -23,9 +23,10 @@ Deterministic id dispatch (ids carry their kind in the id grammar, so exactly on
 3. anything else -> ``catalog_entity``.
 
 Rules: lookups are confined to the server-derived ``domain_ids``; an unknown, unreadable or
-out-of-domain id (or a store error) is omitted, never raised and never explained; ``ref`` is a
-pointer (``<kind>:<id>``), never a body; at most ``MAX_EVIDENCE_IDS`` ids are read per call
-(extras are dropped). A store that is not wired omits its kind.
+out-of-domain id (a store returning None, ``ForbiddenError`` or ``InvalidSchemaError``) is
+omitted, never explained; any other store error propagates (fail closed, 503 via the taxonomy);
+``ref`` is a pointer (``<kind>:<id>``), never a body; at most ``MAX_EVIDENCE_IDS`` ids are
+read per call (extras are dropped). A store that is not wired omits its kind.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from collections.abc import Sequence
 from typing import Any, Final
 
 from neurosphere_core.copilot.tools import EvidenceRecord
+from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from neurosphere_core.scope import IdentityScope
 
 __all__ = ["MAX_EVIDENCE_IDS", "StoreEvidenceReader"]
@@ -83,7 +85,9 @@ class StoreEvidenceReader:
         for evidence_id in list(dict.fromkeys(evidence_ids))[:MAX_EVIDENCE_IDS]:
             try:
                 record = await self._resolve(scope, domains, evidence_id)
-            except Exception:  # unreadable evidence is omitted, never explained
+            except (ForbiddenError, InvalidSchemaError):
+                # Per-id "not readable / malformed id": omitted, never explained. Every other
+                # failure (store outage, timeout, programming error) propagates fail-closed.
                 record = None
             if record is not None:
                 out.append(record)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from copilot_api_harness import (  # pyright: ignore[reportMissingImports]
     FINANCE,
     NOW,
@@ -25,6 +26,7 @@ from neurosphere_api.copilot.models import CitationEvent
 from neurosphere_contracts.evaluation.v1.evaluation_result import EvaluationResult
 from neurosphere_core.aggregates import InMemoryAggregateStore
 from neurosphere_core.catalog.repo import InMemoryCatalogRepository
+from neurosphere_core.errors import DependencyTransientError, ForbiddenError
 from neurosphere_core.evaluation.store import InMemoryEvaluationStore
 from neurosphere_core.recommendations import InMemoryRecommendationStore
 from neurosphere_core.scope import IdentityScope
@@ -116,6 +118,52 @@ async def test_absent_stores_omit_their_kind_and_never_raise() -> None:
     # The shipped evaluation store has no by-id read: that kind is omitted, not scanned.
     plain = StoreEvidenceReader(evaluations=InMemoryEvaluationStore([_evaluation()]))
     assert await plain.get_many(_auditor(), [FINANCE], [EVAL_ID]) == ()
+
+
+class _Raising:
+    """A store whose point reads raise ``error`` for ids in ``bad`` (all when None)."""
+
+    def __init__(self, error: Exception, bad: set[str] | None = None) -> None:
+        self._error = error
+        self._bad = bad
+        self._inner = InMemoryRecommendationStore(
+            [recommendation(1, FINANCE), recommendation(2, FINANCE)]
+        )
+
+    async def get(self, scope: IdentityScope, domain: str, evidence_id: str):
+        if self._bad is None or evidence_id in self._bad:
+            raise self._error
+        return await self._inner.get(scope, domain, evidence_id)
+
+
+async def test_a_generic_store_failure_propagates() -> None:
+    reader = StoreEvidenceReader(recommendations=_Raising(RuntimeError("boom")))
+    with pytest.raises(RuntimeError):
+        await reader.get_many(_auditor(), [FINANCE], [FIN_REC])
+
+
+async def test_a_transient_dependency_failure_propagates() -> None:
+    reader = StoreEvidenceReader(recommendations=_Raising(DependencyTransientError("cosmos down")))
+    with pytest.raises(DependencyTransientError):
+        await reader.get_many(_auditor(), [FINANCE], [FIN_REC])
+
+
+async def test_a_forbidden_id_is_omitted_and_only_that_id() -> None:
+    reader = StoreEvidenceReader(recommendations=_Raising(ForbiddenError(), bad={FIN_REC}))
+    ok_id = "commercial:contoso:neurosphere:recommendation:rec-0002"
+    found = await reader.get_many(_auditor(), [FINANCE], [FIN_REC, ok_id])
+    assert [r.evidence_id for r in found] == [ok_id]
+
+
+async def test_catalog_fallback_omits_an_entity_from_another_domain() -> None:
+    class _Leaky(_Catalog):
+        async def get_entity(self, scope: IdentityScope, entity_id: str):  # type: ignore[override]
+            return self._entities.get(entity_id)  # ignores scope: the reader must still confine
+
+    reader = StoreEvidenceReader(catalog=_Leaky())
+    found = await reader.get_many(_auditor(), [FINANCE], [OPS_AGENT, FIN_AGENT])
+    assert OPS_AGENT not in {r.evidence_id for r in found}
+    assert [r.evidence_id for r in found] == [FIN_AGENT]
 
 
 async def test_input_is_bounded() -> None:
