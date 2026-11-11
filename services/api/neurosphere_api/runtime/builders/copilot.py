@@ -56,6 +56,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from neurosphere_api.copilot import CosmosConversationStore, configure_copilot
 from neurosphere_api.copilot.dependencies import get_copilot
+from neurosphere_api.copilot.evidence import StoreEvidenceReader
 from neurosphere_api.copilot.store import ConversationStore
 from neurosphere_api.runtime.builders import (
     AGGREGATE_READER,
@@ -206,11 +207,23 @@ def _date_clock(ctx: BuildContext) -> Callable[[], datetime] | None:
 
 def _install(ctx: BuildContext, adapter: ModelAdapter) -> None:
     # The tool read ports (catalog, aggregates, recommendations) come from the data builder.
-    ctx.shared(CATALOG_REPOSITORY)
+    catalog = ctx.shared(CATALOG_REPOSITORY)
     ctx.shared(AGGREGATE_READER)
     store = _conversation_store(ctx)
+    state = ctx.app.state
+    # Evidence resolves over the stores the data builder already published; an absent store just
+    # omits its kind (see ``neurosphere_api.copilot.evidence``).
+    evidence = StoreEvidenceReader(
+        recommendations=getattr(state, "recommendation_store", None),
+        evaluations=getattr(state, "evaluation_store", None),
+        catalog=catalog,
+    )
     configure_copilot(
-        ctx.app, model_adapter=adapter, conversation_store=store, clock=_date_clock(ctx)
+        ctx.app,
+        model_adapter=adapter,
+        conversation_store=store,
+        evidence_reader=evidence,
+        clock=_date_clock(ctx),
     )
     try:
         get_copilot(_state_request(ctx))
