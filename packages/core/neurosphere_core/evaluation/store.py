@@ -135,6 +135,12 @@ class EvaluationStore(Protocol):
         """The scope's sample for ``subject_ref`` in ``domain``; ``None`` if absent/out of scope."""
         ...
 
+    async def get_result(
+        self, scope: IdentityScope, domain: str, evaluation_id: str
+    ) -> EvaluationResult | None:
+        """Point read of one result; ``None`` if unknown or out of scope (never distinguished)."""
+        ...
+
     async def list_results(
         self,
         scope: IdentityScope,
@@ -275,6 +281,16 @@ class InMemoryEvaluationStore:
             return None
         found = self._samples.get(((scope.cloud, scope.customer_id, domain), subject_ref))
         return found.model_copy(deep=True) if found is not None else None
+
+    async def get_result(
+        self, scope: IdentityScope, domain: str, evaluation_id: str
+    ) -> EvaluationResult | None:
+        if domain not in scope.allowed_domains:
+            return None
+        found = self._results.get(evaluation_id)
+        if found is None or not _visible(scope, domain, found):
+            return None
+        return found.model_copy(deep=True)
 
     async def list_results(
         self,
