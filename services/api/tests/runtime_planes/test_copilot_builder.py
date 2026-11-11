@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from neurosphere_api.copilot.evidence import StoreEvidenceReader
 from neurosphere_api.runtime.builders import copilot as copilot_builder
 from neurosphere_api.runtime.builders.copilot import (
     CopilotCredentialConfigError,
@@ -192,6 +193,12 @@ def test_a_scripted_adapter_override_serves_chat() -> None:
     with planes.composed.client() as client:
         created = client.post(CONVERSATIONS, headers=planes.auth(ALICE))
     assert created.status_code == 201, created.text
+
+
+def test_installing_the_copilot_wires_the_store_backed_evidence_reader() -> None:
+    planes = compose_planes(model_adapter=ch.ScriptedAdapter(ch.say("Nothing changed.")))
+    assert planes.registry.get("copilot").state == "ok"
+    assert isinstance(planes.app.state.copilot_evidence_reader, StoreEvidenceReader)
 
 
 @pytest.mark.parametrize(
