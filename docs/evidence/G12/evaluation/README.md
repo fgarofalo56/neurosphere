@@ -33,8 +33,7 @@ uv run pytest tests/integration/evaluation -q
 
 ### Pilot set (offline, Government judge)
 
-The only Commercial Foundry row in the shipped matrix is `unverified` (G01), so the Commercial judge is
-disabled and the pilot set runs on the Government judge, whose row
+The pilot set runs on the Government judge, whose row
 `foundry.model_gpt_4_1.government.usgovvirginia.data-zone-standard` is `available`.
 
 | Measure | Value |
@@ -87,11 +86,16 @@ pairs still cleared the minimum, so one `partial` result was emitted with its co
 
 ### Capability-matrix honesty (Commercial)
 
-Running the same pilot on the Commercial judge config: 50 of 50 items skipped with
-`judge_unavailable`, 0 judge calls, 0 results. Reason recorded on every outcome: capability row
-`foundry.base.commercial.global.any` availability is `unverified`, not `available`. Nothing was
-rerouted to the Government judge and no test-only matrix row was added. The result is a finding,
-not a failure: it follows the matrix, and changes only when G01 evidence verifies that row.
+Updated 2026-11-10 (PRP-16 round 2 item 15). The Commercial Foundry base row
+`foundry.base.commercial.global.any` is now `available` / `ga` in the shipped matrix (Learn region
+availability page observed 2026-11-10; Commercial live model swap passed 2026-11-05, see
+`docs/evidence/G05/`). Re-running `tests/integration/evaluation/measure.py` on 2026-11-10: the
+Commercial pilot (recorded fixture judge) judged 32 of 50 items (32 judge calls) and skipped 18 as
+`judge_not_approved` (restricted classification, same rule as the Government run); 0 items are
+`judge_unavailable`. Previously (2026-10-19, row `unverified`) all 50 were `judge_unavailable`.
+A Government run with the Commercial judge config is still refused per item as
+`judge_cloud_mismatch`. Availability is not authorization; this is Commercial only and claims nothing
+about Government.
 
 ### Online path
 
@@ -138,9 +142,10 @@ labels, the drift baselines and the archive-shaped records. Test-only objects, l
 
 - **G16 live judge run: OPEN.** Not run. No model-inference SDK is a repository dependency, no operator
   approval, `NS_LIVE_APPROVED` was not set. `docs/evidence/G16/README.md` describes how it would run.
-- **G01 judge availability per cloud: OPEN.** Read from the matrix only. The Commercial Foundry row is
-  `unverified`, so the Commercial judge is disabled; Government rows are documentation-derived
-  `available`, not authorized and not tested against a Government subscription.
+- **G01 judge availability per cloud: OPEN.** Read from the matrix only. The Commercial Foundry base row is
+  `available` (documentation-derived, observed 2026-11-10, plus the 2026-11-05 G05 Commercial live
+  pass); Government rows are documentation-derived `available`, not authorized and not tested against
+  a Government subscription.
 - **G05 model-swap compatibility: OPEN.** This work supplies quality-regression inputs (judge scores,
   calibration, drift) only. The model swap and its gates are PRP-17.
 - **G06 privacy, retention, legal hold: OPEN until PRP-23.** Evaluation reads only redacted archive
