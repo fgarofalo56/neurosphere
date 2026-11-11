@@ -540,7 +540,7 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 10 | in-progress | worktree (agent) | sonnet | dispatched wave 2 against item 13 contract | 2026-11-11 |
 | 11 | merged | worktree-agent-aaee7ceb1027a9c2a | sonnet | tsc+eslint clean; a11y+audit 517/518 (1 keyboard flake, green alone; agent); audit subset 28 pass (me); real-stack --list 42 tests, ENTRIES==manifest 41; merged e94157c | 2026-11-11 |
 | 12 | todo | | sonnet | | 2026-11-11 |
-| 13 | review | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); d548135 | 2026-11-11 |
+| 13 | merged | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); review APPROVED (opus, 0 blocking); merged 5652d34; openapi regen additive +361/-0, drift+inventory+reference+routes 176 pass (me) | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
 
