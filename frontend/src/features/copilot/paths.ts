@@ -17,3 +17,5 @@ export function conversationPath(conversationId: string): string {
 export function conversationMessagesPath(conversationId: string): string {
   return `${conversationPath(conversationId)}/messages`;
 }
+
+export const COPILOT_STATUS_PATH = `${COPILOT_API_PREFIX}/status`;

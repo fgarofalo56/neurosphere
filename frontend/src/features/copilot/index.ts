@@ -14,7 +14,7 @@ export function copilotNavItems(): NavItem[] {
 
 export { CopilotDock } from "./CopilotDock";
 export { CopilotTransportProvider, useCopilotTransport } from "./transport";
-export { setCopilotSelection, useCopilotSelection } from "./selection";
+export { CopilotSelectionProvider, useCopilotSelection } from "./selection";
 export { buildMessageContext } from "./requestContext";
 export {
   COPILOT_API_PREFIX,

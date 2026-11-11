@@ -119,3 +119,9 @@ export interface AssistantTurn {
   /** Milliseconds from send to the first `token` event (test instrumentation). */
   readonly firstTokenMs: number | null;
 }
+
+/** `GET /api/v1/copilot/status`: 200 even when the assistant is off. */
+export interface CopilotStatus {
+  readonly state: "ready" | "disabled" | "failed";
+  readonly reason_code: string | null;
+}
