@@ -12,6 +12,7 @@ Tool names match the PRP-12 corpus manifest (``tests/security/injection/stubs.py
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -54,6 +55,8 @@ from neurosphere_core.copilot.tools.registry import (
 from neurosphere_core.errors import ForbiddenError
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
+
+logger = logging.getLogger("neurosphere.copilot.tools")
 
 __all__ = [
     "MAX_RESULT_LIMIT",
@@ -150,6 +153,11 @@ def _filter_values(
         if root.field.root != field_name:
             continue
         raw = [root.value] if root.value is not None else list(root.values or [])
+        if not raw:
+            # An empty ``in`` list must never read as "no filter": that would widen the query.
+            raise ToolBudgetError(
+                "filter value list must not be empty", reason="empty_filter_values"
+            )
         found = (found or []) + [item.root for item in raw]
     return found
 
@@ -361,6 +369,30 @@ def _get_evidence(deps: ToolDependencies) -> ToolHandler:
     return run
 
 
+async def _require_resolvable_evidence(
+    deps: ToolDependencies, scope: IdentityScope, args: ProposeActionArgs, domain: str
+) -> None:
+    """Refuse the draft when any model-supplied evidence id does not resolve in the target domain.
+
+    The reader omits unknown and unreadable ids, so a shortfall means a fabricated or unreadable
+    reference. Only the count is logged, never the model-supplied values.
+    """
+    wanted = {ref.evidence_id for ref in args.evidence}
+    if not wanted:
+        return
+    found = await deps.evidence.get_many(scope, [domain], sorted(wanted))
+    resolved = {rec.evidence_id for rec in found if rec.domain_id == domain}
+    unresolved = wanted - resolved
+    if unresolved:
+        logger.warning(
+            "propose_action refused: %d evidence reference(s) did not resolve", len(unresolved)
+        )
+        raise ForbiddenError(
+            "evidence reference does not resolve in the target domain",
+            reason="evidence_ref_unresolved",
+        )
+
+
 def _propose_action(deps: ToolDependencies) -> ToolHandler:
     async def run(scope: IdentityScope, args: ProposeActionArgs) -> ToolResult:
         now = deps.clock()
@@ -374,6 +406,7 @@ def _propose_action(deps: ToolDependencies) -> ToolHandler:
             )
         if not permits(scope, Permission.ACTION_PROPOSE, now=now, domain_id=domain):
             raise ToolPermissionError(Permission.ACTION_PROPOSE.value)
+        await _require_resolvable_evidence(deps, scope, args, domain)
         digest = sha256_digest(
             {
                 "action_kind": args.action_kind,
