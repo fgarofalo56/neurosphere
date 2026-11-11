@@ -14,6 +14,7 @@ import {
 } from "../../api/index.js";
 import {
   domainEntitiesPath,
+  domainEntityPath,
   domainExportPath,
   domainSearchPath,
   entityDeprecatePath,
@@ -25,6 +26,7 @@ import {
   staleAgentsConfirmPath,
   staleAgentsDryRunPath,
 } from "./paths";
+import type { ReasonCode } from "./reasonCodes";
 import type {
   BudgetBody,
   CatalogEntityView,
@@ -164,6 +166,7 @@ export const useImpact = createQueryHook<ImpactParams, GraphResultView>({
 export interface DeprecateVars {
   readonly entityId: string;
   readonly etag: string;
+  readonly reasonCode?: ReasonCode;
 }
 
 export const useDeprecate = createMutationHook<DeprecateVars, CatalogEntityView>({
@@ -171,6 +174,7 @@ export const useDeprecate = createMutationHook<DeprecateVars, CatalogEntityView>
     client.request<CatalogEntityView>({
       method: "POST",
       path: entityDeprecatePath(v.entityId),
+      ...(v.reasonCode !== undefined && { body: { reason_code: v.reasonCode } }),
       ifMatch: v.etag,
     }),
 });
@@ -184,15 +188,41 @@ export const useRecertify = createMutationHook<RecertifyVars, CatalogEntityView>
     client.request<CatalogEntityView>({
       method: "POST",
       path: entityRecertifyPath(v.entityId),
-      body: { valid_for_days: v.validForDays },
+      body: {
+        valid_for_days: v.validForDays,
+        ...(v.reasonCode !== undefined && { reason_code: v.reasonCode }),
+      },
       ifMatch: v.etag,
     }),
+});
+
+export interface CreateEntityVars {
+  readonly domain: string;
+  /** The entity document without any server-owned key (see entityFormModel.ts). */
+  readonly body: Readonly<Record<string, unknown>>;
+}
+
+/** Item 13: the domain rides in the path; the body carries no scope or server-owned key. */
+export const useCreateEntity = createMutationHook<CreateEntityVars, CatalogEntityView>({
+  mutate: (client, v) => client.post<CatalogEntityView>(domainEntitiesPath(v.domain), v.body),
+});
+
+export interface UpdateEntityVars extends CreateEntityVars {
+  readonly entityId: string;
+  readonly etag: string;
+}
+
+export const useUpdateEntity = createMutationHook<UpdateEntityVars, CatalogEntityView>({
+  mutate: (client, v) =>
+    client.put<CatalogEntityView>(domainEntityPath(v.domain, v.entityId), v.body, v.etag),
 });
 
 /** Re-reads the entity and its lineage after a change or a 409. */
 export function useReloadEntity(): () => Promise<void> {
   const queryClient = useQueryClient();
   return useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["catalog-explorer-list"] });
+    await queryClient.invalidateQueries({ queryKey: ["catalog-explorer-search"] });
     await queryClient.invalidateQueries({ queryKey: ["catalog-explorer-entity"] });
     await queryClient.invalidateQueries({ queryKey: ["catalog-explorer-neighbors"] });
     await queryClient.invalidateQueries({ queryKey: ["catalog-explorer-impact"] });

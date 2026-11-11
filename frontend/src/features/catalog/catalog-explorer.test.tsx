@@ -369,8 +369,8 @@ describe("CatalogEntityPage", () => {
     expect(await screen.findByTestId("change-target")).toHaveTextContent(AGENT);
     expect(screen.getByTestId("change-version")).toHaveTextContent("etag-3");
     expect(screen.getByTestId("change-diff-row")).toHaveTextContent("deprecated");
-    // The PRP-10 endpoints take no reason, so the dialog must not imply it is recorded.
-    expect(screen.getByTestId("change-reason-note")).toHaveTextContent("reason is not stored");
+    // No reason code picked: the dialog adds no caveat about what is stored.
+    expect(screen.queryByTestId("change-reason-note")).toBeNull();
     // hidden: Tabster can mark the dialog subtree aria-hidden mid-animation under load.
     await user.type(
       await screen.findByRole("textbox", { name: /Reason/, hidden: true }),
@@ -545,10 +545,20 @@ describe("StaleAgentsPage", () => {
     expect(api.calls).toHaveLength(1);
     expect(api.calls[0]?.body).toEqual({ window_days: 90 });
     await user.click(screen.getByTestId("confirm-open"));
-    const dialog = await screen.findByTestId("stale-confirm-dialog");
-    expect(within(dialog).getByTestId("plan-id")).toHaveTextContent("plan-1");
-    expect(within(dialog).getByTestId("plan-count")).toHaveTextContent("2");
-    await user.click(within(dialog).getByTestId("confirm-submit"));
+    // The shared ChangeConfirmDialog: target, plan version, one diff row per candidate, a reason.
+    const dialog = await screen.findByTestId("change-confirm-dialog");
+    expect(within(dialog).getByTestId("change-target")).toHaveTextContent(
+      "2 stale agents (plan plan-1)",
+    );
+    expect(within(dialog).getByTestId("change-version")).toHaveTextContent("window 90 days");
+    expect(within(dialog).getAllByTestId("change-diff-row")).toHaveLength(2);
+    const submit = within(dialog).getByRole("button", { name: "Confirm change", hidden: true });
+    expect(submit).toBeDisabled();
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /Reason/, hidden: true }),
+      "scheduled cleanup",
+    );
+    await user.click(submit);
     const outcome = await screen.findAllByTestId("outcome-row");
     expect(outcome[0]).toHaveTextContent("Marked");
     expect(outcome[1]).toHaveTextContent("Failed");
@@ -588,10 +598,9 @@ describe("StaleAgentsPage", () => {
     mount(<StaleAgentsPage />, "/catalog/stale-agents", api.fetchImpl);
     await user.click(screen.getByTestId("dry-run"));
     await user.click(await screen.findByTestId("confirm-open"));
-    await user.click(await screen.findByTestId("confirm-submit"));
-    expect(await screen.findByTestId("confirm-dialog-error")).toHaveTextContent(
-      "no longer matches",
-    );
+    await user.type(await screen.findByRole("textbox", { name: /Reason/, hidden: true }), "x");
+    await user.click(screen.getByRole("button", { name: "Confirm change", hidden: true }));
+    expect(await screen.findByTestId("change-error")).toHaveTextContent("no longer matches");
     expect(screen.queryByTestId("outcome")).toBeNull();
   });
 
