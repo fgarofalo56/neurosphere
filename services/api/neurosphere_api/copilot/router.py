@@ -7,6 +7,11 @@
 | GET    | ``/conversations/{id}``               | ``data.read`` |
 | DELETE | ``/conversations/{id}``               | ``data.read`` |
 | POST   | ``/conversations/{id}/messages``      | ``data.read`` |
+| GET    | ``/status``                           | authenticated only |
+
+``/status`` reports the copilot component state (``ready`` / ``disabled`` / ``failed`` plus a
+reason code) and answers 200 even when the copilot is disabled. It needs no permission beyond a
+valid sign-in and never exposes configuration.
 
 Asking requires ``data.read`` in at least one domain (PRP-19 D5); the tools recheck their own
 permission per call. Conversations are user-scoped: the owner comes from the derived scope, never
@@ -28,16 +33,18 @@ from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.actions.common import audit_correlation_id
 from neurosphere_api.actions.dependencies import ActionPlane
-from neurosphere_api.authz import require
+from neurosphere_api.authz import PERMISSION_MARKER, current_scope, require
 from neurosphere_api.copilot.dependencies import (
     CopilotRuntime,
     get_copilot,
     get_optional_action_plane,
+    read_copilot_status,
 )
 from neurosphere_api.copilot.models import (
     ConversationCreated,
     ConversationList,
     ConversationView,
+    CopilotStatus,
     MessageBody,
     SseEvent,
 )
@@ -56,6 +63,14 @@ ConversationId = Annotated[str, Path(min_length=1, max_length=64)]
 Cursor = Annotated[str | None, Query(min_length=1, max_length=256)]
 PageLimit = Annotated[int, Query(ge=1, le=100)]
 
+
+def _authenticated_marker() -> None:
+    """Declares ``data.read`` for the route inventory only; ``/status`` enforces no permission."""
+    return None
+
+
+setattr(_authenticated_marker, PERMISSION_MARKER, Permission.DATA_READ)
+
 _STREAM_HEADERS: Final = {"Cache-Control": "no-store", "X-Accel-Buffering": "no"}
 
 
@@ -71,6 +86,14 @@ async def _encode(events: AsyncIterator[SseEvent]) -> AsyncIterator[bytes]:
 
 def build_router() -> APIRouter:
     router = APIRouter(tags=["copilot"])
+
+    @router.get(
+        "/status", response_model=CopilotStatus, dependencies=[Depends(_authenticated_marker)]
+    )
+    async def copilot_status(
+        request: Request, _scope: Annotated[IdentityScope, Depends(current_scope)]
+    ) -> CopilotStatus:
+        return read_copilot_status(request)
 
     @router.post(
         "/conversations", response_model=ConversationCreated, status_code=status.HTTP_201_CREATED
