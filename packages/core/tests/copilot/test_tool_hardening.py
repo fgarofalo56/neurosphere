@@ -117,13 +117,14 @@ async def test_empty_in_list_is_refused_not_treated_as_no_filter(
 
 
 async def test_real_catalog_hides_unreadable_entity_from_the_tools(
-    harness: Harness, scope_factory: ScopeFactory, query_args: QueryArgs
+    harness: Harness,
+    scope_factory: ScopeFactory,
+    query_args: QueryArgs,
+    agent_factory: Callable[[str, str], Agent],
 ) -> None:
-    from conftest import _agent  # pyright: ignore[reportMissingImports,reportPrivateUsage]
-
     repo = InMemoryCatalogRepository()
     admin = scope_factory([("admin", [FINANCE, OPERATIONS])], [FINANCE, OPERATIONS])
-    hidden: Agent = _agent("ops-1", OPERATIONS)
+    hidden: Agent = agent_factory("ops-1", OPERATIONS)
     await repo.create_entity(admin, hidden)
 
     finance_only = scope_factory([("analyst", [FINANCE])], [FINANCE])
