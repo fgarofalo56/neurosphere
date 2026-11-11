@@ -7,7 +7,7 @@ or an SLA: the grounded-answer figure is a pilot-set target estimate with an int
 No ``from __future__ import annotations``: FastAPI inspects these models.
 """
 
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 from neurosphere_contracts.evaluation.v1.evaluation_result import EvaluationResult
 from pydantic import BaseModel, ConfigDict
@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict
 __all__ = [
     "PILOT_TARGET",
     "PILOT_TARGET_LABEL",
+    "CalibrationSampleOut",
     "CoveragePoint",
     "DriftAlertOut",
     "JudgeOut",
@@ -24,6 +25,7 @@ __all__ = [
     "ResultsList",
     "Trend",
     "TrendPoint",
+    "Truncation",
 ]
 
 PILOT_TARGET: Final = 0.9
@@ -32,6 +34,32 @@ PILOT_TARGET_LABEL: Final = "pilot-set target: at least 90%"
 
 class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class CalibrationSampleOut(_Model):
+    """Review context of one ``evaluation_dispute`` item (round 2 item 14).
+
+    ``payload`` is a bounded, redacted snapshot; null with ``payload_withheld`` true for restricted
+    or unclassified items (``withheld_reason`` says why). ``value`` is the judge's verdict (1 pass,
+    0 fail). Approving the review item means the judge was wrong; rejecting means it was right.
+    """
+
+    subject_ref: str
+    domain_id: str
+    dataset_id: str | None
+    dataset_version: str | None
+    item_id: str
+    dimension: str
+    classification: str | None
+    judge_config_id: str
+    judge_config_version: str
+    value: float
+    rubric_id: str
+    rubric_version: str
+    opened_at: str
+    payload: dict[str, Any] | None
+    payload_withheld: bool
+    withheld_reason: str | None
 
 
 class ResultsList(_Model):
@@ -101,9 +129,19 @@ class DriftAlertOut(_Model):
     threshold: float
 
 
+class Truncation(_Model):
+    """The ``/quality`` read hit its row cap: only the newest ``limit`` results inside the last
+    ``window_days`` days were aggregated; older matching results were left out."""
+
+    limit: int
+    window_days: int
+
+
 class QualityResponse(_Model):
     trends: list[Trend]
     coverage: list[CoveragePoint]
     missing_labels: MissingLabels
     pilot_grounded_rate: PilotGroundedRate
     drift_alerts: list[DriftAlertOut]
+    # null = the aggregation covered every result in the window (not truncated).
+    truncated: Truncation | None = None

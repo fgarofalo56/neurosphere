@@ -11,7 +11,7 @@ import yaml
 from neurosphere_core.capabilities import MatrixLoadError, load_matrix
 from rows import raw_row
 
-TODAY = date(2026, 10, 29)
+TODAY = date(2026, 11, 10)
 
 
 def write(tmp_path: Path, name: str, rows: list[dict[str, Any]]) -> None:

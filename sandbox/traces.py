@@ -116,6 +116,8 @@ class TraceGenerator:
             "duration_ms": max(duration, 0),
             "sampling": {"rate": 1.0, "method": "none"},
         }
+        if a.classification is not None:
+            ev["classification"] = a.classification
         if parent is not None:
             ev["parent_span_id"] = parent
         ev.update(extra)

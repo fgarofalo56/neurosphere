@@ -26,6 +26,7 @@ def test_create_app_mounts_the_two_read_routes() -> None:
     app = create_app(Settings(env="local"))
     paths = {p: sorted(m) for p, m in app.openapi()["paths"].items() if p.startswith(PREFIX)}
     assert paths == {
+        f"{PREFIX}/domains/{{domain}}/calibration-samples": ["get"],
         f"{PREFIX}/domains/{{domain}}/quality": ["get"],
         f"{PREFIX}/domains/{{domain}}/results": ["get"],
     }

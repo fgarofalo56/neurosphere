@@ -1,5 +1,7 @@
 import { createMutationHook, createQueryHook } from "../../api/index.js";
 import type {
+  CalibrationParams,
+  CalibrationSampleView,
   DecideVars,
   IntentParams,
   IntentSummary,
@@ -52,6 +54,21 @@ export const useReviewedIntent = createQueryHook<IntentParams, IntentSummary>({
   key: "review-intent",
   fetcher: (client, p, signal) =>
     client.get<IntentSummary>(intentPath(p.domainId, p.intentId), undefined, signal),
+});
+
+export function calibrationSamplesPath(domainId: string): string {
+  return `/api/v1/evaluation/domains/${encodeURIComponent(domainId)}/calibration-samples`;
+}
+
+/** The judge verdict and item behind an `evaluation_dispute` review item (404 = none recorded). */
+export const useCalibrationSample = createQueryHook<CalibrationParams, CalibrationSampleView>({
+  key: "review-calibration-sample",
+  fetcher: (client, p, signal) =>
+    client.get<CalibrationSampleView>(
+      calibrationSamplesPath(p.domainId),
+      { subject_ref: p.subjectRef },
+      signal,
+    ),
 });
 
 /** `null` assignee claims the item for the caller. */

@@ -24,6 +24,7 @@ from neurosphere_core.evaluation.calibration import (
     Interval,
     StratumCoverage,
 )
+from neurosphere_core.evaluation.samples import CalibrationSample, build_calibration_sample
 from neurosphere_core.evaluation.store import (
     EvaluationConflictError,
     EvaluationStore,
@@ -349,6 +350,113 @@ async def check_same_id_under_another_domain_is_a_conflict(store: EvaluationStor
     scope = make_scope(domains=(FINANCE, OPERATIONS))
     assert eval_ids(await store.results(scope, FINANCE)) == ["eval:r-0001"]
     assert await store.results(scope, OPERATIONS) == ()
+
+
+def _done(n: int, moment: datetime) -> EvaluationResult:
+    return make_result(
+        n,
+        started_at=(moment - timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        completed_at=moment.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
+async def check_results_window_excludes_older_and_orders_newest_first(
+    store: EvaluationStore,
+) -> None:
+    for n, days_ago in ((1, 100), (2, 10), (3, 1), (4, 30)):
+        await store.put_result(_done(n, T - timedelta(days=days_ago)))
+    scope = make_scope()
+    window = await store.results_window(scope, FINANCE, since=T - timedelta(days=90), limit=100)
+    assert eval_ids(window.items) == ["eval:r-0003", "eval:r-0002", "eval:r-0004"]
+    assert window.truncated is False
+    other_domain = make_scope(domains=(FINANCE, OPERATIONS))
+    empty = await store.results_window(other_domain, OPERATIONS, since=T - timedelta(days=90))
+    assert empty.items == () and empty.truncated is False
+
+
+async def check_results_window_cap_keeps_the_newest_and_flags_truncation(
+    store: EvaluationStore,
+) -> None:
+    for n in range(1, 6):
+        await store.put_result(_done(n, T - timedelta(days=10 - n)))
+    scope = make_scope()
+    since = T - timedelta(days=90)
+    capped = await store.results_window(scope, FINANCE, since=since, limit=3)
+    assert eval_ids(capped.items) == ["eval:r-0005", "eval:r-0004", "eval:r-0003"]
+    assert capped.truncated is True
+    exact = await store.results_window(scope, FINANCE, since=since, limit=5)
+    assert len(exact.items) == 5 and exact.truncated is False
+    with pytest.raises(InvalidSchemaError):
+        await store.results_window(scope, FINANCE, since=since, limit=0)
+
+
+def make_sample(
+    subject_ref: str = "commercial:contoso:evaluation:dispute:abc",
+    *,
+    classification: str | None = "internal",
+    payload: dict[str, Any] | None = None,
+    domain: str = FINANCE,
+    customer: str = "contoso",
+    value: float = 1.0,
+) -> CalibrationSample:
+    return build_calibration_sample(
+        subject_ref=subject_ref,
+        cloud="commercial",
+        customer_id=customer,
+        domain_id=domain,
+        dataset_id="ds-1",
+        dataset_version="1",
+        item_id="item-1",
+        dimension="groundedness",
+        classification=classification,
+        judge_config_id="judge",
+        judge_config_version="1+2",
+        value=value,
+        rubric_id="rubric",
+        rubric_version="1",
+        opened_at=T,
+        payload={"question": "q"} if payload is None else payload,
+    )
+
+
+async def check_calibration_sample_round_trip_and_first_write_wins(store: EvaluationStore) -> None:
+    sample = make_sample()
+    await store.put_calibration_sample(sample)
+    await store.put_calibration_sample(make_sample(value=0.0))  # same subject_ref: ignored
+    got = await store.get_calibration_sample(make_scope(), FINANCE, sample.subject_ref)
+    assert got == sample
+    assert got is not None and got.value == 1.0 and got.payload == {"question": "q"}
+    assert await store.get_calibration_sample(make_scope(), FINANCE, "commercial:x") is None
+
+
+async def check_calibration_sample_is_scoped(store: EvaluationStore) -> None:
+    ref = "commercial:contoso:evaluation:dispute:abc"
+    await store.put_calibration_sample(make_sample(ref, domain=OPERATIONS))
+    await store.put_calibration_sample(
+        make_sample(ref, domain=FABRIKAM_FINANCE, customer="fabrikam")
+    )
+    # Not allowed for this scope, another customer's domain, or the wrong domain: all absent.
+    assert await store.get_calibration_sample(make_scope(), OPERATIONS, ref) is None
+    assert await store.get_calibration_sample(make_scope(), FABRIKAM_FINANCE, ref) is None
+    assert await store.get_calibration_sample(make_scope(), FINANCE, ref) is None
+    both = make_scope(domains=(FINANCE, OPERATIONS))
+    found = await store.get_calibration_sample(both, OPERATIONS, ref)
+    assert found is not None and found.domain_id == OPERATIONS
+    assert await store.get_calibration_sample(both, FINANCE, ref) is None
+
+
+async def check_restricted_or_unclassified_sample_never_stores_a_payload(
+    store: EvaluationStore,
+) -> None:
+    await store.put_calibration_sample(make_sample("r1", classification="restricted"))
+    await store.put_calibration_sample(make_sample("r2", classification=None))
+    await store.put_calibration_sample(make_sample("r3", classification="weird"))
+    for ref in ("r1", "r2", "r3"):
+        got = await store.get_calibration_sample(make_scope(), FINANCE, ref)
+        assert got is not None
+        assert got.payload is None
+        assert got.payload_withheld is True
+        assert got.withheld_reason == "restricted"
 
 
 CHECKS: dict[str, Check] = {

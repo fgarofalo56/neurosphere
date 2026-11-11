@@ -14,6 +14,7 @@ from neurosphere_core.evaluation.registry import (
 GOV_ROW = "foundry.model_gpt_4_1.government.usgovvirginia.data-zone-standard"
 GOV_UNAVAILABLE_ROW = "foundry.model_gpt_5_1.government.usgovvirginia.regional-standard"
 COMM_ROW = "foundry.base.commercial.global.any"
+UNVERIFIED_COMM_ROW = "foundry.deployment_write.commercial.global.any"
 
 
 def _llm(cloud: str = "government", row: str | None = GOV_ROW, **over: object) -> JudgeConfig:
@@ -87,8 +88,11 @@ def test_commercial_config_needs_available_commercial_row() -> None:
     config = _llm(cloud="commercial", row=COMM_ROW)
     assert judge_availability(config, matrix_from_rows([_commercial_row("available")]))[0]
     assert not judge_availability(config, matrix_from_rows([_commercial_row("unverified")]))[0]
-    # shipped matrix only has an unverified commercial foundry row: disabled, not assumed
-    assert not judge_availability(config, load_matrix())[0]
+    # the shipped Commercial base row is available since 2026-11-10 (PRP-16 item 15)
+    assert judge_availability(config, load_matrix())[0]
+    # a still-unverified shipped Commercial foundry row keeps the matrix gate covered
+    unverified = _llm(cloud="commercial", row=UNVERIFIED_COMM_ROW)
+    assert not judge_availability(unverified, load_matrix())[0]
 
 
 def test_programmatic_judge_needs_no_endpoint() -> None:

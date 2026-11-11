@@ -1692,6 +1692,132 @@
         "title": "Calibration",
         "type": "object"
       },
+      "CalibrationSampleOut": {
+        "additionalProperties": false,
+        "description": "Review context of one ``evaluation_dispute`` item (round 2 item 14).\n\n``payload`` is a bounded, redacted snapshot; null with ``payload_withheld`` true for restricted\nor unclassified items (``withheld_reason`` says why). ``value`` is the judge's verdict (1 pass,\n0 fail). Approving the review item means the judge was wrong; rejecting means it was right.",
+        "properties": {
+          "classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version"
+          },
+          "dimension": {
+            "title": "Dimension",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "judge_config_id": {
+            "title": "Judge Config Id",
+            "type": "string"
+          },
+          "judge_config_version": {
+            "title": "Judge Config Version",
+            "type": "string"
+          },
+          "opened_at": {
+            "title": "Opened At",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "payload_withheld": {
+            "title": "Payload Withheld",
+            "type": "boolean"
+          },
+          "rubric_id": {
+            "title": "Rubric Id",
+            "type": "string"
+          },
+          "rubric_version": {
+            "title": "Rubric Version",
+            "type": "string"
+          },
+          "subject_ref": {
+            "title": "Subject Ref",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          },
+          "withheld_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withheld Reason"
+          }
+        },
+        "required": [
+          "subject_ref",
+          "domain_id",
+          "dataset_id",
+          "dataset_version",
+          "item_id",
+          "dimension",
+          "classification",
+          "judge_config_id",
+          "judge_config_version",
+          "value",
+          "rubric_id",
+          "rubric_version",
+          "opened_at",
+          "payload",
+          "payload_withheld",
+          "withheld_reason"
+        ],
+        "title": "CalibrationSampleOut",
+        "type": "object"
+      },
       "CanonicalId": {
         "maxLength": 512,
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
@@ -10240,6 +10366,16 @@
             },
             "title": "Trends",
             "type": "array"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Truncation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -14067,6 +14203,26 @@
           "calibration_state"
         ],
         "title": "TrendPoint",
+        "type": "object"
+      },
+      "Truncation": {
+        "additionalProperties": false,
+        "description": "The ``/quality`` read hit its row cap: only the newest ``limit`` results inside the last\n``window_days`` days were aggregated; older matching results were left out.",
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "window_days"
+        ],
+        "title": "Truncation",
         "type": "object"
       },
       "TurnView": {
@@ -19246,6 +19402,61 @@
         "summary": "Scan",
         "tags": [
           "deploy"
+        ]
+      }
+    },
+    "/api/v1/evaluation/domains/{domain}/calibration-samples": {
+      "get": {
+        "operationId": "calibration_sample_api_v1_evaluation_domains__domain__calibration_samples_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_ref",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Subject Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalibrationSampleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Calibration Sample",
+        "tags": [
+          "evaluation"
         ]
       }
     },

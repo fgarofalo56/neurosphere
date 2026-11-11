@@ -115,7 +115,11 @@ class Api:
 
 
 def make_api(
-    *results: EvaluationResult, wire: bool = True, pilot: tuple[str, ...] | None = None
+    *results: EvaluationResult,
+    wire: bool = True,
+    pilot: tuple[str, ...] | None = None,
+    quality_max_results: int | None = None,
+    quality_window_days: int | None = None,
 ) -> Api:
     h = helpers.harness(
         helpers.policy(ALICE, helpers.role(Role.VIEWER, FINANCE)),
@@ -125,6 +129,12 @@ def make_api(
     store = InMemoryEvaluationStore(results)
     if wire:
         h.app.state.evaluation_store = store
+    # Fixed clock: fixtures are dated around T, so the 90-day window never drifts out from them.
+    h.app.state.evaluation_clock = lambda: T
+    if quality_max_results is not None:
+        h.app.state.evaluation_quality_max_results = quality_max_results
+    if quality_window_days is not None:
+        h.app.state.evaluation_quality_window_days = quality_window_days
     if pilot is not None:
         h.app.state.evaluation_pilot_dataset_ids = pilot
     return Api(h=h, store=store)

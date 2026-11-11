@@ -38,6 +38,9 @@ PARAMETERS = [
     "copilotEndpoint",
     "copilotDeployment",
     "copilotMode",
+    "evaluationPilotDomainId",
+    "evaluationPilotSubjectId",
+    "evaluationPilotDatasetIds",
     "searchProvider",
     "searchService",
     "budgetAmount",
@@ -340,13 +343,23 @@ def test_app_settings_follow_the_wire_contract(arm: dict[str, Any]) -> None:
 def test_workers_get_their_identity_in_a_second_pass(arm: dict[str, Any]) -> None:
     bootstrap, final = sorted(_by_type(arm, "Microsoft.Web/sites"), key=_is_bootstrap, reverse=True)
     assert _is_bootstrap(bootstrap) and not _is_bootstrap(final)
-    base = arm["variables"]["workersBaseSettings"]
-    # recommendations/evaluation need compose-mounted data dirs the hosted image lacks.
-    assert (
-        base["NS_WORKER_ROLES"] == "ingestion,projections,aggregates,actions,hitl_timers,lifecycle"
-    )
-    assert base["NS_WORKER_TENANT_ID"] == "[parameters('entraTenantId')]"
+    # workersBaseSettings is union(<static object>, evaluationPilotSettings) (PRP-16 item 12), so
+    # the ARM variable is an expression string; the static part is readable in it.
+    base = str(arm["variables"]["workersBaseSettings"])
+    # recommendations needs a compose-mounted data dir the hosted image lacks; evaluation runs
+    # from the synthetic registry baked into the workers image, with the fixture judge.
+    roles = "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation"
+    assert f"'NS_WORKER_ROLES', '{roles}'" in base
+    assert "'NS_WORKER_EVAL_DATA_DIR', '/app/evaluation-data'" in base
+    assert "'NS_WORKER_EVAL_JUDGE', 'fixture'" in base
+    assert "'NS_WORKER_TENANT_ID', parameters('entraTenantId')" in base
     assert "NS_WORKER_OBJECT_ID" not in base
+    # The pilot ids are omitted (offline stage idle) unless domain AND subject are both set.
+    assert arm["parameters"]["evaluationPilotDomainId"]["defaultValue"] == ""
+    assert arm["parameters"]["evaluationPilotSubjectId"]["defaultValue"] == ""
+    assert arm["variables"]["apiSettings"]["NS_EVALUATION_PILOT_DATASET_IDS"] == (
+        "[parameters('evaluationPilotDatasetIds')]"
+    )
     assert _param(bootstrap, "workersAppSettings") == "[variables('workersBaseSettings')]"
     final_settings = _param(final, "workersAppSettings")
     assert "NS_WORKER_OBJECT_ID" in final_settings

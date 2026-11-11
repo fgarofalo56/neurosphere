@@ -31,6 +31,7 @@ from .conformance import (
     make_cov,
     make_report,
     make_result,
+    make_sample,
     make_scope,
     other_customer_result,
 )
@@ -100,11 +101,36 @@ async def test_a_domain_outside_the_scope_never_reaches_cosmos() -> None:
     results.queries.clear()  # put_result's by-id lookup is deliberately cross-partition
     await store.list_results(scope, OPERATIONS)
     await store.results(scope, OPERATIONS)
+    await store.results_window(scope, OPERATIONS, since=T)
     await store.calibrations(scope, OPERATIONS)
     await store.drift_alerts(scope, OPERATIONS)
     await store.coverage(scope, OPERATIONS)
     assert results.queries == []
     assert runs.queries == []
+
+
+async def test_window_query_is_parameterised_single_partition_and_capped() -> None:
+    results, _, store = _pair()
+    scope = make_scope()
+    # A hostile subject id must travel as a parameter value, never inside the SQL text.
+    hostile = "x' OR 1=1 --"
+    since = T - timedelta(days=90)
+    sql, params = CosmosEvaluationStore.window_query(scope, FINANCE, hostile, since, 5000)
+    assert hostile not in sql
+    assert "c.completed_key >= @since" in sql
+    assert sql.startswith("SELECT TOP @limit * FROM c WHERE ")
+    assert sql.endswith(" ORDER BY c.completed_key DESC")
+    values = {p["name"]: p["value"] for p in params}
+    assert values["@since"] == "2026-07-21T12:00:00.000000Z"
+    assert values["@limit"] == 5001  # cap + 1 so truncation is detectable
+    assert values["@subject"] == hostile
+    assert values["@customer"] == "contoso" and values["@domain"] == FINANCE
+    await store.put_result(make_result(1))
+    results.queries.clear()
+    await store.results_window(scope, FINANCE, since=since, limit=10)
+    (query,) = results.queries
+    assert query.partition_key == ("contoso", FINANCE)
+    assert query.params["@limit"] == 11 and query.params["@since"] == values["@since"]
 
 
 async def test_same_evaluation_id_under_another_customer_conflicts_and_adds_no_document() -> None:
@@ -226,6 +252,8 @@ async def test_outages_map_to_taxonomy_errors_without_echoing_sdk_text(
         store.calibrations(scope, FINANCE),
         store.drift_alerts(scope, FINANCE),
         store.coverage(scope, FINANCE),
+        store.put_calibration_sample(make_sample()),
+        store.get_calibration_sample(scope, FINANCE, make_sample().subject_ref),
     ):
         with pytest.raises(expected) as raised:
             await call

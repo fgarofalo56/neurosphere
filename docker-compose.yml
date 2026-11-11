@@ -210,6 +210,14 @@ services:
       # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
       NS_WORKER_REC_DATA_DIR: /data/sandbox
       NS_WORKER_EVAL_DATA_DIR: /data/evaluation
+      # Offline pilot (PRP-16): fixture judge, synthetic dataset. The domain and subject are
+      # canonical ids from the seeded sandbox world (customer synthco, commercial); the seed
+      # grants the worker principal viewer on every world domain, so dom-001 is in its scope.
+      NS_WORKER_EVAL_JUDGE: fixture
+      NS_WORKER_EVAL_PILOT_DATASET_IDS: sbx-groundedness-pilot
+      NS_WORKER_EVAL_PILOT_DOMAIN_ID: commercial:synthco:sandbox:domain:dom-001
+      NS_WORKER_EVAL_PILOT_SUBJECT_ID: commercial:synthco:sandbox:agent:a-000000
+      NS_WORKER_EVAL_OFFLINE_INTERVAL_SECONDS: "300"
       # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
       NS_FOUNDRY_ENABLED: "false"
       NS_APIM_ENABLED: "false"

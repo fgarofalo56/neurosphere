@@ -20,6 +20,7 @@ CLAUSES: dict[str, Predicate] = {
     "c.domain_id = @domain": lambda d, p: d["domain_id"] == p["@domain"],
     "c.cloud = @cloud": lambda d, p: d["cloud"] == p["@cloud"],
     "c.sort_key > @after": lambda d, p: d["sort_key"] > p["@after"],
+    "c.completed_key >= @since": lambda d, p: d.get("completed_key", "") >= p["@since"],
     "c.subject_id = @subject": lambda d, p: d["subject_id"] == p["@subject"],
     "EXISTS(SELECT VALUE s FROM s IN c.scores WHERE s.dimension = @dimension)": _has_dimension,
 }

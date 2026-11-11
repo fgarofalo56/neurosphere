@@ -1,0 +1,13 @@
+{
+  "id": "chatcmpl-rec-malformed",
+  "object": "chat.completion",
+  "model": "gpt-judge",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {"role": "assistant", "content": "The answer looks good, 9/10."}
+    }
+  ],
+  "usage": {"prompt_tokens": 80, "completion_tokens": 9, "total_tokens": 89}
+}

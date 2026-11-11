@@ -274,8 +274,8 @@ MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py
 
 Evidence: `<date>-grant-model-access`. Without S4 the copilot stays disabled with a reason. That is
 acceptable and is reported, not hidden. Even with S4 it remains disabled until a dated Commercial
-`centralus` capability row exists for the chosen model (decision 5). On the shipped matrix every
-Commercial Foundry row is `unverified`.
+`centralus` capability row exists for the chosen model (decision 5). On the shipped matrix the Commercial
+Foundry base row is `available` (2026-11-10) but there is no per-model Commercial row.
 
 ### S5 Entra redirect and user assignment
 

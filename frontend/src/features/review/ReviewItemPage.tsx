@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import type { ApiError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
 import { EmptyState, LoadingState, PageTemplate, Panel, Timestamp } from "../../design-system";
+import { CalibrationContext } from "./CalibrationContext";
 import { DecisionList, MutationError, QueryErrorState, SlaDue, StateBadge } from "./components";
 import { useClaimItem, useDecideItem, useReviewItem, useReviewedIntent } from "./hooks";
 import { STRINGS } from "./strings";
@@ -249,6 +250,9 @@ function ItemBody({
       </Panel>
       {item.kind === "maker_checker" && item.intent_id !== null ? (
         <IntentUnderReview domainId={domainId} intentId={item.intent_id} onHash={setHash} />
+      ) : null}
+      {item.kind === "evaluation_dispute" ? (
+        <CalibrationContext domainId={domainId} subjectRef={item.subject_ref} />
       ) : null}
       <Panel title={D.decisions}>
         <DecisionList item={item} />

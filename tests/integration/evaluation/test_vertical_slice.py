@@ -6,10 +6,11 @@ fixtures, versioned human labels) -> worker pipeline (offline run, calibration, 
 routers, over HTTP (dev-issuer tokens, in-memory policy store, Government-bound).
 
 In process: no compose, no network (outbound connects are blocked below), no cloud, so this is NOT
-marked ``integration`` and runs in CI. The capability matrix is the SHIPPED one: the only
-Commercial Foundry row is ``unverified`` (G01 OPEN), so the Commercial judge is disabled and the
-pilot set runs on the Government judge, whose rows are ``available``. What this does NOT prove: a
-live judge (G16), a Cosmos evaluation store, runtime hosting, the Azure blob archive reader.
+marked ``integration`` and runs in CI. The capability matrix is the SHIPPED one: the
+Government judge rows and the Commercial Foundry base row are ``available`` (Commercial observed
+2026-11-10; G01 stays OPEN), so the pilot set runs on either cloud's recorded judge. What this
+does NOT prove: a live judge (G16), a Cosmos evaluation store, runtime hosting, the Azure blob
+archive reader.
 """
 
 from __future__ import annotations
@@ -269,28 +270,30 @@ def test_a_budget_limited_run_reports_budget_exhausted_with_the_coverage_achieve
 # --- capability-matrix honesty ----------
 
 
-def test_the_commercial_judge_is_disabled_by_the_shipped_matrix_and_nothing_is_judged() -> None:
-    """Measured finding: the only Commercial Foundry row in the shipped matrix is ``unverified``
-    (G01 OPEN), so the Commercial judge is disabled with a reason and the pilot set is not run
-    there. Nothing is rerouted to the Government judge and nothing is invented."""
+def test_the_commercial_judge_is_enabled_by_the_shipped_matrix_and_scores_items() -> None:
+    """PRP-16 item 15: the Commercial Foundry base row is ``available`` in the shipped matrix
+    (observed 2026-11-10), so the Commercial pilot is judged by the recorded fixture judge and
+    produces scored outcomes. Nothing is rerouted to the Government judge."""
     commercial = asyncio.run(sp.run_slice(cloud="commercial", with_online=False, drift=False))
     report = commercial.summary.offline
-    assert report.skip_counts == {"judge_unavailable": 50}
-    assert commercial.fixture.call_count == 0
-    assert report.evaluated_total == 0 and commercial.summary.results_stored == 0
-    detail = next(o.detail for o in report.outcomes if o.detail)
-    assert "unverified" in detail and "foundry.base.commercial.global.any" in detail
-    assert commercial.summary.calibration_skipped
+    assert "judge_unavailable" not in report.skip_counts
+    assert report.evaluated_total > 0
+    assert commercial.fixture.call_count > 0
+    scored = [o for o in report.outcomes if o.status == "scored"]
+    assert scored, "expected scored Commercial outcomes"
+    assert not any(o.detail and "unverified" in o.detail for o in report.outcomes)
 
 
-async def test_sandbox_telemetry_carries_no_classification_so_online_is_fully_skipped(
+async def test_sandbox_telemetry_classified_spans_reach_the_judge_restricted_never_do(
     s: sp.Slice, tmp_path: Path
 ) -> None:
-    """Fail-closed rules: a missing classification is restricted, so against an LLM judge every
-    online item built from the sandbox telemetry is skipped. This is reported, not changed."""
+    """Round 2 item 9: sandbox telemetry carries a per-agent classification (some agents stay
+    null). Classified, approved spans are evaluated; restricted and unclassified spans (null fails
+    closed to restricted) are skipped ``judge_not_approved`` and never reach the judge."""
     path = sp.generate_government_telemetry(tmp_path / "telemetry-out")
     lines = [ln for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    assert lines and all('"classification"' not in ln for ln in lines)
+    assert any('"classification"' in ln for ln in lines)
+    assert any('"classification"' not in ln for ln in lines)
     registry = sp.build_registry()
     registry.datasets.register(sp.frame_dataset())
     double = sp.CountingLlm()
@@ -300,5 +303,9 @@ async def test_sandbox_telemetry_carries_no_classification_so_online_is_fully_sk
     config = sp.online_config(registry, run_id="online-sandbox", llm=True)
     report = await service.run_online(NdjsonRecordSource(path), config)
     assert report.sampled_total > 0
-    assert report.skip_counts == {"judge_not_approved": report.sampled_total}
-    assert report.evaluated_total == 0 and not double.calls and report.results == ()
+    assert report.evaluated_total > 0 and double.calls
+    assert all(req.classification not in (None, "restricted") for req in double.calls)
+    restricted = [o for o in report.outcomes if o.stratum.endswith("/restricted")]
+    assert restricted
+    assert all(o.status == "skipped" and o.reason == "judge_not_approved" for o in restricted)
+    assert set(report.skip_counts) <= {"judge_not_approved"}
