@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-19-copilot-and-report-creation](active/PRP-19-copilot-and-report-creation.md) | P1 | 7/15 (46%) | todo 8, merged 7 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-19-copilot-and-report-creation](backlog/PRP-19-copilot-and-report-creation.md) | P1 | 10 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage, PRP-17-action-executor-and-hitl | - | sonnet / sonnet | required |
 | [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (backlog) | sonnet / sonnet | none |
 | [PRP-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 | 12 | PRP-29-platform-runtime-wiring, PRP-30-visual-redesign-and-switchable-ui-styles | - | sonnet / sonnet | required |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
