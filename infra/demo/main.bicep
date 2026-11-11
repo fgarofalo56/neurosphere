@@ -72,6 +72,15 @@ param copilotDeployment string = 'mini'
 ])
 param copilotMode string = 'disabled'
 
+@description('Offline evaluation pilot (PRP-16): canonical id of a domain inside the worker identity scope. Empty (default) leaves the offline stage idle; the env vars are then omitted.')
+param evaluationPilotDomainId string = ''
+
+@description('Offline evaluation pilot (PRP-16): canonical subject id inside that domain. Empty (default) leaves the offline stage idle.')
+param evaluationPilotSubjectId string = ''
+
+@description('Registered synthetic dataset ids for the evaluation pilot, comma separated (NS_EVALUATION_PILOT_DATASET_IDS on the API, NS_WORKER_EVAL_PILOT_DATASET_IDS on the workers).')
+param evaluationPilotDatasetIds string = 'sbx-groundedness-pilot'
+
 @description('Catalog search provider (NS_SEARCH_PROVIDER). The demo deploys no AI Search, so it defaults to the in-process fixture; set azure with searchService when an existing service is referenced.')
 @allowed([
   'fixture'
@@ -229,6 +238,7 @@ var commonSettings = union(
 
 var apiSettings = {
   NS_AUTH_AUDIENCES: entraClientId
+  NS_EVALUATION_PILOT_DATASET_IDS: evaluationPilotDatasetIds
   NS_INGEST_EVENTHUBS_NAMESPACE: eventHubsName
   NS_INGEST_EVENTHUB_NAME: eventHubName
   NS_COPILOT_MODE: copilotMode
@@ -245,20 +255,35 @@ var apiSettings = {
 // the site does (D8). The sites are therefore declared twice with identical resources: the
 // bootstrap pass creates them and their identities, the second pass adds the object id. Both
 // passes target the same resources, so the result is one plan, three sites.
-// Not 'all': the recommendations and evaluation roles read sandbox data from compose volume
-// mounts (NS_WORKER_REC_DATA_DIR / NS_WORKER_EVAL_DATA_DIR) that the hosted image does not have.
-// Hosted recommendations and evaluations are written by the seeder instead.
-var workersBaseSettings = {
-  NS_WORKER_ROLES: 'ingestion,projections,aggregates,actions,hitl_timers,lifecycle'
-  NS_WORKER_TENANT_ID: entraTenantId
-  NS_INGESTION_EVENTHUBS_NAMESPACE: eventHubsName
-  NS_INGESTION_EVENTHUB_NAME: eventHubName
-  NS_INGESTION_CONSUMER_GROUP: consumerGroupName
-  NS_INGESTION_STORAGE_ACCOUNT: storageName
-  NS_INGESTION_CHECKPOINT_CONTAINER: checkpointContainer
-  NS_QUARANTINE_STORAGE_ACCOUNT: storageName
-  NS_QUARANTINE_CONTAINER: quarantineContainer
-}
+// Not 'all': the recommendations role reads sandbox data from a compose volume mount
+// (NS_WORKER_REC_DATA_DIR) that the hosted image does not have; hosted recommendations are written
+// by the seeder instead. The evaluation role IS enabled: the workers image carries the SYNTHETIC
+// benchmark registry at /app/evaluation-data (services/workers/Dockerfile), with the fixture judge.
+// The offline pilot stays idle unless evaluationPilotDomainId and evaluationPilotSubjectId are set.
+var evaluationPilotSettings = empty(evaluationPilotDomainId) || empty(evaluationPilotSubjectId)
+  ? {}
+  : {
+      NS_WORKER_EVAL_PILOT_DATASET_IDS: evaluationPilotDatasetIds
+      NS_WORKER_EVAL_PILOT_DOMAIN_ID: evaluationPilotDomainId
+      NS_WORKER_EVAL_PILOT_SUBJECT_ID: evaluationPilotSubjectId
+    }
+
+var workersBaseSettings = union(
+  {
+    NS_WORKER_ROLES: 'ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation'
+    NS_WORKER_EVAL_DATA_DIR: '/app/evaluation-data'
+    NS_WORKER_EVAL_JUDGE: 'fixture'
+    NS_WORKER_TENANT_ID: entraTenantId
+    NS_INGESTION_EVENTHUBS_NAMESPACE: eventHubsName
+    NS_INGESTION_EVENTHUB_NAME: eventHubName
+    NS_INGESTION_CONSUMER_GROUP: consumerGroupName
+    NS_INGESTION_STORAGE_ACCOUNT: storageName
+    NS_INGESTION_CHECKPOINT_CONTAINER: checkpointContainer
+    NS_QUARANTINE_STORAGE_ACCOUNT: storageName
+    NS_QUARANTINE_CONTAINER: quarantineContainer
+  },
+  evaluationPilotSettings
+)
 
 var frontendSettings = {
   NS_UI_CLOUD: cloudName

@@ -181,6 +181,31 @@ def test_app_service_deploy_apply_opt_in_is_one_default_off_parameter() -> None:
     assert text.count("deployApplySettings,") == 1  # the api site only
 
 
+def test_evaluation_env_reaches_workers_and_api_pilot_ids() -> None:
+    """PRP-16 item 12: the workers run the evaluation role from the image's synthetic registry."""
+    default = _containers(_render())
+    workers = _env(default["workers"])
+    assert "evaluation" in workers["NS_WORKER_ROLES"].split(",")
+    assert workers["NS_WORKER_EVAL_DATA_DIR"] == "/app/evaluation-data"
+    assert workers["NS_WORKER_EVAL_JUDGE"] == "fixture"
+    # Pilot domain/subject empty by default: the offline stage stays idle (nothing invented).
+    assert not [k for k in workers if k.startswith("NS_WORKER_EVAL_PILOT_")]
+    assert _env(default["api"])["NS_EVALUATION_PILOT_DATASET_IDS"] == "sbx-groundedness-pilot"
+    assert "NS_EVALUATION_PILOT_DATASET_IDS" not in _env(default["frontend"])
+    piloted = _containers(
+        _render(
+            "--set",
+            "evaluation.pilotDomainId=commercial:acme:sandbox:domain:dom-001",
+            "--set",
+            "evaluation.pilotSubjectId=commercial:acme:sandbox:agent:a-000000",
+        )
+    )
+    env = _env(piloted["workers"])
+    assert env["NS_WORKER_EVAL_PILOT_DOMAIN_ID"] == "commercial:acme:sandbox:domain:dom-001"
+    assert env["NS_WORKER_EVAL_PILOT_SUBJECT_ID"] == "commercial:acme:sandbox:agent:a-000000"
+    assert env["NS_WORKER_EVAL_PILOT_DATASET_IDS"] == "sbx-groundedness-pilot"
+
+
 def test_search_provider_is_set_on_the_api_container_only() -> None:
     values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
     assert values["search"]["provider"] == "fixture"

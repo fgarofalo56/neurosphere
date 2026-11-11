@@ -83,6 +83,17 @@ search:
   index: "" # NS_SEARCH_INDEX (empty = neurosphere-catalog)
   region: "" # NS_SEARCH_REGION
 
+# Evaluation (PRP-16). The workers image carries the SYNTHETIC benchmark registry at
+# /app/evaluation-data; the fixture judge replays recorded verdicts (no model call). The offline
+# pilot stays idle unless BOTH pilotDomainId and pilotSubjectId are set (canonical ids inside the
+# worker identity scope); empty values are not rendered. Names and ids only.
+evaluation:
+  dataDir: /app/evaluation-data # NS_WORKER_EVAL_DATA_DIR (workers)
+  judge: fixture # NS_WORKER_EVAL_JUDGE: fixture | endpoint
+  pilotDatasetIds: "sbx-groundedness-pilot" # NS_EVALUATION_PILOT_DATASET_IDS (api), NS_WORKER_EVAL_PILOT_DATASET_IDS (workers)
+  pilotDomainId: "" # NS_WORKER_EVAL_PILOT_DOMAIN_ID
+  pilotSubjectId: "" # NS_WORKER_EVAL_PILOT_SUBJECT_ID
+
 # Secrets Store CSI driver + Key Vault + workload identity (optional, off by default).
 secretProviderClass:
   enabled: false
@@ -133,6 +144,8 @@ workers:
   replicas: 1
   repository: neurosphere/workers
   port: 8090
+  # NS_WORKER_ROLES, same list as the hosted demo (infra/demo/main.bicep). Empty = unset (idle).
+  roles: "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation"
   probes:
     readiness: /healthz
     liveness: /healthz

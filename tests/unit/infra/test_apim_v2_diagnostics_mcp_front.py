@@ -181,7 +181,9 @@ def test_helm_renders_resource_url_from_gateway_host_only_when_enabled() -> None
         if d["kind"] == "Deployment"
         and d["metadata"]["labels"]["app.kubernetes.io/component"] == "workers"
     )
-    assert "env" not in other["spec"]["template"]["spec"]["containers"][0]
+    # The workers carry the evaluation env (PRP-16 item 12) but never the APIM front URL.
+    workers_env = {e["name"] for e in other["spec"]["template"]["spec"]["containers"][0]["env"]}
+    assert "NS_MCP_RESOURCE_SERVER_URL" not in workers_env
 
 
 def test_helm_requires_gateway_host_when_enabled() -> None:
