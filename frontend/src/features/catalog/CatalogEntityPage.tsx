@@ -1,7 +1,16 @@
-import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
+import {
+  Button,
+  Dropdown,
+  Field,
+  Input,
+  Option,
+  makeStyles,
+  tokens,
+} from "@fluentui/react-components";
 import { useRef, useState, type ReactElement } from "react";
 import { Link, useSearchParams } from "react-router";
 import { ForbiddenError, StaleVersionError, type ApiError } from "../../api/index.js";
+import { useSelectedDomain } from "../../app/domain";
 import {
   DataTable,
   EmptyState,
@@ -20,7 +29,10 @@ import {
   useRecertify,
   useReloadEntity,
 } from "./explorerHooks";
+import { EntityFormPanel } from "./EntityForm";
 import { EntityTypeRows, relationLabel } from "./EntityTypeDetails";
+import { isFormType } from "./entityFormModel";
+import { REASON_CODES, type ReasonCode } from "./reasonCodes";
 import { EntityLink, LifecyclePill, QueryProblem, edgeHref, mapHref } from "./explorerParts";
 import { EXPLORER_STRINGS } from "./explorerStrings";
 import type { CatalogEntityView, GraphResultView } from "./explorerTypes";
@@ -230,6 +242,29 @@ function changeError(error: ApiError | null): string | null {
 
 type Change = "deprecate" | "recertify" | null;
 
+function ReasonCodePicker(props: {
+  readonly value: ReasonCode | "";
+  readonly onChange: (value: ReasonCode | "") => void;
+}): ReactElement {
+  return (
+    <Field label={S.reasonCodeLabel} hint={S.reasonCodeHint}>
+      <Dropdown
+        data-testid="reason-code"
+        value={props.value === "" ? S.reasonCodeNone : S.reasonCodes[props.value]}
+        selectedOptions={[props.value]}
+        onOptionSelect={(_e, d) => props.onChange((d.optionValue ?? "") as ReasonCode | "")}
+      >
+        <Option value="">{S.reasonCodeNone}</Option>
+        {REASON_CODES.map((code) => (
+          <Option key={code} value={code}>
+            {S.reasonCodes[code]}
+          </Option>
+        ))}
+      </Dropdown>
+    </Field>
+  );
+}
+
 function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactElement {
   const styles = useStyles();
   const reload = useReloadEntity();
@@ -238,6 +273,15 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
   const [open, setOpen] = useState<Change>(null);
   const [days, setDays] = useState("365");
   const [done, setDone] = useState("");
+  const [reasonCode, setReasonCode] = useState<ReasonCode | "">("");
+  const [editing, setEditing] = useState(false);
+  const { domains } = useSelectedDomain();
+  const canCurate =
+    domains
+      .find((d) => d.domain_id === entity.domain_id)
+      ?.permissions.includes("catalog.curate") === true;
+  const canEdit = canCurate && isFormType(entity.entity_type);
+  const codeArg = reasonCode === "" ? {} : { reasonCode };
   const triggerRef = useRef<HTMLElement | null>(null);
   const daysNumber = Number(days);
   const daysOk = Number.isInteger(daysNumber) && daysNumber >= 1 && daysNumber <= 730;
@@ -274,17 +318,35 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
     };
     if (open === "recertify") {
       recertify.mutate(
-        { entityId: entity.id, etag: entity.etag, validForDays: daysNumber },
+        { entityId: entity.id, etag: entity.etag, validForDays: daysNumber, ...codeArg },
         { onSuccess, onError },
       );
     } else if (open === "deprecate") {
-      deprecate.mutate({ entityId: entity.id, etag: entity.etag }, { onSuccess, onError });
+      deprecate.mutate(
+        { entityId: entity.id, etag: entity.etag, ...codeArg },
+        { onSuccess, onError },
+      );
     }
   };
 
   return (
     <div className={styles.stack}>
       <div className={styles.row}>
+        {canEdit ? (
+          <Button
+            data-testid="entity-edit"
+            onClick={(e) => {
+              triggerRef.current = e.currentTarget;
+              setDone("");
+              setEditing(true);
+            }}
+          >
+            {S.edit}
+          </Button>
+        ) : null}
+        {canDeprecate || isOwner ? (
+          <ReasonCodePicker value={reasonCode} onChange={setReasonCode} />
+        ) : null}
         {canDeprecate ? (
           <Button
             data-testid="deprecate-open"
@@ -326,6 +388,18 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
           </>
         ) : null}
       </div>
+      {editing ? (
+        <EntityFormPanel
+          domain={entity.domain_id}
+          entity={entity}
+          triggerRef={triggerRef}
+          onCancel={() => setEditing(false)}
+          onSaved={(next) => {
+            setEditing(false);
+            setDone(EXPLORER_STRINGS.form.updated(next.etag));
+          }}
+        />
+      ) : null}
       {done === "" ? null : (
         <p role="status" data-testid="change-done">
           {done}
@@ -338,7 +412,7 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
         version={entity.etag}
         diff={diff}
         submitting={mutation.isPending}
-        reasonNote={S.reasonNotStored}
+        reasonNote={reasonCode === "" ? undefined : S.reasonCodeNote(S.reasonCodes[reasonCode])}
         error={changeError(mutation.error)}
         triggerRef={triggerRef}
         onSubmit={submit}

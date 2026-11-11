@@ -83,8 +83,9 @@ test("the recertification queue and stale-agent flow are forbidden for a viewer 
   await page.getByTestId("dry-run").click();
   await expect(page.getByTestId("candidate-row")).toHaveCount(2);
   await page.getByTestId("confirm-open").click();
-  await page.getByTestId("confirm-submit").click();
-  await expect(page.getByTestId("confirm-dialog-error")).toContainText("declined");
+  await page.getByRole("textbox", { name: /Reason/ }).fill("scheduled cleanup");
+  await page.getByRole("button", { name: "Confirm change" }).click();
+  await expect(page.getByTestId("change-error")).toContainText("declined");
 });
 
 test("an administrator confirms the stale-agent plan and sees per-item outcomes", async ({
@@ -95,11 +96,58 @@ test("an administrator confirms the stale-agent plan and sees per-item outcomes"
   await page.getByTestId("dry-run").click();
   await expect(page.getByTestId("plan-id")).toHaveText("plan-e2e-0001");
   await page.getByTestId("confirm-open").click();
-  await page.getByTestId("confirm-submit").click();
+  await expect(page.getByTestId("change-target")).toContainText("2 stale agents");
+  await page.getByRole("textbox", { name: /Reason/ }).fill("scheduled cleanup");
+  await page.getByRole("button", { name: "Confirm change" }).click();
   const rows = page.getByTestId("outcome-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("Marked");
   await expect(rows.nth(1)).toContainText("Failed");
+});
+
+/** The stub caller lists Finance with data.read only; add catalog.curate on the wire. */
+async function grantCurate(page: Page): Promise<void> {
+  await page.route("**/api/v1/me/domains", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { items: { permissions: string[] }[] };
+    for (const item of body.items) item.permissions = [...item.permissions, "catalog.curate"];
+    await route.fulfill({ response, json: body });
+  });
+}
+
+test("a curator creates an agent, lands on its page and edits it", async ({ page }) => {
+  await actAsAdmin(page);
+  await grantCurate(page);
+  await page.goto(`/catalog?domain_id=${D}`);
+  await page.getByTestId("new-entity").click();
+  await page.getByRole("textbox", { name: /Display name/ }).fill("Created agent");
+  await page.getByRole("textbox", { name: /Platform/ }).fill("foundry");
+  await page.getByRole("textbox", { name: /Source id/ }).fill("synthetic-source");
+  await page.getByTestId("entity-form-review").click();
+  await expect(page.getByTestId("change-target")).toContainText("New agent");
+  await page.getByRole("textbox", { name: /Reason/ }).fill("onboarding");
+  await page.getByRole("button", { name: "Confirm change" }).click();
+
+  await expect(page).toHaveURL(/\/catalog\/entity\?.*entity_id=/);
+  await expect(page.getByTestId("entity-id")).toContainText("commercial:e2e:catalog:agent:");
+  const before = (await page.getByTestId("entity-etag").textContent()) ?? "";
+
+  await page.getByTestId("entity-edit").click();
+  const name = page.getByRole("textbox", { name: /Display name/ });
+  await name.fill("Renamed agent");
+  await page.getByTestId("entity-form-review").click();
+  await expect(page.getByTestId("change-version")).toHaveText(before);
+  await expect(page.getByTestId("change-diff-row")).toContainText("Renamed agent");
+  await page.getByRole("textbox", { name: /Reason/ }).fill("fix the name");
+  await page.getByRole("button", { name: "Confirm change" }).click();
+  await expect(page.getByTestId("change-done")).toContainText("Entity updated");
+  await expect(page.getByTestId("entity-etag")).not.toHaveText(before);
+});
+
+test("without catalog.curate there is no New entity action", async ({ page }) => {
+  await page.goto(`/catalog?domain_id=${D}`);
+  await expect(page.getByTestId("entity-row").first()).toBeVisible();
+  await expect(page.getByTestId("new-entity")).toHaveCount(0);
 });
 
 for (const mode of ["light", "dark", "high-contrast"] as const) {

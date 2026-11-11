@@ -8,6 +8,11 @@ import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
  * - the list is clamped to 4 per page so "N+" and cursor paging are exercised;
  * - deprecate / recertify / stale-agent confirm / export need the `admin` or `steward` persona
  *   (stand-ins for catalog.curate / data.export); reads work for any authorized caller;
+ * - PRP-31 round 2: deprecate / recertify accept the item 9 `reason_code` (closed list, anything
+ *   else or an extra field is 422); the item 13 routes create (POST .../domains/{d}/entities, 201
+ *   plus ETag) and edit (PUT .../entities/{id}, If-Match) need the same persona and answer 403,
+ *   404, 409 (stale If-Match), 422 (missing If-Match, server-owned key, lifecycle_status or an
+ *   entity_type change on PUT, a missing required field, `domain` type) like the real API;
  * - deprecate and recertify need an If-Match that equals the stored ETag, else 409 stale_version;
  *   the owner "contested-team" is always changed by someone else first, so its first recertify
  *   attempt is a deterministic 409 and the ETag the page reloads is the new one.
@@ -300,6 +305,21 @@ function lineage(ctx: FeatureMockContext, kind: string, body: Record<string, unk
   );
 }
 
+/** Item 9: `reason_code` is optional, from the closed list; an extra field is a 422. */
+function reasonCodeOk(
+  ctx: FeatureMockContext,
+  body: Record<string, unknown>,
+  allowed: readonly string[],
+): boolean {
+  const extra = Object.keys(body).find((k) => !allowed.includes(k));
+  const code = body["reason_code"];
+  if (extra !== undefined || (code !== undefined && !REASON_CODES.includes(String(code)))) {
+    ctx.problem(422, "invalid_schema", undefined, "reason_code is not an allowed value.");
+    return false;
+  }
+  return true;
+}
+
 function change(ctx: FeatureMockContext, id: string, op: string, body: Record<string, unknown>) {
   const target = byId(id);
   if (target === undefined) {
@@ -323,9 +343,11 @@ function change(ctx: FeatureMockContext, id: string, op: string, body: Record<st
     return;
   }
   if (op === "deprecate") {
+    if (!reasonCodeOk(ctx, body, ["reason_code"])) return;
     send(ctx, 200, bump(target, { lifecycle_status: "deprecated" }));
     return;
   }
+  if (!reasonCodeOk(ctx, body, ["valid_for_days", "reason_code"])) return;
   const days = body["valid_for_days"];
   if (typeof days !== "number" || days < 1 || days > 730) {
     ctx.problem(422, "invalid_schema", undefined, "valid_for_days must be 1 to 730.");
@@ -335,6 +357,128 @@ function change(ctx: FeatureMockContext, id: string, op: string, body: Record<st
   // The next attempt on the contested owner is again overtaken by "someone else" (repeatable runs).
   if (id === CONTESTED) contestedHit = false;
   send(ctx, 200, bump(target, { recertified_at: NOW, recertify_by: by }));
+}
+
+const REASON_CODES = [
+  "superseded",
+  "no_longer_used",
+  "owner_changed",
+  "owner_left",
+  "security_issue",
+  "quality_issue",
+  "periodic_review",
+  "other",
+];
+
+/** Item 13: keys the server owns; any of them in a body is a 422. */
+const SERVER_OWNED = [
+  "id",
+  "cloud",
+  "customer_id",
+  "domain_id",
+  "version",
+  "etag",
+  "created_at",
+  "updated_at",
+  "schema_version",
+  "recertified_at",
+  "recertify_by",
+];
+
+/** Per-type required body fields (packages/contracts catalog/v1). */
+const REQUIRED: Readonly<Record<string, readonly string[]>> = {
+  agent: ["display_name", "platform", "source_id"],
+  tool: ["display_name", "source_id"],
+  model_deployment: ["provider", "model_name", "deployment_name"],
+  mcp_server: ["display_name", "url", "transport", "auth", "publishable", "provenance"],
+};
+
+function quotedEtag(e: Entity): string {
+  return `"${e.etag}"`;
+}
+
+function sendEntity(ctx: FeatureMockContext, status: number, e: Entity): void {
+  ctx.res.writeHead(status, {
+    "content-type": "application/json",
+    etag: quotedEtag(e),
+    ...ctx.cors,
+  });
+  ctx.res.end(JSON.stringify(e));
+}
+
+function bodyProblem(body: Record<string, unknown>, editing: boolean): string | null {
+  const type = body["entity_type"];
+  if (typeof type !== "string" || type === "") return "entity_type is required.";
+  if (type === "domain") return "domain entities cannot be written here.";
+  for (const key of SERVER_OWNED) {
+    if (key in body) return `${key} is server-owned.`;
+  }
+  if (editing && "lifecycle_status" in body) return "lifecycle_status cannot be set on edit.";
+  for (const key of REQUIRED[type] ?? []) {
+    const value = body[key];
+    if (value === undefined || value === null || value === "") return `${key} is required.`;
+  }
+  return null;
+}
+
+async function writeEntity(
+  ctx: FeatureMockContext,
+  domain: string,
+  entityId: string | undefined,
+): Promise<void> {
+  const raw = await ctx.readBody();
+  if (!canChange(ctx)) {
+    ctx.forbidden();
+    return;
+  }
+  const body = parse(raw);
+  if (entityId === undefined) {
+    const problem = bodyProblem(body, false);
+    if (problem !== null) {
+      ctx.problem(422, "invalid_schema", undefined, problem);
+      return;
+    }
+    counter += 1;
+    const type = body["entity_type"] as string;
+    const name = String(body["display_name"] ?? body["deployment_name"] ?? type);
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const created: Entity = {
+      ...body,
+      id: `${PREFIX}${type}:${slug}-${String(counter)}`,
+      entity_type: type,
+      domain_id: domain,
+      display_name: name,
+      lifecycle_status: "draft",
+      version: 1,
+      etag: `etag-${String(counter)}`,
+      updated_at: NOW,
+    };
+    entities.push(created);
+    sendEntity(ctx, 201, created);
+    return;
+  }
+  const target = entities.find((e) => e.id === entityId && e.domain_id === domain);
+  if (target === undefined) {
+    send(ctx, 404, { error: "not found" });
+    return;
+  }
+  const header = ctx.req.headers["if-match"];
+  if (header === undefined || header === "") {
+    ctx.problem(422, "invalid_schema", undefined, "If-Match is required.");
+    return;
+  }
+  const ifMatch = header.toString().replace(/^W\//, "").replace(/"/g, "");
+  if (ifMatch !== target.etag) {
+    ctx.problem(409, "stale_version", "stale_version", "The entity changed since it was read.");
+    return;
+  }
+  const problem = bodyProblem(body, true);
+  if (problem !== null || body["entity_type"] !== target.entity_type) {
+    ctx.problem(422, "invalid_schema", undefined, problem ?? "entity_type cannot change on edit.");
+    return;
+  }
+  const name = body["display_name"] ?? body["deployment_name"] ?? target.display_name;
+  sendEntity(ctx, 200, bump(target, { ...body, display_name: String(name) }));
 }
 
 function recertifications(ctx: FeatureMockContext): void {
@@ -413,14 +557,18 @@ export const handle: FeatureMockHandler = (ctx) => {
   const method = ctx.req.method ?? "GET";
 
   const domainMatch = /^domains\/([^/]+)\/(entities|search|export)$/.exec(rest);
+  const writeMatch = /^domains\/([^/]+)\/entities\/([^/]+)$/.exec(rest);
   const entityMatch = /^entities\/([^/]+?)(?:\/(deprecate|recertify))?$/.exec(rest);
   const lineageMatch = /^lineage\/(neighbors|impact)$/.exec(rest);
   const reconcileMatch = /^reconcile\/stale-agents\/(dry-run|confirm)$/.exec(rest);
   const isRecerts = rest === "recertifications" && method === "GET";
   const isEntityGet = entityMatch !== null && entityMatch[2] === undefined && method === "GET";
   const isEntityChange = entityMatch !== null && entityMatch[2] !== undefined && method === "POST";
+  const isCreate = domainMatch !== null && domainMatch[2] === "entities" && method === "POST";
+  const isEdit = writeMatch !== null && method === "PUT";
   const mine =
     domainMatch !== null ||
+    isEdit ||
     isEntityGet ||
     isEntityChange ||
     (lineageMatch !== null && method === "POST") ||
@@ -432,7 +580,15 @@ export const handle: FeatureMockHandler = (ctx) => {
     send(ctx, 401, { error: "missing or unrecognised token" });
     return true;
   }
-  if (domainMatch !== null) {
+  if (isEdit && writeMatch !== null) {
+    const domain = decodeURIComponent(writeMatch[1] ?? "");
+    if (domain !== DOMAIN) ctx.forbidden();
+    else void writeEntity(ctx, domain, decodeURIComponent(writeMatch[2] ?? ""));
+  } else if (isCreate && domainMatch !== null) {
+    const domain = decodeURIComponent(domainMatch[1] ?? "");
+    if (domain !== DOMAIN) ctx.forbidden();
+    else void writeEntity(ctx, domain, undefined);
+  } else if (domainMatch !== null) {
     void domainRoute(ctx, decodeURIComponent(domainMatch[1] ?? ""), domainMatch[2] ?? "");
   } else if (isEntityGet && entityMatch !== null) {
     const found = byId(decodeURIComponent(entityMatch[1] ?? ""));

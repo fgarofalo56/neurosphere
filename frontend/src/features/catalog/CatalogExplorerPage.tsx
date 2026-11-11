@@ -7,7 +7,8 @@ import {
   makeStyles,
   tokens,
 } from "@fluentui/react-components";
-import { useState, type ReactElement } from "react";
+import { useRef, useState, type ReactElement } from "react";
+import { useNavigate } from "react-router";
 import { ForbiddenError, useApiClient } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
 import {
@@ -18,9 +19,11 @@ import {
   Panel,
   Timestamp,
 } from "../../design-system";
+import { EntityFormPanel } from "./EntityForm";
 import { fetchExportPage, useEntityList, useEntitySearch } from "./explorerHooks";
 import { EntityLink, LifecyclePill, QueryProblem, downloadJson } from "./explorerParts";
 import { EXPLORER_STRINGS } from "./explorerStrings";
+import { entityHref } from "./paths";
 import {
   ENTITY_TYPES,
   LIFECYCLES,
@@ -270,11 +273,32 @@ export function CatalogExplorerPage(): ReactElement {
   const [term, setTerm] = useState("");
   const [type, setType] = useState<EntityTypeName | "">("");
   const [lifecycle, setLifecycle] = useState<LifecycleName | "">("");
-  const canExport =
-    domains.find((d) => d.domain_id === domainId)?.permissions.includes("data.export") === true;
+  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
+  const newRef = useRef<HTMLElement | null>(null);
+  const permissions = domains.find((d) => d.domain_id === domainId)?.permissions ?? [];
+  const canExport = permissions.includes("data.export");
+  const canCurate = domainId !== "" && permissions.includes("catalog.curate");
 
   return (
-    <PageTemplate title={S.title} description={EXPLORER_STRINGS.explorer.description}>
+    <PageTemplate
+      title={S.title}
+      description={EXPLORER_STRINGS.explorer.description}
+      actions={
+        canCurate ? (
+          <Button
+            appearance="primary"
+            data-testid="new-entity"
+            onClick={(e) => {
+              newRef.current = e.currentTarget;
+              setCreating(true);
+            }}
+          >
+            {S.newEntity}
+          </Button>
+        ) : undefined
+      }
+    >
       <div className={styles.stack}>
         <Panel compact>
           <div className={styles.row}>
@@ -315,6 +339,17 @@ export function CatalogExplorerPage(): ReactElement {
           </div>
           {term === "" ? null : <p data-testid="search-note">{S.searchNote}</p>}
         </Panel>
+        {creating && canCurate ? (
+          <EntityFormPanel
+            domain={domainId}
+            triggerRef={newRef}
+            onCancel={() => setCreating(false)}
+            onSaved={(created) => {
+              setCreating(false);
+              void navigate(entityHref(created.id));
+            }}
+          />
+        ) : null}
         {domainId === "" ? (
           <EmptyState title={S.noDomain} testId="no-domain" />
         ) : term === "" ? (
