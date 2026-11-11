@@ -1,10 +1,11 @@
 ---
 name: PRP-19-copilot-and-report-creation
-status: active
+status: shipped
 priority: P1
 order: 10
 pr: 202
 started: 2026-11-11
+shipped: 2026-11-11
 branch: prp-19-round2
 review: required
 created: 2026-10-08
@@ -431,6 +432,51 @@ Round 2 (items 8-15) approved 2026-11-11 as written: integration branch `prp-19-
 | 16 | merged | worktree-agent-aa228e82cd7b7e00e | sonnet | 6a2a03b; get_result(scope, domain, evaluation_id) on protocol + memory + Cosmos (read_item, pk [customer, domain], doc id _doc_id; None for out-of-scope domain before any read, 404, wrong doc_type, cloud/customer/domain mismatch; other errors mapped via _raise_mapped); orchestrator re-run: ruff + pyright clean, core evaluation 159 passed; implementer: api evaluation + evaluation_worker 112 passed; merge 72dd5c0; emulator conformance not run | 2026-11-11 |
 
 ## Completion note (filled at ship)
+
+### Round 2 (audit gap closure, items 8-16)
+- Date: 2026-11-11.
+- Merged commits:
+  - PR #202, merge `c4929be` into main, with CI 26 passed and 1 skipped, 0 failed, on head `6ef7373`.
+  - Item merges on `prp-19-round2`: item 14 `56659cb`, item 10 `20326bf`, item 16 `72dd5c0`, item 9 `b37ea57` (rework `4d90451`), item 11 `cac4546`, item 8 `67ba291`, item 13 `dcaef7a`, item 12 `8de002e`, item 15 `826e8fe` (follow-up `9721bc8`).
+  - Orchestrator commits:
+    - `fafc1c4`: an item 9 test pinned "the shipped eval store omits eval evidence", which item 16 made false.
+    - `e8bd39c`: item 14's bare `from conftest import _agent` failed deterministically with `tests/contracts` in the same session; it is now an `agent_factory` fixture.
+    - `d1823e3`: `openapi.json` and `docs/reference` regenerated (new `/copilot/status` path, no component renames), plus a `planes.py` comment.
+    - `53e9a0d`: G12 note.
+    - `6ef7373`'s parent: the compose profile test pinned the literal `NS_COPILOT_MODE: disabled`.
+- Reviews:
+  - Item 9: CHANGES REQUIRED. A blanket `except Exception` hid store outages. After rework round 1, the Haiku pass CONFIRMED FIXED.
+  - Items 10, 11 and 14: APPROVED.
+- Local sweep before the PR:
+  - core 2766 passed;
+  - api 1737 passed (injection corpus 78/78, 0 overscoped);
+  - tests + workers + sandbox 5042 passed, 1 failed (the compose pin, fixed);
+  - Vitest 1058 passed, 1 failed. The failure was `curation.test.tsx`, which this PRP does not touch; it passed 3/3 in isolation (Fluent load flake);
+  - pyright 0, ruff clean.
+- Snyk Code: 0 issues in the touched code. The 2 pre-existing medium findings are `mcp/server/router.py` `*` CORS on a public, credential-less metadata document. That file is unchanged and the setting is intentional.
+- Deviations from the round 2 blueprint, and why:
+  - Item 16 was added mid-flight (user decision, 2026-11-11), because `EvaluationStore` had no by-id read.
+  - The reports registry keeps `EmptyEvidenceReader` instead of the planned seam swap. Report runs only execute `tool_for` tools, never `get_evidence`, so a swap would add a build-order dependency for nothing. This is documented in `planes.py`.
+  - Item 10's status route uses the workspaces `_authenticated_marker` pattern (it declares `data.read` for the route inventory only and enforces sign-in).
+  - Item 11 fails composition closed without an audit repository. It edited `tests/integration/copilot/{scenarios,support}.py` and `test_planes_builder.py` outside its ownership; the reviewer accepted these as required by the new contract.
+  - Item 12 changed credential redaction to keep the label and mask only the value.
+  - Item 13 also discards partial text on client-side failures.
+  - Item 14 refuses `in`/`eq` filters with no value. The contract already rejects `values: []`.
+- Descoped: none.
+- Not done, or OPEN:
+  - The live copilot model run is OPEN; `NS_LIVE_APPROVED=1` was not set. G01, G05, G07 and G12 stay OPEN.
+  - The copilot stays `disabled` until an operator configures an endpoint (`docs/runbooks/copilot.md`).
+  - Playwright runs against the mock API only, and Government is not exercised.
+  - Pages cannot publish a selection yet: `frontend/src/app/Shell.tsx` must wrap the `Outlet` and dock in `CopilotSelectionProvider`.
+  - The operator must add `NS_COPILOT_*` lines to `.env.example`; agents cannot edit it.
+- Follow-ups (non-blocking, from reviews):
+  - Item 9: datetime-typed `observed_at` (not `str(root)`).
+  - Item 10: an `is_reason_code` guard on the status fallback, a debug log when a chart is unsaveable, and a docs note that rows without `record_id` are never saveable.
+  - Item 11: bound the URL `report_id` length in denied audits; an audit-write failure turns a 404 into a 500; legacy shares are normalized only on their next write.
+  - Item 12: `tool_name` mismatch raises `ValueError` at request build time.
+  - Item 14: split the branchy empty-`in` test, document the all-or-nothing evidence refusal, and add an MCP-path test for it.
+
+### Round 1
 - Date: 2026-10-22
 - Merged commits: PR #87, merge `b9fe5c0` into main. Item merges on `prp-19-copilot-and-report-creation`: item 3 `817f683`, item 1 `52e2255`, item 4 `b705b42`, item 2 `d8b4914`, item 5 `6bc3efe` (rework `a8655d6`), item 7 `8b71985`, item 6 `83baac1` (rework `2731e1a`), orchestrator test-timeout fix `44b5fe7`, gate notes `f4b1a48`, CI fix-forward `ee60c94` (gitleaks fixture split + `.gitleaksignore` fingerprint, four CodeQL alert classes) and `891dede` (CodeQL match-capture false positive). CI on PR #87: 21 checks passed, 2 licence-register regeneration jobs skipped (nothing to regenerate). Local `verify-gates -Mode full`: PASS (6542 passed, 102 deselected).
 - Deviations from blueprint and why:
