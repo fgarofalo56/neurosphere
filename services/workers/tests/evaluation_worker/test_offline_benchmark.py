@@ -97,12 +97,17 @@ async def test_pilot_set_runs_with_recorded_fixtures_and_skips_restricted() -> N
     assert restricted_cov.evaluated == 0 and restricted_cov.skipped == 8
 
 
-async def test_commercial_judge_is_disabled_by_the_matrix_and_never_called() -> None:
+async def test_commercial_judge_is_enabled_by_the_shipped_matrix_and_scores_items() -> None:
+    """PRP-16 item 15: the shipped Commercial base row is ``available`` (2026-11-10), so the
+    Commercial pilot is judged by the recorded fixture judge instead of skipped."""
     registry, pilot, _, comm = _setup()
     judge = load_fixture_judge()
     report = await _service(registry, judge).run_offline(pilot, _config(comm, "commercial"))
-    assert judge.call_count == 0
-    assert report.skip_counts == {"judge_unavailable": 50}
+    assert "judge_unavailable" not in report.skip_counts
+    assert "judge_cloud_mismatch" not in report.skip_counts
+    assert report.evaluated_total > 0
+    assert judge.call_count == report.evaluated_total
+    assert any(o.status == "scored" for o in report.outcomes)
 
 
 async def test_government_run_with_commercial_config_is_refused_per_item() -> None:
