@@ -20,7 +20,8 @@ again) turns the decisions into human labels, calibrates the judge and stores th
 ``/quality`` over HTTP then reports a pilot grounded rate with an interval. An out-of-scope caller
 gets 403 on ``/quality`` and ``/calibration-samples``.
 
-Evidence is written to ``docs/evidence/G12/evaluation/compose-loop-<date>.md``: emulator, bounded
+Evidence is written to ``temp/evidence/G12/evaluation/compose-loop-<date>.md`` (or, with
+``NS_EVIDENCE_WRITE=1``, the committed ``docs/evidence/G12/evaluation/``): emulator, bounded
 feasibility, NOT a live claim.
 
 Run: ``NS_PROBE_COSMOS_URL=http://127.0.0.1:8081/ MSYS_NO_PATHCONV=1 uv run pytest -q -m integration
@@ -33,6 +34,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 import tempfile
 import time
 import uuid
@@ -95,7 +97,13 @@ OTHER_DOMAIN: Final = "commercial:synthco:sandbox:domain:other-eval"
 SUBJECT: Final = "commercial:synthco:sandbox:agent:a-000000"
 PILOT_DATASET: Final = "sbx-groundedness-pilot"
 DATA_DIR: Final = REPO_ROOT / "sandbox" / "evaluation" / "data"
-EVIDENCE_DIR: Final = REPO_ROOT / "docs" / "evidence" / "G12" / "evaluation"
+#: Runs write to the gitignored ``temp/`` so a local run never dirties the tree; set
+#: ``NS_EVIDENCE_WRITE=1`` to refresh the committed evidence under docs/evidence/G12/evaluation.
+EVIDENCE_DIR: Final = (
+    REPO_ROOT / "docs" / "evidence" / "G12" / "evaluation"
+    if os.environ.get("NS_EVIDENCE_WRITE") == "1"
+    else REPO_ROOT / "temp" / "evidence" / "G12" / "evaluation"
+)
 REVIEWER_OID: Final = "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5"
 OUT_OF_SCOPE_OID: Final = "7d2e3f40-5b6c-4d7e-8f90-a1b2c3d4e5f6"
 EVAL: Final = "/api/v1/evaluation"
