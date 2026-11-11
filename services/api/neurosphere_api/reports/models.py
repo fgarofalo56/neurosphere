@@ -25,9 +25,17 @@ __all__ = [
     "RunView",
     "ShareBody",
     "StoredReport",
+    "normalize_principal",
 ]
 
 MAX_SHARES: Final = 50
+
+
+def normalize_principal(principal_id: str) -> str:
+    """Canonical form of a principal id for every comparison and for storage: stripped, casefolded.
+    Without it ``Owner`` and ``owner `` would be different principals (self-approval bypass)."""
+    return principal_id.strip().casefold()
+
 
 PublicationState = Literal["none", "pending", "approved", "rejected"]
 Metric = Literal["cost", "latency", "errors"]

@@ -344,7 +344,13 @@ def _reports(ctx: BuildContext) -> None:
     if store is None:
         client, database = _database(ctx)
         store = CosmosReportStore.from_client(client, database=database)
-    configure_reports(ctx.app, store=store, tool_registry=registry, clock=clock)
+    configure_reports(
+        ctx.app,
+        store=store,
+        tool_registry=registry,
+        clock=clock,
+        audit=ctx.shared(AUDIT_REPOSITORY),
+    )
     try:
         get_report_service(_state_request(ctx))
     except DependencyTransientError:

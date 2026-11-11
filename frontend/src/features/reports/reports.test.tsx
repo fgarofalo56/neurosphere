@@ -388,7 +388,10 @@ describe("sharing", { timeout: DIALOG_TEST_TIMEOUT }, () => {
     await waitFor(() => expect(calls.some((c) => c.path.endsWith("/shares"))).toBe(true), {
       timeout: 4000,
     });
-    expect(calls.find((c) => c.path.endsWith("/shares"))?.body).toEqual({ principal_id: BOB });
+    const sent = calls.find((c) => c.path.endsWith("/shares"));
+    expect(sent?.body).toEqual({ principal_id: BOB });
+    // The share is made against the definition the owner is looking at.
+    expect(sent?.ifMatch).toBe(ETAG);
   });
 
   it("removes a share", async () => {
@@ -403,6 +406,26 @@ describe("sharing", { timeout: DIALOG_TEST_TIMEOUT }, () => {
     const dialog = await openShareDialog(user);
     await user.click(inDialog(dialog, STRINGS.share.remove));
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
+    expect(calls.find((c) => c.method === "DELETE")?.ifMatch).toBe(ETAG);
+  });
+
+  it("shows the stale-version message when the report changed since it was viewed", async () => {
+    const user = userEvent.setup();
+    setup(VIEW_PATH, {
+      ...viewRoutes(report()),
+      [`POST ${reportSharesPath(DOMAIN, REPORT_ID)}`]: problem(
+        409,
+        "stale_version",
+        "report_modified",
+      ),
+    });
+    const dialog = await openShareDialog(user);
+    await user.click(within(dialog).getByLabelText(STRINGS.share.principalLabel));
+    await user.paste(BOB);
+    await user.click(inDialog(dialog, STRINGS.share.add));
+    expect((await within(dialog).findByTestId("mutation-error")).textContent).toContain(
+      STRINGS.errors.stale,
+    );
   });
 
   it("explains a refused share (403 not_owner) and changes nothing", async () => {
@@ -441,6 +464,19 @@ describe("publication", () => {
     await user.click(await screen.findByTestId("request-publication"));
     expect(await screen.findByTestId("publication-requested")).toBeTruthy();
     expect(calls.find((c) => c.path === PUBLICATION_API)?.body).toBeUndefined();
+    expect(calls.find((c) => c.path === PUBLICATION_API)?.ifMatch).toBe(ETAG);
+  });
+
+  it("shows the stale-version message when the request is refused as stale", async () => {
+    const user = userEvent.setup();
+    setup(VIEW_PATH, {
+      ...viewRoutes(report()),
+      [`POST ${PUBLICATION_API}`]: problem(409, "stale_version", "report_modified"),
+    });
+    await user.click(await screen.findByTestId("request-publication"));
+    expect((await screen.findByTestId("mutation-error")).textContent).toContain(
+      STRINGS.errors.stale,
+    );
   });
 
   it("hides the request control while a request is pending", async () => {

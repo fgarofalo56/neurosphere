@@ -208,7 +208,7 @@ def test_without_audit_the_audited_planes_fail() -> None:
     planes = compose_planes(skip=("audit",))
     assert planes.registry.get("action_plane").code == "audit_repository_unavailable"
     assert planes.registry.get("mcp_admin").code == "audit_repository_unavailable"
-    assert planes.registry.get("reports").state == "ok"  # report runs write no audit
+    assert planes.registry.get("reports").code == "audit_repository_unavailable"
 
 
 def test_without_the_catalog_reader_reports_fail_by_name() -> None:

@@ -8,6 +8,7 @@
                            bounded registry the copilot uses)
 ``report_clock``           optional ``() -> datetime`` (aware; default UTC now)
 ``report_run_cache``       optional :class:`~neurosphere_api.reports.cache.RunCache`
+``report_audit``           optional ``AuditRepository`` (the composition always sets it)
 =========================  ==================================================================
 
 Missing or mistyped required keys fail closed with 503 ``reports_unconfigured``. No
@@ -15,6 +16,7 @@ Missing or mistyped required keys fail closed with 503 ``reports_unconfigured``.
 """
 
 from fastapi import FastAPI, Request
+from neurosphere_core.audit import AuditRepository
 from neurosphere_core.copilot.tools import ToolRegistry
 from neurosphere_core.errors import DependencyTransientError
 
@@ -36,10 +38,13 @@ def get_report_service(request: Request) -> ReportService:
     cache = getattr(state, "report_run_cache", None)
     if cache is not None and not isinstance(cache, RunCache):
         raise DependencyTransientError("reports are not configured", reason=_UNCONFIGURED)
+    audit = getattr(state, "report_audit", None)
+    if audit is not None and not isinstance(audit, AuditRepository):
+        raise DependencyTransientError("reports are not configured", reason=_UNCONFIGURED)
     clock: Clock | None = getattr(state, "report_clock", None)
     if clock is None:
-        return ReportService(store, registry, cache=cache)
-    return ReportService(store, registry, clock=clock, cache=cache)
+        return ReportService(store, registry, cache=cache, audit=audit)
+    return ReportService(store, registry, clock=clock, cache=cache, audit=audit)
 
 
 def configure_reports(
@@ -49,8 +54,10 @@ def configure_reports(
     tool_registry: ToolRegistry,
     clock: Clock | None = None,
     run_cache: RunCache | None = None,
+    audit: AuditRepository | None = None,
 ) -> None:
     """Install the report collaborators on ``app.state`` (one call for PRP-19 item 7)."""
+    app.state.report_audit = audit
     app.state.report_store = store
     app.state.report_tool_registry = tool_registry
     app.state.report_clock = clock
