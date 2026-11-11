@@ -6,7 +6,8 @@ Public API:
 * :func:`register` -- router hook for ``RouterRegistry``. It registers three prefixes:
 
   - ``/api/v1/catalog/domains`` -- entity list, search and export with the domain in the path
-    (:mod:`.catalog`), plus the steward decision route (:mod:`.curation`);
+    (:mod:`.catalog`), the steward decision route (:mod:`.curation`) and the entity create and
+    update routes that stamp the scope server-side (:mod:`.entities`, item 13);
   - ``/api/v1/audit/domains`` -- auditable domains, records and chain verification (:mod:`.audit`);
   - ``/api/v1/capabilities`` -- the shipped capability matrix (:mod:`.capabilities`).
 
@@ -17,7 +18,7 @@ through ``require`` and the route inventory checks it.
 from fastapi import APIRouter
 
 from neurosphere_api.routers import RouterRegistry
-from neurosphere_api.ui_adapters import audit, capabilities, catalog, curation
+from neurosphere_api.ui_adapters import audit, capabilities, catalog, curation, entities
 
 __all__ = ["PREFIXES", "build_catalog_router", "register"]
 
@@ -25,9 +26,10 @@ PREFIXES: tuple[str, ...] = (catalog.PREFIX, audit.PREFIX, capabilities.PREFIX)
 
 
 def build_catalog_router() -> APIRouter:
-    """The ``/api/v1/catalog/domains`` router: catalog reads plus the decision route."""
+    """The ``/api/v1/catalog/domains`` router: reads, the decision route and entity writes."""
     router = catalog.build_router()
     curation.add_routes(router)
+    entities.add_routes(router)
     return router
 
 

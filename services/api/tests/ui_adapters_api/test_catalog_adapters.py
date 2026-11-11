@@ -150,6 +150,8 @@ def test_export_denies_another_domain(world: World) -> None:
 
 EXPECTED_PERMISSIONS = {
     ("GET", "/api/v1/catalog/domains/{domain}/entities"): ("data.read",),
+    ("POST", "/api/v1/catalog/domains/{domain}/entities"): ("catalog.curate",),
+    ("PUT", "/api/v1/catalog/domains/{domain}/entities/{entity_id:path}"): ("catalog.curate",),
     ("POST", "/api/v1/catalog/domains/{domain}/search"): ("data.read",),
     ("GET", "/api/v1/catalog/domains/{domain}/export"): ("data.export",),
     ("GET", "/api/v1/catalog/domains/{domain}/curation/edges/{edge_id:path}"): ("data.read",),
