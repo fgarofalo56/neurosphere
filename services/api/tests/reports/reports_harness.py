@@ -35,6 +35,7 @@ from neurosphere_contracts.catalog.v1.agent import Agent
 from neurosphere_contracts.recommendations.v1.recommendation import Recommendation
 from neurosphere_core.actions import DraftRequest
 from neurosphere_core.aggregates import AggregateWindow, Grain, Metric, QueryResult
+from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope import Role
 from neurosphere_core.catalog import CatalogEntity, EntityFilter
 from neurosphere_core.copilot.tools import (
@@ -178,11 +179,41 @@ class Api:
     store: InMemoryReportStore
     registry: ToolRegistry
     catalog: FakeCatalog
+    audit: AuditRepository
     responses: list[Any] = field(default_factory=list[Any])
 
-    def call(self, method: str, who: str | None, path: str = "", **kwargs: Any) -> Any:
+    def current_etag(self, report_id: str) -> str:
+        """The report's ETag as its owner would read it (not recorded in ``responses``)."""
+        for owner in (ALICE, ERIN):
+            response = self.h.client.request(
+                "GET", f"{REPORTS_PATH}/{report_id}", headers=dict(self.h.auth(owner))
+            )
+            if response.status_code == 200:
+                return str(response.json()["etag"])
+        raise AssertionError("report not readable by any owner")
+
+    def call(
+        self,
+        method: str,
+        who: str | None,
+        path: str = "",
+        *,
+        auto_etag: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """One request. Share, unshare and request-publication need ``If-Match``: unless the
+        caller passes its own headers (or ``auto_etag=False``) the current ETag is attached."""
         headers = dict(self.h.auth(who)) if who else {}
-        headers.update(kwargs.pop("headers", {}))
+        given: dict[str, str] = kwargs.pop("headers", {})
+        headers.update(given)
+        parts = path.strip("/").split("/")
+        needs_etag = (
+            len(parts) >= 2
+            and (parts[1] == "shares" or (parts[1] == "publication" and len(parts) == 2))
+            and method in {"POST", "DELETE"}
+        )
+        if needs_etag and auto_etag and not any(k.lower() == "if-match" for k in given):
+            headers["If-Match"] = self.current_etag(parts[0])
         response = self.h.client.request(method, f"{REPORTS_PATH}{path}", headers=headers, **kwargs)
         self.responses.append(response)
         return response
@@ -206,6 +237,9 @@ class Api:
         )
         assert response.status_code == 200, response.text
         return response.json()
+
+
+AUDIT_CHAIN: str = f"{CUSTOMER}.finance"
 
 
 def problem(response: Any) -> dict[str, Any]:
@@ -250,5 +284,8 @@ def make_api(*, cache: RunCache | None = None) -> Api:
         )
     )
     store = InMemoryReportStore()
-    configure_reports(h.app, store=store, tool_registry=registry, clock=clock, run_cache=cache)
-    return Api(h=h, store=store, registry=registry, catalog=catalog)
+    audit = AuditRepository(InMemoryAuditStore(), clock=clock)
+    configure_reports(
+        h.app, store=store, tool_registry=registry, clock=clock, run_cache=cache, audit=audit
+    )
+    return Api(h=h, store=store, registry=registry, catalog=catalog, audit=audit)

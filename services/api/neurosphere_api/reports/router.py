@@ -15,7 +15,8 @@
 
 The path ``domain_id`` is the authorization TARGET. A report the caller may not see is 404; a
 visible report the caller may not change is 403 ``not_owner``. Every mutation returns the new
-``ETag``; ``PUT`` and ``DELETE`` require ``If-Match`` (mismatch -> 409 ``stale_version``).
+``ETag``; every write (``PUT``, ``DELETE``, share, unshare, publication request and decision)
+requires ``If-Match`` (missing -> 422, mismatch -> 409 ``stale_version``).
 Nothing here stores or returns another viewer's data: ``run`` evaluates the stored query as the
 caller.
 
@@ -24,11 +25,13 @@ No ``from __future__ import annotations``: FastAPI inspects these signatures.
 
 from typing import Annotated, Final
 
-from fastapi import APIRouter, Depends, Header, Path, Query, Response, status
+from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, status
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz import domain_from_path, require
+from neurosphere_api.middleware import correlation_id_of
+from neurosphere_api.reports.audit import audit_correlation_id
 from neurosphere_api.reports.dependencies import get_report_service
 from neurosphere_api.reports.models import (
     DecisionBody,
@@ -62,9 +65,12 @@ DomainPath = Annotated[str, Path(min_length=1, max_length=512)]
 ReportPath = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
 PrincipalPath = Annotated[str, Path(min_length=3, max_length=512, pattern=r"^[A-Za-z0-9:._/=-]+$")]
 IfMatch = Annotated[str, Header(alias="If-Match", min_length=1, max_length=300)]
-OptionalIfMatch = Annotated[str | None, Header(alias="If-Match", min_length=1, max_length=300)]
 Cursor = Annotated[str | None, Query(max_length=2048)]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_LIMIT)]
+
+
+def _correlation(request: Request) -> str:
+    return audit_correlation_id(correlation_id_of(request.scope))
 
 
 def _respond(
@@ -142,50 +148,74 @@ def build_router() -> APIRouter:
 
     @router.post(item + "/run", response_model=RunView)
     async def run_report(
-        domain_id: DomainPath, report_id: ReportPath, scope: ReadScope, service: Service
+        request: Request,
+        domain_id: DomainPath,
+        report_id: ReportPath,
+        scope: ReadScope,
+        service: Service,
     ) -> RunView:
-        return await service.run(scope, domain_id, report_id)
+        return await service.run(scope, domain_id, report_id, correlation_id=_correlation(request))
 
     @router.post(item + "/shares", response_model=ReportView)
     async def share_report(
+        request: Request,
         response: Response,
         domain_id: DomainPath,
         report_id: ReportPath,
         body: ShareBody,
+        if_match: IfMatch,
         scope: CreateScope,
         service: Service,
-        if_match: OptionalIfMatch = None,
     ) -> ReportView:
-        report = await service.share(scope, domain_id, report_id, body.principal_id, if_match)
+        report = await service.share(
+            scope,
+            domain_id,
+            report_id,
+            body.principal_id,
+            if_match,
+            correlation_id=_correlation(request),
+        )
         return _respond(service, response, scope, report)
 
     @router.delete(item + "/shares/{principal_id}", response_model=ReportView)
     async def unshare_report(
+        request: Request,
         response: Response,
         domain_id: DomainPath,
         report_id: ReportPath,
         principal_id: PrincipalPath,
+        if_match: IfMatch,
         scope: CreateScope,
         service: Service,
-        if_match: OptionalIfMatch = None,
     ) -> ReportView:
-        report = await service.unshare(scope, domain_id, report_id, principal_id, if_match)
+        report = await service.unshare(
+            scope,
+            domain_id,
+            report_id,
+            principal_id,
+            if_match,
+            correlation_id=_correlation(request),
+        )
         return _respond(service, response, scope, report)
 
     @router.post(item + "/publication", response_model=ReportView)
     async def request_publication(
+        request: Request,
         response: Response,
         domain_id: DomainPath,
         report_id: ReportPath,
+        if_match: IfMatch,
         scope: CreateScope,
         service: Service,
-        if_match: OptionalIfMatch = None,
     ) -> ReportView:
-        report = await service.request_publication(scope, domain_id, report_id, if_match)
+        report = await service.request_publication(
+            scope, domain_id, report_id, if_match, correlation_id=_correlation(request)
+        )
         return _respond(service, response, scope, report)
 
     @router.post(item + "/publication/decision", response_model=ReportView)
     async def decide_publication(
+        request: Request,
         response: Response,
         domain_id: DomainPath,
         report_id: ReportPath,
@@ -194,7 +224,9 @@ def build_router() -> APIRouter:
         service: Service,
         if_match: IfMatch,
     ) -> ReportView:
-        report = await service.decide_publication(scope, domain_id, report_id, body, if_match)
+        report = await service.decide_publication(
+            scope, domain_id, report_id, body, if_match, correlation_id=_correlation(request)
+        )
         return _respond(service, response, scope, report)
 
     return router

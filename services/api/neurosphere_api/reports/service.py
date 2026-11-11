@@ -7,12 +7,16 @@ this service adds the per-report rules:
   domain; everyone else gets 404 (a report you cannot see does not exist for you). A config
   reviewer may READ the definition of a pending publication, never run it.
 * mutate (update, delete, share, request publication) -- owner only (403 ``not_owner`` for a
-  viewer who can see it). Any change to plan or query resets publication to ``none``.
+  viewer who can see it), always against the ETag the caller viewed (``If-Match``). Any change to
+  plan or query resets publication to ``none``.
 * decide publication -- ``config.manage`` in the domain, a principal other than the owner and
   the requester (``self_approval_refused``).
 * run -- the plan is re-validated, then the stored ``StructuredQuery`` runs through the bounded
   tool registry with the VIEWER's scope (never the owner's). Rows become ``data.values``; the
   filled plan is validated again before it leaves.
+
+Principal ids are compared and stored normalized (:func:`normalize_principal`). Run, share,
+unshare and the publication request/decision are audited (:mod:`neurosphere_api.reports.audit`).
 """
 
 import uuid
@@ -21,6 +25,7 @@ from datetime import UTC, datetime
 from typing import Any, Final
 
 from fastapi import HTTPException
+from neurosphere_core.audit import AuditRepository
 from neurosphere_core.auth.scope import Permission, permits
 from neurosphere_core.charts import validate_chart_plan
 from neurosphere_core.copilot.tools import ToolRegistry, ToolResult
@@ -28,6 +33,7 @@ from neurosphere_core.errors import ForbiddenError, StaleVersionError
 from neurosphere_core.paging import Page
 from neurosphere_core.scope import IdentityScope
 
+from neurosphere_api.reports.audit import ReportAuditor
 from neurosphere_api.reports.cache import RunCache, run_cache_key
 from neurosphere_api.reports.models import (
     MAX_SHARES,
@@ -39,6 +45,7 @@ from neurosphere_api.reports.models import (
     ReportView,
     RunView,
     StoredReport,
+    normalize_principal,
 )
 from neurosphere_api.reports.plan import (
     build_rows,
@@ -54,13 +61,28 @@ __all__ = ["ReportService", "expected_etag", "principal_of", "tool_for"]
 Clock = Callable[[], datetime]
 SHARE_LIMIT_REASON: Final = "share_limit_reached"
 
+OP_RUN: Final = "report.run"
+OP_SHARE: Final = "report.share"
+OP_UNSHARE: Final = "report.unshare"
+OP_REQUEST: Final = "report.publication.request"
+OP_DECIDE: Final = "report.publication.decide"
+
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
 def principal_of(scope: IdentityScope) -> str:
-    return scope.to_contract().principal.principal_id.root
+    """The caller's principal id in normalized form (see :func:`normalize_principal`)."""
+    return normalize_principal(scope.to_contract().principal.principal_id.root)
+
+
+def _is_owner(report: StoredReport, principal: str) -> bool:
+    return normalize_principal(report.owner) == principal
+
+
+def _shared_with(report: StoredReport, principal: str) -> bool:
+    return any(normalize_principal(p) == principal for p in report.shares)
 
 
 def not_found() -> HTTPException:
@@ -96,12 +118,14 @@ class ReportService:
         clock: Clock = _utc_now,
         id_factory: Callable[[], str] = lambda: str(uuid.uuid4()),
         cache: RunCache | None = None,
+        audit: AuditRepository | None = None,
     ) -> None:
         self._store = store
         self._registry = registry
         self._clock = clock
         self._new_id = id_factory
         self._cache = cache
+        self._audit = ReportAuditor(audit)
 
     # -- helpers ---------------------------------------------------------------------------
 
@@ -117,8 +141,8 @@ class ReportService:
     def _can_see(self, scope: IdentityScope, report: StoredReport, *, reviewer: bool) -> bool:
         principal = principal_of(scope)
         if (
-            report.owner == principal
-            or principal in report.shares
+            _is_owner(report, principal)
+            or _shared_with(report, principal)
             or report.publication.state == "approved"
         ):
             return True
@@ -137,27 +161,47 @@ class ReportService:
         return report
 
     async def _owned(
-        self, scope: IdentityScope, domain_id: str, report_id: str, if_match: str | None
+        self,
+        scope: IdentityScope,
+        domain_id: str,
+        report_id: str,
+        if_match: str,
+        *,
+        operation: str | None = None,
+        correlation_id: str | None = None,
     ) -> StoredReport:
         report = await self._readable(scope, domain_id, report_id)
-        if report.owner != principal_of(scope):
+        if not _is_owner(report, principal_of(scope)):
+            if operation is not None:
+                await self._audit.denied(
+                    scope,
+                    operation=operation,
+                    domain_id=domain_id,
+                    report_id=report_id,
+                    etag=report.etag,
+                    code="forbidden",
+                    reason="not_owner",
+                    correlation_id=correlation_id,
+                )
             raise ForbiddenError("only the report owner can change it", reason="not_owner")
         self._check_etag(report, if_match)
         return report
 
     @staticmethod
-    def _check_etag(report: StoredReport, if_match: str | None) -> None:
-        if if_match is not None and expected_etag(if_match, report.etag) != report.etag:
+    def _check_etag(report: StoredReport, if_match: str) -> None:
+        if expected_etag(if_match, report.etag) != report.etag:
             raise report_modified()
 
     def view(self, scope: IdentityScope, report: StoredReport) -> ReportView:
         """Wire view. ``is_owner`` and ``can_decide_publication`` are server-computed hints for
         the UI (the decision route still enforces); they are never an authorization input."""
         me = principal_of(scope)
-        owner = report.owner == me
+        owner = _is_owner(report, me)
+        requester = normalize_principal(report.publication.requested_by or "")
         can_decide = (
             report.publication.state == "pending"
-            and me not in (report.owner, report.publication.requested_by)
+            and me != normalize_principal(report.owner)
+            and me != requester
             and self._holds(scope, Permission.CONFIG_MANAGE, report.domain_id)
         )
         return ReportView(
@@ -262,23 +306,65 @@ class ReportService:
 
     # -- sharing ---------------------------------------------------------------------------
 
+    async def _audited_replace(
+        self,
+        scope: IdentityScope,
+        report: StoredReport,
+        changed: StoredReport,
+        *,
+        operation: str,
+        detail: str,
+        correlation_id: str | None,
+    ) -> StoredReport:
+        return await self._audit.mutate(
+            scope,
+            operation=operation,
+            domain_id=report.domain_id,
+            report_id=report.id,
+            etag=report.etag,
+            detail=detail,
+            correlation_id=correlation_id,
+            action=lambda: self._store.replace(changed, if_match=report.etag or ""),
+            new_etag=lambda stored: stored.etag,
+        )
+
     async def share(
         self,
         scope: IdentityScope,
         domain_id: str,
         report_id: str,
         principal_id: str,
-        if_match: str | None,
+        if_match: str,
+        *,
+        correlation_id: str | None = None,
     ) -> StoredReport:
-        report = await self._owned(scope, domain_id, report_id, if_match)
-        if principal_id == report.owner or principal_id in report.shares:
+        report = await self._owned(
+            scope,
+            domain_id,
+            report_id,
+            if_match,
+            operation=OP_SHARE,
+            correlation_id=correlation_id,
+        )
+        target = normalize_principal(principal_id)
+        if _is_owner(report, target) or _shared_with(report, target):
             return report
         if len(report.shares) >= MAX_SHARES:
             raise StaleVersionError("share limit reached", reason=SHARE_LIMIT_REASON)
         changed = report.model_copy(
-            update={"shares": [*report.shares, principal_id], "updated_at": self._clock()}
+            update={
+                "shares": [*(normalize_principal(p) for p in report.shares), target],
+                "updated_at": self._clock(),
+            }
         )
-        return await self._store.replace(changed, if_match=report.etag or "")
+        return await self._audited_replace(
+            scope,
+            report,
+            changed,
+            operation=OP_SHARE,
+            detail=ReportAuditor.target_detail("shared", target),
+            correlation_id=correlation_id,
+        )
 
     async def unshare(
         self,
@@ -286,25 +372,57 @@ class ReportService:
         domain_id: str,
         report_id: str,
         principal_id: str,
-        if_match: str | None,
+        if_match: str,
+        *,
+        correlation_id: str | None = None,
     ) -> StoredReport:
-        report = await self._owned(scope, domain_id, report_id, if_match)
-        if principal_id not in report.shares:
+        report = await self._owned(
+            scope,
+            domain_id,
+            report_id,
+            if_match,
+            operation=OP_UNSHARE,
+            correlation_id=correlation_id,
+        )
+        target = normalize_principal(principal_id)
+        if not _shared_with(report, target):
             return report
         changed = report.model_copy(
             update={
-                "shares": [p for p in report.shares if p != principal_id],
+                "shares": [
+                    n for n in (normalize_principal(p) for p in report.shares) if n != target
+                ],
                 "updated_at": self._clock(),
             }
         )
-        return await self._store.replace(changed, if_match=report.etag or "")
+        return await self._audited_replace(
+            scope,
+            report,
+            changed,
+            operation=OP_UNSHARE,
+            detail=ReportAuditor.target_detail("unshared", target),
+            correlation_id=correlation_id,
+        )
 
     # -- publication (add-to-UI) -----------------------------------------------------------
 
     async def request_publication(
-        self, scope: IdentityScope, domain_id: str, report_id: str, if_match: str | None
+        self,
+        scope: IdentityScope,
+        domain_id: str,
+        report_id: str,
+        if_match: str,
+        *,
+        correlation_id: str | None = None,
     ) -> StoredReport:
-        report = await self._owned(scope, domain_id, report_id, if_match)
+        report = await self._owned(
+            scope,
+            domain_id,
+            report_id,
+            if_match,
+            operation=OP_REQUEST,
+            correlation_id=correlation_id,
+        )
         if report.publication.state == "pending":
             return report
         now = self._clock()
@@ -316,7 +434,14 @@ class ReportService:
                 "updated_at": now,
             }
         )
-        return await self._store.replace(changed, if_match=report.etag or "")
+        return await self._audited_replace(
+            scope,
+            report,
+            changed,
+            operation=OP_REQUEST,
+            detail="publication_requested",
+            correlation_id=correlation_id,
+        )
 
     async def decide_publication(
         self,
@@ -325,12 +450,25 @@ class ReportService:
         report_id: str,
         body: DecisionBody,
         if_match: str,
+        *,
+        correlation_id: str | None = None,
     ) -> StoredReport:
         # The ETag is mandatory: a reviewer approves exactly the definition they viewed.
         report = await self._load(scope, domain_id, report_id)
         self._check_etag(report, if_match)
         decider = principal_of(scope)
-        if decider in (report.owner, report.publication.requested_by):
+        requester = normalize_principal(report.publication.requested_by or "")
+        if decider in (normalize_principal(report.owner), requester):
+            await self._audit.denied(
+                scope,
+                operation=OP_DECIDE,
+                domain_id=domain_id,
+                report_id=report_id,
+                etag=report.etag,
+                code="forbidden",
+                reason="self_approval_refused",
+                correlation_id=correlation_id,
+            )
             raise ForbiddenError(
                 "a report cannot be approved by its owner or requester",
                 reason="self_approval_refused",
@@ -347,12 +485,39 @@ class ReportService:
             }
         )
         changed = report.model_copy(update={"publication": publication, "updated_at": now})
-        return await self._store.replace(changed, if_match=report.etag or "")
+        return await self._audited_replace(
+            scope,
+            report,
+            changed,
+            operation=OP_DECIDE,
+            detail=f"decision={body.decision}",
+            correlation_id=correlation_id,
+        )
 
     # -- run -------------------------------------------------------------------------------
 
-    async def run(self, scope: IdentityScope, domain_id: str, report_id: str) -> RunView:
-        report = await self._readable(scope, domain_id, report_id)
+    async def run(
+        self,
+        scope: IdentityScope,
+        domain_id: str,
+        report_id: str,
+        *,
+        correlation_id: str | None = None,
+    ) -> RunView:
+        try:
+            report = await self._readable(scope, domain_id, report_id)
+        except HTTPException:
+            await self._audit.denied(
+                scope,
+                operation=OP_RUN,
+                domain_id=domain_id,
+                report_id=report_id,
+                etag=None,
+                code="forbidden",
+                reason="report_not_visible",
+                correlation_id=correlation_id,
+            )
+            raise
         etag = report.etag or ""
         tool = tool_for(report.query_spec)
         args: dict[str, object] = {"query": report.query_spec}
@@ -365,6 +530,14 @@ class ReportService:
             result = await self._registry.invoke(tool, args, scope)
             if self._cache and key:
                 self._cache.put(key, result)
+        await self._audit.allowed(
+            scope,
+            operation=OP_RUN,
+            domain_id=domain_id,
+            report_id=report.id,
+            etag=report.etag,
+            correlation_id=correlation_id,
+        )
         citations = [
             CitationView(
                 record_id=c.record_id,

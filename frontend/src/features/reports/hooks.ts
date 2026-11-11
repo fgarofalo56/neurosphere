@@ -17,6 +17,7 @@ import type {
   ReportListResponse,
   ReportParams,
   ReportView,
+  RequestVars,
   RunView,
   SaveVars,
   ShareVars,
@@ -76,18 +77,30 @@ export const useDeleteReport = createMutationHook<DeleteVars, undefined>({
 
 export const useShareReport = createMutationHook<ShareVars, ReportView>({
   mutate: (client, v) =>
-    client.post<ReportView>(reportSharesPath(v.domainId, v.reportId), {
-      principal_id: v.principalId,
+    client.request<ReportView>({
+      method: "POST",
+      path: reportSharesPath(v.domainId, v.reportId),
+      body: { principal_id: v.principalId },
+      ifMatch: v.etag,
     }),
 });
 
 export const useUnshareReport = createMutationHook<ShareVars, ReportView>({
   mutate: (client, v) =>
-    client.delete<ReportView>(reportSharePath(v.domainId, v.reportId, v.principalId)),
+    client.request<ReportView>({
+      method: "DELETE",
+      path: reportSharePath(v.domainId, v.reportId, v.principalId),
+      ifMatch: v.etag,
+    }),
 });
 
-export const useRequestPublication = createMutationHook<ReportParams, ReportView>({
-  mutate: (client, v) => client.post<ReportView>(reportPublicationPath(v.domainId, v.reportId)),
+export const useRequestPublication = createMutationHook<RequestVars, ReportView>({
+  mutate: (client, v) =>
+    client.request<ReportView>({
+      method: "POST",
+      path: reportPublicationPath(v.domainId, v.reportId),
+      ifMatch: v.etag,
+    }),
 });
 
 export const useDecidePublication = createMutationHook<DecideVars, ReportView>({

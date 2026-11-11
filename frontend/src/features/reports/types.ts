@@ -95,6 +95,13 @@ export interface DeleteVars extends ReportParams {
 
 export interface ShareVars extends ReportParams {
   readonly principalId: string;
+  /** ETag of the ReportView the owner is looking at; the server refuses a stale one. */
+  readonly etag: string;
+}
+
+export interface RequestVars extends ReportParams {
+  /** ETag of the ReportView the owner is looking at; the server refuses a stale one. */
+  readonly etag: string;
 }
 
 export interface DecideVars extends ReportParams {
