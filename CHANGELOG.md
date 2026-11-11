@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Copilot audit-gap closure (PRP-19, PR #202):
+  - Commercial gpt-4.1-mini capability rows: Global Standard in 9 Americas regions and Data Zone Standard in 7 US regions. These record availability only, with no authorization claim. A Commercial approved endpoint is now enabled by the matrix instead of being disabled.
+  - Compose passes `NS_COPILOT_*` through and still defaults to `disabled`. A new `docs/runbooks/copilot.md` covers setup.
+  - Copilot answers cite real recommendation, evaluation-result and catalog records with freshness, through scoped point reads that fail closed. `EvaluationStore.get_result` is new.
+  - A chat chart can be saved as a report: the `chart` event carries the exact query that filled it.
+  - New `GET /api/v1/copilot/status`. The chat shows "not configured" with a reason instead of "try again".
+  - Reports require `If-Match` on share, unshare and request-publication. They emit audit events for run, share, unshare and publication, and normalize principal ids.
+  - Redaction now masks phones, street addresses and credential phrasing.
+  - `propose_action` refuses evidence refs that cannot be resolved, and empty filters are refused.
+  - Proved on the compose emulators with the real endpoint adapter over recorded provider streams. The live model run is still OPEN. Nothing was deployed.
 - Evaluation audit-gap closure (PRP-16, PR #200): the evaluation worker now runs the offline pilot and calibration on a
   schedule, opens HITL `evaluation_dispute` review items for a seeded calibration sample (approve = the judge was wrong,
   reject = the judge was right) and turns decisions into human labels; reviewers see the item, the verdict and the
