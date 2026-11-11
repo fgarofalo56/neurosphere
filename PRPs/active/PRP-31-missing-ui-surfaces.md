@@ -1,9 +1,9 @@
 ---
 name: PRP-31-missing-ui-surfaces
-status: backlog
-started: 2026-10-30
+status: active
+started: 2026-11-11
 pr: 150
-branch: prp-31-missing-ui-surfaces-impl
+branch: prp-31-round2
 review: required
 priority: P1
 order: 12
@@ -374,6 +374,112 @@ Nav entries (added to `workspaceNav.ts` groups; visibility is a usability aid, n
 
 After wave A, each lane owns only its feature folder(s), its `frontend/tests/mock-api/features/<name>.ts` module and its own spec directory. `server.ts`, `features/index.ts`, `appRoutes.ts`, `workspaceNav.ts`, `route-manifest.json`, `route-samples.ts` and `governed-change/**` are frozen after Item 1. If a lane needs a change there, it is a sequenced delta item, never a parallel edit.
 
+### Round 2: audit gap closure (items 9-13, added 2026-11-11)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-11 against main 7eaac3c:
+- Fixed since the audit:
+  - Catalog search is composed by PRP-35 (`runtime/builders/search.py`), and compose sets `NS_SEARCH_PROVIDER: fixture`.
+  - `tests/integration/real_stack/test_manifest_routes.py` already maps GET calls for all 12 routes, with empty `EXPECTED_STATUS`/`KNOWN_EMPTY`. So #104 is likely fixed in practice, though the issue is still open.
+  - `/deploy` scan stays opt-in (`NS_SCAN_ENABLED`; it calls Azure Resource Graph). Its 503 state is the intended one.
+- Still open:
+  - `frontend/tests/real-stack/routes.spec.ts` `ENTRIES` lacks 13 manifest routes (the 12 here plus `/gateways/detail`). Its "entries cover exactly the route manifest" test therefore fails, and no PRP-31 page has run in a browser against the real API.
+  - No PRP-31 mutation has run against the composed API: deprecate/recertify, the curation adapter, stale-agent confirm, emergency disable, and the auditor flow.
+  - `openSample` (`frontend/tests/e2e/a11y/axe-support.ts:95`) ignores `sample.persona`, so `/audit` is axe-checked only as Forbidden.
+  - The deprecate/recertify reason is collected and discarded.
+  - Stale-agent confirm uses its own dialog, not `ChangeConfirmDialog`.
+  - There is no catalog create/edit UI.
+  - Entity bodies carry `cloud`/`customer_id`/`domain_id` (`catalog/v1/agent.py:65-67`), which `ApiClient` refuses, so the create/edit form needs a server-stamping adapter.
+
+User decisions 2026-11-11:
+- **Reason code, not free text.** It comes from a fixed snake_case list and is stored in the audit record `detail`. No free text goes into the immutable chain.
+- **Single-entity create/edit form.** No bulk-import upload.
+- **Relationship-conflict queue UI: a separate PRP.** `catalog_review_queue` has no route; see NOT building.
+- **Approved as planned**, including a headed real-stack browser run at close-out. The operator completes only the Entra sign-in.
+
+### Item 9 - catalog-reason-code  [P] (review: required)
+- Deliverable:
+  - Deprecate and recertify accept an optional `reason_code`. It is one of `superseded`, `no_longer_used`, `owner_changed`, `owner_left`, `security_issue`, `quality_issue`, `periodic_review` or `other`.
+  - Deprecate's body becomes optional `{reason_code?}`. Recertify adds the field to `RecertifyRequest`. Both use `extra="forbid"`, so the change is additive and a call without a body still works.
+  - The code is written into the audit record `detail` in the existing machine format (report the exact form). An unknown code gets 422.
+- Owned files: `services/api/neurosphere_api/catalog/{router,models,service}.py`, `services/api/tests/catalog/**` (new or extended reason tests only).
+- Must NOT touch: `openapi.json` (the orchestrator regenerates it), `packages/contracts/**`, `ui_adapters/**`, `frontend/**`.
+- Acceptance criteria:
+  - The audit row read back carries the code for both routes.
+  - No body and no code is still 200, with `detail` unchanged from today.
+  - An unknown code or extra field gets 422.
+  - The If-Match 409 paths are unchanged.
+
+### Item 13 - catalog-entity-write-adapters  [P] (review: required; model: opus)
+- Deliverable:
+  - `POST /api/v1/catalog/domains/{domain}/entities` and `PUT /api/v1/catalog/domains/{domain}/entities/{entity_id:path}` (If-Match) in `ui_adapters`.
+  - Both need `catalog.curate` on `{domain}` via `require(..., resource=domain_from_path("domain"))`.
+  - The body is the entity document minus its server-owned fields. The server stamps `cloud` and `customer_id` from the scope and `domain_id` from the path. It also mints `id` on create, as `cloud:customer:manual:<type>:<slug>` (report the source segment, which must match the `CanonicalId` pattern). `version`, `etag`, `created_at`, `updated_at` and `schema_version` are left to `CatalogService.create`/`update`, which are called with `channel="button"`.
+  - A body carrying any server-owned key is rejected with 422.
+  - PUT verifies that the stored entity is in `{domain}` (404 otherwise) and keeps the If-Match 409 semantics.
+  - Supported entity types for the form: report which ones `CatalogService.create` accepts. At minimum `agent`, `tool`, `model_deployment` and `mcp_server`.
+- Owned files: `services/api/neurosphere_api/ui_adapters/entities.py` (new), `ui_adapters/__init__.py` (register only), `ui_adapters/models.py` (new models only), `services/api/tests/ui_adapters_api/test_entity_write_adapters.py` (new).
+- Must NOT touch: `catalog/**` (item 9), `openapi.json`, `packages/**`, `frontend/**`, `routers.py`.
+- Acceptance criteria:
+  - Create, then GET, round-trips.
+  - The stamped scope keys equal the caller scope and the path domain.
+  - Server-owned keys in the body get 422.
+  - Cross-domain and cross-customer requests get 403/404.
+  - A stale If-Match gets 409.
+  - The audit row has `channel` = `button`.
+  - The route inventory test is green, and no PRP-29 route shadows the new paths.
+
+### Item 10 - catalog-ui-round2 (depends on items 9 and 13 wire contracts; parallel against the mock)
+- Deliverable:
+  - The deprecate/recertify dialogs replace the free-text reason with a reason-code picker (item 9's list) and send `reason_code`.
+  - Stale-agent confirm goes through `ChangeConfirmDialog`.
+  - The export control is verified, and fixed if missing, for `data.export` holders.
+  - A "New entity" action on `/catalog` and an "Edit" action on `/catalog/entity` (`catalog.curate` only) open a form for the item 13 types. The form sends no `domain_id`/`customer_id`/`cloud`/`id`. Submit goes through `ChangeConfirmDialog`; edit sends If-Match and handles 409.
+  - No new route, so the shared files stay frozen.
+- Owned files: `frontend/src/features/catalog/**` (never `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`), `frontend/tests/mock-api/features/catalog.ts`, `frontend/tests/e2e/catalog/catalog.spec.ts`.
+- Must NOT touch: `frontend/src/app/**`, `frontend/src/design-system/**`, `governed-change/**` (import only), other features, `server.ts`, `features/index.ts`.
+- Acceptance criteria:
+  - Vitest covers the picker (the body carries the code), the stale-agent dialog, create and edit (the request has no scope keys), and the edit 409.
+  - The catalog e2e spec covers create -> entity -> edit and is green.
+  - 0 native form controls; tsc and eslint are clean.
+
+### Item 11 - test-coverage-round2  [P]
+- Deliverable:
+  - `openSample` honours `sample.persona` (the mock's token persona mechanism), so the `/audit` axe, keyboard and aria-tree runs see the auditor view.
+  - `frontend/tests/real-stack/routes.spec.ts` `ENTRIES` lists all 41 manifest routes. Detail routes are opened via a list link. `/deploy`, `/deploy/capabilities` and `/admin/execution-control` declare any expected answers, each with a reason. `/audit` notes that the operator needs `Auditor` or `Admin`.
+- Owned files: `frontend/tests/e2e/a11y/axe-support.ts`, `frontend/tests/real-stack/routes.spec.ts`, and `frontend/tests/e2e/a11y/route-samples.ts` only if the persona needs a field change (report it).
+- Must NOT touch: `frontend/src/**`, the mock API, `playwright*.config.ts`.
+- Acceptance criteria:
+  - The a11y suite for `/audit` asserts the auditor page heading, not Forbidden, in every mode.
+  - The real-stack spec's manifest-coverage test passes in a list-only dry run (`playwright test -c playwright.real-stack.config.ts --list`, plus a unit-level check of the `ENTRIES` vs manifest equality).
+  - The full mock a11y suite stays green.
+
+### Item 12 - prp31-real-stack-loop (depends on items 9, 10, 13)
+- Deliverable: `tests/integration/real_stack/test_ui_surfaces_loop.py` (`pytest.mark.integration`, compose emulators at 127.0.0.1, seeded stack, the same production composition and test token validator as `test_manifest_routes.py`).
+  - Flow:
+    1. Catalog search.
+    2. Create an entity via item 13.
+    3. Edit it with If-Match, then get a stale If-Match 409.
+    4. Deprecate with a `reason_code`; the audit row carries it.
+    5. Recertify.
+    6. A curation decision via the adapter (actor stamped, `channel=button` in audit, a forbidden extra field gets 422).
+    7. Stale-agent dry-run -> confirm.
+    8. An auditor-only persona lists audit domains, reads records and verifies the chain (valid).
+    9. Emergency disable PUT, read back, re-enable.
+    10. Evaluation results, forecast and federation reads return 200.
+  - Output is recorded in `docs/evidence/G12/ui-surfaces/` (README with the command, the date and the result).
+- Owned files: that test, `docs/evidence/G12/ui-surfaces/`.
+- Must NOT touch: product code. Report gaps instead.
+- Acceptance criteria: passes locally against `docker compose up -d --wait` plus the seed; never runs in CI.
+
+Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane).
+
+Orchestrator seams:
+- Regenerate `openapi.json` and `docs/reference` after items 9 and 13 merge.
+- Snyk code scan on the PRP-31 code.
+- A `pnpm demo` screenshot pass over the 12 pages.
+- The headed real-stack browser run (`playwright.real-stack.config.ts`; the operator signs in).
+- Close #104 if the real-stack runs prove those routes serve.
+- Tick the verified acceptance boxes.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -409,6 +515,7 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 - A PRP-17 action kind for curation, or any executor change.
 - Fixing the unchecked `actor` in the existing curation route or server-stamping `consented_by` (reported to PRP-29).
 - Changes to the shell, design system, existing features or `ci.yml` (PRP-30 and the existing owners).
+- Round 2: a relationship-conflict queue page. `catalog_review_queue` has no API route, and how conflicts reach a reviewer is a HITL design question for its own PRP (user decision 2026-11-11). The same goes for catalog bulk-import upload, and for free-text reasons in the audit chain.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
@@ -429,6 +536,13 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 8 | merged | worktree-agent-ac458121c2dffb894 | sonnet | tsc+eslint clean; vitest 4f/17t; e2e admin 7 pass (me); merged 72af36a | 2026-10-30 |
 | 2b | merged | worktree-agent-a85f80e3eeced77f2 | sonnet | ruff+pyright clean (agent); 514 pass ui_adapters_api+authz+path_aliases+catalog+audit+test_app+openapi_drift (me); openapi additive +82/-0; GET returns {edge, edge_version:int, edge_etag:str}+ETag header, matches 4b; merged 2dddb18 | 2026-10-30 |
 | 4b | merged | worktree-agent-a54f8d0bd1a262200 | sonnet | tsc+eslint clean; vitest 3f/25t; e2e curation 6 pass (me); merged 0ca8443 | 2026-10-30 |
+| 9 | todo | | sonnet | | 2026-11-11 |
+| 10 | todo | | sonnet | | 2026-11-11 |
+| 11 | todo | | sonnet | | 2026-11-11 |
+| 12 | todo | | sonnet | | 2026-11-11 |
+| 13 | todo | | opus | | 2026-11-11 |
+
+Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
 
 Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
