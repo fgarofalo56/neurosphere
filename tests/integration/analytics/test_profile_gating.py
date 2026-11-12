@@ -30,7 +30,6 @@ PROFILES: list[tuple[str, str]] = [
     ("government", "usgovvirginia"),
     ("government", "usgovtexas"),
     ("government", "usgovarizona"),
-    ("government", "usdodeast"),
     ("commercial", "eastus2"),
     ("commercial", "swedensouth"),  # no per-region row: falls back to the unverified global row
 ]
@@ -88,9 +87,9 @@ def test_documented_matrix_facts_are_pinned() -> None:
     assert by_name("government", "usgovtexas")["databricks"].status == "disabled"
     assert by_name("government", "usgovarizona")["databricks"].status == "supported"
     assert by_name("government", "usgovarizona")["fabric"].status == "disabled"
-    # DoD: Fabric and Databricks have no verified row and stay disabled.
-    dod = by_name("government", "usdodeast")
-    assert dod["fabric"].status == "disabled" and dod["databricks"].status == "disabled"
+    # DoD is a separate profile that is not built: the region is refused outright (PRP-20).
+    with pytest.raises(InvalidSchemaError):
+        by_name("government", "usdodeast")
     # Commercial: per-region rows exist for eastus2; an unlisted region falls back to unverified.
     assert {b.status for b in by_name("commercial", "eastus2").values()} == {"supported"}
     unlisted = by_name("commercial", "swedensouth")
@@ -125,7 +124,7 @@ def test_selecting_a_disabled_backend_is_refused_before_any_vendor_work(
 
 def test_disabled_cases_exist_in_this_matrix() -> None:
     """Guard against the refusal test above running over an empty parameter set."""
-    assert len(DISABLED) >= 6
+    assert len(DISABLED) >= 5
 
 
 @pytest.mark.parametrize(("cloud", "region"), PROFILES, ids=IDS)

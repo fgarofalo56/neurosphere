@@ -76,6 +76,13 @@ ANALYTICS_KEYS: dict[str, tuple[str, str]] = {
 _GOV_REGION_RE = re.compile(r"^us(gov|dod)[a-z0-9]+$")
 _REGION_RE = re.compile(r"^[a-z][a-z0-9]{2,39}$")
 
+# Evidence-backed Government deployable regions. The reviewable record is
+# infra/bicep/params/government/sovereign-profile.yaml ``allowedRegions``; a parity test
+# (tests/unit/government_profile/test_region_parity.py) keeps this set equal to it.
+GOVERNMENT_DEPLOYABLE_REGIONS: frozenset[str] = frozenset(
+    {"usgovvirginia", "usgovarizona", "usgovtexas"}
+)
+
 
 class FeatureRequest(BaseModel):
     """An optional feature the deployment wants (for example a Foundry model or CMK)."""
@@ -109,6 +116,18 @@ class DeploymentProfile(BaseModel):
             is_gov = bool(_GOV_REGION_RE.match(region))
             if (self.cloud == "government") != is_gov:
                 raise ValueError(f"region {region!r} does not belong to cloud {self.cloud!r}")
+            if self.cloud == "government" and region not in GOVERNMENT_DEPLOYABLE_REGIONS:
+                supported = ", ".join(sorted(GOVERNMENT_DEPLOYABLE_REGIONS))
+                if region.startswith("usdod"):
+                    raise ValueError(
+                        f"capability_unavailable: region {region!r} is a DoD region; DoD is a "
+                        f"separate profile that is not built. Supported Government regions: "
+                        f"{supported}"
+                    )
+                raise ValueError(
+                    f"capability_unavailable: region {region!r} is not an evidence-backed "
+                    f"Government region. Supported Government regions: {supported}"
+                )
         if len(set(self.regions)) != len(self.regions):
             raise ValueError("regions must be unique")
         return self
