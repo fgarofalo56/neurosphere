@@ -207,7 +207,7 @@ User decisions 2026-11-12:
   - #100 profile half: tie the `egressAllowlist` CIDR to the network module's private-endpoint subnet, and tighten `GOV_SUFFIX` so arbitrary `*.azure.us` typos fail.
   - Responsibility-matrix row: hostname egress enforcement is a customer control (for example Azure Firewall application rules) and is OPEN.
   - Update the G02 row.
-- Owned files (may edit): `infra/bicep/params/government/sovereign-profile.yaml`, `infra/helm/values-government.yaml`, `docs/evidence/G02/register.yaml`, `docs/compliance/responsibility-matrix.md`, `docs/RESEARCH-AND-GATES.md` (G02 row only), `tests/unit/government_profile/test_sovereign_hosts.py`, `tests/unit/government_profile/test_no_commercial_endpoints.py` (GOV_SUFFIX only), `tests/unit/evidence_register/`.
+- Owned files (may edit): `infra/bicep/params/government/sovereign-profile.yaml`, `infra/helm/values-government.yaml`, `docs/evidence/G02/register.yaml`, `docs/compliance/responsibility-matrix.md`, `docs/RESEARCH-AND-GATES.md` (G02 row only), `tests/unit/government_profile/test_sovereign_hosts.py` (including its `GOV_SUFFIX`), `tests/unit/evidence_register/`. The second `GOV_SUFFIX` copy, in `tests/security/egress/`, belongs to item 7.
 - Must NOT touch: `infra/bicep/modules/`, `infra/helm/templates/`, `tests/security/egress/`, `.github/`, `packages/`.
 - Acceptance criteria:
   - The audience test asserts the AI Search value equals the constant in `search/azure/client.py`.
@@ -235,7 +235,7 @@ User decisions 2026-11-12:
 
 ### Item 7 - egress-tests-in-ci (#100 CI half, #98) (depends on item 6)
 - Deliverable:
-  - Under `CI`, a missing helm or az fails instead of skipping. The rendered helm output is asserted non-empty.
+  - Under `CI`, a missing helm or az fails instead of skipping. The rendered helm output is asserted non-empty. Tighten the `GOV_SUFFIX` copy in `tests/security/egress/test_allowlist_no_commercial.py`.
   - #98: the compose egress per-host test requires a session-scoped positive-control fixture. An exec failure is distinguished from a blocked connection, and DNS resolution failure is asserted.
   - A CI job installs helm 4 and the az bicep CLI and runs `tests/unit/government_profile`, `tests/unit/infra` and `tests/security/egress -m "not integration"`.
   - A separate CI job runs `-m integration tests/security/egress` against compose (the egress probe only, if feasible).
