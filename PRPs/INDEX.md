@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-31-missing-ui-surfaces](active/PRP-31-missing-ui-surfaces.md) | P1 | 19/19 (100%) | merged 18, descoped 1 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
@@ -31,6 +29,7 @@ _none_
 |---|---|---|
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |
 | [PRP-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-11-11 | #202 |
+| [PRP-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-11-11 | #204 |
 | [PRP-10-catalog-and-relationship-governance](shipped/PRP-10-catalog-and-relationship-governance.md) | 2026-11-08 | #192 |
 | [PRP-05-api-worker-runtime-and-self-observability](shipped/PRP-05-api-worker-runtime-and-self-observability.md) | 2026-11-07 | #184 |
 | [PRP-08-deployment-intelligence-and-iac](shipped/PRP-08-deployment-intelligence-and-iac.md) | 2026-11-07 | #186 |

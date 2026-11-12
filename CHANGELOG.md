@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- UI surfaces audit-gap closure (PRP-31 round 2, PR #204):
+  - Catalog entities can be created and edited from the UI (`catalog.curate`). This uses new `POST`/`PUT /api/v1/catalog/domains/{domain}/entities` adapters that stamp cloud, customer, domain and id server-side. A body carrying a server-owned key gets 422.
+  - Deprecate and recertify take an optional closed `reason_code`, which is stored in the audit record. There is no free text.
+  - Stale-agent confirm goes through the shared governed-change dialog.
+  - Audit chains are source-qualified, so domains whose source is not `catalog` (for example `sandbox`, `neurosphere`) can now be audited. Catalog chains are unchanged. Domains that share a name across sources no longer share a chain.
+  - A forecast with no price version shows "Forecast unavailable: <reason>" instead of "try again".
+  - A real-stack integration loop covers every UI-surface mutation and the auditor flow. The real-stack browser spec covers all 41 manifest routes, and the a11y matrix checks `/audit` as an auditor.
 - Copilot audit-gap closure (PRP-19, PR #202):
   - Commercial gpt-4.1-mini capability rows: Global Standard in 9 Americas regions and Data Zone Standard in 7 US regions. These record availability only, with no authorization claim. A Commercial approved endpoint is now enabled by the matrix instead of being disabled.
   - Compose passes `NS_COPILOT_*` through and still defaults to `disabled`. A new `docs/runbooks/copilot.md` covers setup.

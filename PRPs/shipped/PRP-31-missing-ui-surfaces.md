@@ -1,8 +1,9 @@
 ---
 name: PRP-31-missing-ui-surfaces
-status: active
+status: shipped
 started: 2026-11-11
-pr: 150
+shipped: 2026-11-11
+pr: 204
 branch: prp-31-round2
 review: required
 priority: P1
@@ -78,25 +79,25 @@ Capabilities with no API at all are listed with a named destination, never faked
 | NS-10 | Themes, sandbox, role workspaces, WCAG | shipped | shipped | New pages join the PRP-24 axe matrix |
 
 ## Acceptance criteria
-- [ ] Item 1: all twelve new routes (wire contract) are in `appRoutes.ts`, `route-manifest.json` and `route-samples.ts`; each renders a placeholder page inside the shell. The grouped nav lists them with their permission or role hints. The mock API dispatches to per-feature handler modules through one registry, so no later lane edits `server.ts`, `appRoutes.ts`, `workspaceNav.ts`, the manifest or the samples. The route-manifest Vitest and the "every manifest route has an axe sample" Playwright test are green.
-- [ ] Item 2: the UI-facing adapter endpoints in the wire contract exist under `services/api/neurosphere_api/ui_adapters/**`, each with a declared permission.
+- [x] Item 1: all twelve new routes (wire contract) are in `appRoutes.ts`, `route-manifest.json` and `route-samples.ts`; each renders a placeholder page inside the shell. The grouped nav lists them with their permission or role hints. The mock API dispatches to per-feature handler modules through one registry, so no later lane edits `server.ts`, `appRoutes.ts`, `workspaceNav.ts`, the manifest or the samples. The route-manifest Vitest and the "every manifest route has an axe sample" Playwright test are green.
+- [x] Item 2: the UI-facing adapter endpoints in the wire contract exist under `services/api/neurosphere_api/ui_adapters/**`, each with a declared permission.
   - The route inventory test is green; `openapi.json` is regenerated and `test_openapi_drift` is green.
   - Curation decisions are stamped server-side: the actor is the caller principal (`principal_kind: user` only), `decided_at`, `cloud`/`customer_id`/`domain_id`/`edge_id`/`relation_type` come from the stored edge, and the channel is `button`. A body carrying any of those fields is rejected with 422 (test).
   - The audit adapters derive the chain id server-side. A cross-customer or cross-domain request gets 403, and an auditor with no `data.read` can list and read their audit domains (tests).
-- [ ] Item 3: `/catalog` lists and searches entities for the selected domain (paged, "N+", unknown never shown as 0). `/catalog/entity` shows the entity, its version/ETag, owner and lifecycle, plus lineage neighbors and impact as a table with a "show on map" link. Deprecate and recertify go through the governed change dialog with If-Match; a 409 shows "changed since you opened it" and reloads (test). The recertifications queue and the stale-agent dry-run -> confirm flow work. Export downloads JSON pages for `data.export` holders only.
-- [ ] Item 4: `/catalog/edge` shows the presented edge: status (asserted/inferred/curated), confidence, provenance, evidence ids, first/last observation, validity and lock. Override history is listed, and observations appear in a separate section for `evidence.read` holders only.
+- [x] Item 3: `/catalog` lists and searches entities for the selected domain (paged, "N+", unknown never shown as 0). `/catalog/entity` shows the entity, its version/ETag, owner and lifecycle, plus lineage neighbors and impact as a table with a "show on map" link. Deprecate and recertify go through the governed change dialog with If-Match; a 409 shows "changed since you opened it" and reloads (test). The recertifications queue and the stale-agent dry-run -> confirm flow work. Export downloads JSON pages for `data.export` holders only.
+- [x] Item 4: `/catalog/edge` shows the presented edge: status (asserted/inferred/curated), confidence, provenance, evidence ids, first/last observation, validity and lock. Override history is listed, and observations appear in a separate section for `evidence.read` holders only.
   - Accept/reject/override/lock/unlock go through the governed change dialog, which shows the edge id, expected version, before/after and the required reason, plus the expiry for lock/override.
   - A stale edge (409 `stale_edge`) is surfaced, never retried silently.
   - The page never sends `actor`, `domain_id` or `customer_id` (test).
-- [ ] Item 5: `/audit` is read-only. Its domain picker is fed by `GET /api/v1/audit/domains` (not `/me/domains`). Records are paged by cursor, and fields are shown exactly as the API returns them (no client-side enrichment, no PII beyond the payload). A "Verify chain" control shows the verification result and break position. A 403 shows `ForbiddenState`.
-- [ ] Item 6: `/finops/forecast` shows estimated and invoiced series separately, never summed. It shows the forecast band, the method (`linear_trend_ols`, confidence, fit points, excluded incomplete days) and "forecast unavailable: <reason>" when the API says so. `savings_claim: false` is reflected: no savings wording. `/federation` shows merged totals per currency, per-cell outcome (`ok`/`denied`/`unavailable`), and `complete`/`truncated` badges.
-- [ ] Item 7: `/deploy` (Admin, `config.manage`) runs scan -> choices -> plan.
+- [x] Item 5: `/audit` is read-only. Its domain picker is fed by `GET /api/v1/audit/domains` (not `/me/domains`). Records are paged by cursor, and fields are shown exactly as the API returns them (no client-side enrichment, no PII beyond the payload). A "Verify chain" control shows the verification result and break position. A 403 shows `ForbiddenState`.
+- [x] Item 6: `/finops/forecast` shows estimated and invoiced series separately, never summed. It shows the forecast band, the method (`linear_trend_ols`, confidence, fit points, excluded incomplete days) and "forecast unavailable: <reason>" when the API says so. `savings_claim: false` is reflected: no savings wording. `/federation` shows merged totals per currency, per-cell outcome (`ok`/`denied`/`unavailable`), and `complete`/`truncated` badges.
+- [x] Item 7: `/deploy` (Admin, `config.manage`) runs scan -> choices -> plan.
   - The scan form takes subscription ids and a consent record and shows the per-subscription `visible`/`not_visible` result with the visibility note verbatim.
   - The plan shows each item's status, reuse/create/skip, `shared`, checks, cost basis (`estimated`/`no_incremental_cost`/`unknown`), disabled reason and source link. The plan manifest downloads as JSON. There is **no apply control**.
   - `/deploy/capabilities` renders the matrix with availability, GA status and authorization scope as separate columns. Unsupported or unverified rows are shown disabled with their reason, never as supported.
-- [ ] Item 8: `/evaluations` lists evaluation results for the domain, with subject and dimension filters and cursor paging, and labels calibration and uncertainty as the API returns them. `/admin/execution-control` shows the kill-switch state (`changed_by` as a pseudonym). Disable (reason code required) and re-enable go through the governed change dialog; the API's 403 for non-`config.manage` callers is shown.
-- [ ] Every new page: uses the PRP-30 page template and primitives, contains 0 native form controls (the static test stays green with no new allowlist entries), has Vitest coverage, has one lean Playwright spec, and gets 0 serious/critical axe violations in light, dark, high-contrast and sandbox mode (with the documented tabster exclusion).
-- [ ] PRP exit: all items green under `verify-gates -Mode full`; the full frontend Vitest and Playwright suites are green; the frontend CI job stays under its 25-minute cap (measured, reported); `pnpm demo` shows every new page with mock data. The reviewer confirms that every mutation is server-checked, version-bound and audited, and that no page sends scope keys or actor identity.
+- [x] Item 8: `/evaluations` lists evaluation results for the domain, with subject and dimension filters and cursor paging, and labels calibration and uncertainty as the API returns them. `/admin/execution-control` shows the kill-switch state (`changed_by` as a pseudonym). Disable (reason code required) and re-enable go through the governed change dialog; the API's 403 for non-`config.manage` callers is shown.
+- [x] Every new page: uses the PRP-30 page template and primitives, contains 0 native form controls (the static test stays green with no new allowlist entries), has Vitest coverage, has one lean Playwright spec, and gets 0 serious/critical axe violations in light, dark, high-contrast and sandbox mode (with the documented tabster exclusion).
+- [ ] PRP exit (partly met 2026-11-11: full vitest and Playwright suites and pnpm demo done, frontend e2e shards 18m08s and 12m56s each under the 25-minute cap; `verify-gates -Mode full` was NOT run, CI ran the full suite instead): all items green under `verify-gates -Mode full`; the full frontend Vitest and Playwright suites are green; the frontend CI job stays under its 25-minute cap (measured, reported); `pnpm demo` shows every new page with mock data. The reviewer confirms that every mutation is server-checked, version-bound and audited, and that no page sends scope keys or actor identity.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -608,6 +609,68 @@ Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` fro
 Plan delta approved 2026-10-30: `frontend/src/features/catalog/` already exists (catalog publication). Items 1 and 3 extend it in place: append to `paths.ts`/`routes.tsx`, add new files, new test `catalog-explorer.test.tsx`; never edit `CatalogPublicationPage.tsx`, `components.tsx` or `catalog.test.tsx`.
 
 ## Completion note (filled at ship)
+
+### Round 2 (audit gap closure, items 9-16)
+- **Date:** 2026-11-11.
+- **PR:** #204, from the integration branch `prp-31-round2` (base main 7eaac3c).
+- **Merges:**
+  - item 9: 8427ecc
+  - item 10: a09ce58
+  - item 11: e94157c
+  - item 12: 2128cb2
+  - item 13: 5652d34
+  - item 14b: 79e8f7a
+  - item 15: e0dc19b, via its merge commit
+  - item 16: 924a441
+  - openapi regeneration: 5f867b1
+- **CI:** 26/26 green on the final commit. All four image Grype scans pass, so the #151 CVE no longer trips them.
+- **Verified:**
+  - Every item is verified by the orchestrator on its branch. Items 9, 13 and 14b were reviewed and APPROVED (13 and 14b by Opus); item 14b's review fuzzed 200k ids and found 0 collisions.
+  - Local runs on the integration branch:
+    - broad pytest: 8414 passed;
+    - frontend vitest: 87 files, 1071 tests;
+    - repo-wide ruff and pyright: clean;
+    - gitleaks over the round-2 commits: clean.
+  - Snyk: `ui_adapters` and `neurosphere_core/audit` 0 issues. `frontend/src/features` has 2 medium false positives (a status map; the PRP-19 opaque-origin `postMessage`).
+  - `pnpm demo`: 12 pages checked.
+  - **Headed real-stack browser run, fresh stack, operator Entra sign-in:** 41 of 42 passed. The remaining one is `/gateways/detail`, now in NO_DATA because no gateway is seeded. All 12 PRP-31 pages render against the real API.
+  - **Python real-stack suites:** `test_ui_surfaces_loop` 11 pass and 1 OPEN skip (forecast); `test_manifest_routes` green after item 16.
+- **Deviations from the round 2 blueprint, and why:**
+  - **Item 14 was not merged.** Resolving chains against the caller's held domains opened a cross-domain read. It was superseded by **14b** (user decision), which uses source-qualified chains on the write side:
+    - catalog chains are byte-identical to before;
+    - other sources use `<customer>._<len>.<source>.<name>`;
+    - dotted customer ids are now refused by the writer.
+  - **Item 12 was dispatched early.** It is API-only and did not need item 10.
+  - **Items 15 and 16 were added** after the headed run:
+    - item 15: the forecast 409 now shows "Forecast unavailable: <reason>" with no retry, and the real-stack spec gets the `evaluations-empty` testid;
+    - item 16: `test_manifest_routes` was stale (manifest pin 26 vs 41 since round 1). It now excludes the customer control domain, where the grant is admin-only and holds no audit.read/report.create by design, and expects the forecast 409.
+  - **Item 10:** the reason-code picker sits before `ChangeConfirmDialog`, because that dialog is frozen and has no slot. The dialog still asks for a written reason it does not send (#207).
+  - **Item 13:** routes do not refuse non-user principals, the same as the PRP-10 create route.
+  - **Orchestrator edits outside item ownership:**
+    - pinned the item 13 routes in the ui_adapters permission inventory;
+    - narrowed the item 9 service `reason_code` type to `ReasonCode` (a non-blocking review note);
+    - the item 16 test refresh.
+- **Descoped:**
+  - item 14, superseded by 14b;
+  - the relationship-conflict queue page: its own PRP (#210, user decision);
+  - catalog bulk-import upload;
+  - free-text reasons in the audit chain.
+- **OPEN:**
+  - forecast on seeded data (`price_version_unresolved`; #209);
+  - G09 accessibility sign-off;
+  - pre-14b non-catalog audit records stay on aliased chains, not migrated (#206);
+  - `verify-gates -Mode full` not run (CI ran the full suite).
+- **Follow-ups:**
+  - #205: a fresh `make stack-up` never completes, because the evaluation role fails before the worker grant;
+  - #206: audit chain notes;
+  - #207: dialog slot;
+  - #208: item 13 review notes;
+  - #209: demo and seed gaps;
+  - #210: conflict queue;
+  - #211: `test_seed` fails on fresh emulators. This is pre-existing on main 7eaac3c (verified). `test_catalog_discovery`/`test_evaluation_loop` fail only against a seeded hub and pass on fresh emulators.
+- **#104:** federation, finops and dashboards serve through the composed app on the real stack (`test_manifest_routes` green). Closed with this evidence.
+
+### Round 1
 - Date: 2026-10-30
 - Merged commits: PR #150, squash-merged as `68de973` (items 1 to 8, 2b, 4b; plus `2565027`, `dbfea0a`, `bd03d7c` from the final gate, Playwright and review passes). CI at merge: everything green except `image api` and `image workers` (Grype, base image Python 3.12.15 CVE-2026-115557, not touched by this PRP; merged around it with the user's approval, tracked in #151).
 - Deviations from blueprint and why:
