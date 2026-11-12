@@ -1,11 +1,11 @@
 ---
 name: PRP-20-government-verification-and-sovereign-deployment
-status: backlog
+status: active
 priority: P1
 order: 14
-started: 2026-10-22
+started: 2026-11-12
 pr: 97
-branch: prp-20-government-sovereign
+branch: prp-20-round2
 review: required
 created: 2026-10-08
 model: sonnet
@@ -166,6 +166,91 @@ Ship the Azure Government deployment profile (parameters, endpoints, audiences, 
 - Pattern references: `g03_live.py` refusal pattern from PRP-02; `g01_deploy_smoke.py` evidence format from PRP-08.
 - Tests to write: `tests/unit/gates/test_g02_profile_refuses.py`.
 
+### Round 2: audit gap closure (items 5-9, added 2026-11-12)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-12 against main 8d4fd85:
+- Fixed or overstated since the audit:
+  - The deploy planner is mounted (`services/api/neurosphere_api/routers.py` `_register_deploy_plan`). Disabled-with-reason at runtime comes from the capability matrix.
+  - Tests in `tests/unit/government_profile/test_sovereign_hosts.py` already tie `sovereign-profile.yaml` to the matrix (`test_capability_rows_referenced_exist`) and to `neurosphere_core.cloud` (`test_endpoints_equal_cloud_resolver`). The YAML is the reviewable IaC record, and the matrix is the runtime truth.
+- Still open:
+  - `DeploymentProfile` (`packages/core/neurosphere_core/capabilities/validate.py:103`) accepts any `usgov*`/`usdod*` region for `cloud=government`. A Government plan for `usdodeast` validates, although the profile claims no DoD support and `allowedRegions` lists only usgovvirginia, usgovarizona and usgovtexas.
+  - Audiences. Retrieved 2026-11-12:
+    - AI Search Government is `https://search.azure.us` (https://learn.microsoft.com/azure/search/search-security-rbac-client-code). `neurosphere_core/search/azure/client.py` already uses it, but the manifest records null.
+    - Event Hubs is `https://eventhubs.azure.net/`, "the same for all clouds and tenants" (https://learn.microsoft.com/azure/event-hubs/authorize-access-azure-active-directory).
+    - The Cosmos DB Government data-plane audience is still not stated on any first-party page checked, so it stays `not_verified`.
+  - #100: helm and az static checks skip when the tool is absent; the CIDR is not tied to the PE subnet; `GOV_SUFFIX` is loose.
+  - #98: the compose egress test can pass vacuously and never runs in CI.
+  - #99: teardown can skip the resource-group delete on timeout or parse error.
+  - #101: CLI paths flow into evidence paths in the g01 gate scripts.
+  - NetworkPolicy is CIDR-only, so hostname egress is not enforced in-cluster.
+
+User decisions 2026-11-12:
+- Plan approved as below.
+- D7 still holds (no Government subscription). Live profile runs and the in-cluster egress proof stay OPEN.
+- Hostname (FQDN) egress enforcement is documented as a customer firewall control and recorded OPEN. No new Bicep.
+
+### Item 5 - gov-region-allowlist  [P]
+- Deliverable: for `cloud=government`, `DeploymentProfile` accepts only the evidence-backed region set (usgovvirginia, usgovarizona, usgovtexas). Any other `usgov*` region, and every `usdod*` region, is refused with a reason in the `capability_unavailable` style. DoD is a separate profile, not built here. Commercial validation is unchanged.
+- Owned files (may edit):
+  - `packages/core/neurosphere_core/capabilities/validate.py` (region validation only)
+  - the existing tests of `DeploymentProfile` that use now-refused regions
+  - new `tests/unit/government_profile/test_region_parity.py`
+- Must NOT touch: `infra/`, `docs/`, `tests/unit/government_profile/test_sovereign_hosts.py`, `test_no_commercial_endpoints.py`, contracts.
+- Acceptance criteria:
+  - `usdodeast` and `usdodcentral` are refused for Government, with a reason that names the supported set.
+  - The parity test asserts that the runtime set equals `allowedRegions` in `sovereign-profile.yaml`.
+  - Existing deploy plan and capability tests stay green.
+
+### Item 6 - evidence-and-profile-refresh  [P]
+- Deliverable:
+  - Record the AI Search Government audience as verified and the Event Hubs audience as cross-cloud (both with source URL and retrieved_on 2026-11-12). Record Cosmos as `not_verified`, with the pages checked.
+  - Mirror these in `values-government.yaml`.
+  - #100 profile half: tie the `egressAllowlist` CIDR to the network module's private-endpoint subnet, and tighten `GOV_SUFFIX` so arbitrary `*.azure.us` typos fail.
+  - Responsibility-matrix row: hostname egress enforcement is a customer control (for example Azure Firewall application rules) and is OPEN.
+  - Update the G02 row.
+- Owned files (may edit): `infra/bicep/params/government/sovereign-profile.yaml`, `infra/helm/values-government.yaml`, `docs/evidence/G02/register.yaml`, `docs/compliance/responsibility-matrix.md`, `docs/RESEARCH-AND-GATES.md` (G02 row only), `tests/unit/government_profile/test_sovereign_hosts.py`, `tests/unit/government_profile/test_no_commercial_endpoints.py` (GOV_SUFFIX only), `tests/unit/evidence_register/`.
+- Must NOT touch: `infra/bicep/modules/`, `infra/helm/templates/`, `tests/security/egress/`, `.github/`, `packages/`.
+- Acceptance criteria:
+  - The audience test asserts the AI Search value equals the constant in `search/azure/client.py`.
+  - No document claims authorization.
+  - The static no-Commercial scan still passes. `eventhubs.azure.net` is an audience, not an egress host: it must not enter the egress allowlist, and the scanner must not treat it as a reachable host.
+
+### Item 8 - profile-script-paths (#99)  [P]
+- Deliverable:
+  - Fake-runner unit tests for the approved path of both scripts: success writes evidence with no credential values, drift is detected, and the uninstall dry-run leaves shared resources untouched.
+  - The teardown fix from #99: catch `TimeoutExpired`, `JSONDecodeError` and `KeyboardInterrupt`; make the resource-group delete independent of cleanup; set `release_installed` before `helm upgrade --install`. Document that the AKS cluster must be in the NS_GOV_SUBSCRIPTION_ID subscription.
+- Owned files (may edit): `scripts/gates/_g02_profile_common.py`, `scripts/gates/g02_profile_aks.py`, `scripts/gates/g02_profile_appservice.py`, new `tests/unit/gates/test_g02_profile_paths.py`.
+- Must NOT touch: other `scripts/gates/*`, `tests/unit/gates/test_g02_profile_refuses.py` (it must stay green unchanged), `docs/`.
+- Acceptance criteria:
+  - The tests never invoke real az, helm or kubectl.
+  - A timeout in cleanup still issues the group delete.
+  - The refusal tests are unchanged and green.
+
+### Item 9 - g01-path-confinement (#101)  [P]
+- Deliverable: CLI-supplied output paths in `g01_analytics_live.py` and `g01_deploy_smoke.py` resolve inside the evidence directory (`resolve()` + `is_relative_to`), or the script refuses. Test fixtures that look like secrets are generated per run.
+- Owned files (may edit): `scripts/gates/g01_analytics_live.py`, `scripts/gates/g01_deploy_smoke.py`, `tests/unit/gates/test_g01_*.py`.
+- Must NOT touch: `scripts/gates/g02_*`, `scripts/gates/_g02_profile_common.py`, `docs/`.
+- Acceptance criteria:
+  - A traversal path (`../x`) is refused, and the test asserts that.
+  - The Snyk Code scan of the touched files shows no new findings.
+
+### Item 7 - egress-tests-in-ci (#100 CI half, #98) (depends on item 6)
+- Deliverable:
+  - Under `CI`, a missing helm or az fails instead of skipping. The rendered helm output is asserted non-empty.
+  - #98: the compose egress per-host test requires a session-scoped positive-control fixture. An exec failure is distinguished from a blocked connection, and DNS resolution failure is asserted.
+  - A CI job installs helm 4 and the az bicep CLI and runs `tests/unit/government_profile`, `tests/unit/infra` and `tests/security/egress -m "not integration"`.
+  - A separate CI job runs `-m integration tests/security/egress` against compose (the egress probe only, if feasible).
+- Owned files (may edit): `.github/workflows/ci.yml`, `tests/security/egress/`, the skip sites in `tests/unit/government_profile/test_no_commercial_endpoints.py`, `tests/unit/government_profile/test_sovereign_hosts.py` and `tests/unit/infra/test_helm_render.py`.
+- Must NOT touch: `infra/`, `docker-compose.yml`, `packages/`, `scripts/`.
+- Acceptance criteria:
+  - Locally without helm, the tests still skip. With `CI=true` and no helm, they fail.
+  - Both new CI jobs are green on the PR.
+  - The egress report still reads "static and compose only; in-cluster proof OPEN".
+
+### Round 2 waves
+- Wave A: items 5, 6, 8, 9 in parallel (WIP 4).
+- Wave B: item 7, after item 6 merges.
+- Merge order: 6, 5, 8, 9, 7. Every item gets one review pass (PRP `review: required`).
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -237,6 +322,11 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 | 2 | merged | worktree-agent-ad2f171f638730ee5 | sonnet | 34d2deb + c5b567c (handoff-marker flip) + 3ddde6d (audience provenance fix), merge f2d2aaf; verify government_profile+infra+network 92/92, helm lint/template ok, bicep build-params ok; post-merge 92/92; review APPROVED (4 follow-ups) | 2026-10-22 |
 | 3 | merged | worktree-agent-af3ed6e509f2e314f | sonnet | de8c5cc, merge 4990f12; verify ruff/format/pyright clean, static 57/57, compose integration 41/41 (fresh stack, local only; integration marker does not run in CI); post-merge touched suites 313 passed; snyk 0; review APPROVED (4 follow-ups). In-cluster proof OPEN | 2026-10-22 |
 | 4 | merged | worktree-agent-a2d5b5afaff30879b | sonnet | b6b79a3, merge 083d5d2; verify ruff/format/pyright clean, gates 144/144, both scripts refuse exit 2 "OPEN", docs/ untouched; post-merge 144/144; review APPROVED (4 follow-ups) | 2026-10-22 |
+| 5 | todo | - | sonnet | - | 2026-11-12 |
+| 6 | todo | - | sonnet | - | 2026-11-12 |
+| 7 | todo | - | sonnet | - | 2026-11-12 |
+| 8 | todo | - | sonnet | - | 2026-11-12 |
+| 9 | todo | - | sonnet | - | 2026-11-12 |
 
 ## Audit 2026-11-04
 
