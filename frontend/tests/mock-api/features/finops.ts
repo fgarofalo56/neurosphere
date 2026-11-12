@@ -3,7 +3,8 @@ import type { FeatureMockHandler } from "./context.ts";
 /**
  * PRP-31 item 6 mock: `GET /api/v1/finops/domains/{d}/forecast`. Synthetic numbers only.
  * USD answers a full forecast with one unknown and one incomplete day; EUR answers "forecast
- * unavailable" for both series; any other currency answers a plain forecast.
+ * unavailable" for both series; GBP answers 409 `price_version_unresolved`; any other currency
+ * answers a plain forecast.
  */
 const FORECAST_PATH = /^\/api\/v1\/finops\/domains\/([^/]+)\/forecast$/;
 const AS_OF = Date.UTC(2026, 9, 15);
@@ -118,6 +119,16 @@ export const handle: FeatureMockHandler = (ctx) => {
       "invalid_request",
       undefined,
       "history_days 7-90, horizon_days 1-31, currency ISO 4217",
+    );
+    return true;
+  }
+  if (currency === "GBP") {
+    // No price version covers the window: the real API answers 409 with this reason.
+    ctx.problem(
+      409,
+      "stale_version",
+      "price_version_unresolved",
+      "No price version covers the requested window.",
     );
     return true;
   }

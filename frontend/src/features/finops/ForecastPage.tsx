@@ -1,7 +1,7 @@
 import { Field, Select, makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
-import { ForbiddenError } from "../../api/index.js";
+import { ApiError, ForbiddenError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
 import {
   DataTable,
@@ -320,6 +320,13 @@ function MethodCard({ data }: { readonly data: ForecastResponse }): ReactElement
   );
 }
 
+/** The problem `reason` of an HTTP 409 answer (a retry cannot change it), or null. */
+function conflictReason(error: Error): string | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const reason = error.problem?.reason;
+  return typeof reason === "string" && reason.trim() !== "" ? reason : null;
+}
+
 function ForecastBody({
   domainId,
   historyDays,
@@ -337,6 +344,27 @@ function ForecastBody({
     const error = query.error;
     if (error instanceof ForbiddenError) {
       return <ForbiddenState workspace={STRINGS.workspace} correlationId={error.correlationId} />;
+    }
+    const unavailableReason = conflictReason(error);
+    if (unavailableReason !== null) {
+      const hint =
+        unavailableReason === "price_version_unresolved"
+          ? STRINGS.priceVersionUnresolvedHint
+          : STRINGS.genericUnavailableHint;
+      return (
+        <EmptyState
+          testId="forecast-unavailable"
+          title={STRINGS.unavailableTitle}
+          description={
+            <>
+              <span data-testid="forecast-unavailable-reason">{`${STRINGS.unavailableReasonPrefix} ${unavailableReason}`}</span>
+              <br />
+              {hint}
+              {error.correlationId !== "" ? ` (reference ${error.correlationId})` : ""}
+            </>
+          }
+        />
+      );
     }
     return (
       <div data-testid="error-state">

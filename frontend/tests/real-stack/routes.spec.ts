@@ -28,6 +28,8 @@ interface Entry {
   readonly via?: { readonly list: string; readonly link: string; readonly then?: string };
   /** `data-testid` of a row that must be visible when the page has data. */
   readonly rows?: string;
+  /** `data-testid` of the page's empty state; defaults to `empty-state`. */
+  readonly empty?: string;
   readonly expected?: readonly Expected[];
 }
 
@@ -99,7 +101,7 @@ const ENTRIES: readonly Entry[] = [
     // No API call until a scan is submitted, so there is nothing to expect.
   },
   { route: "/deploy/capabilities" },
-  { route: "/evaluations", rows: "evaluation-row" },
+  { route: "/evaluations", rows: "evaluation-row", empty: "evaluations-empty" },
   {
     route: "/federation",
     expected: [
@@ -110,7 +112,16 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
-  { route: "/finops/forecast" },
+  {
+    route: "/finops/forecast",
+    expected: [
+      {
+        status: 409,
+        pathPrefix: "/api/v1/finops/domains/",
+        why: "the dev price sheet prices only synthetic-model, so the seeded world has no price version (price_version_unresolved); the page shows its unavailable state",
+      },
+    ],
+  },
   { route: "/gateways" },
   {
     route: "/gateways/detail",
@@ -218,6 +229,7 @@ for (const entry of ENTRIES) {
     const domains = await readableDomains(page);
     expect(domains.length).toBeGreaterThan(0);
     const noData = NO_DATA[entry.route];
+    const emptyId = entry.empty ?? "empty-state";
 
     let opened = false;
     for (const domain of domains) {
@@ -225,7 +237,7 @@ for (const entry of ENTRIES) {
         await page.goto(withDomain(entry.via.list, domain));
         await page.locator("main h1").first().waitFor();
         // The list loads after the heading: settle on a link or the empty state before counting.
-        await page.locator(`${entry.via.link}, [data-testid='empty-state']`).first().waitFor();
+        await page.locator(`${entry.via.link}, [data-testid='${emptyId}']`).first().waitFor();
         const link = page.locator(entry.via.link).first();
         if ((await link.count()) === 0) continue;
         if (entry.via.then === undefined) {
@@ -239,7 +251,7 @@ for (const entry of ENTRIES) {
           await page.locator("main h1").first().waitFor();
           // The list settles on rows or on its empty state.
           await page
-            .locator(`[data-testid='${entry.rows}'], [data-testid='empty-state']`)
+            .locator(`[data-testid='${entry.rows}'], [data-testid='${emptyId}']`)
             .first()
             .waitFor();
           if ((await page.getByTestId(entry.rows).count()) === 0) continue;
@@ -266,5 +278,12 @@ for (const entry of ENTRIES) {
       await expect(page.getByTestId(entry.rows).first()).toBeVisible();
     }
     expect(unexpected(answers, entry.expected ?? [])).toEqual([]);
+    // A forecast the API cannot price (409) is a stated state, not a retryable error.
+    if (
+      entry.route === "/finops/forecast" &&
+      answers.some((a) => a.status === 409 && a.path.startsWith("/api/v1/finops/domains/"))
+    ) {
+      await expect(page.getByTestId("forecast-unavailable")).toBeVisible();
+    }
   });
 }
