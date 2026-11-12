@@ -514,7 +514,20 @@ Outcome of Item 14 (2026-11-11): not merged (branch `dd07fef` kept). Resolving t
   - The integration loop passes with the seeded auditor.
   - The authz, ui_adapters, audit, actions, HITL, catalog and curation suites are green.
 
-Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane); then item 14, superseded by 14b.
+### Item 15 - real-stack browser run fixes (added 2026-11-11, from the headed run: 35 of 42 passed)
+- Deliverable:
+  - **`/finops/forecast`.** A 409 `price_version_unresolved`, or any 409 with a problem `reason`, renders "Forecast unavailable: <reason>" with an operator hint (no price version covers this window; check the price sheet). No "Try again", because a retry cannot succeed. The mock gains a fixture for that answer.
+  - **`frontend/tests/real-stack/routes.spec.ts`:**
+    - `Entry` gets an optional `empty` testid. `/evaluations` uses `evaluations-empty` (the spec waited for the generic `empty-state` and timed out on a correctly rendered empty page).
+    - `/finops/forecast` declares the expected 409 `price_version_unresolved`, with the reason: the dev price sheet prices only `synthetic-model`.
+- Owned files: `frontend/src/features/finops/**`, `frontend/tests/mock-api/features/finops.ts`, `frontend/tests/real-stack/routes.spec.ts`.
+- Acceptance criteria:
+  - Vitest covers the 409 unavailable state (no retry control) and the generic error path, which is unchanged.
+  - The finops e2e spec is green.
+  - The real-stack spec `--list` count is unchanged.
+  - tsc and eslint are clean.
+
+Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane); then item 14, superseded by 14b; then item 15.
 
 Orchestrator seams:
 - Regenerate `openapi.json` and `docs/reference` after items 9 and 13 merge.
@@ -586,6 +599,7 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 12 | merged | worktree-agent-a3b97075a648d325a | sonnet | integration 11 pass 1 skip (forecast OPEN: 409 price_version_unresolved), reproduced by me; found audit chain gap (non-catalog domain ids unauditable); merged 2128cb2 | 2026-11-11 |
 | 13 | merged | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); review APPROVED (opus, 0 blocking); merged 5652d34; openapi regen additive +361/-0, drift+inventory+reference+routes 176 pass (me) | 2026-11-11 |
 | 14 | descoped | worktree-agent-a4145f5d51e3467f6 | opus | dd07fef NOT merged: 415 pass + loop 11/1 skip (agent), but cross-domain audit read via shared last-segment chain (xfail-pinned); superseded by 14b (user decision) | 2026-11-11 |
+| 15 | in-progress | worktree (agent) | sonnet | dispatched after headed run (35/42) | 2026-11-11 |
 | 14b | merged | worktree-agent-ae97782c52aa4d353 | opus | ruff+pyright clean, 2178+324+139 pass (agent); loop 11 pass 1 skip + chain/authz/audit 113 pass (me); Snyk 0; review APPROVED (opus, 200k-id fuzz, 0 collisions); merged 79e8f7a | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
