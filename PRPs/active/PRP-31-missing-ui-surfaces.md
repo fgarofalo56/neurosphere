@@ -470,7 +470,23 @@ User decisions 2026-11-11:
 - Must NOT touch: product code. Report gaps instead.
 - Acceptance criteria: passes locally against `docker compose up -d --wait` plus the seed; never runs in CI.
 
-Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane).
+### Item 14 - audit-chain-domain-resolution (added 2026-11-11, user decision; review: required; model: opus)
+Why: Item 12 found that `/audit` answers 403 on the seeded real stack. `domain_from_chain_id` (`services/api/neurosphere_api/authz/audit_mount.py:85-94`) maps the chain `<customer>.<name>` back to `<cloud>:<customer>:catalog:domain:<name>`, with the source segment hard-coded to `catalog`. Writers name the chain by the domain's last segment only (`action_audit_chain_id`, `catalog/service.py` `audit_chain_for`). So a domain with any other source segment is unauditable: the seed mints `sandbox:domain:dom-00N`, and the kill-switch runbook uses `neurosphere:domain:*`.
+- Deliverable: resolve the chain name against the caller's own scope. The domain is the single entry of `scope.allowed_domains` that is in the caller's cloud and customer and whose last segment equals `<name>`.
+  - Zero matches or more than one match means None (deny). More than one is the aliasing case, where two sources share a chain; report it as a follow-up for the write side.
+  - The chain naming is unchanged, so there is no audit data migration.
+  - Remove the `security_auditor` catalog-form workaround from `tests/integration/real_stack/test_ui_surfaces_loop.py`. The seeded `auditor` persona then reads and verifies the chain of a seeded `sandbox:domain` domain.
+- Owned files: `services/api/neurosphere_api/authz/audit_mount.py`, `services/api/neurosphere_api/ui_adapters/audit.py` (only if its round-trip check needs adjusting), `services/api/tests/authz/test_audit_mount.py`, `services/api/tests/ui_adapters_api/test_audit_adapters.py`, `tests/integration/real_stack/test_ui_surfaces_loop.py`, `docs/evidence/G12/ui-surfaces/**`.
+- Must NOT touch: the chain writers (`packages/core/neurosphere_core/actions/audit.py`, `catalog/service.py`), `packages/contracts/**`, `frontend/**`.
+- Acceptance criteria:
+  - Each of `catalog`, `sandbox` and `neurosphere` source domains resolves for a caller holding `audit.read` there.
+  - Another customer or cloud is denied.
+  - A name not in the caller's scope is denied, and an ambiguous name is denied.
+  - The generic `/api/v1/audit/chains/{chain_id}` routes and the `ui_adapters` audit routes agree.
+  - The item 12 loop passes with the seeded auditor and no extra grant.
+  - Authz, ui_adapters and audit suites are green.
+
+Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane); then item 14 (after item 12, because it edits the item 12 test).
 
 Orchestrator seams:
 - Regenerate `openapi.json` and `docs/reference` after items 9 and 13 merge.
@@ -541,6 +557,7 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 11 | merged | worktree-agent-aaee7ceb1027a9c2a | sonnet | tsc+eslint clean; a11y+audit 517/518 (1 keyboard flake, green alone; agent); audit subset 28 pass (me); real-stack --list 42 tests, ENTRIES==manifest 41; merged e94157c | 2026-11-11 |
 | 12 | merged | worktree-agent-a3b97075a648d325a | sonnet | integration 11 pass 1 skip (forecast OPEN: 409 price_version_unresolved), reproduced by me; found audit chain gap (non-catalog domain ids unauditable); merged 2128cb2 | 2026-11-11 |
 | 13 | merged | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); review APPROVED (opus, 0 blocking); merged 5652d34; openapi regen additive +361/-0, drift+inventory+reference+routes 176 pass (me) | 2026-11-11 |
+| 14 | in-progress | worktree (agent) | opus | dispatched (user-approved delta) | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
 
