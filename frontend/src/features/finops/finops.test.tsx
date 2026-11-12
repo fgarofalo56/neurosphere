@@ -275,6 +275,31 @@ describe("ForecastPage", () => {
     await waitFor(() => expect(screen.getByTestId("error-state")).toBeTruthy());
   });
 
+  it("shows 'Forecast unavailable' with the reason and no retry on a 409 with a reason", async () => {
+    useApi(() =>
+      json(
+        { code: "stale_version", reason: "price_version_unresolved", correlation_id: "c9" },
+        409,
+      ),
+    );
+    renderPage();
+    const box = await screen.findByTestId("forecast-unavailable");
+    expect(box.textContent).toContain("Forecast unavailable");
+    expect(box.textContent).toContain("price_version_unresolved");
+    expect(box.textContent).toContain("An operator must load a price sheet");
+    expect(within(box).queryByRole("button")).toBeNull();
+    expect(screen.queryByTestId("error-state")).toBeNull();
+    expect(screen.queryByText(/try again/i)).toBeNull();
+  });
+
+  it("keeps the generic error with Try again for a 409 without a reason", async () => {
+    useApi(() => json({ code: "stale_version", correlation_id: "c8" }, 409));
+    renderPage();
+    const err = await screen.findByTestId("error-state");
+    expect(within(err).getByRole("button")).toBeTruthy();
+    expect(screen.queryByTestId("forecast-unavailable")).toBeNull();
+  });
+
   it("asks for a domain when none is selected", () => {
     useApi(() => json(body()));
     renderPage("");

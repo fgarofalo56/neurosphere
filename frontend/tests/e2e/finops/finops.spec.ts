@@ -56,6 +56,21 @@ test("an unavailable forecast says why and the controls are bounded", async ({ p
   await expect(page.getByTestId("forecast-unavailable-invoiced")).toBeVisible();
 });
 
+test("a 409 price_version_unresolved shows the unavailable state with no retry", async ({
+  page,
+}) => {
+  const api = page.waitForResponse((r) => r.url().includes("/forecast") && r.status() === 409);
+  await page.goto(`${FORECAST}&currency=GBP`);
+  await api;
+  const box = page.getByTestId("forecast-unavailable");
+  await expect(box).toBeVisible();
+  await expect(box).toContainText("Forecast unavailable");
+  await expect(box).toContainText("price_version_unresolved");
+  await expect(box).toContainText("An operator must load a price sheet");
+  await expect(box.getByRole("button")).toHaveCount(0);
+  await expect(page.getByTestId("error-state")).toHaveCount(0);
+});
+
 test("a domain the caller cannot read shows the forbidden state", async ({ page }) => {
   await page.goto("/finops/forecast?domain_id=commercial%3Ae2e%3Asandbox%3Adomain%3Aforbidden");
   await expect(page.getByTestId("forbidden-state")).toBeVisible();
