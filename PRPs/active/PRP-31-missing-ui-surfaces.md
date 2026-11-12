@@ -599,7 +599,7 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 12 | merged | worktree-agent-a3b97075a648d325a | sonnet | integration 11 pass 1 skip (forecast OPEN: 409 price_version_unresolved), reproduced by me; found audit chain gap (non-catalog domain ids unauditable); merged 2128cb2 | 2026-11-11 |
 | 13 | merged | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); review APPROVED (opus, 0 blocking); merged 5652d34; openapi regen additive +361/-0, drift+inventory+reference+routes 176 pass (me) | 2026-11-11 |
 | 14 | descoped | worktree-agent-a4145f5d51e3467f6 | opus | dd07fef NOT merged: 415 pass + loop 11/1 skip (agent), but cross-domain audit read via shared last-segment chain (xfail-pinned); superseded by 14b (user decision) | 2026-11-11 |
-| 15 | in-progress | worktree (agent) | sonnet | dispatched after headed run (35/42) | 2026-11-11 |
+| 15 | merged | worktree-agent-a5eb7316baaf2eadb | sonnet | tsc+eslint clean; finops vitest 16 + e2e 12 pass (me); real-stack --list 42; merged 54d3b40 | 2026-11-11 |
 | 14b | merged | worktree-agent-ae97782c52aa4d353 | opus | ruff+pyright clean, 2178+324+139 pass (agent); loop 11 pass 1 skip + chain/authz/audit 113 pass (me); Snyk 0; review APPROVED (opus, 200k-id fuzz, 0 collisions); merged 79e8f7a | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
