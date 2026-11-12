@@ -1,7 +1,8 @@
 """Audit wiring shared by the HITL service, decision log, notifier stubs and timer worker.
 
-Chain convention (same as catalog/curation): one hash chain per domain, ``<customer>.<name>``
-where ``name`` is the last segment of the canonical domain id. A review item is addressed in
+Chain convention (same as catalog/curation): one hash chain per domain, named by the shared
+source-qualified helper ``neurosphere_core.audit.domain_audit_chain_id`` (``<customer>.<name>``
+for a ``catalog`` source domain). A review item is addressed in
 audit records as ``<cloud>:<customer>:hitl:review_item:<item_id>``; its state appears only as a
 digest, never as a body (PRP-06 metadata-only guard).
 """
@@ -15,6 +16,7 @@ from neurosphere_contracts.audit.v1.audit_record import Subject
 
 from neurosphere_core.audit import AuditContext, make_subject, sha256_digest
 from neurosphere_core.audit.builders import Channel
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.errors import NeuroSphereError
 from neurosphere_core.hitl.models import ReviewItem
 
@@ -41,7 +43,8 @@ SYSTEM_SCOPE_HASH: Final = sha256_digest({"system_scope": "neurosphere.hitl"})
 
 
 def audit_chain_for(customer_id: str, domain_id: str) -> str:
-    return f"{customer_id}.{domain_id.rsplit(':', 1)[-1]}"
+    """The domain's audit chain (:func:`neurosphere_core.audit.domain_audit_chain_id`)."""
+    return domain_audit_chain_id(customer_id, domain_id)
 
 
 def item_subject(item: ReviewItem, *, state_digest: str | None = None) -> Subject:

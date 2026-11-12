@@ -38,6 +38,7 @@ from neurosphere_core.audit import (
     make_subject,
     run_audited_mutation,
 )
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.catalog import (
     CatalogEdge,
     CatalogRepository,
@@ -90,9 +91,8 @@ class InferenceResult(BaseModel):
 
 
 def audit_chain_id(edge: CatalogEdge) -> str:
-    """Audit chain of the edge's domain: ``<customer>.<domain name>`` (audit_mount convention)."""
-    name = edge.domain_id.root.rsplit(":", 1)[-1]
-    return f"{edge.customer_id.root}.{name}"
+    """Audit chain of the edge's domain (shared helper ``domain_audit_chain_id``, item 14b)."""
+    return domain_audit_chain_id(edge.customer_id.root, edge.domain_id.root)
 
 
 def _refusal(exc: BaseException) -> str:

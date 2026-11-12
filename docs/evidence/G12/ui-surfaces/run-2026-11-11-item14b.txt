@@ -1,0 +1,25 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- E:\Repos\GitHub\MyDemoRepos\neurosphere\.claude\worktrees\agent-ae97782c52aa4d353\.venv\Scripts\python.exe
+hypothesis profile 'default'
+rootdir: E:\Repos\GitHub\MyDemoRepos\neurosphere\.claude\worktrees\agent-ae97782c52aa4d353
+configfile: pyproject.toml
+plugins: anyio-4.15.1, hypothesis-6.170.14, platformdirs-4.12.4, asyncio-1.4.1, respx-0.23.1
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_01_catalog_search PASSED [  8%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_02_create_entity PASSED [ 16%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_03_edit_with_if_match PASSED [ 25%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_04_deprecate_with_reason_code_and_audit PASSED [ 33%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_05_recertify PASSED [ 41%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_06_curation_decision PASSED [ 50%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_07_stale_agents_dry_run_then_confirm PASSED [ 58%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_08_auditor_only_persona PASSED [ 66%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_09_emergency_disable_round_trip PASSED [ 75%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_10_reads_answer_200[/api/v1/evaluation/domains/{d}/results] PASSED [ 83%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_10_reads_answer_200[/api/v1/finops/domains/{d}/forecast] SKIPPED [ 91%]
+tests/integration/real_stack/test_ui_surfaces_loop.py::test_10_reads_answer_200[/api/v1/federation/summary] PASSED [100%]
+
+=========================== short test summary info ===========================
+SKIPPED [1] tests\integration\real_stack\test_ui_surfaces_loop.py:474: OPEN: forecast answers 409 price_version_unresolved on the seeded world
+======================= 11 passed, 1 skipped in 10.18s ========================
