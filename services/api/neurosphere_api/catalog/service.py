@@ -41,6 +41,7 @@ from neurosphere_core.audit import (
     make_subject,
     run_audited_mutation,
 )
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.auth.scope import Permission, domains_with_permission
 from neurosphere_core.catalog import (
     CatalogEntity,
@@ -99,8 +100,8 @@ _OWNER_RECERT: Final = ("recertified_at", "recertify_by")
 
 
 def audit_chain_for(customer_id: str, domain_id: str) -> str:
-    """Audit chain of a domain: ``<customer>.<domain name>`` (audit_mount convention)."""
-    return f"{customer_id}.{domain_id.rsplit(':', 1)[-1]}"
+    """Audit chain of a domain (shared helper ``domain_audit_chain_id``, PRP-31 item 14b)."""
+    return domain_audit_chain_id(customer_id, domain_id)
 
 
 def _refusal(exc: BaseException) -> str:

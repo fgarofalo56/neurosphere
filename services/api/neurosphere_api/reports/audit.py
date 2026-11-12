@@ -37,6 +37,7 @@ from neurosphere_core.audit import (
     run_audited_mutation,
 )
 from neurosphere_core.audit.builders import DenialCode
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.audit.content_guard import GUID
 from neurosphere_core.scope import IdentityScope
 
@@ -82,7 +83,7 @@ class ReportAuditor:
 
     @staticmethod
     def _chain(scope: IdentityScope, domain_id: str) -> str:
-        return f"{scope.customer_id}.{_domain_name(domain_id)}"
+        return domain_audit_chain_id(scope.customer_id, domain_id)
 
     @staticmethod
     def _subject(scope: IdentityScope, domain_id: str, report_id: str, etag: str | None) -> Subject:

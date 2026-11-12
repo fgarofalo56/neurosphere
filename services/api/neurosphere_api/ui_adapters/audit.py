@@ -11,12 +11,14 @@ answers 403 for them. The list route here derives the auditable domains from the
 scope (``domains_with_permission(scope, audit.read)``), restricted to the scope's own cloud and
 customer, and answers 403 when none remain.
 
-The chain id is NEVER typed by the browser: it is ``action_audit_chain_id(scope.customer_id,
-domain)``, i.e. ``<customer>.<domain name>``. Because that convention keys a chain by the domain's
-last segment only, a domain is auditable here only when it round-trips: the PRP-06 mount maps the
-derived chain back to exactly ``{domain}`` (``domain_from_chain_id``). Anything else -- another
-customer's or cloud's domain, or a domain whose chain would alias a different domain -- is 403
-``audit_chain_out_of_scope`` and is recorded as a denied attempt. The permission is then checked on
+The chain id is NEVER typed by the browser: it is ``domain_audit_chain_id(scope.customer_id,
+domain)`` (``neurosphere_core.audit.chains``, PRP-31 item 14b): ``<customer>.<name>`` for a
+``catalog`` source domain, ``<customer>._<n>.<source>.<name>`` for any other source. A domain is
+auditable here only when it round-trips: the PRP-06 mount maps the derived chain back to exactly
+``{domain}`` (``domain_from_chain_id``). Anything else -- another customer's or cloud's domain, or
+a domain id the encoding refuses -- is 403 ``audit_chain_out_of_scope`` and is recorded as a
+denied attempt. Records written before item 14b for a non-catalog domain stay on its old
+``<customer>.<name>`` chain and are not shown here (not migrated). The permission is then checked on
 ``{domain}`` itself (no customer-level fallback), so a cross-domain read is 403 too.
 
 Records are paged by sequence exactly like ``GET /api/v1/audit/chains/{chain_id}/records``;
@@ -30,12 +32,12 @@ from typing import Annotated, Final
 
 from fastapi import APIRouter, Depends, Query, Request
 from neurosphere_contracts.audit.v1.audit_record import AuditRecord
-from neurosphere_core.actions.audit import action_audit_chain_id
 from neurosphere_core.audit import AuditRepository, ChainVerification
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.audit.repository import MAX_RANGE
 from neurosphere_core.auth.scope import Permission, domains_with_permission
 from neurosphere_core.catalog import CatalogRepository, EntityFilter
-from neurosphere_core.errors import DependencyTransientError, ForbiddenError
+from neurosphere_core.errors import DependencyTransientError, ForbiddenError, InvalidSchemaError
 from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
@@ -63,13 +65,17 @@ _by_path = domain_from_path("domain")
 def auditable_chain(scope: IdentityScope, domain_id: str) -> str | None:
     """The chain of ``domain_id`` for ``scope``, or ``None`` when it does not round-trip.
 
-    ``None`` for another cloud or customer, and for a domain whose ``<customer>.<name>`` chain
-    the audit mount would attribute to a different domain id.
+    ``None`` for another cloud or customer, for a domain id the shared encoding refuses, and for
+    a chain the audit mount would attribute to a different domain id (defence in depth; the
+    encoding is injective, so this cannot happen for an encodable id).
     """
     parts = domain_id.split(":")
     if len(parts) < 2 or parts[0] != str(scope.cloud) or parts[1] != scope.customer_id:
         return None
-    chain = action_audit_chain_id(scope.customer_id, domain_id)
+    try:
+        chain = domain_audit_chain_id(scope.customer_id, domain_id)
+    except InvalidSchemaError:
+        return None
     return chain if domain_from_chain_id(scope, chain) == domain_id else None
 
 

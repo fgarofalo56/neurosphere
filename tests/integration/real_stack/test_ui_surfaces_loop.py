@@ -51,9 +51,9 @@ LOOPBACK: Final = "http://127.0.0.1:8081"
 #: A fixed, synthetic, non-secret object id for this suite's operator (its own, not the manifest
 #: suite's, so the two suites never share a principal).
 OPERATOR_OID: Final = "6c1b0d9e-8f70-4b6c-9d5e-4f3a2b1c0d9e"
-#: The audit-only principal: ``security_auditor`` (``audit.read``, no ``data.read``) over the
-#: audit-mount form of the seeded domains, see ``_grant_audit_only``.
-AUDIT_ONLY_OID: Final = "7d2c1e0f-9a81-4c7d-8e6f-5a4b3c2d1e0f"
+#: The audit-only principal is the SEEDED ``auditor`` persona (``security_auditor``:
+#: ``audit.read``, no ``data.read``) from ``sandbox/stack/personas.json``, with no extra grant.
+AUDITOR: Final = "auditor"
 CREATED_PREFIX: Final = "ui-loop-"
 ROLES: Final = ("viewer", "analyst", "domain_steward", "security_auditor", "admin")
 GENERATOR_PROFILE: Final = "tiny"
@@ -104,35 +104,6 @@ class Stack:
         return self.client.request(method, path, headers=headers, **kwargs)
 
 
-def _grant_audit_only(grant: ModuleType, tenant: str) -> None:
-    """Grant ``security_auditor`` through the same grant step, on the audit-mount domain ids.
-
-    The audit read API serves a domain ``<cloud>:<customer>:catalog:domain:<name>`` (the chain
-    ``<customer>.<name>``), while the seeded world's domains are ``...:sandbox:domain:<name>``, so
-    no seeded persona can read any audit chain (recorded in the evidence README). Only the domain
-    list handed to the grant step differs; nothing is written outside the policy store.
-    """
-    original = grant.operator_domain_ids
-
-    def audit_form(*args: Any, **kwargs: Any) -> list[str]:
-        return [
-            d.replace(":sandbox:domain:", ":catalog:domain:") for d in original(*args, **kwargs)
-        ]
-
-    grant.operator_domain_ids = audit_form
-    try:
-        argv = [
-            *("--object-id", AUDIT_ONLY_OID),
-            *("--role", "security_auditor"),
-            *("--tenant-id", tenant),
-            *("--profile", GENERATOR_PROFILE),
-        ]
-        code = grant.main(argv, env=dict(os.environ))
-    finally:
-        grant.operator_domain_ids = original
-    assert code == 0, f"audit-only grant exited {code}"
-
-
 def _deprecate_leftovers(stack: Stack) -> None:
     """The catalog has no delete: deprecate every active entity this suite created."""
     listing = stack.call(
@@ -176,8 +147,6 @@ def stack(compose_stack: None) -> Iterator[Stack]:
             code = grant.main(argv, env=dict(os.environ))
             assert code == 0, f"grant {role} exited {code}"
 
-        _grant_audit_only(grant, tenant)
-
         issuer = DevIssuer(Settings(env="local"), tenant_id=tenant, kid="ui-loop-stand-in")
         unrelated = DevIssuer(Settings(env="local"), tenant_id=tenant, kid="unrelated")
 
@@ -204,7 +173,7 @@ def stack(compose_stack: None) -> Iterator[Stack]:
             return {"Authorization": f"Bearer {token}"}
 
         personas = json.loads(PERSONAS.read_text(encoding="utf-8"))["personas"]
-        tokens = {"operator": bearer(OPERATOR_OID), "audit_only": bearer(AUDIT_ONLY_OID)}
+        tokens = {"operator": bearer(OPERATOR_OID)}
         tokens.update({p["slug"]: bearer(p["object_id"]) for p in personas})
         with TestClient(app, raise_server_exceptions=False) as client:
             built = Stack(client, tokens)
@@ -257,17 +226,19 @@ def _owner_body(name: str) -> dict[str, Any]:
     }
 
 
-def _audit_domain(domain: str) -> str:
-    """The id the audit read API serves for a catalog domain (chain ``<customer>.<name>``)."""
-    return domain.replace(":sandbox:domain:", ":catalog:domain:")
-
-
 def _records(stack: Stack, who: str, domain: str) -> list[dict[str, Any]]:
+    """Every record of ``domain``'s chain, read through the domain-path adapter as ``who``.
+
+    The seeded ``sandbox:domain`` id is used unchanged. Since PRP-31 item 14b its chain is the
+    source-qualified ``<customer>._7.sandbox.<name>``, so it holds only records written after
+    14b (this loop's own writes in steps 2-6). Records the seed wrote earlier sit on the old
+    aliased ``<customer>.<name>`` chain and are not read here (not migrated, see the README).
+    """
     out: list[dict[str, Any]] = []
     cursor: str | None = None
     while True:
         query = f"?page_size=200&cursor={cursor}" if cursor else "?page_size=200"
-        path = f"/api/v1/audit/domains/{_audit_domain(domain)}/records{query}"
+        path = f"/api/v1/audit/domains/{domain}/records{query}"
         response = stack.call("GET", path, who)
         assert response.status_code == 200, response.text
         body = response.json()
@@ -332,7 +303,7 @@ def test_04_deprecate_with_reason_code_and_audit(stack: Stack) -> None:
     )
     assert response.status_code == 200, response.text
     assert response.json()["lifecycle_status"] == "deprecated"
-    records = _records(stack, "audit_only", stack.domain)
+    records = _records(stack, AUDITOR, stack.domain)
     hits = [
         r
         for r in records
@@ -405,7 +376,7 @@ def test_06_curation_decision(stack: Stack) -> None:
     assert response.status_code == 201, response.text
     result = response.json()
     assert ":person:" in json.dumps(result), result
-    records = _records(stack, "audit_only", domain)
+    records = _records(stack, AUDITOR, domain)
     mine = [r for r in records if r.get("channel") == "button" and edge_id in json.dumps(r)]
     assert mine, "no button-channel audit record names the decided edge"
 
@@ -431,21 +402,39 @@ def test_07_stale_agents_dry_run_then_confirm(stack: Stack) -> None:
 
 
 def test_08_auditor_only_persona(stack: Stack) -> None:
-    domains = stack.call("GET", "/api/v1/me/domains", "audit_only")
+    assert ":sandbox:domain:" in stack.domain, stack.domain  # a seeded, non-catalog source
+    domains = stack.call("GET", "/api/v1/me/domains", AUDITOR)
     assert domains.status_code in (200, 403), domains.text
     if domains.status_code == 200:
         assert domains.json()["items"] == []
-    listing = stack.call("GET", "/api/v1/audit/domains", "audit_only")
+    listing = stack.call("GET", "/api/v1/audit/domains", AUDITOR)
     assert listing.status_code == 200, listing.text
     items = listing.json()["items"]
     assert items, "the auditor reads no audit domain"
-    assert _audit_domain(stack.domain) in {i["domain_id"] for i in items}
-    records = _records(stack, "audit_only", stack.domain)
-    assert records
-    path = f"/api/v1/audit/domains/{_audit_domain(stack.domain)}/verify"
-    verify = stack.call("GET", path, "audit_only")
+    assert stack.domain in {i["domain_id"] for i in items}
+    records = _records(stack, AUDITOR, stack.domain)
+    # Fresh records written through the API by steps 2-6 of this run, on the qualified chain.
+    created = stack.state["entity"]["id"]
+    assert any(r["subject"]["target"]["canonical_id"] == created for r in records), created
+    assert {r["chain_id"] for r in records} == {_chain(stack.domain)}
+    verify = stack.call("GET", f"/api/v1/audit/domains/{stack.domain}/verify", AUDITOR)
     assert verify.status_code == 200, verify.text
     assert verify.json()["ok"] is True, verify.text
+    assert verify.json()["chain_id"] == _chain(stack.domain)
+    # The generic chain route maps the source-qualified chain back to the same seeded domain.
+    by_chain = stack.call("GET", f"/api/v1/audit/chains/{_chain(stack.domain)}/verify", AUDITOR)
+    assert by_chain.status_code == 200, by_chain.text
+    assert by_chain.json() == verify.json()
+    # The pre-14b aliased chain names the catalog domain of that name: not this auditor's.
+    legacy = f"{stack.domain.split(':')[1]}.{stack.domain.rsplit(':', 1)[-1]}"
+    refused = stack.call("GET", f"/api/v1/audit/chains/{legacy}/verify", AUDITOR)
+    assert refused.status_code == 403, refused.text
+
+
+def _chain(domain: str) -> str:
+    """The source-qualified chain of a seeded domain, ``<customer>._<n>.<source>.<name>``."""
+    _, customer, source, _, name = domain.split(":")
+    return f"{customer}._{len(source)}.{source}.{name}"
 
 
 def test_09_emergency_disable_round_trip(stack: Stack) -> None:
