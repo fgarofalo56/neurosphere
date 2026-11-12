@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import pytest
 import yaml
@@ -31,7 +32,18 @@ def find_commercial_hosts(text: str) -> list[str]:
 
 AZ = shutil.which("az")
 HELM = shutil.which("helm")
-requires_az = pytest.mark.skipif(AZ is None, reason="az CLI not on PATH; CI bicep job covers it")
+_IN_CI = os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no")
+# Under CI a missing az is not skipped; the test body then fails on its AZ assertion (#100).
+requires_az = pytest.mark.skipif(
+    AZ is None and not _IN_CI, reason="az CLI not on PATH; CI bicep job covers it"
+)
+
+
+def _skip_or_fail(reason: str) -> NoReturn:
+    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
+    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
+        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
+    pytest.skip(reason)
 
 
 def _text(path: Path) -> str:
@@ -133,7 +145,7 @@ def test_main_arm_gates_diagnostics_and_front_on_created() -> None:
 
 def _helm_docs(*extra: str) -> list[dict[str, Any]]:
     if HELM is None:
-        pytest.skip("helm is not installed; the dedicated Helm 4 CI job runs this test")
+        _skip_or_fail("helm is not installed; the dedicated Helm 4 CI job runs this test")
     proc = subprocess.run(
         [HELM, "template", "neurosphere", str(CHART), "-f", str(CI_VALUES), *extra],
         capture_output=True,
@@ -188,7 +200,7 @@ def test_helm_renders_resource_url_from_gateway_host_only_when_enabled() -> None
 
 def test_helm_requires_gateway_host_when_enabled() -> None:
     if HELM is None:
-        pytest.skip("helm is not installed")
+        _skip_or_fail("helm is not installed")
     proc = subprocess.run(
         [
             HELM,
