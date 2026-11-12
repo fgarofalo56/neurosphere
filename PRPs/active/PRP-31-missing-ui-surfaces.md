@@ -486,7 +486,35 @@ Why: Item 12 found that `/audit` answers 403 on the seeded real stack. `domain_f
   - The item 12 loop passes with the seeded auditor and no extra grant.
   - Authz, ui_adapters and audit suites are green.
 
-Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane); then item 14 (after item 12, because it edits the item 12 test).
+Outcome of Item 14 (2026-11-11): not merged (branch `dd07fef` kept). Resolving the name against the caller's held domains made `/audit` work, but it opened a cross-domain read. A caller holding only `billing:domain:finance` could read the shared `contoso.finance` chain, which also holds `catalog:domain:finance` records. A read-side-only mapping is either dead or leaky while all writers key chains by the last segment. User decision 2026-11-11: fix it on the write side (Item 14b).
+
+### Item 14b - source-qualified audit chains (added 2026-11-11, user decision; review: required; model: opus)
+- Deliverable: one shared chain-id helper in core, used by every domain-chain writer and every reader.
+  - Writers:
+    - `packages/core/neurosphere_core/actions/audit.py` `action_audit_chain_id`;
+    - `packages/core/neurosphere_core/hitl/auditing.py` `audit_chain_for`;
+    - `services/api/neurosphere_api/catalog/service.py` `audit_chain_for`;
+    - `services/api/neurosphere_api/catalog/curation/service.py` `audit_chain_id`.
+  - Readers: `authz/audit_mount.py` `domain_from_chain_id` and `ui_adapters/audit.py` `auditable_chain`.
+  - Domains whose source segment is `catalog` keep `<customer>.<name>`, so existing chains are unchanged and need no migration. Every other source gets a chain id that maps back to exactly one domain id. It never depends on which domains the caller holds, so there is no aliasing. It fits `^[a-z0-9][a-z0-9._-]{0,127}$`.
+  - Records already written to an aliased `<customer>.<name>` chain for a non-catalog domain stay unreadable through the domain routes, as they are today. Document this.
+- Owned files:
+  - the new core helper module;
+  - the chain functions in the four writers listed above;
+  - `authz/audit_mount.py`, `ui_adapters/audit.py`;
+  - the tests for all of these (including `services/api/tests/runtime_api/test_compose_denial_audit.py`);
+  - `tests/integration/real_stack/test_ui_surfaces_loop.py`, `docs/evidence/G12/ui-surfaces/**`.
+- Acceptance criteria:
+  - The helper round-trips for every source.
+  - `catalog` chains are byte-identical to today.
+  - Two domains that share a name but differ in source get different chains, and neither can read the other's.
+  - The Item 14 test cases carry over: three sources readable; another customer, another cloud, and an unheld or ambiguous name all denied.
+  - The former foreign-auditor case is a 403 again, with no xfail.
+  - Every writer and reader uses the helper (a grep test).
+  - The integration loop passes with the seeded auditor.
+  - The authz, ui_adapters, audit, actions, HITL, catalog and curation suites are green.
+
+Waves (round 2): 1 = items 9, 11, 13 [P]; 2 = item 10; 3 = item 12 (the only compose lane); then item 14, superseded by 14b.
 
 Orchestrator seams:
 - Regenerate `openapi.json` and `docs/reference` after items 9 and 13 merge.
@@ -557,7 +585,8 @@ No live gate: this PRP makes no cloud calls and needs no `NS_LIVE_APPROVED`. The
 | 11 | merged | worktree-agent-aaee7ceb1027a9c2a | sonnet | tsc+eslint clean; a11y+audit 517/518 (1 keyboard flake, green alone; agent); audit subset 28 pass (me); real-stack --list 42 tests, ENTRIES==manifest 41; merged e94157c | 2026-11-11 |
 | 12 | merged | worktree-agent-a3b97075a648d325a | sonnet | integration 11 pass 1 skip (forecast OPEN: 409 price_version_unresolved), reproduced by me; found audit chain gap (non-catalog domain ids unauditable); merged 2128cb2 | 2026-11-11 |
 | 13 | merged | worktree-agent-a92b1572b7b3a34ba | opus | ruff+pyright clean, 54 new tests, 544/545 wider (agent; 1 = pinned inventory, fixed by orchestrator 971e479); ui_adapters_api 158 pass (me); review APPROVED (opus, 0 blocking); merged 5652d34; openapi regen additive +361/-0, drift+inventory+reference+routes 176 pass (me) | 2026-11-11 |
-| 14 | in-progress | worktree (agent) | opus | dispatched (user-approved delta) | 2026-11-11 |
+| 14 | descoped | worktree-agent-a4145f5d51e3467f6 | opus | dd07fef NOT merged: 415 pass + loop 11/1 skip (agent), but cross-domain audit read via shared last-segment chain (xfail-pinned); superseded by 14b (user decision) | 2026-11-11 |
+| 14b | in-progress | worktree (agent) | opus | dispatched (user-approved delta) | 2026-11-11 |
 
 Round 2 (items 9-13) approved 2026-11-11: integration branch `prp-31-round2` from main 7eaac3c; reviews on items 9 and 13; Haiku rework confirmations.
 
