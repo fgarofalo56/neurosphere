@@ -2040,6 +2040,67 @@
         "title": "CatalogEntity",
         "type": "string"
       },
+      "CatalogEntityCreateRequest": {
+        "additionalProperties": true,
+        "description": "``POST /api/v1/catalog/domains/{domain}/entities``: an entity document without any\nserver-owned key (see ``SERVER_OWNED_ENTITY_KEYS``). The remaining fields are validated by\nthe entity's contract after the server stamps its own.",
+        "properties": {
+          "entity_type": {
+            "enum": [
+              "person",
+              "agent",
+              "agent_version",
+              "model_deployment",
+              "grounding_source",
+              "tool",
+              "service",
+              "owner",
+              "policy",
+              "recommendation",
+              "run_reference",
+              "grant",
+              "mcp_server"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type"
+        ],
+        "title": "CatalogEntityCreateRequest",
+        "type": "object"
+      },
+      "CatalogEntityUpdateRequest": {
+        "additionalProperties": true,
+        "description": "``PUT /api/v1/catalog/domains/{domain}/entities/{entity_id}``: the replacement document\nwithout any server-owned key (see ``UPDATE_SERVER_OWNED_ENTITY_KEYS``). ``entity_type`` must\nequal the stored entity's type.",
+        "properties": {
+          "entity_type": {
+            "enum": [
+              "person",
+              "agent",
+              "agent_version",
+              "model_deployment",
+              "grounding_source",
+              "tool",
+              "service",
+              "domain",
+              "owner",
+              "policy",
+              "recommendation",
+              "run_reference",
+              "grant",
+              "mcp_server"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type"
+        ],
+        "title": "CatalogEntityUpdateRequest",
+        "type": "object"
+      },
       "CellOutcome": {
         "additionalProperties": false,
         "description": "How one cell contributed. ``denied``: the cell derived no access for the caller;\n``unavailable``: the cell failed or timed out (the merged summary is then incomplete).",
@@ -3343,6 +3404,35 @@
           "analytics"
         ],
         "title": "DeploymentProfile",
+        "type": "object"
+      },
+      "DeprecateRequest": {
+        "additionalProperties": false,
+        "description": "Optional body of a deprecation: a closed reason code, never free text.",
+        "properties": {
+          "reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "superseded",
+                  "no_longer_used",
+                  "owner_changed",
+                  "owner_left",
+                  "security_issue",
+                  "quality_issue",
+                  "periodic_review",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          }
+        },
+        "title": "DeprecateRequest",
         "type": "object"
       },
       "DiagnosticsState": {
@@ -10578,6 +10668,27 @@
         "additionalProperties": false,
         "description": "Record a recertification of an owner; it is valid for ``valid_for_days`` from now.",
         "properties": {
+          "reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "superseded",
+                  "no_longer_used",
+                  "owner_changed",
+                  "owner_left",
+                  "security_issue",
+                  "quality_issue",
+                  "periodic_review",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
           "valid_for_days": {
             "maximum": 730.0,
             "minimum": 1.0,
@@ -17115,6 +17226,222 @@
         "tags": [
           "ui-adapters"
         ]
+      },
+      "post": {
+        "operationId": "create_entity_in_domain_api_v1_catalog_domains__domain__entities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntityCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
+                    }
+                  ],
+                  "title": "Response Create Entity In Domain Api V1 Catalog Domains  Domain  Entities Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Entity In Domain",
+        "tags": [
+          "ui-adapters"
+        ]
+      }
+    },
+    "/api/v1/catalog/domains/{domain}/entities/{entity_id}": {
+      "put": {
+        "operationId": "update_entity_in_domain_api_v1_catalog_domains__domain__entities__entity_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntityUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Person"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Agent"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentVersion"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ModelDeployment"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GroundingSource"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__tool__Tool"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Service"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Domain"
+                    },
+                    {
+                      "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__owner__Owner"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Policy"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RecommendationReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunReference"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Grant"
+                    },
+                    {
+                      "$ref": "#/components/schemas/McpServer"
+                    }
+                  ],
+                  "title": "Response Update Entity In Domain Api V1 Catalog Domains  Domain  Entities  Entity Id  Put"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Entity In Domain",
+        "tags": [
+          "ui-adapters"
+        ]
       }
     },
     "/api/v1/catalog/domains/{domain}/export": {
@@ -17758,6 +18085,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeprecateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -23274,6 +23618,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeprecateRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

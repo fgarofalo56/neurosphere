@@ -11,6 +11,12 @@ export const STRINGS = {
   loading: "Loading forecast",
   failedTitle: "Could not load the forecast",
   failedBody: "The service did not return the forecast. Try again.",
+  unavailableTitle: "Forecast unavailable",
+  unavailableReasonPrefix: "Reason:",
+  priceVersionUnresolvedHint:
+    "No price version covers this window. An operator must load a price sheet that prices this domain's models.",
+  genericUnavailableHint:
+    "The service cannot produce a forecast for this request. An operator can check the reason code above; retrying will not change the answer.",
   workspace: "Cost forecast",
   unknown: "unknown",
   incomplete: "incomplete",

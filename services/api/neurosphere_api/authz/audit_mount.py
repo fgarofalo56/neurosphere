@@ -14,9 +14,10 @@ Item 4's ``neurosphere_api.audit.register(registry, require_permission=...)`` ex
   ``(scope, chain_id)`` to the canonical domain id the chain belongs to (or ``None`` = deny), and
   the permission is checked on that domain with :func:`permits`. There is deliberately no
   customer-level fallback: a caller holding ``audit.read`` in one domain must never read another
-  domain's chain. :func:`domain_from_chain_id` implements the repository convention
-  ``<customer_id>.<name>`` -> ``<cloud>:<customer_id>:catalog:domain:<name>``; chains that do not
-  follow it (for example a customer-wide chain) map to ``None`` and are denied.
+  domain's chain. :func:`domain_from_chain_id` inverts the shared chain encoding
+  (``neurosphere_core.audit.chains``): ``<customer_id>.<name>`` is the ``catalog`` domain
+  ``<name>``, ``<customer_id>._<n>.<source>.<name>`` is that source's domain; chains that are not
+  an exact encoding map to ``None`` and are denied.
 
 The route inventory sees these dependencies as permission declarations (same marker).
 """
@@ -24,12 +25,12 @@ The route inventory sees these dependencies as permission declarations (same mar
 # No ``from __future__ import annotations`` here: FastAPI resolves string annotations against
 # module globals, and the dependency below closes over a local (``base``) in its annotation.
 
-import re
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
 from typing import Final
 
 from fastapi import Request
+from neurosphere_core.audit.chains import domain_from_audit_chain
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from neurosphere_core.scope import IdentityScope
@@ -79,19 +80,19 @@ def _chain_target(mapper: ChainDomainMapper) -> ResourceResolver:
     return resolve
 
 
-_DOMAIN_NAME: Final = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
-
-
 def domain_from_chain_id(scope: IdentityScope, chain_id: str) -> str | None:
-    """Repository convention: chain ``<customer>.<name>`` belongs to domain ``<name>``.
+    """The one domain id whose audit chain is exactly ``chain_id`` (PRP-31 item 14b).
 
-    Returns ``None`` (deny) when the name is empty or not a plain domain name, so chains outside
-    the convention are unreadable rather than readable by everyone with some audit permission.
+    Delegates to :func:`neurosphere_core.audit.domain_from_audit_chain` with the scope's own cloud
+    and customer. The mapping never consults the caller's grants: ``<customer>.<name>`` is the
+    ``catalog`` domain ``<name>``, ``<customer>._<n>.<source>.<name>`` is that source's domain, and
+    anything else is ``None`` (deny). The ``audit.read`` check on the returned domain decides.
+
+    Legacy limitation: records written before item 14b for a non-catalog domain sit on its old
+    ``<customer>.<name>`` chain, which maps to the catalog domain ``<name>``. A holder of only the
+    non-catalog domain cannot read them through these routes (as before item 14b).
     """
-    name = chain_id.partition(".")[2]
-    if not _DOMAIN_NAME.fullmatch(name):
-        return None
-    return f"{scope.cloud}:{scope.customer_id}:catalog:domain:{name}"
+    return domain_from_audit_chain(str(scope.cloud), scope.customer_id, chain_id)
 
 
 def audit_require_permission(

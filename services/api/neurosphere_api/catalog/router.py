@@ -75,6 +75,7 @@ from neurosphere_api.catalog.dependencies import (
 from neurosphere_api.catalog.grant_publish import add_routes as add_grant_publish_routes
 from neurosphere_api.catalog.mcp_publish import MCP_PUBLISH_PREFIX, build_mcp_publish_router
 from neurosphere_api.catalog.models import (
+    DeprecateRequest,
     ExportPage,
     ImportRequest,
     ImportResult,
@@ -198,12 +199,14 @@ def build_router() -> APIRouter:
         if_match: IfMatch,
         access: CurateAccess,
         service: Service,
+        body: DeprecateRequest | None = None,
     ) -> CatalogEntity:
         entity = await service.deprecate(
             access.scope,
             access.entity,
             expected_etag(if_match, access.entity.etag.root),
             correlation_id=_correlation(request),
+            reason_code=body.reason_code if body is not None else None,
         )
         response.headers["ETag"] = _quoted(entity.etag.root)
         return entity
@@ -223,6 +226,7 @@ def build_router() -> APIRouter:
             body.valid_for_days,
             expected_etag(if_match, access.entity.etag.root),
             correlation_id=_correlation(request),
+            reason_code=body.reason_code,
         )
         response.headers["ETag"] = _quoted(entity.etag.root)
         return entity

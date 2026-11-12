@@ -11,7 +11,6 @@ _none_
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
 | [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (backlog) | sonnet / sonnet | none |
-| [PRP-31-missing-ui-surfaces](backlog/PRP-31-missing-ui-surfaces.md) | P1 | 12 | PRP-29-platform-runtime-wiring, PRP-30-visual-redesign-and-switchable-ui-styles | - | sonnet / sonnet | required |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
 | [PRP-20-government-verification-and-sovereign-deployment](backlog/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 14 | PRP-08-deployment-intelligence-and-iac, PRP-12-threat-model-and-security-baseline, PRP-13-release-versioning-and-container-publishing | - | sonnet / sonnet | required |
 | [PRP-09-connector-sdk-and-reference-connectors](backlog/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 4 | PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability | - | sonnet / sonnet | required |
@@ -30,6 +29,7 @@ _none_
 |---|---|---|
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |
 | [PRP-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-11-11 | #202 |
+| [PRP-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-11-11 | #204 |
 | [PRP-10-catalog-and-relationship-governance](shipped/PRP-10-catalog-and-relationship-governance.md) | 2026-11-08 | #192 |
 | [PRP-05-api-worker-runtime-and-self-observability](shipped/PRP-05-api-worker-runtime-and-self-observability.md) | 2026-11-07 | #184 |
 | [PRP-08-deployment-intelligence-and-iac](shipped/PRP-08-deployment-intelligence-and-iac.md) | 2026-11-07 | #186 |

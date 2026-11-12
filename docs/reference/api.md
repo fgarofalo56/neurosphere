@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `b2ed8aecc9f07859448121b1652261ae170cb183`. Generated: 2026-11-11.
+> Source commit: `d1823e3d70012ba5252528344388870787bb7fb3`. Generated: 2026-11-11.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 141 operations on 126 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 143 operations on 127 paths.
 
 ## Status and verification
 
@@ -168,6 +168,8 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ui-adapters | GET | `/api/v1/catalog/domains/{domain}/curation/edges/{edge_id}` | Read Edge In Domain |
 | ui-adapters | POST | `/api/v1/catalog/domains/{domain}/curation/edges/{edge_id}/decisions` | Decide In Domain |
 | ui-adapters | GET | `/api/v1/catalog/domains/{domain}/entities` | List Domain Entities |
+| ui-adapters | POST | `/api/v1/catalog/domains/{domain}/entities` | Create Entity In Domain |
+| ui-adapters | PUT | `/api/v1/catalog/domains/{domain}/entities/{entity_id}` | Update Entity In Domain |
 | ui-adapters | GET | `/api/v1/catalog/domains/{domain}/export` | Export Domain |
 | ui-adapters | POST | `/api/v1/catalog/domains/{domain}/search` | Search Domain |
 | workspaces | GET | `/api/v1/workspaces/{role}` | Workspace |
@@ -311,6 +313,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Operation id: `deprecate_entity_api_v1_catalog_entities__entity_id__deprecate_post`
 - Summary: Deprecate Entity
 - Parameters: `entity_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `DeprecateRequest` or `null` (optional)
 - Responses: `200` `Person` or `Agent` or `AgentVersion` or `ModelDeployment` or `GroundingSource` or `neurosphere_contracts__catalog__v1__tool__Tool` or `Service` or `Domain` or `neurosphere_contracts__catalog__v1__owner__Owner` or `Policy` or `RecommendationReference` or `RunReference` or `Grant` or `McpServer`; `422` `HTTPValidationError`
 
 #### POST `/api/v1/catalog/entities/{entity_id}/recertify`
@@ -480,6 +483,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Operation id: `deprecate_entity_catalog_entities__entity_id__deprecate_post`
 - Summary: Deprecate Entity
 - Parameters: `entity_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `DeprecateRequest` or `null` (optional)
 - Responses: `200` `Person` or `Agent` or `AgentVersion` or `ModelDeployment` or `GroundingSource` or `neurosphere_contracts__catalog__v1__tool__Tool` or `Service` or `Domain` or `neurosphere_contracts__catalog__v1__owner__Owner` or `Policy` or `RecommendationReference` or `RunReference` or `Grant` or `McpServer`; `422` `HTTPValidationError`
 
 #### POST `/catalog/entities/{entity_id}/recertify`
@@ -1282,6 +1286,22 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: List Domain Entities
 - Parameters: `domain` (path, required), `entity_type` (query), `lifecycle` (query), `page_size` (query), `cursor` (query)
 - Responses: `200` `Page_Union_Person__Agent__AgentVersion__ModelDeployment__GroundingSource__Tool__Service__Domain__Owner__Policy__RecommendationReference__RunReference__Grant__McpServer__`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/catalog/domains/{domain}/entities`
+
+- Operation id: `create_entity_in_domain_api_v1_catalog_domains__domain__entities_post`
+- Summary: Create Entity In Domain
+- Parameters: `domain` (path, required)
+- Request body: application/json: `CatalogEntityCreateRequest` (required)
+- Responses: `201` `Person` or `Agent` or `AgentVersion` or `ModelDeployment` or `GroundingSource` or `neurosphere_contracts__catalog__v1__tool__Tool` or `Service` or `Domain` or `neurosphere_contracts__catalog__v1__owner__Owner` or `Policy` or `RecommendationReference` or `RunReference` or `Grant` or `McpServer`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/catalog/domains/{domain}/entities/{entity_id}`
+
+- Operation id: `update_entity_in_domain_api_v1_catalog_domains__domain__entities__entity_id__put`
+- Summary: Update Entity In Domain
+- Parameters: `domain` (path, required), `entity_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `CatalogEntityUpdateRequest` (required)
+- Responses: `200` `Person` or `Agent` or `AgentVersion` or `ModelDeployment` or `GroundingSource` or `neurosphere_contracts__catalog__v1__tool__Tool` or `Service` or `Domain` or `neurosphere_contracts__catalog__v1__owner__Owner` or `Policy` or `RecommendationReference` or `RunReference` or `Grant` or `McpServer`; `422` `HTTPValidationError`
 
 #### GET `/api/v1/catalog/domains/{domain}/export`
 

@@ -41,6 +41,7 @@ from neurosphere_core.audit import (
     make_subject,
     run_audited_mutation,
 )
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.auth.scope import Permission, domains_with_permission
 from neurosphere_core.catalog import (
     CatalogEntity,
@@ -68,6 +69,7 @@ from neurosphere_api.catalog.models import (
     ImportRequest,
     ImportResult,
     PlanRef,
+    ReasonCode,
     RecertificationItem,
     RecertificationPage,
     StaleAgentConfirm,
@@ -98,8 +100,8 @@ _OWNER_RECERT: Final = ("recertified_at", "recertify_by")
 
 
 def audit_chain_for(customer_id: str, domain_id: str) -> str:
-    """Audit chain of a domain: ``<customer>.<domain name>`` (audit_mount convention)."""
-    return f"{customer_id}.{domain_id.rsplit(':', 1)[-1]}"
+    """Audit chain of a domain (shared helper ``domain_audit_chain_id``, PRP-31 item 14b)."""
+    return domain_audit_chain_id(customer_id, domain_id)
 
 
 def _refusal(exc: BaseException) -> str:
@@ -152,6 +154,7 @@ class CatalogService:
         customer_id: str,
         before: CatalogEntity | None,
         action: Callable[[], Awaitable[CatalogEntity]],
+        reason_code: ReasonCode | None = None,
     ) -> CatalogEntity:
         ctx = AuditContext.from_scope(
             scope, correlation_id=correlation_id, operation=operation, channel=channel
@@ -173,6 +176,9 @@ class CatalogService:
                 )
             return stored
 
+        token = operation.rsplit(".", 1)[-1]
+        success_detail = token if reason_code is None else f"{token}:reason={reason_code}"
+
         def succeeded(result: CatalogEntity) -> AuditDraft:
             return build_after(
                 ctx,
@@ -184,7 +190,7 @@ class CatalogService:
                 ),
                 result="succeeded",
                 verified=True,
-                detail=operation.rsplit(".", 1)[-1],
+                detail=success_detail,
             )
 
         def failed(exc: BaseException) -> AuditDraft:
@@ -340,6 +346,7 @@ class CatalogService:
         *,
         correlation_id: str,
         channel: Channel = "rest",
+        reason_code: ReasonCode | None = None,
     ) -> CatalogEntity:
         """Lifecycle deprecation: a state, not a deletion (edges and history remain)."""
         operation = "catalog.entity_deprecate"
@@ -356,6 +363,7 @@ class CatalogService:
             correlation_id,
             channel,
             lambda: self._repo.deprecate_entity(scope, stored.id, expected_etag),
+            reason_code=reason_code,
         )
 
     async def recertify(
@@ -367,6 +375,7 @@ class CatalogService:
         *,
         correlation_id: str,
         channel: Channel = "rest",
+        reason_code: ReasonCode | None = None,
     ) -> CatalogEntity:
         """Record an ownership recertification now, valid for ``valid_for_days``."""
         operation = "catalog.owner_recertify"
@@ -391,6 +400,7 @@ class CatalogService:
             correlation_id,
             channel,
             lambda: self._repo.update_entity(scope, entity, expected_etag),
+            reason_code=reason_code,
         )
 
     async def _guarded(
@@ -401,6 +411,7 @@ class CatalogService:
         correlation_id: str,
         channel: Channel,
         action: Callable[[], Awaitable[CatalogEntity]],
+        reason_code: ReasonCode | None = None,
     ) -> CatalogEntity:
         domain = entity_domain(dump(stored)) or ""
         return await self._mutate(
@@ -414,6 +425,7 @@ class CatalogService:
             customer_id=stored.customer_id.root,
             before=stored,
             action=action,
+            reason_code=reason_code,
         )
 
     # -- import ----------------------------------------------------------------------------

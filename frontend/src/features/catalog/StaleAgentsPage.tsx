@@ -1,17 +1,5 @@
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  Field,
-  Input,
-  makeStyles,
-  tokens,
-} from "@fluentui/react-components";
-import { useState, type ReactElement } from "react";
+import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
+import { useRef, useState, type ReactElement } from "react";
 import { ForbiddenError, StaleVersionError, type ApiError } from "../../api/index.js";
 import {
   DataTable,
@@ -21,6 +9,7 @@ import {
   StatusPill,
   Timestamp,
 } from "../../design-system";
+import { ChangeConfirmDialog, type ChangeDiffRow } from "../governed-change";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useStaleConfirm, useStaleDryRun } from "./explorerHooks";
 import { EntityLink } from "./explorerParts";
@@ -43,6 +32,20 @@ function errorText(error: ApiError): string {
   if (error instanceof StaleVersionError) return S.errorStale;
   if (error instanceof ForbiddenError) return S.errorForbidden;
   return S.errorGeneric;
+}
+
+const DIFF_CAP = 20;
+
+/** One row per candidate (capped); the plan the server re-derives is the authority. */
+function confirmDiff(plan: StaleAgentPlanView): readonly ChangeDiffRow[] {
+  const rows: ChangeDiffRow[] = plan.candidates.slice(0, DIFF_CAP).map((c) => ({
+    field: c.agent_id,
+    before: S.confirmBefore(c.last_observed),
+    after: S.confirmAfter,
+  }));
+  const rest = plan.candidates.length - DIFF_CAP;
+  if (rest > 0) rows.push({ field: "...", before: "", after: S.confirmMore(rest) });
+  return rows;
 }
 
 function PlanEcho({ plan }: { readonly plan: StaleAgentPlanView }): ReactElement {
@@ -113,6 +116,7 @@ export function StaleAgentsPage(): ReactElement {
   const confirm = useStaleConfirm();
   const [days, setDays] = useState("90");
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const n = Number(days);
   const valid = Number.isInteger(n) && n >= 1 && n <= 3650;
   const plan = dryRun.data;
@@ -169,7 +173,10 @@ export function StaleAgentsPage(): ReactElement {
                 appearance="primary"
                 data-testid="confirm-open"
                 disabled={!canConfirm}
-                onClick={() => setOpen(true)}
+                onClick={(e) => {
+                  triggerRef.current = e.currentTarget;
+                  setOpen(true);
+                }}
               >
                 {S.confirm}
               </Button>
@@ -187,46 +194,25 @@ export function StaleAgentsPage(): ReactElement {
           </p>
         ) : null}
       </div>
-      <Dialog
+      <ChangeConfirmDialog
         open={open && plan !== undefined}
-        modalType="alert"
-        onOpenChange={(_e, d) => setOpen(d.open)}
-      >
-        <DialogSurface data-testid="stale-confirm-dialog">
-          <DialogBody>
-            <DialogTitle>{S.confirmTitle}</DialogTitle>
-            <DialogContent>
-              <p>{S.confirmBody(plan?.candidates.length ?? 0)}</p>
-              {plan === undefined ? null : <PlanEcho plan={plan} />}
-              {confirm.isError ? (
-                <div role="alert" data-testid="confirm-dialog-error">
-                  {errorText(confirm.error)}
-                </div>
-              ) : null}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                appearance="secondary"
-                disabled={confirm.isPending}
-                onClick={() => setOpen(false)}
-              >
-                {S.cancel}
-              </Button>
-              <Button
-                appearance="primary"
-                data-testid="confirm-submit"
-                disabled={confirm.isPending || plan === undefined}
-                onClick={() => {
-                  if (plan === undefined) return;
-                  confirm.mutate({ plan }, { onSuccess: () => setOpen(false) });
-                }}
-              >
-                {confirm.isPending ? S.confirming : S.confirm}
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
+        title={S.confirmTitle}
+        target={plan === undefined ? "" : S.confirmTarget(plan.candidates.length, plan.plan_id)}
+        version={plan === undefined ? "" : S.confirmVersion(plan.window_days, plan.as_of)}
+        diff={plan === undefined ? [] : confirmDiff(plan)}
+        submitting={confirm.isPending}
+        reasonNote={S.confirmNote}
+        error={confirm.isError ? errorText(confirm.error) : null}
+        triggerRef={triggerRef}
+        onSubmit={() => {
+          if (plan === undefined) return;
+          confirm.mutate({ plan }, { onSuccess: () => setOpen(false) });
+        }}
+        onClose={() => {
+          setOpen(false);
+          confirm.reset();
+        }}
+      />
     </PageTemplate>
   );
 }

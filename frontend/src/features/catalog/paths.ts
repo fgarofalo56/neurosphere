@@ -40,6 +40,11 @@ export function domainEntitiesPath(domain: string): string {
   return `${CATALOG_API_PREFIX}/domains/${encodeURIComponent(domain)}/entities`;
 }
 
+/** Item 13 write route: create is POST here, edit is PUT on `domainEntityPath` (If-Match). */
+export function domainEntityPath(domain: string, entityId: string): string {
+  return `${domainEntitiesPath(domain)}/${encodeURIComponent(entityId)}`;
+}
+
 export function domainSearchPath(domain: string): string {
   return `${CATALOG_API_PREFIX}/domains/${encodeURIComponent(domain)}/search`;
 }

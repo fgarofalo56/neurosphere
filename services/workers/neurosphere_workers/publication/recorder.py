@@ -32,6 +32,7 @@ from neurosphere_core.audit import (
     make_subject,
     run_audited_mutation,
 )
+from neurosphere_core.audit.chains import domain_audit_chain_id
 from neurosphere_core.auth.scope import Permission, domains_with_permission
 from neurosphere_core.catalog import CatalogEntity, CatalogRepository
 from neurosphere_core.catalog.repo.documents import dump, entity_domain, parse_entity
@@ -77,7 +78,7 @@ def _utc_now() -> datetime:
 
 
 def _chain(customer_id: str, domain_id: str) -> str:
-    return f"{customer_id}.{domain_id.rsplit(':', 1)[-1]}"
+    return domain_audit_chain_id(customer_id, domain_id)
 
 
 def _refusal(exc: BaseException) -> str:

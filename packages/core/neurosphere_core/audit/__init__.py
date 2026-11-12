@@ -30,6 +30,7 @@ from neurosphere_core.audit.chain import (
     seal,
     verify_chain,
 )
+from neurosphere_core.audit.chains import domain_audit_chain_id, domain_from_audit_chain
 from neurosphere_core.audit.content_guard import assert_metadata_only, find_sensitive_content
 from neurosphere_core.audit.repository import (
     AuditRepository,
@@ -75,6 +76,8 @@ __all__ = [
     "canonical_json",
     "compute_record_hash",
     "digests_equal",
+    "domain_audit_chain_id",
+    "domain_from_audit_chain",
     "find_sensitive_content",
     "is_allow_record",
     "make_subject",

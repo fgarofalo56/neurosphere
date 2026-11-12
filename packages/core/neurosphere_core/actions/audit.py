@@ -29,6 +29,7 @@ from neurosphere_core.audit import (
     make_subject,
 )
 from neurosphere_core.audit.builders import DenialCode, OutcomeResult
+from neurosphere_core.audit.chains import domain_audit_chain_id
 
 __all__ = [
     "ActionAuditEvent",
@@ -81,12 +82,12 @@ class ActionAuditor(Protocol):
 
 
 def action_audit_chain_id(customer_id: str, domain_id: str) -> str:
-    """Audit chain of a domain: ``<customer>.<domain name>``.
+    """Audit chain of a domain (:func:`neurosphere_core.audit.domain_audit_chain_id`).
 
-    Mirrors ``neurosphere_api.catalog.service.audit_chain_for`` (core cannot import the API), so
-    action records land in the chain the audit read API exposes for that domain.
+    The one shared, source-qualified encoding (PRP-31 item 14b), so action records land in the
+    chain the audit read API maps back to exactly this domain. Raises on an unencodable id.
     """
-    return f"{customer_id}.{domain_id.rsplit(':', 1)[-1]}"
+    return domain_audit_chain_id(customer_id, domain_id)
 
 
 def _detail(event: ActionAuditEvent) -> str | None:
