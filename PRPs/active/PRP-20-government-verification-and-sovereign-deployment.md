@@ -322,11 +322,11 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 | 2 | merged | worktree-agent-ad2f171f638730ee5 | sonnet | 34d2deb + c5b567c (handoff-marker flip) + 3ddde6d (audience provenance fix), merge f2d2aaf; verify government_profile+infra+network 92/92, helm lint/template ok, bicep build-params ok; post-merge 92/92; review APPROVED (4 follow-ups) | 2026-10-22 |
 | 3 | merged | worktree-agent-af3ed6e509f2e314f | sonnet | de8c5cc, merge 4990f12; verify ruff/format/pyright clean, static 57/57, compose integration 41/41 (fresh stack, local only; integration marker does not run in CI); post-merge touched suites 313 passed; snyk 0; review APPROVED (4 follow-ups). In-cluster proof OPEN | 2026-10-22 |
 | 4 | merged | worktree-agent-a2d5b5afaff30879b | sonnet | b6b79a3, merge 083d5d2; verify ruff/format/pyright clean, gates 144/144, both scripts refuse exit 2 "OPEN", docs/ untouched; post-merge 144/144; review APPROVED (4 follow-ups) | 2026-10-22 |
-| 5 | todo | - | sonnet | - | 2026-11-12 |
-| 6 | todo | - | sonnet | - | 2026-11-12 |
-| 7 | todo | - | sonnet | - | 2026-11-12 |
-| 8 | todo | - | sonnet | - | 2026-11-12 |
-| 9 | todo | - | sonnet | - | 2026-11-12 |
+| 5 | merged | worktree-agent-af900dd58ab8e81c1 | sonnet | 67ab6e4, merge 5a12345; verify ruff/pyright clean, import-grep suites 172 passed; post-merge touched 232 passed + every usdod-mentioning test 189 passed; review APPROVED (4 follow-ups: copilot gating uncaught ValueError, analytics registry generic reason, UI/mock usdod prefixes, workers deploy test) | 2026-11-12 |
+| 6 | merged | worktree-agent-a8302abde93efff18 | sonnet | 6e94eb6, merge fb36944; verify government_profile+evidence_register+infra+egress(non-integration) 205 passed, helm lint/template ok (agent), check_statements PASS, RESEARCH-AND-GATES diff = G02 row only; post-merge 205 passed; review APPROVED (2 follow-ups) | 2026-11-12 |
+| 7 | in-progress | worktree (implementer) | sonnet | dispatched after item 6 merge | 2026-11-12 |
+| 8 | merged | worktree-agent-af3ae03bb05de1884 | sonnet | c023444, merge 7d690e7; verify ruff/pyright clean, tests/unit/gates 376 passed, refusal tests unchanged, snyk 0 in g02 files; post-merge 376 passed; review APPROVED (3 follow-ups) | 2026-11-12 |
+| 9 | merged | worktree-agent-a75575acb0d33361c | sonnet | 285c904, merge 6d01ae3; verify ruff/pyright clean, gates+hosted_demo 421 passed, snyk tests 0; snyk scripts still reports PT lows (reviewer traced every sink: confinement real, Snyk does not model is_relative_to); post-merge 439 passed; review APPROVED (3 follow-ups) | 2026-11-12 |
 
 ## Audit 2026-11-04
 
