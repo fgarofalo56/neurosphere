@@ -447,9 +447,9 @@ def _run(
             not plan.protected and bool(plan.removable),
             f"removable={len(plan.removable)} protected={len(plan.protected)}",
         )
-    except StepError as exc:
+    except (StepError, subprocess.TimeoutExpired, json.JSONDecodeError) as exc:
         failed = True
-        ctx.checks.append(Check("step-failed", "FAIL", safe_text(str(exc))))
+        ctx.checks.append(Check("step-failed", "FAIL", _describe(exc)))
     except RefusedError as exc:
         failed = True
         ctx.checks.append(Check("tool-missing", "FAIL", safe_text(str(exc))))
@@ -477,7 +477,12 @@ def _run(
         path = write_evidence(ev, evidence_dir, subscription)
     except ScrubError as exc:
         print(f"FAIL: evidence not written ({exc}).")
+        if ctx.facts.get("interrupted"):
+            raise KeyboardInterrupt from exc
         return 1
+    if ctx.facts.get("interrupted"):
+        print(f"INTERRUPTED: G02 profile-{profile.name}; evidence {path.name}")
+        raise KeyboardInterrupt
     print(f"{'FAIL' if failed else 'PASS'}: G02 profile-{profile.name}; evidence {path.name}")
     return 1 if failed else 0
 
@@ -494,25 +499,48 @@ def _tag_group_resources(ctx: RunContext) -> None:
     ctx.record("resources-tagged", True, f"count={len(listing or [])}")
 
 
+_RECOVERABLE = (StepError, RefusedError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError)
+
+
+def _describe(exc: BaseException) -> str:
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return f"{type(exc).__name__}: command timed out"
+    return f"{type(exc).__name__}: {safe_text(str(exc), 120)}"
+
+
+def _delete_group(ctx: RunContext, plan: DryRunPlan, problems: list[str]) -> None:
+    """Re-read the run-id tag, then delete the group; any failure is recorded, never swallowed."""
+    try:
+        tags = ctx.az("group", "show", "--name", ctx.resource_group, "--query", "tags",
+                      "--output", "json", parse_json=True)  # fmt: skip
+        if not isinstance(tags, dict) or tags.get(TAG_RUN) != ctx.run_id:  # pyright: ignore[reportUnknownMemberType]
+            problems.append("resource group run-id tag mismatch; not deleted")
+        elif plan.protected:
+            problems.append("foreign resources found in the group; not deleted")
+        else:
+            ctx.az("group", "delete", "--name", ctx.resource_group, "--yes")
+    except _RECOVERABLE as exc:
+        problems.append(f"group delete: {_describe(exc)}")
+    except KeyboardInterrupt:
+        ctx.facts["interrupted"] = True
+        problems.append("group delete: interrupted")
+
+
 def _teardown(profile: Profile, ctx: RunContext, created_rg: bool, plan: DryRunPlan) -> str:
     """Delete only what this run created; refuse to delete the group if foreign items appear."""
     problems: list[str] = []
     try:
-        profile.cleanup(ctx)
-    except (StepError, RefusedError) as exc:
-        problems.append(f"workload cleanup: {safe_text(str(exc), 120)}")
-    if created_rg:
         try:
-            tags = ctx.az("group", "show", "--name", ctx.resource_group, "--query", "tags",
-                          "--output", "json", parse_json=True)  # fmt: skip
-            if not isinstance(tags, dict) or tags.get(TAG_RUN) != ctx.run_id:  # pyright: ignore[reportUnknownMemberType]
-                problems.append("resource group run-id tag mismatch; not deleted")
-            elif plan.protected:
-                problems.append("foreign resources found in the group; not deleted")
-            else:
-                ctx.az("group", "delete", "--name", ctx.resource_group, "--yes")
-        except (StepError, RefusedError) as exc:
-            problems.append(f"group delete: {safe_text(str(exc), 120)}")
+            profile.cleanup(ctx)
+        except _RECOVERABLE as exc:
+            problems.append(f"workload cleanup: {_describe(exc)}")
+        except KeyboardInterrupt:
+            ctx.facts["interrupted"] = True
+            problems.append("workload cleanup: interrupted")
+    finally:
+        # The group delete never depends on cleanup: it runs even if cleanup raised anything.
+        if created_rg:
+            _delete_group(ctx, plan, problems)
     if problems:
         return "FAILED - " + "; ".join(problems)
     return "resource group and workload objects removed" if created_rg else "nothing created"
