@@ -13,7 +13,14 @@ from pathlib import Path
 
 import pytest
 
+from .ci_gate import skip_or_fail
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Only the probe and its positive control (azurite, reachable from `isolated`). `--no-deps`
+# keeps the Cosmos emulator and Event Hubs out of the egress job; the probe's depends_on is
+# a startup ordering aid, not something the blocked-network checks need.
+EGRESS_SERVICES = ("egress-probe", "azurite")
 
 
 def compose(*args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
@@ -30,10 +37,12 @@ def compose(*args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
 
 @pytest.fixture(scope="session")
 def stack() -> Iterator[None]:
-    """Bring up the emulators plus the `test` profile; tear down afterwards."""
+    """Bring up the probe plus azurite on the `test` profile; tear down afterwards."""
     if shutil.which("docker") is None:
-        pytest.skip("docker is not installed")
-    result = compose("--profile", "test", "up", "-d", "--wait", timeout=900)
+        skip_or_fail("docker is not installed")
+    result = compose(
+        "--profile", "test", "up", "-d", "--wait", "--no-deps", *EGRESS_SERVICES, timeout=900
+    )
     if result.returncode != 0:
         compose("--profile", "test", "down", "-v", "--remove-orphans")
         pytest.fail(f"compose up failed:\n{result.stdout}\n{result.stderr}")
@@ -41,3 +50,39 @@ def stack() -> Iterator[None]:
         yield
     finally:
         compose("--profile", "test", "down", "-v", "--remove-orphans")
+
+
+# Exit codes that mean the exec itself failed, not that the probed command did.
+EXEC_FAILURE_CODES = frozenset({125, 126, 127})
+EXEC_FAILURE_MARKERS = ("no such container", "is not running", "no service")
+
+
+def probe(*cmd: str) -> subprocess.CompletedProcess[str]:
+    """Run ``cmd`` inside egress-probe; fail the test when the exec itself failed.
+
+    A failed `docker exec` makes the caller's `nc` look "blocked", which would pass vacuously
+    (issue #98), so exec failure (container missing, 125/126/127, daemon error text) fails here.
+    """
+    result = compose("--profile", "test", "exec", "-T", "egress-probe", *cmd, timeout=60)
+    stderr = result.stderr.lower()
+    exec_failed = result.returncode in EXEC_FAILURE_CODES or any(
+        m in stderr for m in EXEC_FAILURE_MARKERS
+    )
+    if exec_failed:
+        pytest.fail(
+            f"docker exec failed (not a blocked result): {cmd} rc={result.returncode}\n"
+            f"{result.stdout}\n{result.stderr}"
+        )
+    return result
+
+
+@pytest.fixture(scope="session")
+def positive_control(stack: None) -> None:
+    """The probe can exec and reach an in-network service, so 'blocked' results are meaningful.
+
+    Every per-host test requires this fixture, so `-k <one host>` cannot pass vacuously.
+    """
+    connect = probe("nc", "-z", "-w", "5", "azurite", "10000")
+    assert connect.returncode == 0, f"azurite:10000 unreachable from the probe: {connect.stderr}"
+    resolve = probe("nslookup", "azurite")
+    assert resolve.returncode == 0, f"probe cannot resolve in-network name: {resolve.stdout}"

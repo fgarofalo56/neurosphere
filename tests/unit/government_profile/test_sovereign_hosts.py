@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import ipaddress
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 from urllib.parse import urlsplit
 
 import pytest
@@ -293,10 +294,17 @@ def test_egress_cidr_matches_private_endpoint_subnet(values: dict[str, Any]) -> 
     assert ipaddress.ip_network(entries["private-endpoints"]["cidr"]) == deployed
 
 
+def _skip_or_fail(reason: str) -> NoReturn:
+    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
+    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
+        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
+    pytest.skip(reason)
+
+
 def test_helm_lint_with_government_values() -> None:
     helm = shutil.which("helm")
     if helm is None:
-        pytest.skip("helm is not installed; the dedicated Helm CI job runs this test")
+        _skip_or_fail("helm is not installed; the dedicated Helm CI job runs this test")
     # Absolute executable from shutil.which plus a fixed argv list; no shell.
     proc = subprocess.run(
         [helm, "lint", str(CHART), "-f", str(VALUES)],

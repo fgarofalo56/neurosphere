@@ -7,10 +7,12 @@ Item 3 (``tests/security/egress``) keeps its own, separate deny corpus.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
@@ -62,17 +64,24 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, capture_output=True, text=True, check=False, cwd=ROOT, timeout=180)
 
 
+def _skip_or_fail(reason: str) -> NoReturn:
+    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
+    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
+        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
+    pytest.skip(reason)
+
+
 def _helm() -> str:
     exe = shutil.which("helm")
     if exe is None:
-        pytest.skip("helm is not installed; the dedicated Helm CI job runs this test")
+        _skip_or_fail("helm is not installed; the dedicated Helm CI job runs this test")
     return exe
 
 
 def _az() -> str:
     exe = shutil.which("az")
     if exe is None:
-        pytest.skip("az CLI is not installed; cannot compile the Government Bicep params")
+        _skip_or_fail("az CLI is not installed; cannot compile the Government Bicep params")
     return exe
 
 
