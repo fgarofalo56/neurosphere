@@ -40,6 +40,7 @@ from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
+from neurosphere_api.actions import customer_control_domain
 from neurosphere_api.app import create_app
 from neurosphere_api.runtime import CompositionOverrides, compose_app
 from neurosphere_core.auth.jwt import DevIssuer, JwksCache, JwtConfig, JwtValidator, entra_jwks_uri
@@ -64,7 +65,13 @@ ROLES: Final = ("viewer", "analyst", "domain_steward", "security_auditor", "admi
 GENERATOR_PROFILE: Final = "tiny"
 
 #: Expected non-200 answers: call key -> (status, why). Nothing else may be non-200.
-EXPECTED_STATUS: Final[dict[str, tuple[int, str]]] = {}
+EXPECTED_STATUS: Final[dict[str, tuple[int, str]]] = {
+    "/api/v1/finops/domains/{domain}/forecast?history_days=30&horizon_days=30&currency=USD": (
+        409,
+        "price_version_unresolved: the dev price sheet prices only synthetic-model, so the seeded "
+        "world has no price version; the page shows its unavailable state (PRP-31 item 15)",
+    ),
+}
 
 #: 200 answers that are empty in every readable domain: call key -> why. Empty on purpose: the
 #: seed rebases its world to the run time (cost window, archive look-back) and writes the catalog
@@ -191,7 +198,11 @@ def stack(compose_stack: None) -> Iterator[Stack]:
         with TestClient(app, raise_server_exceptions=False) as client:
             listing = client.get("/api/v1/me/domains", headers=tokens["operator"])
             assert listing.status_code == 200, listing.text
-            domains = [item["domain_id"] for item in listing.json()["items"]]
+            listed = [item["domain_id"] for item in listing.json()["items"]]
+            # The reserved customer control domain (PRP-17 kill switch) is a control-plane
+            # domain, not a data domain: no page shows data there, and its admin-only grant holds
+            # neither audit.read nor report.create, so every data call answers 403 by design.
+            domains = [d for d in listed if d != customer_control_domain(*d.split(":")[:2])]
             assert domains, "the operator reads no domain after the grant"
             seeded = any(
                 client.get(f"/api/v1/recommendations/domains/{d}", headers=tokens["operator"])
@@ -211,7 +222,7 @@ def stack(compose_stack: None) -> Iterator[Stack]:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 26
+    assert len(manifest) == 41
     assert sorted(calls.MANIFEST_CALLS) == sorted(manifest)
 
 

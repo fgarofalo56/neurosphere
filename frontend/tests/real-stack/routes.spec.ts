@@ -171,10 +171,13 @@ const ENTRIES: readonly Entry[] = [
 
 /**
  * Routes whose seeded data is known to be absent for the operator: the reason, as reported.
- * Empty since PRP-29 E2 (recent-dated seed, catalog entities, an operator report). The review
- * queue needs a reviewer role: grant the operator `domain_steward` as well as `admin`.
+ * The review queue needs a reviewer role: grant the operator `domain_steward` as well as `admin`.
  */
-const NO_DATA: Readonly<Record<string, string>> = {};
+const NO_DATA: Readonly<Record<string, string>> = {
+  "/gateways/detail":
+    "no gateway is seeded in the stack (services/api/tests/runtime_routes/manifest_calls.py); " +
+    "the detail page is covered by services/api/tests/gateway_api and the mock e2e",
+};
 
 const manifest = JSON.parse(
   readFileSync(resolve(process.cwd(), "src/app/route-manifest.json"), "utf8"),
