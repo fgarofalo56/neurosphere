@@ -29,7 +29,10 @@ rows:
   notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
     ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
     extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
-    Government endpoint is documents.azure.us.
+    Government endpoint is documents.azure.us. Token audience (checked and retrieved_on 2026-11-12) is
+    not_verified; neither https://learn.microsoft.com/azure/cosmos-db/how-to-connect-role-based-access-control
+    nor https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure states the
+    Government data-plane audience, so none is recorded.
 - id: cosmos-db-hpk
   dependency: Azure Cosmos DB
   feature: hierarchical partition keys
@@ -87,7 +90,9 @@ rows:
   notes: Availability inferred from the audit-scope listing; per-region and per-SKU availability not captured
     ('Products available by region' not fetched). GA status not verified. IL5WI in US Gov regions requires
     extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5).
-    Government namespace suffix is servicebus.usgovcloudapi.net.
+    Government namespace suffix is servicebus.usgovcloudapi.net. Token audience (retrieved_on 2026-11-12) -
+    https://eventhubs.azure.net/ is the same for all clouds and tenants (https://learn.microsoft.com/azure/event-hubs/authorize-access-azure-active-directory).
+    It is a token audience, not a network host, and is not an egress host.
 - id: event-hubs-data-geo-replication-premium
   dependency: Azure Event Hubs
   feature: data geo-replication
@@ -208,7 +213,8 @@ rows:
   retrieved_on: '2026-10-22'
   notes: 'Availability inferred from the audit-scope listing; per-region and per-SKU availability not
     captured (''Products available by region'' not fetched). GA status not verified. IL5WI in US Gov regions
-    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). '
+    requires extra configuration (https://learn.microsoft.com/azure/azure-government/documentation-government-impact-level-5). Token audience (retrieved_on 2026-11-12): https://search.azure.us for Azure Government
+    (https://learn.microsoft.com/azure/search/search-security-rbac-client-code).'
 - id: ai-search-semantic-ranker-usgovvirginia
   dependency: Azure AI Search
   feature: semantic ranker
