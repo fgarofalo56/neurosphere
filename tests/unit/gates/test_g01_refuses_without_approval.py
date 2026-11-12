@@ -5,11 +5,13 @@ Every test drives the script through a fake `az` runner; no subprocess and no ne
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import json
 import os
 import subprocess
 import sys
+import uuid
 from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
@@ -28,8 +30,9 @@ REUSED_APIM = (
     "/subscriptions/99999999-0000-0000-0000-000000000000/resourceGroups/rg-shared/providers/"
     "Microsoft.ApiManagement/service/shared-apim"
 )
-FAKE_JWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJl"
-FAKE_KEY = "AccountKey=" + "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5YWJjZGVm=="
+# Credential-shaped values are generated per run so no secret-looking literal is committed.
+FAKE_JWT = "eyJ" + uuid.uuid4().hex + ".eyJ" + uuid.uuid4().hex + "." + uuid.uuid4().hex
+FAKE_KEY = "AccountKey=" + base64.b64encode(os.urandom(46)).decode()
 
 
 def _load() -> ModuleType:
@@ -143,7 +146,9 @@ def _argv(tmp: Path, *extra: str, apim: bool = True) -> list[str]:
 
 def _run(fake: FakeAz, tmp: Path, *extra: str, apim: bool = True) -> int:
     mod = _load()
-    return mod.main(_argv(tmp, *extra, apim=apim), runner=fake, work_dir=tmp / "work")
+    return mod.main(
+        _argv(tmp, *extra, apim=apim), runner=fake, work_dir=tmp / "work", evidence_roots=[tmp]
+    )
 
 
 def _evidence(tmp: Path) -> tuple[Path, dict[str, Any]]:

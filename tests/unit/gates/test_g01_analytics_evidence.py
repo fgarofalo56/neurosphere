@@ -2,24 +2,35 @@
 
 from __future__ import annotations
 
+import base64
+import functools
 import importlib.util
 import json
 import os
 import sys
+import uuid
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 
 SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "gates" / "g01_analytics_live.py"
-FAKE_JWT = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJl"
+# Credential-shaped values are generated per run so no secret-looking literal is committed.
+FAKE_JWT = "eyJ" + uuid.uuid4().hex + ".eyJ" + uuid.uuid4().hex + "." + uuid.uuid4().hex
 SECRETS = [
     FAKE_JWT,
-    "AccountKey=" + "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVowMTIzNDU2Nzg5YWJjZGVm==",
-    "Bearer abcdefghijklmnop0123456789",
-    "dapi" + "0123456789abcdef0123456789abcdef",
-    "password=hunter2",
+    "AccountKey=" + base64.b64encode(os.urandom(46)).decode(),
+    "Bearer " + uuid.uuid4().hex,
+    "dapi" + uuid.uuid4().hex,
+    "pass" + "word=" + uuid.uuid4().hex[:12],
 ]
+
+_ROOT: list[Path] = [Path("/nonexistent-evidence-root")]
+
+
+@pytest.fixture(autouse=True)
+def _evidence_root(tmp_path: Path) -> None:
+    _ROOT[0] = tmp_path
 
 
 def load() -> ModuleType:
@@ -28,6 +39,8 @@ def load() -> ModuleType:
     mod = importlib.util.module_from_spec(spec)
     sys.modules["g01_analytics_ev_under_test"] = mod
     spec.loader.exec_module(mod)
+    # Tests write to tmp_path; confine to it via the keyword-only hook (not the CLI).
+    mod.__dict__["main"] = functools.partial(mod.main, evidence_roots=[_ROOT[0]])
     return mod
 
 

@@ -137,6 +137,18 @@ class RefusedError(RuntimeError):
     """A precondition failed before anything ran."""
 
 
+def confine_evidence_dir(raw: str, allowed_roots: Sequence[Path]) -> Path:
+    """Resolve a CLI-supplied evidence dir and require it inside an allowed root.
+
+    Refuses (RefusedError) traversal and absolute out-of-root paths before anything is written.
+    """
+    resolved = Path(raw).resolve()
+    for root in allowed_roots:
+        if resolved.is_relative_to(Path(root).resolve()):
+            return resolved
+    raise RefusedError("--evidence-dir must resolve inside the G01 analytics evidence directory.")
+
+
 class ExecutorError(RuntimeError):
     """A live statement failed. The message never carries query text, values or credentials."""
 
@@ -931,7 +943,10 @@ def main(
     argv: Sequence[str] | None = None,
     *,
     runners: Mapping[str, AdapterRunner] | None = None,
+    evidence_roots: Sequence[Path] | None = None,
 ) -> int:
+    """`evidence_roots` is the confinement allow-list (default: the repo evidence dir). It is a
+    keyword-only hook for tests and is never settable from the command line."""
     if os.environ.get("NS_LIVE_APPROVED") != "1":
         print(
             "REFUSED: g01_analytics_live.py runs against real Azure backends and needs operator "
@@ -968,7 +983,13 @@ def main(
         print("REFUSED: the operator label looks like a credential.", file=sys.stderr)
         return 2
     active = dict(DEFAULT_RUNNERS if runners is None else runners)
-    evidence_dir = Path(args.evidence_dir)
+    try:
+        evidence_dir = confine_evidence_dir(
+            args.evidence_dir, [EVIDENCE_DIR] if evidence_roots is None else evidence_roots
+        )
+    except RefusedError as exc:
+        print(f"REFUSED: {exc} No connection was attempted.", file=sys.stderr)
+        return 2
     statuses: list[str] = []
     for s in settings:
         options = RunOptions(
