@@ -109,7 +109,17 @@ export function validateManifest(data: unknown): ConnectorManifest {
   if (issues.length > 0) {
     throw new InvalidManifestError(issues);
   }
-  return (typeof data === "string" ? JSON.parse(data) : data) as ConnectorManifest;
+  // A deep-frozen copy: the caller's input stays untouched and the result cannot be mutated.
+  const copy: unknown = typeof data === "string" ? JSON.parse(data) : structuredClone(data);
+  return deepFreeze(copy as ConnectorManifest);
+}
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value)) deepFreeze(child);
+  }
+  return value;
 }
 
 export interface BuildManifestOptions {

@@ -128,3 +128,27 @@ def test_issue_messages_do_not_echo_submitted_values() -> None:
     issues = manifest_issues(doc)
     assert issues
     assert all(value not in i.detail and value not in i.pointer for i in issues)
+
+
+def test_every_duplicated_credential_name_is_reported_once() -> None:
+    def ref(name: str, key: str) -> dict[str, str]:
+        return {"name": name, "vault_ref": f"https://kv-test01.vault.azure.net/secrets/{key}"}
+
+    doc = build_manifest(
+        name="dup_demo",
+        version="0.1.0",
+        capabilities=["telemetry_ingest"],
+        supported_clouds=["commercial"],
+        granularity=GRAIN,
+    ).model_dump(mode="json")
+    doc["auth_mode"] = "vault_reference"
+    doc["credential_refs"] = [
+        ref("a", "s1"),
+        ref("b", "s2"),
+        ref("a", "s3"),
+        ref("b", "s4"),
+        ref("a", "s5"),
+        ref("c", "s6"),
+    ]
+    dup = [i for i in manifest_issues(doc) if i.detail == "duplicate name"]
+    assert [i.pointer for i in dup] == ["/credential_refs/0/name", "/credential_refs/1/name"]
