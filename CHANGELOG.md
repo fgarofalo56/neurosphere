@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Government sovereign profile audit-gap closure (PRP-20 round 2, PR #216):
+  - Government deployment profiles accept only usgovvirginia, usgovarizona and usgovtexas. DoD and unknown regions are refused with a `capability_unavailable` reason.
+  - Government audiences recorded from Microsoft Learn on 2026-11-12:
+    - AI Search: `https://search.azure.us`.
+    - Event Hubs: `https://eventhubs.azure.net/` (the same in every cloud; a token audience, not an egress host).
+    - Cosmos DB: still not verified.
+  - Hostname (FQDN) egress enforcement is recorded as a customer firewall control and stays OPEN.
+  - CI runs the Government helm/az static tests (it fails, not skips, when a tool is missing). A new `egress blocked (compose probe)` job proves 40 Commercial hosts neither resolve nor connect from the isolated compose network. This is static and compose proof only; the in-cluster proof stays OPEN.
+  - G02 profile scripts always issue the resource-group delete, even after a cleanup timeout. G01 gate `--evidence-dir` paths are confined to the evidence root.
+  - No FedRAMP authorization, ATO or parity is claimed. Live Government runs stay OPEN because there is no Government subscription.
 - UI surfaces audit-gap closure (PRP-31 round 2, PR #204):
   - Catalog entities can be created and edited from the UI (`catalog.curate`). This uses new `POST`/`PUT /api/v1/catalog/domains/{domain}/entities` adapters that stamp cloud, customer, domain and id server-side. A body carrying a server-owned key gets 422.
   - Deprecate and recertify take an optional closed `reason_code`, which is stored in the audit record. There is no free text.

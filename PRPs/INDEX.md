@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-20-government-verification-and-sovereign-deployment](active/PRP-20-government-verification-and-sovereign-deployment.md) | P1 | 9/9 (100%) | merged 9 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
@@ -18,7 +16,7 @@
 | [PRP-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger | - | sonnet / sonnet | required |
 | [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage | - | sonnet / sonnet | required |
 | [PRP-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) | P2 | 17 | PRP-07-telemetry-ingestion-and-cost-ledger, PRP-11-analytics-adapters, PRP-13-release-versioning-and-container-publishing, PRP-14-dashboards-cost-latency-coverage | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
-| [PRP-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | P2 | 18 | PRP-12-threat-model-and-security-baseline, PRP-20-government-verification-and-sovereign-deployment, PRP-21-scale-federation-finops-and-dr | PRP-20-government-verification-and-sovereign-deployment (active); PRP-21-scale-federation-finops-and-dr (backlog) | sonnet / sonnet | required |
+| [PRP-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | P2 | 18 | PRP-12-threat-model-and-security-baseline, PRP-20-government-verification-and-sovereign-deployment, PRP-21-scale-federation-finops-and-dr | PRP-21-scale-federation-finops-and-dr (backlog) | sonnet / sonnet | required |
 
 ## Blocked
 
@@ -28,6 +26,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [PRP-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-11-13 | #216 |
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |
 | [PRP-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-11-11 | #202 |
 | [PRP-31-missing-ui-surfaces](shipped/PRP-31-missing-ui-surfaces.md) | 2026-11-11 | #204 |
