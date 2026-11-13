@@ -22,6 +22,8 @@ from neurosphere_core.errors import (
     UnauthorizedError,
 )
 
+from neurosphere_connector_azure_billing.export_reader import ExportBlobNotFoundError
+
 __all__ = ["AzureBlobExportSource"]
 
 
@@ -58,6 +60,8 @@ class AzureBlobExportSource:
             stream = await self._container.get_blob_client(name).download_blob()
             data = await stream.readall()
         except Exception as exc:
+            if getattr(exc, "status_code", None) == 404 and name != self._manifest_blob:
+                raise ExportBlobNotFoundError(name) from None
             raise _map(exc) from None
         return bytes(data)
 

@@ -47,6 +47,7 @@ from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from neurosphere_connector.write import WriteTargetRegistry
+from neurosphere_connector_azure_billing import AzureBillingConnector, AzureBlobExportSource
 from neurosphere_connector_foundry import (
     FoundryDiscoveryConnector,
     RestProjectReader,
@@ -162,6 +163,10 @@ from neurosphere_workers.evaluation.service import (
     OnlineRunConfig,
 )
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
+from neurosphere_workers.ingestion.billing_export import (
+    BillingExportPoller,
+    BillingExportSettings,
+)
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
 from neurosphere_workers.ingestion.foundry_discovery import (
     FoundryDiscoveryPoller,
@@ -1230,6 +1235,70 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
 
 
 # --------------------------------------------------------------------------------------------
+# billing_export (part of ``all``; a no-op until NS_BILLING_EXPORT_* is configured)
+
+
+async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    export = BillingExportSettings()
+    if export.unconfigured:
+        logger.info(
+            "billing_export not configured; role idles",
+            extra={"event": "worker.billing_export_unconfigured"},
+        )
+
+        async def _noop() -> None:
+            return None
+
+        return _tick_role("billing_export", _noop, cfg)
+    if export.storage_account_url is None:
+        raise RoleConfigError("billing_export_storage_account_url_missing")
+    if export.container is None:
+        raise RoleConfigError("billing_export_container_missing")
+    if export.manifest_blob is None:
+        raise RoleConfigError("billing_export_manifest_blob_missing")
+    if export.domain_id is None:
+        raise RoleConfigError("billing_export_domain_id_missing")
+    if export.api_base_url is None:
+        raise RoleConfigError("billing_export_api_base_url_missing")
+    if export.producer_secret is None:
+        raise RoleConfigError("billing_export_producer_secret_missing")
+    if not export.domain_id_valid:
+        raise RoleConfigError("billing_export_domain_id_invalid")
+    if not export.storage_url_valid:
+        raise RoleConfigError("billing_export_storage_account_url_invalid")
+    if cfg.cloud != "commercial":
+        # The billing connector is Commercial-only (Government export availability is unverified).
+        raise RoleConfigError("billing_export_cloud_unsupported")
+    credential = lifetime.register(
+        DefaultAzureCredential(authority=cfg.settings.cloud_profile.login_host)
+    )
+    source = lifetime.register(
+        AzureBlobExportSource(
+            account_url=export.storage_account_url,
+            container=export.container,
+            manifest_blob=export.manifest_blob,
+            credential=credential,
+        )
+    )
+    http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    poller = BillingExportPoller(
+        reader=AzureBillingConnector(source=source, basis=export.basis, amount_kind="invoiced"),
+        ingest=IngestClient(
+            http.client,
+            base_url=export.api_base_url,
+            producer_id=export.producer_id,
+            secret=export.producer_secret.get_secret_value(),
+        ),
+        customer_id=cfg.customer_id,
+        cloud=cfg.cloud,
+        source_id=export.source_id,
+        domain_id=export.domain_id,
+        batch_size=export.batch_size,
+    )
+    return _tick_role("billing_export", PeriodicTick(poller.tick, export.interval_seconds), cfg)
+
+
+# --------------------------------------------------------------------------------------------
 # write targets (PRP-35 item 4; shared with the API composition, which imports these names)
 #
 # A connector reaches a WriteTargetRegistry only when its own ENABLED flag is set, its target
@@ -1514,6 +1583,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "evaluation": build_evaluation,
     "gateway_poll": build_gateway_poll,
     "foundry_discovery": build_foundry_discovery,
+    "billing_export": build_billing_export,
 }
 
 
