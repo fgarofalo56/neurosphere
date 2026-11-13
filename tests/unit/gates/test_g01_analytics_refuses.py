@@ -6,6 +6,7 @@ runs the script itself with a clean environment to prove the refusal path import
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import os
@@ -22,6 +23,13 @@ DBX_GOV_HOST = "adb-1234567890123456.7.databricks.azure.us"
 FABRIC_HOST = "abc123.datawarehouse.fabric.microsoft.com"
 FABRIC_GOV_HOST = "abc123.fabric.microsoft.us"
 
+_ROOT: list[Path] = [Path("/nonexistent-evidence-root")]
+
+
+@pytest.fixture(autouse=True)
+def _evidence_root(tmp_path: Path) -> None:
+    _ROOT[0] = tmp_path
+
 
 def load() -> ModuleType:
     spec = importlib.util.spec_from_file_location("g01_analytics_under_test", SCRIPT)
@@ -29,6 +37,8 @@ def load() -> ModuleType:
     mod = importlib.util.module_from_spec(spec)
     sys.modules["g01_analytics_under_test"] = mod
     spec.loader.exec_module(mod)
+    # Tests write to tmp_path; confine to it via the keyword-only hook (not the CLI).
+    mod.__dict__["main"] = functools.partial(mod.main, evidence_roots=[_ROOT[0]])
     return mod
 
 

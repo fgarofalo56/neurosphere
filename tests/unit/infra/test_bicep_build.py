@@ -6,6 +6,7 @@ Skipped (with a reason) when ``az`` is not on PATH; the CI ``bicep`` job is the 
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -21,8 +22,11 @@ PARAMS = BICEP_ROOT / "params"
 MAIN = MODULES / "main.bicep"
 
 AZ = shutil.which("az")
+_IN_CI = os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no")
+# Under CI a missing az is not skipped; the test body then fails on its AZ assertion (#100).
 requires_az = pytest.mark.skipif(
-    AZ is None, reason="az CLI not on PATH; the CI bicep job is the backstop for these builds"
+    AZ is None and not _IN_CI,
+    reason="az CLI not on PATH; the CI bicep job is the backstop",
 )
 
 # Every module except main.bicep is one reuse-or-create service family.
@@ -64,6 +68,8 @@ def _az(*args: str) -> str:
 @pytest.fixture(scope="module")
 def main_arm() -> dict[str, Any]:
     if AZ is None:
+        if _IN_CI:
+            pytest.fail("az CLI not on PATH and CI is set")
         pytest.skip("az CLI not on PATH; the CI bicep job is the backstop")
     return json.loads(_az("build", "--file", str(MAIN), "--stdout"))
 

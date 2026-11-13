@@ -46,7 +46,7 @@ def test_government_wildcard_does_not_cover_commercial_region() -> None:
         entry(service="aks", feature="base", cloud="government", region="*"),
         entry(service="synapse", feature="base", cloud="government", region="*"),
     )
-    assert validate_profile(profile("government", "usdodeast"), m, TODAY).supported
+    assert validate_profile(profile("government", "usgovarizona"), m, TODAY).supported
     assert not validate_profile(profile("commercial", "eastus"), m, TODAY).supported
 
 

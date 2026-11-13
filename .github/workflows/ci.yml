@@ -37,6 +37,16 @@ jobs:
         run: uv run ruff format --check .
       - name: Pyright
         run: uv run pyright
+      # The Government/infra/egress static tests shell out to helm and az and now FAIL (not skip)
+      # when CI is set and the tool is missing (issue #100). az is preinstalled on ubuntu-latest.
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
+      - name: Tool versions the static egress tests need
+        run: |
+          helm version --short
+          az bicep install
+          az bicep version
       - name: Pytest
         run: uv run pytest -q
       - name: Dependency audit
@@ -217,6 +227,24 @@ jobs:
         run: helm lint --strict infra/helm -f infra/helm/ci/values-ci.yaml
       - name: Template renders
         run: helm template neurosphere infra/helm -f infra/helm/ci/values-ci.yaml > /dev/null
+
+  # Issue #98/#100: the first job that runs the `integration` marker (addopts deselects it, so
+  # `-m integration` is explicit). It starts only egress-probe and azurite (the positive control)
+  # with --no-deps, so the Cosmos and Event Hubs emulators are not pulled. Static and compose
+  # only; in-cluster proof OPEN.
+  egress-compose:
+    name: egress blocked (compose probe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      - name: Egress probe tests
+        run: uv run pytest -q -m integration tests/security/egress
 
   mermaid:
     name: mermaid diagrams render

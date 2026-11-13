@@ -13,14 +13,15 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
-import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
+from neurosphere_core.cloud import CloudName, profile_for
 
+from .ci_gate import require_tool
 from .corpus import compile_corpus, concrete_host, find_hits, load_corpus
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -29,10 +30,33 @@ VALUES_GOV = CHART / "values-government.yaml"
 PROFILE = ROOT / "infra" / "bicep" / "params" / "government" / "sovereign-profile.yaml"
 BICEPPARAM = ROOT / "infra" / "bicep" / "params" / "government" / "main.bicepparam"
 
-# Government suffixes every egress host must sit under (anchored, whole-label).
+# A host is Government only under a known, dot-anchored suffix (never a bare "azure.us"), so
+# foo.azure.us, documents.azure.us.evil.com and azure.us itself fail (issue #100). Mirrors
+# KNOWN_GOV_SUFFIXES in tests/unit/government_profile/test_sovereign_hosts.py.
+_GOV_PROFILE = profile_for(CloudName.GOVERNMENT)
+KNOWN_GOV_SUFFIXES: frozenset[str] = frozenset(
+    {
+        _GOV_PROFILE.cosmos_suffix.lstrip("."),
+        _GOV_PROFILE.eventhubs_suffix.lstrip("."),
+        _GOV_PROFILE.search_suffix.lstrip("."),
+        _GOV_PROFILE.apim_gateway_suffix.lstrip("."),
+        _GOV_PROFILE.login_host.split(".", 1)[1],
+        _GOV_PROFILE.management_host.split(".", 1)[1],
+        "portal.azure.us",
+        "graph.microsoft.us",
+        "monitor.azure.us",
+        "openai.azure.us",
+        "cognitiveservices.azure.us",
+        "opinsights.azure.us",
+        "databricks.azure.us",
+        "azure-automation.us",
+        "azurewebsites.us",
+        "azurecr.us",
+        "loganalytics.us",
+    }
+)
 GOV_SUFFIX = re.compile(
-    r"(?:^|\.)(?:microsoftonline\.us|microsoft\.us|azure\.us|usgovcloudapi\.net|azure-api\.us"
-    r"|azurewebsites\.us|azurecr\.us|loganalytics\.us)$",
+    r"(?:^|\.)(?:" + "|".join(re.escape(x) for x in sorted(KNOWN_GOV_SUFFIXES)) + r")$",
     re.IGNORECASE,
 )
 
@@ -43,11 +67,10 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def _helm_render() -> str:
-    exe = shutil.which("helm")
-    if exe is None:
-        pytest.skip("helm is not installed; cannot render the Government chart")
+    exe = require_tool("helm", "helm is not installed; cannot render the Government chart")
     proc = _run([exe, "template", "neurosphere", str(CHART), "-f", str(VALUES_GOV)])
     assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip(), "helm template rendered nothing; the scan would pass vacuously"
     return proc.stdout
 
 
@@ -148,6 +171,18 @@ def test_egress_hosts_are_government_suffixed_and_not_denied() -> None:
         assert not find_hits(concrete_host(host)), f"egress host {host!r} matches the deny corpus"
 
 
+@pytest.mark.parametrize(
+    "host", ["foo.azure.us", "documents.azure.us.evil.com", "azure.us", "evilmicrosoftonline.us"]
+)
+def test_gov_suffix_rejects_typos_and_lookalikes(host: str) -> None:
+    assert not GOV_SUFFIX.search(host)
+
+
+def test_gov_suffix_accepts_known_hosts() -> None:
+    assert GOV_SUFFIX.search("nsprobe.documents.azure.us")
+    assert GOV_SUFFIX.search("management.usgovcloudapi.net")
+
+
 def test_gov_suffix_rejects_commercial_hosts() -> None:
     for pattern in load_corpus():
         bare = concrete_host(pattern)
@@ -210,9 +245,7 @@ def test_rendered_egress_cidrs_are_private_rfc1918() -> None:
 
 
 def test_bicep_build_params_has_no_commercial_host() -> None:
-    exe = shutil.which("az")
-    if exe is None:
-        pytest.skip("az CLI is not installed; cannot compile the Government Bicep params")
+    exe = require_tool("az", "az CLI is not installed; cannot compile the Government Bicep params")
     proc = _run([exe, "bicep", "build-params", "--file", str(BICEPPARAM), "--stdout"])
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)

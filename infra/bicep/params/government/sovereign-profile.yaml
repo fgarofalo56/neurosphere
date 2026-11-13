@@ -30,8 +30,10 @@ endpoints:
   cognitiveServicesSuffix: .cognitiveservices.azure.us
 
 # Token audiences. verified=true: value read from `az cloud show --name AzureUSGovernment` (offline,
-# 2026-10-22) or a first-party Learn page. verified=false: no first-party page checked states the
-# value, so none is recorded (null). Do not guess; resolve before relying on it.
+# 2026-10-22) or a first-party Learn page (aiSearch and eventHubs: 2026-11-12). crossCloud=true: the
+# same value is used in every cloud. Audiences are not network hosts and never enter egressHosts.
+# verified=false (cosmosDb): no first-party page checked states the value, so none is recorded (null).
+# Do not guess; resolve before relying on it.
 audiences:
   resourceManager:
     value: https://management.usgovcloudapi.net/
@@ -60,18 +62,21 @@ audiences:
   cosmosDb:
     value: null
     verified: false
-    checked: https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+    checked:
+      - https://learn.microsoft.com/azure/cosmos-db/how-to-connect-role-based-access-control
+      - https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure
+    checked_on: "2026-11-12"
     source: no first-party page checked states the Government data-plane audience
   aiSearch:
-    value: null
-    verified: false
-    checked: https://learn.microsoft.com/azure/search/search-security-rbac
-    source: no first-party page checked states the Government data-plane audience
+    value: https://search.azure.us
+    verified: true
+    source: https://learn.microsoft.com/azure/search/search-security-rbac-client-code (custom audience for Azure Government), 2026-11-12
   eventHubs:
-    value: null
-    verified: false
-    checked: https://learn.microsoft.com/azure/event-hubs/authenticate-application
-    source: no first-party page checked states the Government data-plane audience
+    value: https://eventhubs.azure.net/
+    verified: true
+    crossCloud: true
+    source: https://learn.microsoft.com/azure/event-hubs/authorize-access-azure-active-directory (same value in every cloud and tenant), 2026-11-12
+    note: Token audience only, not a network host. It must never appear in egressHosts or the Helm egress allowlist.
 
 # Government private DNS zones.
 # Source: https://learn.microsoft.com/azure/private-link/private-endpoint-dns#government

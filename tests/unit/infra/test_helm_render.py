@@ -7,11 +7,12 @@ CI job runs Helm 4.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import pytest
 import yaml
@@ -34,21 +35,28 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, capture_output=True, text=True, check=False, cwd=ROOT, timeout=120)
 
 
+def _skip_or_fail(reason: str) -> NoReturn:
+    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
+    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
+        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
+    pytest.skip(reason)
+
+
 def _helm() -> str:
     exe = shutil.which("helm")
     if exe is None:
-        pytest.skip("helm is not installed; the dedicated Helm 4 CI job runs this test")
+        _skip_or_fail("helm is not installed; the dedicated Helm 4 CI job runs this test")
     out = _run([exe, "version", "--short"]).stdout.strip()
     match = re.match(r"v?(\d+)\.", out)
     if match is None or int(match.group(1)) != 4:
-        pytest.skip(f"Helm 4 required (ADR-0002), found {out!r}")
+        _skip_or_fail(f"Helm 4 required (ADR-0002), found {out!r}")
     return exe
 
 
 def _az() -> str:
     exe = shutil.which("az")
     if exe is None:
-        pytest.skip("az CLI is not installed; cannot compile the App Service Bicep params")
+        _skip_or_fail("az CLI is not installed; cannot compile the App Service Bicep params")
     return exe
 
 
@@ -56,7 +64,9 @@ def _render(*extra: str) -> list[dict[str, Any]]:
     helm = _helm()
     proc = _run([helm, "template", "neurosphere", str(CHART), "-f", str(CI_VALUES), *extra])
     assert proc.returncode == 0, proc.stderr
-    return [d for d in yaml.safe_load_all(proc.stdout) if d]
+    docs = [d for d in yaml.safe_load_all(proc.stdout) if d]
+    assert docs, "helm template rendered nothing"
+    return docs
 
 
 def _containers(docs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:

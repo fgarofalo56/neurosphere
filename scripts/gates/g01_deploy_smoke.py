@@ -41,6 +41,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # pyright: ignore[reportAttributeAccessIssue]
 
 REPO = Path(__file__).resolve().parents[2]
+EVIDENCE_ROOT = REPO / "docs" / "evidence" / "G01"
 SCRIPT_VERSION = "1.0.0"
 GATE = "G01"
 TEMPLATE = "infra/bicep/modules/main.bicep"
@@ -97,6 +98,18 @@ class AzError(RuntimeError):
 
 class RefusedError(RuntimeError):
     """A precondition failed before anything was changed."""
+
+
+def confine_evidence_dir(raw: str, allowed_roots: Sequence[Path]) -> Path:
+    """Resolve a CLI-supplied evidence dir and require it inside an allowed root.
+
+    Refuses (RefusedError) traversal and absolute out-of-root paths before anything is written.
+    """
+    resolved = Path(raw).resolve()
+    for root in allowed_roots:
+        if resolved.is_relative_to(Path(root).resolve()):
+            return resolved
+    raise RefusedError("--evidence-dir must resolve inside the G01 evidence directory.")
 
 
 # --------------------------------------------------------------------------- scrubber
@@ -244,7 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--apim-publisher-email", default="", help="required when creating APIM")
     ap.add_argument("--apim-publisher-name", default="", help="required when creating APIM")
     ap.add_argument("--keep", action="store_true", help="skip teardown (default: tear down)")
-    ap.add_argument("--evidence-dir", default=str(REPO / "docs" / "evidence" / "G01"))
+    ap.add_argument("--evidence-dir", default=str(EVIDENCE_ROOT))
     return ap
 
 
@@ -673,9 +686,17 @@ def _write_evidence(evidence: dict[str, Any], evidence_dir: Path) -> Path:
     return path
 
 
-def run(args: argparse.Namespace, runner: AzRunner, work_dir: Path) -> int:
+def run(
+    args: argparse.Namespace,
+    runner: AzRunner,
+    work_dir: Path,
+    evidence_roots: Sequence[Path] | None = None,
+) -> int:
     started = _utcnow()
     try:
+        evidence_dir = confine_evidence_dir(
+            args.evidence_dir, [EVIDENCE_ROOT] if evidence_roots is None else evidence_roots
+        )
         _validate(args)
     except RefusedError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
@@ -784,7 +805,7 @@ def run(args: argparse.Namespace, runner: AzRunner, work_dir: Path) -> int:
             "errors": ["evidence scrubber rejected the collected data (values withheld)"],
         }
         passed = False
-    path = _write_evidence(evidence, Path(args.evidence_dir))
+    path = _write_evidence(evidence, evidence_dir)
     print(f"{evidence['result']}: wrote {path}")
     if not passed and smoke.rg_created and (args.keep or not teardown["performed"]):
         print(
@@ -800,7 +821,10 @@ def main(
     *,
     runner: AzRunner | None = None,
     work_dir: Path | None = None,
+    evidence_roots: Sequence[Path] | None = None,
 ) -> int:
+    """`evidence_roots` is the confinement allow-list (default: the repo evidence dir). It is a
+    keyword-only hook for tests and is never settable from the command line."""
     if os.environ.get("NS_LIVE_APPROVED") != "1":
         print(
             "REFUSED: g01_deploy_smoke.py deploys billable Azure resources and needs operator "
@@ -830,7 +854,7 @@ def main(
     with (
         tempfile.TemporaryDirectory(prefix="g01-") if work_dir is None else _NullCtx(work_dir) as wd
     ):
-        return run(args, runner, Path(wd))
+        return run(args, runner, Path(wd), evidence_roots)
 
 
 class _NullCtx:

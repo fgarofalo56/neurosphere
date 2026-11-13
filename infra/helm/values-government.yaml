@@ -95,3 +95,16 @@ sovereignProfile:
     - "*.cognitiveservices.azure.us"
     - "*.ods.opinsights.azure.us"
     - "*.oms.opinsights.azure.us"
+  # Token audiences (not network hosts; never added to egressHosts). Mirrors the three audiences
+  # PRP-20 round 2 item 6 refreshed in sovereign-profile.yaml on 2026-11-12.
+  audiences:
+    cosmosDb:
+      value: null
+      verified: false
+    aiSearch:
+      value: https://search.azure.us
+      verified: true
+    eventHubs:
+      value: https://eventhubs.azure.net/
+      verified: true
+      crossCloud: true

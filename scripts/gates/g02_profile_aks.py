@@ -8,6 +8,10 @@ check runs before argument parsing, any other import or any command:
   4. `az cloud show` reports AzureUSGovernment
   5. NS_GOV_IMAGE_REGISTRY, NS_GOV_AKS_CLUSTER and NS_GOV_AKS_RESOURCE_GROUP are set
 
+The AKS cluster named by NS_GOV_AKS_CLUSTER / NS_GOV_AKS_RESOURCE_GROUP MUST be in the
+NS_GOV_SUBSCRIPTION_ID subscription: every `az` call (including `az aks get-credentials`) is
+pinned to that subscription, so a cluster elsewhere fails the run.
+
 No Government subscription exists for this project (decision D7), so this script has NEVER been
 run live. It must not be run by an agent; the operator runs it with their own approval.
 
@@ -118,8 +122,10 @@ class AksProfile:
             "kubectl", "label", "namespace", ctx.facts["namespace"],
             "neurosphere-gate=G02", f"neurosphere-run={ctx.run_id}", *self._kube(ctx),
         )  # fmt: skip
-        self._helm_install(ctx)
+        # Set BEFORE the install: a failed or interrupted `helm upgrade --install` can leave a
+        # half-created release, and teardown must still uninstall it.
         ctx.facts["release_installed"] = True
+        self._helm_install(ctx)
 
     def smoke(self, ctx: Any) -> None:
         base = ["--namespace", ctx.facts["namespace"], *self._kube(ctx)]
@@ -162,13 +168,19 @@ class AksProfile:
         if "namespace" not in ctx.facts:
             return
         base = ["--namespace", ctx.facts["namespace"], *self._kube(ctx)]
-        if ctx.facts.get("release_installed"):
-            ctx.run("helm", "uninstall", ctx.facts["release"], "--wait", *base)
+        uninstall_error: Exception | None = None
+        try:
+            if ctx.facts.get("release_installed"):
+                ctx.run("helm", "uninstall", ctx.facts["release"], "--wait", *base)
+        except Exception as exc:
+            uninstall_error = exc
         if ctx.facts.get("namespace_created"):
             ctx.run(
                 "kubectl", "delete", "namespace", ctx.facts["namespace"], "--wait=true",
                 *self._kube(ctx),
             )  # fmt: skip
+        if uninstall_error is not None:
+            raise uninstall_error
 
 
 def main(argv: list[str] | None = None, **kwargs: Any) -> int:
