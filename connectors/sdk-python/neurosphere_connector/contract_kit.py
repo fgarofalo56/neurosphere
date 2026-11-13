@@ -73,8 +73,6 @@ async def check_connector_contract(connector: Any) -> list[Violation]:
         out.append(bad)
     elif not isinstance(freshness, FreshnessReport):
         out.append(Violation("freshness_type", "freshness() must return FreshnessReport"))
-    elif freshness.lag_ms is None and freshness.watermark is not None:
-        pass  # watermark without lag is allowed; lag is simply unknown
     elif freshness.lag_ms == 0 and freshness.watermark is None and freshness.observed_at is None:
         out.append(Violation("freshness_unknown_as_zero", "lag_ms=0 with no observation"))
 
