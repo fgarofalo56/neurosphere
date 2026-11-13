@@ -4,15 +4,16 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 7/14 (50%) | todo 7, merged 7 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (backlog) | sonnet / sonnet | none |
+| [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (active) | sonnet / sonnet | none |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
-| [PRP-09-connector-sdk-and-reference-connectors](backlog/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 4 | PRP-01-contracts-and-schemas, PRP-05-api-worker-runtime-and-self-observability | - | sonnet / sonnet | required |
 | [PRP-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger | - | sonnet / sonnet | required |
 | [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage | - | sonnet / sonnet | required |
 | [PRP-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) | P2 | 17 | PRP-07-telemetry-ingestion-and-cost-ledger, PRP-11-analytics-adapters, PRP-13-release-versioning-and-container-publishing, PRP-14-dashboards-cost-latency-coverage | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |

@@ -1,11 +1,11 @@
 ---
 name: PRP-09-connector-sdk-and-reference-connectors
-status: backlog
+status: active
 priority: P2
 order: 4
-started: 2026-10-17
+started: 2026-11-13
 pr: 45
-branch: prp-09-connector-sdk
+branch: prp-09-round2
 review: required
 created: 2026-10-08
 model: sonnet
@@ -194,6 +194,120 @@ The binding rule for this PRP is the last clause: no invented APIs. Where a docu
 - Pattern references: Pydantic forbid-extra; errors taxonomy.
 - Tests to write: `connectors/sdk-python/tests/write/test_write_connector.py`.
 
+### Round 2: audit gap closure (items 7-13, added 2026-11-13)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-13 against main c60fba0:
+- Still open:
+  - The OTel, Foundry-discovery and billing connectors and `build_variance_report` have no non-test caller. Only Azure Monitor runs, via the `gateway_poll` role (PRP-33).
+  - Nothing runs `check_connector_contract` against a reference connector. The TS contract kit has no pass/fail assertions.
+  - #46 is still live. `connector.py` `_poll` advances `cursor` past a truncated page (`page.partial`: PartialError or MAX_ROWS). A 429 on a later slice raises and discards the earlier slices. An empty source list advances the watermark over nothing.
+  - #47, #48, #49 and #50 are open.
+- Already in place, so reused rather than rebuilt:
+  - PRP-14 `/api/v1/reconciliation` and `frontend/src/features/reconciliation/` already compare gateway, app and billing against the ledger.
+  - The ledger fold (`neurosphere_core/ledger/fold.py`) handles invoiced billing observations and allocations.
+  - `CostRecord` carries `kind=invoiced`, `observation_source=billing` and `billing_period`, sent as CloudEvent type `com.neurosphere.cost.v1`.
+  - The catalog projection creates `draft` entities marked `attributes.discovered_from` (`services/workers/neurosphere_workers/projections/catalog/discovery.py`).
+
+User decisions 2026-11-13:
+- Full gap closure, including composition (the "real data path" step for these connectors).
+- Billing feeds the existing reconciliation view through ingest. No parallel variance API. `build_variance_report` gets an operator CLI.
+- OTel is composed as an opt-in compose profile, with a compose-gated integration test.
+- G04 stays OPEN. No live run this round.
+
+Shared rules for items 7-13:
+- New worker roles follow the `gateway_poll` pattern in `services/workers/neurosphere_workers/runtime/factories.py`. Each is part of `all`, idles with one info log line when unconfigured, and raises `RoleConfigError` on half-configured settings.
+- Agents cannot edit `.env.example`. The orchestrator hands the new `NS_*` lines to the operator.
+- Helm and Bicep env wiring for the new roles is a follow-up issue, not this round.
+- The compose project name is shared across worktrees, so compose-gated runs are sequenced, never concurrent.
+
+### Item 7 - azure-monitor-watermark (#46)  [P]
+- Deliverable:
+  - A truncated page holds the cursor at that slice's start, so the slice is re-polled. Alternatively, the gap is recorded explicitly in the result. Either way, the watermark never passes unread rows.
+  - A 429 on a later slice returns the records of the completed slices, with `partial=True` and the rate-limit state recorded. It does not discard them.
+  - An empty source list does not advance the watermark.
+- Owned files (may edit): `connectors/reference/azure-monitor/`, `services/workers/neurosphere_workers/ingestion/gateway_poll/` (only where the poller relies on the old semantics), and their tests.
+- Must NOT touch: `connectors/sdk-python/`, other `connectors/reference/*`, `factories.py`, `docs/`.
+- Acceptance criteria:
+  - A fake-paginator test with a MAX_ROWS page and a PartialError page shows the next poll re-reads that slice.
+  - A 429 on slice 2 still returns slice 1's records and flags the result partial.
+  - With empty sources, `next_watermark` equals the input watermark.
+  - The `gateway_poll` tests stay green.
+
+### Item 8 - write-verify-strictness (#47)  [P]
+- Deliverable:
+  - `verify` compares with strict types (`True` does not equal `1`).
+  - An empty observed state is unverifiable, not matched.
+  - `move` and `copy` verification requires the prior value, or the limitation is documented and flagged.
+  - Path lookup rejects Unicode digits and leading-zero indexes.
+  - `_check_capable` requires the protocol methods to be coroutine functions.
+- Owned files (may edit): `connectors/sdk-python/neurosphere_connector/write/`, `connectors/sdk-python/tests/write/`.
+- Must NOT touch: the rest of `connectors/sdk-python/`, `connectors/reference/`, `packages/core/neurosphere_core/actions/`, `services/`.
+- Acceptance criteria:
+  - Each #47 case has a test.
+  - Cross-tests stay green: `connectors/reference/foundry-actions`, `connectors/reference/apim-gateway`, and every test importing `neurosphere_connector.write` (found by grep).
+
+### Item 9 - sdk-hardening (#48, #50)  [P]
+- Deliverable:
+  - #48: the vault error carries no `__context__` holding the raw resolver exception; rotation-drain behaviour is documented or auto-scheduled; the rate-limit `remaining=0` survives a later success; duplicate-name detection is O(n) and reports every duplicate; the dead branch is removed.
+  - #50: `validateManifest` returns a frozen copy; a shared invalid fixture covers a malformed `documentation_url`; the `SecretValue.equals` comment is accurate; credential failures raise a `ConnectorError` with a code; `UPDATE_INTEROP_FIXTURES=1` is documented.
+  - TS contract-kit pass/fail tests: a conforming connector passes and a broken one fails.
+- Owned files (may edit): `connectors/sdk-python/` (excluding `neurosphere_connector/write/` and `tests/write/`), `connectors/sdk-ts/`.
+- Must NOT touch: `connectors/reference/`, `packages/`, root manifests and lockfiles.
+- Acceptance criteria:
+  - A log-capture and exception-chain test proves no credential value is reachable through `__context__` or `__cause__`.
+  - Interop fixtures still pass both ways.
+  - `tsc --noEmit` and Vitest are green.
+
+### Item 10 - otel-composition (#49)  [P]
+- Deliverable:
+  - #49 fixes: widen the body-name guard (bare `completion` and `messages`); count dropped array, bytes and None attributes; reject or omit NaN and Inf; make `force_flush` really flush; fail on an unrecognised vault host; parse HTTP-date `Retry-After`.
+  - An opt-in `otel` docker-compose profile runs the official OpenTelemetry collector with the body-dropping config, exporting to the composed ingest edge. The producer credential comes from the environment, never from a file.
+  - A compose-gated integration test (`integration` marker) sends an OTLP span to the collector and checks it lands as a `TelemetryEvent`, with missing fields null and the body attributes absent.
+- Owned files (may edit): `connectors/reference/otel-generic/`, `docker-compose.yml` (the new `otel` profile service only), `tests/integration/connectors/`, `packages/core/neurosphere_core/payload/` (the body-name guard only).
+- Must NOT touch: `services/api/neurosphere_api/ingest/` (except reading it), other compose services, `.github/`, `.env.example`.
+- Acceptance criteria:
+  - Each #49 case has a unit test.
+  - The guard widening keeps every importer's tests green (grep `neurosphere_core.payload`).
+  - The integration test passes locally against compose, run sequenced. CI does not run the `integration` marker for this test, and that is stated.
+  - The G12 delta (no Entra producer identity on the emulator) stays recorded.
+
+### Item 11 - foundry-discovery-role (after Wave A)  [P with 13]
+- Deliverable:
+  - A `foundry_discovery` worker role that polls the Foundry project(s) configured by `NS_FOUNDRY_DISCOVERY_*`, using `FoundryDiscoveryConnector` with a bounded interval.
+  - It upserts `draft` Agent and ModelDeployment catalog entities with `attributes.discovered_from="foundry"`. It creates them only if absent and never overwrites a curated or declared entity.
+  - Government-unavailable capabilities are recorded as `unavailable` (log and health), never as empty.
+  - Includes the item-5 Foundry review findings, if any remain.
+- Owned files (may edit): new `services/workers/neurosphere_workers/ingestion/foundry_discovery/`, `connectors/reference/foundry/`, the `foundry_discovery` builder and registration in `services/workers/neurosphere_workers/runtime/factories.py` and `runtime/settings.py`, and their tests.
+- Must NOT touch: `projections/catalog/` (except reading it), `packages/core/neurosphere_core/catalog/`, other roles' builders, `infra/`.
+- Acceptance criteria:
+  - An unconfigured role idles, and a half-configured role raises `RoleConfigError`.
+  - A fake-reader test shows draft entities created once and a curated entity left untouched on re-poll.
+  - A Government profile reports the documented absent capabilities as `unavailable`.
+  - The workers runtime tests stay green.
+
+### Item 13 - contract-kit-conformance (after Wave A)  [P with 11]
+- Deliverable: one parametrized test running `check_connector_contract` against every reference connector (otel-generic, azure-monitor, foundry, azure-billing, apim-gateway, foundry-actions), each constructed with fakes and no network.
+- Owned files (may edit): new `tests/unit/connector_conformance/` (a unique directory name, to avoid test-package clashes).
+- Must NOT touch: any connector source. A connector that fails conformance is reported to the orchestrator, which dispatches it as a fresh fix item.
+- Acceptance criteria:
+  - All six connectors are covered.
+  - A deliberately broken fake fails the kit in the same test file.
+  - Nothing reaches the network.
+
+### Item 12 - billing-export-role (after item 11 merges; shares factories.py)
+- Deliverable:
+  - A `billing_export` worker role that reads the Cost Management export configured by `NS_BILLING_EXPORT_*` (`AzureBlobExportSource`, managed identity).
+  - It maps the export's daily per-resource aggregates to `CostRecord` (`kind=invoiced`, `observation_source=billing`, `billing_period`, and a stable `dedupe_key`) and posts them as `com.neurosphere.cost.v1` CloudEvents through the ingest edge, so the PRP-14 reconciliation view shows the billing source.
+  - Granularity is never finer than the export, and null cost stays null.
+  - Reader hardening from the item-5 review: cap on `gzip.decompress` size; `Decimal` rejects underscores and non-ASCII digits; dropped dateless rows and missing partitions are stated.
+  - Operator CLI `scripts/connectors/billing_variance.py` runs `build_variance_report` offline.
+- Owned files (may edit): new `services/workers/neurosphere_workers/ingestion/billing_export/`, `connectors/reference/azure-billing/`, the `billing_export` builder and registration in `factories.py` and `runtime/settings.py`, `scripts/connectors/billing_variance.py`, and their tests.
+- Must NOT touch: `packages/core/neurosphere_core/ledger/`, `aggregates/`, `services/api/neurosphere_api/ingest/`, `services/api/neurosphere_api/reconciliation/`, `frontend/`.
+- **Stop condition:** if the ingest edge rejects request-less invoiced CostRecords, or the ledger and aggregates do not surface them as the reconciliation `billing` source, stop and report. That is a PRP-07 change, not this lane's.
+- Acceptance criteria:
+  - A fake-blob test, run through the ingest pipeline's fakes, shows billing amounts arriving as the reconciliation billing source at export granularity.
+  - Unconfigured and half-configured behaviour matches item 11.
+  - Snyk Code is clean on the new files.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -240,6 +354,13 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 | 4 | merged | worktree-agent-aa7e2a4c99970301d | sonnet | ruff/format/pyright clean; 23 passed, 1 live deselected (re-run on branch); Snyk: 1 low (URL substring check in test) fixed 4bbcbb8, rescan 0; a938df3. Gov gated behind allow_unverified_government; App Insights Gov disabled; review APPROVE (5 non-blocking; top: truncated slice (MAX_ROWS/PartialError) still advances watermark — rows lost, flagged partial only); merge 6e2d0cf, connectors 93 passed + pyright/ruff clean post-merge | 2026-10-17 |
 | 5 | merged | worktree-agent-a28be3f1c8bf37394 | sonnet | fa7fde2: ruff/format/pyright clean, 52 passed, Snyk 0. Verify FAIL round 1: licence gate — azure-ai-projects -> openai -> httpx2 -> httpx2-jsfetch (emscripten-only) UNKNOWN licence. Documented Foundry REST list APIs exist (rest/api/microsoft-foundry/aiproject); fix round 1 dispatched: REST reader, drop SDK. Round 1 fix f679df8: REST reader, azure-ai-projects removed; ruff/format/pyright clean, 73 passed, licences PASS, Snyk 0 (re-run on branch); review APPROVE (5 non-blocking); merged + uv relock; coverage.md item 3/4 rows reconciled by orchestrator | 2026-10-17 |
 | 6 | merged | worktree-agent-a4a17a14f0a492cd0 | sonnet | ruff/format/pyright clean; sdk-python 59 passed (re-run on branch); Snyk Code 0 issues; 84f3cdc; review APPROVE (6 non-blocking: verify type coercion True==1, move/copy post-state limits, SDK does not enforce target version — executor must); merge b3910e9, sdk-python 59 passed + pyright clean post-merge | 2026-10-17 |
+| 7 | todo | | sonnet | | 2026-11-13 |
+| 8 | todo | | sonnet | | 2026-11-13 |
+| 9 | todo | | sonnet | | 2026-11-13 |
+| 10 | todo | | sonnet | | 2026-11-13 |
+| 11 | todo | | sonnet | | 2026-11-13 |
+| 13 | todo | | sonnet | | 2026-11-13 |
+| 12 | todo | | sonnet | | 2026-11-13 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
