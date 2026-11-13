@@ -20,6 +20,7 @@ Role -> class:
 * ``recommendations`` periodic ``run_pipeline``
 * ``evaluation``      periodic online ``EvaluationService`` run
 * ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; idles if unconfigured)
+* ``foundry_discovery`` Foundry agents/deployments -> draft catalog (idles if unconfigured)
 """
 
 from __future__ import annotations
@@ -46,6 +47,12 @@ from azure.identity import DefaultAzureCredential as SyncDefaultAzureCredential
 from azure.identity.aio import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from neurosphere_connector.write import WriteTargetRegistry
+from neurosphere_connector_foundry import (
+    FoundryDiscoveryConnector,
+    RestProjectReader,
+    default_token_provider,
+    project_endpoint,
+)
 from neurosphere_connector_foundry_actions import create_swap_connector
 from neurosphere_core.actions import ActionAuditor, ActionService
 from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
@@ -71,7 +78,7 @@ from neurosphere_core.clients.factories import (
     ENV_COSMOS_ENDPOINT,
     ENV_COSMOS_KEY,
 )
-from neurosphere_core.cloud import Settings, load_settings
+from neurosphere_core.cloud import CloudName, Settings, load_settings
 from neurosphere_core.copilot.models.endpoints import AdapterConfig, endpoint_problem
 from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError, ValidationIssue
@@ -156,6 +163,11 @@ from neurosphere_workers.evaluation.service import (
 )
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
+from neurosphere_workers.ingestion.foundry_discovery import (
+    FoundryDiscoveryPoller,
+    FoundryDiscoverySettings,
+    ProjectTarget,
+)
 from neurosphere_workers.ingestion.gateway_poll import (
     GatewayPoller,
     GatewayPollSettings,
@@ -1155,6 +1167,69 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
 
 
 # --------------------------------------------------------------------------------------------
+# foundry_discovery (part of ``all``; a no-op until NS_FOUNDRY_DISCOVERY_* is configured)
+
+
+async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    disc = FoundryDiscoverySettings()
+    if disc.unconfigured:
+        logger.info(
+            "foundry_discovery not configured; role idles",
+            extra={"event": "worker.foundry_discovery_unconfigured"},
+        )
+
+        async def _noop() -> None:
+            return None
+
+        return _tick_role("foundry_discovery", _noop, cfg)
+    if not disc.project_pairs_raw:
+        raise RoleConfigError("foundry_discovery_projects_missing")
+    if disc.domain_id is None:
+        raise RoleConfigError("foundry_discovery_domain_id_missing")
+    if not disc.domain_id_valid:
+        raise RoleConfigError("foundry_discovery_domain_id_invalid")
+    try:
+        projects = disc.parse_projects()
+    except ValueError:
+        raise RoleConfigError("foundry_discovery_projects_invalid") from None
+    cloud = CloudName(cfg.cloud)
+    targets: list[ProjectTarget] = []
+    for resource, project in projects:
+        try:
+            endpoint = project_endpoint(cloud, resource, project)
+        except ValueError:
+            raise RoleConfigError("foundry_discovery_projects_invalid") from None
+        http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+        reader = RestProjectReader(
+            endpoint=endpoint,
+            token_provider=default_token_provider(cloud),
+            cloud=cloud,
+            client=http.client,
+            max_pages=disc.max_pages,
+        )
+        connector = FoundryDiscoveryConnector(
+            reader=reader, cloud=cloud, project_endpoint=endpoint, max_items=disc.max_items
+        )
+        targets.append(ProjectTarget(project=f"{resource}/{project}", connector=connector))
+    customer = cfg.customer_id
+    cosmos = await _cosmos(cfg, lifetime)
+    db = _database(cfg, cosmos)
+    stack = build_policy_stack(
+        cfg.settings, cosmos=cosmos, auth=cfg.auth, store=cfg.store, tenant_id=cfg.tenant_id
+    )
+    identity = build_identity(cfg.settings, stack=stack, worker=cfg.worker, customer_id=customer)
+    poller = FoundryDiscoveryPoller(
+        targets=targets,
+        repository=CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        scope_provider=identity.scope_provider,
+        customer_id=customer,
+        domain_id=disc.domain_id,
+        cloud=cloud.value,
+    )
+    return _tick_role("foundry_discovery", PeriodicTick(poller.tick, disc.interval_seconds), cfg)
+
+
+# --------------------------------------------------------------------------------------------
 # write targets (PRP-35 item 4; shared with the API composition, which imports these names)
 #
 # A connector reaches a WriteTargetRegistry only when its own ENABLED flag is set, its target
@@ -1438,6 +1513,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "recommendations": build_recommendations,
     "evaluation": build_evaluation,
     "gateway_poll": build_gateway_poll,
+    "foundry_discovery": build_foundry_discovery,
 }
 
 
