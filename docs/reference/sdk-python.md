@@ -1,7 +1,7 @@
 # Connector SDK reference (Python)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `d1823e3d70012ba5252528344388870787bb7fb3`. Generated: 2026-11-11.
+> Source commit: `91a1b88fda6823634f0046108a6aa7b3e786a62c`. Generated: 2026-11-13.
 > Sources: `connectors/sdk-python/neurosphere_connector/`.
 
 Package `neurosphere_connector` (connector SDK, read side) and `neurosphere_connector.write` (write path, imported explicitly; it is advisory by default and carries no Azure SDK import). Symbols are the `__all__` of each package, extracted from source with `ast`. Public methods are listed under each class.
@@ -251,6 +251,7 @@ Methods:
 
 - `def matched(self) -> bool`
 - `def mismatched_paths(self) -> tuple[str, ...]`
+- `def unverifiable_paths(self) -> tuple[str, ...]`
 
 ### `WriteConnector`
 
@@ -296,7 +297,7 @@ Methods:
 ### `build_verify_result`
 
 ```python
-def build_verify_result(request: WriteRequest, observed_state: Mapping[str, Any], *, observed_version: str | None=None) -> VerifyResult
+def build_verify_result(request: WriteRequest, observed_state: Mapping[str, Any], *, observed_version: str | None=None, prior_state: Mapping[str, Any] | None=None) -> VerifyResult
 ```
 
 Helper for implementers: ``observed_state`` must come from reading the real target.
@@ -304,7 +305,7 @@ Helper for implementers: ``observed_state`` must come from reading the real targ
 ### `check_diff_against_state`
 
 ```python
-def check_diff_against_state(diff: ProposedDiff, observed_state: Mapping[str, Any]) -> tuple[OperationCheck, ...]
+def check_diff_against_state(diff: ProposedDiff, observed_state: Mapping[str, Any], *, prior_state: Mapping[str, Any] | None=None) -> tuple[OperationCheck, ...]
 ```
 
 Compare each requested operation with the state actually read back from the target.
