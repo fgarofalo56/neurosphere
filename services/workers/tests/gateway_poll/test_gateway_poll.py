@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from neurosphere_workers.ingestion.gateway_poll import (
     STATUS_INGEST_FAILED,
     STATUS_OK,
     STATUS_PARTIAL,
+    STATUS_RATE_LIMITED,
     STATUS_REFUSED_GOVERNMENT,
     GatewayPollSettings,
 )
@@ -109,6 +111,23 @@ async def test_watermark_advances_on_full_coverage_and_feeds_next_tick() -> None
     second = await rig.current(reg)
     assert second.poll_watermark == w2
     assert second.freshness_seconds == 60  # no records this tick: previous value kept, not 0
+
+
+async def test_mid_poll_rate_limit_ingests_completed_slices_and_keeps_status() -> None:
+    w_ok = NOW - LOOKBACK + SLICE
+    throttled = replace(
+        result(all_rows(), next_watermark=w_ok, partial=True),
+        rate_limited=True,
+        retry_after_seconds=9,
+    )
+    rig = Rig(FakeConnector([throttled]))
+    reg = await _seed(rig)
+
+    await rig.poller.tick()  # does not raise
+
+    stored = await rig.current(reg)
+    assert (stored.poll_watermark, stored.poll_status) == (w_ok, STATUS_RATE_LIMITED)
+    assert len(rig.api.events) == len(all_rows()) > 0
 
 
 async def test_partial_slice_stops_the_watermark_and_is_repolled() -> None:
