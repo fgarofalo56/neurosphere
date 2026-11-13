@@ -84,5 +84,8 @@ def positive_control(stack: None) -> None:
     """
     connect = probe("nc", "-z", "-w", "5", "azurite", "10000")
     assert connect.returncode == 0, f"azurite:10000 unreachable from the probe: {connect.stderr}"
-    resolve = probe("nslookup", "azurite")
+    # Absolute name: the probe inherits the host's DNS search list (on GitHub runners
+    # *.internal.cloudapp.net). Docker's embedded DNS answers SERVFAIL for the suffixed name on an
+    # internal network and busybox nslookup stops there instead of trying the bare name.
+    resolve = probe("nslookup", "azurite.")
     assert resolve.returncode == 0, f"probe cannot resolve in-network name: {resolve.stdout}"

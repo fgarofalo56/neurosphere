@@ -234,8 +234,15 @@ def test_audiences(manifest: dict[str, Any]) -> None:
 def test_event_hubs_audience_is_not_an_egress_host(
     manifest: dict[str, Any], values: dict[str, Any]
 ) -> None:
+    audience_host = urlsplit(manifest["audiences"]["eventHubs"]["value"]).hostname
+    assert audience_host == "eventhubs.azure.net"
     for hosts in (manifest["egressHosts"], values["sovereignProfile"]["egressHosts"]):
-        assert not any("eventhubs.azure.net" in h for h in hosts)
+        # Compare whole DNS labels (no substring match): the audience host must not be an egress
+        # host, nor the parent domain of one (for example "*.eventhubs.azure.net").
+        tail = audience_host.split(".")
+        for h in hosts:
+            labels = h.lower().split(".")
+            assert labels[-len(tail) :] != tail, f"audience host in egress allowlist: {h}"
 
 
 def test_helm_audiences_mirror_manifest(manifest: dict[str, Any], values: dict[str, Any]) -> None:

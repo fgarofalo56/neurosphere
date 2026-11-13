@@ -27,7 +27,9 @@ def test_probe_is_alive_and_reaches_an_emulator(positive_control: None) -> None:
 
 @pytest.mark.parametrize("host", HOSTS)
 def test_commercial_host_does_not_resolve_or_connect(positive_control: None, host: str) -> None:
-    resolve = probe("nslookup", host)
+    # Absolute name (trailing dot): busybox nslookup stops at the first search-domain SERVFAIL,
+    # so a relative lookup would test the runner's search suffix, not the corpus host itself.
+    resolve = probe("nslookup", f"{host}.")
     assert resolve.returncode != 0, f"{host} resolved from the isolated network:\n{resolve.stdout}"
     connect = probe("nc", "-z", "-w", "3", host, "443")
     assert connect.returncode != 0, f"unexpected TCP connect to {host}:443"
