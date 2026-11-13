@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 7/14 (50%) | todo 7, merged 7 | sonnet / sonnet | required |
+| [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 11/14 (78%) | todo 1, in-progress 2, merged 11 | sonnet / sonnet | required |
 
 ## Backlog
 
