@@ -20,6 +20,7 @@ https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md (both observ
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Final, Literal
 
@@ -30,6 +31,7 @@ from pydantic import ValidationError as PydanticValidationError
 __all__ = [
     "CloudEventIn",
     "attribute",
+    "attribute_drop_reason",
     "readable_spans_to_otlp",
     "redact_outgoing",
     "telemetry_event_to_cloudevent",
@@ -65,31 +67,56 @@ def redact_outgoing(document: Any) -> tuple[Any, dict[str, int]]:
     """
     # JSON round trip: the guard walks dict/list only, so tuples and other containers must be
     # normalized first or their bodies would pass through untouched.
-    clean, counts = drop_body_fields(json.loads(json.dumps(document)))
+    clean, counts = drop_body_fields(json.loads(json.dumps(document, allow_nan=False)))
     if find_body_fields(clean):  # pragma: no cover - defensive
         raise ValueError("body fields survived redaction")
     return clean, counts
 
 
+def attribute_drop_reason(value: Any) -> str | None:
+    """Why ``attribute`` cannot send ``value`` (array, bytes, null, non_finite), else None."""
+    if value is None:
+        return "null"
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return "bytes"
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return "array"
+    if isinstance(value, float) and not math.isfinite(value):
+        return "non_finite"
+    if isinstance(value, (bool, int, float, str)):
+        return None
+    return "unsupported"
+
+
 def attribute(key: str, value: Any) -> dict[str, Any] | None:
-    """One OTLP/JSON attribute, or None for a value the edge cannot read (non-scalar, None)."""
+    """One OTLP/JSON attribute, or None for a value the edge cannot read.
+
+    Arrays, bytes, None and unsupported types are omitted, as are NaN and +/-Inf (JSON cannot
+    carry them; omitted means unknown, never 0). Callers count the omissions through
+    ``attribute_drop_reason``.
+    """
+    if attribute_drop_reason(value) is not None:
+        return None
     if isinstance(value, bool):
         return {"key": key, "value": {"boolValue": value}}
     if isinstance(value, int):
         return {"key": key, "value": {"intValue": str(value)}}  # int64 is a string in OTLP/JSON
     if isinstance(value, float):
         return {"key": key, "value": {"doubleValue": value}}
-    if isinstance(value, str):
-        return {"key": key, "value": {"stringValue": value}}
-    return None
+    return {"key": key, "value": {"stringValue": str(value)}}
 
 
-def _attributes(items: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+def _attributes(
+    items: Mapping[str, Any] | None, dropped: dict[str, int] | None = None
+) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for key, value in (items or {}).items():
         converted = attribute(str(key), value)
         if converted is not None:
             out.append(converted)
+        elif dropped is not None:
+            reason = attribute_drop_reason(value) or "unsupported"
+            dropped[reason] = dropped.get(reason, 0) + 1
     return out
 
 
@@ -99,6 +126,7 @@ def readable_spans_to_otlp(
     customer_id: str | None = None,
     source_id: str | None = None,
     cloud: str | None = None,
+    dropped_attributes: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """``opentelemetry-sdk`` ``ReadableSpan`` objects -> an OTLP/JSON ``ExportTraceServiceRequest``.
 
@@ -122,7 +150,7 @@ def readable_spans_to_otlp(
             "traceId": format(context.trace_id, "032x"),
             "spanId": format(context.span_id, "016x"),
             "name": span.name,
-            "attributes": _attributes(span.attributes),
+            "attributes": _attributes(span.attributes, dropped_attributes),
         }
         if span.parent is not None:
             otlp["parentSpanId"] = format(span.parent.span_id, "016x")
@@ -137,7 +165,7 @@ def readable_spans_to_otlp(
     return {
         "resourceSpans": [
             {
-                "resource": {"attributes": _attributes(resource_attrs)},
+                "resource": {"attributes": _attributes(resource_attrs, dropped_attributes)},
                 "scopeSpans": [{"spans": group}],
             }
             for resource_attrs, group in groups.values()

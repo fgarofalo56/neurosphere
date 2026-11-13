@@ -1,0 +1,84 @@
+# Collector config for the opt-in compose profile `otel` (see README.md in this directory).
+# Derived from otel-collector.example.yaml: same body-dropping processors, but it exports OTLP/JSON
+# to the composed `api` service's ingest edge over the compose network, and carries the dev
+# producer's source id. DEV ONLY: nothing here is for a hosted environment.
+#
+# The producer credential is read from the collector's environment (NS_PRODUCER_CREDENTIAL, passed
+# through by docker-compose.yml from the host shell). It is never written to this file.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Names mirror neurosphere_core.payload.BODY_FIELD_NAMES (a test pins that).
+  attributes/drop_bodies:
+    actions:
+      - key: prompt
+        action: delete
+      - key: response
+        action: delete
+      - key: gen_ai.prompt
+        action: delete
+      - key: gen_ai.completion
+        action: delete
+      - key: gen_ai.input.messages
+        action: delete
+      - key: gen_ai.output.messages
+        action: delete
+      - key: gen_ai.system_instructions
+        action: delete
+      - key: completion
+        action: delete
+      - key: messages
+        action: delete
+
+  # Anything whose last dotted segment is "prompt" or "response" (for example llm.prompt).
+  transform/drop_body_suffixes:
+    error_mode: ignore
+    trace_statements:
+      - delete_matching_keys(span.attributes, "(?i)^(.*\\.)?(prompt|response)$")
+    metric_statements:
+      - delete_matching_keys(datapoint.attributes, "(?i)^(.*\\.)?(prompt|response)$")
+
+  # The dev producer (infra/dev/ingest-producers.dev.json) is registered for this source only.
+  resource/neurosphere:
+    attributes:
+      - key: neurosphere.source_id
+        value: dev-source
+        action: upsert
+
+  batch:
+    send_batch_size: 200
+    send_batch_max_size: 200
+    timeout: 1s
+
+exporters:
+  otlphttp/neurosphere:
+    traces_endpoint: http://api:8000/api/v1/ingest/otlp/traces
+    metrics_endpoint: http://api:8000/api/v1/ingest/otlp/metrics
+    # The edge accepts application/json only, uncompressed.
+    encoding: json
+    compression: none
+    headers:
+      authorization: "Bearer ${env:NS_PRODUCER_CREDENTIAL}"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 60s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/drop_bodies, transform/drop_body_suffixes, resource/neurosphere, batch]
+      exporters: [otlphttp/neurosphere]
+    metrics:
+      receivers: [otlp]
+      processors: [attributes/drop_bodies, transform/drop_body_suffixes, resource/neurosphere, batch]
+      exporters: [otlphttp/neurosphere]
