@@ -21,6 +21,8 @@ COPY connectors/sdk-python ./connectors/sdk-python
 COPY connectors/reference/azure-monitor ./connectors/reference/azure-monitor
 COPY connectors/reference/apim-gateway ./connectors/reference/apim-gateway
 COPY connectors/reference/foundry-actions ./connectors/reference/foundry-actions
+COPY connectors/reference/foundry ./connectors/reference/foundry
+COPY connectors/reference/azure-billing ./connectors/reference/azure-billing
 RUN uv sync --frozen --no-dev --no-editable --package neurosphere-workers
 
 # python:3.12-alpine (Python 3.12.16), digest observed 2026-11-02

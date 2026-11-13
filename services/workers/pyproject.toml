@@ -9,6 +9,8 @@ dependencies = [
   "neurosphere-connector-azure-monitor",
   "neurosphere-connector-apim-gateway",
   "neurosphere-connector-foundry-actions",
+  "neurosphere-connector-foundry",
+  "neurosphere-connector-azure-billing",
   "pydantic>=2.14,<3",
   "aiohttp>=3.9,<4",
   "httpx>=0.28,<0.29",
@@ -20,6 +22,8 @@ neurosphere-connector = { workspace = true }
 neurosphere-connector-azure-monitor = { workspace = true }
 neurosphere-connector-apim-gateway = { workspace = true }
 neurosphere-connector-foundry-actions = { workspace = true }
+neurosphere-connector-foundry = { workspace = true }
+neurosphere-connector-azure-billing = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
