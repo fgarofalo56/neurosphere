@@ -26,6 +26,7 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "recommendations",
     "evaluation",
     "gateway_poll",
+    "foundry_discovery",
 )
 
 #: Roles that must be named explicitly: ``all`` does not start them. Empty since ``gateway_poll``
