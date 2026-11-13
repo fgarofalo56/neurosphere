@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+
 from neurosphere_core.errors import CapabilityUnavailableError
 
 from neurosphere_connector.write.write_protocol import WriteConnector
@@ -18,6 +20,11 @@ def _check_capable(connector: object) -> WriteConnector:
         raise _reject(
             "write_protocol_not_implemented", "connector does not implement WriteConnector"
         )
+    for method in ("dry_run", "apply", "verify", "rollback"):
+        if not inspect.iscoroutinefunction(getattr(connector, method)):
+            raise _reject(
+                "write_protocol_not_implemented", f"WriteConnector.{method} must be an async def"
+            )
     ws = connector.manifest.write_support
     if not ws.supported or not ws.actions:
         raise _reject("write_support_absent", "manifest declares no write support")
