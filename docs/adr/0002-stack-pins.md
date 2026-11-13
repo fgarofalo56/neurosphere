@@ -233,7 +233,7 @@ only when the package is dev-only (hypothesis, for example).
 | pyparsing | 3.3.3 | MIT | https://pypi.org/project/pyparsing/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pyright | 1.1.414 | MIT | https://pypi.org/project/pyright/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | pytest | 9.1.1 | MIT | https://pypi.org/project/pytest/ | dev-only; no EOL published locally; Dependabot tracks releases |
-| pytest-asyncio | 1.4.1 | Apache-2.0 | https://pypi.org/project/pytest-asyncio/ | dev-only; no EOL published locally; Dependabot tracks releases |
+| pytest-asyncio | 1.4.1.post1 | Apache-2.0 | https://pypi.org/project/pytest-asyncio/ | dev-only; no EOL published locally; Dependabot tracks releases |
 | python-dotenv | 1.2.4 | BSD-3-Clause | https://pypi.org/project/python-dotenv/ | runtime; no EOL published locally; Dependabot tracks releases |
 | python-multipart | 0.0.32 | Apache-2.0 | https://pypi.org/project/python-multipart/ | runtime; 0.x: minor releases may break; no support window recorded |
 | pytokens | 0.4.1 | MIT | https://pypi.org/project/pytokens/ | dev-only; 0.x: minor releases may break; no support window recorded |
