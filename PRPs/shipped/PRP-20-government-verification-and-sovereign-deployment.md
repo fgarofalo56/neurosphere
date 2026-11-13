@@ -1,10 +1,11 @@
 ---
 name: PRP-20-government-verification-and-sovereign-deployment
-status: active
+status: shipped
 priority: P1
 order: 14
 started: 2026-11-12
-pr: 97
+shipped: 2026-11-13
+pr: 216
 branch: prp-20-round2
 review: required
 created: 2026-10-08
@@ -296,6 +297,47 @@ NS_LIVE_APPROVED=1 python scripts/gates/g02_profile_appservice.py    # operator-
 - Item 2 ownership extended (user-approved 2026-10-22) to the two PRP-08 handoff markers in `tests/unit/infra/test_helm_render.py`: `test_extension_points_left_to_later_prps` now asserts `values-government.yaml` exists, and `test_no_literal_azure_endpoints` excludes that one file (covered by `tests/unit/government_profile/`).
 
 ## Completion note (filled at ship)
+
+### Round 2 (audit gap closure, items 5-9)
+- Date: 2026-11-13. PR #216 (merge 3cfd406). Round 1 was PR #97.
+- Merged commits:
+  - Item 6: 6e94eb6 (merge fb36944).
+  - Item 5: 67ab6e4 (merge 5a12345).
+  - Item 8: c023444 (merge 7d690e7).
+  - Item 9: 285c904 (merge 6d01ae3).
+  - Item 7: fddd298 (merge 5eaacf2), plus fix-forward 954ce18 after the first CI run.
+- Every item was verified by the orchestrator and reviewed once (all APPROVED).
+- CI on PR #216: all 33 checks green on the second run.
+  - `python` took 22m and now runs with helm 4.3.0 and az bicep installed, so the Government helm/az tests run instead of skipping.
+  - The new `egress blocked (compose probe)` job: 41 passed (probe positive control plus 40 Commercial corpus hosts, each failing DNS and TCP from the `internal: true` network).
+- Closed #98, #99, #100, #101.
+- Deviations from blueprint and why:
+  - Item 7 numbering. The CI item was drafted as "item 10" and renumbered to 7 to match the approved plan.
+  - Item 6. `GOV_SUFFIX` exists in two test files, so item 6 owns the `government_profile` copy and item 7 the `egress` copy. The PE CIDR already matched the Bicep default (10.40.1.0/24), so only the tie test was added. Register `retrieved_on` stays on the audit-scope source; the 2026-11-12 audience evidence is in the row notes, because the schema forbids extra fields.
+  - Item 5. DoD regions now fail profile validation. The analytics registry surfaces this as a generic `InvalidSchemaError` instead of disabled rows (follow-up #212).
+  - Item 7 fix-forward (954ce18), after the first CI run:
+    - The probe inherits the runner's DNS search list (`*.internal.cloudapp.net`). Docker's embedded DNS answers SERVFAIL for the suffixed name on an internal network, and busybox `nslookup` stops there, so lookups now use absolute names (trailing dot).
+    - CodeQL flagged `py/incomplete-url-substring-sanitization` on the Event Hubs audience check, which now compares DNS labels.
+  - Item 8. The what-if noise allow-list was not built, because it needs real Government what-if output (follow-up #213).
+- Descoped items: none.
+- Live gates: OPEN. The G02 profile AKS / App Service live runs need a Government subscription, and D7 still holds (user reconfirmed 2026-11-12).
+- Also OPEN:
+  - The in-cluster egress proof. The static and compose proofs are not that proof.
+  - Hostname (FQDN) egress enforcement, which is a customer firewall control (user decision 2026-11-12; responsibility-matrix row).
+  - The Cosmos DB Government data-plane audience. It is not stated on any first-party page checked on 2026-11-12.
+  - Fabric availability in GCC and DoD.
+  - G01 Government integration evidence.
+  - G02 agency ATO, which belongs to the authorizing official.
+- Corners cut, stated plainly:
+  - The compose egress suite was never run locally, because another session's compose stack was up and the project name is shared. Its first and only runs were in CI.
+  - Snyk Code still reports the g01 PT lows: it does not model `is_relative_to`. The reviewer traced every sink and found the confinement real (#214).
+- Follow-ups:
+  - #212: align copilot, analytics and UI with the region allowlist.
+  - #213: G02 teardown hardening.
+  - #214: justified Snyk ignore for the g01 PT lows.
+  - #215: egress-compose job hardening.
+
+### Round 1
 - Date: 2026-10-22
 - Merged commits: PR #97 (merge e00d606). Item 2: 34d2deb, c5b567c, 3ddde6d (merge f2d2aaf). Item 1: 2e84afa (merge 8f5435e). Item 4: b6b79a3 (merge 083d5d2). Item 3: de8c5cc (merge 4990f12). Local `verify-gates -Mode full` PASS (lint, typecheck, 6709 tests, build); CI on PR #97 all green.
 - Deviations from blueprint and why:
