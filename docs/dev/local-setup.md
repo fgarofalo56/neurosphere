@@ -28,6 +28,8 @@ Pins are authoritative in [ADR-0002](../adr/0002-stack-pins.md).
 
 ### One-time setup
 
+Clone the repository first (`git clone https://github.com/fgarofalo56/neurosphere.git`, then `cd neurosphere`) and run everything below from its root. Node must be 24.x; a newer Node only prints `Unsupported engine` warnings from pnpm.
+
 ```bash
 uv sync && pnpm install && bash scripts/install-git-hooks.sh
 ```
