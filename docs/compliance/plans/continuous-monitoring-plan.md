@@ -5,7 +5,7 @@
 > **Statement:** NeuroSphere is not FedRAMP authorized; the authorizing official decides. This document supports the customer security team and the authorizing official. It is not an assessment, makes no authorization, ATO, parity or certification claim, and carries no authorization date or compliance score.
 > **Provenance:** PRP-23 item 4. Customer-owned inputs are recorded as `customer` and OPEN; they are never guessed here.
 
-Links: [incident response plan](incident-response-plan.md), [change management plan](change-management-plan.md), [contingency plan](contingency-plan.md), [boundary and data-flow diagrams](boundary-and-data-flow.md), [responsibility matrix](../responsibility-matrix.md), [threat model](../../security/threat-model.md), [DoD checklist](../../release/dod-checklist.md), [SLO notes](../../ops/slo.md). Security runbooks: [rotation](../../security/runbooks/secret-rotation.md), [incident response](../../security/runbooks/incident-response-plan.md).
+Links: [incident response plan](incident-response-plan.md), [change management plan](change-management-plan.md), [contingency plan](contingency-plan.md), [boundary and data-flow diagrams](boundary-and-data-flow.md), [responsibility matrix](https://github.com/fgarofalo56/neurosphere/blob/main/docs/compliance/responsibility-matrix.md), [threat model](https://github.com/fgarofalo56/neurosphere/blob/main/docs/security/threat-model.md), [DoD checklist](../../release/dod-checklist.md), [SLO notes](../../ops/slo.md). Security runbooks: [rotation](../../security/runbooks/secret-rotation.md), [incident response](../../security/runbooks/incident-response-plan.md).
 
 ## 1. What is monitored
 

@@ -5,7 +5,7 @@
 This page does not restate disaster recovery. The owning documents are:
 
 - Procedure, targets, measurements and caveats: [dr-runbook.md](../ops/dr-runbook.md). Gate G07 (workload, SLO, DR) stays OPEN; measured values there are from compose and are not representative of production.
-- Scripts and safety rules for backup, restore and the drill: [infra/dr/README.md](../../infra/dr/README.md).
+- Scripts and safety rules for backup, restore and the drill: [infra/dr/README.md](https://github.com/fgarofalo56/neurosphere/blob/main/infra/dr/README.md).
 - Contingency planning: [contingency-plan.md](../compliance/plans/contingency-plan.md).
 
 Emulator drill (local, synthetic data only):
