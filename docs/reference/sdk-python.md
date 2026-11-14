@@ -1,7 +1,7 @@
 # Connector SDK reference (Python)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `91a1b88fda6823634f0046108a6aa7b3e786a62c`. Generated: 2026-11-13.
+> Source commit: `67597e4b1151427218b932f0756138556fecd1d4`. Generated: 2026-11-14.
 > Sources: `connectors/sdk-python/neurosphere_connector/`.
 
 Package `neurosphere_connector` (connector SDK, read side) and `neurosphere_connector.write` (write path, imported explicitly; it is advisory by default and carries no Azure SDK import). Symbols are the `__all__` of each package, extracted from source with `ast`. Public methods are listed under each class.
@@ -171,7 +171,7 @@ Assemble and validate a manifest, deriving ``advisory``, ``write_support`` and a
 async def check_connector_contract(connector: Any) -> list[Violation]
 ```
 
-Check manifest, health, rate-limit, coverage and freshness reporting.
+Check manifest, health, rate-limit, coverage and freshness reporting (read profile).
 
 ### `manifest_issues`
 
