@@ -16,6 +16,8 @@ FORBIDDEN_NAMES = ("DECISIONS-LOG.md", "PRD.md")
 # Top-level docs/ entries that exclude_docs may re-include.
 ALLOWED_TOP_LEVEL = {
     "index.md",
+    # Theme CSS/JS plus brand files. `/*` also matches theme files, so this must stay.
+    "assets",
     "adr",
     "runbooks",
     "walkthroughs",
@@ -165,6 +167,15 @@ def test_internal_pages_are_not_built() -> None:
         *UNPUBLISHED_FILES,
     ):
         assert other not in built
+
+
+def test_theme_assets_are_published_and_docs_assets_hold_no_pages() -> None:
+    """The site shipped unstyled once: `/*` in exclude_docs also dropped Material's assets."""
+    lines = [ln.strip() for ln in _config()["exclude_docs"].splitlines() if ln.strip()]
+    assert "!/assets/" in lines, "theme CSS/JS under assets/ would be excluded"
+    assert not list((DOCS / "assets").rglob("*.md")), "docs/assets/ is for static files only"
+    for css in _config().get("extra_css", []):
+        assert (DOCS / css).is_file(), f"extra_css {css} missing from docs/"
 
 
 def test_strict_mode_is_on() -> None:
