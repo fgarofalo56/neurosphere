@@ -21,9 +21,9 @@ import asyncio
 import functools
 import json
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, date, datetime
-from typing import Any, ParamSpec, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import httpx
 from azure.core.credentials_async import AsyncTokenCredential
@@ -125,15 +125,18 @@ class FoundryModelSwapAdvisoryConnector(AdvisoryWriteMixin):
         return _manifest(advisory=True)
 
 
-P = ParamSpec("P")
-R = TypeVar("R")
+_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 
-def _tracked(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
-    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise."""
+def _tracked(fn: _F) -> _F:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
+    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise.
+
+    Typed ``_F -> _F`` so the decorated method keeps its exact ``async def`` type and still
+    satisfies the ``WriteConnector`` protocol.
+    """
 
     @functools.wraps(fn)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         tracker: HealthTracker = cast(Any, args[0])._tracker
         try:
             result = await fn(*args, **kwargs)
@@ -143,7 +146,7 @@ def _tracked(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:  # noq
         tracker.record_success()
         return result
 
-    return wrapper
+    return cast(_F, wrapper)
 
 
 class FoundryModelSwapConnector:

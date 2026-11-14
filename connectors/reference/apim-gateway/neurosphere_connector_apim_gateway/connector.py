@@ -20,11 +20,10 @@ repo-wide test to this package.
 from __future__ import annotations
 
 import functools
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 from typing import (
     Any,
     Final,
-    ParamSpec,
     Protocol,
     TypeVar,
     cast,
@@ -103,8 +102,7 @@ ACTION_KINDS: Final = (
 # v2 tiers are unverified in Government (PRP-34 gotcha); manage stays disabled until this row
 # says ``available``.
 GOVERNMENT_ROW: Final = "apim.backend_pool.government.any.standard_v2"
-P = ParamSpec("P")
-R = TypeVar("R")
+_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 #: Refusal when a diff grammar does not belong to the intent's action kind (PRP-34 item 10).
 ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
@@ -165,11 +163,15 @@ class ApimGatewayAdvisoryConnector(AdvisoryWriteMixin):
         return _manifest(advisory=True)
 
 
-def _tracked(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
-    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise."""
+def _tracked(fn: _F) -> _F:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
+    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise.
+
+    Typed ``_F -> _F`` so the decorated method keeps its exact ``async def`` type and still
+    satisfies the ``WriteConnector`` protocol.
+    """
 
     @functools.wraps(fn)
-    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         tracker: HealthTracker = cast(Any, args[0])._tracker
         try:
             result = await fn(*args, **kwargs)
@@ -179,7 +181,7 @@ def _tracked(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:  # noq
         tracker.record_success()
         return result
 
-    return wrapper
+    return cast(_F, wrapper)
 
 
 class ApimGatewayConnector:
