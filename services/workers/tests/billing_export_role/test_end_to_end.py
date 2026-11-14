@@ -67,7 +67,7 @@ class EdgeStandIn:
     def rig_time() -> Any:
         from datetime import UTC, datetime
 
-        return datetime(2026, 10, 19, 12, 0, 0, tzinfo=UTC)
+        return datetime(2026, 11, 19, 12, 0, 0, tzinfo=UTC)
 
 
 async def test_billing_export_surfaces_as_reconciliation_billing_source() -> None:
