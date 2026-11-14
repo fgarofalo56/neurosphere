@@ -252,7 +252,7 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 | 8 | todo | | sonnet | | 2026-11-14 |
 | 9 | todo | | sonnet | | 2026-11-14 |
 | 10 | todo | prp-25-round2 | opus | | 2026-11-14 |
-| Pages | todo | (repo setting) | opus | | 2026-11-14 |
+| Pages | merged | (repo setting) | opus | Pages enabled 2026-11-14 via `gh api -X POST repos/fgarofalo56/neurosphere/pages -f build_type=workflow` (public, https enforced); main docs run 43624135046 re-run: build + deploy success; https://fgarofalo56.github.io/neurosphere/ returns 200 (home + ADRs). First deploy no longer OPEN | 2026-11-14 |
 
 Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch history. Gates: 96 PRP tests pass, `validate_planning.py` PASS, `mkdocs build --strict` PASS, `verify-gates -Mode full` PASS (4/4 gates; first run failed only on a broken pnpm shim under Node 26, fixed by installing pnpm@11.17.0 globally).
 
