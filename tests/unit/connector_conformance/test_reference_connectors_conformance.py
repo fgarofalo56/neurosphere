@@ -19,7 +19,11 @@ from typing import Any
 import httpx
 import pytest
 from neurosphere_connector import CredentialBroker, StaticCredentialResolver
-from neurosphere_connector.contract_kit import Violation, check_connector_contract
+from neurosphere_connector.contract_kit import (
+    Violation,
+    check_connector_contract,
+    check_write_connector_contract,
+)
 from neurosphere_connector_apim_gateway import ApimGatewayConnector, InMemoryApplyRecordStore
 from neurosphere_connector_azure_billing import AzureBillingConnector
 from neurosphere_connector_azure_monitor import AzureMonitorConnector
@@ -166,30 +170,66 @@ def _foundry_actions() -> Any:
     )
 
 
-# Write connectors implement the write-path protocol (plan/dry_run/apply/verify/rollback) and are
-# not BaseConnector subclasses: they expose no health/coverage/freshness. Reported, not fixed here.
-_WRITE_GAP = "health_missing, coverage_missing, freshness_missing - reported to orchestrator"
-
-_CASES: list[Any] = [
+# Read connectors run the read profile; write connectors (WriteConnector protocol, not
+# BaseConnector) run the write profile. Both assert no violations, so a construction error fails.
+_READ_CASES: list[Any] = [
     pytest.param(_otel, id="otel-generic"),
     pytest.param(_azure_monitor, id="azure-monitor"),
     pytest.param(_foundry, id="foundry"),
     pytest.param(_azure_billing, id="azure-billing"),
-    pytest.param(
-        _apim_gateway, id="apim-gateway", marks=pytest.mark.xfail(strict=True, reason=_WRITE_GAP)
-    ),
-    pytest.param(
-        _foundry_actions,
-        id="foundry-actions",
-        marks=pytest.mark.xfail(strict=True, reason=_WRITE_GAP),
-    ),
 ]
+_WRITE_CASES: list[Any] = [
+    pytest.param(_apim_gateway, id="apim-gateway"),
+    pytest.param(_foundry_actions, id="foundry-actions"),
+]
+_CASES: list[Any] = [*_READ_CASES, *_WRITE_CASES]
 
 
-@pytest.mark.parametrize("factory", _CASES)
-async def test_reference_connector_passes_the_contract_kit(factory: Callable[[], Any]) -> None:
+@pytest.mark.parametrize("factory", _READ_CASES)
+async def test_read_connector_passes_the_read_profile(factory: Callable[[], Any]) -> None:
     violations = await check_connector_contract(factory())
     assert violations == [], [(v.code, v.message) for v in violations]
+
+
+@pytest.mark.parametrize("factory", _WRITE_CASES)
+async def test_write_connector_passes_the_write_profile(factory: Callable[[], Any]) -> None:
+    connector = factory()
+    violations = await check_write_connector_contract(connector)
+    assert violations == [], [(v.code, v.message) for v in violations]
+    health = await connector.health()
+    assert health.state.value == "unknown"
+
+
+def _without_health(factory: Callable[[], Any]) -> Any:
+    """A real write connector with its health() removed."""
+    connector = factory()
+    cls = type("NoHealth", (type(connector),), {"health": None})
+    connector.__class__ = cls
+    return connector
+
+
+@pytest.mark.parametrize("factory", _WRITE_CASES)
+async def test_write_profile_fails_a_write_connector_without_health(
+    factory: Callable[[], Any],
+) -> None:
+    codes = {v.code for v in await check_write_connector_contract(_without_health(factory))}
+    assert "health_missing" in codes
+
+
+@pytest.mark.parametrize("factory", _READ_CASES)
+async def test_write_profile_fails_a_read_connector(factory: Callable[[], Any]) -> None:
+    codes = {v.code for v in await check_write_connector_contract(factory())}
+    assert "write_protocol_missing" in codes
+
+
+async def test_write_profile_fails_an_advisory_write_connector() -> None:
+    connector = _apim_gateway()
+    advisory = connector.manifest.model_copy(update={"advisory": True})
+    connector.__class__ = type(
+        "AdvisoryManifest", (type(connector),), {"manifest": property(lambda _self: advisory)}
+    )
+    codes = {v.code for v in await check_write_connector_contract(connector)}
+    assert "manifest_advisory" in codes
 
 
 def test_all_six_reference_connectors_are_covered() -> None:
