@@ -32,19 +32,58 @@ passes the support thresholds (`min_score`, `min_coverage`) the response is an e
 abstention (`abstained: true`, no citations). Every non-abstained answer cites docs URLs.
 
 Errors use one envelope: `{"error":{"code","message"}}`. Codes: `rate_limited` (429, with
-`Retry-After`), `request_too_large` (413), `invalid_request` (422).
+`Retry-After`), `request_too_large` (413), `invalid_request` (422), `model_unavailable` (503).
 
 ## Model client
 
-Generation goes through the `ModelClient` protocol. The default is `StubModel`, a
-deterministic extractive client that quotes the top passage; tests use it, and there are no
-paid calls in tests or CI. `model_endpoint` and `model_api_key_env` (the NAME of an
-environment variable) are reserved for an operator-configured provider; no provider client
-ships yet, so setting `model_endpoint` fails at startup with a clear error.
+Generation goes through the `ModelClient` protocol. With no `model_endpoint` the default is
+`StubModel`, a deterministic extractive client that quotes the top passage; tests use it, and
+there are no paid calls in tests or CI. Setting `model_endpoint` switches to
+`AzureOpenAIModel`, which calls the Azure OpenAI v1 Chat Completions API
+(`POST {endpoint}/openai/v1/chat/completions`, `model` = your deployment name).
 
-Corpus text is untrusted input. The service has no tools, runs no code from the corpus and
-makes no outbound requests. `build_prompt` fences passages and tells the model to treat
-them as data.
+Hosting the service and approving the model deployment are operator actions; this repository
+does not deploy either. Live checks need `NS_LIVE_APPROVED=1` (see
+`tests/test_live_model_smoke.py`) and are reported OPEN when they did not run.
+
+Model settings (all `DOCS_ASSISTANT_` environment variables):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `model_endpoint` | unset (stub) | HTTPS Azure OpenAI endpoint; requires `model_deployment` |
+| `model_deployment` | unset | Deployment name sent as `model` |
+| `cloud` | `commercial` | `commercial` or `government`; selects the host allowlist and token scope |
+| `model_auth` | `entra` | `entra` (bearer token) or `key` (`api-key` header) |
+| `model_api_key_env` | unset | NAME of the environment variable holding the key; required for `key` |
+| `model_timeout_seconds` | 20 | Per-request timeout |
+| `model_max_completion_tokens` | 1024 | Sent as `max_completion_tokens`; reasoning tokens count against it, so keep headroom |
+| `model_reasoning_effort` | `minimal` | `minimal`, `low`, `medium`, `high`, or unset to omit the field |
+
+Auth. `entra` uses `azure.identity.aio.DefaultAzureCredential` (managed identity in Azure)
+with scope `https://cognitiveservices.azure.com/.default`, or the `.azure.us` scope when
+`cloud=government`; grant the identity the `Cognitive Services User` role. `key` reads the key
+from the named environment variable at call time. The key is never a config value and is never
+logged or echoed in an error.
+
+Endpoint allowlist. The endpoint must use HTTPS and its parsed hostname must end with a
+dotted suffix allowed for the cloud. Commercial: `.openai.azure.com`, `.services.ai.azure.com`,
+`.cognitiveservices.azure.com`. Government: `.openai.azure.us`, `.cognitiveservices.azure.us`.
+Anything else (other hosts, lookalikes such as a host that merely contains the Azure name,
+plain HTTP, embedded userinfo, a Commercial host under `cloud=government`) fails at startup.
+
+Request and result handling. Only `model`, `messages`, `max_completion_tokens` and, when set,
+`reasoning_effort` are sent: no `temperature`, no `tools` or `functions`. The system message
+holds the rules; the user message holds the fenced passages and the question. If the model
+replies `ABSTAIN` (or starts with it) or the provider reports `content_filter`, the response
+is the normal abstention (`abstained: true`, no citations). Citations always come from the
+retrieved chunks, never from model text. Any non-2xx status, timeout, transport error,
+credential failure, malformed JSON or an empty completion (for example the budget was spent on
+reasoning) returns `503` with code `model_unavailable`. The service never falls back to the
+stub silently, and the error text never includes the key, a token or the provider body.
+
+Corpus text is untrusted input. The service has no tools and runs no code from the corpus. Its
+only outbound request is the configured model call. `build_messages` escapes angle brackets in
+passages so they cannot close the fence, and tells the model to treat them as data.
 
 ## Configuration
 
@@ -54,7 +93,7 @@ unknown settings are rejected. Defaults:
 | Setting | Default | Meaning |
 |---|---|---|
 | `site_dir` | required | Built-site directory |
-| `docs_base_url` | `https://docs.example.invalid/` | Public base URL used for citations; set it to the real site |
+| `docs_base_url` | `https://fgarofalo56.github.io/neurosphere/` | Public base URL used for citations |
 | `rate_limit_requests` / `rate_limit_window_seconds` | 20 / 60 | Sliding window per client; a configuration default, not a performance claim |
 | `trusted_proxy_hops` | 0 | 0 uses the socket peer and ignores `X-Forwarded-For`; N uses the Nth entry from the right |
 | `max_body_bytes` / `max_question_chars` | 2048 / 500 | Request size limits |
