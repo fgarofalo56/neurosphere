@@ -23,7 +23,7 @@ PART1 = "exports/run/part1.csv"
 HEADER = "Date,CostInBillingCurrency,BillingCurrencyCode,ResourceId,MeterId\n"
 R1 = "/subscriptions/s1/resourceGroups/rg/providers/Microsoft.CognitiveServices/accounts/aoai"
 R2 = "/subscriptions/s1/resourceGroups/rg/providers/Microsoft.Search/searchServices/search"
-NOW = datetime(2026, 10, 19, 12, 0, 0, tzinfo=UTC)
+NOW = datetime(2026, 11, 19, 12, 0, 0, tzinfo=UTC)
 
 CSV0 = (
     HEADER

@@ -153,3 +153,42 @@ async def test_dateless_rows_are_reported_on_the_tick_status() -> None:
     poller = make_poller(source, ingest)
     await poller.tick()
     assert poller.last_status.rows_dropped_no_date == 1
+
+
+def _split_month_source() -> FakeBlobSource:
+    header = "Date,CostInBillingCurrency,BillingCurrencyCode,ResourceId,MeterId\n"
+    csv = header + "2026-10-30,1.00,USD,/r/a,m1\n" + "2026-11-02,2.00,USD,/r/a,m1\n"
+    return FakeBlobSource(manifest([PART0], rows=2), {PART0: csv.encode()})
+
+
+async def test_previous_month_day_is_posted_current_month_day_is_held() -> None:
+    ingest = FakeIngest()
+    poller = make_poller(_split_month_source(), ingest)  # clock: 2026-11-19
+    await poller.tick()
+    assert poller.last_status.status == STATUS_OK
+    assert poller.last_status.posted == 1
+    assert poller.last_status.held_open_period == 1
+    records = _records(ingest)
+    assert [str(getattr(r.kind, "value", r.kind)) for r in records] == ["invoiced"]
+    assert ingest.events[0]["data"]["billing_period"]["start_date"] == "2026-10-30"
+
+
+async def test_held_days_post_once_the_month_closes_without_duplicates() -> None:
+    from datetime import UTC, datetime
+
+    now = [datetime(2026, 11, 19, tzinfo=UTC)]
+    ingest = FakeIngest()
+    poller = make_poller(_split_month_source(), ingest)
+    poller._clock = lambda: now[0]
+    await poller.tick()
+    await poller.tick()  # same month, same manifest: skipped
+    assert poller.last_status.status == STATUS_UNCHANGED
+    assert len(ingest.events) == 1
+    now[0] = datetime(2026, 12, 1, tzinfo=UTC)
+    await poller.tick()
+    assert poller.last_status.held_open_period == 0
+    ids = [e["id"] for e in ingest.events]
+    assert len(ids) == 3  # October day re-sent (deduped downstream) plus the now-closed day
+    assert len(set(ids)) == 2
+    await poller.tick()
+    assert poller.last_status.status == STATUS_UNCHANGED

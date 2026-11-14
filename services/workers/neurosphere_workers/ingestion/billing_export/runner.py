@@ -4,9 +4,18 @@ Each daily per-resource aggregate becomes one ``CostRecord`` (``kind=invoiced``,
 ``observation_source=billing``, ``billing_period`` = that usage day, ``usage_start``/``usage_end``
 = that day's bounds) sent as a ``com.neurosphere.cost.v1`` CloudEvent through the ingest edge.
 It carries no request id, so the ledger folds it into an ``AllocationRecord`` and the aggregates
-report it as the reconciliation ``billing`` source (granularity ``vendor``, the coarsest label
-the aggregate model has for request-less billing). Nothing is apportioned below the export's
-day-per-resource granularity.
+report it as the reconciliation ``billing`` source (the outbox emits granularity
+``vendor_period``, which the aggregates map to ``vendor``, the coarsest label the aggregate model
+has for request-less billing). Nothing is apportioned below the export's day-per-resource
+granularity.
+
+Closed months only: an actual-cost export for the still-open billing month is not an invoice (late
+usage restates those days), so only days whose calendar month (UTC, from the injectable clock) ended
+before the current month are posted as ``invoiced``. The export rows carry no billing-period end, so
+the calendar month is the rule. Open-month days are held back and counted in
+``last_status.held_open_period``; they are never posted as ``estimated`` (that needs a price
+version and billing has none). Restatement limit: the first amount posted for a closed day wins,
+because ids exclude the amount.
 
 Rules:
 
@@ -18,7 +27,10 @@ Rules:
   Limit: a later restatement of an already-ingested day keeps the first amount.
 * The checkpoint is the SHA-256 of the manifest bytes of the last export fully posted. It is held
   in memory: a restart re-posts once, which the dedupe makes harmless. It advances only when the
-  export was complete and every record was accepted.
+  export was complete and every record was accepted. While open-period days were held, the
+  checkpoint also records the (year, month) of the clock, so an unchanged manifest is skipped only
+  within that month; once the clock enters a new month the export is re-read and the now-closed
+  days are posted (already-posted days dedupe on their deterministic ids).
 
 An upstream failure (blob 429/5xx, ingest 5xx) never raises out of :meth:`tick`; the next tick
 retries.
@@ -82,6 +94,7 @@ class TickStatus:
     skipped_unmappable: int = 0
     rows_dropped_no_date: int = 0
     blobs_missing: tuple[str, ...] = ()
+    held_open_period: int = 0
 
 
 def _utcnow() -> datetime:
@@ -194,6 +207,7 @@ class BillingExportPoller:
         self._batch = batch_size
         self._clock = clock
         self._posted_manifest: str | None = None
+        self._held_month: tuple[int, int] | None = None  # set while open-period days were held
         self.last_status = TickStatus()
 
     async def tick(self) -> None:
@@ -211,15 +225,23 @@ class BillingExportPoller:
         export = result.export
         status.rows_dropped_no_date = result.rows_dropped_no_date
         status.blobs_missing = export.blobs_missing
-        if export.manifest_sha256 and export.manifest_sha256 == self._posted_manifest:
+        now = self._clock().astimezone(UTC)
+        month = (now.year, now.month)
+        if (
+            export.manifest_sha256
+            and export.manifest_sha256 == self._posted_manifest
+            and self._held_month in (None, month)
+        ):
             status.status = STATUS_UNCHANGED
             return
 
-        now = self._clock()
         events: list[dict[str, Any]] = []
         for agg in result.aggregates:
             if agg.cost is None:
                 status.skipped_null_cost += 1
+                continue
+            if (agg.usage_date.year, agg.usage_date.month) >= month:
+                status.held_open_period += 1  # open billing month: not an invoice yet
                 continue
             record = to_cost_record(
                 agg,
@@ -259,8 +281,17 @@ class BillingExportPoller:
                     "complete": export.complete,
                 },
             )
+        if status.held_open_period:
+            logger.info(
+                "billing export open-period days held (closed months only; first amount wins)",
+                extra={
+                    "event": "billing_export.held_open_period",
+                    "held_open_period": status.held_open_period,
+                },
+            )
         if not export.complete or not accepted_all:
             status.status = STATUS_INCOMPLETE if not export.complete else STATUS_INGEST_FAILED
             return  # no checkpoint: the next tick re-reads, replays are deduped
         self._posted_manifest = export.manifest_sha256 or None
+        self._held_month = month if status.held_open_period else None
         status.status = STATUS_OK
