@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 16/16 (100%) | merged 16 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
@@ -26,6 +24,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [PRP-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-11-14 | #221 |
 | [PRP-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-14 | #223 |
 | [PRP-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-11-13 | #216 |
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |

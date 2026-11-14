@@ -1,10 +1,11 @@
 ---
 name: PRP-09-connector-sdk-and-reference-connectors
-status: active
+status: shipped
 priority: P2
 order: 4
 started: 2026-11-13
-pr: 45
+shipped: 2026-11-14
+pr: 221
 branch: prp-09-round2
 review: required
 created: 2026-10-08
@@ -397,6 +398,47 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
   - G04 OPEN: no live contract run for Azure Monitor, Foundry or billing (`NS_LIVE_APPROVED=1` not used; no `docs/evidence/G04/`); Government endpoints are configuration only; unbuilt NS-09 targets open by design. Recorded in docs/RESEARCH-AND-GATES.md.
   - G12: `tests/integration/connectors/` (1 test) passed against the compose emulators locally; delta recorded — Entra producer identity is not reproducible on the Event Hubs emulator, the edge checks the producer credential instead.
 - Follow-ups: #46 (Azure Monitor watermark advances past truncated slices: data-loss path, fix before any live G04 run), #47 (WriteConnector verify strictness: type coercion, move/copy, target version enforced by PRP-17 executor), #48 (Python SDK hardening), #49 (OTel connector edge cases), #50 (TS SDK polish). Item 5 non-blocking review findings, not filed separately: billing `blobs_expected` equals blobs read so missing partitions show only via the row-count check; rows without a date are dropped (counted, not stated in the variance report); `gzip.decompress` has no size cap; `Decimal` accepts underscores and non-ASCII digits in cost cells.
+
+### Round 2 (items 7-15)
+- Date: 2026-11-14.
+- Merged commits: PR #221, merge 485b739.
+  - Item merges: 9126742 (7), fc61837 (8), 91a1b88 (9), 69bdb83 (10), 0a71aab (11), 5a071ae (12), e38fcf0 (15), and 0812515 (13 and 14 together).
+  - Orchestrator commits:
+    - 8e6f544: round-2 plan.
+    - 9fc4ea4: reference regeneration and the ADR-0002 collector pin.
+    - ecb4859: workers dependencies, Dockerfile and relock.
+    - ab92727: `_tracked` typing fix-forward.
+    - be986fd: coverage, G04/G12 and board docs.
+    - bb22079: gitleaksignore.
+    - d02c2e0: copied the connectors into every `uv --frozen` image.
+- What a stack can do now:
+  - Foundry discovery runs as the `foundry_discovery` role and writes create-if-absent draft catalog entities.
+  - The Azure billing export runs as the `billing_export` role. It writes closed-month invoiced CostRecords, which appear in the reconciliation view's `billing` source.
+  - The OTel collector runs as the opt-in compose profile `otel`.
+  - Azure Monitor no longer skips truncated slices (#46).
+  - #47-#50 are closed by items 8-10.
+  - The contract kit runs against all six reference connectors. Write connectors use a write profile.
+- Deviations from blueprint and why:
+  - Item 13's two strict xfails exposed a real gap: the write connectors have no health, coverage or freshness. The user chose a write profile, added as item 14. Item 13's one review blocker (the xfail hid construction errors) was reworked inside item 14 and approved there.
+  - Item 15 is a fix-forward of item 12's review. Open-month actual cost was being labelled `invoiced`. Now only closed calendar months (UTC) are posted, and open-month days are held and counted. The Haiku pass confirmed the fix.
+  - Item 11 added no project to the deployment id, to stay aligned with the PRP-17 swap-target scheme. Two projects with the same deployment name collide, first writer wins (#219).
+  - Billing granularity shows as `vendor` in reconciliation, because the aggregate model has no request-less day/resource label. Amounts land per usage day.
+  - Orchestrator fixes:
+    - Per-item pyright was scoped, so repo-wide pyright caught 4 `_tracked` typing errors after merge (ab92727).
+    - CI's api image failed because the lock now references the foundry and billing connectors but only the workers prod Dockerfile copied them. All five `uv --frozen` images were fixed (d02c2e0).
+  - Agents cannot edit `.env.example`. The operator ran `temp/add-prp09-r2-env.sh`, and the change is committed in the close-out PR.
+- Descoped items: none.
+- Live items run or OPEN:
+  - G04 OPEN: no live provider run, and no `docs/evidence/G04/`. The #46 blocker for a live run is fixed. The live run and the hosted wiring are in #220.
+  - G12 delta unchanged: the OTel collector compose test passed locally against the Event Hubs emulator, which has no Entra producer identity. CI does not run the `integration` marker.
+- Corners cut, stated:
+  - Snyk Code did NOT run on items 12, 14 and 15. The MCP session logged out and then Snyk was down for maintenance. Items 7-11 scanned at 0 issues. CodeQL and full-history gitleaks are green on #221.
+  - One of three local cross-test runs for item 12 had a single failure that did not reproduce. The failing test was not captured. This is consistent with the known WinError 10055 local flake.
+- Verification:
+  - The combined local post-merge run passed: 6821 tests, 0 failed.
+  - Repo-wide ruff, format and pyright are clean.
+  - PR #221 CI: 33 pass, 4 skipped (main-only jobs).
+- Follow-ups: #218 (data-path connectors; fix the vault-host suffix check first), #219 (SDK, write verify, Foundry ids, kit), #220 (hosted wiring for the new roles plus the G04 live run). Snyk scans for items 12, 14 and 15 when the service is back.
 
 ## Audit 2026-11-04
 
