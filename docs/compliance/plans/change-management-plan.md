@@ -5,7 +5,7 @@
 > **Statement:** NeuroSphere is not FedRAMP authorized; the authorizing official decides. This document supports the customer security team and the authorizing official. It is not an assessment, makes no authorization, ATO, parity or certification claim, and carries no authorization date or compliance score.
 > **Provenance:** PRP-23 item 4. Customer-owned inputs are recorded as `customer` and OPEN; they are never guessed here.
 
-Links: release gates in the [Definition-of-Done checklist](../../release/dod-checklist.md) (PRP-13), [release process](../../release/release-process.md), [versioning](../../release/versioning.md), [verify](../../release/verify.md). Secret handling: [pre-push checklist](../../security/runbooks/pre-push-checklist.md). Responsibility split: [responsibility matrix](../responsibility-matrix.md). Related plans: [continuous monitoring](continuous-monitoring-plan.md), [incident response](incident-response-plan.md).
+Links: release gates in the [Definition-of-Done checklist](https://github.com/fgarofalo56/neurosphere/blob/main/docs/release/dod-checklist.md) (PRP-13), [release process](../../release/release-process.md), [versioning](../../release/versioning.md), [verify](../../release/verify.md). Secret handling: [pre-push checklist](../../security/runbooks/pre-push-checklist.md). Responsibility split: [responsibility matrix](https://github.com/fgarofalo56/neurosphere/blob/main/docs/compliance/responsibility-matrix.md). Related plans: [continuous monitoring](continuous-monitoring-plan.md), [incident response](incident-response-plan.md).
 
 ## 1. Two kinds of change
 
@@ -40,7 +40,7 @@ Product: revert through version control; no history rewriting of shared branches
 
 ## 5. Security impact analysis
 
-Each product change that touches identity, audit, the action executor, MCP, data egress or the boundary needs the threat model reviewed for the affected boundary ([threat-model.md](../../security/threat-model.md)); the reviewer notes the outcome in the PRP or pull request. A change to the audit store, the conflict rules in the lifecycle engine or the disclaimer enforcement is `review: required`.
+Each product change that touches identity, audit, the action executor, MCP, data egress or the boundary needs the threat model reviewed for the affected boundary ([threat-model.md](https://github.com/fgarofalo56/neurosphere/blob/main/docs/security/threat-model.md)); the reviewer notes the outcome in the PRP or pull request. A change to the audit store, the conflict rules in the lifecycle engine or the disclaimer enforcement is `review: required`.
 
 ## 6. Customer inputs (OPEN)
 

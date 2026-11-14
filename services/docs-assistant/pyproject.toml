@@ -8,6 +8,8 @@ dependencies = [
   "uvicorn>=0.54,<0.55",
   "pydantic>=2.14,<3",
   "pydantic-settings>=2.16,<3",
+  "httpx>=0.28,<0.29",
+  "azure-identity>=1.26,<2",
 ]
 
 [build-system]

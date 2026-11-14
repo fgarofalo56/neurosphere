@@ -8,7 +8,7 @@ This covers upgrading between releases when persisted shapes change. Policy is i
 
 - A migrations library with an ordered ledger, dry run, forward and rollback, and a lease so only one runner applies steps: `packages/core/neurosphere_core/migrations/`.
 - There is no standalone migration CLI in the repository. Migrations are exercised through the library and its tests. If your release needs a command-line runner, that is OPEN: do not invent one.
-- Forward then rollback, idempotent second run and concurrent runners are verified on the emulator only. Migrations against a live account are OPEN (gate G12). Evidence: [migrations-emulator.md](../evidence/PRP-13/migrations-emulator.md).
+- Forward then rollback, idempotent second run and concurrent runners are verified on the emulator only. Migrations against a live account are OPEN (gate G12). Evidence: [migrations-emulator.md](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/PRP-13/migrations-emulator.md).
 
 ## Procedure
 

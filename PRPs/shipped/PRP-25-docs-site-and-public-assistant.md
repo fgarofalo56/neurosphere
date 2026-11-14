@@ -1,11 +1,12 @@
 ---
 name: PRP-25-docs-site-and-public-assistant
-status: backlog
+status: shipped
 priority: P1
 order: 11
-pr: 154
-started: 2026-10-30
-branch: prp-25-docs-site
+pr: 223
+started: 2026-11-14
+shipped: 2026-11-14
+branch: prp-25-round2
 review: none
 created: 2026-10-08
 model: sonnet
@@ -163,6 +164,50 @@ Ship the branded static documentation site (with Pages deployment), generated AP
 - Pattern references: FastAPI service layout; PRP-12 injection corpus idea (a small local corpus is acceptable if PRP-12 is not merged).
 - Tests to write: `services/docs-assistant/tests/test_corpus_boundary.py`, `services/docs-assistant/tests/test_rate_limit.py`, `services/docs-assistant/tests/test_abstain.py`.
 
+### Round 2: audit gap closure (items 5-10, added 2026-11-14)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-14 against main 485b739:
+- Pages was never enabled on the repository. Every `docs` run on a push to main fails in `deploy-pages` with `404 ... Ensure GitHub Pages has been enabled`, and `GET /repos/.../pages` is 404.
+- The site still publishes only `index.md` and `adr/`. Published runbooks and walkthroughs would link into `RESEARCH-AND-GATES.md`, `dev/`, `ops/`, `release/`, `security/runbooks/`, `compliance/` and one `evidence/` page.
+- The assistant is still the extractive stub. Nothing publishes or runs its image, and `docs_base_url` is a placeholder.
+- Audit claim corrected: the reference regeneration test does run in CI. Root `testpaths` includes `tests`, and the python job runs `uv run pytest -q`.
+
+User decisions 2026-11-14:
+- Enable Pages (public repo). The orchestrator enables it with `build_type=workflow` and re-runs the failed main run as first-deploy evidence.
+- Publish the adopter set: runbooks, walkthroughs, reference, `RESEARCH-AND-GATES.md`, `ARCHITECTURE.md`, `dev/`, `ops/`, `release/`, `connectors/`, `deploy/`, `security/runbooks/`, `compliance/plans/`. Never `evidence/`, `validation/`, `PRD.md`, `DECISIONS-LOG.md`, `design/`. Links from published pages into unpublished paths become GitHub `blob/main` URLs.
+- Assistant: a real Azure OpenAI model client, its image in `release.yml`, an opt-in compose profile. Hosting stays an operator action. One live smoke against a throwaway Foundry deployment (Azure spend pre-authorized), deleted afterwards.
+- New-user test: a clean-room run by a fresh agent, recorded as automated. The human test stays OPEN and the DRAFT banners stay.
+
+### Item 5 - site-publish  [P]
+- Deliverable: the adopter-set publish allowlist in `mkdocs.yml` (`exclude_docs` and `nav` in step), `site_url` set to `https://fgarofalo56.github.io/neurosphere/`, home page links to the new sections, and cross-links fixed so `mkdocs build --strict` passes.
+- Owned files (may edit): `mkdocs.yml`, `docs/index.md`, `tests/docs/test_nav_allowlist.py`, `docs/reference/generate.py` and its regenerated pages (only if reference links need it). Link-only edits (rewrite a relative link to a GitHub `blob/main` URL, or fix a broken anchor) in any page that becomes published.
+- Must NOT touch: page content beyond those links, `services/docs-assistant/`, `.github/workflows/`, `docker-compose.yml`, `docs/evidence/`, `docs/validation/`.
+- Acceptance criteria:
+  - Strict build passes. Every published section is in `nav`.
+  - The allowlist test asserts that `evidence/`, `validation/`, `PRD.md`, `DECISIONS-LOG.md` and `design/` are not in the built site.
+  - `tests/docs` passes, including reference regeneration with no diff.
+
+### Item 7 - assistant-model  [P]
+- Deliverable: an Azure OpenAI chat-completions `ModelClient` over httpx with no tools. Auth is keyless (`DefaultAzureCredential`, scope by cloud) or an API key read at call time from the env var named by `model_api_key_env`. The endpoint must end in an Azure OpenAI or Foundry host suffix for the configured cloud. Timeouts are bounded. An `ABSTAIN` reply is an abstention. Citations come only from retrieved chunks. A model failure returns 503 `model_unavailable`, never a silent stub fallback. `docs_base_url` defaults to the Pages URL.
+- Owned files (may edit): `services/docs-assistant/` only. New dependencies are declared in its `pyproject.toml`; the orchestrator relocks and regenerates the licence register at merge.
+- Must NOT touch: `uv.lock`, `docs/`, `.github/`, `docker-compose.yml`, any other service or package. It imports nothing from `neurosphere_*`.
+- Acceptance criteria:
+  - Existing corpus-boundary, rate-limit, abstain and image-config tests stay green on the stub.
+  - New tests use an httpx `MockTransport` to cover the request shape (passages fenced as data, no tools field), `ABSTAIN` mapping, citation source, non-2xx and timeout to 503, a non-Azure endpoint rejected at config, and the key never appearing in logs or errors.
+  - One `pytest.mark.live` smoke test refuses without `NS_LIVE_APPROVED=1`.
+
+### Item 8 - assistant-delivery  (after items 5 and 7)
+- Deliverable: `docs-assistant` in the `release.yml` image matrix; a `docs` compose profile (builds the image, mounts `temp/site` read-only, binds `127.0.0.1:8091`, only `DOCS_ASSISTANT_*` env); a published `docs/runbooks/docs-assistant.md` and its `nav` line.
+- Owned files (may edit): `.github/workflows/release.yml` (matrix only), `docker-compose.yml` (new service only), `docs/runbooks/docs-assistant.md`, `mkdocs.yml` (one nav line), tests that pin the release matrix or compose services.
+- Acceptance criteria: `docker compose --profile docs config` is valid; one up, ask, down smoke passes against a built site; strict docs build passes.
+
+### Item 9 - clean-room new-user run  (after item 8)
+- Deliverable: a fresh agent clones the integration branch under `temp/`, builds the site, follows only the built install page, records an "Automated clean-room run" section with every deviation, and fixes the runbook text it found wrong.
+- Owned files (may edit): `docs/runbooks/new-user-test.md`, `docs/runbooks/install.md`, `docs/dev/local-setup.md` (fixes only).
+- Acceptance criteria: the record names the agent, date, machine and each deviation. The human tester fields stay OPEN, the DRAFT banners stay, and `tests/docs` passes.
+
+### Item 10 - live smoke  (orchestrator, after item 7)
+- A throwaway resource group (tags `project`, `owner`) and AIServices account in Limitlessdata - Main, with a `gpt-5-nano` GlobalStandard capacity 1 deployment in eastus2. Run the item 7 live smoke with `NS_LIVE_APPROVED=1`, record the evidence under `docs/evidence/PRP-25/`, then delete and purge.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -203,6 +248,14 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 | 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
 | 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
 | 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
+| 5 | merged | worktree-agent-a448a67267023c323 | sonnet | ae4a4cb: 65 pages in nav (adopter set), 22 links rewritten to GitHub URLs in 11 files, site_url set; mkdocs build --strict PASS, tests/docs 86 passed, no evidence/validation/PRD/design/threat-model/DECISIONS in built site (re-run on branch); merge e466350, build + tests/docs 86 passed post-merge | 2026-11-14 |
+| 7 | merged | worktree-agent-a35699351feffd416 | sonnet | fdb86d7: Azure OpenAI v1 client (entra or key-by-env-name, dot-suffix host allowlist per cloud, no tools, max_completion_tokens, ABSTAIN + content_filter -> abstain, empty/non-2xx/timeout -> 503 model_unavailable); 72 passed (re-run on branch); merge ce72d59, uv relock 35d824b (+4 lines), licences PASS (589); docs-assistant + tests/docs 158 passed, pyright 0, ruff clean post-merge; Snyk Code 2 Low CWE-23 (operator-configured site_dir into os.walk, CLI arg + live test env) accepted, not request input | 2026-11-14 |
+| 8 | merged | worktree-agent-a6f83b35546fb676f | sonnet | ef8c896: release.yml images matrix + sign loop gain docs-assistant (test_release_workflow updated, actionlint clean); compose `docs` profile (127.0.0.1:8091, temp/site ro, read_only, cap_drop ALL, no-new-privileges, pass-through DOCS_ASSISTANT_* only); runbooks/docs-assistant.md (DRAFT) + nav line; 18 release/compose tests passed + compose config ok (re-run on branch). Its 3 test_dod_links failures came from item 5 (see fix-forward 8bdde69). Merge 49e260a: strict build ok, 310 passed, validate_planning exit 0; compose smoke: healthy, /healthz 706 chunks, cited stub answer, 20 x 200 then 429 | 2026-11-14 |
+| 5-fix | merged | prp-25-round2 | opus | 8bdde69: item 5 rewrote release/dod-checklist.md links, breaking tests/release/test_dod_links.py (missed: only tests/docs ran post-merge). Checklist restored and kept unpublished (exclude_docs + UNPUBLISHED_FILES in nav allowlist test); two compliance plans link it by GitHub URL; strict build ok, 435 passed across docs/release/compliance/marketing/hosted_demo/licences | 2026-11-14 |
+| 5-theme | merged | prp-25-round2 | opus | User: "pages is awful looking". Live site served no CSS: `exclude_docs: /*` also matches theme files, so Material's assets/ (CSS+JS) were dropped from every build since item 1 (main.*.min.css 404 on Pages; artifact had no assets/). Fix: `!/assets/` re-include, brand palette from tokens/brand.ts (docs/assets/stylesheets/neurosphere.css, app tile mark as logo/favicon), light/dark toggle, nav tabs, code copy, repo link, magiclink, pymdownx extensions, system fonts (no third-party font request). Guards: allowlist test asserts `!/assets/` + extra_css present; docs.yml step fails if main.*.min.css / bundle.*.min.js / neurosphere.css missing from the artifact. Strict build ok, guard ok locally, tests/docs + release 164 passed, actionlint ok; Playwright screenshots (light, dark, gates page) checked | 2026-11-14 |
+| 9 | merged | worktree-agent-afd7a6948f8ccad0c | sonnet | 5a6c108: automated clean-room run COMPLETED WITH DEVIATIONS (7: version checks + Node 24 note, missing clone step, dev-up would recreate running Event Hubs emulator, pnpm demo ports/startup, make test > 10 min, dev-down drops volumes, port 8080 held); fixes in install.md + local-setup.md, record in new-user-test.md; human test OPEN, DRAFT banners kept; emulator container IDs unchanged; tests/docs + hosted_demo 158 passed (agent). Merge: strict build ok, 163 passed (docs, release, runbook-referencing tests); repo-wide ruff + pyright 0, gitleaks origin/main..HEAD no leaks | 2026-11-14 |
+| 10 | merged | prp-25-round2 | opus | Live smoke PASSED in Limitlessdata - Main, throwaway AIServices `ns-docs-asst-11141611` (keyless) + gpt-5-nano 2025-08-07: pytest -m live 1 passed; transcript 5/5 HTTP 200 (1 cited answer, 4 abstentions incl. injection probe) after capacity 1 -> 50 (capacity 1 gave 429 -> 503 model_unavailable as designed). Follow-up: install question abstained (top_k=3 recall). RG deleted, account purged. Evidence docs/evidence/PRP-25/docs-assistant-live-smoke-2026-11-14.md; inventory regenerated, tests/compliance 79 passed | 2026-11-14 |
+| Pages | merged | (repo setting) | opus | Pages enabled 2026-11-14 via `gh api -X POST repos/fgarofalo56/neurosphere/pages -f build_type=workflow` (public, https enforced); main docs run 43624135046 re-run: build + deploy success; https://fgarofalo56.github.io/neurosphere/ returns 200 (home + ADRs). First deploy no longer OPEN | 2026-11-14 |
 
 Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch history. Gates: 96 PRP tests pass, `validate_planning.py` PASS, `mkdocs build --strict` PASS, `verify-gates -Mode full` PASS (4/4 gates; first run failed only on a broken pnpm shim under Node 26, fixed by installing pnpm@11.17.0 globally).
 
@@ -219,9 +272,41 @@ Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch his
 - New-user test: OPEN. No independent tester has followed `docs/runbooks/install.md`; `docs/runbooks/new-user-test.md` is an unfilled template and the runbooks stay labelled DRAFT.
 - Follow-ups:
   - OPEN: independent new-user test (above).
-  - OPEN: first Pages deploy, which runs on the first push to `main` after merge; any hosted assistant deployment is an operator action.
+  - DONE in round 2: first Pages deploy. Any hosted assistant deployment is still an operator action.
   - G09 (theme/brand/media review) not closed here.
   - Pin the Playwright image by digest so its toolchain cannot drift again.
+
+### Round 2 (items 5-10, shipped 2026-11-14)
+- PR #223, merge commit `4a95fdd`. CI on the final head `0158694`: 34 passed, 4 skipped (main-only jobs). Item merges on `prp-25-round2`:
+  - item 5 `e466350` (from `ae4a4cb`)
+  - item 7 `ce72d59` (from `fdb86d7`), relock `35d824b`
+  - item 8 `49e260a` (from `ef8c896`)
+  - item 9 `5a6c108`
+  - fix-forwards `8bdde69` (DoD checklist) and `0158694` (theme assets and branding)
+  - evidence `e5f33b9`
+- Pages:
+  - Enabled 2026-11-14 with `build_type=workflow` on the public repo.
+  - The main deploy after #223 (run 43648358104) succeeded.
+  - Checked live: https://fgarofalo56.github.io/neurosphere/ serves the theme CSS, brand stylesheet and logo (200). `runbooks/install/`, `walkthroughs/admin/` and `reference/api/` are 200. `evidence/`, `validation/`, `PRD/` and `release/dod-checklist/` are 404.
+- Deviations from the round 2 blueprint and why:
+  - **DoD checklist kept internal (`8bdde69`).** Item 5 rewrote links in `docs/release/dod-checklist.md`, which broke `tests/release/test_dod_links.py`. The orchestrator ran only `tests/docs` after the merge, and item 8's agent caught it. The checklist is restored and kept unpublished.
+  - **Site was unstyled since item 1 (`0158694`).** The user reported "pages is awful looking". `exclude_docs: /*` also excluded the Material theme's `assets/`, so every build since item 1 (2026-11-02) shipped with no CSS or JS, and no test looked at the rendered output.
+    - The fix re-includes `assets/` and adds brand styling from `frontend/src/design-system/tokens/brand.ts`.
+    - Guards: the allowlist test pins `!/assets/`, and `docs.yml` fails if the artifact lacks the theme CSS/JS.
+  - **Edits outside item ownership** (orchestrator, CI unblockers or fix-forwards): `.github/workflows/docs.yml` (asset guard), two `docs/compliance/plans/*` link rewrites, `docs/evidence/inventory.md` (regenerated), `uv.lock`.
+  - **Live smoke capacity.** The live smoke raised the throwaway deployment's capacity from 1 to 50. With capacity 1 the model returned 429, which the service correctly surfaced as 503 `model_unavailable`.
+- Descoped: none. Item 6 was never assigned a number. The Pages enablement row stands in for it.
+- Still OPEN:
+  - The human new-user test; runbooks stay DRAFT. An automated clean-room run is recorded in `docs/runbooks/new-user-test.md`, completed with 7 deviations.
+  - Hosting the assistant.
+  - Assistant Government endpoints and live key-auth.
+  - G09.
+- Follow-ups:
+  - Assistant recall: the install question abstained live (`top_k=3`, 150-word chunks).
+  - `make dev-up` recreates an already-running Event Hubs emulator (`--no-recreate`).
+  - No fast `make test` variant.
+  - Helm/Bicep wiring for the assistant if it is ever hosted.
+  - Snyk Code: 2 Low CWE-23 findings, operator-configured `site_dir` into `os.walk`. Accepted.
 
 ## Audit 2026-11-04
 

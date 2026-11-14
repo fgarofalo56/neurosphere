@@ -11,8 +11,8 @@ This page does not restate security procedures. Use the owning documents:
 | Planned rotation | [secret-rotation.md](../security/runbooks/secret-rotation.md) |
 | Wiring a secret into a workload | [key-vault-references.md](../security/runbooks/key-vault-references.md) |
 | Before committing or pushing | [pre-push-checklist.md](../security/runbooks/pre-push-checklist.md) |
-| Threat model | [threat-model.md](../security/threat-model.md) |
-| Compliance planning artifacts | [docs/compliance/](../compliance/plans/README.md) and [responsibility-matrix.md](../compliance/responsibility-matrix.md) |
+| Threat model | [threat-model.md](https://github.com/fgarofalo56/neurosphere/blob/main/docs/security/threat-model.md) |
+| Compliance planning artifacts | [docs/compliance/](../compliance/plans/README.md) and [responsibility-matrix.md](https://github.com/fgarofalo56/neurosphere/blob/main/docs/compliance/responsibility-matrix.md) |
 
 Index of the security runbooks: [README.md](../security/runbooks/README.md). Nothing here claims FedRAMP authorization, ATO or compliance parity; Government availability is gated, see [RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).
 

@@ -5,7 +5,7 @@
 > **Statement:** NeuroSphere is not FedRAMP authorized; the authorizing official decides. This document supports the customer security team and the authorizing official. It is not an assessment, makes no authorization, ATO, parity or certification claim, and carries no authorization date or compliance score.
 > **Provenance:** PRP-23 item 4. Customer-owned inputs are recorded as `customer` and OPEN; they are never guessed here.
 
-This plan points at the operational procedure and the measurements; it does not duplicate them. Procedure: [DR runbook](../../ops/dr-runbook.md) (PRP-21). Boundaries: [boundary and data-flow diagrams](boundary-and-data-flow.md). Incident handling: [incident response plan](incident-response-plan.md). Responsibility split: [responsibility matrix](../responsibility-matrix.md).
+This plan points at the operational procedure and the measurements; it does not duplicate them. Procedure: [DR runbook](../../ops/dr-runbook.md) (PRP-21). Boundaries: [boundary and data-flow diagrams](boundary-and-data-flow.md). Incident handling: [incident response plan](incident-response-plan.md). Responsibility split: [responsibility matrix](https://github.com/fgarofalo56/neurosphere/blob/main/docs/compliance/responsibility-matrix.md).
 
 ## 1. Recovery objectives
 

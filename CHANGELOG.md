@@ -20,6 +20,11 @@ All notable changes to this project are documented here. The format follows
     - #48 and #50: SDK hardening.
     - #49: OTel edge cases.
   - G04 stays OPEN (no live provider run).
+- Docs site and public docs assistant audit-gap closure (PRP-25 round 2, PR #223):
+  - GitHub Pages enabled; https://fgarofalo56.github.io/neurosphere/ now publishes the adopter set (runbooks, walkthroughs, API/SDK/MCP reference, operations, security runbooks, release, connectors, architecture and gates). Evidence, validation and internal planning stay unpublished.
+  - The site was unstyled since it first shipped (`exclude_docs: /*` also dropped the theme's CSS/JS). Fixed and branded with the product palette; the docs workflow now fails if theme assets are missing.
+  - Docs assistant: Azure OpenAI v1 model client (keyless Entra or key read from a named env var, per-cloud endpoint allowlist, no tools, abstains with `ABSTAIN`, 503 `model_unavailable` on model failure). Image published by `release.yml`; opt-in `docs` compose profile on 127.0.0.1:8091; operator runbook.
+  - Live smoke against a throwaway gpt-5-nano deployment passed (evidence under `docs/evidence/PRP-25/`). An automated clean-room install run is recorded; the human new-user test stays OPEN.
 - Government sovereign profile audit-gap closure (PRP-20 round 2, PR #216):
   - Government deployment profiles accept only usgovvirginia, usgovarizona and usgovtexas. DoD and unknown regions are refused with a `capability_unavailable` reason.
   - Government audiences recorded from Microsoft Learn on 2026-11-12:

@@ -331,6 +331,49 @@ services:
       - ./connectors/reference/otel-generic/collector/otel-collector.compose.yaml:/etc/otelcol/config.yaml:ro
     networks: [default]
 
+  # --- profile `docs`: the public docs assistant (PRP-25), separate from the product ---
+  # Opt-in: build the site first (docs/adr/0008-docs-site-tool.md), then
+  #   docker compose --profile docs up -d --wait docs-assistant     # http://127.0.0.1:8091
+  # It shares nothing with the emulators or the app profile, so it has no depends_on. With no
+  # DOCS_ASSISTANT_MODEL_* set it runs the deterministic stub. The optional settings below are
+  # pass-through names without values: Compose forwards them only when exported in the host shell
+  # (an empty `${VAR:-}` would set an empty string and fail the https validator). Deliberately not
+  # `${VAR:?}`: Compose interpolates inactive profiles too. The model key is never in this file:
+  # with DOCS_ASSISTANT_MODEL_AUTH=key, export the key under DOCS_ASSISTANT_MODEL_KEY and set
+  # DOCS_ASSISTANT_MODEL_API_KEY_ENV=DOCS_ASSISTANT_MODEL_KEY. See docs/runbooks/docs-assistant.md.
+  docs-assistant:
+    profiles: [docs]
+    build:
+      context: .
+      dockerfile: services/docs-assistant/Dockerfile
+    image: neurosphere/docs-assistant:local
+    ports:
+      - "127.0.0.1:8091:8000"
+    environment:
+      - DOCS_ASSISTANT_MODEL_ENDPOINT
+      - DOCS_ASSISTANT_MODEL_DEPLOYMENT
+      - DOCS_ASSISTANT_MODEL_AUTH
+      - DOCS_ASSISTANT_MODEL_API_KEY_ENV
+      - DOCS_ASSISTANT_MODEL_KEY
+      - DOCS_ASSISTANT_CLOUD
+      - DOCS_ASSISTANT_DOCS_BASE_URL
+    volumes:
+      - ./temp/site:/srv/site:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    networks: [default]
+
 networks:
   default: {}
   isolated:
