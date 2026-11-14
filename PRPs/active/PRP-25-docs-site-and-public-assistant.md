@@ -247,9 +247,9 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 | 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
 | 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
 | 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
-| 5 | in-progress | worktree (implementer) | sonnet | dispatched Wave A | 2026-11-14 |
-| 7 | in-progress | worktree (implementer) | sonnet | dispatched Wave A | 2026-11-14 |
-| 8 | todo | | sonnet | | 2026-11-14 |
+| 5 | merged | worktree-agent-a448a67267023c323 | sonnet | ae4a4cb: 65 pages in nav (adopter set), 22 links rewritten to GitHub URLs in 11 files, site_url set; mkdocs build --strict PASS, tests/docs 86 passed, no evidence/validation/PRD/design/threat-model/DECISIONS in built site (re-run on branch); merge e466350, build + tests/docs 86 passed post-merge | 2026-11-14 |
+| 7 | merged | worktree-agent-a35699351feffd416 | sonnet | fdb86d7: Azure OpenAI v1 client (entra or key-by-env-name, dot-suffix host allowlist per cloud, no tools, max_completion_tokens, ABSTAIN + content_filter -> abstain, empty/non-2xx/timeout -> 503 model_unavailable); 72 passed (re-run on branch); merge ce72d59, uv relock 35d824b (+4 lines), licences PASS (589); docs-assistant + tests/docs 158 passed, pyright 0, ruff clean post-merge; Snyk Code 2 Low CWE-23 (operator-configured site_dir into os.walk, CLI arg + live test env) accepted, not request input | 2026-11-14 |
+| 8 | in-progress | worktree (implementer) | sonnet | dispatched after 5 + 7 merged | 2026-11-14 |
 | 9 | todo | | sonnet | | 2026-11-14 |
 | 10 | todo | prp-25-round2 | opus | | 2026-11-14 |
 | Pages | merged | (repo setting) | opus | Pages enabled 2026-11-14 via `gh api -X POST repos/fgarofalo56/neurosphere/pages -f build_type=workflow` (public, https enforced); main docs run 43624135046 re-run: build + deploy success; https://fgarofalo56.github.io/neurosphere/ returns 200 (home + ADRs). First deploy no longer OPEN | 2026-11-14 |
