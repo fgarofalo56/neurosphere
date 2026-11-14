@@ -2,6 +2,7 @@
 # Build: uv run --no-project --with mkdocs-material==9.8.0 mkdocs build --strict --site-dir temp/site
 site_name: NeuroSphere
 site_description: Customer-hosted AI governance documentation
+site_url: https://fgarofalo56.github.io/neurosphere/
 docs_dir: docs
 site_dir: temp/site
 strict: true
@@ -23,17 +24,92 @@ validation:
   anchors: warn
 
 # Publish allowlist, part 1: files outside this set are not built into the site at all
-# (gitignore syntax). Everything at the top of docs/ is excluded, then only these paths
-# are re-included. docs/evidence/ and internal planning stay unpublished. Keep this in
-# step with `nav` below; tests/docs/test_nav_allowlist.py enforces it.
+# (gitignore syntax). Everything at the top of docs/ is excluded, then only the adopter
+# set is re-included. docs/evidence/, docs/validation/, docs/design/, docs/PRD.md,
+# docs/DECISIONS-LOG.md and the rest of docs/security/ and docs/compliance/ stay
+# unpublished. Keep this in step with `nav` below; tests/docs/test_nav_allowlist.py
+# enforces it.
 exclude_docs: |
   /*
   !/index.md
   !/adr/
+  !/runbooks/
+  !/walkthroughs/
+  !/reference/
+  /reference/*
+  !/reference/*.md
+  !/ARCHITECTURE.md
+  !/RESEARCH-AND-GATES.md
+  !/dev/
+  !/ops/
+  !/release/
+  !/connectors/
+  !/deploy/
+  !/security/
+  /security/*
+  !/security/runbooks/
+  !/compliance/
+  /compliance/*
+  !/compliance/plans/
+  __pycache__/
 
 # Publish allowlist, part 2: explicit nav. Add pages here deliberately.
 nav:
   - Home: index.md
+  - Get started:
+      - runbooks/install.md
+      - dev/local-setup.md
+      - runbooks/seeding.md
+      - deploy/hosted-demo.md
+  - Runbooks:
+      - runbooks/operations.md
+      - runbooks/ingest.md
+      - runbooks/ingest-cost-attribution.md
+      - runbooks/runtime-composition.md
+      - runbooks/copilot.md
+      - runbooks/action-plane-kill-switch.md
+      - runbooks/migration.md
+      - runbooks/dr.md
+      - runbooks/security.md
+      - runbooks/new-user-test.md
+  - Walkthroughs:
+      - walkthroughs/admin.md
+      - walkthroughs/analyst.md
+      - walkthroughs/auditor.md
+      - walkthroughs/steward.md
+      - walkthroughs/viewer.md
+  - Reference:
+      - reference/index.md
+      - reference/api.md
+      - reference/mcp.md
+      - reference/sdk-python.md
+      - reference/sdk-ts.md
+  - Operations:
+      - ops/dr-runbook.md
+      - ops/slo.md
+  - Security:
+      - security/runbooks/README.md
+      - security/runbooks/credential-leak-response.md
+      - security/runbooks/incident-response-plan.md
+      - security/runbooks/key-vault-references.md
+      - security/runbooks/pre-push-checklist.md
+      - security/runbooks/secret-rotation.md
+      - compliance/plans/README.md
+      - compliance/plans/boundary-and-data-flow.md
+      - compliance/plans/change-management-plan.md
+      - compliance/plans/contingency-plan.md
+      - compliance/plans/continuous-monitoring-plan.md
+      - compliance/plans/incident-response-plan.md
+  - Release:
+      - release/release-process.md
+      - release/versioning.md
+      - release/verify.md
+      - release/dod-checklist.md
+  - Connectors:
+      - connectors/coverage.md
+  - Architecture and gates:
+      - ARCHITECTURE.md
+      - RESEARCH-AND-GATES.md
   - Architecture decisions:
       - adr/0001-record-architecture-decisions.md
       - adr/0002-stack-pins.md

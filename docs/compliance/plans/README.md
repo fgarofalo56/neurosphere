@@ -13,4 +13,4 @@
 | [change-management-plan.md](change-management-plan.md) | Product and runtime change control; links the PRP-13 DoD checklist |
 | [continuous-monitoring-plan.md](continuous-monitoring-plan.md) | What is monitored, by whom, and what is OPEN |
 
-Diagram sources and rendered SVGs: [diagrams/](diagrams/). The responsibility split is the [PRP-20 matrix](../responsibility-matrix.md). Open gates this set touches: G02 (boundary and agency decision) and G06 (retention and legal hold) stay OPEN and G07 (DR) stays OPEN; closure belongs to the customer and the authorizing official.
+Diagram sources and rendered SVGs: [diagrams/](https://github.com/fgarofalo56/neurosphere/tree/main/docs/compliance/plans/diagrams). The responsibility split is the [PRP-20 matrix](https://github.com/fgarofalo56/neurosphere/blob/main/docs/compliance/responsibility-matrix.md). Open gates this set touches: G02 (boundary and agency decision) and G06 (retention and legal hold) stay OPEN and G07 (DR) stays OPEN; closure belongs to the customer and the authorizing official.

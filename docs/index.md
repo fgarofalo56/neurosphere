@@ -12,6 +12,16 @@ work.
     Unsupported cloud, region or feature combinations are disabled with a reason, not
     silently routed to another cloud.
 
+## Start here
+
+- Install: [install runbook](runbooks/install.md) and [local setup](dev/local-setup.md).
+- Operate: [runbooks](runbooks/operations.md), [DR](ops/dr-runbook.md) and [SLOs](ops/slo.md).
+- Use: [admin walkthrough](walkthroughs/admin.md), plus analyst, auditor, steward and viewer.
+- Integrate: [API and SDK reference](reference/index.md) and [connector coverage](connectors/coverage.md).
+- Secure: [security runbooks](security/runbooks/README.md) and [ATO accelerator plans](compliance/plans/README.md).
+- Release: [release process](release/release-process.md) and [verification](release/verify.md).
+- Design: [architecture](ARCHITECTURE.md) and [research and gates](RESEARCH-AND-GATES.md).
+
 ## Architecture decision records
 
 Each record states the context, the decision and its date.

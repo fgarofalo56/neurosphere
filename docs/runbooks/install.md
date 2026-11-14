@@ -70,4 +70,4 @@ make dev-down
 
 ## Hosted (Azure) deployment
 
-Hosted demo steps are in [hosted-demo.md](../deploy/hosted-demo.md) and the requirements in [AZURE-DEPLOYMENT.md](../AZURE-DEPLOYMENT.md). They need operator approval and an approved subscription; this runbook does not repeat them. Cloud and region availability, feature maturity and authorization are separate gates, see [RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).
+Hosted demo steps are in [hosted-demo.md](../deploy/hosted-demo.md) and the requirements in [AZURE-DEPLOYMENT.md](https://github.com/fgarofalo56/neurosphere/blob/main/docs/AZURE-DEPLOYMENT.md). They need operator approval and an approved subscription; this runbook does not repeat them. Cloud and region availability, feature maturity and authorization are separate gates, see [RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).
