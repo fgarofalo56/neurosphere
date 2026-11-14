@@ -28,3 +28,5 @@ fb44b04ff075bdf5bb688bf9b787ab975ee05494:infra/demo/modules/keyvault-rbac.bicep:
 ceca49776fa7196a6d7bce79fe51b87f1c4ed9da:infra/dev/ingest-producers.dev.json:generic-api-key:5
 # PRP-35 item 4: idempotency_key test fixture string, not a credential.
 8a02d07ef5cad2948a0bcde2a6912a1ebf156a59:services/api/tests/runtime_planes/test_planes_builder.py:generic-api-key:138
+# PRP-09 round 2 item 10: compose hostname:port "api:8000" in the OTel collector endpoint URL, not a credential (the credential is ${env:NS_PRODUCER_CREDENTIAL}).
+aa7296602d18359fd446938e0f4b80e48793b361:connectors/reference/otel-generic/collector/otel-collector.compose.yaml:generic-api-key:62
