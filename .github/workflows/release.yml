@@ -1,6 +1,6 @@
 name: release
 
-# Tag-triggered publish (PRP-13 item 2). Builds the api, workers and frontend images,
+# Tag-triggered publish (PRP-13 item 2). Builds the api, workers, frontend and docs-assistant images,
 # pushes them to GHCR, attaches a syft CycloneDX SBOM, signs keylessly with cosign by
 # digest, pushes the Helm chart as OCI and drafts a GitHub Release.
 #
@@ -143,6 +143,8 @@ jobs:
             dockerfile: services/workers/Dockerfile
           - service: frontend
             dockerfile: frontend/Dockerfile
+          - service: docs-assistant
+            dockerfile: services/docs-assistant/Dockerfile
     env:
       SERVICE: ${{ matrix.service }}
       DOCKERFILE: ${{ matrix.dockerfile }}
@@ -245,7 +247,7 @@ jobs:
         run: |
           set -euo pipefail
           identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@${GITHUB_REF}"
-          for svc in api workers frontend; do
+          for svc in api workers frontend docs-assistant; do
             ref="$(cat "$RUNNER_TEMP/in/${svc}.digest")"
             sbom="$RUNNER_TEMP/in/${svc}.cdx.json"
             echo "== ${svc}: ${ref}"
