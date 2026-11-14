@@ -1,11 +1,11 @@
 ---
 name: PRP-25-docs-site-and-public-assistant
-status: backlog
+status: active
 priority: P1
 order: 11
 pr: 154
-started: 2026-10-30
-branch: prp-25-docs-site
+started: 2026-11-14
+branch: prp-25-round2
 review: none
 created: 2026-10-08
 model: sonnet
@@ -163,6 +163,50 @@ Ship the branded static documentation site (with Pages deployment), generated AP
 - Pattern references: FastAPI service layout; PRP-12 injection corpus idea (a small local corpus is acceptable if PRP-12 is not merged).
 - Tests to write: `services/docs-assistant/tests/test_corpus_boundary.py`, `services/docs-assistant/tests/test_rate_limit.py`, `services/docs-assistant/tests/test_abstain.py`.
 
+### Round 2: audit gap closure (items 5-10, added 2026-11-14)
+Reopened by the 2026-11-04 audit (section at the end). Rechecked 2026-11-14 against main 485b739:
+- Pages was never enabled on the repository. Every `docs` run on a push to main fails in `deploy-pages` with `404 ... Ensure GitHub Pages has been enabled`, and `GET /repos/.../pages` is 404.
+- The site still publishes only `index.md` and `adr/`. Published runbooks and walkthroughs would link into `RESEARCH-AND-GATES.md`, `dev/`, `ops/`, `release/`, `security/runbooks/`, `compliance/` and one `evidence/` page.
+- The assistant is still the extractive stub. Nothing publishes or runs its image, and `docs_base_url` is a placeholder.
+- Audit claim corrected: the reference regeneration test does run in CI. Root `testpaths` includes `tests`, and the python job runs `uv run pytest -q`.
+
+User decisions 2026-11-14:
+- Enable Pages (public repo). The orchestrator enables it with `build_type=workflow` and re-runs the failed main run as first-deploy evidence.
+- Publish the adopter set: runbooks, walkthroughs, reference, `RESEARCH-AND-GATES.md`, `ARCHITECTURE.md`, `dev/`, `ops/`, `release/`, `connectors/`, `deploy/`, `security/runbooks/`, `compliance/plans/`. Never `evidence/`, `validation/`, `PRD.md`, `DECISIONS-LOG.md`, `design/`. Links from published pages into unpublished paths become GitHub `blob/main` URLs.
+- Assistant: a real Azure OpenAI model client, its image in `release.yml`, an opt-in compose profile. Hosting stays an operator action. One live smoke against a throwaway Foundry deployment (Azure spend pre-authorized), deleted afterwards.
+- New-user test: a clean-room run by a fresh agent, recorded as automated. The human test stays OPEN and the DRAFT banners stay.
+
+### Item 5 - site-publish  [P]
+- Deliverable: the adopter-set publish allowlist in `mkdocs.yml` (`exclude_docs` and `nav` in step), `site_url` set to `https://fgarofalo56.github.io/neurosphere/`, home page links to the new sections, and cross-links fixed so `mkdocs build --strict` passes.
+- Owned files (may edit): `mkdocs.yml`, `docs/index.md`, `tests/docs/test_nav_allowlist.py`, `docs/reference/generate.py` and its regenerated pages (only if reference links need it). Link-only edits (rewrite a relative link to a GitHub `blob/main` URL, or fix a broken anchor) in any page that becomes published.
+- Must NOT touch: page content beyond those links, `services/docs-assistant/`, `.github/workflows/`, `docker-compose.yml`, `docs/evidence/`, `docs/validation/`.
+- Acceptance criteria:
+  - Strict build passes. Every published section is in `nav`.
+  - The allowlist test asserts that `evidence/`, `validation/`, `PRD.md`, `DECISIONS-LOG.md` and `design/` are not in the built site.
+  - `tests/docs` passes, including reference regeneration with no diff.
+
+### Item 7 - assistant-model  [P]
+- Deliverable: an Azure OpenAI chat-completions `ModelClient` over httpx with no tools. Auth is keyless (`DefaultAzureCredential`, scope by cloud) or an API key read at call time from the env var named by `model_api_key_env`. The endpoint must end in an Azure OpenAI or Foundry host suffix for the configured cloud. Timeouts are bounded. An `ABSTAIN` reply is an abstention. Citations come only from retrieved chunks. A model failure returns 503 `model_unavailable`, never a silent stub fallback. `docs_base_url` defaults to the Pages URL.
+- Owned files (may edit): `services/docs-assistant/` only. New dependencies are declared in its `pyproject.toml`; the orchestrator relocks and regenerates the licence register at merge.
+- Must NOT touch: `uv.lock`, `docs/`, `.github/`, `docker-compose.yml`, any other service or package. It imports nothing from `neurosphere_*`.
+- Acceptance criteria:
+  - Existing corpus-boundary, rate-limit, abstain and image-config tests stay green on the stub.
+  - New tests use an httpx `MockTransport` to cover the request shape (passages fenced as data, no tools field), `ABSTAIN` mapping, citation source, non-2xx and timeout to 503, a non-Azure endpoint rejected at config, and the key never appearing in logs or errors.
+  - One `pytest.mark.live` smoke test refuses without `NS_LIVE_APPROVED=1`.
+
+### Item 8 - assistant-delivery  (after items 5 and 7)
+- Deliverable: `docs-assistant` in the `release.yml` image matrix; a `docs` compose profile (builds the image, mounts `temp/site` read-only, binds `127.0.0.1:8091`, only `DOCS_ASSISTANT_*` env); a published `docs/runbooks/docs-assistant.md` and its `nav` line.
+- Owned files (may edit): `.github/workflows/release.yml` (matrix only), `docker-compose.yml` (new service only), `docs/runbooks/docs-assistant.md`, `mkdocs.yml` (one nav line), tests that pin the release matrix or compose services.
+- Acceptance criteria: `docker compose --profile docs config` is valid; one up, ask, down smoke passes against a built site; strict docs build passes.
+
+### Item 9 - clean-room new-user run  (after item 8)
+- Deliverable: a fresh agent clones the integration branch under `temp/`, builds the site, follows only the built install page, records an "Automated clean-room run" section with every deviation, and fixes the runbook text it found wrong.
+- Owned files (may edit): `docs/runbooks/new-user-test.md`, `docs/runbooks/install.md`, `docs/dev/local-setup.md` (fixes only).
+- Acceptance criteria: the record names the agent, date, machine and each deviation. The human tester fields stay OPEN, the DRAFT banners stay, and `tests/docs` passes.
+
+### Item 10 - live smoke  (orchestrator, after item 7)
+- A throwaway resource group (tags `project`, `owner`) and AIServices account in Limitlessdata - Main, with a `gpt-5-nano` GlobalStandard capacity 1 deployment in eastus2. Run the item 7 live smoke with `NS_LIVE_APPROVED=1`, record the evidence under `docs/evidence/PRP-25/`, then delete and purge.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -203,6 +247,12 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 | 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
 | 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
 | 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
+| 5 | todo | | sonnet | | 2026-11-14 |
+| 7 | todo | | sonnet | | 2026-11-14 |
+| 8 | todo | | sonnet | | 2026-11-14 |
+| 9 | todo | | sonnet | | 2026-11-14 |
+| 10 | todo | prp-25-round2 | opus | | 2026-11-14 |
+| Pages | todo | (repo setting) | opus | | 2026-11-14 |
 
 Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch history. Gates: 96 PRP tests pass, `validate_planning.py` PASS, `mkdocs build --strict` PASS, `verify-gates -Mode full` PASS (4/4 gates; first run failed only on a broken pnpm shim under Node 26, fixed by installing pnpm@11.17.0 globally).
 
