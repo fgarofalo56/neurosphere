@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-25-docs-site-and-public-assistant](active/PRP-25-docs-site-and-public-assistant.md) | P1 | 10/11 (90%) | in-progress 1, merged 10 | sonnet / sonnet | none |
+| [PRP-25-docs-site-and-public-assistant](active/PRP-25-docs-site-and-public-assistant.md) | P1 | 11/11 (100%) | merged 11 | sonnet / sonnet | none |
 | [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 16/16 (100%) | merged 16 | sonnet / sonnet | required |
 
 ## Backlog
