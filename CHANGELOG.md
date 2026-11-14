@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Connector runners and SDK hardening (PRP-09 round 2, PR #221):
+  - New worker roles, both part of `all` and idle until configured:
+    - `foundry_discovery`: creates draft catalog entities if they are absent, and never overwrites curated ones.
+    - `billing_export`: posts closed-month invoiced cost through the ingest edge to the reconciliation `billing` source. The open month is held.
+  - Opt-in `otel` compose profile running the OpenTelemetry Collector (0.165.0) with body attributes dropped.
+  - Contract-kit conformance for all six reference connectors, with a new write-connector profile.
+  - Operator CLI `scripts/connectors/billing_variance.py`.
+  - Fixes:
+    - #46: Azure Monitor no longer skips truncated slices.
+    - #47: strict `WriteConnector` verify.
+    - #48 and #50: SDK hardening.
+    - #49: OTel edge cases.
+  - G04 stays OPEN (no live provider run).
 - Government sovereign profile audit-gap closure (PRP-20 round 2, PR #216):
   - Government deployment profiles accept only usgovvirginia, usgovarizona and usgovtexas. DoD and unknown regions are refused with a `capability_unavailable` reason.
   - Government audiences recorded from Microsoft Learn on 2026-11-12:

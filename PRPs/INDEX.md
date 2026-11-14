@@ -4,15 +4,13 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-09-connector-sdk-and-reference-connectors](active/PRP-09-connector-sdk-and-reference-connectors.md) | P2 | 16/16 (100%) | merged 16 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | PRP-09-connector-sdk-and-reference-connectors (active) | sonnet / sonnet | none |
+| [PRP-25-docs-site-and-public-assistant](backlog/PRP-25-docs-site-and-public-assistant.md) | P1 | 11 | PRP-09-connector-sdk-and-reference-connectors, PRP-13-release-versioning-and-container-publishing, PRP-22-mcp-server-and-client | - | sonnet / sonnet | none |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 13 | PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters | PRP-11-analytics-adapters (backlog) | sonnet / sonnet | none |
 | [PRP-11-analytics-adapters](backlog/PRP-11-analytics-adapters.md) | P2 | 15 | PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger | - | sonnet / sonnet | required |
 | [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 16 | PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage | - | sonnet / sonnet | required |
@@ -27,6 +25,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [PRP-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-11-14 | #221 |
 | [PRP-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-11-13 | #216 |
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |
 | [PRP-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-11-11 | #202 |
