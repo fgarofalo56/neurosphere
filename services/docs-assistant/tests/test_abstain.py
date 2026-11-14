@@ -10,6 +10,8 @@ from docs_assistant.config import Settings
 from docs_assistant.index import Chunk
 from docs_assistant.model import StubModel, build_model, build_prompt
 
+BASE = "https://fgarofalo56.github.io/neurosphere/"
+
 
 def _client(repo: Path) -> TestClient:
     return TestClient(create(Settings(site_dir=repo / "site")))
@@ -22,10 +24,8 @@ def test_supported_question_is_answered_with_docs_citation(repo: Path) -> None:
     assert data["abstained"] is False
     assert "MkDocs Material" in data["answer"]
     assert data["citations"]
-    assert all(c["url"].startswith("https://docs.example.invalid/") for c in data["citations"])
-    assert data["citations"][0]["url"].startswith(
-        "https://docs.example.invalid/adr/0008-docs-site-tool/"
-    )
+    assert all(c["url"].startswith(BASE) for c in data["citations"])
+    assert data["citations"][0]["url"].startswith(BASE + "adr/0008-docs-site-tool/")
 
 
 def test_unsupported_question_abstains_without_citations(repo: Path) -> None:
@@ -58,7 +58,7 @@ def test_injection_text_in_corpus_is_data_not_instructions(repo: Path) -> None:
     # citations are unchanged and nothing outside the corpus is referenced.
     assert set(data) == {"answer", "abstained", "citations"}
     assert data["answer"].startswith('From the published docs: "')
-    assert all(c["url"].startswith("https://docs.example.invalid/") for c in data["citations"])
+    assert all(c["url"].startswith(BASE) for c in data["citations"])
     assert INJECTION  # fixture string is what the page carried
 
 

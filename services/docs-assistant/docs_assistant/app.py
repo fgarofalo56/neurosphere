@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -13,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import Settings
 from .index import DocsIndex
-from .model import ModelClient, build_model
+from .model import ModelClient, ModelUnavailableError, build_model
 from .ratelimit import RateLimiter
 
 log = logging.getLogger("docs_assistant")
@@ -92,8 +94,19 @@ def create(
         cfg.rate_limit_requests, cfg.rate_limit_window_seconds, cfg.max_tracked_clients
     )
 
+    @asynccontextmanager
+    async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            await llm.aclose()  # closes the http client and any credential
+
     app = FastAPI(
-        title="NeuroSphere docs assistant", docs_url=None, redoc_url=None, openapi_url=None
+        title="NeuroSphere docs assistant",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=_lifespan,
     )
 
     @app.exception_handler(ApiError)
@@ -134,7 +147,16 @@ def create(
             return AskResponse(answer=ABSTAIN_MESSAGE, abstained=True, citations=[])
 
         passages = [h.chunk for h in supported]
-        answer = await llm.generate(question, passages)
+        try:
+            answer = await llm.generate(question, passages)
+        except ModelUnavailableError as exc:
+            log.warning("model unavailable: %s", exc)
+            raise ApiError(
+                503, "model_unavailable", "The answer service is temporarily unavailable."
+            ) from exc
+        if answer is None:
+            return AskResponse(answer=ABSTAIN_MESSAGE, abstained=True, citations=[])
+        # Citations come only from the retrieved chunks, never from model text.
         seen: set[str] = set()
         citations: list[Citation] = []
         for p in passages:
