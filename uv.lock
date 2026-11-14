@@ -1388,7 +1388,9 @@ name = "neurosphere-docs-assistant"
 version = "0.0.0"
 source = { editable = "services/docs-assistant" }
 dependencies = [
+    { name = "azure-identity" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
@@ -1396,7 +1398,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-identity", specifier = ">=1.26,<2" },
     { name = "fastapi", specifier = ">=0.143,<0.150" },
+    { name = "httpx", specifier = ">=0.28,<0.29" },
     { name = "pydantic", specifier = ">=2.14,<3" },
     { name = "pydantic-settings", specifier = ">=2.16,<3" },
     { name = "uvicorn", specifier = ">=0.54,<0.55" },

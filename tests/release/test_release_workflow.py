@@ -74,7 +74,7 @@ def test_expected_jobs(wf: dict[str, Any]) -> None:
     assert set(wf["jobs"]) == {"meta", "images", "sign", "chart", "release-notes"}
     assert wf["jobs"]["images"]["strategy"]["fail-fast"] is False
     services = {m["service"] for m in wf["jobs"]["images"]["strategy"]["matrix"]["include"]}
-    assert services == {"api", "workers", "frontend"}
+    assert services == {"api", "workers", "frontend", "docs-assistant"}
 
 
 def test_no_suppressed_failures(text: str) -> None:

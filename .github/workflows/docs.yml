@@ -35,6 +35,11 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Build in strict mode (validates internal links, images and anchors)
         run: uv run --no-project --with mkdocs-material==9.8.0 mkdocs build --strict --site-dir temp/site
+      - name: Theme assets are in the artifact (the site once shipped unstyled)
+        run: |
+          set -euo pipefail
+          ls temp/site/assets/stylesheets/main.*.min.css temp/site/assets/javascripts/bundle.*.min.js
+          test -f temp/site/assets/stylesheets/neurosphere.css
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5

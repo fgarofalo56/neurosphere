@@ -1,0 +1,43 @@
+/* NeuroSphere docs palette. Values come from the product brand ramp in
+   frontend/src/design-system/tokens/brand.ts (neutralBrandRamp) and the navy of the app mark. */
+
+:root,
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #1f3a5f;
+  --md-primary-fg-color--light: #0e4a86;
+  --md-primary-fg-color--dark: #0a2a4d;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #f3f8fe;
+  --md-accent-fg-color: #1269c0;
+  --md-accent-fg-color--transparent: rgba(18, 105, 192, 0.1);
+  --md-typeset-a-color: #105aa3;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #0a2a4d;
+  --md-primary-fg-color--light: #0e4a86;
+  --md-primary-fg-color--dark: #071a30;
+  --md-primary-bg-color: #f3f8fe;
+  --md-primary-bg-color--light: #c8e0f9;
+  --md-accent-fg-color: #78adea;
+  --md-accent-fg-color--transparent: rgba(120, 173, 234, 0.12);
+  --md-typeset-a-color: #94bff0;
+  --md-default-bg-color: #0b1422;
+}
+
+/* System font stack (theme.font is off, so no third-party font request). */
+:root {
+  --md-text-font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --md-code-font: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+/* Header logo tile: a little larger and with rounded corners like the app. */
+.md-header__button.md-logo img {
+  height: 1.6rem;
+  border-radius: 0.3rem;
+}
+
+/* Gate and capability tables are wide; a slightly smaller size keeps more columns visible. */
+.md-typeset table:not([class]) {
+  font-size: 0.72rem;
+}

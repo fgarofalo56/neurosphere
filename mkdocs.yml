@@ -2,16 +2,68 @@
 # Build: uv run --no-project --with mkdocs-material==9.8.0 mkdocs build --strict --site-dir temp/site
 site_name: NeuroSphere
 site_description: Customer-hosted AI governance documentation
+site_url: https://fgarofalo56.github.io/neurosphere/
 docs_dir: docs
 site_dir: temp/site
 strict: true
 
+repo_url: https://github.com/fgarofalo56/neurosphere
+repo_name: fgarofalo56/neurosphere
+edit_uri: ""
+
 theme:
   name: material
+  logo: assets/brand/neurosphere-tile.svg
+  favicon: assets/brand/neurosphere-tile.svg
+  icon:
+    repo: fontawesome/brands/github
+  font: false
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+# Brand palette from frontend/src/design-system/tokens/brand.ts. Served from docs/assets/,
+# which is re-included below so the theme's own CSS and JS are published too.
+extra_css:
+  - assets/stylesheets/neurosphere.css
 
 markdown_extensions:
   - admonition
   - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.tabbed:
+      alternate_style: true
   - toc:
       permalink: true
 
@@ -23,17 +75,97 @@ validation:
   anchors: warn
 
 # Publish allowlist, part 1: files outside this set are not built into the site at all
-# (gitignore syntax). Everything at the top of docs/ is excluded, then only these paths
-# are re-included. docs/evidence/ and internal planning stay unpublished. Keep this in
-# step with `nav` below; tests/docs/test_nav_allowlist.py enforces it.
+# (gitignore syntax). Everything at the top of docs/ is excluded, then only the adopter
+# set is re-included. docs/evidence/, docs/validation/, docs/design/, docs/PRD.md,
+# docs/DECISIONS-LOG.md and the rest of docs/security/ and docs/compliance/ stay
+# unpublished. Keep this in step with `nav` below; tests/docs/test_nav_allowlist.py
+# enforces it.
+# `/*` also matches files the theme contributes, so `!/assets/` must stay: without it
+# Material's CSS and JS are dropped and the site renders unstyled (shipped that way
+# until 2026-11-14). docs/assets/ holds only brand files and the extra stylesheet.
 exclude_docs: |
   /*
   !/index.md
+  !/assets/
   !/adr/
+  !/runbooks/
+  !/walkthroughs/
+  !/reference/
+  /reference/*
+  !/reference/*.md
+  !/ARCHITECTURE.md
+  !/RESEARCH-AND-GATES.md
+  !/dev/
+  !/ops/
+  !/release/
+  /release/dod-checklist.md
+  !/connectors/
+  !/deploy/
+  !/security/
+  /security/*
+  !/security/runbooks/
+  !/compliance/
+  /compliance/*
+  !/compliance/plans/
+  __pycache__/
 
 # Publish allowlist, part 2: explicit nav. Add pages here deliberately.
 nav:
   - Home: index.md
+  - Get started:
+      - runbooks/install.md
+      - dev/local-setup.md
+      - runbooks/seeding.md
+      - deploy/hosted-demo.md
+  - Runbooks:
+      - runbooks/operations.md
+      - runbooks/ingest.md
+      - runbooks/ingest-cost-attribution.md
+      - runbooks/runtime-composition.md
+      - runbooks/copilot.md
+      - runbooks/docs-assistant.md
+      - runbooks/action-plane-kill-switch.md
+      - runbooks/migration.md
+      - runbooks/dr.md
+      - runbooks/security.md
+      - runbooks/new-user-test.md
+  - Walkthroughs:
+      - walkthroughs/admin.md
+      - walkthroughs/analyst.md
+      - walkthroughs/auditor.md
+      - walkthroughs/steward.md
+      - walkthroughs/viewer.md
+  - Reference:
+      - reference/index.md
+      - reference/api.md
+      - reference/mcp.md
+      - reference/sdk-python.md
+      - reference/sdk-ts.md
+  - Operations:
+      - ops/dr-runbook.md
+      - ops/slo.md
+  - Security:
+      - security/runbooks/README.md
+      - security/runbooks/credential-leak-response.md
+      - security/runbooks/incident-response-plan.md
+      - security/runbooks/key-vault-references.md
+      - security/runbooks/pre-push-checklist.md
+      - security/runbooks/secret-rotation.md
+      - compliance/plans/README.md
+      - compliance/plans/boundary-and-data-flow.md
+      - compliance/plans/change-management-plan.md
+      - compliance/plans/contingency-plan.md
+      - compliance/plans/continuous-monitoring-plan.md
+      - compliance/plans/incident-response-plan.md
+  - Release:
+      - release/release-process.md
+      - release/versioning.md
+      - release/verify.md
+  - Connectors:
+      - connectors/coverage.md
+  - Architecture and gates:
+      - ARCHITECTURE.md
+      - RESEARCH-AND-GATES.md
   - Architecture decisions:
       - adr/0001-record-architecture-decisions.md
       - adr/0002-stack-pins.md
