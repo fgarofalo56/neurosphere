@@ -247,8 +247,8 @@ Plus the docs build and link check commands for the tool chosen in item 1 (named
 | 2 | merged | worktree-agent-a5ab94971e7c7c75b | sonnet | generated API/SDK/MCP references + drift test; tests/docs/test_reference_coverage.py pass; merged b816627 | 2026-11-02 |
 | 3 | merged | prp-25-docs-site | sonnet | runbooks + 5 persona walkthroughs + command check pass; committed 9e4917b; runbooks stay DRAFT, new-user test OPEN | 2026-11-02 |
 | 4 | merged | worktree-agent-a73f8c5d53bfbe425 | sonnet | docs-assistant corpus-boundary, rate-limit, abstain tests pass; merged 168da9d; pyright + licence fix 699c6cb | 2026-11-02 |
-| 5 | todo | | sonnet | | 2026-11-14 |
-| 7 | todo | | sonnet | | 2026-11-14 |
+| 5 | in-progress | worktree (implementer) | sonnet | dispatched Wave A | 2026-11-14 |
+| 7 | in-progress | worktree (implementer) | sonnet | dispatched Wave A | 2026-11-14 |
 | 8 | todo | | sonnet | | 2026-11-14 |
 | 9 | todo | | sonnet | | 2026-11-14 |
 | 10 | todo | prp-25-round2 | opus | | 2026-11-14 |
