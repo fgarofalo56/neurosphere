@@ -1,7 +1,7 @@
 # Reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `d1823e3d70012ba5252528344388870787bb7fb3`. Generated: 2026-11-11.
+> Source commit: `67597e4b1151427218b932f0756138556fecd1d4`. Generated: 2026-11-14.
 > Sources: see each page.
 
 Generated reference pages. They are rebuilt from committed inputs and checked for drift by `tests/docs/test_reference_coverage.py`.

@@ -7,6 +7,7 @@
 
 import type { ConnectorManifest } from "@neurosphere/contracts";
 
+import { ConnectorError } from "./errors.js";
 import {
   type Clock,
   type CoverageReport,
@@ -58,7 +59,9 @@ export abstract class BaseConnector {
   /** Resolve a declared credential now (always via the broker, so rotation applies). */
   credential(name: string): Promise<SecretValue> {
     if (this.#credentials === undefined) {
-      return Promise.reject(new Error("connector was created without a credential broker"));
+      return Promise.reject(
+        new ConnectorError("credential_broker_missing", "connector was created without a credential broker"),
+      );
     }
     return this.#credentials.get(name);
   }

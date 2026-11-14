@@ -29,7 +29,11 @@ export class SecretValue {
     return this.#value;
   }
 
-  /** Constant-time-ish comparison without revealing either value. */
+  /**
+   * Compare without revealing either value. The loop always covers the longer length and does
+   * no early exit, but this is JavaScript: JIT and engine behaviour give no hard constant-time
+   * guarantee, and the comparison is over UTF-16 code units. Not for adversarial timing contexts.
+   */
   equals(other: unknown): boolean {
     if (!(other instanceof SecretValue)) return false;
     const a = this.#value;

@@ -44,6 +44,8 @@ class BillingReadResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     export: ExportReadResult
     aggregates: list[BillingAggregate]
+    #: Rows that could not be placed on a day and are therefore in no aggregate.
+    rows_dropped_no_date: int = 0
 
 
 class AzureBillingConnector(BaseConnector):
@@ -89,4 +91,8 @@ class AzureBillingConnector(BaseConnector):
 
     async def _read(self) -> BillingReadResult:
         export = await read_export(self._source, basis=self._basis, amount_kind=self._amount_kind)
-        return BillingReadResult(export=export, aggregates=aggregate_daily(export.rows))
+        return BillingReadResult(
+            export=export,
+            aggregates=aggregate_daily(export.rows),
+            rows_dropped_no_date=export.rows_without_date,
+        )

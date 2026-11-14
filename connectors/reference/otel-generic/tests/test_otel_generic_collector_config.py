@@ -15,6 +15,19 @@ def test_collector_config_deletes_every_body_field_name() -> None:
         assert f"- key: {name}\n        action: delete" in text, name
 
 
+COMPOSE_CONFIG = CONFIG.with_name("otel-collector.compose.yaml")
+
+
+def test_compose_collector_config_drops_every_body_name_and_keeps_credential_out() -> None:
+    text = COMPOSE_CONFIG.read_text(encoding="utf-8")
+    for name in sorted(BODY_FIELD_NAMES):
+        assert f"- key: {name}\n        action: delete" in text, name
+    assert "${env:NS_PRODUCER_CREDENTIAL}" in text
+    assert "/api/v1/ingest/otlp/traces" in text
+    assert "encoding: json" in text
+    assert "compression: none" in text
+
+
 def test_collector_config_targets_edge_paths_with_json_and_no_compression() -> None:
     text = CONFIG.read_text(encoding="utf-8")
     assert "/v1/ingest/otlp/traces" in text

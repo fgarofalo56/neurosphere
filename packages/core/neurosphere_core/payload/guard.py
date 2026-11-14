@@ -27,6 +27,10 @@ BODY_FIELD_NAMES: Final[frozenset[str]] = frozenset(
         "gen_ai.input.messages",
         "gen_ai.output.messages",
         "gen_ai.system_instructions",
+        # Bare chat-completion keys (PRP-09 item 10, #49): `completion` and `messages` carry the
+        # model output / conversation body without a `gen_ai.` prefix.
+        "completion",
+        "messages",
     }
 )
 

@@ -150,10 +150,86 @@ async def test_verify_remove_move_copy_checks() -> None:
         ],
     )
     req = WriteRequest(target=_TARGET, target_version="v1", proposed_diff=diff)
-    ok = build_verify_result(req, {"b": 1, "c": 1})
+    prior = {"gone": 9, "a": 1, "b": 1}
+    ok = build_verify_result(req, {"b": 1, "c": 1}, prior_state=prior)
     assert ok.matched is True
-    bad = build_verify_result(req, {"gone": 1, "a": 1, "b": 1, "c": 2})
+    bad = build_verify_result(req, {"gone": 1, "a": 1, "b": 1, "c": 2}, prior_state=prior)
     assert bad.mismatched_paths == ("/gone", "/b", "/c")
+
+
+def _diff(*ops: dict[str, Any]) -> WriteRequest:
+    return WriteRequest(
+        target=_TARGET,
+        target_version="v1",
+        proposed_diff=ProposedDiff(
+            format="json_patch", operations=[PatchOperation.model_validate(o) for o in ops]
+        ),
+    )
+
+
+def test_verify_is_type_strict() -> None:
+    t = _diff({"op": "replace", "path": "/f", "value": True})
+    assert build_verify_result(t, {"f": 1}).matched is False
+    assert build_verify_result(t, {"f": True}).matched is True
+    f = _diff({"op": "replace", "path": "/f", "value": False})
+    assert build_verify_result(f, {"f": 0}).matched is False
+    n = _diff({"op": "replace", "path": "/f", "value": 1})
+    assert build_verify_result(n, {"f": 1.0}).matched is False  # int vs float: explicit mismatch
+    nested = _diff({"op": "add", "path": "/f", "value": {"k": [True]}})
+    assert build_verify_result(nested, {"f": {"k": [1]}}).matched is False
+    assert build_verify_result(nested, {"f": {"k": [True]}}).matched is True
+
+
+def test_move_copy_without_prior_value_is_unverifiable() -> None:
+    mv = _diff({"op": "move", "from": "/a", "path": "/b"})
+    res = build_verify_result(mv, {"b": 1})
+    assert res.matched is False
+    assert res.unverifiable_paths == ("/b",)
+    assert res.checks[0].reason == "prior_value_unknown"
+    cp = _diff({"op": "copy", "from": "/a", "path": "/b"})
+    assert build_verify_result(cp, {"a": 1, "b": 1}).unverifiable_paths == ("/b",)
+
+
+def test_move_copy_reject_stale_destination() -> None:
+    mv = _diff({"op": "move", "from": "/a", "path": "/b"})
+    # destination holds a stale value, not the moved one
+    stale = build_verify_result(mv, {"b": "old"}, prior_state={"a": "new", "b": "old"})
+    assert stale.matched is False and stale.unverifiable_paths == ()
+    assert build_verify_result(mv, {"b": "new"}, prior_state={"a": "new"}).matched is True
+    cp = _diff({"op": "copy", "from": "/a", "path": "/b"})
+    stale_cp = build_verify_result(cp, {"a": "new", "b": "old"}, prior_state={"a": "new"})
+    assert stale_cp.matched is False
+    assert build_verify_result(cp, {"a": "new", "b": "new"}, prior_state={"a": "new"}).matched
+    absent = build_verify_result(mv, {"b": 1}, prior_state={})
+    assert absent.checks[0].reason == "prior_value_absent"
+
+
+def test_remove_against_empty_state_is_unverifiable() -> None:
+    rm = _diff({"op": "remove", "path": "/a/b"})
+    empty = build_verify_result(rm, {})
+    assert empty.matched is False
+    assert empty.unverifiable_paths == ("/a/b",)
+    assert empty.checks[0].reason == "empty_observed_state"
+    assert build_verify_result(rm, {"a": {}}).matched is True
+    assert build_verify_result(rm, {"a": {"b": 1}}).matched is False
+
+
+def test_pointer_array_index_follows_rfc6901() -> None:
+    state = {"a": ["x", "y"]}
+    for path in ("/a/²", "/a/٢", "/a/00", "/a/01", "/a/-", "/a/" + "9" * 500):
+        res = build_verify_result(_diff({"op": "test", "path": path, "value": "x"}), state)
+        assert res.matched is False  # typed not-found, never an uncaught ValueError
+    assert build_verify_result(_diff({"op": "test", "path": "/a/0", "value": "x"}), state).matched
+    assert build_verify_result(_diff({"op": "test", "path": "/a/1", "value": "y"}), state).matched
+
+
+def test_registry_rejects_sync_protocol_methods() -> None:
+    for name in ("dry_run", "apply", "verify", "rollback"):
+        sync = FakeWriter()
+        setattr(sync, name, lambda *_a, **_k: None)
+        with pytest.raises(CapabilityUnavailableError) as ei:
+            WriteTargetRegistry().register(sync)
+        assert ei.value.reason == "write_protocol_not_implemented"
 
 
 def test_registry_rejects_non_write_connectors() -> None:

@@ -4,9 +4,10 @@ Per gateway: build the connector for the gateway's cloud, compute the window fro
 ``poll_watermark`` (or the first-poll lookback), query ``APIM_GATEWAY`` and ``APIM_MCP``, map rows
 to ``TelemetryEvent``s (gateway rows emit no ``CostRecord``: they carry no price, PRP-33 D2) and
 post them to the ingest API as CloudEvents under the ``apim-gateway-poll`` producer. The connector
-only returns records for slices every source answered, so the watermark advances to its
-``next_watermark`` and a partial slice is simply re-polled on the next tick. Replays are safe:
-the ingestion pipeline dedupes on ``(customer_id, source_id, event_id)``.
+only returns records for slices every source answered (a truncated or throttled slice is held
+back; a mid-poll 429 returns the completed slices flagged ``rate_limited``), so the watermark
+advances to its ``next_watermark`` and a partial slice is simply re-polled on the next tick.
+Replays are safe: the ingestion pipeline dedupes on ``(customer_id, source_id, event_id)``.
 
 Nothing raises out of :meth:`GatewayPoller.tick` for an upstream failure (ARM/Log Analytics 429,
 ingest 5xx, a bad row): the outcome is recorded as ``poll_status`` on the registration and the
@@ -49,6 +50,7 @@ __all__ = [
     "STATUS_INGEST_FAILED",
     "STATUS_OK",
     "STATUS_PARTIAL",
+    "STATUS_RATE_LIMITED",
     "STATUS_REFUSED_GOVERNMENT",
     "ConnectorFactory",
     "GatewayPoller",
@@ -61,6 +63,7 @@ logger = logging.getLogger("neurosphere.workers.gateway_poll")
 
 STATUS_OK: Final = "ok"
 STATUS_PARTIAL: Final = "partial"
+STATUS_RATE_LIMITED: Final = "rate_limited"
 STATUS_REFUSED_GOVERNMENT: Final = "refused_government_unverified"
 STATUS_CLOUD_MISMATCH: Final = "cloud_mismatch"
 STATUS_INGEST_FAILED: Final = "ingest_failed"
@@ -278,7 +281,7 @@ class GatewayPoller:
             )
             cost_centers = await self._cost_centers(connector, gateway, watermark)
         except RateLimitedError:
-            return _Outcome(status="rate_limited")
+            return _Outcome(status=STATUS_RATE_LIMITED)
         except NeuroSphereError as exc:
             return _Outcome(status=f"poll_failed:{exc.code}"[:64])
         finally:
@@ -309,8 +312,13 @@ class GatewayPoller:
                 },
             )
         lag_ms = result.freshness.lag_ms
+        status = STATUS_OK
+        if result.rate_limited:
+            status = STATUS_RATE_LIMITED  # completed slices are ingested, the rest is re-polled
+        elif not full:
+            status = STATUS_PARTIAL
         return _Outcome(
-            status=STATUS_OK if full else STATUS_PARTIAL,
+            status=status,
             watermark=result.next_watermark,
             freshness_seconds=None if lag_ms is None else lag_ms // 1000,
             coverage=fraction,

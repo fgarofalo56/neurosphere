@@ -10,6 +10,7 @@ from neurosphere_connector import (
     CoverageReport,
     FreshnessReport,
     HealthState,
+    HealthTracker,
     build_manifest,
 )
 from neurosphere_contracts.connectors.v1.connector_manifest import ConnectorManifest, Granularity
@@ -114,6 +115,28 @@ async def test_hard_errors_fail_immediately_without_leaking_text(exc: Exception)
     assert h.state is HealthState.FAILING
     assert LEAK not in h.model_dump_json()
     assert h.last_error_code is not None
+
+
+def test_rate_limit_remaining_survives_success_without_value_until_reset() -> None:
+    clock = _Clock()
+    tracker = HealthTracker(clock=clock)
+    tracker.record_error(RateLimitedError(30))
+    clock.now = T0 + timedelta(seconds=10)
+    tracker.record_success()  # carries no remaining: the known 0 must be kept
+    assert tracker.snapshot().rate_limit.remaining == 0
+    tracker.record_success(remaining=7)  # a new value replaces it
+    assert tracker.snapshot().rate_limit.remaining == 7
+    tracker.record_success()  # a non-zero last known value is kept too
+    assert tracker.snapshot().rate_limit.remaining == 7
+
+
+def test_rate_limit_zero_remaining_cleared_after_reset_time() -> None:
+    clock = _Clock()
+    tracker = HealthTracker(clock=clock)
+    tracker.record_error(RateLimitedError(30))
+    clock.now = T0 + timedelta(seconds=31)
+    tracker.record_success()
+    assert tracker.snapshot().rate_limit.remaining is None
 
 
 def test_coverage_rejects_answered_over_expected() -> None:

@@ -10,6 +10,7 @@ manifest never echoes what was submitted.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, cast
 
@@ -68,11 +69,15 @@ def _cross_field_issues(m: ConnectorManifest) -> list[ValidationIssue]:
     if m.auth_mode != "vault_reference" and refs:
         issues.append(ValidationIssue("/credential_refs", "only vault_reference carries refs"))
     names = [r.name for r in refs]
+    counts = Counter(names)
+    reported: set[str] = set()
     for i, name in enumerate(names):
-        if names.index(name) != i:
+        if counts[name] > 1 and name not in reported:
+            reported.add(name)
             issues.append(ValidationIssue(f"/credential_refs/{i}/name", "duplicate name"))
     clouds = set(m.supported_clouds)
     for i, ref in enumerate(refs):
+        # The contract's vault_ref pattern needs a 3-24 char vault name: the Azure Key Vault rule.
         host = ref.vault_ref.removeprefix("https://").split("/", 1)[0]
         cloud = next((c for s, c in _VAULT_HOST_CLOUD.items() if host.endswith("." + s)), None)
         if cloud not in clouds:

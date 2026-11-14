@@ -21,8 +21,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
-from typing import Any, Final
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+from typing import Any, Final, Literal
 
 import httpx
 from neurosphere_connector import (
@@ -73,10 +76,11 @@ DEFAULT_CREDENTIAL_REF: Final = CredentialRef(
     vault_ref="https://ns-connectors.vault.azure.net/secrets/otel-producer-credential",
 )
 
-_CLOUD_BY_VAULT_HOST: Final = {
+_CLOUD_BY_VAULT_HOST: Final[dict[str, Literal["commercial", "government"]]] = {
     "vault.azure.net": "commercial",
     "vault.usgovcloudapi.net": "government",
 }
+MAX_RETRY_AFTER_SECONDS: Final = 300
 _RETRYABLE_STATUS: Final = frozenset({500, 502, 503, 504})
 _JSON: Final = "application/json"
 _EVENTS_BATCH: Final = "application/cloudevents-batch+json"
@@ -98,16 +102,29 @@ class PushSummary(BaseModel):
     ignored: int = Field(ge=0)
     # Body fields removed (name -> count): by the connector before send plus by the edge.
     dropped_fields: dict[str, int] = Field(default_factory=dict)
+    # Attributes omitted because OTLP/JSON here cannot carry them (reason -> count): array,
+    # bytes, null, non_finite (NaN/Inf), unsupported. Omitted means unknown, never 0.
+    dropped_attributes: dict[str, int] = Field(default_factory=dict)
 
 
 def _manifest(ref: CredentialRef) -> ConnectorManifest:
-    host = ref.vault_ref.removeprefix("https://").split("/", 1)[0]
-    cloud = next((c for suffix, c in _CLOUD_BY_VAULT_HOST.items() if host.endswith(suffix)), None)
+    host = ref.vault_ref.removeprefix("https://").split("/", 1)[0].lower()
+    cloud: Literal["commercial", "government"] | None = None
+    for suffix, known in _CLOUD_BY_VAULT_HOST.items():
+        if host.endswith(suffix):
+            cloud = known
+    if cloud is None:
+        # No silent fallback to commercial: a wrong cloud would cross the boundary.
+        raise InvalidSchemaError(
+            "The credential vault host is not a recognised Azure Key Vault host.",
+            reason="unrecognized_vault_host",
+        )
+    clouds: list[Literal["commercial", "government"]] = [cloud]
     return build_manifest(
         name="otel-generic",
         version="0.1.0",
         capabilities=["telemetry_ingest", "health_reporting"],
-        supported_clouds=["government" if cloud == "government" else "commercial"],
+        supported_clouds=clouds,
         granularity=Granularity(time_grain="event", subject_level="request"),
         scopes=["telemetry:ingest"],
         credential_refs=[ref],
@@ -128,7 +145,7 @@ def _split(
     pending.reverse()
     while pending:
         chunk = pending.pop()
-        body = json.dumps(build(chunk), separators=(",", ":")).encode("utf-8")
+        body = json.dumps(build(chunk), separators=(",", ":"), allow_nan=False).encode("utf-8")
         if len(body) <= max_bytes:
             bodies.append(body)
         elif len(chunk) > 1:
@@ -213,7 +230,9 @@ class OtelGenericConnector(BaseConnector):
         return _manifest(self._ref)
 
     # -- public push API --------------------------------------------------------------------
-    async def push_traces(self, document: Mapping[str, Any]) -> PushSummary:
+    async def push_traces(
+        self, document: Mapping[str, Any], *, dropped_attributes: dict[str, int] | None = None
+    ) -> PushSummary:
         """Send an OTLP/JSON ``ExportTraceServiceRequest`` (bodies dropped, batches bounded)."""
         clean, dropped = redact_outgoing(dict(document))
         triples = _flatten(clean, "resourceSpans", "scopeSpans", "spans")
@@ -223,7 +242,7 @@ class OtelGenericConnector(BaseConnector):
             max_items=self._max_items,
             max_bytes=self._max_bytes,
         )
-        return await self._push("/otlp/traces", _JSON, bodies, dropped)
+        return await self._push("/otlp/traces", _JSON, bodies, dropped, dropped_attributes)
 
     async def push_metrics(self, document: Mapping[str, Any]) -> PushSummary:
         """Send an OTLP/JSON ``ExportMetricsServiceRequest`` (one metric per item)."""
@@ -246,8 +265,9 @@ class OtelGenericConnector(BaseConnector):
 
     async def export_spans(self, spans: Iterable[Any]) -> PushSummary:
         """Send ``opentelemetry-sdk`` ``ReadableSpan`` objects (what a SpanExporter receives)."""
-        document = readable_spans_to_otlp(spans, **self._claims)
-        return await self.push_traces(document)
+        attr_drops: dict[str, int] = {}
+        document = readable_spans_to_otlp(spans, **self._claims, dropped_attributes=attr_drops)
+        return await self.push_traces(document, dropped_attributes=attr_drops)
 
     async def close(self) -> None:
         if self._owns_client:
@@ -256,11 +276,22 @@ class OtelGenericConnector(BaseConnector):
 
     # -- transport --------------------------------------------------------------------------
     async def _push(
-        self, path: str, content_type: str, bodies: list[bytes], dropped: dict[str, int]
+        self,
+        path: str,
+        content_type: str,
+        bodies: list[bytes],
+        dropped: dict[str, int],
+        dropped_attributes: dict[str, int] | None = None,
     ) -> PushSummary:
+        attr_drops = dict(dropped_attributes or {})
         if not bodies:
             return PushSummary(
-                requests=0, accepted=0, rejected=0, ignored=0, dropped_fields=dropped
+                requests=0,
+                accepted=0,
+                rejected=0,
+                ignored=0,
+                dropped_fields=dropped,
+                dropped_attributes=attr_drops,
             )
 
         async def run() -> PushSummary:
@@ -279,6 +310,7 @@ class OtelGenericConnector(BaseConnector):
                 rejected=rejected,
                 ignored=ignored,
                 dropped_fields=total_dropped,
+                dropped_attributes=attr_drops,
             )
 
         def freshness(_: PushSummary) -> FreshnessReport:
@@ -347,9 +379,20 @@ def _json_object(response: httpx.Response) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _retry_after(response: httpx.Response) -> int:
-    raw = response.headers.get("retry-after", "")
-    return int(raw) if raw.isdigit() else 1
+def _retry_after(response: httpx.Response, *, now: datetime | None = None) -> int:
+    """Seconds to wait: delta-seconds or an HTTP-date, clamped to [1, MAX_RETRY_AFTER_SECONDS]."""
+    raw = response.headers.get("retry-after", "").strip()
+    if raw.isascii() and raw.isdigit():
+        seconds = int(raw)
+    else:
+        try:
+            when = parsedate_to_datetime(raw)
+        except (TypeError, ValueError, IndexError):
+            return 1
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=UTC)
+        seconds = math.ceil((when - (now or datetime.now(UTC))).total_seconds())
+    return max(1, min(seconds, MAX_RETRY_AFTER_SECONDS))
 
 
 def _terminal_error(status: int) -> Exception:

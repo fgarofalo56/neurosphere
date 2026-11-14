@@ -311,6 +311,26 @@ services:
       api:
         condition: service_healthy
 
+  # --- profile `otel`: the official OpenTelemetry Collector (contrib) in front of the api ingest edge ---
+  # Opt-in (PRP-09 item 10): `docker compose --profile app --profile otel up -d --wait`. It drops
+  # prompt/response body attributes and exports OTLP/JSON to http://api:8000/api/v1/ingest. The
+  # producer credential comes from the host shell (NS_PRODUCER_CREDENTIAL, "<producer_id>.<secret>";
+  # the dev producer is in docs/runbooks/ingest.md) and is never a file. Deliberately not
+  # `${VAR:?}`: Compose interpolates inactive profiles too. The contrib image has no shell, so there
+  # is no healthcheck; clients wait for :4318. Config: connectors/reference/otel-generic/collector.
+  otel-collector:
+    profiles: [otel]
+    image: otel/opentelemetry-collector-contrib:0.165.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    environment:
+      NS_PRODUCER_CREDENTIAL: ${NS_PRODUCER_CREDENTIAL:-}
+    volumes:
+      - ./connectors/reference/otel-generic/collector/otel-collector.compose.yaml:/etc/otelcol/config.yaml:ro
+    networks: [default]
+
 networks:
   default: {}
   isolated:

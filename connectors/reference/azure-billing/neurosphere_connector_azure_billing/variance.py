@@ -114,6 +114,8 @@ class VarianceReport(BaseModel):
     granularity_statement: str
     lines: list[VarianceLine]
     billing_rows_other_basis_ignored: int
+    #: Export rows with no usable date: in no billing line, so this report cannot cover them.
+    billing_rows_without_date: int = 0
     unmatched_estimates: list[UnmatchedEstimate]
     notes: tuple[str, ...] = _NOTES
 
@@ -141,6 +143,7 @@ def build_variance_report(
     *,
     level: ComparisonLevel = "day_resource",
     basis: CostBasis = "actual",
+    rows_without_date: int = 0,
 ) -> VarianceReport:
     """Compare ``basis`` billing aggregates with ledger estimates at ``level``."""
     ignored = 0
@@ -228,5 +231,6 @@ def build_variance_report(
         granularity_statement=_STATEMENTS[level],
         lines=lines,
         billing_rows_other_basis_ignored=ignored,
+        billing_rows_without_date=rows_without_date,
         unmatched_estimates=unmatched,
     )

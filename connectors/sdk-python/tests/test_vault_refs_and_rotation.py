@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 import logging
@@ -93,10 +94,20 @@ async def test_value_never_reaches_logs_or_exceptions(caplog: pytest.LogCaptureF
     bad = _Demo(credentials=CredentialBroker(Leaky({}), [REF]))
     with pytest.raises(DependencyTransientError) as info:
         await bad.call_provider()
-    assert SECRET not in str(info.value)
-    assert SECRET not in repr(info.value)
+    seen: set[int] = set()
+    chain: list[BaseException] = [info.value]
+    while chain:
+        exc = chain.pop()
+        if id(exc) in seen:
+            continue
+        seen.add(id(exc))
+        assert SECRET not in str(exc)
+        assert SECRET not in repr(exc)
+        assert all(SECRET not in str(a) for a in exc.args)
+        chain.extend(e for e in (exc.__cause__, exc.__context__) if e is not None)
     assert info.value.__cause__ is None
-    assert info.value.__suppress_context__
+    assert info.value.__context__ is None
+    assert SECRET not in caplog.text
 
     broker = CredentialBroker(_resolver(), [REF])
     await broker.get("api_key")
@@ -133,6 +144,22 @@ async def test_rotation_hook_runs_and_next_call_uses_new_value() -> None:
     assert seen == ["api_key"]
     assert async_seen == ["api_key"]
     assert await connector.call_provider() == SECRET_2
+
+
+async def test_async_hooks_from_a_source_signal_wait_for_the_host_drain() -> None:
+    resolver = _resolver()
+    broker = CredentialBroker(resolver, [REF])
+    ran: list[str] = []
+
+    async def async_hook(name: str) -> None:
+        ran.append(name)
+
+    broker.on_rotation(async_hook)
+    resolver.rotate(REF, SECRET_2)
+    await asyncio.sleep(0)
+    assert ran == []  # not auto-scheduled: the host must drain
+    await broker.drain_rotation_hooks()
+    assert ran == ["api_key"]
 
 
 async def test_manual_notify_rotated_invalidates_cache() -> None:

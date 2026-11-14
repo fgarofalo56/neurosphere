@@ -6,6 +6,15 @@ source) and a watermark. The query APIs have no cursor paging, so a "page" is on
 the budget runs out the result is ``partial`` and no further slice is fetched; the next poll
 resumes from ``next_watermark``. The watermark only advances over slices every source answered.
 
+Truncated slices (a ``PartialError`` or ``MAX_ROWS`` rows from any source) never advance the
+watermark: their rows are discarded (a re-read cannot duplicate them) and the cursor stays at the
+slice start. Within the poll the slice is retried at half length, each retry costing one page of
+the budget, down to ``MIN_SLICE``; a slice still truncated there is reported as
+``stalled_slice_start`` with ``partial`` set, never an unbounded loop. A 429 on a later slice
+returns the completed slices with ``rate_limited`` and ``retry_after_seconds`` set (health shows
+``rate_limited``); a 429 on the first slice raises. With no sources nothing is read: the
+watermark is unchanged and the result is partial.
+
 Query text comes from fixed templates (``queries.py``); callers cannot supply KQL. Government
 hosts are configuration only and unverified (see ``endpoints.py``); they need an explicit
 ``allow_unverified_government`` opt-in and never fall back to Commercial.
@@ -62,6 +71,7 @@ __all__ = ["AzureMonitorConnector", "PollBounds", "PollResult"]
 
 Sleeper = Callable[[float], Awaitable[None]]
 _DOC_URL = "https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/request-format"
+MIN_SLICE = timedelta(seconds=30)  # floor for halving a truncated slice
 _TIME_COLUMNS = ("TimeGenerated", "timestamp")
 
 
@@ -101,6 +111,12 @@ class PollResult:
     failed_sources: dict[str, str] = field(default_factory=dict)  # source_id -> error code
     truncated_pages: int = 0
     dropped_body_fields: dict[str, int] = field(default_factory=dict)
+    # A later slice was throttled: completed slices are returned, this one is re-polled.
+    rate_limited: bool = False
+    retry_after_seconds: int | None = None
+    shrunk_slices: int = 0  # truncated slices retried at half length within this poll
+    # Set when a slice is still truncated at MIN_SLICE: the watermark is held at this instant.
+    stalled_slice_start: datetime | None = None
 
 
 @dataclass
@@ -180,11 +196,16 @@ class AzureMonitorConnector(BaseConnector):
         self, sources: Sequence[MonitorSource], *, watermark: datetime | None = None
     ) -> PollResult:
         """Fetch at most ``max_pages`` slices after ``watermark``; health is updated either way."""
-        return await self.guarded_call(
+        result = await self.guarded_call(
             lambda: self._poll(list(sources), watermark),
             freshness=lambda r: r.freshness,
             coverage=lambda r: r.coverage,
         )
+        if result.rate_limited:  # partial result: keep the records, surface the 429 on health
+            self._tracker.record_error(
+                RateLimitedError(result.retry_after_seconds or 0, "azure monitor throttled a slice")
+            )
+        return result
 
     async def _poll(self, sources: list[MonitorSource], watermark: datetime | None) -> PollResult:
         b = self._bounds
@@ -192,50 +213,85 @@ class AzureMonitorConnector(BaseConnector):
         horizon = now - b.ingestion_delay
         start = watermark or horizon - b.initial_lookback
         window_end = min(horizon, start + b.max_window)
-        partial = window_end < horizon  # window cap hit: more data waits for the next poll
+        # Window cap hit: more data waits for the next poll. No sources: nothing was read, so
+        # the poll can never claim completeness.
+        partial = window_end < horizon or not sources
         records: list[dict[str, Any]] = []
         dropped: dict[str, int] = {}
         failed: dict[str, str] = {}
-        pages = requests = truncated = 0
+        pages = requests = truncated = shrunk = 0
         cursor = start
+        slice_len = b.slice_length
+        stalled = False
+        retry_after: int | None = None
+        rate_limited = False
         last_error: NeuroSphereError | None = None
 
-        for _ in range(b.max_pages):
+        for _ in range(b.max_pages if sources else 0):
             if cursor >= window_end:
                 break
-            page_end = min(cursor + b.slice_length, window_end)
+            page_end = min(cursor + slice_len, window_end)
             page_rows: list[dict[str, Any]] = []
+            page_dropped: dict[str, int] = {}
             page_failed: dict[str, str] = {}
+            page_truncated = False
+            limited: RateLimitedError | None = None
             for src in sources:
                 requests += 1
                 try:
                     page = await self._query(src, cursor, page_end)
-                except RateLimitedError:
-                    raise
+                except RateLimitedError as exc:
+                    limited = exc
+                    break
                 except NeuroSphereError as exc:
                     page_failed[src.source_id] = exc.code
                     last_error = exc
                     continue
-                truncated += page.partial
+                if page.partial:
+                    truncated += 1
+                    page_truncated = True
                 for row in page.rows:
                     clean, counts = drop_body_fields(
                         {"source_kind": src.kind.value, "source_id": src.source_id, **row}
                     )
                     page_rows.append(clean)
                     for name, n in counts.items():
-                        dropped[name] = dropped.get(name, 0) + n
+                        page_dropped[name] = page_dropped.get(name, 0) + n
+            if limited is not None:
+                if cursor == start:
+                    raise limited  # the first slice never completed: a failure, not a partial
+                rate_limited = True
+                retry_after = limited.retry_after_seconds
+                partial = True
+                break  # keep completed slices; this slice is re-polled next time
             if page_failed:
                 failed = page_failed
                 if len(page_failed) == len(sources) and pages == 0 and last_error is not None:
                     raise last_error  # nothing answered at all: a failure, not a partial poll
                 partial = True
                 break  # do not advance past a slice some source did not answer
-            records.extend(page_rows)
             pages += 1
+            if page_truncated:
+                # Rows of a truncated slice are discarded and the cursor stays at the slice start,
+                # so the next poll re-reads it and nothing is duplicated or skipped. Within this
+                # poll the slice is retried at half length (bounded by the page budget) down to
+                # MIN_SLICE; below that it stays held and is reported as stalled.
+                halved = slice_len / 2
+                if halved < MIN_SLICE or page_end - cursor <= MIN_SLICE:
+                    stalled = True
+                    partial = True
+                    break
+                slice_len = halved
+                shrunk += 1
+                continue
+            records.extend(page_rows)
+            for name, n in page_dropped.items():
+                dropped[name] = dropped.get(name, 0) + n
             cursor = page_end
+            slice_len = b.slice_length
 
-        # Page budget exhausted (cursor short of the window) or any truncated/partial page.
-        partial = partial or cursor < window_end or truncated > 0
+        # Page budget exhausted (cursor short of the window) or a slice held back.
+        partial = partial or cursor < window_end
         expected = len(sources)
         coverage = CoverageReport(
             expected_sources=expected, answered_sources=expected - len(failed), partial=partial
@@ -252,6 +308,10 @@ class AzureMonitorConnector(BaseConnector):
             failed_sources=failed,
             truncated_pages=truncated,
             dropped_body_fields=dropped,
+            rate_limited=rate_limited,
+            retry_after_seconds=retry_after,
+            shrunk_slices=shrunk,
+            stalled_slice_start=cursor if stalled else None,
         )
 
     @staticmethod

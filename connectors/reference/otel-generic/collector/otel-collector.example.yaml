@@ -35,6 +35,10 @@ processors:
         action: delete
       - key: gen_ai.system_instructions
         action: delete
+      - key: completion
+        action: delete
+      - key: messages
+        action: delete
 
   # Anything whose last dotted segment is "prompt" or "response" (for example llm.prompt).
   transform/drop_body_suffixes:

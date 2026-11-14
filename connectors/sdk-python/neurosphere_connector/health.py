@@ -126,10 +126,16 @@ class HealthTracker:
         self._seen = True
         self._failures = 0
         self._last_code = None
+        if remaining is not None:
+            self._remaining = remaining
+        elif self._remaining == 0 and (
+            self._limited_until is None or self._clock() >= self._limited_until
+        ):
+            # A zero quota is stale once its reset time has passed (or was never known).
+            self._remaining = None
         self._rate_limited = False
         self._limited_until = None
         self._retry_after = None
-        self._remaining = remaining
         if freshness is not None:
             self._freshness = freshness
         if coverage is not None:

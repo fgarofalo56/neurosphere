@@ -157,14 +157,18 @@ class CredentialBroker:
         ref = self._refs.get(name)
         if ref is None:
             raise CapabilityUnavailableError("credential_not_declared", f"credential {name!r}")
+        value: SecretValue | None = None
         try:
             value = await self._resolver.resolve(ref)
         except Exception:
             # Never chain or echo the resolver's text: it may hold provider response bodies.
             _log.warning("credential resolution failed", extra={"credential": name})
+        if value is None:
+            # Raised outside the except block so __context__ and __cause__ stay empty: ``from
+            # None`` only hides the chain in tracebacks; the resolver error stays reachable.
             raise DependencyTransientError(
                 f"credential {name!r} could not be resolved", reason="credential_resolution_failed"
-            ) from None
+            )
         self._cache[name] = value
         return value
 
@@ -188,7 +192,13 @@ class CredentialBroker:
                 self._pending.append(result)
 
     async def drain_rotation_hooks(self) -> None:
-        """Await async hooks queued by a synchronous ``RotationSource`` signal."""
+        """Await async hooks queued by a synchronous ``RotationSource`` signal.
+
+        A ``RotationSource`` signal is synchronous: the cache is invalidated immediately but async
+        hooks are only queued, and nothing schedules them. The host MUST call this (after each
+        request or on a timer) or those hooks never run. ``notify_rotated`` runs hooks itself and
+        needs no drain.
+        """
         pending, self._pending = self._pending, []
         for item in pending:
             await item

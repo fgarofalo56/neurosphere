@@ -28,9 +28,11 @@ Rules enforced here:
 from __future__ import annotations
 
 import csv
-import gzip
+import hashlib
 import io
 import json
+import re
+import zlib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -41,16 +43,25 @@ from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaErr
 from pydantic import BaseModel, ConfigDict
 
 __all__ = [
+    "MAX_DECOMPRESSED_BYTES",
     "AmountKind",
     "BillingAggregate",
     "CostBasis",
     "CostRow",
+    "ExportBlobNotFoundError",
     "ExportBlobSource",
     "ExportReadResult",
     "aggregate_daily",
     "parse_cost_csv",
     "read_export",
 ]
+
+#: Cap on one decompressed partition (a gzip bomb guard). An operator with larger partitions
+#: passes ``max_decompressed_bytes`` to ``read_export``.
+MAX_DECOMPRESSED_BYTES = 256 * 1024 * 1024
+
+# ``Decimal`` also accepts underscores ("1_0") and non-ASCII digits; a cost cell is neither.
+_COST_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 
 CostBasis = Literal["actual", "amortized"]
 AmountKind = Literal["estimated", "invoiced"]
@@ -119,12 +130,23 @@ class ExportReadResult(BaseModel):
     rows_with_bad_cost: int
     blobs_read: int
     blobs_expected: int | None
+    #: Partitions the manifest listed that the source reported absent (a partial export).
+    blobs_missing: tuple[str, ...] = ()
+    #: SHA-256 of the manifest bytes: a changed value means the export was rewritten.
+    manifest_sha256: str = ""
     complete: bool
     granularity: str = "day per resource per meter (as reported by the export)"
 
 
+class ExportBlobNotFoundError(Exception):
+    """A partition named by the manifest does not exist (yet) in the container."""
+
+
 class ExportBlobSource(Protocol):
-    """Blob access the reader needs; production uses ``AzureBlobExportSource``."""
+    """Blob access the reader needs; production uses ``AzureBlobExportSource``.
+
+    ``read_blob`` raises ``ExportBlobNotFoundError`` for a blob that is absent.
+    """
 
     async def read_manifest(self) -> bytes: ...
 
@@ -168,6 +190,8 @@ def _parse_cost(value: str | None) -> tuple[Decimal | None, bool]:
     """Return (cost, was_present_but_unparseable). Blank -> (None, False)."""
     if value is None:
         return None, False
+    if _COST_TEXT.fullmatch(value) is None:
+        return None, True
     try:
         parsed = Decimal(value)
     except InvalidOperation:
@@ -259,6 +283,7 @@ class _ManifestInfo:
     row_count: int | None = None
     file_format: str | None = None
     compression: str | None = None
+    blob_count: int | None = None
     blobs: list[str] = field(default_factory=lambda: [])
 
 
@@ -280,6 +305,8 @@ def _read_manifest(raw: bytes) -> _ManifestInfo:
         info.type = export.get("type")  # pyright: ignore[reportUnknownMemberType]
     count = d.get("dataRowCount")
     info.row_count = count if isinstance(count, int) else None
+    blob_count = d.get("blobCount")
+    info.blob_count = blob_count if isinstance(blob_count, int) and blob_count >= 0 else None
     for blob in d["blobs"]:
         name = blob.get("blobName") if isinstance(blob, dict) else None  # pyright: ignore[reportUnknownMemberType]
         if isinstance(name, str):
@@ -287,14 +314,36 @@ def _read_manifest(raw: bytes) -> _ManifestInfo:
     return info
 
 
+def _bounded_gunzip(data: bytes, limit: int) -> bytes:
+    """Decompress gzip (one or more members); refuse output above ``limit`` bytes."""
+    out = bytearray()
+    remaining = data
+    while remaining:
+        stream = zlib.decompressobj(wbits=31)
+        try:
+            out += stream.decompress(remaining, limit - len(out) + 1)
+        except zlib.error:
+            raise InvalidSchemaError("export partition is not valid gzip") from None
+        if len(out) > limit:
+            raise InvalidSchemaError(
+                "export partition exceeds the decompressed size cap", reason="export_too_large"
+            )
+        if not stream.eof:
+            raise InvalidSchemaError("export partition gzip stream is truncated")
+        remaining = stream.unused_data
+    return bytes(out)
+
+
 async def read_export(
     source: ExportBlobSource,
     *,
     basis: CostBasis,
     amount_kind: AmountKind = "estimated",
+    max_decompressed_bytes: int = MAX_DECOMPRESSED_BYTES,
 ) -> ExportReadResult:
     """Read every partition named by the manifest and report completeness honestly."""
-    info = _read_manifest(await source.read_manifest())
+    manifest_bytes = await source.read_manifest()
+    info = _read_manifest(manifest_bytes)
     if (info.file_format or "Csv").lower() != "csv":
         raise CapabilityUnavailableError(
             "export_format_unsupported", "only CSV exports are read; Parquet is not supported"
@@ -304,17 +353,34 @@ async def read_export(
         raise CapabilityUnavailableError("export_compression_unsupported")
     stats = _ParseStats()
     rows: list[CostRow] = []
+    missing: list[str] = []
+    blobs_read = 0
     for name in info.blobs:
-        data = await source.read_blob(name)
+        try:
+            data = await source.read_blob(name)
+        except ExportBlobNotFoundError:
+            missing.append(name)
+            continue
+        blobs_read += 1
         if compression == "gzip":
-            data = gzip.decompress(data)
+            data = _bounded_gunzip(data, max_decompressed_bytes)
+        elif len(data) > max_decompressed_bytes:
+            raise InvalidSchemaError(
+                "export partition exceeds the size cap", reason="export_too_large"
+            )
         rows.extend(
             parse_cost_csv(
                 data.decode("utf-8-sig"), basis=basis, amount_kind=amount_kind, stats=stats
             )
         )
-    blobs_expected = len(info.blobs)
-    complete = info.row_count is None or info.row_count == stats.rows_read
+    # The manifest's own ``blobCount`` is the expectation when present, so a manifest whose list
+    # was cut short is visible; otherwise the listed names are all there is to expect.
+    blobs_expected = info.blob_count if info.blob_count is not None else len(info.blobs)
+    complete = (
+        not missing
+        and blobs_read == blobs_expected
+        and (info.row_count is None or info.row_count == stats.rows_read)
+    )
     return ExportReadResult(
         rows=rows,
         manifest_type=info.type,
@@ -323,7 +389,9 @@ async def read_export(
         rows_without_date=stats.rows_without_date,
         rows_with_unknown_cost=stats.rows_with_unknown_cost,
         rows_with_bad_cost=stats.rows_with_bad_cost,
-        blobs_read=len(info.blobs),
+        blobs_read=blobs_read,
         blobs_expected=blobs_expected,
+        blobs_missing=tuple(missing),
+        manifest_sha256=hashlib.sha256(manifest_bytes).hexdigest(),
         complete=complete,
     )

@@ -13,11 +13,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from neurosphere_contracts.connectors.v1.connector_manifest import ConnectorManifest
+from neurosphere_core.errors import CapabilityUnavailableError
 
 from neurosphere_connector.health import CoverageReport, FreshnessReport, HealthReport
 from neurosphere_connector.manifest import manifest_issues
+from neurosphere_connector.write.write_registry import _check_capable
 
-__all__ = ["Violation", "check_connector_contract"]
+__all__ = ["Violation", "check_connector_contract", "check_write_connector_contract"]
 
 
 @dataclass(frozen=True)
@@ -41,26 +43,63 @@ async def _call(connector: Any, method: str) -> tuple[Any, Violation | None]:
     return result, None
 
 
-async def check_connector_contract(connector: Any) -> list[Violation]:
-    """Check manifest, health, rate-limit, coverage and freshness reporting."""
-    out: list[Violation] = []
-
-    manifest = getattr(connector, "manifest", None)
+def _check_manifest(manifest: Any) -> list[Violation]:
     if manifest is None:
-        out.append(Violation("manifest_missing", "connector exposes no manifest"))
-    elif not isinstance(manifest, ConnectorManifest):
-        out.append(Violation("manifest_type", "manifest must be a ConnectorManifest"))
-    else:
-        for issue in manifest_issues(manifest.model_dump(mode="json")):
-            out.append(Violation("manifest_invalid", f"{issue.pointer or '/'}: {issue.detail}"))
+        return [Violation("manifest_missing", "connector exposes no manifest")]
+    if not isinstance(manifest, ConnectorManifest):
+        return [Violation("manifest_type", "manifest must be a ConnectorManifest")]
+    return [
+        Violation("manifest_invalid", f"{issue.pointer or '/'}: {issue.detail}")
+        for issue in manifest_issues(manifest.model_dump(mode="json"))
+    ]
 
+
+async def _check_health(connector: Any) -> list[Violation]:
     health, bad = await _call(connector, "health")
     if bad:
-        out.append(bad)
-    elif not isinstance(health, HealthReport):
-        out.append(Violation("health_type", "health() must return HealthReport"))
-    elif health.rate_limit.limited and health.state.value != "rate_limited":
-        out.append(Violation("health_rate_limit", "limited but state is not rate_limited"))
+        return [bad]
+    if not isinstance(health, HealthReport):
+        return [Violation("health_type", "health() must return HealthReport")]
+    if health.rate_limit.limited and health.state.value != "rate_limited":
+        return [Violation("health_rate_limit", "limited but state is not rate_limited")]
+    return []
+
+
+def _check_serializable(manifest: Any) -> list[Violation]:
+    if not isinstance(manifest, ConnectorManifest):
+        return []
+    try:
+        json.dumps(manifest.model_dump(mode="json"))
+    except (TypeError, ValueError):
+        return [Violation("manifest_not_serializable", "manifest is not JSON-serializable")]
+    return []
+
+
+# Reasons raised by the write registry's capability check -> kit violation codes.
+_WRITE_REASONS = {
+    "write_protocol_not_implemented": "write_protocol_missing",
+    "write_support_absent": "write_actions_missing",
+    "connector_advisory": "manifest_advisory",
+}
+
+
+def _check_write_shape(connector: Any) -> list[Violation]:
+    """Reuse the write registry's capability check; map its refusal to a kit violation."""
+    try:
+        _check_capable(connector)
+    except CapabilityUnavailableError as exc:
+        code = _WRITE_REASONS.get(exc.reason or "", "write_protocol_missing")
+        return [Violation(code, str(exc.detail))]
+    except AttributeError:
+        return [Violation("write_protocol_missing", "connector lacks a WriteConnector member")]
+    return []
+
+
+async def check_connector_contract(connector: Any) -> list[Violation]:
+    """Check manifest, health, rate-limit, coverage and freshness reporting (read profile)."""
+    manifest = getattr(connector, "manifest", None)
+    out = _check_manifest(manifest)
+    out.extend(await _check_health(connector))
 
     coverage, bad = await _call(connector, "coverage")
     if bad:
@@ -73,14 +112,22 @@ async def check_connector_contract(connector: Any) -> list[Violation]:
         out.append(bad)
     elif not isinstance(freshness, FreshnessReport):
         out.append(Violation("freshness_type", "freshness() must return FreshnessReport"))
-    elif freshness.lag_ms is None and freshness.watermark is not None:
-        pass  # watermark without lag is allowed; lag is simply unknown
     elif freshness.lag_ms == 0 and freshness.watermark is None and freshness.observed_at is None:
         out.append(Violation("freshness_unknown_as_zero", "lag_ms=0 with no observation"))
 
-    if isinstance(manifest, ConnectorManifest):
-        try:
-            json.dumps(manifest.model_dump(mode="json"))
-        except (TypeError, ValueError):
-            out.append(Violation("manifest_not_serializable", "manifest is not JSON-serializable"))
+    out.extend(_check_serializable(manifest))
+    return out
+
+
+async def check_write_connector_contract(connector: Any) -> list[Violation]:
+    """Write profile: valid non-advisory manifest with write actions, the ``WriteConnector``
+    protocol (as the write registry checks it) and a non-raising ``health()``.
+
+    Coverage and freshness are read-only requirements and are not checked here.
+    """
+    manifest = getattr(connector, "manifest", None)
+    out = _check_manifest(manifest)
+    out.extend(_check_write_shape(connector))
+    out.extend(await _check_health(connector))
+    out.extend(_check_serializable(manifest))
     return out

@@ -21,7 +21,13 @@ __all__ = ["WriteConnector", "build_verify_result"]
 
 @runtime_checkable
 class WriteConnector(Protocol):
-    """A connector that can really change its target. ``advisory`` must mirror the manifest."""
+    """A connector that can really change its target. ``advisory`` must mirror the manifest.
+
+    The four methods must be ``async def`` (the registry rejects sync ones). The SDK does NOT
+    enforce target-version equality: callers (the PRP-17 action executor) must compare the
+    ``version_before`` of an ``ApplyResult`` (and the version a dry run planned against) with the
+    version they requested before treating the change as the one they approved.
+    """
 
     @property
     def manifest(self) -> ConnectorManifest: ...
@@ -51,12 +57,19 @@ def build_verify_result(
     observed_state: Mapping[str, Any],
     *,
     observed_version: str | None = None,
+    prior_state: Mapping[str, Any] | None = None,
 ) -> VerifyResult:
-    """Helper for implementers: ``observed_state`` must come from reading the real target."""
+    """Helper for implementers: ``observed_state`` must come from reading the real target.
+
+    Pass ``prior_state`` (the pre-change read) so ``move``/``copy`` can be verified; see
+    ``check_diff_against_state``.
+    """
     return VerifyResult(
         target=request.target,
         requested_diff=request.proposed_diff,
         observed_state=dict(observed_state),
         observed_version=observed_version,
-        checks=check_diff_against_state(request.proposed_diff, observed_state),
+        checks=check_diff_against_state(
+            request.proposed_diff, observed_state, prior_state=prior_state
+        ),
     )
