@@ -401,3 +401,16 @@ async def test_logs_never_carry_policy_xml_or_named_value_references(
     text = "\n".join(r.getMessage() for r in caplog.records)
     assert caplog.records  # the applier does log step outcomes
     assert "{{" not in text and "<" not in text and "foundry-key" not in text
+
+
+async def test_health_is_unknown_then_follows_apply_and_rollback_outcomes() -> None:
+    conn, _, _ = make()
+    assert (await conn.health()).state.value == "unknown"
+    applied = await conn.apply(await reviewed(conn, request(*publication_ops())))
+    assert (await conn.health()).state.value == "healthy"
+    bogus = applied.model_copy(update={"rollback_token": "apply-999"})
+    with pytest.raises(InvalidSchemaError):
+        await conn.rollback(bogus)
+    report = await conn.health()
+    assert report.state.value == "failing"
+    assert report.last_error_code == "invalid_schema"

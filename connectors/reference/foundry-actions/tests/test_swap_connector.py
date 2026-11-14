@@ -394,3 +394,21 @@ async def test_token_never_appears_in_errors() -> None:
         await _connector(arm).dry_run(swap_request())
     assert TOKEN not in str(err.value)
     assert TOKEN not in json.dumps(err.value.reason)
+
+
+async def test_health_is_unknown_then_follows_apply_outcome() -> None:
+    conn = _connector(FakeArm(post_put_states=["Succeeded"]))
+    assert (await conn.health()).state.value == "unknown"
+    await conn.apply(swap_request())
+    healthy = await conn.health()
+    assert healthy.state.value == "healthy"
+    assert healthy.consecutive_failures == 0
+
+
+async def test_health_records_a_failed_apply_without_leaking_text() -> None:
+    conn = _connector(FakeArm(models=[]))
+    with pytest.raises(InvalidSchemaError):
+        await conn.apply(swap_request())
+    report = await conn.health()
+    assert report.state.value == "failing"
+    assert report.last_error_code == "invalid_schema"

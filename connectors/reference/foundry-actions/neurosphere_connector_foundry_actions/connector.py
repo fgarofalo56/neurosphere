@@ -18,15 +18,16 @@ the documented PUT has no traffic split, so there is no connector-level canary (
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, ParamSpec, TypeVar, cast
 
 import httpx
 from azure.core.credentials_async import AsyncTokenCredential
-from neurosphere_connector import build_manifest
+from neurosphere_connector import HealthReport, HealthTracker, build_manifest
 from neurosphere_connector.write import (
     AdvisoryWriteMixin,
     ApplyResult,
@@ -124,6 +125,27 @@ class FoundryModelSwapAdvisoryConnector(AdvisoryWriteMixin):
         return _manifest(advisory=True)
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def _tracked(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
+    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise."""
+
+    @functools.wraps(fn)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        tracker: HealthTracker = cast(Any, args[0])._tracker
+        try:
+            result = await fn(*args, **kwargs)
+        except Exception as exc:
+            tracker.record_error(exc)
+            raise
+        tracker.record_success()
+        return result
+
+    return wrapper
+
+
 class FoundryModelSwapConnector:
     """Write connector for a Foundry deployment model swap (one account)."""
 
@@ -139,6 +161,7 @@ class FoundryModelSwapConnector:
         poll_timeout_seconds: float = 300.0,
     ) -> None:
         self.account = account
+        self._tracker = HealthTracker()
         self._arm = arm
         self._sleep = sleep
         self._clock = clock
@@ -153,6 +176,10 @@ class FoundryModelSwapConnector:
     @property
     def advisory(self) -> bool:
         return False
+
+    async def health(self) -> HealthReport:
+        """Last apply/verify/rollback outcome; ``unknown`` before any ran. No network call."""
+        return self._tracker.snapshot()
 
     # -- helpers ---------------------------------------------------------------------------
 
@@ -233,6 +260,7 @@ class FoundryModelSwapConnector:
             would_change=model_of(patched) != model_of(current),
         )
 
+    @_tracked
     async def apply(self, request: WriteRequest) -> ApplyResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(request.target)
@@ -273,6 +301,7 @@ class FoundryModelSwapConnector:
             return False
         return True
 
+    @_tracked
     async def verify(self, request: WriteRequest) -> VerifyResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(request.target)
@@ -292,6 +321,7 @@ class FoundryModelSwapConnector:
         )
         return result.model_copy(update={"checks": (*result.checks, failed)})
 
+    @_tracked
     async def rollback(self, applied: ApplyResult) -> RollbackResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(applied.target)
