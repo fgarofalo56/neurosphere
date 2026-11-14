@@ -1,281 +1,260 @@
 ---
 name: PRP-23-ato-evidence-and-data-lifecycle
 status: backlog
-priority: P2
-order: 18
-pr: 118
-started: 2026-10-23
-branch: prp-23-ato-evidence-and-data-lifecycle
+priority: P1
+order: 23
 review: required
 created: 2026-10-08
 model: sonnet
-phase: 4
-ns: NS-08
-depends_on: [PRP-12-threat-model-and-security-baseline, PRP-20-government-verification-and-sovereign-deployment, PRP-21-scale-federation-finops-and-dr]
-wave: W8
-absorbs: P4.5, G06
 orchestrator_model: sonnet
 implementer_model: sonnet
+phase: 4
+ns: NS-08
+depends_on: []
+wave: W12
+branch: prp-23-round2-lifecycle-runtime
+allow_parallel: true
+absorbs: P4.5, G06
+issues: [119, 120]
 ---
 
-# PRP-23: ATO evidence and data lifecycle
+# PRP-23: ATO evidence and data lifecycle (round 2)
 
 ## Goal
-Ship the data lifecycle engine (retention, pseudonymization, deletion, export, legal hold, with written conflict rules and immutable audit) and the ATO accelerator documents: NIST 800-53 Rev 5 control narratives, SSP sections, a POA&M template, boundary and data-flow diagrams, incident/contingency/change/continuous-monitoring plans, and a script that assembles an evidence inventory idempotently. It is for the customer security team, records officers and the authorizing official. It supports their decision; it does not make it. It lands in W8 because it indexes evidence from the threat model and scans (PRP-12), the Government register (PRP-20) and the DR measurements (PRP-21). **Every document produced here states "not FedRAMP authorized; the authorizing official decides".**
+Make the shipped data lifecycle engine do real work behind an explicit safety switch, and finish the compliance documentation polish. Today the lifecycle worker role is registered but idle (`_lifecycle_job_source()` returns `None`) and its target registry is empty, there is no API to place a legal hold or request a job, no store has a delete, and a FAILED queue outcome is silently dropped. This PRP adds a Cosmos-backed job source and a lifecycle API (holds, requests, status), delete backends for the catalog, ledger and archive stores, retry of FAILED queued outcomes, a retention-policy file source, and a dry-run mode that is the default, so nothing is deleted until an operator sets execute mode. It also lands the #120 documentation and tooling polish and upgrades the CA-7, CP-2 and PM-5 control statuses (their documents now exist). It is for customer security teams and records officers; it is `review: required` because it deletes data. G06 stays OPEN: classification, payload opt-in, retention periods and the legal-hold process are customer inputs.
 
-> ATO accelerator includes boundary/data-flow diagrams, SSP/control narratives, inheritance/responsibility matrix, POA&M, evidence inventory, scan outputs, configuration baselines, continuous monitoring and change/incident/contingency plans. Map to applicable NIST 800-53 Rev 5 and agency requirements; track FedRAMP/DoD scope separately. (NS-08)
+Out of scope: contracts and permission restructuring (PRP-37 owns `packages/contracts/**` and `permissions.py` restructuring); catalog repository internals beyond a new delete module (PRP-43); the compliance control library for NIST AI RMF, SR 11-7, HIPAA and OMB M-25-21 (PRP-56); scheduled expiry sweeps from policy rules (follow-up issue); a lifecycle UI (not planned); live Azure runs (none needed).
 
-> NeuroSphere is not FedRAMP authorized and cannot grant an agency ATO. Azure Government, GCC/GCC High and DoD impact levels are not interchangeable. Agency authorizing officials determine ATO; inherited controls do not automatically authorize this application. No certification deadline promise. (NS-08)
-
-> Configurable retention, pseudonymization, deletion/export, legal holds and immutable audit retention with documented conflict rules. (PRD section 3)
+## Why
+- The role runs nothing: `services/workers/neurosphere_workers/runtime/factories.py:698-705` `_lifecycle_job_source()` returns `None`, so `build_lifecycle` (`:714`) returns `IdleRole` (reason `lifecycle_no_job_source`, `:253`), and `_lifecycle_targets()` (`:708-711`) is an empty `TargetRegistry`.
+- No delete exists in the stores: the engine calls `target.delete` (`packages/core/neurosphere_core/lifecycle/engine.py:414-437`) but the catalog, ledger and archive have no `DocumentBackend` (`lifecycle/adapters.py:31-53` defines the surface only). The durable stores are NOT missing: `CosmosMappingStore`, `CosmosHoldRegistry` and `CosmosRequestQueue` exist (`lifecycle/cosmos.py:132,186,240`), so #119 bullet 1 and the round-1 completion note are stale.
+- `process_queue` drops FAILED outcomes: `engine.py:512-520` removes every outcome that is not `QUEUED`, including `FAILED`, so a transient store error loses the request after auditing it.
+- No `neurosphere_api` module references the lifecycle package, so a hold or request cannot be created over HTTP; the control mapping marks AU-11 and SI-12 `planned` for that reason (`docs/compliance/ssp/control-mapping.yaml:186-190,605-609`).
+- CA-7, CP-2 and PM-5 are `planned` with text saying the plan and inventory are "not yet in the repository" (`control-mapping.yaml:239-245,299-305,431-437`), but `docs/compliance/plans/*` and `scripts/compliance/collect_evidence.py` shipped, so the statuses are stale (lane-c).
+- #120 review findings are authored from review and still open: negation exemption over the whole sentence in `scripts/compliance/check_statements.py`, leaf-only symlink check in `collect_evidence.py`, missing AC-5 and SC-18 evidence entries, no mermaid-diff test.
 
 ## Acceptance criteria
-- [ ] Item 1: Given an object under legal hold, When a deletion or retention expiry targets it, Then deletion is blocked and the attempt is audited; given any audit record or audit container, When any lifecycle action targets it, Then the engine refuses (test), and with no policy configured nothing is deleted.
-- [ ] Item 2: Given the control narrative set, When the mapping test runs, Then every control entry cites at least one implementing PRP and one evidence path that exists (or is explicitly marked `planned` or `customer`), and no entry uses the words "compliant" or "authorized" about NeuroSphere.
-- [ ] Item 3: Given unchanged inputs, When `scripts/compliance/` runs twice, Then `docs/evidence/inventory.md` and the package manifest are byte-identical; files matching credential-shaped paths are never collected.
-- [ ] Item 4: Given the plans under `docs/compliance/plans/`, When the statement check runs, Then every document under `docs/compliance/` contains "not FedRAMP authorized; the authorizing official decides".
-- [ ] PRP exit: items 1-4 green under `verify-gates -Mode full`; G06 and G02 recorded OPEN with the customer inputs still required; no document claims authorization, ATO, parity or a certification date.
+- [ ] Given dry-run mode (the default) and a due DELETE request, When the worker processes it, Then the target record still exists, the audit chain holds a before and after record whose detail is `dry_run:would_delete`, and the outcome carries `dry_run=true`, `effect=none` (test per action kind).
+- [ ] Given execute mode, a DELETE on a catalog, ledger or archive record, When processed, Then the record is gone, a read-back confirms it, and the outcome is `completed/deleted`; a held record is still refused and audited; the audit container is still refused (backend tests per store plus the existing engine tests).
+- [ ] Given a queued request whose first execution FAILED, When `process_queue` runs, Then it stays queued with an attempt count and `not_before` backoff and is retried until a configured maximum, after which it is audited as `failed_final` and removed (test with a flaky target).
+- [ ] Given `POST /api/v1/lifecycle/requests`, When the caller lacks the lifecycle permission, Then 403; when it holds it, a job is persisted and 202 returns the request id, and `GET .../requests/{id}` shows pending, then the outcome after the worker ran (API test with in-memory stores).
+- [ ] Given hold placement and release routes, Then both are audited with the server-derived identity, a caller-supplied customer or domain is ignored, and a held target blocks deletion end to end (API plus engine test).
+- [ ] Given no retention policy file, Then the engine reports `policy_status=unset` and expiry deletes nothing; given a valid file, the policy is loaded; an invalid file fails closed to unset and is reported on the lifecycle status route.
+- [ ] Given execute mode is not set, the status route and `/readyz` detail say the role is in dry-run; setting `NS_LIFECYCLE_MODE=execute` is the only way mutation happens (test).
+- [ ] The #120 items pass: negation limited to the same clause with a regression test, resolved-path containment in `collect_evidence.py`, AC-5 and SC-18 evidence entries, a mermaid-vs-`diagrams/*.mmd` diff test, DR drill size wording aligned, the Chrome `executablePath` note moved to a contributor note.
+- [ ] CA-7, CP-2 and PM-5 are `designed` or `implemented_tested` with evidence paths that exist; AU-11 and SI-12 change status only if the compose integration test passes (otherwise they stay `planned` with updated text); no entry says "compliant" or "authorized".
+- [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, the one independent review pass is approved, G06 and G02 recorded OPEN.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|---|---|---|
-| 1 | Model and review | sonnet/none; sonnet/required; opus | sonnet, review required (D6) |
-| 2 | Control baseline | pick Low/Moderate/High; leave to customer | Not selected here. The mapping covers the control families the platform plausibly implements or inherits (AC, AU, CA, CM, CP, IA, IR, PL, RA, SA, SC, SI, SR and related) and records baseline selection as a customer/agency input. FedRAMP and DoD scope are tracked in a separate section of the SSP scope file, never merged into the NIST mapping |
-| 3 | Control status vocabulary | compliant/non-compliant; neutral | `designed`, `implemented_tested`, `inherited`, `customer`, `planned`, `not_applicable`. No "compliant" or "authorized" value. Inheritance cites the PRP-20 responsibility matrix and states inherited controls do not automatically authorize this application |
-| 4 | Conflict precedence | ad hoc; written order | Highest first: (1) audit immutability, (2) legal hold, (3) minimum retention period, (4) subject deletion or pseudonymization request, (5) maximum retention expiry. A lower rule never overrides a higher one; a deferred request is queued and audited, and executes when the blocking rule lifts |
-| 5 | Audit and deletion | allow with approval; never | Audit is never deleted by the engine. Audit records carry pseudonymous principals; the pseudonym mapping store is separate and is subject to deletion unless under hold, so erasure of a person is achieved by mapping destruction, not audit deletion |
-| 6 | Default policy | built-in defaults; none | No built-in retention values. Missing or invalid policy fails closed: nothing is deleted, prompt/response bodies are not retained, and the engine reports the policy as unset. Retention periods come from the customer's records policy (G06) |
-| 7 | Deletion verification | trust the API; read back | Every deletion is verified by reading back the target; a failed verification marks the job `failed` and raises an audit record. No pretend deletes |
-| 8 | Export | any scope; scoped | Export is filtered by the caller's `IdentityScope` and the request's lawful basis; held data may be exported only to authorized custodians, and exports are audited |
-| 9 | Evidence package location | commit the package; index only | `docs/evidence/inventory.md` (committed index with path, sha256, source date, status) plus a package archive written to `temp/compliance-package/` (gitignored). The generation timestamp is not written into the index so reruns are identical |
-| 10 | Diagrams | claim rendered; render | Boundary and data-flow diagrams are Mermaid in markdown; they are rendered with the pinned `@mermaid-js/mermaid-cli` and the SVGs committed before any document says they are rendered |
-| 11 | Disclaimer enforcement | by convention; by test | `scripts/compliance/check_statements.py` plus `tests/compliance/` fail if any `docs/compliance/**/*.md` lacks the sentence. This includes the PRP-20 responsibility matrix |
-| 12 | Customer-specific inputs | assume; record | Classification, payload opt-in, retention periods, legal hold process, authorizing official and agency baseline are recorded as required customer inputs in the SSP scope file with status OPEN. They are not guessed |
+| 1 | Default mutation mode | Execute by default; dry-run by default | Dry-run by default (`NS_LIFECYCLE_MODE=dry_run`); `execute` is explicit. Jobs may also request dry-run individually; a job can only make the run safer, never override dry-run mode |
+| 2 | Where requested jobs are stored | New container; reuse `lifecycle_requests` | ASSUMPTION: reuse the existing `lifecycle_requests` container with job documents marked `job_state`, because a new container is a Tier-1 stores edit owned by PRP-37 in W12; the queue's `pending()` query is changed to exclude job documents |
+| 3 | Retention policy source | Cosmos admin store; settings; file | ASSUMPTION: a JSON file at `NS_LIFECYCLE_POLICY_FILE` loaded through `load_policy`; unset or invalid means unset and nothing expires. The admin-store source can replace it later through the same loader |
+| 4 | New permission | Reuse `config.manage`; new `lifecycle.manage` | New `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`), granted to the admin role. PRP-37 (same wave) is adding lifecycle permissions to `permissions.py`; after rebase use its name if it exists, otherwise append this one (Tier 2) and say so in the completion note |
+| 5 | FAILED retry policy | Retry forever; bounded | Bounded: `NS_LIFECYCLE_MAX_ATTEMPTS` (default 5) with exponential `not_before` backoff; then `failed_final`, audited and removed |
+| 6 | Archive delete | Edit the archive writer; own backend module | Own backend in `lifecycle/archive_backend.py` over the blob container client; the PRP-07 archive writer is not edited |
+| 7 | Conversation target | Build the shim here | Not built: the `ConversationBackend` shim over the API conversation store needs API-hosted wiring; filed as a follow-up. The worker registers catalog, ledger and archive only |
+| 8 | Review and model | sonnet/none; sonnet/required | sonnet, review required, one pass; approve unless a blocking defect (wrong deletion, hold bypass, audit gap) |
 
 ## Context manifest
 
-### Files that matter
-- `PRP.md` - sections 1-3.
-- `docs/PRD.md` - NS-08 text, section 3 retention and DR, section 4 release gates.
-- `docs/ARCHITECTURE.md` - the five diagrams, trust boundaries.
-- `docs/RESEARCH-AND-GATES.md` - G02, G06, G07; Government findings.
-- `docs/adr/0002-stack-pins.md` - pins used by the scripts (Python 3.12, Node 24, pnpm 11).
-- `docs/DECISIONS-LOG.md` - D6, D7, D8.
-- `SECURITY.md`, `.gitleaks.toml`, `pyproject.toml`, `docker-compose.yml`, `infra/compose/eventhubs.config.json`, `.claude/hooks/config.ps1`, `.env.example`, `scripts/validate_planning.py` (credential-shaped path regex to reuse, not copy).
-- Created by PRP-06: `neurosphere_core.audit` (hash-chained, append-only), `neurosphere_core.auth.scope`.
-- Created by PRP-07: redacted archive, quarantine container, cost ledger.
-- Created by PRP-10: catalog repository (a lifecycle target).
-- Created by PRP-12: `docs/security/threat-model.md`, `.github/workflows/security.yml` outputs (SBOM, scans), `docs/security/runbooks/`.
-- Created by PRP-13: `docs/release/dod-checklist.md`, migrations tooling.
-- Created by PRP-20: `docs/evidence/G02/register.yaml`, `docs/compliance/responsibility-matrix.md`.
-- Created by PRP-21: `docs/ops/dr-runbook.md`, `docs/evidence/G07/`.
+### Files to read first
+- `packages/core/neurosphere_core/lifecycle/engine.py` - `submit`, `_decide`, `_run`, `_execute_*`, `process_queue` (lines 187-340, 373-520).
+- `packages/core/neurosphere_core/lifecycle/{targets.py,adapters.py,models.py,policy.py}` - target protocols, `DocumentBackend`, enums, `load_policy`.
+- `packages/core/neurosphere_core/lifecycle/cosmos.py` - the three Cosmos stores (pattern for the job store).
+- `services/workers/neurosphere_workers/lifecycle/worker.py` - `LifecycleWorker`, `JobSource`, `RequestedJob`, `process_batch`.
+- `services/workers/neurosphere_workers/runtime/factories.py:690-745` - the lifecycle builder bodies (W12 Tier-1, owned here).
+- `packages/core/neurosphere_core/stores/containers.py:174-180` and `infra/compose/cosmos-containers.json` - lifecycle containers (read only).
+- `packages/core/neurosphere_core/catalog/partitioning.py` and `catalog/repo/cosmos.py` - partition keys for the catalog delete module; `ledger/cosmos.py` (partition = customer id).
+- `docs/compliance/ssp/control-mapping.yaml`, `scripts/compliance/{check_statements,collect_evidence}.py`, `tests/compliance/`.
+- `docs/ops/dr-runbook.md` - the recovery path referenced in rollback.
+
+### Interfaces consumed
+- Audit chain: `neurosphere_core.audit.builders.AuditContext.from_scope`, `run_audited_mutation` (PRP-06, shipped).
+- `Permission` and role mapping (`auth/scope/permissions.py`); lifecycle permission naming coordinated with PRP-37.
+- Hold, queue and mapping Cosmos stores (PRP-23 round 1).
+
+### Interfaces provided
+- API: `POST/GET /api/v1/lifecycle/holds`, `DELETE /api/v1/lifecycle/holds/{hold_id}`, `POST/GET /api/v1/lifecycle/requests`, `GET /api/v1/lifecycle/requests/{request_id}`, `GET /api/v1/lifecycle/status` (policy state, mode, queue depth).
+- Core: `lifecycle.jobs.CosmosJobStore`, `LifecycleOutcome.dry_run`, engine `mode`, `catalog/lifecycle_delete.py`, `ledger/lifecycle_delete.py`, `lifecycle/archive_backend.py`.
+- Settings: `NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`.
 
 ### Patterns to match
-- Pydantic v2 models with `model_config = ConfigDict(extra="forbid")`; FastAPI routers per module under `services/api/neurosphere_api/<module>/router.py`; async Azure SDK clients from `packages/core/neurosphere_core/clients`; error taxonomy exceptions from `neurosphere_core.errors`.
-- Lifecycle targets are protocol implementations (catalog, archive, ledger, conversations) so each store keeps its own adapter; the engine never reaches into a store's internals.
-- Tests beside packages plus cross-package suites in `tests/`; `pytest.mark.integration` for compose-backed targets.
-- Documents are markdown with a fixed header block (scope, status vocabulary, statement).
-
-### Conventions
-- ruff line 100, py312, S rules on; pyright standard; conventional commits; owned-file discipline.
-- Evidence under `docs/evidence/`; any live script under `scripts/gates/` refuses without `NS_LIVE_APPROVED=1`. This PRP has none.
-- Forward slashes only in commands.
+- Cosmos store shape and error mapping: `lifecycle/cosmos.py:132-300` (`from_client`, `_select`, `_raise_mapped`).
+- Router per module with `require(...)` and server-derived scope: `services/api/neurosphere_api/federation/router.py`.
+- Role builder returning `IdleRole` with a reason: `factories.py:714-728`.
+- Compliance test style: `tests/compliance/test_statements.py`, `test_control_mapping.py`.
 
 ### Gotchas
-- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
-- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
-- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
-- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
-- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
-- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
-- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
-- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
-- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
-- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
-- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
-- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
-- Hidden navigation is not authorization; the API must deny.
-- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
-- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
-- PRP-specific: legal hold wins over deletion and over retention expiry. Audit is never deleted. A deletion request that is blocked is queued and audited, never silently dropped and never forced.
-- PRP-specific: pseudonymization is not deletion. Pseudonymized data that can be re-identified through a retained mapping is still personal data; the engine reports which of the two actually happened.
-- PRP-specific: "inherited" controls do not automatically authorize this application, and a service in a FedRAMP or DoD audit scope listing is not an authorization of this workload.
-- PRP-specific: the evidence script reads scan and test outputs; it must never read `.env`, credential-shaped paths or secret stores, and must never copy a value that looks like a credential into the package. Failures are listed, not skipped.
-- PRP-specific: Mermaid diagrams are not "produced" until rendered; the plan documents link rendered SVGs or say "not rendered".
-- PRP-specific: no certification date, authorization date or compliance percentage may appear in any document.
+- Real test directories are `services/workers/tests/lifecycle_worker/`, `packages/core/tests/lifecycle/`, `packages/core/tests/lifecycle_cosmos/` and `tests/integration/lifecycle/`; the round-1 gate listed a `lifecycle` worker directory that does not exist. The new API tests live in `services/api/tests/lifecycle_api/`.
+- The audit container must stay unregistrable (`TargetRegistry.register` refuses it); never register `audit` or its chain as a target in any backend.
+- Deletion is irreversible: only dry-run is reversible. Do not run execute mode against any shared or hosted store during development; tests use in-memory and emulator stores only.
+- Do not edit existing files in `neurosphere_core/catalog/` or `ledger/` (PRP-43 and PRP-07 area); only the two new `lifecycle_delete.py` modules are added.
+- Adding `LIFECYCLE_MANAGE` touches the Tier-2 inventories (`packages/core/tests/auth/scope/test_roles.py`, `tests/security/authz/test_privileged_roles.py`, `services/api/tests/authz/test_route_inventory.py`, `test_startup_route_check.py`); append lines only.
+- `services/api/openapi.json` changes with the new routes (Tier 3): regenerate in the last commit.
 
-### External references
-- NIST SP 800-53 Rev 5 control catalog: https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final (agency baseline selection is a customer input; verify the current revision at implementation time).
-- Azure services in FedRAMP and DoD audit scope: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope (updated 2026-09-21, retrieved 2026-10-08).
-- Fabric in GCC High (FedRAMP High assessment in progress): https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high (retrieved 2026-10-08).
-- Event Hubs metadata geo-DR and data geo-replication (contingency plan inputs): https://learn.microsoft.com/azure/event-hubs/event-hubs-geo-dr (retrieved 2026-10-06) and https://learn.microsoft.com/azure/event-hubs/geo-replication (2026-07-11).
-- Gitleaks and secret-scan layers: SECURITY.md in this repository; gitleaks 8.30.1 per docs/adr/0002-stack-pins.md (observed 2026-10-08).
+Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
+
+## Ownership
+
+```ownership
+owns:
+  - docs/compliance/**
+  - scripts/compliance/**
+  - tests/compliance/**
+  - docs/evidence/inventory.md
+  - docs/runbooks/lifecycle.md
+  - docs/dev/diagram-rendering.md
+  - packages/core/neurosphere_core/lifecycle/**
+  - packages/core/tests/lifecycle/**
+  - packages/core/tests/lifecycle_cosmos/**
+  - packages/core/neurosphere_core/catalog/lifecycle_delete.py
+  - packages/core/neurosphere_core/ledger/lifecycle_delete.py
+  - services/workers/neurosphere_workers/lifecycle/**
+  - services/workers/tests/lifecycle_worker/**
+  - services/api/neurosphere_api/lifecycle/**
+  - services/api/tests/lifecycle_api/**
+  - tests/integration/lifecycle/**
+tier1:
+  - services/workers/neurosphere_workers/runtime/factories.py
+tier2_appends:
+  - services/api/neurosphere_api/routers.py
+  - services/api/neurosphere_api/authz/routes.py
+  - services/api/neurosphere_api/runtime/builders/__init__.py
+  - services/api/neurosphere_api/runtime/settings.py
+  - packages/core/neurosphere_core/auth/scope/permissions.py
+  - services/api/tests/authz/test_route_inventory.py
+  - services/api/tests/authz/test_startup_route_check.py
+  - packages/core/tests/auth/scope/test_roles.py
+  - tests/security/authz/test_privileged_roles.py
+must_not_touch:
+  - packages/contracts/**
+  - packages/core/neurosphere_core/stores/containers.py
+  - infra/compose/cosmos-containers.json
+  - services/api/neurosphere_api/runtime/builders/data.py
+  - docker-compose.yml
+```
 
 ## Implementation blueprint
 
-### Item 1 - retention-policy-engine  [P]
-- Deliverable: lifecycle engine with retention, pseudonymization, deletion, export and legal hold, the written conflict rules, target protocols with catalog/archive/ledger/conversation adapters, and a worker that executes scheduled and requested jobs with read-back verification.
-- Owned files (may edit): `packages/core/neurosphere_core/lifecycle/`, `services/workers/neurosphere_workers/lifecycle/`.
-- Must NOT touch: `packages/core/neurosphere_core/audit/` and `services/api/neurosphere_api/audit/` (PRP-06), `packages/core/neurosphere_core/catalog/` (PRP-10), `packages/core/neurosphere_core/ledger/` (PRP-07), `docs/compliance/`, `scripts/compliance/`, root `pyproject.toml`, `docker-compose.yml`.
-- Depends on: none.
-- Acceptance criteria:
-  - Legal hold blocks deletion and retention expiry; the blocked request is queued and audited.
-  - The engine refuses any action targeting the audit container or an audit record (test); audit is never deleted.
-  - With no policy configured, nothing is deleted and prompt/response bodies are not retained.
-  - Every deletion is verified by read-back; a failed verification yields `failed` plus an audit record.
-- Pattern references: `IdentityScope` on export; error taxonomy; worker runtime base from PRP-05; audit writer interface from PRP-06 (consume, do not modify).
-- Tests to write: `packages/core/tests/lifecycle/test_conflict_rules.py`, `packages/core/tests/lifecycle/test_audit_immutable.py`, `packages/core/tests/lifecycle/test_no_policy_fails_closed.py`, `services/workers/tests/lifecycle/test_job_verification.py`, `tests/integration/lifecycle/test_targets_compose.py` (`pytest.mark.integration`).
+Items A, 1 and 2 are independent [P] (disjoint files). Item 3 waits for 1; item 4 waits for 1 and 2; item 5 closes out. `control-mapping.yaml` is edited by item A first and by item 5 last, never in parallel.
 
-### Item 2 - control-narratives  [P]
-- Deliverable: NIST 800-53 Rev 5 mapping, SSP narratives per control family, SSP scope file (customer inputs, FedRAMP/DoD scope tracked separately) and POA&M template.
-- Owned files (may edit): `docs/compliance/ssp/`, `docs/compliance/poam.md`, `tests/compliance/test_control_mapping.py`.
-- Must NOT touch: `docs/compliance/responsibility-matrix.md` (PRP-20), `docs/compliance/plans/` (item 4), `docs/evidence/` (items 3 and PRP-20/21), `scripts/compliance/`, `packages/core/`.
+### Item A - Compliance docs and tooling polish (#120)  [P]
+- Deliverable: clause-scoped negation in `check_statements.py` with a regression test ("authorized, unlike X which is not" must fail); `full.resolve()` containment under the repo root in `collect_evidence.py` with a symlinked-parent test; AC-5 evidence adds `hitl/policy.py`, SC-18 cites a specific chart-sandbox test; a test diffing each fenced mermaid block in `docs/compliance/plans/*.md` against `diagrams/*.mmd`; DR drill size wording aligned in `contingency-plan.md` and the G07 DR README reference; Chrome workaround moved to `docs/dev/diagram-rendering.md`; CA-7, CP-2 and PM-5 upgraded with real evidence paths; `docs/evidence/inventory.md` regenerated by the collector.
+- Owned files: `docs/compliance/**`, `scripts/compliance/**`, `tests/compliance/**`, `docs/evidence/inventory.md`, `docs/dev/diagram-rendering.md` (new).
+- Must NOT touch: `docs/evidence/G07/**`, `docs/RESEARCH-AND-GATES.md`, any product code.
 - Depends on: none.
-- Acceptance criteria:
-  - Each control entry has a status from the fixed vocabulary, an implementing PRP id and an evidence path; entries with `planned` or `customer` say so and name the owner.
-  - The mapping test fails on a missing evidence path for any `implemented_tested` entry, and on the words "compliant" or "authorized" applied to NeuroSphere.
-  - The POA&M template has columns for weakness, control, milestone, owner, scheduled completion and status; no pre-filled completion dates.
-  - The SSP scope file lists the customer inputs from clarification 12 as OPEN.
-- Pattern references: PRP-20 responsibility matrix (link, do not copy); PRP-12 threat model.
-- Tests to write: `tests/compliance/test_control_mapping.py`.
+- Acceptance criteria: the #120 and CA-7/CP-2/PM-5 criteria; running the collector twice leaves `inventory.md` byte-identical.
+- Tests: `tests/compliance/test_statements.py`, `tests/compliance/test_no_credential_collection.py`, `tests/compliance/test_inventory_idempotent.py`, `tests/compliance/test_control_mapping.py`, `tests/compliance/test_plan_diagrams_rendered.py`, `tests/compliance/test_plan_mermaid_matches_source.py` (new).
+- Pattern references: `scripts/compliance/check_statements.py`, `tests/compliance/conftest.py`.
 
-### Item 3 - evidence-inventory-automation  [P]
-- Deliverable: script that collects scan outputs, test evidence and configuration baselines into an indexed inventory and a package archive, plus the statement checker.
-- Owned files (may edit): `scripts/compliance/`, `docs/evidence/inventory.md`, `tests/compliance/` (except `test_control_mapping.py`).
-- Must NOT touch: `docs/evidence/G02/`, `docs/evidence/G03/`, `docs/evidence/G07/`, `docs/compliance/`, `.github/workflows/`, `scripts/gates/`, `scripts/validate_planning.py`.
+### Item 1 - Engine: dry-run, retry, policy file, job store  [P]
+- Deliverable: engine `mode` (`dry_run` default | `execute`) and `LifecycleOutcome.dry_run`; in dry-run `_execute_delete`, `_execute_pseudonymize` and `_execute_erase` perform the decision, the existing-record read and a before/after audit with detail `dry_run:would_<effect>` but call no mutating target method; `process_queue` keeps FAILED items with `attempts`, `not_before` backoff and a maximum, then `failed_final`; `load_policy_file(path)` helper over `load_policy`; `CosmosJobStore` in `lifecycle/jobs.py` (submit with dedupe, get, list, claim after a checkpoint, record outcome) over the `lifecycle_requests` container using `job_state` documents; `CosmosRequestQueue.pending()` excludes job documents.
+- Owned files: `packages/core/neurosphere_core/lifecycle/**` (except `archive_backend.py`, item 2), `packages/core/tests/lifecycle/**`, `packages/core/tests/lifecycle_cosmos/**`.
+- Must NOT touch: `stores/containers.py`, `infra/compose/cosmos-containers.json`, contracts.
 - Depends on: none.
-- Acceptance criteria:
-  - Two runs on unchanged inputs produce byte-identical `docs/evidence/inventory.md` and package manifest (test).
-  - Credential-shaped paths and `.env*` files are never collected; a planted fixture file proves it.
-  - Missing expected evidence is listed as `missing` in the inventory, never skipped silently.
-  - `check_statements.py` fails when any `docs/compliance/**/*.md` lacks the required sentence.
-- Pattern references: credential-shaped path regex in `scripts/validate_planning.py`; scan output locations from PRP-12.
-- Tests to write: `tests/compliance/test_inventory_idempotent.py`, `tests/compliance/test_no_credential_collection.py`, `tests/compliance/test_statements.py`.
+- Acceptance criteria: dry-run, retry and policy criteria above; existing conflict-rule, audit-immutable and no-policy tests unchanged and green.
+- Tests: `packages/core/tests/lifecycle/test_dry_run.py` (new), `packages/core/tests/lifecycle/test_retry_failed.py` (new), `packages/core/tests/lifecycle/test_policy_file.py` (new), `packages/core/tests/lifecycle_cosmos/test_job_store.py` (new), plus the existing files in both directories.
+- Pattern references: `engine.py:373-440`, `lifecycle/cosmos.py:240-300`.
 
-### Item 4 - boundary-and-contingency  [P]
-- Deliverable: boundary and data-flow diagrams (rendered), incident response, contingency, change management and continuous monitoring plans.
-- Owned files (may edit): `docs/compliance/plans/`.
-- Must NOT touch: `docs/compliance/ssp/`, `docs/compliance/poam.md`, `docs/compliance/responsibility-matrix.md`, `docs/ops/dr-runbook.md` (PRP-21), `docs/security/` (PRP-12), `docs/ARCHITECTURE.md`.
+### Item 2 - Delete backends for catalog, ledger and archive  [P]
+- Deliverable: `DocumentBackend` implementations: `catalog/lifecycle_delete.py` (entity and edge documents by id with the catalog partition rules, `read`, `remove`, `page`, `page_by_subject`, `redact_subject`, `project`), `ledger/lifecycle_delete.py` (cost-ledger entries, partition = customer id), `lifecycle/archive_backend.py` (blob container; blob names verified against `services/workers/neurosphere_workers/archive/` read only). Each wraps through the existing adapter classes in `adapters.py` and never accepts the audit container.
+- Owned files: `packages/core/neurosphere_core/catalog/lifecycle_delete.py`, `packages/core/neurosphere_core/ledger/lifecycle_delete.py`, `packages/core/neurosphere_core/lifecycle/archive_backend.py`, tests beside them.
+- Must NOT touch: existing modules in `catalog/` and `ledger/`, `neurosphere_workers/archive/**`.
 - Depends on: none.
-- Acceptance criteria:
-  - Every document states "not FedRAMP authorized; the authorizing official decides".
-  - Contingency plan references measured DR results from `docs/evidence/G07/dr/` and the Event Hubs metadata-DR caveat; it does not restate RTO/RPO targets as guarantees.
-  - Diagrams are rendered SVGs committed beside the sources, or the plan says "not rendered".
-  - Government and Commercial boundaries are drawn separately; no data flow crosses between them.
-- Pattern references: `docs/ARCHITECTURE.md` boundary diagrams; PRP-12 incident response and rotation runbooks (link).
-- Tests to write: covered by item 3 `tests/compliance/test_statements.py`; diagram render check `tests/compliance/test_plan_diagrams_rendered.py` is owned by item 3.
+- Acceptance criteria: each backend deletes and then reads back absent against its in-memory or emulator store; a missing record is a no-op; the audit container is refused.
+- Tests: `packages/core/tests/lifecycle/test_catalog_backend.py` (new), `packages/core/tests/lifecycle/test_ledger_backend.py` (new), `packages/core/tests/lifecycle/test_archive_backend.py` (new), `tests/integration/lifecycle/test_targets_compose.py` (emulator, integration marker).
+- Pattern references: `lifecycle/adapters.py:31-120`, `ledger/cosmos.py:32-100`.
+
+### Item 3 - Lifecycle API (holds, requests, status)
+- Deliverable: `services/api/neurosphere_api/lifecycle/` router, models and dependencies; `LIFECYCLE_MANAGE` permission (see Clarification 4) appended in `permissions.py` unless PRP-37 already added it, granted to the admin role; routes listed under Interfaces provided; every write audited with `AuditContext.from_scope`; a builder is not required if the router reads stores from `app.state` set by a new `runtime/builders` helper registered as a Tier-2 line (state: job store, hold registry, queue, engine policy status); route allowlist and inventory lines; `openapi.json` regenerated last.
+- Owned files: `services/api/neurosphere_api/lifecycle/**`, `services/api/tests/lifecycle_api/**`, Tier-2 lines in `routers.py`, `authz/routes.py`, `permissions.py` and the four inventories.
+- Must NOT touch: `runtime/builders/data.py`, `authz/dependencies.py`, contracts.
+- Depends on: item 1.
+- Acceptance criteria: the API, hold and status criteria above; app boot refuses nothing (no undeclared route).
+- Tests: `services/api/tests/lifecycle_api/test_requests_api.py` (new), `services/api/tests/lifecycle_api/test_holds_api.py` (new), `services/api/tests/lifecycle_api/test_status_api.py` (new), `services/api/tests/test_openapi_drift.py`.
+- Pattern references: `federation/router.py`, `authz/dependencies.py:165-210`.
+
+### Item 4 - Worker runtime wiring
+- Deliverable: `_lifecycle_job_source` returns a Cosmos-backed `JobSource` (new `services/workers/neurosphere_workers/lifecycle/job_source.py` adapting `CosmosJobStore.claim` to `RequestedJob`); `_lifecycle_targets` registers catalog, ledger and archive targets from the new backends; `build_lifecycle` loads `NS_LIFECYCLE_POLICY_FILE`, sets mode from `NS_LIFECYCLE_MODE`, and passes an `on_outcome` sink that records the outcome on the job; the idle path remains when the Cosmos client is unavailable; mode is logged at startup and shown in the role status.
+- Owned files: `services/workers/neurosphere_workers/lifecycle/**`, `services/workers/neurosphere_workers/runtime/factories.py` (`build_lifecycle`, `_lifecycle_job_source`, `_lifecycle_targets` bodies only), `services/workers/tests/lifecycle_worker/**`, `docs/runbooks/lifecycle.md` (new).
+- Must NOT touch: other builder bodies in `factories.py`, `runtime/roles.py`, Helm.
+- Depends on: items 1 and 2.
+- Acceptance criteria: with a fake Cosmos and in-memory targets a submitted job runs to an outcome visible on the job; dry-run default leaves targets intact; `execute` mutates; role is `idle` with a reason when storage is not configured.
+- Tests: `services/workers/tests/lifecycle_worker/test_job_verification.py`, `services/workers/tests/lifecycle_worker/test_runtime_wiring.py` (new), `services/workers/tests/lifecycle_worker/test_job_source.py` (new).
+- Pattern references: `factories.py:714-745`, `worker.py:60-120`.
+
+### Item 5 - Integration and close-out
+- Deliverable: upgrade AU-11 and SI-12 in `control-mapping.yaml` only if the emulator integration test (`tests/integration/lifecycle`, local) passes, otherwise leave `planned` with updated narrative; regenerate `docs/evidence/inventory.md`; Tier 3 regeneration (`openapi.json`, `docs/reference/**`, status table, index); completion note with "Env vars for the operator" (`NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`); one independent review pass; follow-up issues (conversation shim, expiry sweeps from policy, Helm role wiring check); link #132 lifecycle bullet to #119.
+- Owned files: this PRP file; `docs/compliance/ssp/control-mapping.yaml`; `docs/evidence/inventory.md`.
+- Must NOT touch: items 1-4 source except an integration defect (record it).
+- Depends on: items A, 1-4.
+- Acceptance criteria: statuses match what ran; completion note filled.
 
 ## Validation gates
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
-python scripts/validate_planning.py
-```
-Feature-specific:
-```
-python -m pytest packages/core/tests/lifecycle services/workers/tests/lifecycle tests/compliance
-docker compose up -d --wait
-python -m pytest -m integration tests/integration/lifecycle
-python scripts/compliance/collect_evidence.py
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -q packages/core/tests/lifecycle packages/core/tests/lifecycle_cosmos services/workers/tests/lifecycle_worker services/api/tests/lifecycle_api services/api/tests/authz services/api/tests/test_openapi_drift.py packages/core/tests/auth/scope tests/security/authz tests/compliance
 python scripts/compliance/collect_evidence.py
 python scripts/compliance/check_statements.py
-git diff --exit-code docs/evidence/inventory.md
+docker compose up -d --wait
+uv run pytest -q -m integration tests/integration/lifecycle
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
+python scripts/validate_planning.py
 ```
-The two collection runs followed by `git diff --exit-code` after staging the first output prove idempotency.
+
+Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md` is empty the second time.
+
+## Migration and rollback
+- Migration: none to existing data. Job documents are added to the existing `lifecycle_requests` container under a `job_state` marker; no container or schema change. New settings default to dry-run and unset policy.
+- Dry-run: `NS_LIFECYCLE_MODE=dry_run` (default) runs every decision and audit step but mutates nothing; a job can also be submitted as dry-run through the API. Review the dry-run outcomes (`GET /api/v1/lifecycle/requests`) before switching to `execute`.
+- Rollback and kill switch: set `NS_LIFECYCLE_MODE=dry_run` and restart (settings apply on restart, assumption A1) or remove `lifecycle` from `NS_WORKER_ROLES`; this stops all further mutation. Revert the PRP branch to remove the code.
+- Deleted data cannot be restored by this PRP. Recovery is the store-level path in `docs/ops/dr-runbook.md` (Cosmos backup restore, blob soft delete where enabled), and a restore must be followed by replaying the lifecycle audit chain so erased subjects are not resurrected. State this in the runbook; the audit record of each deletion holds the record id and digest, never the body.
+- Per-pass bound: the worker batch size (50) limits how many jobs run per fetch; a larger purge needs repeated requests, each audited.
 
 ## Live and open gates
-- G06 (privacy/retention/legal hold): stays OPEN. The engine ships policy-driven with fail-closed defaults, but approved classification, payload opt-in, retention periods and the legal hold process are customer inputs not yet provided.
-- G02 (FedRAMP/DoD boundary and agency ATO): stays OPEN; this PRP provides the accelerator documents only. Closure belongs to the authorizing official.
-- G07 (workload/SLO/DR): the contingency plan cites measurements but does not close the gate.
-- No live Azure item in this PRP.
-- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+- G06 (retention, classification, legal-hold process) and G02 stay OPEN: customer inputs, no guess. No live Azure item here; no `NS_LIVE_APPROVED=1` run is needed.
+- Hosted Helm and Bicep wiring of the lifecycle role (values already list the role) is verified, not changed, and any gap is filed for PRP-58; live deletion against hosted stores is not run.
 
 ## NOT building
-- Any authorization, ATO, FedRAMP or DoD IL claim, certification date, or compliance score.
-- The responsibility matrix and evidence register (PRP-20); the threat model and runbooks (PRP-12); DR scripts and runbook (PRP-21).
-- A 3PAO assessment package, agency-specific baseline selection, or control testing by an assessor.
-- A records management product, eDiscovery, or legal hold workflow UI; the engine honors holds set through its interface.
-- Automatic deletion of audit data, under any rule.
+- A conversation target shim, scheduled expiry sweeps from policy rules, a lifecycle UI, a soft-delete or undo feature.
+- New contracts, new Cosmos containers or Bicep changes (PRP-37 owns those).
+- The extended compliance control library (PRP-56) or any compliance, authorization or certification claim.
+- Edits to existing catalog or ledger repository code.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [x] All clarification questions are decided, not guessed
+- [x] All clarification questions are decided, not guessed (rows 2 and 3 are labelled assumptions)
 
 ## Execution state
 
-Plan approved 2026-10-23 with six deltas signed off by the operator.
-
-- D1: worker tests live in `services/workers/tests/lifecycle_worker/` (not `lifecycle/`) so they do not shadow `packages/core/tests/lifecycle/` in one pytest session.
-- D2: the conversation target adapter is written against a structural protocol inside the lifecycle package; `neurosphere_core` may not import `neurosphere_api`. Wiring the API `ConversationStore` into a running worker, and worker registration/deployment (runtime, Helm), are follow-ups.
-- D3: item 4 renders plan diagrams with `pnpm dlx @mermaid-js/mermaid-cli@12.0.0` directly; `scripts/render_mermaid.py` is fixed to the five `docs/ARCHITECTURE.md` blocks and is not owned here.
-- D4: inventory source date is read from file content (a `retrieved`/`observed` field or a date in the path), else `undated`; never mtime or git history.
-- D5: `check_statements.py` also flags affirmative claims (authorization, ATO granted, parity, certification date, compliance percentage), allowing negated forms. This is the measurement for the PRP exit criterion.
-- D6: the orchestrator records G06 and G02 OPEN in `docs/RESEARCH-AND-GATES.md` at close-out, after all merges.
-- D7 (2026-10-23, operator decision after item 1 review): a legal hold on any record containing a subject's data also blocks erasing that subject's pseudonym mapping; the erase is queued and audited until no such hold remains, and a target that cannot enumerate a subject's records fails closed (deferred, distinct reason). One rework round on item 1; merge order becomes 2, 4, 3, 1.
-
-Waves: A = items 1-4 in parallel. Merge order 1, 2, 4, 3; after item 3 the orchestrator reruns the collector twice and proves `git diff --exit-code docs/evidence/inventory.md`. Models: implementers sonnet; one sonnet reviewer per item; rework confirmation haiku.
-
-| Item | Status | Branch | Model | Evidence | Updated |
-|---|---|---|---|---|---|
-| 1 retention-policy-engine | merged | worktree-agent-a34c8294c39b9a2e1 + rework worktree-agent-ae16b1ae8efb4cd90 | sonnet | da8360a, orchestrator fix d7794ea, D7 rework 8341575; reviewer APPROVED, haiku confirmed D7 + assert fix RESOLVED; merged 4c863e8; post-merge 137 passed, integration 1 passed (compose), Snyk 0 | 2026-10-23 |
-| 2 control-narratives | merged | worktree-agent-ad7723b24c20973c0 | sonnet | 094d904; orchestrator re-ran ruff, pyright, pytest 38 passed, sentence grep empty; reviewer APPROVED (no blockers) ; merged 8f00239, tests/compliance green post-merge | 2026-10-23 |
-| 3 evidence-inventory-automation | merged | worktree-agent-a6c368d9b1727037e | sonnet | 47ffba0; orchestrator re-ran ruff, pyright, pytest 40 passed 1 skipped (plans absent), collector idempotent, check_statements PASS on items 2 and 4 docs; reviewer APPROVED (no blockers) ; merged 8c4e8bf, 79 passed 0 skipped post-merge, inventory regenerated missing 0 and idempotent | 2026-10-23 |
-| 4 boundary-and-contingency | merged | worktree-agent-acc0c6cbf8d07de94 | sonnet | 578b3ba; orchestrator re-ran sentence grep empty, claim grep only the mandated sentence, 2 SVGs valid XML, validate_planning PASS; reviewer APPROVED (no blockers) ; merged ea7f3f9, diagram test collects real plans post-merge | 2026-10-23 |
+| Item | Status | Branch/worktree | Notes |
+|------|--------|-----------------|-------|
+| A | todo | | |
+| 1 | todo | | |
+| 2 | todo | | |
+| 3 | todo | | |
+| 4 | todo | | |
+| 5 | todo | | |
 
 ## Completion note (filled at ship)
-- Date: 2026-10-23
-- Merged commits:
-  - PR #118. Item merges into `prp-23-ato-evidence-and-data-lifecycle`:
-    - item 2 `8f00239` (094d904)
-    - item 4 `ea7f3f9` (578b3ba)
-    - item 3 `8c4e8bf` (47ffba0)
-    - item 1 `4c863e8` (da8360a, d7794ea, 8341575)
-  - Inventory regenerated in `f92a060`; gate register updated in `0a681ae`.
-  - Local `verify-gates -Mode full`: 4/4 PASS, 7469 passed, 146 deselected. Compose integration test: 1 passed. PR CI: all 21 checks green, including CodeQL and gitleaks full history.
-- Deviations from blueprint and why: D1-D7 in Execution state.
-  - D1: worker tests live in `lifecycle_worker/` to avoid a pytest package clash.
-  - D2: the conversation adapter is written against a structural protocol, because of core's import boundary.
-  - D3: item 4 calls the pinned mermaid-cli directly. Puppeteer could not find its headless shell, so the render used the installed Chrome.
-  - D4: inventory dates are read from file content.
-  - D5: `check_statements.py` also scans for affirmative claims.
-  - D6: the orchestrator recorded the gates.
-  - D7: by operator decision, a legal hold on any record containing a subject's data also defers erasing that subject's mapping. A target that cannot enumerate a subject's records fails closed.
-  - Merge order changed from 1, 2, 4, 3 to 2, 4, 3, 1 to accommodate the D7 rework.
-  - The orchestrator fixed one pyright error directly (`d7794ea`, an integration test the lane did not typecheck).
-- Descoped items: none.
-- Customer inputs still OPEN (G06, G02):
-  - G06: data classification, payload opt-in, retention periods, legal hold process.
-  - G02: agency baseline, authorizing official determination, assessment.
-  - The SSP scope inputs are listed in `docs/compliance/ssp/scope.md`.
-  - G07: the contingency plan cites the compose DR drill only and does not close the gate.
-- Reviewer verdict (conflict rules, disclaimer enforcement): one Sonnet reviewer per item, all APPROVED with no blockers.
-  - Item 1's reviewer confirmed the precedence order, audit immutability (including read-back `doc_type`), fail-closed policy, audited read-back deletes and scoped export.
-  - The reviewer's hold-vs-erase finding was escalated and fixed (D7); Haiku confirmed it RESOLVED.
-  - The item 3 reviewer confirmed the disclaimer is enforced in every `docs/compliance/**/*.md` and that credential paths are filtered before any read.
-- Follow-ups:
-  - Lifecycle wiring (shared files):
-    - durable legal hold and request-queue stores (in-memory only today)
-    - real delete backends for the catalog, archive and ledger stores
-    - lifecycle worker registration in the runtime entrypoint, plus Helm
-    - an API `ConversationStore` to `ConversationBackend` shim
-    - a retry policy for FAILED queue outcomes
-  - Compliance tooling:
-    - restrict the `check_statements.py` negation exemption to the same clause, with a regression test for "X is authorized, unlike Y which is not"
-    - add a resolved-path-under-root check in `collect_evidence.py` for symlinked parent directories
-  - Docs:
-    - add `hitl/policy.py` to the AC-5 evidence and cite a specific chart-sandbox test for SC-18
-    - add a test that diffs each mermaid block against its `.mmd` source
-    - align the DR drill size wording ("tens of kilobytes" vs about 478 KB) in the contingency plan and the G07 DR README
-    - move the Chrome render workaround to a contributor note
-  - Once those land, upgrade AU-11, CA-7, CP-2, PM-5 and SI-12 from `planned` to evidence-backed statuses.
+- Date, PR, merge commit:
+- Deviations from the blueprint and why:
+- Descoped items:
+- OPEN gates (G06, G02):
+- Env vars for the operator (`NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`):
+- Follow-up issue numbers:
+- Product check (can an operator place a hold and request a dry-run deletion without raw API calls?):
 
-## Audit 2026-11-04
-
-Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
-
-- The lifecycle engine does nothing at runtime: `services/workers/neurosphere_workers/runtime/factories.py:452-470` (`build_lifecycle`) builds `LifecycleEngine` with an empty `TargetRegistry()` and `_NoRequestedJobs` (`:445-449`) that always returns `[]`. No delete, retention or export happens.
-- No lifecycle API exists under `services/api/neurosphere_api`, so a legal hold or deletion/export request cannot be submitted.
-- Not built (admitted follow-ups): real delete backends for catalog, archive and ledger stores, API `ConversationStore` shim, Helm, retry policy; AU-11, CA-7, CP-2, PM-5, SI-12 still `planned`. Cosmos hold/queue stores (`lifecycle/cosmos.py`) may now be durable; completion note says in-memory and looks stale.
-- Met: control mapping (64 entries), deterministic evidence collection with credential-path filtering, required-sentence check, plan documents and diagrams.
+## History
+- Round 1 (PR #118, merged 2026-10-23) shipped the lifecycle engine with Cosmos hold, queue and mapping stores, the 64-control NIST mapping, the evidence inventory scripts, the compliance plans and rendered diagrams (items 1-4).
+- The 2026-11-04 audit reopened it: engine inert at runtime, no lifecycle API, no retry for FAILED outcomes, "durable stores missing".
+- The 2026-11-14 re-audit (lane-c) found the durable-stores claim stale (the Cosmos stores exist), the PRP-21 dependency not real (only `docs/evidence/G07/dr/` and the DR runbook are consumed, both present), and the gate path `services/workers/tests/lifecycle` wrong (real: `lifecycle_worker`).
+- This rewrite removed the round-1 blueprint, the audit section and `depends_on`, added dry-run and rollback as mandatory, and folded #119 and #120 into items A and 1-5; #132's lifecycle bullet is linked to #119.
+- The original text is in git history (`git log --follow PRPs/backlog/PRP-23-ato-evidence-and-data-lifecycle.md`).

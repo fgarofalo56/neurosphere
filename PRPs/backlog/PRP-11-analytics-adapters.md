@@ -1,255 +1,237 @@
 ---
 name: PRP-11-analytics-adapters
 status: backlog
-priority: P2
-order: 15
-started: 2026-10-18
-pr: 63
-branch: prp-11-analytics-adapters
+priority: P1
+order: 22
 review: required
 created: 2026-10-08
 model: sonnet
-phase: 2
-ns: NS-01, NS-07
-depends_on: [PRP-02-capability-matrix-and-feasibility-benchmark, PRP-07-telemetry-ingestion-and-cost-ledger]
-wave: W5
-absorbs: P2.1
 orchestrator_model: sonnet
 implementer_model: sonnet
+phase: 2
+ns: NS-01, NS-07
+depends_on: []
+wave: W12
+branch: prp-11-round2-analytics-runtime
+allow_parallel: true
+absorbs: P2.1
+issues: [59, 60, 61, 62]
 ---
 
-# PRP-11: Analytics adapters
+# PRP-11: Analytics adapters (round 2)
 
 ## Goal
-Ship the `TelemetryAnalytics` and `RecommendationCompute` contracts with an in-process fixture adapter, and three vendor adapters (Microsoft Fabric, Azure Synapse, Azure Databricks) that implement the same contract, plus an equivalence and gating suite and an operator-approved live gate. It is for operators who must choose an analytics backend at deployment and for PRP-14/15/21, which consume aggregates without caring which backend runs. It lands in W5 because the capability matrix (PRP-02) says which adapters may be enabled and the ledger and outbox (PRP-07) produce the normalized input the adapters serve.
+Make the analytics adapters selectable and honest at runtime. Round 1 shipped the contracts, the fixture adapter and three vendor adapters tested against a SQLite stub, but nothing in the running API selects an adapter and the only real client (a Databricks Statement Execution executor) lives inside a gate script. Round 2 moves that executor into the product, adds an API runtime builder that builds the adapter named by settings and sets `app.state.analytics_adapter`, clears the review nits that accumulated as issues #60, #61 and #62, and adds a windowed quantile path so Synapse stops refusing quantiles (#59). It is for operators who pick an analytics backend at deployment and for PRP-64, which runs the live gate per adapter. It runs in W12 because it holds the API composition bodies (`runtime/compose.py`, `runtime/status.py`) for that wave.
 
-> Implement all three adapters to a shared capability/query contract, not identical vendor internals.
+Out of scope: live runs per adapter and the evidence under `docs/evidence/G01/analytics/` (PRP-64; the script stays refusing without `NS_LIVE_APPROVED=1`); real Fabric and Synapse executors (a TDS driver needs an ADR-0002 row and operator approval, so those two stay OPEN and selecting them reports a reason); hot aggregates and dashboards (shipped PRP-14); recommendation rules and the agent series source (PRP-15); Government Fabric host verification (needs a Learn fact or a live run, PRP-64); the `DeploymentProfile` Government region allowlist callers in copilot, workers and the UI (PRP-59, issue #212 other bullets).
 
-> At deployment choose ... Fabric/Synapse/Azure Databricks analytics backend where validated. Show unavailable options disabled with reasons; never route Government telemetry to Commercial to fill a gap.
-
-> Separate durable ingestion, operational catalog and analytical serving; materialized hot aggregates prevent batch analytics from blocking the map.
-
-Adapters are equivalent at the contract level, not identical in internals. The suite proves that identical normalized input yields equivalent aggregates within a documented tolerance; it does not prove identical SQL, plans or performance.
+## Why
+- No composition path selects an adapter: `app.state.analytics_adapter` is read at `services/api/neurosphere_api/dashboards/dependencies.py:40` and set nowhere in `services/api`; `runtime/builders/` has no analytics module and `runtime/status.py` has no analytics component (lane A, PRP-11 section 1).
+- The only real vendor client is `DatabricksStatementExecutor` inside `scripts/gates/g01_analytics_live.py` (class at line 393); `databricks/adapter.py:94` refuses to build without an injected executor, so the product cannot reach a warehouse.
+- The live script imports its workload from the test package and a private function (`tests.integration.analytics.support`, `test_equivalence._cases`, script lines 515-520 and 718), issues setup SQL with no time budget and uses `CREATE SCHEMA IF NOT EXISTS` followed by `DROP SCHEMA ... CASCADE` (lines 730, 770). Issue #60.
+- The suite's guards are weak: `tests/integration/analytics/test_profile_gating.py:179-196` never reaches its assert (`pragma: no cover`), the commercial-host test accepts any `InvalidSchemaError`, dedicated Synapse is not in the constructibility check, and `test_equivalence.py:200` accepts `None` or 0. Issue #61.
+- Synapse refuses approximate quantiles in both modes (`synapse/dialect.py:65`, reason `synapse_no_approx_percentile`); `PERCENTILE_CONT` exists only as a window function that the one-aggregate-per-group renderer (`base/dialect.py:render_statement`) cannot express. Issue #59.
+- `base/registry.py:_capability` turns a Government-region validation error into a generic `InvalidSchemaError`, hiding the capability reason (issue #212, analytics bullet).
 
 ## Acceptance criteria
-- [ ] Item 1: Given a query exceeding its time, row or cost budget, When the fixture adapter runs it, Then it cancels and raises `rate_limited`; budget fields are required on every request.
-- [ ] Item 2: Fabric adapter passes the equivalence suite against a stub SQL endpoint; migrations are versioned and idempotent.
-- [ ] Item 3: Synapse adapter passes the same suite; serverless and dedicated modes are selected by configuration.
-- [ ] Item 4: Databricks adapter passes the same suite against a SQL warehouse stub.
-- [ ] Item 5: Identical normalized input yields aggregates equal within the documented tolerance across fixture, Fabric, Synapse and Databricks; the Government profile enables only approved adapters; an unavailable adapter is visible and disabled with its reason.
-- [ ] Item 6: `scripts/gates/g01_analytics_live.py` refuses without `NS_LIVE_APPROVED=1`; with approval it runs per adapter and writes evidence under `docs/evidence/G01/analytics/`.
-- [ ] PRP exit: items 1-5 green under `verify-gates -Mode full`; item 6 evidenced per adapter or recorded OPEN per adapter.
+- [ ] Given `NS_ANALYTICS_BACKEND` unset or `none`, When the API composes, Then the optional component `analytics_adapter` is `disabled`, `app.state.analytics_adapter` is absent and `/readyz` is unaffected (#212 registry bullet traced to item 3; selection gap from lane A).
+- [ ] Given `NS_ENV=local` and `NS_ANALYTICS_BACKEND=fixture`, When the API composes, Then `app.state.analytics_adapter` is a `FixtureAnalytics` and `analytics_region` is set; Given any other environment with `fixture`, Then the component is `failed` with reason `analytics_fixture_not_local`.
+- [ ] Given `NS_ANALYTICS_BACKEND=databricks` with a valid commercial host, warehouse id, catalog, schema and region, When the API composes with a mock transport, Then the adapter is a `DatabricksAnalytics` over the product executor and `analytics_health` runs a bounded one-row statement through it.
+- [ ] Given `fabric` or `synapse`, When the API composes, Then the component is `failed` with reason `analytics_executor_unavailable` (no TDS driver is approved); no connection is attempted.
+- [ ] Given a Government cloud with a Commercial Databricks host, or a backend the capability matrix disables for the region, Then the component is `failed` with the matrix reason code, never a cross-cloud fallback.
+- [ ] The Databricks executor lives in `neurosphere_core.analytics.databricks.executor`, is covered by `httpx.MockTransport` tests (submit, poll, cancel on `CancelledError`, row budget breach, HTTP error carries only status or `error_code`), and `scripts/gates/g01_analytics_live.py` imports it instead of defining it (#60 item "move shared pieces").
+- [ ] The live script wraps setup and teardown statements in `asyncio.timeout`, uses plain `CREATE SCHEMA` so a reused run id fails instead of dropping a pre-existing schema, and imports its request set from `neurosphere_core.analytics.fixture` (#60 bullets 1-3); the 256-parameter and INLINE-size limits stay recorded as unverified until the live run (#60 bullet 4); it still prints REFUSED and exits 2 without `NS_LIVE_APPROVED=1`.
+- [ ] `tests/integration/analytics/` assertions are tightened per #61 points 1-5 (the Government registry loop reaches its assert or is removed, the host test matches the error field, dedicated Synapse is covered, narrowed scope asserts `row_count == 0`, the shim test asserts the expected shim set per adapter).
+- [ ] Each #62 bullet is fixed with a test or recorded in the completion note as not reproducible or descoped, with the reason.
+- [ ] Given a Synapse request with `approx_quantile`, When the adapter runs, Then it renders a windowed `PERCENTILE_CONT ... OVER (PARTITION BY ...)` statement and the equivalence suite compares it to the fixture within the documented tolerance; the dedicated and serverless refusal test is replaced by a pass test (#59).
+- [ ] Given a Government region request that `DeploymentProfile` refuses, When `create_adapter` or `list_backends` is called, Then the raised error keeps the `capability_unavailable` reason (#212 analytics bullet).
+- [ ] Live runs per adapter stay OPEN and are written OPEN in the completion note (handed to PRP-64).
+- [ ] PRP exit: the touched suites pass, `verify-gates.ps1 -Mode full` is green and `python scripts/validate_planning.py` passes.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|---|---|---|
-| 1 | Model and review | sonnet/none; sonnet/required | sonnet, review required (D6) |
-| 2 | Are all three adapters in scope | pick one; all three | All three behind one contract (PRD NS-07); the customer chooses among validated profiles. No ClickHouse, no standalone Kafka |
-| 3 | What does "equivalent" mean | identical results; within tolerance | Aggregates (sum, count, quantile approximations, group-by) match within a stated tolerance; exact-match for counts and sums, documented tolerance for approximate quantiles. Tolerance is in code and in the suite docstring, not implied |
-| 4 | Government enablement | all three; approved only | Only adapters the capability matrix marks approved for the selected Government region. Fabric in GCC High is GA in US Gov Virginia and Texas (observed 2026-10-08); Fabric customer-managed keys and workspace identity are unsupported there, GCC and DoD unverified. Synapse and Azure Databricks are in Azure Government FedRAMP High / DoD audit scope (Databricks in US Gov Virginia and Arizona). Availability is not authorization; none of this is an ATO claim |
-| 5 | Disabled options | hide; show disabled with reason | Visible but disabled with reason string from the matrix; selecting one returns `capability_unavailable` |
-| 6 | Live runs | CI; operator-approved | Operator-approved only (D7); Commercial subscription; each adapter's live run is independent and may stay OPEN individually |
-| 7 | Local tests | emulators; stubs | In-process fixture plus recorded stub endpoints. There is no local Fabric, Synapse or Databricks emulator, so adapter tests are contract and stub tests; real behavior is evidenced only by item 6 |
-| 8 | Migrations | ad hoc; versioned | Versioned, backward-compatible migrations per adapter, applied by a runner that PRP-13 later generalizes; this PRP ships the adapter-local scripts and tests on a fixture snapshot |
-| 9 | Where compute runs | any; inside boundary | Inside the selected cloud boundary only; adapter config carries cloud and region and the adapter refuses mismatched endpoints (Government config with a Commercial host raises) |
-| 10 | Unknown values | zero-fill; null | Missing metrics aggregate to unknown/null, never 0; the suite includes null-bearing fixtures |
-| 11 | Scope | per-adapter filtering; shared | Every request carries `IdentityScope` and the same structured filter object; adapters translate it, they never accept query text |
-| 12 | Budgets | advisory; enforced | Enforced per request (time, rows scanned, cost units); cancellation is tested |
+| 1 | Model and review | sonnet/none; sonnet/required | sonnet, review required (round 1 decision D6 stands; the builder selects a backend that serves telemetry) |
+| 2 | What "wired" means | Dashboards read the adapter; adapter selected and health-reported | Dashboards, map and copilot read Cosmos hot aggregates and never need the adapter (`dashboards/analytics.py:3`). "Wired" here means selected from settings, set on `app.state` and health-reported through the existing `AnalyticsProbe`; no route starts reading analytics data in this PRP |
+| 3 | Setting names | One file; `NS_ANALYTICS_*` env | `NS_ANALYTICS_BACKEND` (`none` default, `fixture`, `fabric`, `synapse`, `databricks`), `NS_ANALYTICS_REGION`, and for Databricks `NS_ANALYTICS_DATABRICKS_HOST`, `_WAREHOUSE_ID`, `_CATALOG`, `_SCHEMA`; cloud comes from `NS_CLOUD`. Credentials are never settings: the executor uses a managed-identity token (`DefaultAzureCredential`) |
+| 4 | Fabric and Synapse real executors | Add a TDS driver now; stay OPEN | Stay OPEN (round 1 decision). Selecting them reports `analytics_executor_unavailable`; a driver needs an ADR-0002 row and operator approval and this PRP may not touch `pyproject.toml` or `uv.lock` |
+| 5 | Synapse quantile tolerance | Exact only; reuse the approximate tolerance | ASSUMPTION: `PERCENTILE_CONT` is an exact continuous percentile, so it is compared with the existing documented quantile tolerance in `analytics/base/compare.py` (no new tolerance); the live check stays in PRP-64 |
+| 6 | Databricks token audience in Government | Reuse the Commercial resource id; refuse | ASSUMPTION: the Entra resource id in the script (`2ff814a6-...`) is verified for Commercial only; for `NS_CLOUD=government` the builder reports `analytics_government_unverified` until a Learn fact or a live run confirms it |
+| 7 | Where the shared workload lives | Test package; product module | A product module under `neurosphere_core/analytics/fixture/` so the script and the suite import one source (#60 bullet 2) |
+| 8 | `integration` marker on the suite | Add it; keep it unmarked | Keep unmarked (round 1 deviation 3 stands: CI runs the default `uv run pytest -q`, which deselects `integration`); the gate command is `uv run pytest -q tests/integration/analytics` |
 
 ## Context manifest
 
-### Files that matter
-- `PRP.md` - sections 1-3 (analytics via TelemetryAnalytics/RecommendationCompute capability contracts).
-- `docs/PRD.md` - NS-01 (cost and envelope), NS-07 (analytics options), section 3 (hot aggregates, scale profiles).
-- `docs/ARCHITECTURE.md` - analytical serving layer.
-- `docs/RESEARCH-AND-GATES.md` - G01 row and the Fabric GCC High, Synapse and Databricks findings (retrieved 2026-10-08).
-- `docs/adr/0002-stack-pins.md` - pins; no Fabric/Synapse/Databricks SDK is pinned there yet, so item owners add rows via PRP-00 process before adding dependencies.
-- `docs/DECISIONS-LOG.md` - D6, D7, D8.
-- `pyproject.toml`, `docker-compose.yml`, `.env.example`, `.claude/hooks/config.ps1`, `scripts/validate_planning.py`.
-- Created by PRP-02: `packages/core/neurosphere_core/capabilities/` (matrix, `validate_profile()`), `docs/adr/0007-analytics-adapter-contract.md`, `scripts/gates/` conventions.
-- Created by PRP-07: `packages/core/neurosphere_core/ledger/`, outbox and normalized event model, `tests/integration/ingestion/`.
-- Created by PRP-01: telemetry, cost, scope, query schemas and generated types.
-- Created by PRP-05: `neurosphere_core.errors`, `.../cloud/`, `.../clients/`.
-- Consumed by PRP-14, PRP-15 (and PRP-21): the contract in `analytics/base/`.
+### Files to read first
+- `packages/core/neurosphere_core/analytics/base/registry.py` - `create_adapter`, `_capability`, `list_backends` (items 1, 3).
+- `packages/core/neurosphere_core/analytics/databricks/adapter.py` and `config.py` - `create_adapter` needs an injected `SqlExecutor`; `DatabricksConfig` fields.
+- `scripts/gates/g01_analytics_live.py:356-512` - `build_statement_body`, `DatabricksStatementExecutor`, `open_databricks_executor` (the code item 2 moves).
+- `packages/core/neurosphere_core/analytics/base/enforcement.py` - `SqlExecutor`, `ExecutionLimits`, `BudgetBreach`.
+- `packages/core/neurosphere_core/analytics/base/dialect.py:94-191` and `synapse/dialect.py` - `approx_quantile`, `render_statement` (item 4).
+- `services/api/neurosphere_api/runtime/builders/gateway.py` - an optional-component builder with its own settings (pattern for item 3).
+- `services/api/neurosphere_api/runtime/status.py:35-55` - `REQUIRED_COMPONENTS`, `OPTIONAL_COMPONENTS`.
+- `services/api/neurosphere_api/dashboards/dependencies.py:35-45` and `dashboards/analytics.py` - the consumer of `app.state.analytics_*`.
+- `tests/integration/analytics/{support,test_equivalence,test_profile_gating}.py` and `tests/unit/gates/test_g01_analytics_databricks.py` - what items 1 and 2 edit.
+- `docs/evidence/G01/analytics/README.md` - the live run recipe (stays accurate; only the executor import path changes).
+
+### Interfaces consumed
+- `neurosphere_core.capabilities.validate.validate_profile` / `DeploymentProfile` (PRP-02, shipped): the matrix gate behind `create_adapter`.
+- `BuildContext` and `BuilderSpec` (`runtime/builders/__init__.py`, PRP-29, shipped): `ctx.settings.cloud_profile`, `ctx.environ`, `ctx.attempt`, `ctx.disabled`, `ctx.on_shutdown`, `ctx.lifetime`.
+- `neurosphere_core.errors` (`CapabilityUnavailableError`, `InvalidSchemaError`, `RateLimitedError`).
+- `httpx` and `azure-identity` are already core dependencies (`packages/core/pyproject.toml`); no new dependency is added.
+
+### Interfaces provided
+- `neurosphere_core.analytics.databricks.executor.DatabricksStatementExecutor` and `open_databricks_executor(...)` (new); PRP-64 runs the live gate through the same class the API uses.
+- Settings `NS_ANALYTICS_BACKEND`, `NS_ANALYTICS_REGION`, `NS_ANALYTICS_DATABRICKS_{HOST,WAREHOUSE_ID,CATALOG,SCHEMA}`; optional component name `analytics_adapter`; `app.state.analytics_adapter`, `analytics_region`, `analytics_health`.
+- `neurosphere_core.analytics.fixture.equivalence_cases(cloud)` (new public name for the shared request set) used by the suite and the script.
+- Windowed-quantile hook on the `Dialect` protocol (item 4), optional so existing dialects need no change.
 
 ### Patterns to match
-- Protocols (`typing.Protocol`) in `analytics/base/`; one subpackage per adapter; adapters registered through a capability-gated factory.
-- Pydantic v2 `extra="forbid"` for query requests, budgets, results; async clients via `neurosphere_core.clients`.
-- Errors from `neurosphere_core.errors` (`rate_limited`, `capability_unavailable`, `dependency_transient`).
-- Tests beside packages; shared equivalence suite parametrized over adapters in `tests/integration/analytics/`; `pytest.mark.integration` and `pytest.mark.live` markers.
-
-### Conventions
-- ruff line 100, py312, S rules on (no string-built SQL from caller input; parameterized statements only); pyright standard; conventional commits; owned-file discipline.
-- Evidence under `docs/evidence/G01/analytics/`; live scripts refuse without `NS_LIVE_APPROVED=1`.
-- Forward slashes only in commands.
+- Optional builder with a settings class and reason codes: `runtime/builders/gateway.py:60-149`; test env clearing: `services/api/tests/runtime_gateway_builder/conftest.py:18-33`.
+- `httpx.MockTransport` executor tests: `tests/unit/gates/test_g01_analytics_databricks.py:1-50`.
+- Reason codes are `[a-z][a-z0-9_]{0,63}`, never values (`runtime/status.py` `is_reason_code`).
+- Matrix-gated factory with lazy vendor modules: `base/registry.py:73-106`.
 
 ### Gotchas
-- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
-- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
-- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
-- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
-- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
-- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
-- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
-- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
-- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
-- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
-- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
-- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
-- Hidden navigation is not authorization; the API must deny.
-- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
-- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
-- PRP-specific: the adapters are equivalent at the contract level. Do not force vendor internals to match; do not add vendor-specific fields to the shared contract to make one adapter pass.
-- PRP-specific: stub-based adapter tests prove contract conformance only. Never describe them as evidence that Fabric, Synapse or Databricks works in a given cloud or region; only item 6 live runs do.
-- PRP-specific: Fabric in GCC High does not support customer-managed keys, workspace identity or Fabric IQ items; adapter feature flags must reflect that and the matrix must be the source.
-- PRP-specific: a Government adapter configuration containing any Commercial hostname must fail at construction, not at first call.
-- PRP-specific: approximate quantile functions differ across engines; compare with the documented tolerance, and compare counts and sums exactly.
-- PRP-specific: new third-party SDK dependencies (Databricks SQL connector, ODBC drivers) may carry non-permissive licences or EULAs; add an ADR-0002 row and get operator approval before adding them.
+- Adding a builder changes `default_builders()`; tests pin the order and the component set (`services/api/tests/runtime_api/test_readiness.py:178-215`, `runtime_gateway_builder/test_gateway_builder.py:103`, `runtime_data/data_helpers.py:79`). Grep for `default_builders` and `OPTIONAL_COMPONENTS` and update those expectations; this is the only reason a file outside the owned test directories is touched.
+- `analytics_adapter` must be OPTIONAL: a deployment with no backend is valid and must stay ready.
+- `base/dialect.py` is edited twice (items 1 and 4): sequence them, never parallel.
+- The real executor must not log SQL text, parameter values or tokens; errors carry the HTTP status or `error_code` only (the script's rule, keep it).
+- `PERCENTILE_CONT ... OVER` returns one row per input row, so the Synapse renderer must `SELECT DISTINCT` the group keys; the row-limit check (`limit + 1`) must still hold.
+- A new runtime builder module must be CodeQL-clean: no PEP 695 generics in nested functions, no host substring checks without a leading dot.
+Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
-### External references
-- Fabric in GCC High: https://learn.microsoft.com/fabric/enterprise/us-government-community-cloud-high (observed 2026-10-08); announcement https://www.microsoft.com/en-us/microsoft-cloud/blog/us-government/2026/09/02/microsoft-fabric-in-gcc-high-building-the-data-foundation-for-ai/.
-- Azure Government FedRAMP High / DoD audit scope for Synapse and Databricks: https://learn.microsoft.com/azure/azure-government/compliance/azure-services-in-fedramp-auditscope (updated 2026-09-21).
-- Event Hubs data geo-replication (Premium and Dedicated; Government unverified): https://learn.microsoft.com/azure/event-hubs/geo-replication (2026-07-11), relevant to upstream feed assumptions.
-- Cosmos DB change feed modes (why outbox feeds the analytics sink): https://learn.microsoft.com/azure/cosmos-db/change-feed-modes (observed 2026-06-17).
-- ADR-0002 pins: docs/adr/0002-stack-pins.md (observed 2026-10-08).
+## Ownership
+```ownership
+owns:
+  - packages/core/neurosphere_core/analytics/**
+  - packages/core/tests/analytics/**
+  - tests/integration/analytics/**
+  - tests/unit/gates/test_g01_analytics_*.py
+  - scripts/gates/g01_analytics_live.py
+  - docs/evidence/G01/analytics/**
+  - services/api/neurosphere_api/runtime/builders/analytics.py
+  - services/api/tests/analytics_runtime/**
+tier1:
+  - services/api/neurosphere_api/runtime/compose.py
+  - services/api/neurosphere_api/runtime/status.py
+tier2_appends:
+  - services/api/neurosphere_api/runtime/builders/__init__.py
+  - services/api/neurosphere_api/runtime/settings.py
+must_not_touch:
+  - pyproject.toml
+  - uv.lock
+  - infra/**
+  - packages/contracts/**
+  - docs/RESEARCH-AND-GATES.md
+  - docs/adr/0002-stack-pins.md
+```
 
 ## Implementation blueprint
 
-### Item 1 - contracts-and-fixture-adapter  [P]
-- Deliverable: `TelemetryAnalytics` and `RecommendationCompute` protocols, request/response/budget models, an in-process fixture adapter over normalized sandbox data, and budget/cancellation enforcement.
-- Owned files (may edit): `packages/core/neurosphere_core/analytics/base/`, `packages/core/neurosphere_core/analytics/fixture/`.
-- Must NOT touch: `packages/core/neurosphere_core/analytics/fabric/`, `.../synapse/`, `.../databricks/`, `packages/core/neurosphere_core/capabilities/`, `packages/core/neurosphere_core/ledger/`, `tests/integration/analytics/`, root `pyproject.toml`.
+Order: 1 then 2 then 3 (they share `databricks/`, then the builder consumes the executor); 4 after 1 (both edit `base/dialect.py`); 5 last. No item is `[P]`.
+
+### Item 1 - Hygiene: suite, adapters, registry reason, shared workload
+- Deliverable: #61 assertions tightened; #62 nits fixed or recorded; the registry keeps the `capability_unavailable` reason for refused regions (#212 analytics bullet) and passes a caller-supplied executor to the fixture factory only when it is a `SqlExecutor` (otherwise documents why not); the equivalence request set and dataset builders move into `neurosphere_core/analytics/fixture/` (`equivalence_cases`), with the suite importing them from there.
+- Owned files: `packages/core/neurosphere_core/analytics/base/{registry,stub}.py`, `analytics/fabric/{config,migrations}.py`, `analytics/synapse/config.py`, `analytics/databricks/{migrations,dialect}.py`, `analytics/fixture/**`, `packages/core/tests/analytics/**`, `tests/integration/analytics/**`.
+- Must NOT touch: `analytics/base/dialect.py` (item 4), `scripts/gates/**` (item 2), `services/**`.
 - Depends on: none.
-- Acceptance criteria:
-  - Budget exceeded raises `rate_limited` and cancels the in-flight work (test with a slow fake).
-  - Requests without `IdentityScope` or budgets fail validation; no field accepts query text.
-  - Unknown metrics return `unknown`, not 0.
-- Pattern references: Protocols; Pydantic forbid-extra; errors taxonomy.
-- Tests to write: `packages/core/tests/analytics/test_base_budgets.py`, `packages/core/tests/analytics/test_fixture_adapter.py`.
+- Acceptance criteria: each #61 point has a test that fails on the old assertion; Fabric `apply_migrations` serialises concurrent runners (two concurrent runs insert one ledger row); a dedicated Synapse workspace named `*-ondemand` with a derived host is rejected; Databricks `_IDENT` uses `fullmatch`; the stub counter no longer depends on ANSI quoting or the recorded limitation is kept in `G12_PARITY_GAPS`; `list_backends(cloud="government", region="usdodcentral")` raises with reason `capability_unavailable`.
+- Tests: `packages/core/tests/analytics/test_base_registry.py` (extend), `test_fabric_adapter.py`, `test_synapse_adapter.py`, `test_databricks_adapter.py`, `tests/integration/analytics/test_profile_gating.py`, `test_equivalence.py`.
+- Pattern references: `tests/integration/analytics/support.py:90-140` (`build_adapter`), `base/registry.py:73-106`.
 
-### Item 2 - fabric-adapter  [P]
-- Deliverable: Fabric Lakehouse / SQL endpoint adapter and migrations implementing the base protocols.
-- Owned files (may edit): `packages/core/neurosphere_core/analytics/fabric/`.
-- Must NOT touch: `packages/core/neurosphere_core/analytics/base/`, other adapter packages, `packages/core/neurosphere_core/deploy/fabric/` (PRP-08 provisioning), `tests/integration/analytics/`.
-- Depends on: Item 1.
-- Acceptance criteria:
-  - Passes the equivalence suite with the Fabric stub within the documented tolerance.
-  - Rejects a configuration whose host does not match the selected cloud.
-  - Migrations are versioned, idempotent, and tested on a fixture snapshot.
-- Pattern references: base protocols; clients factory.
-- Tests to write: `packages/core/tests/analytics/test_fabric_adapter.py`.
+### Item 2 - Product Databricks executor and hardened live script
+- Deliverable: `databricks/executor.py` holding `build_statement_body`, `DatabricksStatementExecutor` and `open_databricks_executor` moved from the script; `databricks/__init__.py` exports them; the script imports them, wraps setup and teardown `run_sql` in `asyncio.timeout` (cancelling the server statement), uses plain `CREATE SCHEMA`, and imports the workload from `fixture.equivalence_cases`.
+- Owned files: `packages/core/neurosphere_core/analytics/databricks/{executor,__init__}.py` (new `executor.py`), `scripts/gates/g01_analytics_live.py`, `tests/unit/gates/test_g01_analytics_*.py`, `packages/core/tests/analytics/test_databricks_executor.py` (new).
+- Must NOT touch: `pyproject.toml`, `uv.lock`, the script's refusal-first behaviour (`NS_LIVE_APPROVED` check stays before any import), `docs/RESEARCH-AND-GATES.md`.
+- Depends on: item 1.
+- Acceptance criteria: `uv run pytest -q tests/unit/gates/test_g01_analytics_refuses.py` still shows REFUSED with exit 2 and no import of project code before the check; executor tests pass on `httpx.MockTransport` with no network; a statement cancelled by the time budget posts the cancel endpoint; the module exports no token or query text in any error.
+- Tests: `packages/core/tests/analytics/test_databricks_executor.py`, `tests/unit/gates/test_g01_analytics_databricks.py` (re-pointed imports), `test_g01_analytics_evidence.py`.
+- Pattern references: `scripts/gates/g01_analytics_live.py:393-481`, `tests/unit/gates/test_g01_analytics_databricks.py:34-60`.
 
-### Item 3 - synapse-adapter  [P]
-- Deliverable: Synapse serverless and dedicated SQL adapter and migrations.
-- Owned files (may edit): `packages/core/neurosphere_core/analytics/synapse/`.
-- Must NOT touch: `packages/core/neurosphere_core/analytics/base/`, other adapter packages, `tests/integration/analytics/`.
-- Depends on: Item 1.
-- Acceptance criteria:
-  - Passes the equivalence suite with the Synapse stub; mode (serverless or dedicated) selected by config.
-  - Cloud and host mismatch rejected at construction.
-  - Migrations versioned and idempotent.
-- Pattern references: base protocols; clients factory.
-- Tests to write: `packages/core/tests/analytics/test_synapse_adapter.py`.
+### Item 3 - API runtime builder: select and report the adapter
+- Deliverable: `runtime/builders/analytics.py` with an `AnalyticsSettings` (`NS_ANALYTICS_*`), a `build(ctx)` that disables the optional component when the backend is `none`, builds the fixture adapter only under `NS_ENV=local`, builds `DatabricksAnalytics` over the product executor (token from `DefaultAzureCredential` bound to the cloud's login host, client closed with `ctx.on_shutdown`), reports `analytics_executor_unavailable` for Fabric and Synapse and `analytics_government_unverified` for Databricks under Government, sets `app.state.analytics_adapter`, `analytics_region` and an `analytics_health` callable (bounded one-row statement, no network at build time); `analytics_adapter` added to `OPTIONAL_COMPONENTS`; the builder registered last in `default_builders()`.
+- Owned files: `services/api/neurosphere_api/runtime/builders/analytics.py` (new), `runtime/status.py` (append the component name), `runtime/builders/__init__.py` (append to `default_builders`), `runtime/settings.py` only if the settings class lives there (prefer the builder module), `services/api/tests/analytics_runtime/**` (new directory, no `__init__.py`, conftest clearing `NS_ANALYTICS_`), and the pinned expectations in `services/api/tests/runtime_api/test_readiness.py`, `runtime_gateway_builder/test_gateway_builder.py` and `runtime_data/data_helpers.py` (one-line updates).
+- Must NOT touch: `dashboards/**`, `data.py`, `planes.py`, `routers.py`, other builders' bodies.
+- Depends on: item 2.
+- Acceptance criteria: the six builder criteria above, each a test; `/readyz` stays ready with the backend unset; a misconfigured backend makes only `analytics_adapter` failed with a reason code and no value in the status; the dashboards analytics badge reports `ok` for a healthy fake and `delayed` when the health call raises.
+- Tests: `services/api/tests/analytics_runtime/test_analytics_builder.py`, `test_analytics_health.py`, plus the updated pinned tests; run with `services/api/tests/runtime_api services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/health`.
+- Pattern references: `runtime/builders/gateway.py:60-149`, `dashboards/dependencies.py:35-45`.
 
-### Item 4 - databricks-adapter  [P]
-- Deliverable: Azure Databricks SQL warehouse adapter and migrations.
-- Owned files (may edit): `packages/core/neurosphere_core/analytics/databricks/`.
-- Must NOT touch: `packages/core/neurosphere_core/analytics/base/`, other adapter packages, `tests/integration/analytics/`.
-- Depends on: Item 1.
-- Acceptance criteria:
-  - Passes the equivalence suite with the warehouse stub.
-  - Credentials via vault references only; none logged.
-  - Cloud and host mismatch rejected at construction; migrations versioned and idempotent.
-- Pattern references: base protocols; clients factory.
-- Tests to write: `packages/core/tests/analytics/test_databricks_adapter.py`.
+### Item 4 - Synapse windowed quantile (#59)
+- Deliverable: an optional `windowed_quantile(column_sql, q, group_sql)` hook on the `Dialect` protocol, a renderer branch in `render_statement` that emits `SELECT DISTINCT <keys>, PERCENTILE_CONT(q) WITHIN GROUP (ORDER BY col) OVER (PARTITION BY <keys>), ...` for dialects that provide it, the Synapse dialects (serverless and dedicated) providing it instead of raising, the SQLite stub shim for `PERCENTILE_CONT ... OVER`, and the equivalence suite and gating tests updated.
+- Owned files: `packages/core/neurosphere_core/analytics/base/dialect.py`, `analytics/synapse/{dialect,adapter,stub_shims}.py`, `packages/core/tests/analytics/test_synapse_adapter.py`, `tests/integration/analytics/test_equivalence.py`.
+- Must NOT touch: `analytics/fabric/**`, `analytics/databricks/**`, anything outside the owned list.
+- Depends on: item 1.
+- Acceptance criteria: a quantile request over a grouped, time-bucketed dimension returns the same rows as the fixture within tolerance on both Synapse modes; a request that also asks for a row limit still raises `rate_limited` on `limit + 1` rows; `G12_PARITY_GAPS` lists that the stub emulates the window function and that real `PERCENTILE_CONT` semantics are unproven until the live run.
+- Tests: `packages/core/tests/analytics/test_synapse_adapter.py`, `tests/integration/analytics/test_equivalence.py`.
+- Pattern references: `base/dialect.py:120-191`, `synapse/dialect.py:40-91`.
 
-### Item 5 - equivalence-and-gating-suite
-- Deliverable: shared suite that feeds identical normalized input to every adapter and compares aggregates, plus gating tests for Commercial and Government profiles.
-- Owned files (may edit): `tests/integration/analytics/`.
-- Must NOT touch: `packages/core/neurosphere_core/analytics/` (any subpackage), `packages/core/neurosphere_core/capabilities/`, `tests/integration/ingestion/` (PRP-07), `tests/integration/deploy/` (PRP-08).
-- Depends on: Items 2, 3, 4.
-- Acceptance criteria:
-  - Identical normalized input yields aggregates equal within the documented tolerance (exact for counts and sums) across all adapters.
-  - Government profile fixture enables only matrix-approved adapters; an unavailable adapter is listed disabled with the matrix reason and selecting it returns `capability_unavailable`.
-  - Null-bearing fixtures aggregate to unknown, never 0.
-- Pattern references: `validate_profile()` from PRP-02; parametrized pytest.
-- Tests to write: `tests/integration/analytics/test_equivalence.py`, `tests/integration/analytics/test_profile_gating.py`.
-
-### Item 6 - live-gate (operator approved)
-- Deliverable: script that runs the equivalence workload against a real backend per adapter in the Commercial subscription and writes per-adapter evidence.
-- Owned files (may edit): `scripts/gates/g01_analytics_live.py`, `docs/evidence/G01/analytics/`.
-- Must NOT touch: `scripts/gates/g01_deploy_smoke.py` and `docs/evidence/G01/` outside `analytics/` (PRP-08), `docs/RESEARCH-AND-GATES.md`, `tests/integration/analytics/`.
-- Depends on: Item 5.
-- Acceptance criteria:
-  - Exits non-zero with a clear message without `NS_LIVE_APPROVED=1`.
-  - With approval, runs only the adapters named on the command line and records tolerance results per adapter.
-  - Evidence names backend SKU class, region, date and the delta from the stub run (G12); no credential values.
-- Pattern references: `scripts/gates/` conventions from PRP-02.
-- Tests to write: `tests/unit/gates/test_g01_analytics_refuses.py`.
+### Item 5 - Integration and close-out
+- Deliverable: `docs/evidence/G01/analytics/README.md` updated (executor import path, new settings, what stays OPEN); Tier-2 appends confirmed; Tier-3 regeneration (`openapi.json` is not expected to change, run the drift test to confirm); completion note per reference section 6 with an "Env vars for the operator" list (`NS_ANALYTICS_*`) because `.env.example` cannot be edited by an agent; issues #60, #61, #62 closed only if every bullet is fixed or justified, #59 closed, #212 left open (other bullets belong to PRP-59).
+- Owned files: `docs/evidence/G01/analytics/README.md`, this PRP's Execution state and completion note, regenerated `PRPs/PRP-MASTER-neurosphere.md` status table and `PRPs/INDEX.md`.
+- Must NOT touch: `docs/RESEARCH-AND-GATES.md` (PRP-64 owns the G01 row), `.env.example`.
+- Depends on: items 1-4.
+- Acceptance criteria: gates below pass; live runs written OPEN per adapter.
+- Tests: none new.
+- Pattern references: `PRPs/reference/parallel-build-reference.md` section 6.
 
 ## Validation gates
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
+```bash
+uv sync --frozen --group dev
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -q packages/core/tests/analytics tests/integration/analytics tests/unit/gates services/api/tests/analytics_runtime services/api/tests/runtime_api services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/health services/api/tests/test_openapi_drift.py
+python scripts/prp_status.py --check
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 python scripts/validate_planning.py
 ```
-Feature-specific:
-```
-docker compose up -d --wait
-python -m pytest packages/core/tests/analytics
-python -m pytest -m integration tests/integration/analytics
-NS_LIVE_APPROVED=1 python scripts/gates/g01_analytics_live.py --adapter fabric    # operator-approved, requires NS_LIVE_APPROVED=1
-NS_LIVE_APPROVED=1 python scripts/gates/g01_analytics_live.py --adapter synapse    # operator-approved, requires NS_LIVE_APPROVED=1
-NS_LIVE_APPROVED=1 python scripts/gates/g01_analytics_live.py --adapter databricks    # operator-approved, requires NS_LIVE_APPROVED=1
-```
+Live (operator only, NOT run by this PRP): `NS_LIVE_APPROVED=1 MSYS_NO_PATHCONV=1 uv run python scripts/gates/g01_analytics_live.py --adapter databricks --operator "<name>" ...` per `docs/evidence/G01/analytics/README.md`.
+
+## Migration and rollback
+No data or schema migration: the builder only reads settings and the adapter reads no store at build time. The feature is off by default (`NS_ANALYTICS_BACKEND` unset gives a `disabled` optional component), so rollback is unsetting the variable; reverting the branch removes the module and the one-line registrations. New settings are optional with safe defaults.
 
 ## Live and open gates
-- G01 (service/feature/region/SKU matrix): item 6 supplies Commercial integration evidence per adapter under `docs/evidence/G01/analytics/`. Government Fabric, Synapse and Databricks stay OPEN (no Government subscription; availability is not authorization, see G02).
-- G02 (FedRAMP/DoD boundary): not touched by evidence here; the Government profile only enables approved adapters and makes no authorization claim.
-- G12 (emulator parity): record what stubs cannot reproduce (engine-specific SQL semantics, throttling, auth).
-- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+- G01 per adapter (Fabric, Synapse, Databricks, Commercial) and G12 stub-vs-live deltas: OPEN, need `NS_LIVE_APPROVED=1` and an operator-approved subscription; handed to PRP-64. Fabric and Synapse cannot run at all until a TDS driver has an ADR-0002 row and operator approval.
+- Government analytics (Fabric, Synapse, Databricks) and the inferred Government Fabric SQL suffix `.fabric.microsoft.us`: OPEN (no Government subscription; availability is not authorization).
+- The Databricks Statement Execution limits (256 parameters, INLINE size) and `PERCENTILE_CONT` semantics on real Synapse: unverified until the live run.
 
 ## NOT building
-- Hot aggregates worker and dashboards API (PRP-14); recommendation rules (PRP-15).
-- Provisioning Fabric capacity or workspaces (PRP-08 `deploy/fabric/`).
-- Cross-cell federation summaries and load profiles (PRP-21).
-- A migration runner shared across stores (PRP-13); only adapter-local migrations here.
-- Any ClickHouse, Kafka, Neo4j or other unlisted analytics backend.
-- Data movement between Government and Commercial clouds, ever.
-- Authorization or compliance claims for any adapter.
+- A TDS driver or real Fabric and Synapse executors (ADR-0002 row and operator approval first).
+- Any route that reads analytics data, or a change to dashboards, map or copilot to use the adapter.
+- Hosted wiring of `NS_ANALYTICS_*` in Helm, Bicep or compose (PRP-58) and `.env.example` edits (operator).
+- Live evidence files, `docs/RESEARCH-AND-GATES.md` rows (PRP-64).
+- Cross-cloud routing of any kind.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [x] All clarification questions are decided, not guessed
+- [x] All clarification questions are decided, not guessed (rows 5 and 6 are labelled assumptions)
 
 ## Execution state
 
-Plan approved 2026-10-18. Waves: 1 → (2, 3, 4) → 5 → 6. Design calls at approval: local `AnalyticsBudget` wraps the PRP-01 `Budget` and adds required `max_rows_scanned`/`max_cost_units`; budget exceed raises `rate_limited` (PRP wins over the ADR-0007 "truncation marker"; ADR amended at close-out); the stub SQL endpoint is stdlib sqlite3 over the shared normalized fixture with per-dialect shims recorded as G12 gaps; no new third-party dependencies; adapter-local per-cloud host suffix tables; Commercial rows are `unverified`, so Commercial profiles show every adapter disabled. Item 6 live runs: operator chose ship the script and record OPEN per adapter.
-
-| Item | Status | Branch | Model | Evidence | Updated |
-|------|--------|--------|-------|----------|---------|
-| 1 | merged | worktree-agent-adbfb1d113747a4a1 | sonnet | 82eaea9; ruff/format/pyright clean; analytics+import-boundaries 61 passed (re-run on branch), core 889 passed (implementer); Snyk Code NOT RUN (CLI unauthenticated); review APPROVE (non-blocking: registry drops caller executor for fixture, stub scan-counter regex needs quoting-normalising rewrite for bracket/backtick dialects, stub serialises runs via lock, fixture rows_scanned reports full table on early stop, registry ImportError name check loose); merge fcb6752, core 889 passed + pyright clean post-merge. Note: Commercial per-region rows (commercial_regions.yaml, e.g. eastus2) are `available`/ga unverified, so design call 6 is superseded: Commercial is matrix-driven per region | 2026-10-18 |
-| 2 | merged | worktree-agent-afc3672c2020eac45 | sonnet | dd6a50b; ruff/format/pyright clean; analytics 106 passed (re-run on branch); Snyk Code NOT RUN (CLI unauthenticated); orchestrator verified APPROX_PERCENTILE_CONT + DATETRUNC on Learn (Fabric Warehouse + SQL analytics endpoint); review APPROVE (non-blocking: stale unverified docstrings (fixed 888ddf4), database ident regex allows spaces (not interpolated), no migration concurrency guard, Z-suffixed timestamp text vs datetime2 to check at live gate); merge 8431f6d, analytics 106 passed + pyright clean post-merge | 2026-10-18 |
-| 3 | merged | worktree-agent-a3c359d26e60029ce | sonnet | 9ad4563; ruff/format/pyright clean; analytics 121 passed (re-run on branch); Snyk Code NOT RUN; approx quantile refused (capability_unavailable) in both modes: no approx percentile aggregate in Synapse, PERCENTILE_CONT is window-only; review APPROVE (non-blocking: dedicated workspace named *-ondemand with derived host looks serverless, redundant cross-cloud loop, stub proves shape not Synapse acceptance of OPENROWSET/OPTION LABEL/collation, docstring wording); merge 00591e5, analytics 166 passed + pyright/ruff clean post-merge | 2026-10-18 |
-| 4 | merged | worktree-agent-af33b15df6c952aee | sonnet | 59d64e5; ruff/format/pyright clean; analytics 112 passed (re-run on branch); Snyk Code NOT RUN; orchestrator verified named :markers, approx_percentile, date_trunc on Learn; review APPROVE (non-blocking: migrations _IDENT uses $ not fullmatch, stale docstring (fixed cfc631d), percentile_approx default accuracy, timestamp text binding); merge de0d79f, core 1045 passed + pyright clean post-merge | 2026-10-18 |
-| 5 | merged | worktree-agent-a4961a50ac1caa476 | sonnet | e1114ef; ruff/format/pyright clean; tests/integration/analytics 172 passed (re-run on branch), collected in default suite (4745 passed, 4 skipped pnpm-dependent, implementer); NOT marked integration (deviation: CI runs only default `uv run pytest -q`, which deselects integration; suite is in-process); review APPROVE (non-blocking: gov-registry first loop never reaches its assert, commercial-host test accepts any InvalidSchemaError, dedicated not in constructibility check, narrowed-scope assertion weak, shims test only non-empty); merge b1fd1fd, analytics 388 passed post-merge | 2026-10-18 |
-| 6 | merged | worktree-agent-ad24a3e9f2b364ed4 | sonnet | eb7998d; ruff/format/pyright clean; tests/unit/gates 118 passed (re-run on branch); unapproved run prints REFUSED, exit 2; Databricks Entra resource id verified on Learn (note fixed c4ed6db); review APPROVE (non-blocking: setup/teardown run_sql has no time budget, workload imported from test modules incl. private _cases, CREATE SCHEMA IF NOT EXISTS + DROP CASCADE on reused run id, 256-param/INLINE limits unverified); merge 52a0898. Live runs: Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision; Fabric/Synapse also need an approved TDS driver) | 2026-10-18 |
+| Item | Status | Branch/worktree | Notes |
+|---|---|---|---|
+| 1 | todo | | |
+| 2 | todo | | |
+| 3 | todo | | |
+| 4 | todo | | |
+| 5 | todo | | |
 
 ## Completion note (filled at ship)
-- Date: 2026-10-18
-- Merged commits: PR #63 merged as 05c7e89 (CI 16/16 green after two fix commits: 5e05ce4 gitleaks fixture split + fingerprint-exact `.gitleaksignore` for the already-pushed synthetic fixture in eb7998d, and CodeQL string-concat; 2cd101a CodeQL wrong-arguments). Item merges into the integration branch: 1 fcb6752, 2 8431f6d, 3 00591e5, 4 de0d79f, 5 b1fd1fd, 6 52a0898. Orchestrator commits: 888ddf4, cfc631d, c4ed6db (Learn verification notes), 7e6c28a (ADR-0007 amendment, RESEARCH-AND-GATES G01/G12). `verify-gates -Mode full` on the integration branch: lint, typecheck, tests (4813 passed, 65 deselected), build all PASS.
-- Deviations from blueprint and why: (1) budget breach raises `rate_limited` rather than ADR-0007's "truncation marker"; the PRP is authority, ADR amended. (2) `AnalyticsBudget` wraps the PRP-01 `Budget` and adds required `max_rows_scanned` and `max_cost_units`, because the contract lacks them. (3) `tests/integration/analytics/` is not marked `integration`: CI runs only the default `uv run pytest -q`, which deselects `integration`, and the suite is in-process, so the marker would have meant it never ran in CI. Gate command is `uv run pytest -q tests/integration/analytics`. (4) Synapse refuses approximate quantiles in both modes (`capability_unavailable`): Synapse has neither `APPROX_PERCENTILE_CONT` nor an aggregate `PERCENTILE_CONT` (Learn, 2026-10-18). (5) Commercial per-region matrix rows (`commercial_regions.yaml`) make listed Commercial regions `supported` with GA unverified, superseding the plan's "Commercial all disabled" assumption. (6) Stub SQL endpoint is stdlib sqlite3 with declared dialect shims, so no new dependencies; migrations use a separate executor protocol because the stub is SELECT-only. (7) The live script imports its workload from the test package (follow-up #60).
-- Descoped items: none.
-- Live items run or OPEN per adapter (Fabric, Synapse, Databricks; G01, G12): **none ran**. Fabric OPEN, Synapse OPEN, Databricks OPEN (operator decision 2026-10-18). Fabric and Synapse also need an approved TDS driver (ADR-0002 row) before they can run at all. Government analytics stays OPEN (no Government subscription; availability is not authorization). G12 stub-vs-live deltas are OPEN; the gaps are listed in each adapter's `G12_PARITY_GAPS` and in `docs/RESEARCH-AND-GATES.md`. The Government Fabric SQL suffix `.fabric.microsoft.us` is inferred and unverified. Snyk Code was not run (CLI unauthenticated in the session).
-- Follow-ups: #59 Synapse windowed quantile path; #60 live-gate hardening (setup and teardown timeouts, workload out of the test package, schema reuse); #61 equivalence and gating suite tightening; #62 adapter hardening nits.
+- Date, PR, merged commits:
+- Deviations from the blueprint and why:
+- Descoped items:
+- OPEN gates (G01 per adapter, G12 deltas, Government):
+- Env vars for the operator (`NS_ANALYTICS_*`):
+- Follow-up issue numbers:
+- Product check (can an operator select a backend without editing files?):
 
-## Audit 2026-11-04
-
-Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
-
-- No real client exists for any vendor adapter: Fabric (`fabric/__init__.py`, 'no real driver'), Synapse (`synapse/__init__.py:63` raises without an injected executor), Databricks (`databricks/adapter.py:94` same; its only real `httpx` executor is inside `scripts/gates/g01_analytics_live.py` and never ran). All are tested against a sqlite stub only.
-- Nothing in the running app selects an adapter: no non-test caller of `create_adapter` under `services/`, no analytics setting. Dashboards do not use the adapter for data (`dashboards/analytics.py:3`); `dependencies.py:35-40` reads `app.state.analytics_adapter` etc., which nothing sets.
-- Synapse refuses approximate quantiles and does not support the dedicated pool (`synapse/config.py`); Fabric Government suffix is 'INFERRED, UNVERIFIED'. Gating tests have weak asserts (a loop that never reaches its assert; a test accepting any `InvalidSchemaError`). `tests/integration/analytics` is not marked `integration`.
-- `docs/evidence/G01/analytics/` holds only a README; all three adapters OPEN; Fabric/Synapse cannot run without a TDS driver.
+## History
+- Round 1 shipped as PR #63 (merged 2026-10-18): contracts, fixture adapter, Fabric, Synapse and Databricks adapters over a SQLite stub, the equivalence and gating suite and the live-gate script. Live runs did not run; all three adapters stayed OPEN.
+- The 2026-11-04 audit reopened it: no real vendor client, nothing selecting an adapter in the running app, weak suite assertions, evidence directory holding only a README.
+- The 2026-11-14 lane A audit confirmed the gaps and found the wiring and executor claims still true, plus four stale commands (`python -m pytest -m integration tests/integration/analytics` collects nothing because the suite is not `integration`-marked; the correct form is `uv run pytest -q tests/integration/analytics`).
+- This rewrite drops the round 1 blueprint, execution table and audit section, scopes round 2 to hygiene, the product executor, the runtime builder and the Synapse quantile, and hands every live run to PRP-64.
+- The original text is in git history (`git log --follow PRPs/backlog/PRP-11-analytics-adapters.md`).

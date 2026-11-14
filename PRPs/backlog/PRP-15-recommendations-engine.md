@@ -2,250 +2,239 @@
 name: PRP-15-recommendations-engine
 status: backlog
 priority: P1
-order: 13
-started: 2026-10-19
-pr: 79
-review: none
+order: 25
+review: required
 created: 2026-10-08
-branch: prp-15-recommendations-engine
 model: sonnet
-phase: 2
-ns: NS-03
-depends_on: [PRP-10-catalog-and-relationship-governance, PRP-11-analytics-adapters]
-wave: W6
-absorbs: P2.3
 orchestrator_model: sonnet
 implementer_model: sonnet
+phase: 2
+ns: NS-03
+depends_on: []
+wave: W13
+branch: prp-15-round2-production-series
+allow_parallel: true
+absorbs: P2.3
+issues: [133]
 ---
 
-# PRP-15: Recommendations engine
+# PRP-15: Recommendations engine (round 2)
 
 ## Goal
-Ship the evidence-backed recommendation pipeline for NS-03: bounded rules for cost spikes, latency and error degradation and unused agents; duplicate-candidate detection that only ever proposes a consolidation review; cost projections tied to versioned pricing; and an API and UI that list recommendations with evidence, owner, prerequisites and an explicit advisory status. Audience: domain stewards, analysts and FinOps, who need suggestions they can trust and audit; downstream, PRP-17 consumes the review-routing interface and PRP-16 shares the evidence conventions. It lands in W6 after the catalog (PRP-10) and analytics adapters (PRP-11) supply entities and `RecommendationCompute`. Recommendations are advisory until the action gates of PRP-17 pass; nothing here changes a target system.
+Feed the shipped recommendations pipeline with real telemetry and raise its measured quality. Round 1 shipped bounded rules, duplicate detection, cost projection, the API, the UI and a worker role, but every record comes from sandbox NDJSON files. Round 2 adds a production `AgentSeriesSource` that reads the redacted archive (telemetry and cost documents) behind a new `NS_WORKER_REC_SOURCE=archive|sandbox` switch (default `sandbox`), runs duplicate detection over the live catalog when the source is `archive`, recalibrates duplicate thresholds and the pilot-density latency policy on held-out seeds, and closes the two recommendation bullets of #133 (the `HitlReviewRouter` race and duplicate recommendation ids across partitions). It is for stewards and FinOps who need recommendations about their own agents, and for PRP-58, which turns the role on in hosted environments. It runs in W13 because it holds the worker `build_recommendations` body.
 
-> NS-03: "Each suggestion includes evidence window, coverage, uncertainty, prerequisites, projected estimate and owner; cold-start uses bounded rules rather than fabricated scores."
+Out of scope: enabling the recommendations role in Bicep, App Service and Helm and a real-stack run (PRP-58, lane A unit U2); the evaluation half of #133 (`evaluation_id` duplicates across partitions, PRP-16 territory, left on the issue); the `RecommendationStore` SharedKey coupling in the API composition (#131, PRP-51); gateway token pricing (#148, PRP-46); an agent dimension on the PRP-11 analytics contract or on the hot aggregates (PRP-14; the owner chose the archive for this series, assumption A4); any execution path (PRP-17).
 
-> NS-03: "Duplicate detection recommends consolidation review; it never automatically merges operational agents."
-
-> NS-03: "Model swaps require capability/context/tool compatibility, quality regression tests and cost comparison, then staged rollout/canary and rollback."
+## Why
+- The only `AgentSeriesSource` implementation is `SandboxSeriesSource` (`services/workers/neurosphere_workers/recommendations/rules/sandbox_source.py:98`); `rules/series.py:4-5` records the production source as OPEN, and `recommendations/pipeline.py:233-260` reads `agents.ndjson`, `relations.ndjson`, `telemetry.ndjson` and `cost.ndjson` from one directory for rules, duplicates and usage.
+- The worker raises `recommendations_data_dir_missing` unless `NS_WORKER_REC_DATA_DIR` is set (`runtime/factories.py:757-762`); `infra/demo/main.bicep:259-260` does not run the role because the hosted image has no such directory.
+- Neither rules nor duplicates call `RecommendationCompute`: `TelemetryAnalytics` cannot group by agent (`Dimension` in `analytics/base/models.py:64-72` has no agent) and duplicates read presented relations through `GraphQuery` over an in-memory sandbox catalog (`pipeline.py:100-133`). The round 1 text claiming otherwise is removed here.
+- The ledger carries no agent id (`ledger/models.py:123-153` `Observation`, `:174-209` `LedgerEntry`), so per-agent cost can only come from the archive's cost documents; telemetry carries `canonical_agent_id` (contract `telemetry_event.py:187`) and the archive keeps day-partitioned blobs `{customer}/{domain}/{yyyy}/{mm}/{dd}/{doc_id}.json.gz` (`archive/serialize.py:35-54`).
+- Quality is below the round 1 targets: duplicate precision 0.75 on held-out seed 5 against the 80% target, pilot-density latency detection 0/5, 3/5 and 3/5 with 1, 2 and 4 false alarms (`docs/evidence/G12/recommendations/README.md`, reproduced by `tests/integration/recommendations/measure_detection.py`); duplicate thresholds (`duplicates/config.py:62-64`) were tuned on the measured seeds.
+- #133 bullets 1 and 2 are still true: `HitlReviewRouter.route` serialises only inside one process (`services/api/neurosphere_api/recommendations/review_hitl.py:54-79`, its docstring admits two processes can open two items) and `CosmosRecommendationStore.put` upserts then deletes copies in other partitions (`packages/core/neurosphere_core/recommendations/cosmos_store.py:125-142`), so two concurrent puts into different partitions can both survive or delete each other.
 
 ## Acceptance criteria
-- [ ] Item 1: Given the sandbox with seeded anomalies (spike, latency, unused), When the rules run, Then every injected anomaly in the manifest is detected; Given an agent with too little history, Then cold start emits a bounded rule result with no numeric score.
-- [ ] Item 2: Given the sandbox duplicate set, When similarity runs through `RecommendationCompute`, Then precision is at least 80% on that set (a pilot-set target, not a general claim); no code path merges, deletes or edits agents.
-- [ ] Item 3: Every projection carries a price version id and effective date; a projection with no resolvable price version is not emitted.
-- [ ] Item 4: Given a recommendation, When a user clicks any action control, Then it routes to review and the API refuses direct execution (no executable state) until PRP-17 gates exist; UI shows "advisory".
-- [ ] Each recommendation record validates against the PRP-01 `Recommendation` schema with evidence window, coverage, uncertainty, prerequisites, projected estimate and owner.
-- [ ] Authorization: recommendations for domain B never appear for a caller scoped to domain A, in list, detail or search.
-- [ ] PRP exit: `verify-gates -Mode full` and `python scripts/validate_planning.py` pass; measured precision and detection results filed in the completion note.
+- [ ] Given `NS_WORKER_REC_SOURCE=archive`, When the role starts, Then it needs no `NS_WORKER_REC_DATA_DIR`; Given `sandbox` (the default) or unset, Then behaviour and the existing `recommendations_data_dir_missing` and `recommendations_data_dir_invalid` errors are unchanged (`services/workers/tests/worker_roles/test_builders.py` still passes).
+- [ ] Given archive blobs of telemetry and cost documents for a cloud, customer and domains, When `ArchiveSeriesSource` loads a window, Then each in-scope agent in the live catalog gets one `AgentDay` per day with events, requests, errors, p50 and p95 latency, cost and `covered` computed with the same rules as `SandboxSeriesSource` (same fixtures give equal series: parity test).
+- [ ] Given a day on which no event from any agent of a source was archived, Then the day is `covered=False` and rules report unknown coverage, never zero usage; Given the archive listing hit its bound (`ArchiveReader.truncated`), Then the affected window is marked unknown and the run records `archive_truncated` instead of emitting `unused_agent`.
+- [ ] Given a blob for another customer, another cloud or a domain outside the scope, When the source loads, Then it is never read into a series (cross-customer leak test); a malformed blob is skipped and counted, never fatal.
+- [ ] Given `archive`, When the pipeline runs, Then agents, owners and duplicate candidates come from the live `CatalogRepository` through the read-only `GraphQuery` and `AgentLister`, token usage for right-sizing comes from archive cost documents (deduped by `dedupe_key`), and nothing is written to the catalog.
+- [ ] Given the duplicate thresholds are tuned on tuning seeds and measured on held-out seeds that were never used for tuning, Then duplicate precision is at least 0.80 on each held-out dense seed, or the criterion text and the evidence README are amended to the measured numbers with the reason (the lane A alternative); recall is reported.
+- [ ] At pilot density (about 2 traces per agent-day) latency detection and false alarms are re-measured on held-out seeds with no silent miss; ASSUMPTION target: at least 3 of 5 detected and at most 1 false alarm per seed, otherwise the measured numbers replace the target in the evidence and completion note.
+- [ ] Given two `HitlReviewRouter.route` calls for one recommendation racing in two router instances over one store, Then exactly one review item exists and both calls return its id (#133 bullet 1), via a deterministic item id and a create-only write.
+- [ ] Given two concurrent `CosmosRecommendationStore.put` calls with the same `recommendation_id` in different domain partitions, Then exactly one copy remains after both finish (#133 bullet 2), and the in-memory store follows the same rule.
+- [ ] No route, UI control or worker path executes a change; the executions refusal stays 409 `capability_unavailable` (unchanged round 1 behaviour).
+- [ ] The hosted enablement and the real-stack run are written OPEN and handed to PRP-58.
+- [ ] PRP exit: the touched suites pass, `verify-gates.ps1 -Mode full` is green, `python scripts/validate_planning.py` passes, the measured numbers are in `docs/evidence/G12/recommendations/README.md`.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
-|---|----------|-----------------|----------|
-| 1 | Model and review | opus; sonnet | Sonnet, review: none (D6). Advisory-only status removes the highest-risk path |
-| 2 | Are recommendations executable | executable now; advisory | Advisory until action gates pass. The API has no execute route; PRP-17 owns execution and G05 |
-| 3 | Cold start | model-based score; bounded rules | Bounded rules only (fixed thresholds with documented windows); no fabricated scores. Output states "insufficient history" with coverage |
-| 4 | Duplicate action | auto-merge; review only | Review only; never merges. Candidates link to both entities and carry similarity evidence |
-| 5 | Duplicate precision target | none; 80% | At least 80% precision on the sandbox duplicate set, stated as a pilot-set target. Recall is reported, not gated |
-| 6 | Embeddings | required; optional | Optional input (NS-02 "optional embeddings"). The fixture adapter path must pass without embeddings; shared-source and overlap signals are the baseline |
-| 7 | Pricing sources | hardcoded; versioned snapshots | Azure Retail Prices API snapshots plus provider price sheets, each stored as an immutable versioned snapshot with id and effective date. Snapshot refresh is a separate job and needs egress approval; tests use committed fixtures only |
-| 8 | Live pricing calls | include in CI; fixtures | Fixtures in CI. No live call is part of this PRP; no paid model calls |
-| 9 | Compute path | in API process; worker via adapter | Analytical work runs in workers through `RecommendationCompute` (PRP-11), never on the interactive path |
-| 10 | Model right-sizing | recommend swaps; candidates only | Candidates only, with explicit prerequisites (capability, context, tool compatibility, regression tests, canary); no claim of savings without a price version |
-| 11 | Government | same code; gated | Same code path; adapter availability comes from the capability matrix; no data leaves its cloud |
-| 12 | Emulators | rely on RU or indexes | Cosmos emulator lacks RU accounting and range/composite indexes; evidence is bounded feasibility on compose (G12) |
+|---|---|---|---|
+| 1 | Model and review | sonnet/none; sonnet/required | sonnet, review required: the PRP changes what the worker reads from customer telemetry and a concurrency-sensitive write path |
+| 2 | Production series source | Agent dimension on analytics adapters; per-agent hot aggregates; archive reader | Assumption A4 (owner direction): read the archive behind `NS_WORKER_REC_SOURCE=archive|sandbox`, default `sandbox`; no contract change, worker-only. A per-agent aggregate series now exists as PRP-49 for the map and is not used here |
+| 3 | Where per-agent cost comes from | Ledger; archive cost documents | Archive cost documents (the ledger has no agent id, verified in `ledger/models.py`); the ledger is not read |
+| 4 | Duplicates in archive mode | Keep the sandbox catalog; live catalog | Live `CatalogRepository` read-only through `RepositoryGraphQuery`; the sandbox path keeps `load_sandbox_catalog` |
+| 5 | Archive window | Fixed; derived | ASSUMPTION: the last `RuleSet` lookback (max of the rule `lookback_days`) complete UTC days ending today, overridable by `NS_WORKER_REC_LOOKBACK_DAYS` |
+| 6 | Archive listing is bounded | Index the archive now; flag truncation | Flag truncation as unknown coverage (honest, no new index); sizing on a real account stays OPEN (#133 archive-reader bullet, G07) |
+| 7 | Deterministic review item id | Conditional create in the router; deterministic id | Deterministic UUIDv5 over `(customer, domain, recommendation id)` passed to `HitlService.open_item` through a new optional `item_id` argument; the store's create-only write turns a lost race into `StaleVersionError`, which the router resolves by reading the winner. This edits `packages/core/neurosphere_core/hitl/service.py` (one keyword argument), outside the ownership list in the assignment; flagged for the orchestrator |
+| 8 | Duplicate ids across partitions | Transactions; deterministic winner | Cosmos has no cross-partition transaction: after the upsert, if copies exist, the copy in the lexicographically smallest `[customer, domain]` partition wins and every other writer deletes its own copy, never another's; ASSUMPTION: a record never legitimately moves domains |
+| 9 | Held-out seeds | Reuse tuned seeds; new seeds | Tuning seeds 1, 2, 3, 7 (as measured in round 1); held-out seeds 5, 13, 17 chosen here and never used for tuning; the lists live in `measure_detection.py` |
+| 10 | Pilot latency targets | None; fixed targets | ASSUMPTION in the criteria above; amend to measured numbers if unreachable without losing dense-profile detection (3/3) |
 
 ## Context manifest
 
-### Files that matter
-- `PRP.md` sections 1-3, `docs/PRD.md` NS-03 (plus NS-02 for optional embeddings), `docs/ARCHITECTURE.md` section 2 (recommendations fed by analytics, catalog and evaluation) and section 6 (RecommendationCompute).
-- `docs/RESEARCH-AND-GATES.md` (G01, G04, G05, G12), `docs/adr/0002-stack-pins.md`, `docs/adr/0007-analytics-adapter-contract.md` (created by PRP-02).
-- `pyproject.toml`, `docker-compose.yml`, `infra/compose/eventhubs.config.json`, `.claude/hooks/config.ps1`, `.env.example`, `scripts/validate_planning.py`.
-- Created by PRP-01: `packages/contracts/schemas/recommendations/` (`Recommendation`), `schemas/cost/`, generated Python and TS types.
-- Created by PRP-03: `sandbox/` generator with anomaly manifest (spike, latency, unused, duplicates).
-- Created by PRP-05: worker runtime base, `neurosphere_core/errors`, `paging`.
-- Created by PRP-06: `neurosphere_api/authz/`.
-- Created by PRP-07: `neurosphere_core/ledger/` with price version table and cost records.
-- Created by PRP-10: `neurosphere_core/catalog/repo/`, `catalog/graph/` (entities, shared-source relations).
-- Created by PRP-11: `neurosphere_core/analytics/base/` (`RecommendationCompute`) and `analytics/fixture/`.
-- Created by PRP-14 (if merged first): hot aggregates; this PRP must not depend on them.
+### Files to read first
+- `services/workers/neurosphere_workers/recommendations/rules/series.py` - `AgentDay`, `AgentSeries`, the sync `AgentSeriesSource` protocol.
+- `services/workers/neurosphere_workers/recommendations/rules/sandbox_source.py` - bucketing, dedupe, coverage rules the archive source must match.
+- `services/workers/neurosphere_workers/recommendations/pipeline.py:233-330` and `load_sandbox_catalog`, `summarize_usage` - what `run_pipeline` reads from the directory.
+- `services/workers/neurosphere_workers/runtime/archive_reader.py` - `ArchiveReader.names/read`, `truncated`, blob naming.
+- `services/workers/neurosphere_workers/runtime/factories.py:311-325, 757-790` - `_archive_container`, `build_recommendations`; `runtime/settings.py:104-115` `RecommendationSettings`.
+- `services/workers/neurosphere_workers/recommendations/duplicates/{config,detector,models}.py` - thresholds, `AgentLister`, the read-only guarantee.
+- `tests/integration/recommendations/measure_detection.py` and `docs/evidence/G12/recommendations/README.md` - the measurement harness and recorded numbers.
+- `services/api/neurosphere_api/recommendations/review_hitl.py` and `packages/core/neurosphere_core/hitl/{service.py,store.py}` - `open_item`, create-only `create`, `StaleVersionError`.
+- `packages/core/neurosphere_core/recommendations/{cosmos_store.py,store.py}` - `put` and the in-memory parity.
+- `services/workers/tests/worker_roles/test_builders.py` - existing role-config tests that must keep passing.
+
+### Interfaces consumed
+- `ArchiveReader` and the archive blob format (PRP-07 and PRP-29, shipped); `TelemetryEvent` and `CostRecord` contract models (PRP-01).
+- `CatalogRepository.list_entities` and `RepositoryGraphQuery` (PRP-10, shipped), `CosmosCatalogRepository` (already built in `factories.py:438`).
+- `HitlService.open_item` and `ReviewItem` (PRP-17, shipped).
+- `PriceSnapshotStore` and `run_pipeline` signature (round 1, shipped).
+
+### Interfaces provided
+- `ArchiveSeriesSource.load(...)` (async classmethod returning a snapshot that satisfies the sync `AgentSeriesSource`), `archive_source.py` (new).
+- Settings `NS_WORKER_REC_SOURCE` (`sandbox` default, `archive`) and `NS_WORKER_REC_LOOKBACK_DAYS`; PRP-58 sets them in hosted profiles.
+- `run_pipeline` keeps its signature for the sandbox path and gains a sibling entry for archive inputs (item 2); PRP-58 and PRP-61 build against the stored `Recommendation` records only.
+- `HitlService.open_item(..., item_id=None)` optional argument (additive).
 
 ### Patterns to match
-- Pydantic v2 models with `model_config = ConfigDict(extra="forbid")` for rule configs, evidence windows and projection records.
-- FastAPI routers per module under `services/api/neurosphere_api/<module>/router.py` (`recommendations/`), endpoints behind `require(permission)`.
-- Async Azure SDK clients from `packages/core/neurosphere_core/clients`; analytical access only through `RecommendationCompute`.
-- Error taxonomy exceptions from `neurosphere_core.errors` (`capability_unavailable`, `rate_limited` on budget exceed).
-- Tests beside packages and cross-package suites in `tests/`; `pytest.mark.integration` for compose-backed runs.
-- Frontend: TS strict, `@fluentui/react-components`, Vitest + Testing Library, Playwright under `frontend/tests/e2e`; data via PRP-04 typed client.
-
-### Conventions
-- ruff (line 100, py312, S rules on), pyright standard, conventional commits (`feat(recommendations): ...`), owned-file discipline.
-- Evidence under `docs/evidence/<gate>/`; `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1` (none here).
-- Rules are data-driven (versioned config documents with thresholds and windows) so a recommendation can cite the rule id and version that produced it.
+- Bucketing, dedupe by `event_id` and `dedupe_key`, coverage by (source, day): `rules/sandbox_source.py:136-200`.
+- Role builder with archive container and Cosmos: `runtime/factories.py:425-465` (aggregates builder) and `757-790`.
+- Create-only write plus conflict mapping: `hitl_cosmos/store.py:181-190`.
+- Held-out vs tuning separation in measurement scripts: `tests/integration/recommendations/measure_detection.py:68-100`.
 
 ### Gotchas
-- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
-- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
-- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
-- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
-- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
-- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
-- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
-- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
-- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
-- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
-- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
-- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
-- Hidden navigation is not authorization; the API must deny.
-- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
-- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
-- PRP-specific: a recommendation's cost estimate is a projection from versioned pricing; show it as an estimate with the price version, never as realized savings. No percentage savings claim without evidence.
-- PRP-specific: locked or curated catalog relations influence presented lineage; duplicate similarity must read presented relations and must not write to the catalog.
-- PRP-specific: unused-agent rules must distinguish "no events observed" from "no coverage" (a source with missing telemetry is unknown, not unused).
-- PRP-specific: price sheets from providers may be PDF or portal-only; ingest only machine-readable official sources and record the retrieval date; do not scrape.
-- PRP-specific: `neurosphere_core/pricing/` is owned by item 3 only; PRP-07 owns the ledger's price version table, so pricing code must read it through the ledger interface, not edit it.
+- `AgentSeriesSource.series` is synchronous but archive reads are async: load everything first (bounded) and serve the snapshot; never block the event loop.
+- Archive documents are already redacted and pseudonymized; the source reads no payload bodies and logs no document content, only counts.
+- `ArchiveReader.names` returns doc id to blob name for the whole customer (bounded by `max_blobs`, default 20000); filter by the day segments of the blob name before downloading.
+- Round 1 measurements are UNVERIFIED in this session (not re-run); the first step of item 3 is to rerun `measure_detection.py` on the current tree.
+- `services/api/openapi.json` is not expected to change; if a response model is touched, expect the component-rename trap and regenerate once.
+- Tests using `next(iter(set))` flake on hash seed; sort before choosing (a round 1 duplicates test broke this way).
+- `factories.py` `build_recommendations` is a Tier-1 body owned by this PRP in W13 only; do not edit other builders.
+Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
-### External references
-- Azure Retail Prices API (public pricing endpoint, query by service/SKU/region/currency), https://learn.microsoft.com/rest/api/cost-management/retail-prices/azure-retail-prices, not observed during planning: record the retrieval date and any Government cloud applicability in the snapshot metadata at implementation time.
-- Cosmos hierarchical partition keys (Python SDK 4.6 or later; new containers only), https://learn.microsoft.com/azure/cosmos-db/hierarchical-partition-keys, observed 2026-10-08.
-- Cosmos DB vNext emulator limits, https://learn.microsoft.com/azure/cosmos-db/emulator-linux, observed 2026-10-08.
-- Foundry models in Azure Government (model availability affects right-sizing candidates), https://learn.microsoft.com/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-gov, observed 2026-10-08 (dated 2026-09-01).
-- PRD NS-03 planning text in `docs/PRD.md` (repo document, v1.1).
+## Ownership
+```ownership
+owns:
+  - packages/core/neurosphere_core/recommendations/**
+  - services/workers/neurosphere_workers/recommendations/**
+  - services/api/neurosphere_api/recommendations/**
+  - tests/integration/recommendations/**
+  - docs/evidence/G12/recommendations/**
+  - packages/core/tests/recommendations_cosmos/**
+  - packages/core/neurosphere_core/hitl/service.py
+tier1:
+  - services/workers/neurosphere_workers/runtime/factories.py
+tier2_appends:
+  - services/workers/neurosphere_workers/runtime/settings.py
+must_not_touch:
+  - packages/core/neurosphere_core/analytics/**
+  - packages/core/neurosphere_core/aggregates/**
+  - packages/contracts/**
+  - infra/**
+  - docker-compose.yml
+  - pyproject.toml
+  - uv.lock
+```
 
 ## Implementation blueprint
 
-### Item 1 — rules-engine  [P]
-- Deliverable: rule evaluator and versioned rule configs for cost spike, latency degradation, error degradation and unused agent, each emitting evidence window, coverage, uncertainty and owner reference; cold-start path emits bounded rule output with no score.
-- Owned files (may edit): `services/workers/neurosphere_workers/recommendations/rules/`.
-- Must NOT touch: `services/workers/neurosphere_workers/recommendations/duplicates/` (item 2), `.../projection/` (item 3), `packages/core/neurosphere_core/pricing/` (item 3), `neurosphere_core/analytics/` (PRP-11), `sandbox/` (PRP-03), root `pyproject.toml`.
-- Depends on: none.
-- Acceptance criteria:
-  - All anomalies in the sandbox manifest (spike, latency, unused) are detected, with zero false positives on the clean control set.
-  - Agent with history below the minimum window yields `cold_start` output with null score and a stated rule threshold.
-  - Missing telemetry is reported as `unknown` coverage, never as zero usage.
-- Pattern references: worker runtime base; Pydantic strict rule configs; `RecommendationCompute` for aggregate reads.
-- Tests to write: `services/workers/neurosphere_workers/recommendations/rules/tests/test_sandbox_anomalies.py`, `test_cold_start_no_score.py`, `test_unknown_not_unused.py`.
+Order: 1 and 3 are `[P]` (no shared file); 2 after 1; 4 independent of the rest but sequenced after 2 only because both run the touched suites together; 5 last.
 
-### Item 2 — duplicate-candidates  [P]
-- Deliverable: similarity job over shared sources, overlapping tools and (optionally) embeddings via `RecommendationCompute`, producing consolidation-review candidates with evidence; no mutation path.
-- Owned files (may edit): `services/workers/neurosphere_workers/recommendations/duplicates/`.
-- Must NOT touch: `.../recommendations/rules/` (item 1), `.../recommendations/projection/` (item 3), `neurosphere_core/catalog/` (PRP-10, read through interfaces only), `sandbox/`.
+### Item 1 - Archive series source  [P]
+- Deliverable: `rules/archive_source.py` with `ArchiveSeriesSource.load(reader, *, scope, agents, window)` reading archive blobs of the window (telemetry and cost messages), validating with the contract models, deduping, tracking truncation and skip counts, and exposing `series(...)` and `observed_window()` like the sandbox source; shared helpers factored without changing `SandboxSeriesSource` behaviour; export in `rules/__init__.py`.
+- Owned files: `services/workers/neurosphere_workers/recommendations/rules/{archive_source,__init__}.py`, `rules/tests/test_archive_source*.py` (new).
+- Must NOT touch: `rules/config.py`, `rules/evaluator.py` (item 3), `runtime/**`, `pipeline.py` (item 2).
 - Depends on: none.
-- Acceptance criteria:
-  - At least 80% precision on the sandbox duplicate set (pilot-set target); recall reported alongside.
-  - Static test proves the module imports no catalog write API and calls no update, merge or delete method.
-  - Candidate cites both canonical IDs, similarity signals and evidence IDs; low-confidence candidates route to review, not to a recommendation of action.
-- Pattern references: `RecommendationCompute` fixture adapter; catalog `GraphQuery` read-only use.
-- Tests to write: `services/workers/neurosphere_workers/recommendations/duplicates/tests/test_precision_sandbox.py`, `test_no_merge_paths.py`, `test_scope_filtering.py`.
+- Acceptance criteria: parity with `SandboxSeriesSource` on a fixture written to an in-memory fake container, uncovered day, truncation flag, cross-customer, cross-cloud, out-of-scope domain and malformed-blob tests from the criteria above.
+- Tests: `rules/tests/test_archive_source_parity.py`, `test_archive_source_scope.py`, `test_archive_source_coverage.py` (fake container implementing `BlobReadable`).
+- Pattern references: `rules/sandbox_source.py:98-200`, `runtime/archive_reader.py:55-130`, `rules/tests/support.py`.
 
-### Item 3 — cost-projection  [P]
-- Deliverable: versioned pricing store (immutable snapshots from Azure Retail Prices API data and provider price sheets, with id, source, retrieval date, effective date, currency) and projection logic for right-sizing candidates and cost comparisons.
-- Owned files (may edit): `services/workers/neurosphere_workers/recommendations/projection/`, `packages/core/neurosphere_core/pricing/`.
-- Must NOT touch: `packages/core/neurosphere_core/ledger/` (PRP-07), `.../recommendations/rules/` (item 1), `.../recommendations/duplicates/` (item 2), `infra/`, `.env.example`.
+### Item 2 - Pipeline inputs, settings and role wiring
+- Deliverable: a pipeline entry that takes a prepared series source, a live catalog (`GraphQuery` plus `AgentLister`) and usage summaries from archive cost documents, reusing the sandbox path unchanged; `RecommendationSettings.source` and `lookback_days`; `build_recommendations` branching on the source (archive container via `_archive_container`, Cosmos catalog repository, no data-dir requirement for `archive`).
+- Owned files: `recommendations/pipeline.py`, `services/workers/neurosphere_workers/runtime/factories.py` (`build_recommendations` body only), `runtime/settings.py` (new fields only), `recommendations/tests/test_pipeline_archive.py` (new), `services/workers/tests/worker_roles/test_builders.py` (new cases appended; existing ones unchanged).
+- Must NOT touch: other builders in `factories.py`, `rules/**` (items 1 and 3), `duplicates/**` internals.
+- Depends on: item 1.
+- Acceptance criteria: the first two and fifth criteria above; an archive-mode run over fakes stores the same record kinds as the sandbox run on equivalent data; `archive` with a truncated listing stores no `unused_agent` and reports `archive_truncated` in `PipelineSummary`.
+- Tests: `recommendations/tests/test_pipeline_archive.py`, `services/workers/tests/worker_roles/test_builders.py`, `tests/integration/recommendations/test_vertical_slice.py` (still green).
+- Pattern references: `pipeline.py:233-330`, `factories.py:425-465`.
+
+### Item 3 - Held-out recalibration  [P]
+- Deliverable: rerun the harness first; tune duplicate thresholds and the latency noise policy on tuning seeds only, measure on held-out seeds, record both lists and the numbers; amend a target only with the measured numbers and the reason.
+- Owned files: `recommendations/duplicates/{config,detector}.py`, `rules/{config,evaluator}.py`, `tests/integration/recommendations/measure_detection.py`, `docs/evidence/G12/recommendations/README.md`, tests beside the edited modules.
+- Must NOT touch: `rules/archive_source.py`, `rules/__init__.py` (item 1), `sandbox/**` (PRP-03).
 - Depends on: none.
-- Acceptance criteria:
-  - Every projection includes `price_version_id` and effective date; projection without a resolvable version is rejected (`invalid_schema`).
-  - Snapshots are immutable and content-hashed; a new snapshot never overwrites an old one.
-  - Right-sizing candidates list prerequisites (capability, context, tool compatibility, regression tests, canary) and state "estimate", with uncertainty range.
-- Pattern references: Pydantic strict models; ledger price version table read via interface.
-- Tests to write: `packages/core/neurosphere_core/pricing/tests/test_snapshot_immutability.py`, `.../test_version_resolution.py`, `services/workers/neurosphere_workers/recommendations/projection/tests/test_projection_cites_version.py` (fixture snapshots only, no network).
+- Acceptance criteria: the duplicate-precision and pilot-latency criteria above; the dense-profile results stay 3/3 on cost spike, latency and unused with zero unlabelled false positives; every number in the README is reproducible with `uv run python tests/integration/recommendations/measure_detection.py`.
+- Tests: `rules/tests/test_latency_pooled.py`, `duplicates/tests/test_precision_sandbox.py` (extended with held-out seeds), `tests/integration/recommendations/test_vertical_slice.py`.
+- Pattern references: `measure_detection.py:101-185`, `duplicates/config.py:55-95`.
 
-### Item 4 — recommendations-api-ui
-- Deliverable: list and detail endpoints with filters and pagination, evidence panel, owner, prerequisites, advisory status, and a "route to review" action that calls the PRP-17 interface (stubbed until PRP-17 merges); frontend list and detail pages.
-- Owned files (may edit): `services/api/neurosphere_api/recommendations/`, `frontend/src/features/recommendations/`.
-- Must NOT touch: `services/api/neurosphere_api/actions/`, `.../hitl/` (PRP-17), `frontend/src/features/review/` and `frontend/src/features/actions/` (PRP-17), `frontend/src/api/`, `frontend/src/design-system/`, items 1-3 paths.
-- Depends on: items 1, 2, 3.
-- Acceptance criteria:
-  - No route or UI control executes a change; a request attempting execution returns `capability_unavailable` with reason "action gates not passed".
-  - Detail shows evidence window, coverage, uncertainty, prerequisites, projected estimate with price version, and owner; unknown fields render "unknown".
-  - Cross-domain list or detail request returns 403; axe clean; keyboard operable.
-- Pattern references: router per module; `require(permission)`; PRP-04 typed client; Fluent UI v9.
-- Tests to write: `services/api/neurosphere_api/recommendations/tests/test_no_execute_route.py`, `test_scope_denial.py`, `test_detail_contract.py`, `frontend/src/features/recommendations/__tests__/detail.test.tsx`, `advisory-badge.test.tsx`.
+### Item 4 - Review race and cross-partition duplicates (#133)
+- Deliverable: `HitlService.open_item(item_id=...)`; `HitlReviewRouter` derives the id, treats `StaleVersionError` `review_item_exists` as "someone else won" and returns the existing item; `CosmosRecommendationStore.put` and the in-memory store apply the smallest-partition-wins rule from Clarification 8.
+- Owned files: `services/api/neurosphere_api/recommendations/review_hitl.py`, `packages/core/neurosphere_core/hitl/service.py`, `packages/core/neurosphere_core/recommendations/{cosmos_store,store}.py`, `packages/core/tests/recommendations_cosmos/**`, `services/api/neurosphere_api/recommendations/tests/**`.
+- Must NOT touch: other `hitl/` modules, the HITL Cosmos store, `neurosphere_api/actions/**`.
+- Depends on: none (sequenced last among code items to run suites together).
+- Acceptance criteria: the two #133 criteria above using two router instances over one in-memory HITL store and two store instances over one fake Cosmos container; existing idempotency tests unchanged.
+- Tests: `packages/core/tests/recommendations_cosmos/test_recommendation_conformance.py` (extend), `test_cross_partition_put.py` (new), `packages/core/tests/hitl/test_open_item_id.py` (new), `services/api/neurosphere_api/recommendations/tests/test_review_race.py` (new); the existing `services/api/tests/runtime_planes/test_review_hitl.py` must keep passing and is read-only here.
+- Pattern references: `hitl_cosmos/store.py:181-190`, `cosmos_store.py:125-142`.
+
+### Item 5 - Integration and close-out
+- Deliverable: Tier-3 regeneration (`python scripts/prp_status.py --write`, the index build, `openapi.json` drift check), the evidence README final, completion note with "Env vars for the operator" (`NS_WORKER_REC_SOURCE`, `NS_WORKER_REC_LOOKBACK_DAYS`), #133 left open with a comment listing the evaluation half and the archive-reader sizing bullet; follow-up issue for the archive listing index if sizing demands it.
+- Owned files: this PRP file, `docs/evidence/G12/recommendations/**`, regenerated `PRPs/PRP-MASTER-neurosphere.md` status table and `PRPs/INDEX.md`.
+- Must NOT touch: `docs/RESEARCH-AND-GATES.md` rows other than via PRP-64.
+- Depends on: items 1-4.
+- Acceptance criteria: gates below pass; hosted enablement written OPEN.
+- Tests: none new.
+- Pattern references: `PRPs/reference/parallel-build-reference.md` section 6.
 
 ## Validation gates
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
+```bash
+uv sync --frozen --group dev
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -q services/workers/neurosphere_workers/recommendations services/api/neurosphere_api/recommendations packages/core/neurosphere_core/pricing packages/core/neurosphere_core/recommendations packages/core/tests/recommendations_cosmos packages/core/tests/hitl services/workers/tests/worker_roles services/api/tests/runtime_planes/test_review_hitl.py tests/integration/recommendations services/api/tests/test_openapi_drift.py
+uv run python tests/integration/recommendations/measure_detection.py
+python scripts/prp_status.py --check
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 python scripts/validate_planning.py
 ```
-Feature-specific:
-- `docker compose up -d --wait` then `python -m pytest -m integration services/workers/neurosphere_workers/recommendations services/api/neurosphere_api/recommendations -q`
-- `python -m pytest packages/core/neurosphere_core/pricing -q`
-- `pnpm --filter frontend test`
-- `make seed` to load the sandbox anomaly manifest before detection tests.
-- No live script: this PRP has no operator-approved gate. A live pricing refresh, if ever wanted, is a separate item that would be **operator-approved, requires NS_LIVE_APPROVED=1**.
+Frontend (only if a UI file is touched, none expected): `pnpm --filter @neurosphere/frontend test`. There is no `make seed`; the sandbox seed is `scripts/sandbox/sbx_cli.py seed --data-dir`.
+
+## Migration and rollback
+No schema change and no new container. `NS_WORKER_REC_SOURCE` defaults to `sandbox`, so existing compose and hosted behaviour is unchanged until an operator sets `archive`; rollback is unsetting it. The deterministic review item id applies to items opened after the change; items opened earlier keep random ids and the router still finds them by `subject_ref` (existing lookup stays as the read path). The partition rule cleans duplicate recommendation copies only when a later `put` runs; no backfill.
 
 ## Live and open gates
-- G05 (model swap compatibility): untouched; this PRP only lists right-sizing candidates with prerequisites. Execution evidence is PRP-17.
-- G04 (provider/API/license coverage): price sheet ingestion records source coverage per provider; gaps stay OPEN until PRP-09 evidence exists.
-- G01 (service/feature/region/SKU matrix): projections depend on region and SKU availability from the matrix; unverified Government rows produce no projection.
-- G12 (emulator parity): detection and precision results come from emulators on compose; record that RU and index behavior are not reproduced.
-- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+- Hosted enablement of the recommendations role and a real-stack run against Cosmos and the real archive: OPEN, operator approval and a deploy needed; handed to PRP-58.
+- Archive listing sizing on a real storage account and RU cost of the recommendation store: OPEN (G07, G12).
+- G04 price-sheet coverage and G01 Government projections: unchanged and OPEN; Government pricing stays unavailable.
+- No live script exists for this PRP; no paid call is made.
 
 ## NOT building
-- Action execution, approvals, maker-checker and review queue (PRP-17); only the routing interface call.
-- Evaluation, judge calibration and quality trends (PRP-16).
-- Dashboards (PRP-14) and live map overlays (PRP-18).
-- Copilot recommendation explanations (PRP-19).
-- Automatic merge or consolidation of agents, ever.
-- Forecast models or FinOps forecasting (PRP-21).
-- Agent/tool selection as a recommendation capability (NS-03 calls it optional and secondary).
+- Execution, approvals or any change to a target system (PRP-17); the 409 executions refusal stays.
+- An agent dimension on the analytics adapters or the hot aggregates, and any use of `RecommendationCompute` for agent rules.
+- Hosted infrastructure for the role (PRP-58), pricing refresh, evaluation changes (PRP-16), the `evaluation_id` half of #133.
+- An `ArchiveTraceReader` or archive index.
 - Any claim of realized savings.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [x] All clarification questions are decided, not guessed
+- [x] All clarification questions are decided, not guessed (rows 5, 8 and 10 are labelled assumptions)
 
 ## Execution state
 
-Plan approved 2026-10-19 with four deltas signed off by the operator, because the repo contradicted the blueprint:
-
-- D1: `RecommendationCompute` (PRP-11) exposes only `co_usage_candidates` (model/provider co-usage across domains), and `TelemetryAnalytics.aggregate` cannot group by agent (`Dimension` has no agent). The fixture adapter builds its own dataset, not the sandbox output, and the PRP-14 aggregates have no agent grain. Item 1 therefore evaluates rules over a narrow `AgentSeriesSource` protocol (per agent per day: events, cost known/unknown, latency p95, errors, per-source coverage) with one implementation that reads sandbox output files (`agents.ndjson`, `telemetry.ndjson`, `cost.ndjson`; telemetry carries `canonical_agent_id`). Recorded OPEN: a production series source needs an agent dimension on the PRP-11 contract and its four adapters.
-- D2: agent-pair duplicates cannot run through `RecommendationCompute` (co-usage pairs models, not agents). The sandbox defines a duplicate as shared grounding sources plus the same model deployment, which are catalog relations. Item 2 computes similarity in the worker over presented relations through the read-only `GraphQuery` (in-memory catalog loaded from sandbox output); embeddings are an optional signal hook only. Precision is measured against the manifest's `duplicate_agent_candidates`.
-- D3: `neurosphere_api` depends only on `neurosphere-core`, so item 4 also owns the new `packages/core/neurosphere_core/recommendations/` (store protocol plus in-memory implementation over the generated `neurosphere_contracts` `Recommendation`, scope-filtered list/get/search). Items 1-3 emit the generated contract model. Item 4 no longer depends on items 1-3 (it tests on contract fixtures).
-- D4: the UI is split out of item 4 into item 5 (`frontend/src/features/recommendations/`). A new item 6 owns the shared wiring: router registration in `services/api/neurosphere_api/routers.py`; route and nav in `frontend/src/app/main.tsx` and `frontend/src/app/workspaceNav.ts`; recommendations fixtures in `frontend/tests/mock-api/server.ts`; Playwright specs in `frontend/tests/e2e/recommendations/`; `services/api/openapi.json` regeneration; the worker pipeline `services/workers/neurosphere_workers/recommendations/pipeline.py` (runs items 1-3 over sandbox output into the store); an in-process slice in `tests/integration/recommendations/`; and evidence in `docs/evidence/G12/recommendations/` with measured detection and precision. The orchestrator created `services/workers/neurosphere_workers/recommendations/__init__.py` on the integration branch before dispatch; no item edits it.
-
-Waves: 1 = items 1, 2, 3, 4 in parallel; 2 = item 5 (first free slot); 3 = item 6 (after 1-5).
-
-- D5 (operator sign-off 2026-10-19, after item 6): item 6's evidence showed latency detection 0/5 at pilot density (~2 traces/agent-day) with one unlabelled agent flagged per seed, so item 1's acceptance held only on dense data. Fix-forward item 7 owns `services/workers/neurosphere_workers/recommendations/rules/`, `tests/integration/recommendations/` and `docs/evidence/G12/recommendations/`: a pooled-window latency rule with a minimum request count, `insufficient_evidence` (no score) below it instead of a silent miss, root cause of the unlabelled flags, then re-measurement and an evidence update. Wave 4 = item 7.
-
-### Wire contract (decided at approval; items 4-6 code against it)
-The domain is a path segment, authorized against the server-derived `IdentityScope`; out-of-scope domain returns 403 (problem+json), policy store outage 503.
-
-- `GET /api/v1/recommendations/domains/{domain}` (`data.read`), query `kind`, `q` (bounded text over kind and subject ids), `cursor`, `limit`: `{ "items": [Recommendation], "next_cursor": str|null }`.
-- `GET /api/v1/recommendations/domains/{domain}/items/{recommendation_id:path}` (`data.read`): `{ "recommendation": Recommendation, "review": {"state": "not_routed"|"pending_review", "review_request_id": str|null}, "execution": {"executable": false, "reason": "action gates not passed"} }`.
-- `POST /api/v1/recommendations/domains/{domain}/review-requests`, body `{ "recommendation_id" }` (`action.propose`): 202 `{ "review_request_id", "state": "pending_review" }` through a `ReviewRouter` protocol, in-memory stub until PRP-17.
-- `POST /api/v1/recommendations/domains/{domain}/executions`: always refuses with `capability_unavailable`, reason "action gates not passed"; no executing code path.
-
-`recommendation_id` = `{cloud}:{customer_id}:neurosphere:recommendation:{kind with _ as -}-{h}`, where `h` is the first 24 hex chars of sha256 over `generator_id|generator_version|sorted subject_ids|window.start|window.end`. Amended after item 3 to the hyphenated kind; item 1 then showed `_` is in fact allowed by the last-segment class `[a-z0-9._/=-]`, so the hyphen form is a consistency choice, not a grammar requirement. All items use it.
-
-`Recommendation` is the PRP-01 schema document verbatim (`packages/contracts/schemas/recommendations/v1/recommendation.schema.json`).
-
-| Item | Status | Branch | Model | Evidence | Updated |
-|------|--------|--------|-------|----------|---------|
-| 1 | merged | worktree-agent-a3a33fb34fe9eb576 | sonnet | ac73f1d; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, rules 45 passed, no production `sandbox` import (test-only `sys.path` setup); detection on a 40-agent, 7-day, ~20 traces/agent-day set: cost_spike 3/3, latency 3/3, unused 3/3 on seeds 3 and 11, zero false positives on non-anomaly agents (cost-spike agents also trip latency, a real effect, allowed); decisions: latency uses daily p50 by default (p95 on a handful of requests was too noisy, controls hit 9x; `percentile` configurable), score = breach_days / recent_days with `rule_bound`, source coverage from the canonical id source segment, uncovered source -> `unknown_coverage`, no record; limits: pilot profile (~2 traces/agent-day) latency recall 2/5 plus one unlabelled zero-event sub-agent flagged unused, and seed 7 misses one latency anomaly at ratio 1.97 vs threshold 2.0 (data density, recorded); merge 32db480, recommendations workers 72 passed post-merge | 2026-10-19 |
-| 2 | merged | worktree-agent-a68d7d8fcfed09859 | sonnet | 0abe7d0; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, duplicates 29 passed (54 s), no mutation calls or `view="raw"` outside tests; measured on custom sandbox (400 agents, 8 domains, 3 days, 8 duplicate pairs) seed 7: 9 predicted, 8 TP, precision 0.889, recall 1.000, 27 pairs to `review_candidates`; seeds 1-3 precision 1.0, recall 1.0. CAVEAT: thresholds (`min_similarity` 0.9, `review_floor` 0.7) were tuned on these same seeds, so this is a pilot-set fit, not held-out evidence; decisions: confidence-weighted Jaccard over presented `grounded_by`/`uses_model`/`invokes`/`owned_by` plus `agent_kind` and an optional embedding provider, trace-inferred edges at 0.25 of confidence, same domain is a gate; agents listed via a narrow `AgentLister` (GraphQuery has no list op); model deployments homed in another domain are `unobserved` under a single-domain scope (coverage partial, wider upper bound); merge 41dd240, recommendations workers 101 passed post-merge; later full run (after item 7) failed `test_narrow_scope_marks_hidden_targets_as_unobserved_not_as_mismatch`: the test took `next(iter(set))`, so the chosen duplicate depended on PYTHONHASHSEED (failed on 7 of 25 seeds tried); orchestrator test fix c1f5467 (sorted order, first domain where the deployment is homed elsewhere, still required to exist), 6 passed on every failing seed, 138 passed under seed 7 | 2026-10-19 |
-| 3 | merged | worktree-agent-a2f115cb4eb7c644b | sonnet | d1eadaa; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, pricing + projection 47 passed, no network imports, fixtures labelled synthetic; decisions: identical re-put is an idempotent no-op, conflicting re-put raises `SnapshotConflictError`; right-sizing records are `method: rule`, `insufficient_evidence`, no score (nothing measures candidate quality); candidate priced from the same snapshot as the current model, else `invalid_schema` `price_unresolved`; Retail Prices snapshots apply to commercial only (Learn, verified 2026-10-19); deviation: id kind segment uses hyphens (contract amended); merge 6e1f468, ruff clean, 47 passed post-merge | 2026-10-19 |
-| 4 | merged | worktree-agent-a18e73fa86390fd69 | sonnet | cbb4d5e; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, recommendations 48 passed, services/api 507 passed (a reconciliation scope test failed once in the agent's first run and passed on every re-run, flaky, cause not established); scope audit: router uses `require(permission, domain_from_path)`, store `_visible` checks customer, cloud, allowed domain and record domain == path domain; deviations: executions refusal is 409 `capability_unavailable` with `detail` "action gates not passed" and `reason` `action_gates_not_passed` (ProblemDetails requires snake_case reason) and requires `action.propose`; missing recommendation is a plain 404; extra body `domain_id`/`customer_id` ignored; `q` is a case-insensitive substring capped at 128 chars; app.state `recommendation_store`, `review_router` (503 when absent); OPEN: Cosmos store, real PRP-17 ReviewRouter; merge 814cfe2, services/api + core 538 passed post-merge | 2026-10-19 |
-| 5 | merged | worktree-agent-acbc0c06c6b9c3991 | sonnet | ade8182; orchestrator re-run on branch: eslint + tsc clean, vitest 191 passed (25 new), build ok; `Recommendation` type from `@neurosphere/contracts`, POST via the existing `createMutationHook`/`client.post` (no `frontend/src/api/` edit); domain and id from UI search params `?domain_id=`/`&recommendation_id=` (same convention as dashboards; the API call carries the domain as a path segment only); exports `recommendationRoutes` (`recommendations`, `recommendations/detail`) and `recommendationNavItems()` (`/recommendations`); merge 4846678 plus orchestrator fix 6192074 (filter submit relabelled "Apply filters": a bare "Apply" beside advisory recommendations read as applying one); post-merge lint + tsc clean, vitest 191 passed, build ok | 2026-10-19 |
-| 6 | merged | worktree-agent-a7deb5e66d2fd7da8 | sonnet | 19b0a33 + e982714; orchestrator re-run on branch: ruff + pyright clean repo-wide, services/api + recommendations workers + slice 635 passed, validate_planning PASS, eslint + tsc clean, vitest 191 passed, build ok, Playwright 32 passed (15 recommendations incl. 403, axe, no execute control); `run_pipeline(directory, *, scope, store, prices, pairs, created_at, rules, duplicate_config, signal_provider) -> PipelineSummary`; evidence `docs/evidence/G12/recommendations/README.md` (reproduce: `uv run python tests/integration/recommendations/measure_detection.py`): dense 40-agent set cost 3/3, unused 3/3, latency 3/3 (2/3 on seeds 3 and 7 with 3 duplicate pairs), pilot density (200 agents, ~2 traces/agent-day) cost 5/5, unused 4/4, LATENCY 0/5 on both seeds, one unlabelled agent flagged per seed (not root-caused), duplicates precision and recall 1.0 on 1-4 labelled pairs (thresholds tuned on the same seeds); deviations: `openapi.json` is NOT additive, adding `Recommendation` made pydantic rename existing components (`Timestamp`, `Date`, `Owner`, `Validity`, `Lock`, `EdgeOverride`) to module-qualified names (wire JSON unchanged; only consumer is the drift test), duplicates run once per scope rather than per domain (pairs already gate on one domain), mock API gained POST + CORS; merge 7d09dd5 plus orchestrator fix 5128be4 (item 5 badge row `<p>` -> `<div>`, nested-div warning); post-merge eslint + tsc clean, vitest 191, build ok, Playwright 32 passed | 2026-10-19 |
-| 7 | merged | worktree-agent-a5454c115db069643 | sonnet | 289dcb1; orchestrator re-run on branch: ruff + format clean, pyright 0 errors, recommendations workers + slice 138 passed; latency rule 2.0.0 pools durations over the whole baseline and recent windows (p50 ratio 2.0, `min_window_requests` 8), below the floor emits `insufficient_evidence`, no score, `not_estimable`; latency after (detected / insufficient-for-injected / silent / FP): dense seeds 3, 11, 7 and held-out 5: 3/3, 0, 0, 0; pilot seed 3: 0/5, 5, 0, 1; seed 11: 3/5, 2, 0, 2; held-out seed 5: 3/5, 2, 0, 4 (before: 0/5 silent on seeds 3 and 11). No injected regression is silent any more, but pilot false alarms rose (1/2/4 per seed vs 1 before; heavy tails at 8-15 samples) and 54-65 insufficient-evidence records per pilot run are emitted for sparse agents; ratio 2.5 cut false alarms but dropped dense seeds 3 and 7 to 2/3, reverted. Unlabelled flags: seed 3 latency `a-000096` was daily-median noise (pooled ratio 1.84, no longer flagged); seed 11 unused `a-000195` is an unlabelled true effect (active sub-agent, 0 events on 7 covered days), kept. Also surfaced: held-out dense seed 5 duplicates 4 predicted / 3 true, precision 0.75, below the 0.80 target (item 2 code unchanged); merge a976d1d | 2026-10-19 |
+| Item | Status | Branch/worktree | Notes |
+|---|---|---|---|
+| 1 | todo | | |
+| 2 | todo | | |
+| 3 | todo | | |
+| 4 | todo | | |
+| 5 | todo | | |
 
 ## Completion note (filled at ship)
-- Date: 2026-10-19
-- Merged commits: PR #79 merged as c44d0b2 (CI 21/21 green on 48549cf, including CodeQL, full-history gitleaks, image scans, contracts drift, planning, python and frontend). Item merges into the integration branch: 3 6e1f468, 4 814cfe2, 1 32db480, 5 4846678 (+ fix 6192074), 2 41dd240, 6 7d09dd5 (+ fix 5128be4), 7 a976d1d; test fixes c1f5467 (duplicates hash-seed dependence) and 48549cf (reconciliation leak check). Before the PR: `verify-gates -Mode full` lint PASS, pyright 0 errors, build PASS, tests 5310 passed / 1 failed (the hash-seed test, fixed in c1f5467, touched suites 138 passed); Playwright 32 passed, vitest 191 passed, validate_planning PASS, licences PASS (534), full-history gitleaks clean.
-- Measured results (synthetic sandbox, in-memory stores; `docs/evidence/G12/recommendations/README.md`): dense profile (40 agents, ~20 traces/agent-day, seeds 3, 11, 7, held-out 5) cost spike 3/3, latency 3/3, unused 3/3, zero false positives on non-anomaly agents; pilot density (200 agents, ~2 traces/agent-day) cost 5/5, unused 4/4, latency detected 0/5, 3/5 and 3/5 on seeds 3, 11 and held-out 5 with every undetected injected regression reported `insufficient_evidence` (none silent), latency false alarms 1, 2 and 4; duplicates precision 0.889 / recall 1.0 on seed 7 and 1.0 / 1.0 on seeds 1-3 (thresholds tuned on those seeds), held-out dense seed 5 precision 0.75, below the 0.80 pilot-set target.
-- Deviations from blueprint and why: D1, rules read a narrow `AgentSeriesSource` with a sandbox-output implementation because `RecommendationCompute`/`TelemetryAnalytics` cannot group by agent. D2, duplicates use the catalog `GraphQuery` presented view because co-usage pairs models, not agents. D3, item 4 also owns the core `neurosphere_core/recommendations` store because the API depends only on core; item 4 no longer depended on items 1-3. D4, the UI split into item 5 and a wiring item 6 took the shared files. D5, fix-forward item 7 (pooled-window latency rule with an insufficient-evidence floor) after item 6 measured 0/5 silent latency detection at pilot density. The `recommendation_id` kind segment uses hyphens for consistency (the grammar would allow `_`). Executions refusal is 409 with `reason` `action_gates_not_passed` (ProblemDetails requires snake_case). `services/api/openapi.json` is not additive: adding `Recommendation` made pydantic rename existing components (`Timestamp`, `Date`, `Owner`, `Validity`, `Lock`, `EdgeOverride`) to module-qualified names; wire JSON unchanged, only consumer is the drift test. Orchestrator fixes: "Apply filters" label, badge row `<p>` to `<div>`, duplicates test hash-seed dependence, and a pre-existing PRP-14 reconciliation test whose `"99"` leak check matched random hex ids (outside this PRP's files, test-only).
-- Descoped items: none. Item 1's acceptance (every injected anomaly detected) holds on dense data only; at pilot density undetected latency regressions are reported as insufficient evidence rather than detected (operator chose fix-forward D5, then ship).
-- Open gates recorded (ids and where): G12 (in-memory stores only, no Cosmos recommendation store, so RU/index/429/Entra unexercised), G04 (price-sheet source coverage recorded, gaps open), G01 (Retail Prices API is Commercial-only; Government projections need a Government-applicable sheet), all in docs/RESEARCH-AND-GATES.md; G05 untouched (PRP-17). Evidence in docs/evidence/G12/recommendations/.
-- Follow-ups: a production agent-series source (agent dimension on the PRP-11 contract and its four adapters); Cosmos `RecommendationStore` plus `app.state` production bootstrap (routes return 503 on a real deployment until it exists); the real PRP-17 `ReviewRouter`; latency false alarms at pilot density and the volume of insufficient-evidence records (54-65 per pilot run); held-out calibration of duplicate thresholds (0.75 on seed 5); keeping `openapi.json` component names stable (e.g. explicit model titles); hosting `run_pipeline` in the workers container with a `__main__`.
+- Date, PR, merged commits:
+- Deviations from the blueprint and why:
+- Descoped items:
+- Measured results (tuning seeds, held-out seeds, dense and pilot density):
+- OPEN gates (hosted enablement, archive sizing, G04, G01 Government):
+- Env vars for the operator (`NS_WORKER_REC_SOURCE`, `NS_WORKER_REC_LOOKBACK_DAYS`):
+- Follow-up issue numbers:
+- Product check (can an operator see recommendations about their own agents without editing files?):
 
-## Audit 2026-11-04
-
-Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
-
-- Recommendations are computed only from sandbox NDJSON (`services/workers/neurosphere_workers/recommendations/pipeline.py`); nothing outside tests feeds real agent telemetry into the rules. The production agent-series source is OPEN (D1, `RecommendationCompute` cannot group by agent).
-- The worker raises `recommendations_data_dir_missing` unless `NS_WORKER_REC_DATA_DIR` is set. Compose sets it to `/data/sandbox` (`docker-compose.yml:201`); `infra/demo/main.bicep:239` says the hosted image lacks those mounts, so the hosted page is likely empty (inferred).
-- Detection quality below target: at pilot density latency detection is 0/5 on seed 3 and 3/5 on seeds 11 and 5, with 1/2/4 false alarms per run; duplicate precision 0.889 on the tuning seed but 0.75 on held-out seed 5 (target 80%), shipped anyway. Duplicates use `GraphQuery`, not `RecommendationCompute` (D2).
-- Frontend e2e runs against the mock API only. Real PRP-17 ReviewRouter now exists as `HitlReviewRouter`; follow-up on `run_pipeline` hosting open.
+## History
+- Round 1 shipped as PR #79 (merged 2026-10-19; seven items including the fix-forward latency rule): rules engine, duplicate candidates, cost projection, recommendations API and UI, the worker role over sandbox files, `HitlReviewRouter` and `CosmosRecommendationStore` wiring afterwards (PRP-29).
+- The 2026-11-04 audit reopened it: sandbox-only input, empty hosted page, detection quality below target (duplicate precision 0.75 held-out, pilot latency 0/5 on seed 3), frontend e2e on the mock API only.
+- The 2026-11-14 lane A audit found the `run_pipeline` hosting claim stale (`factories.py:757`), the `RecommendationCompute` claims false (rules and duplicates never call it), `make seed` nonexistent, a wrong `pnpm --filter frontend` and a non-compose `-m integration` command.
+- This rewrite removes the round 1 blueprint, wire-contract notes, execution table and audit section, keeps the shipped behaviour as context only, and scopes round 2 to the archive series source, held-out recalibration and the two #133 bullets. Hosted enablement moved to PRP-58.
+- The original text is in git history (`git log --follow PRPs/backlog/PRP-15-recommendations-engine.md`).
