@@ -46,6 +46,9 @@ PUBLISHED_PREFIXES = (
     "compliance/plans/",
 )
 PUBLISHED_FILES = {"index.md", "ARCHITECTURE.md", "RESEARCH-AND-GATES.md"}
+# Pages inside a published folder that stay internal. The DoD checklist is a release gate
+# whose links must stay relative into evidence/ (tests/release/test_dod_links.py).
+UNPUBLISHED_FILES = {"release/dod-checklist.md"}
 
 
 def _config() -> dict:
@@ -99,6 +102,8 @@ def _built_pages() -> set[str]:
 
 
 def _is_allowlisted(page: str) -> bool:
+    if page in UNPUBLISHED_FILES:
+        return False
     return page in PUBLISHED_FILES or page.startswith(PUBLISHED_PREFIXES)
 
 
@@ -154,7 +159,11 @@ def test_internal_pages_are_not_built() -> None:
     assert not leaked, f"internal pages would be published: {leaked}"
     for p in DOCS.glob("evidence/**/*.md"):
         assert p.relative_to(DOCS).as_posix() not in built
-    for other in ("security/threat-model.md", "compliance/responsibility-matrix.md"):
+    for other in (
+        "security/threat-model.md",
+        "compliance/responsibility-matrix.md",
+        *UNPUBLISHED_FILES,
+    ):
         assert other not in built
 
 

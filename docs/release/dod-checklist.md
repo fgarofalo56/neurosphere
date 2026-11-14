@@ -3,7 +3,7 @@
 Copy this file to `docs/evidence/release/<version>/dod-checklist.md` when cutting a
 release, tick the lines, and file the per-release evidence next to it. The
 authority for the clauses below is the master index
-[Definition of programme done](https://github.com/fgarofalo56/neurosphere/blob/main/PRPs/PRP-MASTER-neurosphere.md#definition-of-programme-done).
+[Definition of programme done](../../PRPs/PRP-MASTER-neurosphere.md#definition-of-programme-done).
 
 Rules for every line:
 
@@ -22,10 +22,10 @@ none of them is asserted here.
 
 - [ ] Every in-scope PRP is in `PRPs/shipped/` with a completion note: `docs/evidence/release/<version>/prp-status.txt` (output of the PRP index check).
 - [ ] Every NS requirement has executable acceptance evidence: `docs/evidence/release/<version>/acceptance-run.txt`.
-- [ ] No open critical or high security defect: [supply-chain scan evidence](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/prp-12-supply-chain/local-scan-evidence.md) and `docs/evidence/release/<version>/security-scan.txt`.
-- [ ] Profile availability and compliance reviewed, G01 status stated: [G01 evidence](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/G01/README.md). Government analytics and authorized integration tests are OPEN (G01).
+- [ ] No open critical or high security defect: [supply-chain scan evidence](../evidence/prp-12-supply-chain/local-scan-evidence.md) and `docs/evidence/release/<version>/security-scan.txt`.
+- [ ] Profile availability and compliance reviewed, G01 status stated: [G01 evidence](../evidence/G01/README.md). Government analytics and authorized integration tests are OPEN (G01).
 - [ ] Profile compliance reviewed, G02 status stated: FedRAMP/DoD boundary and agency ATO are owned by the customer security owner. OPEN (G02).
-- [ ] Migrations and rollback tested on the emulator: [migrations emulator run](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/PRP-13/migrations-emulator.md).
+- [ ] Migrations and rollback tested on the emulator: [migrations emulator run](../evidence/PRP-13/migrations-emulator.md).
 - [ ] Migrations and rollback tested against a live account: OPEN (G12), emulator-vs-live deltas are not yet measured.
 - [ ] Known limitations documented: `docs/evidence/release/<version>/known-limitations.md`.
 - [ ] Production credentials and approvals present only through approved channels: `docs/evidence/release/<version>/credential-channels.md`.
@@ -34,7 +34,7 @@ none of them is asserted here.
 
 ## Gate-backed items that bound this release
 
-- [ ] Graph benchmark: [G03 live run](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/G03/live-2026-10-17.md). In-region latency and 429 behaviour remain OPEN (G03).
+- [ ] Graph benchmark: [G03 live run](../evidence/G03/live-2026-10-17.md). In-region latency and 429 behaviour remain OPEN (G03).
 - [ ] Provider, API and license coverage: OPEN (G04), no live connector contract run.
 - [ ] Privacy, retention and legal hold: OPEN (G06).
 - [ ] Workload sizing, DR, measured RTO and RPO: OPEN (G07).
@@ -43,7 +43,7 @@ none of them is asserted here.
 
 ## Release artefacts
 
-- [ ] Images built non-root (uid checked) and scanned with no High or Critical findings: [image builds and scans](https://github.com/fgarofalo56/neurosphere/blob/main/docs/evidence/PRP-13/images.md).
+- [ ] Images built non-root (uid checked) and scanned with no High or Critical findings: [image builds and scans](../evidence/PRP-13/images.md).
 - [ ] Release images scanned at the release digest: `docs/evidence/release/<version>/image-scan.txt`.
 - [ ] Signed images verified with cosign: `docs/evidence/release/<version>/cosign-verify.txt`.
 - [ ] SBOM attached to each image: `docs/evidence/release/<version>/sbom.txt`.

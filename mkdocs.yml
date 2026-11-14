@@ -43,6 +43,7 @@ exclude_docs: |
   !/dev/
   !/ops/
   !/release/
+  /release/dod-checklist.md
   !/connectors/
   !/deploy/
   !/security/
@@ -104,7 +105,6 @@ nav:
       - release/release-process.md
       - release/versioning.md
       - release/verify.md
-      - release/dod-checklist.md
   - Connectors:
       - connectors/coverage.md
   - Architecture and gates:
