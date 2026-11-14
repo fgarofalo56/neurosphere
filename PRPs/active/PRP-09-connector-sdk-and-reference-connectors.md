@@ -308,6 +308,22 @@ Shared rules for items 7-13:
   - Unconfigured and half-configured behaviour matches item 11.
   - Snyk Code is clean on the new files.
 
+### Item 14 - write-connector kit profile (added 2026-11-13, after item 13)
+Item 13 found that the two write connectors fail the contract kit with `health_missing`, `coverage_missing` and `freshness_missing`. They are `apim-gateway` (PRP-34) and `foundry-actions` (PRP-17). Both implement `WriteConnector`, not `BaseConnector`. User decision 2026-11-13: add a write profile to the kit.
+- Deliverable: `contract_kit.py` gains a write-connector profile that requires:
+  - a valid manifest with `advisory=false`;
+  - the `WriteConnector` protocol, with coroutine methods and the registry capability check;
+  - health reporting.
+
+  Coverage and freshness stay read-connector requirements. Both write connectors gain `health()` if they lack it. Item 13's two strict xfails become passes.
+- Owned files: `connectors/sdk-python/neurosphere_connector/contract_kit.py` and its tests, `connectors/reference/apim-gateway/`, `connectors/reference/foundry-actions/`, `tests/unit/connector_conformance/`.
+- Must NOT touch: `write/` semantics (item 8), `packages/core/neurosphere_core/actions/`, `services/`.
+- Acceptance criteria:
+  - All six reference connectors pass their profile.
+  - A write connector with no health fails.
+  - A read connector checked against the write profile fails.
+  - Cross-tests stay green for the executor, the write-target composition and the APIM manage path.
+
 ## Validation gates
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
@@ -358,9 +374,10 @@ python -m pytest connectors -m live    # operator-approved, requires NS_LIVE_APP
 | 8 | merged | worktree-agent-a6af0daa87717b516 | sonnet | cd8c423: ruff/format/pyright clean; write + foundry-actions + apim-gateway + all write consumers 610 passed (re-run on branch); Snyk 0; strict-type verify, move/copy need prior_state else unverifiable, empty-state remove unverifiable, RFC 6901 indexes, coroutine check; review APPROVE (3 follow-ups: 1 vs 1.0 false negative note, move without from_ reason, MappingProxy test); docs/reference stamp drift deferred to post-Wave-A regen; merge fc61837, 754 passed post-merge | 2026-11-13 |
 | 9 | merged | worktree-agent-ac72400207bf9b336 | sonnet | e344f22: ruff/format/pyright clean; sdk-python + cross-tests 901 passed, sdk-ts tsc clean + vitest 34 passed (re-run on branch); Snyk 0 (sdk-python, sdk-ts); review APPROVE (2 follow-ups: pin health success inside limit window, host-side drain check); merge 91a1b88, 917 py + 34 ts passed post-merge | 2026-11-13 |
 | 10 | merged | worktree-agent-ad789d219346ba67a | sonnet | aa72966: ruff/format/pyright clean; otel + payload/compose importers 178 passed (re-run on branch); integration tests/integration/connectors 2 passed vs compose (agent-run, local only; CI does not run the integration marker); Snyk 0; guard adds completion/messages; collector otel/opentelemetry-collector-contrib:0.165.0 under profile otel, credential from host env NS_PRODUCER_CREDENTIAL; review APPROVE (4 follow-ups: export/shutdown race, test cannot prove collector-side drop, no missing-credential 401 test, vault host endswith without leading dot); merge 69bdb83, 1053 passed post-merge; docs/reference regen + ADR-0002 pin 9fc4ea4 | 2026-11-13 |
-| 11 | in-progress | (worktree agent) | sonnet | dispatched (Wave B) | 2026-11-13 |
-| 13 | in-progress | (worktree agent) | sonnet | dispatched (Wave B) | 2026-11-13 |
-| 12 | todo | | sonnet | | 2026-11-13 |
+| 11 | merged | worktree-agent-a1f9b6ad1cf06310f | sonnet | 6dfd282: ruff/format/pyright clean; workers + connectors + role-list cross-tests 700 passed (re-run on branch); Snyk 0; NS_FOUNDRY_DISCOVERY_* (PROJECTS, DOMAIN_ID, INTERVAL_SECONDS, MAX_ITEMS, MAX_PAGES); create-if-absent draft Agent/ModelDeployment, deployment id matches g05 scheme; review APPROVE (4 follow-ups: same-name deployment collision across projects, domain_id cloud/customer check, attr caps, debug-only names); merge 0a71aab, 1112 passed post-merge; workers deps + Dockerfile + relock ecb4859 | 2026-11-13 |
+| 13 | review | worktree-agent-a68482756de8a0e48 | sonnet | 240f00a: ruff/pyright clean; conformance 8 passed, 2 strict xfail (apim-gateway, foundry-actions: health/coverage/freshness missing; write connectors) re-run on branch; user chose write profile -> item 14 | 2026-11-13 |
+| 12 | review | worktree-agent-a773ab36b7eb8f0e9 | sonnet | 6d1bc3d: ruff/format/pyright clean; workers + billing + ledger/aggregates cross-tests 1014 passed (re-run on branch; 1 of 3 runs had 1 non-reproducing failure); stop condition not hit (request-less invoiced -> AllocationRecord vendor_period -> reconciliation billing); Snyk NOT RUN (unauthenticated) | 2026-11-13 |
+| 14 | todo | | sonnet | | 2026-11-13 |
 
 ## Completion note (filled at ship)
 - Date: 2026-10-17
