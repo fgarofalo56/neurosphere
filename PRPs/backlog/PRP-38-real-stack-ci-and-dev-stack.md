@@ -14,7 +14,7 @@ depends_on: []
 wave: W12
 branch: prp-38-real-stack-ci
 allow_parallel: true
-issues: [205, 211, 162, 209, 180]
+issues: [227, 205, 211, 162, 209, 180]
 ---
 
 # PRP-38: Real stack that starts, seeds cleanly and is tested in CI

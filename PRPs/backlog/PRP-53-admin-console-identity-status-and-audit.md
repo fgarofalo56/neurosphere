@@ -14,7 +14,7 @@ depends_on: [PRP-39-identity-admin-api-and-revocation, PRP-40-audit-search-expor
 wave: W17
 branch: prp-53-admin-console-core
 allow_parallel: true
-issues: []
+issues: [246]
 ---
 
 # PRP-53: Admin console, part 1: identity, domains, system status and audit search

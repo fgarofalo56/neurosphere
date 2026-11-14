@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
 wave: W15
 branch: prp-46-cost-center
 allow_parallel: true
-issues: [190, 148, 179, 167, 168, 169]
+issues: [239, 190, 148, 179, 167, 168, 169]
 ---
 
 # PRP-46: Cost-center attribution and ingest follow-ups

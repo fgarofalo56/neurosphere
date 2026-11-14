@@ -14,7 +14,7 @@ depends_on: [PRP-42-connector-configuration-and-credential-references]
 wave: W19
 branch: prp-62-aws-bedrock-connector
 allow_parallel: true
-issues: []
+issues: [256]
 ---
 
 # PRP-62: AWS Bedrock reference connector (metadata only)

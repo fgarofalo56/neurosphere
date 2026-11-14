@@ -14,7 +14,7 @@ depends_on: [PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-env
 wave: W19
 branch: prp-63-delivery-pipeline
 allow_parallel: true
-issues: []
+issues: [257]
 ---
 
 # PRP-63: Delivery pipeline to the hosted environment

@@ -14,7 +14,7 @@ depends_on: [PRP-41-producer-registry, PRP-42-connector-configuration-and-creden
 wave: W18
 branch: prp-57-admin-console-sources
 allow_parallel: true
-issues: []
+issues: [250]
 ---
 
 # PRP-57: Admin console, part 2: data sources, pricing and feature settings

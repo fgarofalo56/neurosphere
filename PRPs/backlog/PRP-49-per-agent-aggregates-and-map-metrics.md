@@ -14,7 +14,7 @@ depends_on: [PRP-18-live-map-and-session-replay]
 wave: W16
 branch: prp-49-per-agent-aggregates
 allow_parallel: true
-issues: []
+issues: [243]
 ---
 
 # PRP-49: Per-agent aggregates and map metrics

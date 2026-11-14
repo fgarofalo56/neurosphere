@@ -14,7 +14,7 @@ depends_on: []
 wave: W17
 branch: prp-59-deploy-gov-followups
 allow_parallel: true
-issues: [36, 38, 212, 213, 214, 133]
+issues: [249, 36, 38, 212, 213, 214, 133]
 ---
 
 # PRP-59: Deploy and Government follow-ups

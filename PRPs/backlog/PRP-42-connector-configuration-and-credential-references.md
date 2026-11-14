@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identi
 wave: W14
 branch: prp-42-connector-config
 allow_parallel: true
-issues: []
+issues: [236]
 ---
 
 # PRP-42: Connector configuration with credential references

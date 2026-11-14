@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identi
 wave: W16
 branch: prp-45-system-status-settings
 allow_parallel: true
-issues: []
+issues: [242]
 ---
 
 # PRP-45: System status, first-run checklist and stored feature settings

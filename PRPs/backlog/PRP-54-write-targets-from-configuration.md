@@ -14,7 +14,7 @@ depends_on: [PRP-45-system-status-first-run-and-feature-settings]
 wave: W17
 branch: prp-54-write-targets
 allow_parallel: true
-issues: [132]
+issues: [247, 132]
 ---
 
 # PRP-54: Write targets from stored configuration, more than one per connector kind

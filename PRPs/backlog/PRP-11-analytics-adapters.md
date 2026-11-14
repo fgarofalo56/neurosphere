@@ -15,7 +15,7 @@ wave: W12
 branch: prp-11-round2-analytics-runtime
 allow_parallel: true
 absorbs: P2.1
-issues: [59, 60, 61, 62]
+issues: [228, 59, 60, 61, 62]
 ---
 
 # PRP-11: Analytics adapters (round 2)

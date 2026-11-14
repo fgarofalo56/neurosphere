@@ -14,7 +14,7 @@ depends_on: [PRP-56-compliance-control-library-and-evidence-bundles, PRP-15-reco
 wave: W19
 branch: prp-61-detections
 allow_parallel: true
-issues: []
+issues: [255]
 ---
 
 # PRP-61: Configuration detections and shadow-AI discovery

@@ -14,6 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
 wave: W14
 branch: prp-40-audit-siem
 allow_parallel: true
+issues: [234]
 ---
 
 # PRP-40: Audit search, export, readable denials and an Event Hubs SIEM sink

@@ -14,6 +14,7 @@ depends_on: []
 wave: W13
 branch: prp-18-round2-map-edge-batching
 allow_parallel: true
+issues: [233]
 absorbs: P3.1
 ---
 

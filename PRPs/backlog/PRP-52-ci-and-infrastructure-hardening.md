@@ -14,7 +14,7 @@ depends_on: []
 wave: W16
 branch: prp-52-ci-infra-hardening
 allow_parallel: true
-issues: [66, 67, 68, 69, 171, 215]
+issues: [245, 66, 67, 68, 69, 171, 215]
 ---
 
 # PRP-52: CI and infrastructure hardening

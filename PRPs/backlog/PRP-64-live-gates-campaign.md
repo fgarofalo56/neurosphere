@@ -14,7 +14,7 @@ depends_on: [PRP-11-analytics-adapters, PRP-21-scale-federation-finops-and-dr, P
 wave: W20
 branch: prp-64-live-gates
 allow_parallel: true
-issues: [39, 40, 57, 108, 124]
+issues: [258, 39, 40, 57, 108, 124]
 ---
 
 # PRP-64: Live gates campaign (operator-attended)

@@ -14,6 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
 wave: W13
 branch: prp-39-identity-admin
 allow_parallel: true
+issues: [230]
 ---
 
 # PRP-39: Identity admin API and principal revocation

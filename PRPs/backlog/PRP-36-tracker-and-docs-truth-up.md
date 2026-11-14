@@ -14,7 +14,7 @@ depends_on: []
 wave: W11
 branch: prp-36-docs-truth-up
 allow_parallel: true
-issues: [41, 148]
+issues: [225, 41, 148]
 ---
 
 # PRP-36: Tracker and docs truth-up

@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
 wave: W14
 branch: prp-43-catalog-hardening
 allow_parallel: true
-issues: [193, 194, 195, 207, 208, 210]
+issues: [237, 193, 194, 195, 207, 208, 210]
 ---
 
 # PRP-43: Catalog hardening and the relationship review queue

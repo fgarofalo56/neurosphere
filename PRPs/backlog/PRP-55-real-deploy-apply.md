@@ -14,7 +14,7 @@ depends_on: [PRP-54-write-targets-from-configuration]
 wave: W18
 branch: prp-55-real-deploy-apply
 allow_parallel: true
-issues: []
+issues: [251]
 ---
 
 # PRP-55: Real deploy apply

@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identi
 wave: W15
 branch: prp-44-platform-config
 allow_parallel: true
-issues: [209]
+issues: [238, 209]
 ---
 
 # PRP-44: Platform configuration (domains, budgets, price sheets, review policy)

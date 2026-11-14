@@ -14,7 +14,7 @@ depends_on: []
 wave: W17
 branch: prp-56-compliance-evidence
 allow_parallel: true
-issues: []
+issues: [248]
 ---
 
 # PRP-56: Compliance control library and evidence bundles

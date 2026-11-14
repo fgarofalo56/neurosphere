@@ -14,7 +14,7 @@ depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
 wave: W15
 branch: prp-48-authz-audit-hardening
 allow_parallel: true
-issues: [91, 114, 69, 70, 206]
+issues: [241, 91, 114, 69, 70, 206]
 ---
 
 # PRP-48: Authorization and audit-chain hardening

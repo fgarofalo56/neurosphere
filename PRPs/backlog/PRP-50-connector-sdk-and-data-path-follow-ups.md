@@ -14,7 +14,7 @@ depends_on: []
 wave: W16
 branch: prp-50-connector-followups
 allow_parallel: true
-issues: [218, 219]
+issues: [244, 218, 219]
 ---
 
 # PRP-50: Connector SDK and data-path follow-ups

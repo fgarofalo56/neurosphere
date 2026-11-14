@@ -14,6 +14,7 @@ depends_on: []
 wave: W18
 branch: prp-60-search-indexing-hardening
 allow_parallel: true
+issues: [253]
 ---
 
 # PRP-60: Search indexing hardening

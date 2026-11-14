@@ -15,7 +15,7 @@ wave: W13
 branch: prp-21-round2-admission-federation
 allow_parallel: true
 absorbs: P4.3 + P4.4, G07
-issues: [105, 106, 107]
+issues: [232, 105, 106, 107]
 ---
 
 # PRP-21: Scale, federation, FinOps and DR (round 2)

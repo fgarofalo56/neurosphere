@@ -14,7 +14,7 @@ depends_on: [PRP-41-producer-registry, PRP-42-connector-configuration-and-creden
 wave: W18
 branch: prp-58-hosted-data-path
 allow_parallel: true
-issues: [136, 143, 144, 220]
+issues: [252, 136, 143, 144, 220]
 ---
 
 # PRP-58: Hosted data path and environment hardening

@@ -15,7 +15,7 @@ wave: W12
 branch: prp-23-round2-lifecycle-runtime
 allow_parallel: true
 absorbs: P4.5, G06
-issues: [119, 120]
+issues: [229, 119, 120]
 ---
 
 # PRP-23: ATO evidence and data lifecycle (round 2)

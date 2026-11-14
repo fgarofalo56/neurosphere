@@ -15,7 +15,7 @@ wave: W13
 branch: prp-15-round2-production-series
 allow_parallel: true
 absorbs: P2.3
-issues: [133]
+issues: [231, 133]
 ---
 
 # PRP-15: Recommendations engine (round 2)

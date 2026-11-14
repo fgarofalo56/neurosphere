@@ -14,7 +14,7 @@ depends_on: []
 wave: W15
 branch: prp-47-shell-test-infra
 allow_parallel: true
-issues: [92, 93, 94, 95, 125, 209]
+issues: [240, 92, 93, 94, 95, 125, 209]
 ---
 
 # PRP-47: Frontend shell fixes and test infrastructure

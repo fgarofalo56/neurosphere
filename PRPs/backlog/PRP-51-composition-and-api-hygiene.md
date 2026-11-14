@@ -14,7 +14,7 @@ depends_on: []
 wave: W19
 branch: prp-51-composition-hygiene
 allow_parallel: true
-issues: [130, 131, 133, 132]
+issues: [254, 130, 131, 133, 132]
 ---
 
 # PRP-51: Composition and API hygiene

@@ -14,7 +14,7 @@ depends_on: []
 wave: W12
 branch: prp-37-contracts-admin
 allow_parallel: true
-issues: [190, 178, 114, 195, 148]
+issues: [226, 190, 114, 195, 148]
 ---
 
 # PRP-37: Contracts revision for the control plane (admin schemas, cost tags, permissions, stores)
