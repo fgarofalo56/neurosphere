@@ -1,10 +1,11 @@
 ---
 name: PRP-25-docs-site-and-public-assistant
-status: active
+status: shipped
 priority: P1
 order: 11
-pr: 154
+pr: 223
 started: 2026-11-14
+shipped: 2026-11-14
 branch: prp-25-round2
 review: none
 created: 2026-10-08
@@ -271,9 +272,41 @@ Reconciled 2026-11-02: this table was missing at resume; rebuilt from branch his
 - New-user test: OPEN. No independent tester has followed `docs/runbooks/install.md`; `docs/runbooks/new-user-test.md` is an unfilled template and the runbooks stay labelled DRAFT.
 - Follow-ups:
   - OPEN: independent new-user test (above).
-  - OPEN: first Pages deploy, which runs on the first push to `main` after merge; any hosted assistant deployment is an operator action.
+  - DONE in round 2: first Pages deploy. Any hosted assistant deployment is still an operator action.
   - G09 (theme/brand/media review) not closed here.
   - Pin the Playwright image by digest so its toolchain cannot drift again.
+
+### Round 2 (items 5-10, shipped 2026-11-14)
+- PR #223, merge commit `4a95fdd`. CI on the final head `0158694`: 34 passed, 4 skipped (main-only jobs). Item merges on `prp-25-round2`:
+  - item 5 `e466350` (from `ae4a4cb`)
+  - item 7 `ce72d59` (from `fdb86d7`), relock `35d824b`
+  - item 8 `49e260a` (from `ef8c896`)
+  - item 9 `5a6c108`
+  - fix-forwards `8bdde69` (DoD checklist) and `0158694` (theme assets and branding)
+  - evidence `e5f33b9`
+- Pages:
+  - Enabled 2026-11-14 with `build_type=workflow` on the public repo.
+  - The main deploy after #223 (run 43648358104) succeeded.
+  - Checked live: https://fgarofalo56.github.io/neurosphere/ serves the theme CSS, brand stylesheet and logo (200). `runbooks/install/`, `walkthroughs/admin/` and `reference/api/` are 200. `evidence/`, `validation/`, `PRD/` and `release/dod-checklist/` are 404.
+- Deviations from the round 2 blueprint and why:
+  - **DoD checklist kept internal (`8bdde69`).** Item 5 rewrote links in `docs/release/dod-checklist.md`, which broke `tests/release/test_dod_links.py`. The orchestrator ran only `tests/docs` after the merge, and item 8's agent caught it. The checklist is restored and kept unpublished.
+  - **Site was unstyled since item 1 (`0158694`).** The user reported "pages is awful looking". `exclude_docs: /*` also excluded the Material theme's `assets/`, so every build since item 1 (2026-11-02) shipped with no CSS or JS, and no test looked at the rendered output.
+    - The fix re-includes `assets/` and adds brand styling from `frontend/src/design-system/tokens/brand.ts`.
+    - Guards: the allowlist test pins `!/assets/`, and `docs.yml` fails if the artifact lacks the theme CSS/JS.
+  - **Edits outside item ownership** (orchestrator, CI unblockers or fix-forwards): `.github/workflows/docs.yml` (asset guard), two `docs/compliance/plans/*` link rewrites, `docs/evidence/inventory.md` (regenerated), `uv.lock`.
+  - **Live smoke capacity.** The live smoke raised the throwaway deployment's capacity from 1 to 50. With capacity 1 the model returned 429, which the service correctly surfaced as 503 `model_unavailable`.
+- Descoped: none. Item 6 was never assigned a number. The Pages enablement row stands in for it.
+- Still OPEN:
+  - The human new-user test; runbooks stay DRAFT. An automated clean-room run is recorded in `docs/runbooks/new-user-test.md`, completed with 7 deviations.
+  - Hosting the assistant.
+  - Assistant Government endpoints and live key-auth.
+  - G09.
+- Follow-ups:
+  - Assistant recall: the install question abstained live (`top_k=3`, 150-word chunks).
+  - `make dev-up` recreates an already-running Event Hubs emulator (`--no-recreate`).
+  - No fast `make test` variant.
+  - Helm/Bicep wiring for the assistant if it is ever hosted.
+  - Snyk Code: 2 Low CWE-23 findings, operator-configured `site_dir` into `os.walk`. Accepted.
 
 ## Audit 2026-11-04
 
