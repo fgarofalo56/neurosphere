@@ -24,10 +24,11 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Annotated, Final
+from typing import Annotated, Final, Protocol, runtime_checkable
 
 from fastapi import Depends, Request
 from neurosphere_core.admission import TokenBucketLimiter, derive_limiter_key
+from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import (
     Permission,
     ScopeDerivation,
@@ -50,8 +51,10 @@ from neurosphere_api.middleware import correlation_id_of
 
 __all__ = [
     "PERMISSION_MARKER",
+    "PRESCOPE_AUDIT_ATTRIBUTE",
     "AuthzTarget",
     "PermissionDependency",
+    "PrescopeAudit",
     "ResourceResolver",
     "current_derivation",
     "current_scope",
@@ -62,6 +65,8 @@ __all__ = [
 
 #: Attribute set on every dependency built by :func:`require`; the route inventory reads it.
 PERMISSION_MARKER: Final = "__ns_permission__"
+#: ``app.state`` attribute of the optional pre-scope audit hook (PRP-40 item 5).
+PRESCOPE_AUDIT_ATTRIBUTE: Final = "prescope_audit"
 
 _LOG = get_logger("neurosphere_api.authz")
 _PASSTHROUGH_ERRORS: Final = (UnauthorizedError, ForbiddenError, DependencyTransientError)
@@ -93,28 +98,72 @@ PermissionDependency = Callable[..., Awaitable[IdentityScope]]
 async def current_derivation(
     request: Request, state: Annotated[AuthzState, Depends(get_authz_state)]
 ) -> ScopeDerivation:
-    """Validate the bearer token and derive the scope (with the policy ids used, for audit)."""
-    authorization = _authorization_header(request)
+    """Validate the bearer token and derive the scope (with the policy ids used, for audit).
+
+    A failure is reported to the optional pre-scope audit hook (PRP-40 item 5,
+    :func:`_audit_prescope`) and then raised unchanged; the hook never alters the outcome.
+    """
+    claims: VerifiedClaims | None = None
     try:
+        authorization = _authorization_header(request)
         async with asyncio.timeout(state.timeout_seconds):
             claims = await state.authenticator.authenticate(authorization)
             derivation = await state.scope_source.derive(claims)
-    except _PASSTHROUGH_ERRORS:
+    except _PASSTHROUGH_ERRORS as exc:
+        await _audit_prescope(request, claims, exc.code, exc.reason)
         raise
     except TimeoutError as exc:
+        await _audit_prescope(request, claims, DependencyTransientError.code, "authz_timeout")
         raise DependencyTransientError("authorization timed out", reason="authz_timeout") from exc
     except Exception as exc:
         # Includes NeuroSphereError subclasses outside the three authz outcomes.
+        await _audit_prescope(request, claims, DependencyTransientError.code, "authz_unavailable")
         raise DependencyTransientError(
             "authorization unavailable", reason="authz_unavailable"
         ) from exc
     if not isinstance(derivation, ScopeDerivation) or not isinstance(
         derivation.scope, IdentityScope
     ):
+        await _audit_prescope(request, claims, DependencyTransientError.code, "authz_invalid_scope")
         raise DependencyTransientError(
             "scope source returned an invalid scope", reason="authz_invalid_scope"
         )
     return derivation
+
+
+@runtime_checkable
+class PrescopeAudit(Protocol):
+    """Hook for failures before a scope exists (PRP-40 item 5; ``neurosphere_api.audit.prescope``).
+
+    Installed as ``app.state.prescope_audit`` by the composition; absent means no pre-scope audit.
+    """
+
+    async def identity_failure(
+        self, claims: VerifiedClaims, code: str, reason: str | None, correlation_id: str | None
+    ) -> None: ...
+
+    async def unauthenticated(self, reason: str | None, correlation_id: str | None) -> None: ...
+
+
+async def _audit_prescope(
+    request: Request, claims: VerifiedClaims | None, code: str, reason: str | None
+) -> None:
+    """Report a pre-scope failure: identity known -> denial record; 401 -> SIEM signal only.
+
+    Never raises and never changes the outcome: the caller re-raises the original error. Other
+    failures with no verified identity (for example a key-infrastructure outage) are not recorded.
+    """
+    hook = getattr(request.app.state, PRESCOPE_AUDIT_ATTRIBUTE, None)
+    if not isinstance(hook, PrescopeAudit):
+        return
+    correlation_id = correlation_id_of(request.scope)
+    try:
+        if claims is not None:
+            await hook.identity_failure(claims, code, reason, correlation_id)
+        elif code == UnauthorizedError.code:
+            await hook.unauthenticated(reason, correlation_id)
+    except Exception:
+        _LOG.warning("pre-scope audit failed", extra={"deny_reason": reason or code})
 
 
 async def current_scope(
