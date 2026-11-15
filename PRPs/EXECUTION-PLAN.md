@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W13
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-18: Live map and session replay (round 2)](backlog/PRP-18-live-map-and-session-replay.md) | sonnet | required | none | - | - | `prp-18-round2-map-edge-batching` |
-
-Gate before the next wave: Identity admin routes pass the authz suites; admission is on in compose; pilot re-run filed.
-
 ### W14
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -87,7 +79,7 @@ Gate before the next wave: Authz and audit-chain suites green; cost-center attri
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-45: System status, first-run checklist and stored feature settings](backlog/PRP-45-system-status-first-run-and-feature-settings.md) | opus | required | PRP-48 | - | - | `prp-45-system-status-settings` |
-| 2 | [PRP-49: Per-agent aggregates and map metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | sonnet | required | PRP-18 | - | - | `prp-49-per-agent-aggregates` |
+| 2 | [PRP-49: Per-agent aggregates and map metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | sonnet | required | none | - | - | `prp-49-per-agent-aggregates` |
 | 3 | [PRP-50: Connector SDK and data-path follow-ups](backlog/PRP-50-connector-sdk-and-data-path-follow-ups.md) | sonnet | required | none | PRP-46 | - | `prp-50-connector-followups` |
 | 4 | [PRP-52: CI and infrastructure hardening](backlog/PRP-52-ci-and-infrastructure-hardening.md) | sonnet | required | none | PRP-11 | - | `prp-52-ci-infra-hardening` |
 
@@ -148,9 +140,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W13
-    P18["PRP-18"]
-  end
   subgraph W14
     P40["PRP-40"]
     P41["PRP-41"]
@@ -196,7 +185,6 @@ flowchart LR
     P66["PRP-66"]
   end
   P48 --> P45
-  P18 --> P49
   P40 --> P53
   P44 --> P53
   P45 --> P53
@@ -233,7 +221,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W13 | PRP-18 | `frontend/tests/mock-api/server.ts` |
 | W14 | PRP-40 | `services/api/neurosphere_api/runtime/builders/data.py` |
 | W14 | PRP-41 | `services/api/neurosphere_api/runtime/builders/edge.py`<br>`services/api/neurosphere_api/main.py` |
 | W14 | PRP-42 | `services/workers/neurosphere_workers/runtime/factories.py` |
@@ -257,14 +244,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-18 (W13)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-18-live-map-and-session-replay.md
-
-Context for this run: wave W13 of PRPs/EXECUTION-PLAN.md, branch prp-18-round2-map-edge-batching cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-40 (W14)
 
@@ -343,7 +322,7 @@ Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-45-system-s
 ```text
 /prp:prp-execute PRPs/backlog/PRP-49-per-agent-aggregates-and-map-metrics.md
 
-Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-49-per-agent-aggregates cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-18 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-49-per-agent-aggregates cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-50 (W16)
