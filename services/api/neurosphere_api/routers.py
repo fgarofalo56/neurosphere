@@ -187,6 +187,12 @@ def _register_federation(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_lifecycle(registry: RouterRegistry) -> None:
+    from neurosphere_api.lifecycle import register
+
+    register(registry)
+
+
 def _register_finops(registry: RouterRegistry) -> None:
     from neurosphere_api.finops import register
 
@@ -246,6 +252,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_me,
     _register_workspaces,
     _register_federation,
+    _register_lifecycle,
     _register_finops,
     _register_mcp_server,
     _register_mcp_admin,

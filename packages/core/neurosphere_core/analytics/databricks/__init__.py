@@ -1,4 +1,4 @@
-"""Azure Databricks SQL warehouse analytics adapter (PRP-11 item 4)."""
+"""Azure Databricks SQL warehouse analytics adapter (PRP-11 items 4, round 2 item 2)."""
 
 from neurosphere_core.analytics.databricks.adapter import (
     G12_PARITY_GAPS,
@@ -8,6 +8,14 @@ from neurosphere_core.analytics.databricks.adapter import (
 )
 from neurosphere_core.analytics.databricks.config import DatabricksConfig
 from neurosphere_core.analytics.databricks.dialect import DatabricksDialect
+from neurosphere_core.analytics.databricks.executor import (
+    DATABRICKS_SCOPE,
+    DatabricksStatementExecutor,
+    ExecutorError,
+    build_statement_body,
+    create_databricks_executor,
+    open_databricks_executor,
+)
 from neurosphere_core.analytics.databricks.migrations import (
     MIGRATIONS,
     SQLITE_MIGRATION_REWRITES,
@@ -15,13 +23,19 @@ from neurosphere_core.analytics.databricks.migrations import (
 )
 
 __all__ = [
+    "DATABRICKS_SCOPE",
     "G12_PARITY_GAPS",
     "MIGRATIONS",
     "SQLITE_MIGRATION_REWRITES",
     "DatabricksAnalytics",
     "DatabricksConfig",
     "DatabricksDialect",
+    "DatabricksStatementExecutor",
+    "ExecutorError",
     "apply_migrations",
+    "build_statement_body",
     "create_adapter",
+    "create_databricks_executor",
+    "open_databricks_executor",
     "sqlite_shims",
 ]

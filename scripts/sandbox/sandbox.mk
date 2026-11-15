@@ -37,4 +37,4 @@ SEED_PROFILE ?= small
 .PHONY: seed-stack
 
 seed-stack: ## Seed the local real stack (idempotent; needs compose emulators + workers running)
-	uv run python scripts/sandbox/sbx_seed_stack.py --profile $(SEED_PROFILE) $(if $(OPERATOR_OID),--operator-object-id "$(OPERATOR_OID)")
+	uv run python scripts/sandbox/sbx_seed_stack.py --profile $(SEED_PROFILE) $(if $(OPERATOR_OID),--operator-object-id "$(OPERATOR_OID)") $(SEED_ARGS)

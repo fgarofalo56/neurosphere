@@ -1,7 +1,7 @@
 # Connector SDK reference (Python)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `3e52431d80da7db195cae76c1ee4b9596056c1c4`. Generated: 2026-11-15.
+> Source commit: `077cf1a2a3bd7d718526b42e5df022d399106958`. Generated: 2026-11-15.
 > Sources: `connectors/sdk-python/neurosphere_connector/`.
 
 Package `neurosphere_connector` (connector SDK, read side) and `neurosphere_connector.write` (write path, imported explicitly; it is advisory by default and carries no Azure SDK import). Symbols are the `__all__` of each package, extracted from source with `ast`. Public methods are listed under each class.

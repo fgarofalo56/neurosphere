@@ -19,8 +19,10 @@ statement runs. ``MigrationExecutor`` is deliberately separate from the read-onl
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import re
+import weakref
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -102,6 +104,11 @@ def validate_migration_set(migrations: Sequence[Migration]) -> None:
             raise ValueError(f"malformed migration {migration.id}")
 
 
+_LEDGER_LOCKS: weakref.WeakKeyDictionary[object, dict[str, asyncio.Lock]] = (
+    weakref.WeakKeyDictionary()
+)
+
+
 async def apply_migrations(
     executor: MigrationExecutor,
     *,
@@ -109,7 +116,25 @@ async def apply_migrations(
     migrations: Sequence[Migration] = MIGRATIONS,
     now: datetime | None = None,
 ) -> MigrationReport:
-    """Apply pending migrations in order. Running it again applies nothing."""
+    """Apply pending migrations in order. Running it again applies nothing.
+
+    Runners that share an executor and schema are serialised by an in-process lock, so two
+    concurrent runs insert one ledger row per version (issue #62). Separate processes are
+    not serialised here: that needs an engine-side guard, proven at the live gate.
+    """
+    per_executor = _LEDGER_LOCKS.setdefault(executor, {})
+    lock = per_executor.setdefault(config.schema_name, asyncio.Lock())
+    async with lock:
+        return await _apply_locked(executor, config=config, migrations=migrations, now=now)
+
+
+async def _apply_locked(
+    executor: MigrationExecutor,
+    *,
+    config: FabricConfig,
+    migrations: Sequence[Migration],
+    now: datetime | None,
+) -> MigrationReport:
     if config.read_only:
         raise CapabilityUnavailableError(
             "fabric_item_read_only",

@@ -11,7 +11,7 @@ Each builder module defines three names::
 
 :func:`default_builders` returns the fixed order (the ``routers.py`` hook pattern)::
 
-    authz -> data -> planes -> copilot -> mcp -> gateway -> edge
+    authz -> data -> planes -> copilot -> mcp -> gateway -> edge -> lifecycle
 
 so a builder may consume anything an EARLIER builder published. ``compose_app(...,
 builders=...)`` accepts any sequence of :class:`BuilderSpec` (tests pass stubs for components
@@ -56,9 +56,7 @@ Shared objects
 it or raises ``ComponentUnavailableError("<key>_unavailable")``; ``ctx.maybe_shared(KEY)`` returns
 ``None`` instead. Keys are typed :class:`SharedKey` constants. Declared here:
 
-=========================  =========================================================  ========
 Key                        Object                                                     By
-=========================  =========================================================  ========
 ``AUTH_SETTINGS``          ``AuthSettings`` (tenant, audiences, customer binding)     authz
 ``AUTHENTICATOR``          the installed ``TokenAuthenticator`` (``JwtValidator``)    authz
 ``SCOPE_SOURCE``           the installed ``ScopeSource`` (the composed deriver)       authz
@@ -73,7 +71,6 @@ Key                        Object                                               
 ``AGGREGATE_READER``       the aggregate reader installed on ``app.state``            data
 ``CATALOG_REPOSITORY``     the catalog repository installed on ``app.state``          data
 ``ACTION_SERVICE``         the ONE ``ActionService`` (buttons, chat and MCP share it)  planes
-=========================  =========================================================  ========
 
 A builder may declare further keys in its own module; later builders import them from there.
 
@@ -356,11 +353,13 @@ class BuildContext:
 def default_builders() -> tuple[BuilderSpec, ...]:
     """The production order. Local imports keep builder modules out of import time."""
     from neurosphere_api.runtime.builders import (
+        analytics,
         authz,
         copilot,
         data,
         edge,
         gateway,
+        lifecycle,
         mcp,
         planes,
     )
@@ -373,4 +372,6 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         mcp.BUILDER,
         gateway.BUILDER,
         edge.BUILDER,
+        lifecycle.BUILDER,
+        analytics.BUILDER,
     )

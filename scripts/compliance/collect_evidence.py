@@ -175,6 +175,11 @@ def _collect_one(root: Path, rel: str) -> Row:
     full = root / rel
     if full.is_symlink():
         return Row(rel, "-", "-", f"{FAILED}: symlink not followed")
+    # A symlinked parent directory leaves the leaf a regular file but points outside the repo.
+    try:
+        full.resolve().relative_to(root.resolve())
+    except ValueError:
+        return Row(rel, "-", "-", f"{FAILED}: path resolves outside root")
     try:
         data = normalise(full.read_bytes())
     except OSError as exc:

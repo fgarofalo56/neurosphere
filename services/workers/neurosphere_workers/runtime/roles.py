@@ -6,7 +6,6 @@ from typing import Final
 
 __all__ = [
     "ALL_ROLES_KEYWORD",
-    "OPT_IN_ROLES",
     "ROLE_NAMES",
     "RoleConfigError",
     "UnknownRoleError",
@@ -29,11 +28,6 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "foundry_discovery",
     "billing_export",
 )
-
-#: Roles that must be named explicitly: ``all`` does not start them. Empty since ``gateway_poll``
-#: joined ``all``: it is a logged no-op when no gateway polling is configured, so it cannot
-#: crash a deployment that lacks its producer secret.
-OPT_IN_ROLES: Final[tuple[str, ...]] = ()
 
 
 class UnknownRoleError(ValueError):
@@ -62,9 +56,8 @@ class RoleConfigError(Exception):
 def parse_roles(raw: str | None) -> tuple[str, ...]:
     """The roles to run, de-duplicated in canonical order.
 
-    ``None``/blank -> ``()`` (idle). ``all`` expands to :data:`ROLE_NAMES` minus
-    :data:`OPT_IN_ROLES`. Any unknown name
-    raises :class:`UnknownRoleError` (nothing is started).
+    ``None``/blank -> ``()`` (idle). ``all`` expands to every role in
+    :data:`ROLE_NAMES`. Any unknown name raises :class:`UnknownRoleError` (nothing is started).
     """
     if raw is None or not raw.strip():
         return ()
@@ -76,5 +69,5 @@ def parse_roles(raw: str | None) -> tuple[str, ...]:
         raise UnknownRoleError(unknown)
     wanted = set(names)
     if ALL_ROLES_KEYWORD in wanted:
-        wanted.update(role for role in ROLE_NAMES if role not in OPT_IN_ROLES)
+        wanted.update(ROLE_NAMES)
     return tuple(role for role in ROLE_NAMES if role in wanted)

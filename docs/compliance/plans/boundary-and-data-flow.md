@@ -155,4 +155,4 @@ This diagram is drawn once for a single cloud boundary and is instantiated separ
 
 ## Rendering
 
-Both diagrams were rendered with the pinned CLI (`pnpm dlx @mermaid-js/mermaid-cli@12.0.0 -i <name>.mmd -o <name>.svg`) and the SVG coordinates were trimmed to two decimals, matching `scripts/render_mermaid.py`, so the repository PII scan does not misread long digit runs. On the authoring machine puppeteer's own headless shell was not installed, so the installed Google Chrome was supplied through the puppeteer `executablePath` option; the Mermaid CLI and version are the pinned ones. Re-render after any change to a `.mmd` file and keep the fenced block above identical to its source.
+Both diagrams were rendered with the pinned CLI (`pnpm dlx @mermaid-js/mermaid-cli@12.0.0 -i <name>.mmd -o <name>.svg`) and the SVG coordinates were trimmed to two decimals, matching `scripts/render_mermaid.py`, so the repository PII scan does not misread long digit runs. Local rendering notes are in `docs/dev/diagram-rendering.md`. Re-render after any change to a `.mmd` file and keep the fenced block above identical to its source.

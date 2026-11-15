@@ -129,11 +129,12 @@ from neurosphere_core.evaluation.judge import (  # noqa: E402
     request_hash,
 )
 from neurosphere_core.evaluation.store import EvaluationStore  # noqa: E402
+from neurosphere_core.gateway import GatewayRegistration, GatewayStore  # noqa: E402
+from neurosphere_core.gateway.models import gateway_id_for  # noqa: E402
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry  # noqa: E402
 from neurosphere_core.hitl.decisions import DecisionLog, DecisionStore  # noqa: E402
 from neurosphere_core.hitl.store import HitlStore  # noqa: E402
 from neurosphere_core.mcp import McpClientPolicy, McpRegistry, McpServerStore  # noqa: E402
-from neurosphere_core.payload import HubMessage, HubMessageKind  # noqa: E402
 from neurosphere_core.pricing import (  # noqa: E402
     InMemoryPriceSnapshotStore,
     PriceRow,
@@ -169,6 +170,7 @@ from sbx_guard import (  # noqa: E402
     require_local_endpoint,
 )
 from sbx_seam import HubSeam  # noqa: E402
+from sbx_wire import envelope, received_stamp  # noqa: E402
 
 from sandbox.config import (  # noqa: E402
     CACHED_INPUT_FACTOR,
@@ -245,6 +247,7 @@ CATEGORIES: Final = (
     "intents",
     "reports",
     "mcp_servers",
+    "gateways",
     "grants",
 )
 #: Categories the workers fill from the pushed events.
@@ -535,7 +538,7 @@ def hub_lines(directory: Path, not_after: datetime | None = None) -> list[bytes]
     the run time that would be the future, so a record dated after ``not_after`` is stamped
     ``not_after`` instead (only the published copy; the ids are untouched).
     """
-    received = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    received = received_stamp()
     lines: list[bytes] = []
     for name, kind in (("telemetry.ndjson", "telemetry"), ("cost.ndjson", "cost")):
         for doc in read_ndjson(directory / name):
@@ -546,19 +549,15 @@ def hub_lines(directory: Path, not_after: datetime | None = None) -> list[bytes]
                 and _timestamp(doc["recorded_at"]) > not_after
             ):
                 doc = {**doc, "recorded_at": not_after.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"}
-            message = HubMessage(
-                kind=HubMessageKind(kind),
-                event_id=doc["event_id"] if telemetry else doc["cost_id"],
-                cloud=doc["cloud"],
-                customer_id=doc["customer_id"],
-                source_id=doc["source_id"],
-                producer_id=PRODUCER_ID,
-                received_at=received,
-                request_id=doc.get("request_id"),
-                observation_kind="gateway" if telemetry else "billing",
-                data=doc,
+            lines.append(
+                envelope(
+                    doc,
+                    kind=kind,
+                    event_id=doc["event_id"] if telemetry else doc["cost_id"],
+                    received_at=received,
+                    producer_id=PRODUCER_ID,
+                )
             )
-            lines.append(message.to_bytes())
     return lines
 
 
@@ -605,6 +604,7 @@ class Backends:
     actions: ActionService
     reports: ReportStore
     mcp: McpServerStore
+    gateways: GatewayStore
 
 
 class Tally:
@@ -1067,16 +1067,53 @@ async def seed_mcp_servers(
         tally.record("mcp_servers", created=1, existing=0)
 
 
+# -- gateway registration --------------------------------------------------------------------
+
+#: SYNTHETIC APIM service id (a fixture subscription GUID; nothing resolves it).
+SEED_GATEWAY_ARM_ID: Final = (
+    "/subscriptions/00000000-0000-4000-8000-000000000001/resourceGroups/rg-synthetic-sandbox"
+    "/providers/Microsoft.ApiManagement/service/apim-synthetic-sandbox"
+)
+
+
+async def seed_gateways(
+    backends: Backends,
+    config: SeedConfig,
+    world: World,
+    principals: Mapping[str, str],
+    tally: Tally,
+) -> None:
+    """One SYNTHETIC observe-mode gateway registration in the first domain, so the gateways pages
+    have data (#209). Registered through ``GatewayStore.create``; the id is deterministic, so a
+    re-run finds it and creates nothing. It carries no workspace, so the poll role skips it."""
+    domain = world.domain_id(0)
+    gateway_id = gateway_id_for(config.customer, domain, SEED_GATEWAY_ARM_ID)
+    if await backends.gateways.get(config.customer, domain, gateway_id) is not None:
+        tally.record("gateways", created=0, existing=1)
+        return
+    stamp = datetime.now(UTC).replace(microsecond=0)
+    await backends.gateways.create(
+        GatewayRegistration(
+            id=gateway_id,
+            customer_id=config.customer,
+            domain_id=domain,
+            cloud=cast(Any, config.cloud),
+            arm_resource_id=SEED_GATEWAY_ARM_ID,
+            name="apim-synthetic-sandbox",
+            tier="standard_v2",
+            created_at=stamp,
+            updated_at=stamp,
+            registered_by=principals["admin"].rsplit(":", 1)[-1],
+        )
+    )
+    tally.record("gateways", created=1, existing=0)
+
+
 # -- catalog entities ------------------------------------------------------------------------
 
 
-async def seed_entities(
-    backends: Backends, scope: IdentityScope, directory: Path, tally: Tally
-) -> None:
-    """Write the generated entities (domains, owners, models, grounding sources, tools, agents,
-    people) through ``CatalogRepository.create_entity`` under the workers' own scope. The ingestion
-    projection only ever writes edges, so without this the map has no nodes. Entity ids are
-    canonical and independent of the time rebase, so a re-run finds them and creates nothing."""
+def _entity_docs(scope: IdentityScope, directory: Path) -> Iterator[tuple[str, Doc]]:
+    """Generated entity documents inside the workers' scope: (kind, document)."""
     allowed = frozenset(scope.allowed_domains)
     for name in ENTITY_FILES:
         path = directory / name
@@ -1093,12 +1130,46 @@ async def seed_entities(
                 or domain not in allowed
             ):
                 continue  # outside the workers' scope: fail closed, never widen
-            if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            yield kind, doc
+
+
+async def existing_entity_ids(
+    backends: Backends, scope: IdentityScope, directory: Path
+) -> frozenset[str]:
+    """Ids of generated entities the catalog already holds (call before publishing events)."""
+    found: set[str] = set()
+    for _, doc in _entity_docs(scope, directory):
+        if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            found.add(doc["id"])
+    return frozenset(found)
+
+
+async def seed_entities(
+    backends: Backends,
+    scope: IdentityScope,
+    directory: Path,
+    tally: Tally,
+    preexisting: frozenset[str] | None = None,
+) -> None:
+    """Write the generated entities (domains, owners, models, grounding sources, tools, agents,
+    people) through ``CatalogRepository.create_entity`` under the workers' own scope. The ingestion
+    projection only ever writes edges and, for entities it has seen telemetry for, the same
+    entity ids, so without this the map has no nodes. Entity ids are canonical and independent of
+    the time rebase, so a re-run finds them and creates nothing.
+
+    An entity found now that was not there before the events were pushed was created by the
+    projection workers during this run: it is seeded data, not "skipped existing" (#211), so
+    only ``preexisting`` ids are tallied as existing."""
+    for kind, doc in _entity_docs(scope, directory):
+        if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            if preexisting is None or doc["id"] in preexisting:
                 tally.record("entities", created=0, existing=1)
-                continue
-            entity = ENTITY_MODELS[kind].model_validate(doc)
-            await backends.catalog.create_entity(scope, cast(Any, entity))
-            tally.record("entities", created=1, existing=0)
+            else:
+                tally.record("entities", created=1, existing=0)
+            continue
+        entity = ENTITY_MODELS[kind].model_validate(doc)
+        await backends.catalog.create_entity(scope, cast(Any, entity))
+        tally.record("entities", created=1, existing=0)
 
 
 # -- time rebase -----------------------------------------------------------------------------
@@ -1262,6 +1333,16 @@ async def run_seed(
     principals = await seed_grants(backends, config, world, tally, env)
     await seed_prices(backends, tally)
 
+    scope = await worker_scope(backends, config)
+    missing = sorted(set(world_domains(world)) - set(scope.allowed_domains))
+    if missing:
+        raise SeedError(
+            f"the worker scope lacks {len(missing)} seeded domains; grants did not apply"
+        )
+    # Entities that exist BEFORE the events are pushed are the only genuinely pre-existing ones;
+    # any that show up later were written by the projection workers during this run (#211).
+    preexisting = await existing_entity_ids(backends, scope, workdir)
+
     if publishing:
         lines = await asyncio.to_thread(hub_lines, workdir, now() - NEWEST_AGE)
         sent = await asyncio.to_thread(backends.hub.publish, iter(lines))
@@ -1269,17 +1350,12 @@ async def run_seed(
     else:
         log("the ledger already holds events; not publishing again")
 
-    scope = await worker_scope(backends, config)
-    missing = sorted(set(world_domains(world)) - set(scope.allowed_domains))
-    if missing:
-        raise SeedError(
-            f"the worker scope lacks {len(missing)} seeded domains; grants did not apply"
-        )
     await seed_recommendations(backends, scope, workdir, spec["review_limit"], tally)
     await seed_evaluations(backends, scope, world, spec["evaluation_subjects"], tally)
     await seed_intents(backends, world, principals, tally)
     await seed_reports(backends, world, principals, tally)
     await seed_mcp_servers(backends, config, principals, tally)
+    await seed_gateways(backends, config, world, principals, tally)
 
     log(f"waiting up to {config.wait_seconds:.0f}s for the workers to land the events")
     after = await wait_for_landing(
@@ -1291,7 +1367,7 @@ async def run_seed(
     )
     # After the wait: the entities would otherwise make the catalog look landed before the
     # projection's edges are there.
-    await seed_entities(backends, scope, workdir, tally)
+    await seed_entities(backends, scope, workdir, tally, preexisting)
     # The aggregates role drains in event order, so the newest (today) buckets land last and are
     # the ones the 1-day cost window reads. Wait for them, but never fail on it.
     _, newest_rebased = observed_bounds(workdir)
@@ -1313,6 +1389,32 @@ async def run_seed(
         # workers may still be draining them); none of that is new seeding.
         created = max(after[name] - before[name], 0) if publishing else 0
         tally.record(name, created=created, existing=after[name] - created)
+    return tally.summary()
+
+
+async def run_grants_only(
+    config: SeedConfig,
+    backends: Backends,
+    workdir: Path,
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> Doc:
+    """Apply only the grants (worker principal, personas, operator).
+
+    The workers' evaluation role refuses to start until the worker principal holds its pilot
+    domain (``evaluation_pilot_domain_out_of_scope``), so a fresh ``make stack-up`` grants first
+    and starts the app profile second (#205). This publishes nothing and waits for no worker; the
+    full seed afterwards finds the grants and reports them unchanged.
+    """
+    env = dict(os.environ) if environ is None else environ
+    tally = Tally()
+    gen = generate_config(config)
+    await asyncio.to_thread(generate, gen, workdir)
+    await seed_grants(backends, config, World(gen), tally, env)
+    # The price snapshot too: a worker loads its price table at start and then refreshes it only
+    # every price_refresh_seconds, so events priced before it sees the snapshot are stored
+    # unresolved and the cost forecast answers 409 price_version_unresolved (#209 item 2).
+    await seed_prices(backends, tally)
     return tally.summary()
 
 
@@ -1420,6 +1522,7 @@ def assemble_backends(
     from neurosphere_core.actions.cosmos_store import CosmosExecutionControl as Control
     from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
     from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
+    from neurosphere_core.gateway import CosmosGatewayStore
     from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
     from neurosphere_core.mcp.cosmos_store import CosmosMcpServerStore
     from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
@@ -1467,13 +1570,16 @@ def assemble_backends(
         ),
         reports=CosmosReportStore.from_client(cosmos, database=config.database),
         mcp=CosmosMcpServerStore.from_client(cosmos, database=config.database),
+        gateways=CosmosGatewayStore.from_client(cosmos, database=config.database),
     )
 
 
-async def _seed(config: SeedConfig) -> Doc:
+async def _seed(config: SeedConfig, *, grants_only: bool = False) -> Doc:
     with tempfile.TemporaryDirectory(prefix="ns-seed-") as tmp:
         async with AsyncExitStack() as stack:
             backends = await open_backends(config, stack)
+            if grants_only:
+                return await run_grants_only(config, backends, Path(tmp))
             return await run_seed(config, backends, Path(tmp))
 
 
@@ -1588,6 +1694,11 @@ def _parser() -> argparse.ArgumentParser:
         "--operator-object-id", help="also grant this Entra object id admin (your sign-in)"
     )
     parser.add_argument(
+        "--grants-only",
+        action="store_true",
+        help="apply the grants and nothing else (no publish, no wait for workers); local only",
+    )
+    parser.add_argument(
         "--hosted",
         type=Path,
         metavar="REGISTRATION",
@@ -1642,6 +1753,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     args = _parser().parse_args(argv)
     environ = dict(os.environ) if env is None else dict(env)
     if args.hosted is not None:
+        if args.grants_only:
+            print("REFUSED: --grants-only is for the local stack only", file=sys.stderr)
+            return EXIT_REFUSED
         return _main_hosted(args, environ)
     try:
         config = resolve_config(args.profile, args.operator_object_id, environ)
@@ -1650,7 +1764,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
         return EXIT_REFUSED
     try:
         with scoped_environ({**environ, **config.environ()}):
-            summary = asyncio.run(_seed(config))
+            summary = asyncio.run(
+                _seed(config, grants_only=True) if args.grants_only else _seed(config)
+            )
     except (SeedError, NeuroSphereError, ValidationError, OSError) as exc:
         print(f"FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
         return EXIT_FAILED

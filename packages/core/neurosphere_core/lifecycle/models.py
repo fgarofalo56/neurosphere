@@ -131,6 +131,8 @@ class LifecycleOutcome(_Frozen):
     reidentifiable: bool | None = None
     policy_status: Literal["set", "unset"] = "unset"
     not_before: datetime | None = None
+    #: True when the decision and audit ran but no mutating target method was called.
+    dry_run: bool = False
 
 
 class LegalHold(_Frozen):

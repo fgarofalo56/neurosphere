@@ -6,7 +6,9 @@ expired by the engine, prompt/response bodies are not retained, and the status s
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -71,3 +73,20 @@ def load_policy(raw: Mapping[str, Any] | None) -> PolicyState:
     except ValidationError:
         return PolicyState(status="unset", problem="invalid")
     return PolicyState(status="set", policy=policy)
+
+
+def load_policy_file(path: str | Path | None) -> PolicyState:
+    """Load a JSON retention policy file; unset, unreadable or invalid files fail closed to unset.
+
+    ``problem`` is ``not_configured`` (no path), ``file_unreadable`` (missing, unreadable or not
+    JSON) or ``invalid`` (valid JSON that is not a valid policy). Never raises, never defaults.
+    """
+    if path is None or not str(path).strip():
+        return UNSET
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return PolicyState(status="unset", problem="file_unreadable")
+    if not isinstance(raw, dict):
+        return PolicyState(status="unset", problem="invalid")
+    return load_policy(raw)
