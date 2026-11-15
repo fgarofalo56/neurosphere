@@ -210,9 +210,9 @@ Logs Ingestion, Splunk HEC or syslog sinks; async export jobs; audit retention o
 | 1 | verifying | prp-40-audit-siem | `siem_eventhubs.py`, `siem_health.py`, exporter guarded + `export_signal`; `packages/core/tests/audit_siem` |
 | 2 | verifying | prp-40-audit-siem | `audit_siem` optional component, `SIEM_SINK_HEALTH`; deviation: one-line allowance in `runtime_data/test_data_builder.py` for `audit_siem` disabled |
 | 3 | verifying | prp-40-audit-siem | `audit/{search_store,search,models,access}.py`; store published from `data.py` (Cosmos, or the repository twin with an overridden repository); emulator test written, not run (no compose) |
-| 4 | verifying | prp-40-audit-siem | `audit/{export,denials,siem_status}.py` registered from `audit.register`; `ui_adapters/audit.py` unchanged (shared `auditable_chain` imported); route inventory test added |
+| 4 | verifying | prp-40-audit-siem | `audit/{export,denials,siem_status}.py` registered by a new `audit.router.register_views` hook appended to `routers.py` REGISTERED (Tier-2 line; keeps the pinned `audit.register` prefixes); `ui_adapters/audit.py` unchanged (shared `auditable_chain` imported); route inventory test added |
 | 5 | verifying | prp-40-audit-siem | PRP-21 shipped; no W14 PRP holds `authz/dependencies.py` (PRP-41 lists it must_not_touch; PRP-48 owns it in W15). Hook `PrescopeAudit` in `current_derivation`, `audit/prescope.py`, installed by `data.py` |
-| 6 | todo | | |
+| 6 | in-progress | prp-40-audit-siem | Done on branch: runbook `docs/runbooks/audit-siem.md` + mkdocs nav, route inventory test, env var list (below). Left for merge: rebase, Tier-3 regen (`openapi.json` drift test fails until regenerated, docs/reference), changelog fragment, completion note, CI |
 
 ## Completion note (filled at ship)
 - Date and PR:

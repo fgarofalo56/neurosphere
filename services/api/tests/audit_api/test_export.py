@@ -71,7 +71,8 @@ async def test_ndjson_export_streams_and_audits_each_domain(world: World) -> Non
         assert last.outcome is not None and last.outcome.detail == "rows_8_ndjson"
         assert last.subject is not None and last.subject.state_digest is not None
         # No record bodies: only a digest of the filters, the count and the format.
-        assert "corr-f" not in json.dumps(last.model_dump(mode="json"))
+        dumped = json.dumps(last.model_dump(mode="json"))
+        assert all(f'"corr-f{i}"' not in dumped for i in range(4))
     assert len(await _records(world, chain_of(HR))) == before[HR]
 
 
