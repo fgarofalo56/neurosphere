@@ -340,6 +340,10 @@ class InMemoryPolicyAdminRepository:
     Writes land in the wrapped read repository, so a deriver built on ``self.reader`` sees an
     accepted change after the head bump, exactly as derivation over Cosmos does. Tests and the
     local sandbox only; never a production store.
+
+    A document seeded straight into ``reader`` has no ETag here until :meth:`get_with_etag` has
+    read it, so a replace of a seeded document is refused as stale until then. This fails
+    closed; authors of the sandbox and of PRP-39 tests must read before they replace.
     """
 
     def __init__(

@@ -27,6 +27,7 @@ from collections.abc import Iterator, Mapping
 from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, Final, Literal, get_args
+from urllib.parse import urlsplit
 
 from neurosphere_contracts.admin.v1.budget import SpendBudget
 from neurosphere_contracts.admin.v1.connector_config import ConnectorConfig
@@ -146,7 +147,7 @@ def _check_credential(pointer: str, node: Mapping[str, Any], cloud: str | None) 
     if node["kind"] == "key_vault_secret":
         if not has_uri or has_mi:
             raise _refuse(pointer, "key_vault_secret needs secret_uri and nothing else")
-        host = str(node["secret_uri"]).split("/")[2]
+        host = urlsplit(str(node["secret_uri"])).hostname or ""
         if cloud is not None and not host.endswith(_VAULT_SUFFIX[cloud]):
             raise _refuse(f"{pointer}/secret_uri", "vault is not on the deployment cloud")
     elif not has_mi or has_uri:
