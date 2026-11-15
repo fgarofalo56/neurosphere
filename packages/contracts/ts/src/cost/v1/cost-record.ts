@@ -162,6 +162,10 @@ export interface CostRecord {
    * RFC 3339 timestamp in UTC (Z suffix).
    */
   recorded_at: string;
+  /**
+   * Cost allocation tags carried from the source (for example the nscostcenter resource tag mapped to cost_center, #190). Null or absent when the source reports none. Added in schema_version 1.1.0; records without tags stay valid.
+   */
+  tags?: CostTags | null;
 }
 /**
  * Inclusive provider billing period. start_date <= end_date is checked by validate_billing_period_order.
@@ -238,4 +242,17 @@ export interface CostReconciliation {
    * When reconciliation last ran (RFC 3339 UTC). Null when never.
    */
   reconciled_at?: Timestamp | null;
+}
+/**
+ * At most 16 entries; keys lowercase ^[a-z][a-z0-9_.-]{0,62}$; values 1 to 128 characters. The reserved key cost_center follows the catalog/v1 Grant cost_center pattern. Same grammar as admin/v1 common cost_tags. The generated Pydantic model keeps the key and value bounds but not the entry count or the cost_center rule; both are checked by tests/contracts/validators.py::validate_cost_tags.
+ *
+ * This interface was referenced by `CostRecord`'s JSON-Schema
+ * via the `definition` "tags".
+ */
+export interface CostTags {
+  /**
+   * This interface was referenced by `CostTags`'s JSON-Schema definition
+   * via the `patternProperty` "^[a-z][a-z0-9_.-]{0,62}$".
+   */
+  [k: string]: string | undefined;
 }

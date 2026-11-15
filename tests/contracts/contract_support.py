@@ -38,7 +38,7 @@ MANIFEST_NAMES = ("index.json", "manifest.json", "expectations.json")
 
 # Definition libraries: ``$defs`` only, never validated directly, so they have no examples.
 # Explicit by design; test_schemas.py checks it agrees with the manifests' own declarations.
-LIBRARY_SCHEMAS = frozenset({"catalog/v1/common.schema.json"})
+LIBRARY_SCHEMAS = frozenset({"admin/v1/common.schema.json", "catalog/v1/common.schema.json"})
 
 
 class NetworkBlockedError(RuntimeError):

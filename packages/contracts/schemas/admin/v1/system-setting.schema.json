@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/system-setting.schema.json",
+  "title": "SystemSetting",
+  "description": "One runtime setting the operator manages from the console instead of environment variables (PRP-45). setting_key selects which typed member is present: exactly the member named by setting_key is set and no other. Each member holds endpoints, Azure resource ids and a CredentialReference only, never a key, token or connection string. enabled false keeps the configuration but disables the component (the first-run checklist reports it as disabled). Core validates the per-key rule again (ADMIN_KIND_MODELS, PRP-65) because the generated Pydantic model carries every member as optional.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "setting_key", "enabled"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "setting_key": {
+      "type": "string",
+      "enum": ["copilot", "judge", "search", "scan", "mcp_server", "write_target"]
+    },
+    "enabled": { "type": "boolean" },
+    "copilot": { "$ref": "#/$defs/model_endpoint" },
+    "judge": { "$ref": "#/$defs/model_endpoint" },
+    "search": { "$ref": "#/$defs/search" },
+    "scan": { "$ref": "#/$defs/scan" },
+    "mcp_server": { "$ref": "#/$defs/mcp_server" },
+    "write_target": { "$ref": "#/$defs/write_target" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "setting_key": { "const": "copilot" } }, "required": ["setting_key"] },
+      "then": {
+        "required": ["copilot"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "copilot"] }
+      }
+    },
+    {
+      "if": { "properties": { "setting_key": { "const": "judge" } }, "required": ["setting_key"] },
+      "then": {
+        "required": ["judge"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "judge"] }
+      }
+    },
+    {
+      "if": { "properties": { "setting_key": { "const": "search" } }, "required": ["setting_key"] },
+      "then": {
+        "required": ["search"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "search"] }
+      }
+    },
+    {
+      "if": { "properties": { "setting_key": { "const": "scan" } }, "required": ["setting_key"] },
+      "then": {
+        "required": ["scan"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "scan"] }
+      }
+    },
+    {
+      "if": {
+        "properties": { "setting_key": { "const": "mcp_server" } },
+        "required": ["setting_key"]
+      },
+      "then": {
+        "required": ["mcp_server"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "mcp_server"] }
+      }
+    },
+    {
+      "if": {
+        "properties": { "setting_key": { "const": "write_target" } },
+        "required": ["setting_key"]
+      },
+      "then": {
+        "required": ["write_target"],
+        "propertyNames": { "enum": ["schema_version", "setting_key", "enabled", "write_target"] }
+      }
+    }
+  ],
+  "$defs": {
+    "model_endpoint": {
+      "title": "ModelEndpointSetting",
+      "description": "An Azure OpenAI / Foundry model deployment used by the copilot or the evaluation judge.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint", "deployment", "api_version", "resource_id", "credential"],
+      "properties": {
+        "endpoint": { "$ref": "common.schema.json#/$defs/https_url" },
+        "deployment": {
+          "description": "Model deployment name.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "api_version": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(-preview)?$"
+        },
+        "resource_id": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/azure_resource_id" }, { "type": "null" }]
+        },
+        "credential": { "$ref": "credential-reference.schema.json" }
+      }
+    },
+    "search": {
+      "title": "SearchSetting",
+      "description": "Azure AI Search service and index used for catalog and evidence search.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint", "index_name", "resource_id", "credential"],
+      "properties": {
+        "endpoint": { "$ref": "common.schema.json#/$defs/https_url" },
+        "index_name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,127}$" },
+        "resource_id": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/azure_resource_id" }, { "type": "null" }]
+        },
+        "credential": { "$ref": "credential-reference.schema.json" }
+      }
+    },
+    "scan": {
+      "title": "ScanSetting",
+      "description": "Scheduled discovery scan over the listed subscriptions or resource groups.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interval_seconds", "scopes", "credential"],
+      "properties": {
+        "interval_seconds": { "type": "integer", "minimum": 300, "maximum": 604800 },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^/subscriptions/[0-9a-fA-F-]{36}(/resourceGroups/[A-Za-z0-9._()-]{1,90})?$"
+          }
+        },
+        "credential": { "$ref": "credential-reference.schema.json" }
+      }
+    },
+    "mcp_server": {
+      "title": "McpServerSetting",
+      "description": "The NeuroSphere MCP server endpoint published to clients (PRP-22).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["endpoint", "resource_id", "credential"],
+      "properties": {
+        "endpoint": { "$ref": "common.schema.json#/$defs/https_url" },
+        "resource_id": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/azure_resource_id" }, { "type": "null" }]
+        },
+        "credential": {
+          "anyOf": [{ "$ref": "credential-reference.schema.json" }, { "type": "null" }]
+        }
+      }
+    },
+    "write_target": {
+      "title": "WriteTargetSetting",
+      "description": "Resource the action executor writes to (an API Management gateway or a Foundry project).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_kind", "resource_id", "credential"],
+      "properties": {
+        "target_kind": { "type": "string", "enum": ["apim", "foundry"] },
+        "resource_id": { "$ref": "common.schema.json#/$defs/azure_resource_id" },
+        "credential": { "$ref": "credential-reference.schema.json" }
+      }
+    }
+  }
+}

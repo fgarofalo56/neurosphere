@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "connector_id": "billing-agency-a",
+  "connector_kind": "billing_export",
+  "domain_ids": [
+    "government:agency-a:neurosphere:domain:benefits"
+  ],
+  "settings": {
+    "export_container": "cost-exports"
+  },
+  "credential": {
+    "kind": "key_vault_secret",
+    "secret_uri": "https://kv-ns-agency.vault.usgovcloudapi.net/secrets/billing-export/0123456789abcdef0123456789abcdef"
+  },
+  "enabled": true
+}

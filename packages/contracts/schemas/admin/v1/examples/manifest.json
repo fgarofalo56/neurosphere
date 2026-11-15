@@ -1,0 +1,669 @@
+{
+  "description": "Examples for admin v1 (PRP-37). Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error (instance_path as a JSON Pointer, validator keyword) that must appear in the validation error tree. Consumed by tests/contracts.",
+  "library_schemas": [
+    "common.schema.json"
+  ],
+  "examples": [
+    {
+      "file": "valid/credential-reference.key-vault-secret.json",
+      "schema": "credential-reference.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/credential-reference.government-key-vault.json",
+      "schema": "credential-reference.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/credential-reference.managed-identity.json",
+      "schema": "credential-reference.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/credential-reference.secret-value.json",
+      "schema": "credential-reference.schema.json",
+      "valid": false,
+      "derived_from": "valid/credential-reference.key-vault-secret.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no member can hold a credential value"
+    },
+    {
+      "file": "invalid/credential-reference.sas-url.json",
+      "schema": "credential-reference.schema.json",
+      "valid": false,
+      "derived_from": "valid/credential-reference.key-vault-secret.json",
+      "expected_error": {
+        "instance_path": "/secret_uri",
+        "keyword": "pattern"
+      },
+      "reason": "only a Key Vault secret identifier, never a signed URL"
+    },
+    {
+      "file": "invalid/credential-reference.managed-identity-with-secret-uri.json",
+      "schema": "credential-reference.schema.json",
+      "valid": false,
+      "derived_from": "valid/credential-reference.managed-identity.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "not"
+      },
+      "reason": "exactly one reference form"
+    },
+    {
+      "file": "invalid/credential-reference.key-vault-without-uri.json",
+      "schema": "credential-reference.schema.json",
+      "valid": false,
+      "derived_from": "valid/credential-reference.key-vault-secret.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "key_vault_secret needs secret_uri"
+    },
+    {
+      "file": "valid/role-assignment-change.assign-viewer.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/role-assignment-change.assign-admin-time-bound.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/role-assignment-change.remove.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/role-assignment-change.admin-without-expiry.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/role-assignment-change.assign-admin-time-bound.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "privileged roles are time-bound (PolicyRoleAssignment)"
+    },
+    {
+      "file": "invalid/role-assignment-change.upn-principal.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/role-assignment-change.assign-viewer.json",
+      "expected_error": {
+        "instance_path": "/principal_id",
+        "keyword": "pattern"
+      },
+      "reason": "principal ids are pseudonymous, never a UPN or email"
+    },
+    {
+      "file": "invalid/role-assignment-change.wildcard-domain.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/role-assignment-change.assign-viewer.json",
+      "expected_error": {
+        "instance_path": "/domain_ids/0",
+        "keyword": "pattern"
+      },
+      "reason": "no wildcard or all-domains form"
+    },
+    {
+      "file": "invalid/role-assignment-change.free-text-reason.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/role-assignment-change.assign-viewer.json",
+      "expected_error": {
+        "instance_path": "/reason",
+        "keyword": "pattern"
+      },
+      "reason": "reasons are machine codes, never free text"
+    },
+    {
+      "file": "invalid/role-assignment-change.assign-without-role.json",
+      "schema": "role-assignment-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/role-assignment-change.assign-viewer.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "assign names the role"
+    },
+    {
+      "file": "valid/domain-membership-change.add.json",
+      "schema": "domain-membership-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/domain-membership-change.email-principal.json",
+      "schema": "domain-membership-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-membership-change.add.json",
+      "expected_error": {
+        "instance_path": "/principal_id",
+        "keyword": "pattern"
+      },
+      "reason": "principal ids are pseudonymous"
+    },
+    {
+      "file": "invalid/domain-membership-change.non-domain-id.json",
+      "schema": "domain-membership-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-membership-change.add.json",
+      "expected_error": {
+        "instance_path": "/domain_id",
+        "keyword": "pattern"
+      },
+      "reason": "membership targets a Domain id"
+    },
+    {
+      "file": "valid/resource-grant-change.read-export.json",
+      "schema": "resource-grant-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/resource-grant-change.missing-expiry.json",
+      "schema": "resource-grant-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/resource-grant-change.read-export.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "grants are always time-bound"
+    },
+    {
+      "file": "invalid/resource-grant-change.unknown-permission.json",
+      "schema": "resource-grant-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/resource-grant-change.read-export.json",
+      "expected_error": {
+        "instance_path": "/permissions/1",
+        "keyword": "enum"
+      },
+      "reason": "grant permissions are the closed resource set"
+    },
+    {
+      "file": "valid/revocation-request.until-lifted.json",
+      "schema": "revocation-request.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/revocation-request.issued-before.json",
+      "schema": "revocation-request.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/revocation-request.free-text-reason.json",
+      "schema": "revocation-request.schema.json",
+      "valid": false,
+      "derived_from": "valid/revocation-request.until-lifted.json",
+      "expected_error": {
+        "instance_path": "/reason",
+        "keyword": "pattern"
+      },
+      "reason": "reasons are machine codes"
+    },
+    {
+      "file": "invalid/revocation-request.unknown-mode.json",
+      "schema": "revocation-request.schema.json",
+      "valid": false,
+      "derived_from": "valid/revocation-request.until-lifted.json",
+      "expected_error": {
+        "instance_path": "/mode",
+        "keyword": "enum"
+      },
+      "reason": "closed mode set"
+    },
+    {
+      "file": "valid/revocation-status.not-revoked.json",
+      "schema": "revocation-status.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/revocation-status.revoked.json",
+      "schema": "revocation-status.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/revocation-status.not-revoked-with-reason.json",
+      "schema": "revocation-status.schema.json",
+      "valid": false,
+      "derived_from": "valid/revocation-status.not-revoked.json",
+      "expected_error": {
+        "instance_path": "/reason",
+        "keyword": "type"
+      },
+      "reason": "revocation members are null when not revoked"
+    },
+    {
+      "file": "invalid/revocation-status.revoked-without-time.json",
+      "schema": "revocation-status.schema.json",
+      "valid": false,
+      "derived_from": "valid/revocation-status.revoked.json",
+      "expected_error": {
+        "instance_path": "/revoked_at",
+        "keyword": "type"
+      },
+      "reason": "a revoked principal has revoked_at"
+    },
+    {
+      "file": "invalid/revocation-status.unbounded-propagation.json",
+      "schema": "revocation-status.schema.json",
+      "valid": false,
+      "derived_from": "valid/revocation-status.not-revoked.json",
+      "expected_error": {
+        "instance_path": "/propagation_bound_seconds",
+        "keyword": "maximum"
+      },
+      "reason": "NS_REVOCATION_TTL_SECONDS is at most 900"
+    },
+    {
+      "file": "valid/principal-access-summary.typical.json",
+      "schema": "principal-access-summary.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/principal-access-summary.privileged-without-expiry.json",
+      "schema": "principal-access-summary.schema.json",
+      "valid": false,
+      "derived_from": "valid/principal-access-summary.typical.json",
+      "expected_error": {
+        "instance_path": "/assignments/1/expires_at",
+        "keyword": "type"
+      },
+      "reason": "privileged assignments always show an expiry"
+    },
+    {
+      "file": "invalid/principal-access-summary.email-on-principal.json",
+      "schema": "principal-access-summary.schema.json",
+      "valid": false,
+      "derived_from": "valid/principal-access-summary.typical.json",
+      "expected_error": {
+        "instance_path": "/principal",
+        "keyword": "additionalProperties"
+      },
+      "reason": "no direct identifier on the principal"
+    },
+    {
+      "file": "valid/admin-config-document.domain.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/admin-config-document.version-zero.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/version",
+        "keyword": "minimum"
+      },
+      "reason": "versions start at 1"
+    },
+    {
+      "file": "invalid/admin-config-document.unknown-kind.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/kind",
+        "keyword": "enum"
+      },
+      "reason": "closed admin kind set"
+    },
+    {
+      "file": "invalid/admin-config-document.upn-updated-by.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/updated_by",
+        "keyword": "pattern"
+      },
+      "reason": "writers are pseudonymous principals"
+    },
+    {
+      "file": "valid/producer-record.active.json",
+      "schema": "producer-record.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/producer-record.plaintext-secret.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/secret_sha256",
+        "keyword": "pattern"
+      },
+      "reason": "only the SHA-256 digest is stored"
+    },
+    {
+      "file": "invalid/producer-record.unknown-observation-kind.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/sources/0/observation_kind",
+        "keyword": "enum"
+      },
+      "reason": "closed observation kinds"
+    },
+    {
+      "file": "invalid/producer-record.no-sources.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/sources",
+        "keyword": "minItems"
+      },
+      "reason": "a producer publishes for at least one source"
+    },
+    {
+      "file": "valid/producer-secret-issued.rotation.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/producer-secret-issued.retrievable.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-secret-issued.rotation.json",
+      "expected_error": {
+        "instance_path": "/shown_once",
+        "keyword": "const"
+      },
+      "reason": "a producer secret is shown once only"
+    },
+    {
+      "file": "invalid/producer-secret-issued.weak-secret.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-secret-issued.rotation.json",
+      "expected_error": {
+        "instance_path": "/secret",
+        "keyword": "pattern"
+      },
+      "reason": "at least 256 bits"
+    },
+    {
+      "file": "valid/connector-config.gateway-poll.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/connector-config.government-billing-export.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/connector-config.otel-no-credential.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/connector-config.nested-setting.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/settings/include_mcp",
+        "keyword": "anyOf"
+      },
+      "reason": "settings are scalars only"
+    },
+    {
+      "file": "invalid/connector-config.secret-like-setting-key.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/settings",
+        "keyword": "not"
+      },
+      "reason": "a credential is never a setting"
+    },
+    {
+      "file": "invalid/connector-config.wildcard-domain.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/domain_ids/0",
+        "keyword": "pattern"
+      },
+      "reason": "explicit domains only"
+    },
+    {
+      "file": "valid/domain-definition.finance.json",
+      "schema": "domain-definition.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/domain-definition.government-control.json",
+      "schema": "domain-definition.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/domain-definition.region-display-name.json",
+      "schema": "domain-definition.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-definition.finance.json",
+      "expected_error": {
+        "instance_path": "/residency_region",
+        "keyword": "pattern"
+      },
+      "reason": "ARM region names"
+    },
+    {
+      "file": "invalid/domain-definition.unknown-classification.json",
+      "schema": "domain-definition.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-definition.finance.json",
+      "expected_error": {
+        "instance_path": "/classification",
+        "keyword": "enum"
+      },
+      "reason": "catalog classification vocabulary"
+    },
+    {
+      "file": "valid/budget.monthly-cost-center.json",
+      "schema": "budget.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/budget.annual-unfiltered.json",
+      "schema": "budget.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/budget.float-amount.json",
+      "schema": "budget.schema.json",
+      "valid": false,
+      "derived_from": "valid/budget.monthly-cost-center.json",
+      "expected_error": {
+        "instance_path": "/amount",
+        "keyword": "type"
+      },
+      "reason": "money is a decimal string"
+    },
+    {
+      "file": "invalid/budget.cost-center-with-space.json",
+      "schema": "budget.schema.json",
+      "valid": false,
+      "derived_from": "valid/budget.monthly-cost-center.json",
+      "expected_error": {
+        "instance_path": "/tags_filter/cost_center",
+        "keyword": "pattern"
+      },
+      "reason": "Grant cost_center pattern"
+    },
+    {
+      "file": "valid/price-sheet-upload.provider-sheet-government.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/price-sheet-upload.retail-prices.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/price-sheet-upload.retail-prices-for-government.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "/clouds",
+        "keyword": "const"
+      },
+      "reason": "Retail Prices API covers Commercial only"
+    },
+    {
+      "file": "invalid/price-sheet-upload.float-price.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "/rows/0/retail_price",
+        "keyword": "type"
+      },
+      "reason": "money is a decimal string"
+    },
+    {
+      "file": "invalid/price-sheet-upload.asserted-content-hash.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "the server stamps the hash"
+    },
+    {
+      "file": "valid/review-policy-document.defaults-with-override.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/review-policy-document.no-maker-checker.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/review-policy-document.defaults-with-override.json",
+      "expected_error": {
+        "instance_path": "/kind_defaults",
+        "keyword": "contains"
+      },
+      "reason": "maker_checker must have a policy (fail closed otherwise)"
+    },
+    {
+      "file": "invalid/review-policy-document.zero-sla.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/review-policy-document.defaults-with-override.json",
+      "expected_error": {
+        "instance_path": "/kind_defaults/0/policy/sla_seconds",
+        "keyword": "minimum"
+      },
+      "reason": "durations are positive"
+    },
+    {
+      "file": "valid/system-setting.copilot.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/system-setting.government-write-target.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/system-setting.api-key-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "/copilot",
+        "keyword": "additionalProperties"
+      },
+      "reason": "endpoints and references only, never a key"
+    },
+    {
+      "file": "invalid/system-setting.second-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "enum"
+      },
+      "reason": "exactly the member named by setting_key"
+    },
+    {
+      "file": "invalid/system-setting.missing-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "the member named by setting_key is present"
+    },
+    {
+      "file": "valid/first-run-checklist-item.complete.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/first-run-checklist-item.copilot-missing.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/first-run-checklist-item.missing-without-reason.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": false,
+      "derived_from": "valid/first-run-checklist-item.copilot-missing.json",
+      "expected_error": {
+        "instance_path": "/reason",
+        "keyword": "type"
+      },
+      "reason": "every incomplete item says why"
+    },
+    {
+      "file": "invalid/first-run-checklist-item.external-doc-link.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": false,
+      "derived_from": "valid/first-run-checklist-item.copilot-missing.json",
+      "expected_error": {
+        "instance_path": "/doc_path",
+        "keyword": "pattern"
+      },
+      "reason": "repository documentation paths only"
+    },
+    {
+      "file": "valid/admin-config-document.producer.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/admin-config-document.kind-body-mismatch.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/body",
+        "keyword": "required"
+      },
+      "reason": "the body is the document of the named kind"
+    }
+  ]
+}

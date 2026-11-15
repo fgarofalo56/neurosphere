@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "principal": {
+    "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "principal_kind": "user"
+  },
+  "customer_id": "contoso",
+  "cloud": "commercial",
+  "policy_version": "pv-42",
+  "memberships": [
+    "commercial:contoso:neurosphere:domain:finance",
+    "commercial:contoso:neurosphere:domain:hr"
+  ],
+  "assignments": [
+    {
+      "assignment_id": "ra-finance-viewer",
+      "role": "viewer",
+      "domain_ids": [
+        "commercial:contoso:neurosphere:domain:finance"
+      ],
+      "expires_at": null,
+      "reason": "joined_finance_team"
+    },
+    {
+      "assignment_id": "ra-finance-admin",
+      "role": "admin",
+      "domain_ids": [
+        "commercial:contoso:neurosphere:domain:finance"
+      ],
+      "expires_at": "2027-02-14T00:00:00Z",
+      "reason": "quarterly_access_review"
+    }
+  ],
+  "grants": [
+    {
+      "grant_id": "g-invoice-bot-read",
+      "resource_id": "commercial:contoso:foundry:agent:invoice-bot",
+      "permissions": [
+        "read"
+      ],
+      "expires_at": "2027-02-14T00:00:00Z",
+      "reason": "audit_sampling"
+    }
+  ],
+  "revocation": {
+    "schema_version": "1.0.0",
+    "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "revoked": false,
+    "mode": null,
+    "revoked_at": null,
+    "reason": null,
+    "revoked_by": null,
+    "propagation_bound_seconds": 60
+  },
+  "generated_at": "2026-11-14T09:30:00Z"
+}

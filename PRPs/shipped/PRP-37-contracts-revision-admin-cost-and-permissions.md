@@ -1,6 +1,8 @@
 ---
 name: PRP-37-contracts-revision-admin-cost-and-permissions
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 273
 priority: P0
 order: 20
 review: required
@@ -98,6 +100,7 @@ owns:
   - packages/contracts/**
   - packages/core/neurosphere_core/errors/**
   - packages/core/tests/test_errors.py
+  - packages/core/neurosphere_core/audit/builders.py
   - tests/contracts/**
   - docs/adr/0004-contract-versioning.md
 tier1:
@@ -182,16 +185,21 @@ Ingest tag mapping, ledger tag queries, API error handler changes, catalog prove
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
+| 1 | verifying | prp-37-contracts-admin | admin/v1 common, credential-reference and identity schemas, examples, bindings, credential walker; admin-config-document moved to item 2 (its body is the item-2 kind schemas) |
+| 2 | verifying | prp-37-contracts-admin | producer, connector, domain, SpendBudget (title renamed: query/v1 owns Budget), price sheet, review policy, system setting, checklist item and AdminConfigDocument (body pinned per kind); mapping tests to PriceSnapshot, ReviewPolicyRegistry, ProducerRegistration |
+| 3 | verifying | prp-37-contracts-admin | CostRecord.tags, query grant/mcp_server/grants_access_to, 4 error codes + core classes (audit denial enum mirrored), manifest caps, provenance test, additive-only baseline + test, ADR-0004 amendment; follow-up #272 for API handlers |
+| 4 | done | prp-37-contracts-admin | merge step: rebase on main, regenerate Tier-3 (openapi.json, docs/reference, status table, INDEX.md, CHANGELOG), close out |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: shipped 2026-11-15, PR #273 (branch `prp-37-contracts-admin`).
+- Provided names (for PRP-39..57 and PRP-65 authors): `neurosphere_contracts.admin.v1.<module>` / `packages/contracts/ts/src/admin/v1/<file>.ts`:
+  `common` (`$defs`: `admin_kind`, `config_version`, `reason_code`, `principal_id`, `customer_id`, `cloud`, `canonical_id`, `domain_id`, `record_id`, `slug`, `display_name`, `timestamp`, `date`, `etag`, `role`, `grant_permission`, `decimal_amount`, `currency`, `https_url`, `azure_resource_id`, `cost_tags`, `doc_path`),
+  `CredentialReference`, `AdminConfigDocument`, `RoleAssignmentChange`, `DomainMembershipChange`, `ResourceGrantChange`, `PrincipalAccessSummary`, `RevocationRequest`, `RevocationStatus`, `ProducerRecord`, `ProducerSecretIssued`, `ConnectorConfig`, `DomainDefinition`, `SpendBudget` (module `budget`), `PriceSheetUpload`, `ReviewPolicyDocument`, `SystemSetting`, `FirstRunChecklistItem`.
+  Revised: `CostRecord.tags`; `StructuredQuery` entities `grant`, `mcp_server`, relation `grants_access_to`; `ProblemDetails` codes `not_found`, `method_not_allowed`, `payload_too_large`, `internal_error`; core `NotFoundError`, `MethodNotAllowedError`, `PayloadTooLargeError`, `InternalError`.
+- Deviations: (1) admin `budget.schema.json` is titled `SpendBudget`, not `Budget`, because `query/v1` already exports `Budget` from the TS index. (2) `setting_key` contains the segment `key`; the credential walker allows it only while enum-constrained (plus `secret_uri`, pattern-bound to Key Vault hosts, and `PriceSheetRow.token_meter`, a price meter). (3) Admin change requests carry `schema_version` and machine `reason` codes (not free text); `ResourceGrantChange` has no `op` (removal is a route delete) and `RevocationRequest` names no target (the route does). (4) The audit `denial.code` enum and core `audit.builders.DenialCode` gained the four new codes, because the existing validator keeps audit denial codes equal to the taxonomy and core passes `NeuroSphereError.code` into `DenialCode` (`packages/core/neurosphere_core/audit/builders.py` is outside the declared ownership: a four-line additive Literal mirror). (5) `CostRecord.tags` and `SpendBudget.tags_filter` share one grammar; the generated Pydantic models keep key/value bounds but not the 16-entry cap or the `cost_center` pattern (ADR-0004 projection), checked by `validate_cost_tags`. (6) Item 1 committed without `admin-config-document`, which landed with item 2 because its body is pinned to the item-2 kind schemas.
+- Reviewer follow-ups applied at merge: rendered `ProblemDetails.schema_version` is now `1.1.0` (taxonomy 1.1.0); `audit/builders.py` added to the Ownership block; the status-table date line is regenerated at merge, not carried from the branch.
+- Descoped items: none.
+- OPEN gates: none live (contract-only PRP). Tier-3 regeneration at merge: `services/api/openapi.json` (drift test fails until regenerated), `docs/reference/**` (`test_api_page_states_error_taxonomy` and `test_regeneration_equals_committed_output` fail until regenerated), status table, `PRPs/INDEX.md`, CHANGELOG.
+- Env vars for the operator: none.
+- Follow-up issues: #272 (API handlers emit the four new problem codes; the frontend `TAXONOMY_CODES` list is in its scope). For PRP-42: validate per-kind `ConnectorConfig.settings` values (URL, resource id, integer) server-side, since a neutral key such as `endpoint` can still carry a 512-char secret-like string. For PRP-46: call a core validator (`validate_cost_tags`) for the 16-entry cap and `cost_center` pattern; the generated `CostTags` and admin `cost_tags` models do not enforce them. Still open: #226 (permissions and stores half is PRP-65), #190 beyond tags (ingest mapping, ledger queries), #114 (deployment-scope helper, PRP-65), #195 (catalog provenance population), #148 (non-enum items).
+- Product check (can an operator use it without editing files): no, by design: this PRP ships contracts only; the console and APIs that use them are PRP-39..57 and PRP-65.

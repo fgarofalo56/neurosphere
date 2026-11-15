@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/actions/v1/action-state.schema.json",
+  "title": "ActionState",
+  "description": "Lifecycle state of a durable ActionIntent (PRP.md section 3): drafted -> validated -> awaiting_confirmation -> awaiting_approval -> executing -> succeeded/failed/rolled_back/expired. Which (from, to) moves are legal is NOT encoded here; it is the allowlist in ./transitions.json (Clarification 11). This enum is distinct from the HITL review-item enum in ./review-item-state.schema.json (Clarification 12).",
+  "type": "string",
+  "enum": [
+    "drafted",
+    "validated",
+    "awaiting_confirmation",
+    "awaiting_approval",
+    "executing",
+    "succeeded",
+    "failed",
+    "rolled_back",
+    "expired"
+  ]
+}

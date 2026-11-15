@@ -358,7 +358,8 @@ def test_check_structured_query_field_applicability() -> None:
     assert v.check_structured_query_field_applicability(agents)
     assert set(v.FIELD_APPLICABILITY) == {
         "person", "agent", "agent_version", "model_deployment", "grounding_source", "tool",
-        "service", "domain", "owner", "policy", "recommendation", "run_reference",
+        "service", "domain", "owner", "policy", "recommendation", "run_reference", "grant",
+        "mcp_server",
         "telemetry_event", "cost_record", "evaluation_result",
     }  # fmt: skip
 

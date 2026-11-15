@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/domain-membership-change.schema.json",
+  "title": "DomainMembershipChange",
+  "description": "Request to add or remove one pseudonymous principal's membership of one domain (PRP-39 identity API). Maps onto PRP-06 PrincipalPolicy.domain_memberships. Membership alone grants no permission; roles and grants do.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "op", "principal_id", "domain_id", "reason"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "op": { "type": "string", "enum": ["add", "remove"] },
+    "principal_id": { "$ref": "common.schema.json#/$defs/principal_id" },
+    "domain_id": { "$ref": "common.schema.json#/$defs/domain_id" },
+    "reason": { "$ref": "common.schema.json#/$defs/reason_code" }
+  }
+}

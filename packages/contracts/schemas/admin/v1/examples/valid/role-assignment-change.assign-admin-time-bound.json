@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "op": "assign",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "assignment_id": "ra-finance-admin",
+  "role": "admin",
+  "domain_ids": [
+    "commercial:contoso:neurosphere:domain:finance",
+    "commercial:contoso:neurosphere:domain:hr"
+  ],
+  "expires_at": "2027-02-14T00:00:00Z",
+  "reason": "quarterly_access_review"
+}

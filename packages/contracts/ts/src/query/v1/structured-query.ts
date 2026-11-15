@@ -28,7 +28,9 @@ export type CatalogEntity =
   | "owner"
   | "policy"
   | "recommendation"
-  | "run_reference";
+  | "run_reference"
+  | "grant"
+  | "mcp_server";
 /**
  * This interface was referenced by `StructuredQuery`'s JSON-Schema
  * via the `definition` "filter".
@@ -329,7 +331,7 @@ export interface Traversal {
    * NS-02 relation names in lowercase snake_case.
    *
    * @minItems 1
-   * @maxItems 9
+   * @maxItems 10
    */
   relations: [
     (
@@ -342,6 +344,7 @@ export interface Traversal {
       | "owned_by"
       | "depends_on"
       | "supersedes"
+      | "grants_access_to"
     ),
     ...(
       | "invokes"
@@ -353,6 +356,7 @@ export interface Traversal {
       | "owned_by"
       | "depends_on"
       | "supersedes"
+      | "grants_access_to"
     )[],
   ];
   direction: "outgoing" | "incoming" | "both";

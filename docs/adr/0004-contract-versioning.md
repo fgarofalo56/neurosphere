@@ -193,3 +193,36 @@ PRP-02 item 0 amended `CapabilityMatrixEntry` in place: added `id`; changed the 
 and `ga_status` vocabularies (`deprecated` and `retired` dropped); made `authorization_scope`
 a citation string; and allowed region `*`. This is a deliberate v2-class change made in place
 because no consumer of the entry existed yet.
+
+## Amendment note (2026-11-14, PRP-37)
+
+**Additive-only is now enforced by a test.** `tests/contracts/test_additive_only.py`
+compares every `*/v1/*.schema.json` with the committed snapshot in
+`tests/contracts/fixtures/v1-baseline/` and fails on a removed schema, subschema, property or
+`$defs` entry, a removed enum value or changed `const`, a newly required property, a narrowed
+`type`, a tightened bound, any `pattern` change, a newly closed object or a changed `$ref`.
+New schemas, properties, enum values and appended `allOf` members are not compared; a new
+conditional that narrows existing documents remains a review item. Deliberate exceptions live
+in the test's `ALLOWED_TIGHTENINGS` with a reason and must be listed here; a stale entry fails
+the suite. The snapshot is refreshed (`python tests/contracts/test_additive_only.py --refresh`)
+only after an accepted change, and the allowlist is emptied in the same change.
+
+**The single v1 tightening (PRP-37 Clarification 7, an ASSUMPTION at plan time).**
+`connectors/v1/connector-manifest.schema.json`:
+
+- `scopes` items (`/properties/scopes/items`, `pattern`): at most 128 characters (was 256).
+- `documentation_url` (`/properties/documentation_url`, `maxLength` and `pattern`): at most
+  512 characters (was 2048) and at most 128 characters per path segment.
+
+Allowed in place because no manifest in the repository exceeds the caps (the contract
+examples and the SDK interop fixtures under `connectors/**` are validated by
+`tests/contracts/test_connector_manifest.py`; the reference connectors' built manifests by
+`tests/unit/connector_conformance`), and because a long opaque scope or URL path is the only
+place left in a manifest where a secret could hide. `credential_ref.name` is unchanged.
+
+**Additive v1 revisions in the same PRP:** the new `admin/v1` family; `CostRecord.tags`
+(optional, nullable; #190); `StructuredQuery` entities `grant` and `mcp_server` and relation
+`grants_access_to` (traversal `relations.maxItems` 9 to 10; #148); error codes `not_found`
+(404), `method_not_allowed` (405), `payload_too_large` (413) and `internal_error` (500) in
+`error-codes.json` (table `schema_version` 1.1.0), `ProblemDetails` and the `AuditRecord`
+denial codes, with one `neurosphere_core.errors` class each.

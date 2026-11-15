@@ -2035,7 +2035,9 @@
           "owner",
           "policy",
           "recommendation",
-          "run_reference"
+          "run_reference",
+          "grant",
+          "mcp_server"
         ],
         "title": "CatalogEntity",
         "type": "string"
@@ -3192,7 +3194,11 @@
               "stale_version",
               "rate_limited",
               "invalid_schema",
-              "dependency_transient"
+              "dependency_transient",
+              "not_found",
+              "method_not_allowed",
+              "payload_too_large",
+              "internal_error"
             ],
             "title": "Code",
             "type": "string"
@@ -14217,11 +14223,12 @@
                 "grounded_by",
                 "owned_by",
                 "depends_on",
-                "supersedes"
+                "supersedes",
+                "grants_access_to"
               ],
               "type": "string"
             },
-            "maxItems": 9,
+            "maxItems": 10,
             "minItems": 1,
             "title": "Relations",
             "type": "array"

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/first-run-checklist-item.schema.json",
+  "title": "FirstRunChecklistItem",
+  "description": "OUTPUT-ONLY. One row of the operator first-run checklist (PRP-45): whether a platform component is configured, with a machine reason and a documentation path when it is not complete. complete carries no reason; every other status carries one, so the console can say why a component is missing, disabled or failing instead of showing a blank.",
+  "readOnly": true,
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "item_id", "component", "status", "reason", "doc_path", "required"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "item_id": { "$ref": "common.schema.json#/$defs/slug" },
+    "component": {
+      "description": "Runtime component the item checks (runtime status component name, for example cosmos, copilot, search).",
+      "$ref": "common.schema.json#/$defs/slug"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "missing", "disabled", "not_applicable", "error"]
+    },
+    "reason": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/reason_code" }, { "type": "null" }]
+    },
+    "doc_path": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/doc_path" }, { "type": "null" }]
+    },
+    "required": {
+      "description": "true when the platform cannot serve its core function without this component.",
+      "type": "boolean"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "complete" } }, "required": ["status"] },
+      "then": { "properties": { "reason": { "type": "null" } } },
+      "else": { "properties": { "reason": { "type": "string" } } }
+    }
+  ]
+}

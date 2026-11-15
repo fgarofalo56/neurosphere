@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/review-policy-document.schema.json",
+  "title": "ReviewPolicyDocument",
+  "description": "Operator review policy (PRP-44), mapping onto core HITL ReviewPolicyRegistry: kind_defaults become the per-review-kind defaults and action_overrides the (review_kind, action_kind) overrides. Durations are integer seconds (core ReviewPolicy timedeltas). A kind missing from kind_defaults has no policy and fails closed (capability_unavailable), so maker_checker is required. Self-approval stays forbidden unless an override says otherwise. Rules JSON Schema cannot express are checked by tests/contracts/validators.py::check_review_policy_document: review kinds in kind_defaults and (review_kind, action_kind) pairs in action_overrides are unique.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "policy_version", "kind_defaults", "action_overrides"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "policy_version": {
+      "description": "Version label copied onto every ReviewPolicy built from this document.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "kind_defaults": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/kind_default" },
+      "contains": {
+        "properties": { "review_kind": { "const": "maker_checker" } },
+        "required": ["review_kind"]
+      }
+    },
+    "action_overrides": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/action_override" }
+    }
+  },
+  "$defs": {
+    "review_kind": {
+      "type": "string",
+      "enum": ["maker_checker", "relationship", "evaluation_dispute", "recommendation", "policy_exception"]
+    },
+    "kind_default": {
+      "title": "ReviewKindDefault",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["review_kind", "policy"],
+      "properties": {
+        "review_kind": { "$ref": "#/$defs/review_kind" },
+        "policy": { "$ref": "#/$defs/policy" }
+      }
+    },
+    "action_override": {
+      "title": "ReviewActionOverride",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["review_kind", "action_kind", "policy"],
+      "properties": {
+        "review_kind": { "$ref": "#/$defs/review_kind" },
+        "action_kind": {
+          "description": "Action kind (actions/v1 ActionIntent action_kind).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "policy": { "$ref": "#/$defs/policy" }
+      }
+    },
+    "policy": {
+      "title": "ReviewPolicySettings",
+      "description": "One core ReviewPolicy. Every duration is positive.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "self_approval_forbidden",
+        "approver_permission",
+        "assignment_timeout_seconds",
+        "sla_seconds",
+        "escalation_step_seconds",
+        "max_escalations",
+        "expiry_seconds"
+      ],
+      "properties": {
+        "self_approval_forbidden": { "type": "boolean" },
+        "approver_permission": {
+          "description": "Permission the reviewer needs on the item's domain.",
+          "type": "string",
+          "enum": ["action.approve", "catalog.curate"]
+        },
+        "assignment_timeout_seconds": { "$ref": "#/$defs/duration_seconds" },
+        "sla_seconds": { "$ref": "#/$defs/duration_seconds" },
+        "escalation_step_seconds": { "$ref": "#/$defs/duration_seconds" },
+        "max_escalations": { "type": "integer", "minimum": 0, "maximum": 10 },
+        "expiry_seconds": { "$ref": "#/$defs/duration_seconds" }
+      }
+    },
+    "duration_seconds": {
+      "description": "Positive duration in whole seconds, at most 90 days.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 7776000
+    }
+  }
+}

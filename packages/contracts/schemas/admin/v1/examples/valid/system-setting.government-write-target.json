@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "setting_key": "write_target",
+  "enabled": false,
+  "write_target": {
+    "target_kind": "apim",
+    "resource_id": "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-gov/providers/Microsoft.ApiManagement/service/apim-agency-a",
+    "credential": {
+      "kind": "key_vault_secret",
+      "secret_uri": "https://kv-ns-agency.vault.usgovcloudapi.net/secrets/billing-export/0123456789abcdef0123456789abcdef"
+    }
+  }
+}

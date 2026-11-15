@@ -70,6 +70,10 @@ class Denial(BaseModel):
         "rate_limited",
         "invalid_schema",
         "dependency_transient",
+        "not_found",
+        "method_not_allowed",
+        "payload_too_large",
+        "internal_error",
     ]
     """
     Error taxonomy code. Mirrors errors/v1 (authoritative); `validate_denial_codes_match_error_taxonomy` in tests/contracts/test_error_taxonomy.py keeps the two lists equal.

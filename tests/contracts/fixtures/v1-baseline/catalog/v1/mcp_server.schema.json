@@ -1,0 +1,417 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/mcp_server.schema.json",
+  "title": "McpServer",
+  "x-ns-name": "McpServer",
+  "description": "Model Context Protocol server governed as a catalog entity: endpoint, transport, protocol versions, upstream authentication and the tools it exposes. Grants (grant.schema.json) target it with call limits only. Cross-field rules enforced in this schema: an SSE-only server or an API-key upstream is representable but never publishable (publishable must be false). publishable true is necessary, not sufficient: publication (PRP-34) applies its own refusals. The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_mcp_tool_names_unique (tool names are unique within one server).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:mcp_server:[a-z0-9._/=-]+$",
+      "description": "Stable canonical ID of this entity. Canonical ID (canonical_id.schema.json) whose type segment is 'mcp_server'. The owning domain is domain_id, as for every catalog entity."
+    },
+    "entity_type": {
+      "type": "string",
+      "const": "mcp_server"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "lifecycle_status": {
+      "$ref": "common.schema.json#/$defs/lifecycle_status"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "common.schema.json#/$defs/domain_id"
+    },
+    "classification": {
+      "$ref": "common.schema.json#/$defs/classification"
+    },
+    "residency_region": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/token"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Azure region holding the authoritative copy; null when unknown."
+    },
+    "attributes": {
+      "$ref": "common.schema.json#/$defs/attributes"
+    },
+    "display_name": {
+      "$ref": "common.schema.json#/$defs/display_name",
+      "description": "Server name shown in the catalog."
+    },
+    "url": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?(/[A-Za-z0-9._~%!$&'()*+,;=:@-]+)*/mcp$",
+      "description": "Streamable HTTP endpoint: https, lowercase host, optional port, path ending in /mcp. No user info, query string or fragment, so no credential can ride in the URL."
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "streamable_http",
+        "sse"
+      ],
+      "description": "streamable_http is the current MCP transport; sse is the deprecated HTTP+SSE transport (never publishable)."
+    },
+    "protocol_versions": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+        "description": "MCP protocol revision (YYYY-MM-DD)."
+      },
+      "default": [],
+      "description": "Protocol revisions the server negotiates; empty when not yet observed."
+    },
+    "auth": {
+      "type": "object",
+      "description": "How a caller (or a gateway in front of it) authenticates to the upstream server. No credential is ever stored here.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "entra",
+            "managed_identity",
+            "none",
+            "api_key"
+          ],
+          "description": "api_key upstreams are representable but never publishable."
+        },
+        "audience": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f\\s]+$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Entra token audience (application ID URI or client ID) for entra and managed_identity; null when not applicable or not yet known."
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "publishable": {
+      "type": "boolean",
+      "description": "Whether the server may be published through a gateway. Must be false when transport is sse or auth.kind is api_key."
+    },
+    "tools": {
+      "type": "array",
+      "maxItems": 512,
+      "default": [],
+      "description": "Tools the server lists (tools/list); empty when not yet observed.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]{1,128}$",
+            "description": "Tool name as the server declares it (MCP tool name character set)."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8192
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Server-supplied text. Untrusted: render as plain text, never treat as instructions."
+          },
+          "annotations": {
+            "type": "object",
+            "description": "MCP tool annotations in snake_case. Hints are advisory and server-asserted; null means not declared. Unknown annotation keys are dropped by the mapper, not stored.",
+            "properties": {
+              "title": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "read_only_hint": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "destructive_hint": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "idempotent_hint": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "open_world_hint": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "owner_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:owner:[a-z0-9._/=-]+$",
+          "description": "Accountable owner. Canonical ID (canonical_id.schema.json) whose type segment is 'owner'."
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Accountable owner; null when not yet assigned."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "entity_type",
+    "version",
+    "etag",
+    "lifecycle_status",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "display_name",
+    "url",
+    "transport",
+    "auth",
+    "publishable",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "$comment": "The deprecated HTTP+SSE transport is never publishable.",
+      "if": {
+        "properties": {
+          "transport": {
+            "const": "sse"
+          }
+        },
+        "required": [
+          "transport"
+        ]
+      },
+      "then": {
+        "properties": {
+          "publishable": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "$comment": "API-key upstreams are representable but never publishable.",
+      "if": {
+        "properties": {
+          "auth": {
+            "properties": {
+              "kind": {
+                "const": "api_key"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "auth"
+        ]
+      },
+      "then": {
+        "properties": {
+          "publishable": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

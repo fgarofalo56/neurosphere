@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/budget.schema.json",
+  "title": "SpendBudget",
+  "description": "A spend budget for one domain and period (PRP-44; evaluated against the cost ledger by PRP-46). Titled SpendBudget because query/v1 already exports a Budget (the query execution budget). amount is a decimal string in currency, never a float. thresholds_percent are alert points as integer percentages of amount (strictly ascending, so 50, 80, 100, 120). tags_filter narrows the budget to CostRecord rows whose tags contain every listed key and value; absent means every row of the domain. Rules JSON Schema cannot express (thresholds strictly ascending) are checked by tests/contracts/validators.py::check_budget_thresholds_ascending.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "budget_id",
+    "domain_id",
+    "period",
+    "amount",
+    "currency",
+    "thresholds_percent"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "budget_id": { "$ref": "common.schema.json#/$defs/slug" },
+    "domain_id": { "$ref": "common.schema.json#/$defs/domain_id" },
+    "period": { "type": "string", "enum": ["monthly", "quarterly", "annual"] },
+    "amount": { "$ref": "common.schema.json#/$defs/decimal_amount" },
+    "currency": { "$ref": "common.schema.json#/$defs/currency" },
+    "thresholds_percent": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1, "maximum": 1000 }
+    },
+    "tags_filter": {
+      "description": "Absent means every cost row of the domain.",
+      "$ref": "common.schema.json#/$defs/cost_tags"
+    }
+  }
+}

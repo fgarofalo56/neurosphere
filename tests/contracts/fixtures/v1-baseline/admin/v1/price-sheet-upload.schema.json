@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/price-sheet-upload.schema.json",
+  "title": "PriceSheetUpload",
+  "description": "An operator-uploaded price sheet (PRP-44). Maps one to one onto core pricing PriceSnapshot minus content_hash: the server builds the snapshot with build_snapshot, which stamps the hash, so an upload can never assert its own hash. Money is a decimal string, never a float. azure_retail_prices sheets apply to commercial only and their source_url host is prices.azure.com; Commercial prices are never a fallback for Government (both enforced again by PriceSnapshot). Rules JSON Schema cannot express are checked by tests/contracts/validators.py::check_price_sheet_upload: token price rows are unique per (provider, model, model_version, kind) and a token row's unit_of_measure is 1K or 1M.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "source",
+    "source_url",
+    "retrieval_date",
+    "effective_date",
+    "currency",
+    "clouds",
+    "synthetic",
+    "notes",
+    "rows"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "snapshot_id": { "$ref": "common.schema.json#/$defs/slug" },
+    "source": { "type": "string", "enum": ["azure_retail_prices", "provider_price_sheet"] },
+    "source_url": {
+      "description": "Where the sheet was obtained. HTTPS, no query string or fragment.",
+      "$ref": "common.schema.json#/$defs/https_url"
+    },
+    "retrieval_date": { "$ref": "common.schema.json#/$defs/date" },
+    "effective_date": { "$ref": "common.schema.json#/$defs/date" },
+    "currency": { "$ref": "common.schema.json#/$defs/currency" },
+    "clouds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/cloud" }
+    },
+    "synthetic": {
+      "description": "true for demo or test sheets; synthetic prices are labelled wherever they are shown.",
+      "type": "boolean"
+    },
+    "notes": { "type": "string", "maxLength": 2000 },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/price_row" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "source": { "const": "azure_retail_prices" } },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "clouds": { "const": ["commercial"] },
+          "source_url": { "pattern": "^https://prices\\.azure\\.com(/|$)" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "price_row": {
+      "title": "PriceSheetRow",
+      "description": "One price (core PriceRow; Retail Prices API Items[] field names in snake_case).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["service_name", "sku_name", "unit_of_measure", "retail_price"],
+      "properties": {
+        "service_name": { "$ref": "#/$defs/label" },
+        "sku_name": { "$ref": "#/$defs/label" },
+        "meter_id": { "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }] },
+        "meter_name": { "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }] },
+        "arm_region_name": {
+          "anyOf": [{ "type": "string", "pattern": "^[a-z][a-z0-9]{1,31}$" }, { "type": "null" }]
+        },
+        "unit_of_measure": { "$ref": "#/$defs/label" },
+        "retail_price": { "$ref": "common.schema.json#/$defs/decimal_amount" },
+        "unit_price": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/decimal_amount" }, { "type": "null" }]
+        },
+        "price_type": { "$ref": "#/$defs/label" },
+        "effective_start_date": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/date" }, { "type": "null" }]
+        },
+        "token_meter": { "anyOf": [{ "$ref": "#/$defs/token_meter" }, { "type": "null" }] }
+      }
+    },
+    "token_meter": {
+      "title": "PriceSheetTokenMeter",
+      "description": "Maps a price row to a model token price (core TokenMeter).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "model", "kind"],
+      "properties": {
+        "provider": { "$ref": "#/$defs/label" },
+        "model": { "$ref": "#/$defs/label" },
+        "model_version": { "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }] },
+        "kind": { "type": "string", "enum": ["input", "output", "cached"] }
+      }
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 256 }
+  }
+}

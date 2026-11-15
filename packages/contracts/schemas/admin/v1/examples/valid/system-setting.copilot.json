@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "setting_key": "copilot",
+  "enabled": true,
+  "copilot": {
+    "endpoint": "https://aoai-ns-contoso.openai.azure.com/",
+    "deployment": "gpt-4-1-copilot",
+    "api_version": "2025-04-01-preview",
+    "resource_id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-ai/providers/Microsoft.CognitiveServices/accounts/aoai-ns-contoso",
+    "credential": {
+      "kind": "managed_identity",
+      "managed_identity_client_id": "6f1c2b9e-0d4a-4c1e-9b7a-3e5f8d2c1a07"
+    }
+  }
+}

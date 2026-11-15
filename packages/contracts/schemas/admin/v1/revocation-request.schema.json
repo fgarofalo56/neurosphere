@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/revocation-request.schema.json",
+  "title": "RevocationRequest",
+  "description": "Request to revoke one principal's sessions (PRP-39; PRP-06 revocation service). The target principal is named by the route, never by this body. issued_before: deny every token issued at or before the revocation (plus clock skew); the principal may sign in again. until_lifted: deny every token until an operator lifts the revocation. Revocation is bounded by NS_REVOCATION_TTL_SECONDS, not instant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reason", "mode"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "reason": { "$ref": "common.schema.json#/$defs/reason_code" },
+    "mode": { "type": "string", "enum": ["issued_before", "until_lifted"] }
+  }
+}

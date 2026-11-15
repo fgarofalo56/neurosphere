@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "aoai-gov-2026-11",
+  "source": "provider_price_sheet",
+  "source_url": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/",
+  "retrieval_date": "2026-11-01",
+  "effective_date": "2026-11-01",
+  "currency": "USD",
+  "clouds": [
+    "government"
+  ],
+  "synthetic": true,
+  "notes": "Synthetic demo sheet; not a published Government price.",
+  "rows": [
+    {
+      "service_name": "Azure OpenAI",
+      "sku_name": "gpt-4.1 Input",
+      "meter_id": null,
+      "meter_name": "gpt-4.1 input tokens",
+      "arm_region_name": "usgovvirginia",
+      "unit_of_measure": "1M",
+      "retail_price": "2.20",
+      "unit_price": null,
+      "price_type": "Consumption",
+      "effective_start_date": "2026-11-01",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1",
+        "model_version": null,
+        "kind": "input"
+      }
+    },
+    {
+      "service_name": "Azure OpenAI",
+      "sku_name": "gpt-4.1 Output",
+      "unit_of_measure": "1K",
+      "retail_price": "0.0088",
+      "token_meter": {
+        "provider": "azure_openai",
+        "model": "gpt-4.1",
+        "kind": "output"
+      }
+    }
+  ]
+}

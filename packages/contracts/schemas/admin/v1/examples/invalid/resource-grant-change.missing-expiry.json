@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "grant_id": "g-invoice-bot-read",
+  "resource_id": "commercial:contoso:foundry:agent:invoice-bot",
+  "permissions": [
+    "read",
+    "export"
+  ],
+  "reason": "audit_sampling"
+}

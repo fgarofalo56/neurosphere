@@ -1,4 +1,4 @@
-"""Exception classes for the seven PRP-01 error codes.
+"""Exception classes for the PRP-01 error codes (seven in 1.0.0, four added by PRP-37).
 
 ``http_status`` and ``retryable`` are class constants that tests cross-check against
 ``error-codes.json`` and the generated ``ProblemDetails`` model. ``to_problem_details`` renders
@@ -20,10 +20,14 @@ ErrorCode = Literal[
     "rate_limited",
     "invalid_schema",
     "dependency_transient",
+    "not_found",
+    "method_not_allowed",
+    "payload_too_large",
+    "internal_error",
 ]
-HttpStatus = Literal[401, 403, 409, 422, 429, 502, 503]
+HttpStatus = Literal[401, 403, 404, 405, 409, 413, 422, 429, 500, 502, 503]
 
-_SCHEMA_VERSION = "1.0.0"
+_SCHEMA_VERSION = "1.1.0"
 _PROBLEM_TYPE_BASE = "https://neurosphere.invalid/problems/"
 
 
@@ -172,3 +176,39 @@ class DependencyTransientError(NeuroSphereError):
     @property
     def status(self) -> HttpStatus:
         return self._status
+
+
+class NotFoundError(NeuroSphereError):
+    """No route matches, or the named resource does not exist in the caller's scope (404)."""
+
+    code = "not_found"
+    title = "Not found"
+    http_status = 404
+    retryable = False
+
+
+class MethodNotAllowedError(NeuroSphereError):
+    """The route exists but does not accept this HTTP method (405)."""
+
+    code = "method_not_allowed"
+    title = "Method not allowed"
+    http_status = 405
+    retryable = False
+
+
+class PayloadTooLargeError(NeuroSphereError):
+    """The request body exceeds the route's size limit (413)."""
+
+    code = "payload_too_large"
+    title = "Payload too large"
+    http_status = 413
+    retryable = False
+
+
+class InternalError(NeuroSphereError):
+    """An unexpected server fault (500). The body carries the correlation id, never a trace."""
+
+    code = "internal_error"
+    title = "Internal error"
+    http_status = 500
+    retryable = False
