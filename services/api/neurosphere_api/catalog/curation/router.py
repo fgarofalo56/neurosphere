@@ -25,8 +25,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, Request, status
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
-from neurosphere_core.auth.scope import Permission
-from neurosphere_core.catalog import CatalogRepository, EdgeObservation, PresentedEdge
+from neurosphere_core.auth.scope import Permission, domains_with_permission
+from neurosphere_core.catalog import (
+    CatalogRepository,
+    EdgeObservation,
+    PresentedEdge,
+    ReviewItem,
+    ReviewQueue,
+)
+from neurosphere_core.catalog.review_queue import ReviewResolution
 from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.scope import IdentityScope
 from pydantic import BaseModel, ConfigDict
@@ -34,10 +41,15 @@ from pydantic import BaseModel, ConfigDict
 from neurosphere_api.authz import require
 from neurosphere_api.catalog.curation.dependencies import (
     EdgeAccess,
+    ReviewAccess,
     edge_access,
+    get_clock,
     get_repository,
+    get_review_queue,
     get_service,
+    review_queue_guard,
 )
+from neurosphere_api.catalog.curation.service import Clock as ClockFn
 from neurosphere_api.catalog.curation.service import CurationService, DecisionResult
 from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.middleware import correlation_id_of
@@ -61,6 +73,28 @@ ReadAccess = Annotated[EdgeAccess, Depends(edge_access(Permission.DATA_READ))]
 AuditorScope = Annotated[IdentityScope, Depends(require(Permission.EVIDENCE_READ))]
 Service = Annotated[CurationService, Depends(get_service)]
 Repository = Annotated[CatalogRepository, Depends(get_repository)]
+
+
+CurateAnywhere = Annotated[IdentityScope, Depends(require(Permission.CATALOG_CURATE))]
+ReviewGuard = Annotated[ReviewAccess, Depends(review_queue_guard())]
+Queue = Annotated[ReviewQueue, Depends(get_review_queue)]
+Clock = Annotated[ClockFn, Depends(get_clock)]
+
+
+class ReviewQueuePage(BaseModel):
+    """Open review items the caller may resolve (oldest first)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ReviewItem]
+
+
+class ReviewResolveBody(BaseModel):
+    """``resolved_by`` and ``resolved_at`` are server-stamped; the body names only the outcome."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    resolution: ReviewResolution
 
 
 class OverrideHistory(BaseModel):
@@ -108,6 +142,29 @@ def build_router() -> APIRouter:
     @router.get("/edges/{edge_id:path}", response_model=PresentedEdge)
     async def presented(access: ReadAccess, service: Service) -> PresentedEdge:
         return await service.presented(access.scope, access.edge)
+
+    @router.get("/review-queue", response_model=ReviewQueuePage)
+    async def review_queue(
+        scope: CurateAnywhere,
+        queue: Queue,
+        clock: Clock,
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    ) -> ReviewQueuePage:
+        """Open conflicts in the caller's scope, oldest first, in domains they may curate."""
+        curated = domains_with_permission(scope, Permission.CATALOG_CURATE, now=clock())
+        items = [i for i in await queue.list_open(scope, limit) if i.domain_id in curated]
+        return ReviewQueuePage(items=items)
+
+    @router.post("/review-queue/{item_id}/resolve", response_model=ReviewItem)
+    async def resolve_review_item(
+        request: Request, body: ReviewResolveBody, access: ReviewGuard, service: Service
+    ) -> ReviewItem:
+        return await service.resolve_review_item(
+            access.scope,
+            access.item,
+            body.resolution,
+            correlation_id=audit_correlation_id(correlation_id_of(request.scope)),
+        )
 
     return router
 

@@ -43,12 +43,14 @@ from neurosphere_core.catalog import (
     CatalogEdge,
     CatalogRepository,
     PresentedEdge,
+    ReviewItem,
     ReviewQueue,
     format_timestamp,
     merge_observation,
     parse_timestamp,
 )
 from neurosphere_core.catalog.graph.latest import present_with_latest
+from neurosphere_core.catalog.review_queue import ReviewResolution
 from neurosphere_core.catalog.rules import MergeOutcome
 from neurosphere_core.errors import (
     ForbiddenError,
@@ -364,4 +366,81 @@ class CurationService:
             observation_recorded=recorded,
             review_item_id=item_id,
             review_enqueued=enqueued,
+        )
+
+    # -- review queue ----------------------------------------------------------------------
+
+    async def resolve_review_item(
+        self,
+        scope: IdentityScope,
+        item: ReviewItem,
+        resolution: ReviewResolution,
+        *,
+        correlation_id: str,
+        channel: Channel = "rest",
+    ) -> ReviewItem:
+        """Record ``resolution`` on an open review item (PRP-43 item 6).
+
+        The caller has authorized ``catalog.curate`` on ``item.domain_id`` and loaded ``item``
+        with its own scope. ``resolved_by`` and ``resolved_at`` are stamped here, never taken from
+        the request. An already resolved item is returned unchanged (idempotent, no new audit
+        record). The audit subject holds the item id, reason and resolution only, never the
+        conflicting observation's evidence. ``accepted_inference`` does not edit the edge: the
+        steward uses the audited decision route for that.
+        """
+        if item.status == "resolved":
+            return item
+        ctx = AuditContext.from_scope(
+            scope,
+            correlation_id=correlation_id,
+            operation="catalog.review_resolve",
+            channel=channel,
+        )
+        chain = domain_audit_chain_id(item.customer_id, item.domain_id)
+        subject = make_subject(
+            item.edge_id,
+            _ENTITY_TYPE,
+            state={"item_id": item.id, "status": item.status, "reason": item.reason},
+        )
+        principal = scope.to_contract().principal.principal_id.root
+        resolved_at = format_timestamp(self._clock())
+
+        async def mutate() -> ReviewItem:
+            stored = await self._queue.resolve(
+                scope,
+                item.id,
+                resolved_by=principal,
+                resolution=resolution,
+                resolved_at=resolved_at,
+            )
+            if stored.status != "resolved" or stored.resolution != resolution:
+                raise InvalidSchemaError("resolution could not be read back", reason="unverified")
+            return stored
+
+        def succeeded(result: ReviewItem) -> AuditDraft:
+            return build_after(
+                ctx,
+                make_subject(
+                    item.edge_id,
+                    _ENTITY_TYPE,
+                    state={
+                        "item_id": item.id,
+                        "status": result.status,
+                        "resolution": result.resolution,
+                    },
+                ),
+                result="succeeded",
+                verified=True,
+                detail=f"resolution={resolution}:item={item.id}",
+            )
+
+        return await run_audited_mutation(
+            self._audit,
+            chain,
+            before=build_before(ctx, subject),
+            mutate=mutate,
+            after=succeeded,
+            on_error=lambda exc: build_after(
+                ctx, subject, result="failed", verified=False, detail=_refusal(exc)
+            ),
         )
