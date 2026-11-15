@@ -1,6 +1,8 @@
 ---
 name: PRP-41-producer-registry
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 290
 priority: P0
 order: 29
 review: required
@@ -32,15 +34,15 @@ Out of scope: connector configuration and the Key Vault secret reader (PRP-42, w
 - `main.create` runs the ingest bootstrap before `compose_app` (`main.py:30-33`); the shared Cosmos client only exists inside composition, so the store layer must attach later (`runtime/builders/edge.py:19-26` is where the ingest component is reported).
 
 ## Acceptance criteria
-- [ ] Given an admin holding customer-level `config.manage`, When they `POST /api/v1/admin/sources/producers` with an id, a cloud, and a `sources` map, Then the response is 201 with a `ProducerSecretIssued` body containing the secret once; a later `GET` of the same producer never contains the secret or its digest; the stored document holds only `secret_sha256`.
-- [ ] Given the issued secret, When a producer posts to an ingest route with `Authorization: Bearer <producer_id>.<secret>`, Then it authenticates (2xx on a valid event) within `NS_INGEST_PRODUCER_REFRESH_SECONDS` of creation on another replica and immediately on the creating replica.
-- [ ] Rotate returns a new secret once and the old secret is refused (401) immediately on the same replica; disable makes the producer unusable (401 `Producer credential rejected.`, same body as an unknown producer) and `enable` restores it with the current secret; both need `If-Match` and are audited.
-- [ ] A producer whose `cloud` differs from the deployment cloud, or whose `customer_id` differs from the caller's customer, is refused at creation (422 / 403) and nothing is stored (`Never bridge Government data to Commercial`).
-- [ ] Given both a store record and a file entry with the same `producer_id`, Then the store record wins; given the store unreachable, Then file producers still authenticate and store-only producers fail closed with 401 (never an allow); a store outage at startup does not stop the app and shows as a reason code, not a message.
-- [ ] Given `NS_INGEST_PRODUCER_STORE` unset or false and a producers file set, Then behaviour is byte-for-byte as today (existing `services/api/tests/ingest` suite passes unchanged); given neither set, ingest stays 503 `ingest_not_configured` and `/readyz` shows `composition.ingest.disabled`.
-- [ ] No log line, audit record, exception text, OpenAPI example or test snapshot contains a secret or a digest; audit records carry `producer_id`, source ids and a digest-free summary (CodeQL secret-name rule).
-- [ ] Callers without customer-level `config.manage` (including `config.manage` in an ordinary domain, viewers, auditors, expired admins) get 403 on every new route and a denial record; every new route is in the route inventories and boots under `verify_route_permissions`.
-- [ ] `docs/runbooks/ingest.md` documents create, show-once, rotate, disable and the file fallback, and how a producer id and secret are handed to a poller (PRP-42).
+- [x] Given an admin holding customer-level `config.manage`, When they `POST /api/v1/admin/sources/producers` with an id, a cloud, and a `sources` map, Then the response is 201 with a `ProducerSecretIssued` body containing the secret once; a later `GET` of the same producer never contains the secret or its digest; the stored document holds only `secret_sha256`.
+- [x] Given the issued secret, When a producer posts to an ingest route with `Authorization: Bearer <producer_id>.<secret>`, Then it authenticates (2xx on a valid event) within `NS_INGEST_PRODUCER_REFRESH_SECONDS` of creation on another replica and immediately on the creating replica.
+- [x] Rotate returns a new secret once and the old secret is refused (401) immediately on the same replica; disable makes the producer unusable (401 `Producer credential rejected.`, same body as an unknown producer) and `enable` restores it with the current secret; both need `If-Match` and are audited.
+- [x] A producer whose `cloud` differs from the deployment cloud, or whose `customer_id` differs from the caller's customer, is refused at creation (422 / 403) and nothing is stored (`Never bridge Government data to Commercial`).
+- [x] Given both a store record and a file entry with the same `producer_id`, Then the store record wins; given the store unreachable, Then file producers still authenticate and store-only producers fail closed with 401 (never an allow); a store outage at startup does not stop the app and shows as a reason code, not a message.
+- [x] Given `NS_INGEST_PRODUCER_STORE` unset or false and a producers file set, Then behaviour is byte-for-byte as today (existing `services/api/tests/ingest` suite passes unchanged); given neither set, ingest stays 503 `ingest_not_configured` and `/readyz` shows `composition.ingest.disabled`.
+- [x] No log line, audit record, exception text, OpenAPI example or test snapshot contains a secret or a digest; audit records carry `producer_id`, source ids and a digest-free summary (CodeQL secret-name rule).
+- [x] Callers without customer-level `config.manage` (including `config.manage` in an ordinary domain, viewers, auditors, expired admins) get 403 on every new route and a denial record; every new route is in the route inventories and boots under `verify_route_permissions`.
+- [x] `docs/runbooks/ingest.md` documents create, show-once, rotate, disable and the file fallback, and how a producer id and secret are handed to a poller (PRP-42).
 - PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated.
 
 ## Clarifications (decided)
@@ -169,11 +171,11 @@ Parallelization: items 1 and 2 [P] (core and API ingest side share no file). Ite
 
 ### Item 4 - Composition: edge builder and main
 - Deliverable: edge builder builds `ProducerAdmin` over the `admin_config` repository (Cosmos on the shared client, in-memory only under `NS_ENV=local` or a backend override), attaches the store layer to the ingest registry through an `on_startup` hook, reports `admin_producers`, and invalidates the local snapshot after each write; `main.py` passes the store switch to the ingest bootstrap.
-- Owned files: `runtime/builders/edge.py`, `main.py`, `runtime/status.py` (append `admin_producers`), `services/api/tests/admin_producers_api/test_builder.py`.
+- Owned files: `runtime/builders/edge.py`, `main.py`, `runtime/status.py` (append `admin_producers`), `services/api/tests/admin_producers_api/test_producers_builder.py`.
 - Must NOT touch: `runtime/builders/data.py`, `admin.py`.
 - Depends on: item 3.
 - Acceptance criteria: with the switch off the ingest component is exactly as before; with it on and a fake repository, a created producer authenticates; cosmos unavailable reports `admin_producers` disabled with a reason code and file producers keep working; existing `runtime_api`, `runtime_routes` and `runtime_data` suites pass.
-- Tests: `services/api/tests/admin_producers_api/test_builder.py`; re-run `services/api/tests/runtime_api`, `runtime_routes`, `runtime_data`, `ingest`.
+- Tests: `services/api/tests/admin_producers_api/test_producers_builder.py`; re-run `services/api/tests/runtime_api`, `runtime_routes`, `runtime_data`, `ingest`.
 - Pattern references: `runtime/builders/edge.py:17-27`, `runtime/builders/gateway.py` (shared Cosmos client, override seam).
 
 ### Item 5 - Authorization and secrecy negative suite
@@ -221,18 +223,19 @@ Console page; per-producer rate-limit or quota editing; secret overlap window; E
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | done | prp-41-producer-registry | core ProducerAdmin, secret hygiene (9 tests) |
+| 2 | done | prp-41-producer-registry | StoreProducerRegistry, LayeredProducerRegistry, bootstrap switch |
+| 3 | done | prp-41-producer-registry | six routes, audited, show-once |
+| 4 | done | prp-41-producer-registry | edge builder, admin_producers component, startup refresher |
+| 5 | done | prp-41-producer-registry | ABAC + secrecy suites |
+| 6 | done | prp-41-producer-registry | routers hook, inventory, runbook done; Tier-3 regeneration, changelog fragment and close-out done in the close-out commit |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-15, PR #290 (issue 235).
+- Deviations: `services/api/tests/runtime_api/test_readiness.py` was edited to add `composition.admin_producers.disabled` (not in the Ownership block; a required consequence of the new optional component, not another PRP's Tier-1 file). Tier-3 `openapi.json` and `docs/reference/**` were first committed on the branch and were regenerated again after merging `origin/main`. No `[serial-after]` items existed in this PRP.
+- Descoped items: none. Assumptions on clarification rows 5, 6 and 7 were taken as stated (unattended run).
+- OPEN gates: hosted ingest smoke and enabling the store layer in hosted, Helm and App Service profiles (PRP-58, operator-gated, G04 via PRP-64). Nothing live was run here; all behaviour is proven on in-memory twins.
+- Env vars for the operator: `NS_INGEST_PRODUCER_STORE` (true to attach the store layer), `NS_INGEST_PRODUCER_REFRESH_SECONDS` (cross-replica refresh interval). `.env.example` not edited.
+- Follow-up issues: (a) race in `StoreProducerRegistry.refresh` (producer_store.py): a refresh that started before an admin write can overwrite the local snapshot with pre-write state after `apply()`; fix with a write-generation counter captured before awaiting the loader. (b) `StoreProducerRegistry` loads at most `MAX_LIST_LIMIT` (1000) records per refresh; more producers silently fail closed with 401; needs pagination or a documented cap. (c) `test_only_the_issued_contract_model_mentions_a_secret_or_digest` (tests/security/authz/test_admin_producers_secrecy.py and services/api/tests/admin_producers_api/test_openapi_committed.py) only greps for `digest`; also flag `secret_sha256` in every schema except `ProducerSecretIssued`. Issue numbers not filed (unattended run).
+- Reviewer follow-ups verified: the prior blocking item is fixed (openapi.json carries the six `/api/v1/admin/sources/producers` paths plus ProducerCreateRequest, ProducerPage, ProducerSourceView, ProducerView, ProducerSecretIssued; refs resolve; the only secret-shaped field is the show-once `ProducerSecretIssued.secret`). Routes all use `require_customer_control(Permission.CONFIG_MANAGE)`; If-Match is required before any write on rotate, disable and enable; audit detail is a reason code.
+- Product check (can an operator use it without editing files): an admin can create, rotate, disable and enable producers through the audited API with no file edit (runbook `docs/runbooks/ingest.md`). There is no console page yet (PRP-57), so raw API calls are needed until then; the hosted profiles still need the store switch (PRP-58).

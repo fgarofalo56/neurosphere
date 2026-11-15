@@ -15,6 +15,7 @@ from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError
 from neurosphere_api.deprecation import register_with_alias
 from neurosphere_api.ingest.auth import (
     ProducerRegistration,
+    ProducerRegistry,
     RegisteredCredentialAuthenticator,
     StaticProducerRegistry,
 )
@@ -36,7 +37,7 @@ def build_service(
     ingest_settings: IngestSettings,
     publisher: Publisher,
     *,
-    registry: StaticProducerRegistry | None = None,
+    registry: ProducerRegistry | None = None,
 ) -> IngestService:
     if registry is None:
         path = ingest_settings.producers_file

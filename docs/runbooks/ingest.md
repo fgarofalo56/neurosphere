@@ -40,6 +40,26 @@ Both values are empty by default (ingest disabled). Set exactly one; setting bot
 
 The ConfigMap holds digests only, so it is acceptable; plaintext secrets must never go in one.
 
+## Producer registry in the store (PRP-41)
+
+Instead of hand-editing the file, an administrator registers producers through the audited admin API. The store layer is opt-in: set `NS_INGEST_PRODUCER_STORE=true` (default false; PRP-58 turns it on in the hosted, Helm and App Service profiles). With the switch off nothing changes and the file behaves exactly as above. With the switch on and no file, ingest is enabled with an empty file layer, so only store producers authenticate.
+
+Settings: `NS_INGEST_PRODUCER_STORE` and `NS_INGEST_PRODUCER_REFRESH_SECONDS` (default 30, max 3600).
+
+Every route needs customer-level `config.manage` (that permission on the customer control domain; `config.manage` in an ordinary domain is refused with 403 `customer_scope_required`). Mutations need `If-Match` with the `ETag` of the last read (missing is 422 `precondition_required`, stale is 409).
+
+- Create: `POST /api/v1/admin/sources/producers` with `{"producer_id": "...", "cloud": "commercial", "sources": {"<source_id>": "gateway|application|billing"}}`. The 201 body (`ProducerSecretIssued`) carries the generated secret ONCE, with `Cache-Control: no-store`. Copy it straight into the producer's secret store; it can never be read back. The stored document holds only the SHA-256 digest. A `cloud` other than the deployment's is 422 `cross_cloud`; a `customer_id` other than yours is 403 `cross_customer`. A billing producer must declare kind `billing`.
+- Hand-off: the producer presents `Authorization: Bearer <producer_id>.<secret>`. For the internal pollers (PRP-42 connectors) put the secret in Key Vault and reference it from the connector configuration; this API never stores or returns a secret reference value.
+- Rotate: `POST .../{producer_id}/rotate` with `If-Match`. The new secret is shown once; the old secret stops working immediately on the replica that handled the call.
+- Disable / enable: `POST .../{producer_id}/disable` and `/enable` with `If-Match`. A disabled producer gets the same 401 `Producer credential rejected.` as an unknown one; enabling restores it with the current secret. Rotating or disabling is the incident response for a leaked secret.
+- List and read: `GET .../` (bounded, `limit` up to 200) and `GET .../{producer_id}`. Neither carries the secret or its digest.
+
+Propagation: the creating replica authenticates immediately. Other replicas pick the change up within `NS_INGEST_PRODUCER_REFRESH_SECONDS`. There is no overlap window on rotation (immediate cut-over).
+
+Fallback: a store record wins over a file entry with the same `producer_id`, and a disabled store record hides the file entry. If the store is unreachable, file producers keep authenticating; store-only producers fail closed with 401 until a refresh succeeds (a refresh failure keeps the last snapshot and logs the reason code `producer_store_unavailable`, never a message). Startup never waits for the store. With the switch on but Cosmos not configured outside `NS_ENV=local`, the `admin_producers` component reports `disabled` and the admin routes answer 503 `admin_producers_unconfigured`.
+
+Audit: operations `producer.create`, `producer.rotate`, `producer.disable`, `producer.enable` on chain `<customer>.admin-config`; records carry the producer id, source ids, status and version, never a secret or digest.
+
 ## Verify
 
 1. `curl -s localhost:8000/readyz`: `composition.ingest.disabled` is absent when configured, present when not.

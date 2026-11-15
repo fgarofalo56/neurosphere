@@ -355,6 +355,28 @@ def test_identity_admin_routes_declare_their_permissions() -> None:
     }
 
 
+def test_producer_admin_routes_declare_config_manage() -> None:
+    """PRP-41: every producer admin route needs config.manage (customer-level on top)."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/sources/producers"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    perm = ("config.manage",)
+    one = f"{base}/{{producer_id}}"
+    assert found == {
+        (base, "POST"): perm,
+        (base, "GET"): perm,
+        (one, "GET"): perm,
+        (f"{one}/rotate", "POST"): perm,
+        (f"{one}/disable", "POST"): perm,
+        (f"{one}/enable", "POST"): perm,
+    }
+
+
 def test_audit_search_export_routes_declare_their_permissions() -> None:
     """PRP-40: search, denials and SIEM status need audit.read; export needs audit.export."""
     app = create_app(Settings(env="local"))
