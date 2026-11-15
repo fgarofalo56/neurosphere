@@ -104,7 +104,7 @@ from neurosphere_core.gateway import (
     create_gateway_container,
 )
 from neurosphere_core.gateway.models import GATEWAY_ID_PATTERN
-from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry
+from neurosphere_core.hitl import HitlService
 from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
 from neurosphere_core.ledger import PriceTable
@@ -143,6 +143,7 @@ from neurosphere_workers.actions.apim import (
     build_http_apim_gateway_connector,
 )
 from neurosphere_workers.actions.deploy import DeployConnector, PlanApprovals
+from neurosphere_workers.admin_platform import ledger_price_table, load_review_policies
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
@@ -405,7 +406,12 @@ async def build_ingestion(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleR
             "cosmos_account": base.cosmos_account or cfg.store.cosmos_account,
         }
     )
-    deps = await build_pipeline_deps(cfg.settings, lifetime=lifetime, ingestion=ingestion)
+    deps = await build_pipeline_deps(
+        cfg.settings,
+        lifetime=lifetime,
+        ingestion=ingestion,
+        price_table=await ledger_price_table(cfg),
+    )
     checkpoint_store = create_checkpoint_store(
         cfg.settings,
         lifetime=lifetime,
@@ -517,12 +523,15 @@ def _audit(cfg: RuntimeConfig, cosmos: CosmosClient) -> AuditRepository:
     )
 
 
-def _hitl_service(cfg: RuntimeConfig, cosmos: CosmosClient, audit: AuditRepository) -> HitlService:
+async def _hitl_service(
+    cfg: RuntimeConfig, cosmos: CosmosClient, audit: AuditRepository
+) -> HitlService:
     return HitlService(
         CosmosHitlStore.from_client(cosmos, database=cfg.store.database),
         DecisionLog(audit, CosmosDecisionStore.from_client(cosmos, database=cfg.store.database)),
         audit,
-        ReviewPolicyRegistry(),
+        # PRP-44: the stored review policy over the built-in defaults (applied at startup).
+        await load_review_policies(cfg, cosmos),
         _NoReviewerAuthorizer(),
     )
 
@@ -567,7 +576,7 @@ async def build_actions(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRun
     # neither configured the registry is empty and every intent fails closed with
     # capability_unavailable (no connector call, no pretend change).
     registry, gateways = await _action_write_targets(cfg, lifetime, cosmos)
-    hitl = _hitl_service(cfg, cosmos, audit)
+    hitl = await _hitl_service(cfg, cosmos, audit)
     executor = compose_action_executor(
         service,
         registry,
@@ -698,7 +707,7 @@ async def _action_write_targets(
 
 async def build_hitl_timers(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     cosmos = await _cosmos(cfg, lifetime)
-    service = _hitl_service(cfg, cosmos, _audit(cfg, cosmos))
+    service = await _hitl_service(cfg, cosmos, _audit(cfg, cosmos))
     return WorkerRole(
         HitlTimerWorker(service),
         idle_seconds=cfg.worker.poll_seconds,
@@ -1151,7 +1160,7 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
         judge_config=judge_config,
         judge=judge,
         store=results,
-        hitl=_hitl_service(cfg, cosmos, _audit(cfg, cosmos)),
+        hitl=await _hitl_service(cfg, cosmos, _audit(cfg, cosmos)),
         datasets=tuple(pilot),
         settings=evaluation,
         customer_id=customer,
