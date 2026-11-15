@@ -27,7 +27,7 @@ requires the OTHER endpoint to resolve through ``get_entity`` (scope-filtered). 
 node outside the scope is dropped, so a path through such a node is cut there and never
 bridged. Presented lineage runs every edge through ``rules.present_edge`` with its overrides;
 rejected edges are hidden and not traversed. The ``raw`` view skips curation and requires an
-Auditor scope, checked explicitly with ``repo.engine.auditor_domains`` (no probe call through
+Auditor scope, checked explicitly with ``catalog.auditor.auditor_domains`` (no probe call through
 the unknown-edge fallback of ``list_observations``): a non-auditor request raises
 ``ForbiddenError``, never an empty result, and so does an edge in a non-audited domain.
 An edge whose lock has expired is presented with its newest observation (``graph.latest``).
@@ -45,6 +45,7 @@ from typing import Literal
 from neurosphere_contracts.query.v1.budget import Budget
 
 from neurosphere_core.catalog import rules
+from neurosphere_core.catalog.auditor import auditor_domains
 from neurosphere_core.catalog.graph.bulk import BULK_EDGE_PAGES, BULK_SCAN_PAGES, NODE_READ_CHUNK
 from neurosphere_core.catalog.graph.latest import LatestObservationReader, wants_latest
 from neurosphere_core.catalog.protocol import (
@@ -63,7 +64,6 @@ from neurosphere_core.catalog.protocol import (
     NeighborsRequest,
     PresentedEdge,
 )
-from neurosphere_core.catalog.repo.engine import auditor_domains
 from neurosphere_core.errors.taxonomy import ForbiddenError
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.paging.models import MAX_PAGE_SIZE
@@ -94,6 +94,9 @@ def _domain_of(entity: CatalogEntity) -> str | None:
     return None if domain is None else str(domain.root)
 
 
+_ENDPOINT_READ_CONCURRENCY = 16
+_FAN_OUT_PAGES = 20
+"""Edge pages read per node while counting in-scope edges (bounded; the deadline also applies)."""
 _RAW_DENIED = "raw observations require a security auditor scope"
 _TIMED_OUT = GraphResult(nodes=[], edges=[], truncated=True, truncated_reason="timeout_ms")
 
@@ -495,16 +498,24 @@ class RepositoryGraphQuery:
             return True
         return False
 
-    async def _in_scope(
-        self, scope: IdentityScope, walk: _Walk, entity_id: str
-    ) -> CatalogEntity | None:
-        if entity_id in walk.scope_cache:
-            return walk.scope_cache[entity_id]
+    async def _resolve_scope(
+        self, scope: IdentityScope, walk: _Walk, entity_ids: list[str]
+    ) -> None:
+        """Fill ``walk.scope_cache`` for ``entity_ids``: distinct ids, bounded concurrency."""
+        unseen = [i for i in dict.fromkeys(entity_ids) if i not in walk.scope_cache]
+        if not unseen:
+            return
         if self._expired(walk):
-            return None
-        entity = await self._repo.get_entity(scope, entity_id)
-        walk.scope_cache[entity_id] = entity
-        return entity
+            return
+        gate = asyncio.Semaphore(_ENDPOINT_READ_CONCURRENCY)
+
+        async def read(entity_id: str) -> CatalogEntity | None:
+            async with gate:
+                return await self._repo.get_entity(scope, entity_id)
+
+        found = await asyncio.gather(*(read(i) for i in unseen))
+        for entity_id, entity in zip(unseen, found, strict=True):
+            walk.scope_cache[entity_id] = entity
 
     async def _expand(
         self,
@@ -521,24 +532,33 @@ class RepositoryGraphQuery:
     ) -> None:
         if self._expired(walk):
             return
-        page = await self._repo.list_edges_by_node(
-            scope, current, direction, flt, PageRequest(page_size=MAX_PAGE_SIZE)
-        )
-        edges: list[CatalogEdge] = sorted(page.items, key=lambda e: e.id)
-
         # Scope first, budget second: an out-of-scope endpoint is cut here and must not count
-        # toward (or reveal itself through) the fan-out truncation.
+        # toward (or reveal itself through) the fan-out truncation. So page on until more than
+        # ``fan_out`` IN-SCOPE edges are seen or the node's edges are exhausted (PRP-43 item 3).
         visible: list[tuple[CatalogEdge, str]] = []
-        for edge in edges:
-            other = edge.target_id if edge.source_id == current else edge.source_id
-            if await self._in_scope(scope, walk, other) is None:
-                if walk.stopped:
-                    return
-                continue  # out-of-scope endpoint: cut here, never bridged
-            visible.append((edge, other))
-        if len(visible) > walk.fan_out or (page.next_cursor is not None and edges):
+        cursor: str | None = None
+        more = False
+        for _ in range(_FAN_OUT_PAGES):
+            page = await self._repo.list_edges_by_node(
+                scope, current, direction, flt, PageRequest(page_size=MAX_PAGE_SIZE, cursor=cursor)
+            )
+            edges: list[CatalogEdge] = sorted(page.items, key=lambda e: e.id)
+            others = [e.target_id if e.source_id == current else e.source_id for e in edges]
+            await self._resolve_scope(scope, walk, others)
+            if walk.stopped:
+                return
+            visible.extend(
+                (edge, other)
+                for edge, other in zip(edges, others, strict=True)
+                if walk.scope_cache.get(other) is not None
+            )
+            cursor = page.next_cursor
+            more = cursor is not None and bool(edges)
+            if not more or len(visible) > walk.fan_out:
+                break
+        if len(visible) > walk.fan_out or more:
             walk.truncate("max_edges")
-            visible = visible[: walk.fan_out]
+        visible = visible[: walk.fan_out]
 
         candidates: list[tuple[CatalogEdge, str]] = []
         for edge, other in visible:
