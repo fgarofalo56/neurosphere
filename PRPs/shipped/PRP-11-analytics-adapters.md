@@ -1,6 +1,8 @@
 ---
 name: PRP-11-analytics-adapters
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 275
 priority: P1
 order: 22
 review: required
@@ -34,18 +36,18 @@ Out of scope: live runs per adapter and the evidence under `docs/evidence/G01/an
 - `base/registry.py:_capability` turns a Government-region validation error into a generic `InvalidSchemaError`, hiding the capability reason (issue #212, analytics bullet).
 
 ## Acceptance criteria
-- [ ] Given `NS_ANALYTICS_BACKEND` unset or `none`, When the API composes, Then the optional component `analytics_adapter` is `disabled`, `app.state.analytics_adapter` is absent and `/readyz` is unaffected (#212 registry bullet traced to item 3; selection gap from lane A).
-- [ ] Given `NS_ENV=local` and `NS_ANALYTICS_BACKEND=fixture`, When the API composes, Then `app.state.analytics_adapter` is a `FixtureAnalytics` and `analytics_region` is set; Given any other environment with `fixture`, Then the component is `failed` with reason `analytics_fixture_not_local`.
-- [ ] Given `NS_ANALYTICS_BACKEND=databricks` with a valid commercial host, warehouse id, catalog, schema and region, When the API composes with a mock transport, Then the adapter is a `DatabricksAnalytics` over the product executor and `analytics_health` runs a bounded one-row statement through it.
-- [ ] Given `fabric` or `synapse`, When the API composes, Then the component is `failed` with reason `analytics_executor_unavailable` (no TDS driver is approved); no connection is attempted.
-- [ ] Given a Government cloud with a Commercial Databricks host, or a backend the capability matrix disables for the region, Then the component is `failed` with the matrix reason code, never a cross-cloud fallback.
-- [ ] The Databricks executor lives in `neurosphere_core.analytics.databricks.executor`, is covered by `httpx.MockTransport` tests (submit, poll, cancel on `CancelledError`, row budget breach, HTTP error carries only status or `error_code`), and `scripts/gates/g01_analytics_live.py` imports it instead of defining it (#60 item "move shared pieces").
-- [ ] The live script wraps setup and teardown statements in `asyncio.timeout`, uses plain `CREATE SCHEMA` so a reused run id fails instead of dropping a pre-existing schema, and imports its request set from `neurosphere_core.analytics.fixture` (#60 bullets 1-3); the 256-parameter and INLINE-size limits stay recorded as unverified until the live run (#60 bullet 4); it still prints REFUSED and exits 2 without `NS_LIVE_APPROVED=1`.
-- [ ] `tests/integration/analytics/` assertions are tightened per #61 points 1-5 (the Government registry loop reaches its assert or is removed, the host test matches the error field, dedicated Synapse is covered, narrowed scope asserts `row_count == 0`, the shim test asserts the expected shim set per adapter).
-- [ ] Each #62 bullet is fixed with a test or recorded in the completion note as not reproducible or descoped, with the reason.
-- [ ] Given a Synapse request with `approx_quantile`, When the adapter runs, Then it renders a windowed `PERCENTILE_CONT ... OVER (PARTITION BY ...)` statement and the equivalence suite compares it to the fixture within the documented tolerance; the dedicated and serverless refusal test is replaced by a pass test (#59).
-- [ ] Given a Government region request that `DeploymentProfile` refuses, When `create_adapter` or `list_backends` is called, Then the raised error keeps the `capability_unavailable` reason (#212 analytics bullet).
-- [ ] Live runs per adapter stay OPEN and are written OPEN in the completion note (handed to PRP-64).
+- [x] Given `NS_ANALYTICS_BACKEND` unset or `none`, When the API composes, Then the optional component `analytics_adapter` is `disabled`, `app.state.analytics_adapter` is absent and `/readyz` is unaffected (#212 registry bullet traced to item 3; selection gap from lane A).
+- [x] Given `NS_ENV=local` and `NS_ANALYTICS_BACKEND=fixture`, When the API composes, Then `app.state.analytics_adapter` is a `FixtureAnalytics` and `analytics_region` is set; Given any other environment with `fixture`, Then the component is `failed` with reason `analytics_fixture_not_local`.
+- [x] Given `NS_ANALYTICS_BACKEND=databricks` with a valid commercial host, warehouse id, catalog, schema and region, When the API composes with a mock transport, Then the adapter is a `DatabricksAnalytics` over the product executor and `analytics_health` runs a bounded one-row statement through it.
+- [x] Given `fabric` or `synapse`, When the API composes, Then the component is `failed` with reason `analytics_executor_unavailable` (no TDS driver is approved); no connection is attempted.
+- [x] Given a Government cloud with a Commercial Databricks host, or a backend the capability matrix disables for the region, Then the component is `failed` with the matrix reason code, never a cross-cloud fallback.
+- [x] The Databricks executor lives in `neurosphere_core.analytics.databricks.executor`, is covered by `httpx.MockTransport` tests (submit, poll, cancel on `CancelledError`, row budget breach, HTTP error carries only status or `error_code`), and `scripts/gates/g01_analytics_live.py` imports it instead of defining it (#60 item "move shared pieces").
+- [x] The live script wraps setup and teardown statements in `asyncio.timeout`, uses plain `CREATE SCHEMA` so a reused run id fails instead of dropping a pre-existing schema, and imports its request set from `neurosphere_core.analytics.fixture` (#60 bullets 1-3); the 256-parameter and INLINE-size limits stay recorded as unverified until the live run (#60 bullet 4); it still prints REFUSED and exits 2 without `NS_LIVE_APPROVED=1`.
+- [x] `tests/integration/analytics/` assertions are tightened per #61 points 1-5 (the Government registry loop reaches its assert or is removed, the host test matches the error field, dedicated Synapse is covered, narrowed scope asserts `row_count == 0`, the shim test asserts the expected shim set per adapter).
+- [x] Each #62 bullet is fixed with a test or recorded in the completion note as not reproducible or descoped, with the reason.
+- [x] Given a Synapse request with `approx_quantile`, When the adapter runs, Then it renders a windowed `PERCENTILE_CONT ... OVER (PARTITION BY ...)` statement and the equivalence suite compares it to the fixture within the documented tolerance; the dedicated and serverless refusal test is replaced by a pass test (#59).
+- [x] Given a Government region request that `DeploymentProfile` refuses, When `create_adapter` or `list_backends` is called, Then the raised error keeps the `capability_unavailable` reason (#212 analytics bullet).
+- [x] Live runs per adapter stay OPEN and are written OPEN in the completion note (handed to PRP-64).
 - [ ] PRP exit: the touched suites pass, `verify-gates.ps1 -Mode full` is green and `python scripts/validate_planning.py` passes.
 
 ## Clarifications (decided)
@@ -218,16 +220,16 @@ No data or schema migration: the builder only reads settings and the adapter rea
 | 2 | merged | prp-11-round2-analytics-runtime | executor moved, script hardened |
 | 3 | merged | prp-11-round2-analytics-runtime | builder + pinned test updates |
 | 4 | merged | prp-11-round2-analytics-runtime | windowed quantile; stub interpolation differs from nearest-rank on small groups |
-| 5 | in-progress | prp-11-round2-analytics-runtime | README done; Tier-3 regen and completion note at merge step |
+| 5 | merged | prp-11-round2-analytics-runtime | README, Tier-3 regen, completion note |
 
 ## Completion note (filled at ship)
-- Date, PR, merged commits:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (G01 per adapter, G12 deltas, Government):
-- Env vars for the operator (`NS_ANALYTICS_*`):
-- Follow-up issue numbers:
-- Product check (can an operator select a backend without editing files?):
+- Date, PR, merged commits: 2026-11-15, PR #275 (squash). Items 1-5 on branch prp-11-round2-analytics-runtime, merged with origin/main (PRP-38) without conflicts.
+- Deviations from the blueprint and why: the reviewer follow-up on `fabric/migrations.py` was applied in the close-out commit: `_LEDGER_LOCKS` is now a `WeakKeyDictionary` keyed by the executor (then by schema name), so a recycled `id()` cannot share a lock and the table does not grow. `verify-gates.ps1 -Mode full` was not run in this unattended session; the touched suites, repo-wide ruff, ruff format and pyright were run instead (983 tests passed), and CI is the full gate. No `[serial-after]` items existed in this PRP. `openapi.json` and `docs/reference` did not change (drift tests pass).
+- Descoped items: real Fabric and Synapse executors (no approved TDS driver); live runs (PRP-64).
+- OPEN gates (G01 per adapter, G12 deltas, Government): G01 live per adapter (Fabric, Synapse, Databricks, Commercial) and G12 stub-vs-live deltas OPEN. Synapse windowed percentile is exact `PERCENTILE_CONT` while the fixture oracle is nearest-rank, so small groups differ by more than the 2 percent tolerance; recorded in the evidence README, PRP-64 must reconcile it. Databricks under Government is refused with `analytics_government_unverified` until the Government Entra audience is verified. Fabric and Synapse report `analytics_executor_unavailable`. Databricks 256-parameter and INLINE-size limits unverified. Government Fabric host suffix inferred, unverified.
+- Env vars for the operator (`NS_ANALYTICS_*`): `NS_ANALYTICS_BACKEND` (none, fixture, databricks, fabric, synapse; unset means disabled), `NS_ANALYTICS_REGION`, `NS_ANALYTICS_DATABRICKS_HOST`, `NS_ANALYTICS_DATABRICKS_WAREHOUSE_ID`, `NS_ANALYTICS_DATABRICKS_CATALOG`, `NS_ANALYTICS_DATABRICKS_SCHEMA`. `.env.example` not edited (agent-blocked); hosted wiring is PRP-58.
+- Follow-up issue numbers: #212 stays open (other bullets belong to PRP-59); PRP-64 for live gates and the percentile reconciliation.
+- Product check (can an operator select a backend without editing files?): Partly. Selection is by `NS_ANALYTICS_*` environment settings and status shows in the component report, but no UI or API route reads analytics data yet and hosted wiring is PRP-58.
 
 ## History
 - Round 1 shipped as PR #63 (merged 2026-10-18): contracts, fixture adapter, Fabric, Synapse and Databricks adapters over a SQLite stub, the equivalence and gating suite and the live-gate script. Live runs did not run; all three adapters stayed OPEN.

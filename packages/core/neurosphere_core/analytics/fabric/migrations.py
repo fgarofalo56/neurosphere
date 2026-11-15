@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import re
+import weakref
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -103,7 +104,9 @@ def validate_migration_set(migrations: Sequence[Migration]) -> None:
             raise ValueError(f"malformed migration {migration.id}")
 
 
-_LEDGER_LOCKS: dict[tuple[int, str], asyncio.Lock] = {}
+_LEDGER_LOCKS: weakref.WeakKeyDictionary[object, dict[str, asyncio.Lock]] = (
+    weakref.WeakKeyDictionary()
+)
 
 
 async def apply_migrations(
@@ -119,7 +122,8 @@ async def apply_migrations(
     concurrent runs insert one ledger row per version (issue #62). Separate processes are
     not serialised here: that needs an engine-side guard, proven at the live gate.
     """
-    lock = _LEDGER_LOCKS.setdefault((id(executor), config.schema_name), asyncio.Lock())
+    per_executor = _LEDGER_LOCKS.setdefault(executor, {})
+    lock = per_executor.setdefault(config.schema_name, asyncio.Lock())
     async with lock:
         return await _apply_locked(executor, config=config, migrations=migrations, now=now)
 
