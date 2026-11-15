@@ -171,6 +171,15 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
         notes="ReviewItem carries customer_id and domain_id (it has no 'domain' field)",
     ),
     ContainerSpec(
+        "catalog_quarantine",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_workers.projections.catalog.quarantine_cosmos",
+        notes=(
+            "CandidateQuarantineRecord carries customer_id and domain_id; id is the candidate "
+            "edge id (upsert), identifiers only (PRP-43)"
+        ),
+    ),
+    ContainerSpec(
         "lifecycle_requests",
         _CUSTOMER,
         "neurosphere_core.lifecycle.cosmos",

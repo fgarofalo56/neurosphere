@@ -60,6 +60,7 @@ WIRE_CONTRACT: dict[str, tuple[str, ...]] = {
     "hitl_items": ("/customer_id", "/domain_id"),
     "hitl_decisions": ("/review_item_id",),
     "catalog_review_queue": ("/customer_id", "/domain_id"),
+    "catalog_quarantine": ("/customer_id", "/domain_id"),
     "lifecycle_requests": ("/customer_id",),
     "lifecycle_holds": ("/customer_id",),
     "lifecycle_mappings": ("/customer_id",),

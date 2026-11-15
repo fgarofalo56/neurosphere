@@ -234,3 +234,13 @@ class ApimWriteSettings(BaseSettings):
     @property
     def complete(self) -> bool:
         return self.gateway_id is not None and self.domain_id is not None
+
+
+class CatalogProjectionSettings(BaseSettings):
+    """``NS_WORKER_CATALOG_*``: the catalog projection (PRP-43)."""
+
+    model_config = SettingsConfigDict(env_prefix="NS_WORKER_CATALOG_", frozen=True, extra="ignore")
+
+    #: Skipped candidates (out of scope or id collision) per process lifetime before the worker
+    #: logs one WARNING with counts only. The records themselves go to ``catalog_quarantine``.
+    quarantine_warn: int = Field(default=100, ge=1)

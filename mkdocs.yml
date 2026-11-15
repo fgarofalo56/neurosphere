@@ -125,6 +125,7 @@ nav:
       - runbooks/admission-and-federation.md
       - runbooks/ingest-cost-attribution.md
       - runbooks/lifecycle.md
+      - runbooks/catalog-review-queue.md
       - runbooks/runtime-composition.md
       - runbooks/identity-admin.md
       - runbooks/copilot.md

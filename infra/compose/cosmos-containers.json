@@ -80,6 +80,18 @@
     },
     {
       "default_ttl": null,
+      "name": "catalog_quarantine",
+      "owner": "neurosphere_workers.projections.catalog.quarantine_cosmos",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
       "name": "catalog_review_queue",
       "owner": "neurosphere_core.catalog.review_queue_cosmos",
       "partition_key": {

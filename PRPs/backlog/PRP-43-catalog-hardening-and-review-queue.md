@@ -259,14 +259,14 @@ Keyed stale-agent digest; moving the search `cache_key` helper (PRP-60); connect
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | needs PRP-37 and PRP-42 merged |
-| 3 | todo | | rebase on PRP-18 |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | after 4 |
-| 7 | todo | | after 6 |
-| 8 | todo | | |
+| 1 | verifying | prp-43-catalog-hardening | quarantine collision + Cosmos sink + threshold warning done, tests green |
+| 2 | in-progress | prp-43-catalog-hardening | container spec, regenerated cosmos-containers.json (Bicep reads it), worker setting `CatalogProjectionSettings.quarantine_warn`, emulator test written (not run). OPEN: `build_projections` wiring is [serial-after: PRP-42] (not in PRPs/shipped) |
+| 3 | verifying | prp-43-catalog-hardening | bounded concurrency 16, scope-filtered fan-out, `catalog/auditor.py`; rebased on PRP-18 main |
+| 4 | verifying | prp-43-catalog-hardening | provenance on PresentedEdge, Cosmos open marker, emulator tests written (not run: no compose) |
+| 5 | verifying | prp-43-catalog-hardening | per-route pre-parse Content-Length guard via route class, pinned tests |
+| 6 | verifying | prp-43-catalog-hardening | list + resolve routes, `ReviewQueueGuard` (`review_queue_guard`), audit, tests |
+| 7 | verifying | prp-43-catalog-hardening | dialog `controls`/`reasonMode`, ReviewQueuePage, nav, mock, vitest, e2e + a11y green |
+| 8 | in-progress | prp-43-catalog-hardening | runbook + mkdocs nav + Tier-2 lines done; Tier-3 regeneration, factories wiring and close-out left for the merge step |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:
