@@ -104,7 +104,7 @@ def _load(path: str) -> Any:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError as exc:
         parent = module_name.rsplit(".", 1)[0]
-        if exc.name in (module_name, parent):
+        if exc.name in (module_name, parent) and exc.name is not None:
             raise CapabilityUnavailableError(
                 "adapter_not_installed", f"adapter module {module_name} is not installed"
             ) from None
@@ -126,6 +126,8 @@ def create_adapter(
     ``name`` is ``fabric``, ``synapse``, ``databricks`` or ``fixture`` (sandbox only)."""
     if name == "fixture":
         factory = _load(FIXTURE_FACTORY)
+        # The fixture adapter reads in-process synthetic data and has no executor: a caller
+        # supplied one is deliberately not passed on (it would never be used).
         return factory(
             cloud=cloud, region=region, config=dict(config or {}), executor=None, sandbox=sandbox
         )

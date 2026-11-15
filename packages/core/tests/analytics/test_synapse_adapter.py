@@ -473,3 +473,13 @@ def test_g12_gaps_are_documented() -> None:
     text = " ".join(synapse.G12_PARITY_GAPS).lower()
     for needle in ("top", "quantile", "dwu", "throttl", "entra", "cold start"):
         assert needle in text or needle.replace("throttl", "concurrency") in text
+
+
+def test_dedicated_workspace_named_like_serverless_is_rejected() -> None:
+    with pytest.raises(InvalidSchemaError):
+        synapse.create_adapter(
+            cloud="commercial",
+            region="eastus",
+            config=make_config("dedicated", workspace="nsdemo-ondemand"),
+            executor=object(),
+        )

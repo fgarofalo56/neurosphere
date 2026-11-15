@@ -79,6 +79,10 @@ class SynapseConfig(BaseModel):
                     f"host does not match mode {self.mode!r}: the serverless endpoint "
                     f"carries {ONDEMAND_MARK!r}, the dedicated endpoint does not"
                 )
+        if self.mode == "dedicated" and self.workspace.endswith(ONDEMAND_MARK):
+            # a dedicated workspace named like the serverless endpoint would derive a host
+            # that looks serverless (issue #62)
+            raise ValueError(f"a dedicated workspace name must not end in {ONDEMAND_MARK!r}")
         if self.mode == "dedicated" and self.external_data_source is not None:
             raise ValueError("external_data_source applies to serverless mode only")
         return self
