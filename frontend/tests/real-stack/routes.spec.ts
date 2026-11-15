@@ -92,6 +92,7 @@ const ENTRIES: readonly Entry[] = [
   },
   { route: "/catalog/publication" },
   { route: "/catalog/recertifications" },
+  { route: "/catalog/review-queue" },
   { route: "/catalog/stale-agents" },
   { route: "/dashboards/cost" },
   { route: "/dashboards/coverage" },

@@ -8,6 +8,7 @@ import {
   catalogGovernanceNavItems,
   catalogNavItems,
 } from "../features/catalog/routes";
+import { reviewQueueNavItems } from "../features/curation/routes";
 import { dashboardNavItems } from "../features/dashboards/routes";
 import { deployNavItems } from "../features/deploy/routes";
 import { evaluationsNavItems } from "../features/evaluations/routes";
@@ -71,6 +72,7 @@ export function buildAppNavItems(): readonly NavItem[] {
       ...gatewaysNavItems(),
       ...catalogNavItems(),
       ...catalogGovernanceNavItems(),
+      ...reviewQueueNavItems(),
       ...auditNavItems(),
       ...deployNavItems(),
       ...executionControlNavItems(),

@@ -84,3 +84,43 @@ describe("ChangeConfirmDialog", () => {
     await waitFor(() => expect(opener).toHaveFocus());
   });
 });
+
+describe("ChangeConfirmDialog code mode", () => {
+  function CodeHarness(props: {
+    readonly valid: boolean;
+    readonly onSubmit: (v: ChangeConfirmSubmit) => void;
+  }): ReactElement {
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <ChangeConfirmDialog
+          open
+          target={TARGET}
+          version="etag-7"
+          diff={DIFF}
+          reasonMode="code"
+          controls={<span data-testid="slot">picker</span>}
+          controlsValid={props.valid}
+          onSubmit={props.onSubmit}
+          onClose={vi.fn()}
+        />
+      </FluentProvider>
+    );
+  }
+
+  it("hides the free-text reason and renders the controls slot", async () => {
+    render(<CodeHarness valid onSubmit={vi.fn()} />);
+    expect(await screen.findByTestId("slot")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { hidden: true })).toBeNull();
+  });
+
+  it("enables submit only while the slot reports valid, with an empty reason", async () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(<CodeHarness valid={false} onSubmit={onSubmit} />);
+    const submit = await screen.findByRole("button", { name: "Confirm change", hidden: true });
+    expect(submit).toBeDisabled();
+    rerender(<CodeHarness valid onSubmit={onSubmit} />);
+    const enabled = await screen.findByRole("button", { name: "Confirm change", hidden: true });
+    await userEvent.setup().click(enabled);
+    expect(onSubmit).toHaveBeenCalledWith({ reason: "", expiry: null });
+  });
+});

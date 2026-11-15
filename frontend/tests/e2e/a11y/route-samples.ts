@@ -187,6 +187,12 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     ready: "main h1",
   },
   {
+    pattern: "/catalog/review-queue",
+    name: "review queue",
+    url: `/catalog/review-queue?${q()}`,
+    ready: "main h1",
+  },
+  {
     pattern: "/catalog/stale-agents",
     name: "stale agents",
     url: `/catalog/stale-agents?${q()}`,
