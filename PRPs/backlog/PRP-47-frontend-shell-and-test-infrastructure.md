@@ -240,8 +240,8 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. The human accessibility sign
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | merged | prp-47-shell-test-infra | nav arrows, last-domain cleanup, theme in Providers; badge overflow not reproducible, Playwright check added |
+| 2 | merged | prp-47-shell-test-infra | comment + tests |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

@@ -1,8 +1,13 @@
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { EventType, type AccountInfo, type IPublicClientApplication } from "@azure/msal-browser";
+import { MsalProvider } from "@azure/msal-react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createApiClient, QueryProvider } from "../api/index.js";
+import { createStubMsalInstance } from "../../tests/e2e-support/stubMsal";
 import { registerTokenSource } from "../auth/token";
 import {
+  DomainProvider,
   LAST_DOMAIN_KEY_PREFIX,
   NO_DOMAINS_MESSAGE,
   lastDomainStorageKey,
@@ -239,5 +244,74 @@ describe("last selected domain in localStorage", () => {
     expect(localStorage.getItem(key)).toBeNull();
     expect(localStorage.length).toBe(0);
     expect(vi.mocked(msal.logoutRedirect)).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("last selected domain is removed when the account disappears", () => {
+  type Listener = (message: { eventType: string }) => void;
+
+  /** MSAL stub whose account list can be emptied and announced, as MSAL does on sign-out. */
+  function removableMsal(account: AccountInfo) {
+    let accounts: AccountInfo[] = [account];
+    const listeners: Listener[] = [];
+    const base = createStubMsalInstance() as unknown as Record<string, unknown>;
+    const msal = {
+      ...base,
+      getAllAccounts: () => accounts,
+      getActiveAccount: () => accounts[0] ?? null,
+      addEventCallback: (cb: Listener) => {
+        listeners.push(cb);
+        return "id";
+      },
+      removeEventCallback: () => undefined,
+    } as unknown as IPublicClientApplication;
+    return {
+      msal,
+      /** What MSAL does when the account is removed here or in another tab. */
+      removeAccount(eventType: string) {
+        accounts = [];
+        act(() => {
+          for (const cb of listeners) cb({ eventType });
+        });
+      },
+    };
+  }
+
+  function mount(msal: IPublicClientApplication): void {
+    const client = createApiClient({
+      baseUrl: "http://api.test",
+      getToken: () => Promise.resolve("test-credential"),
+      fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ items: LIST }))),
+      maxRetries: 0,
+    });
+    render(
+      <MsalProvider instance={msal}>
+        <QueryProvider client={client}>
+          <DomainProvider>
+            <p>child</p>
+          </DomainProvider>
+        </QueryProvider>
+      </MsalProvider>,
+    );
+  }
+
+  it.each([
+    ["sign-out in this tab", EventType.LOGOUT_SUCCESS],
+    ["sign-out in another tab (account removed from the shared cache)", EventType.ACCOUNT_REMOVED],
+  ])("removes the stored key after %s", async (_name, eventType) => {
+    const account = newAccount();
+    const userKey = await pseudonymousUserKey(account.homeAccountId);
+    const key = lastDomainStorageKey(userKey ?? "");
+    localStorage.setItem(key, OPS);
+    const { msal, removeAccount } = removableMsal(account);
+    mount(msal);
+    await screen.findByText("child");
+    // Let the pseudonymous key resolve so the provider knows whose key it holds.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(localStorage.getItem(key)).toBe(OPS);
+
+    removeAccount(eventType);
+    await waitFor(() => expect(localStorage.getItem(key)).toBeNull());
+    expect(localStorage.length).toBe(0);
   });
 });
