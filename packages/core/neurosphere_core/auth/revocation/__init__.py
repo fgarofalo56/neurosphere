@@ -44,14 +44,19 @@ from neurosphere_core.auth.revocation.model import (
     REASON_CODE_PATTERN,
     ReasonCode,
     RevocationEntry,
+    RevocationMode,
     RevocationSettings,
     is_canonical_principal_id,
     is_reason_code,
+    lifted_entry,
     load_revocation_settings,
+    merge_entries,
     revocation_document_id,
 )
 from neurosphere_core.auth.revocation.service import (
+    LIFT_ACTION,
     REVOKE_ACTION,
+    STATUS_ACTION,
     AuditPhase,
     RevocationAuditEvent,
     RevocationAuditor,
@@ -60,7 +65,12 @@ from neurosphere_core.auth.revocation.service import (
     RevocationService,
     ScopePermissionRevocationAuthorizer,
 )
-from neurosphere_core.auth.revocation.store import InMemoryRevocationStore, RevocationStore
+from neurosphere_core.auth.revocation.store import (
+    InMemoryRevocationStore,
+    RevocationReader,
+    RevocationStore,
+    no_active_block,
+)
 
 __all__ = [
     "DEFAULT_CHECKER_MAX_ENTRIES",
@@ -69,11 +79,13 @@ __all__ = [
     "DEFAULT_REVOCATION_CONTAINER",
     "DEFAULT_REVOCATION_RETENTION_SECONDS",
     "DEFAULT_REVOCATION_TTL_SECONDS",
+    "LIFT_ACTION",
     "MAX_REVOCATION_TTL_SECONDS",
     "MIN_REVOCATION_RETENTION_SECONDS",
     "PRINCIPAL_ID_PATTERN",
     "REASON_CODE_PATTERN",
     "REVOKE_ACTION",
+    "STATUS_ACTION",
     "AuditPhase",
     "CacheInvalidator",
     "CachedRevocationChecker",
@@ -88,13 +100,18 @@ __all__ = [
     "RevocationAuthorizer",
     "RevocationEntry",
     "RevocationHookRegistry",
+    "RevocationMode",
     "RevocationOutcome",
+    "RevocationReader",
     "RevocationService",
     "RevocationSettings",
     "RevocationStore",
     "ScopePermissionRevocationAuthorizer",
     "is_canonical_principal_id",
     "is_reason_code",
+    "lifted_entry",
     "load_revocation_settings",
+    "merge_entries",
+    "no_active_block",
     "revocation_document_id",
 ]

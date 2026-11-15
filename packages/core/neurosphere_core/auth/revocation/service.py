@@ -26,15 +26,17 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Awaitable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Final, Literal, Protocol, runtime_checkable
+from typing import Final, Literal, Protocol, get_args, runtime_checkable
 
 from neurosphere_core.auth.jwt import Clock
 from neurosphere_core.auth.revocation.fanout import FanoutReport, RevocationHookRegistry
 from neurosphere_core.auth.revocation.model import (
     DEFAULT_REVOCATION_TTL_SECONDS,
     RevocationEntry,
+    RevocationMode,
     is_canonical_principal_id,
     is_reason_code,
 )
@@ -50,7 +52,9 @@ from neurosphere_core.errors import (
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
+    "LIFT_ACTION",
     "REVOKE_ACTION",
+    "STATUS_ACTION",
     "AuditPhase",
     "RevocationAuditEvent",
     "RevocationAuditor",
@@ -63,6 +67,11 @@ __all__ = [
 _log = logging.getLogger(__name__)
 
 REVOKE_ACTION: Final = "principal.revoke"
+#: Lifting an ``until_lifted`` block (PRP-39).
+LIFT_ACTION: Final = "principal.revoke_lift"
+#: Reading a principal's revocation state; only a denial is ever audited under it.
+STATUS_ACTION: Final = "principal.revocation_read"
+_MODES: Final = frozenset(get_args(RevocationMode))
 AuditPhase = Literal["denied", "intent", "outcome", "failed"]
 
 
@@ -87,6 +96,8 @@ class RevocationAuditEvent:
     deny_reason: str | None = None
     error_code: str | None = None
     fanout: FanoutReport | None = None
+    #: Requested mode on ``principal.revoke`` (effective mode on its outcome); ``None`` on lift.
+    mode: RevocationMode | None = None
 
 
 @runtime_checkable
@@ -156,27 +167,49 @@ class RevocationService:
     def hooks(self) -> RevocationHookRegistry:
         return self._hooks
 
-    async def revoke(
-        self, actor: IdentityScope, target_principal_id: str, *, reason: str
-    ) -> RevocationOutcome:
+    @property
+    def propagation_bound_seconds(self) -> float:
+        return self._ttl
+
+    def _base_event(
+        self,
+        actor: IdentityScope,
+        target_principal_id: str,
+        reason: str,
+        *,
+        action: str,
+        mode: RevocationMode | None,
+    ) -> RevocationAuditEvent:
         if not isinstance(actor, IdentityScope):
-            raise TypeError("revoke requires a server-derived IdentityScope")
+            raise TypeError("revocation requires a server-derived IdentityScope")
         issues: list[ValidationIssue] = []
         if not is_canonical_principal_id(target_principal_id):
             issues.append(ValidationIssue("/principal_id", "must be a canonical principal id"))
         if not is_reason_code(reason):
             issues.append(ValidationIssue("/reason", "must be a machine reason code"))
+        if mode is not None and mode not in _MODES:
+            issues.append(ValidationIssue("/mode", "must be issued_before or until_lifted"))
         if issues:
             raise InvalidSchemaError("invalid revocation request", errors=issues)
-        actor_id = _actor_id(actor)
-        base = RevocationAuditEvent(
-            action=REVOKE_ACTION,
+        return RevocationAuditEvent(
+            action=action,
             phase="intent",
-            actor_principal_id=actor_id,
+            actor_principal_id=_actor_id(actor),
             actor_scope_hash=actor.scope_hash,
             target_principal_id=target_principal_id,
             reason=reason,
+            mode=mode,
         )
+
+    async def revoke(
+        self,
+        actor: IdentityScope,
+        target_principal_id: str,
+        *,
+        reason: str,
+        mode: RevocationMode = "issued_before",
+    ) -> RevocationOutcome:
+        base = self._base_event(actor, target_principal_id, reason, action=REVOKE_ACTION, mode=mode)
         await self._authorize(actor, target_principal_id, base)
 
         revoked_at = datetime.fromtimestamp(self._clock(), UTC)
@@ -184,11 +217,82 @@ class RevocationService:
             principal_id=target_principal_id,
             revoked_at=revoked_at,
             reason=reason,
-            revoked_by=actor_id,
+            revoked_by=base.actor_principal_id,
+            mode=mode,
         )
         await self._auditor.record(replace(base, phase="intent", revoked_at=revoked_at))
+        effective = await self._guarded(base, revoked_at, self._store.put(entry))
+
+        fanout = await self._hooks.fan_out(target_principal_id)
+        await self._auditor.record(
+            replace(
+                base,
+                phase="outcome",
+                revoked_at=effective.revoked_at,
+                mode=effective.mode,
+                fanout=fanout,
+            )
+        )
+        return RevocationOutcome(
+            entry=effective, fanout=fanout, propagation_bound_seconds=self._ttl
+        )
+
+    async def lift(
+        self, actor: IdentityScope, target_principal_id: str, *, reason: str
+    ) -> RevocationOutcome:
+        """Lift an ``until_lifted`` block (PRP-39). Same permission and audit order as
+        :meth:`revoke`; the action is ``principal.revoke_lift``. No active block is
+        ``not_found`` (``no_active_block``). Only cache invalidators are called (no push
+        session exists to close); other replicas re-admit within the TTL."""
+        base = self._base_event(actor, target_principal_id, reason, action=LIFT_ACTION, mode=None)
+        await self._authorize(actor, target_principal_id, base)
+        lifted_at = datetime.fromtimestamp(self._clock(), UTC)
+        await self._auditor.record(replace(base, phase="intent"))
+        lifted = await self._guarded(
+            base,
+            None,
+            self._store.lift(
+                target_principal_id, lifted_by=base.actor_principal_id, lifted_at=lifted_at
+            ),
+        )
+        fanout = await self._hooks.invalidate_caches(target_principal_id)
+        await self._auditor.record(
+            replace(
+                base,
+                phase="outcome",
+                revoked_at=lifted.revoked_at,
+                mode=lifted.mode,
+                fanout=fanout,
+            )
+        )
+        return RevocationOutcome(entry=lifted, fanout=fanout, propagation_bound_seconds=self._ttl)
+
+    async def status(
+        self, actor: IdentityScope, target_principal_id: str
+    ) -> RevocationEntry | None:
+        """Current entry for ``target_principal_id`` (``None`` when not revoked), under the same
+        authorizer as :meth:`revoke` (a denial is audited). Outage raises; never ``None``."""
+        base = self._base_event(
+            actor, target_principal_id, "status_read", action=STATUS_ACTION, mode=None
+        )
+        await self._authorize(actor, target_principal_id, base)
         try:
-            effective = await self._store.put(entry)
+            return await self._store.get(target_principal_id)
+        except NeuroSphereError:
+            raise
+        except Exception as exc:
+            raise DependencyTransientError(
+                "revocation store unavailable", reason="revocation_store_unavailable"
+            ) from exc
+
+    async def _guarded(
+        self,
+        base: RevocationAuditEvent,
+        revoked_at: datetime | None,
+        write: Awaitable[RevocationEntry],
+    ) -> RevocationEntry:
+        try:
+            return await write
         except NeuroSphereError as exc:
             await self._audit_failure(base, revoked_at, exc)
             raise
@@ -198,14 +302,6 @@ class RevocationService:
             )
             await self._audit_failure(base, revoked_at, error)
             raise error from exc
-
-        fanout = await self._hooks.fan_out(target_principal_id)
-        await self._auditor.record(
-            replace(base, phase="outcome", revoked_at=effective.revoked_at, fanout=fanout)
-        )
-        return RevocationOutcome(
-            entry=effective, fanout=fanout, propagation_bound_seconds=self._ttl
-        )
 
     async def _authorize(
         self, actor: IdentityScope, target: str, base: RevocationAuditEvent
@@ -228,7 +324,7 @@ class RevocationService:
             raise ForbiddenError("revocation not authorized", reason="not_authorized")
 
     async def _audit_failure(
-        self, base: RevocationAuditEvent, revoked_at: datetime, error: NeuroSphereError
+        self, base: RevocationAuditEvent, revoked_at: datetime | None, error: NeuroSphereError
     ) -> None:
         try:
             await self._auditor.record(
@@ -237,5 +333,5 @@ class RevocationService:
         except Exception as exc:  # the store error is what the caller must see
             _log.warning(
                 "revocation failure audit not written",
-                extra={"action": REVOKE_ACTION, "error_type": type(exc).__name__},
+                extra={"action": base.action, "error_type": type(exc).__name__},
             )

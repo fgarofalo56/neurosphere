@@ -207,7 +207,7 @@ Console UI, Entra group sync, Graph lookups of display names, bulk import of ass
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | verifying | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
