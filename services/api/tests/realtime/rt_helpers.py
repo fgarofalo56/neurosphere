@@ -57,9 +57,11 @@ class Ticker:
         self._interval = interval
         self._gate = asyncio.Semaphore(0)
         self.calls = 0
+        self.requested: list[float] = []
 
     async def sleeper(self, seconds: float) -> None:
         self.calls += 1
+        self.requested.append(seconds)
         await self._gate.acquire()
 
     async def tick(self, pumps: int = 1, abort: Callable[[], bool] | None = None) -> None:
@@ -116,11 +118,11 @@ class Rig:
         return client.websocket_connect(WS_URL, subprotocols=["ns.bearer", token])
 
 
-def build_rig(*policies: PrincipalPolicy, **settings: Any) -> Rig:
+def build_rig(*policies: PrincipalPolicy, ttl: float = TTL, **settings: Any) -> Rig:
     holder: dict[str, Harness] = {}
     revocations = InMemoryRevocationStore(clock=lambda: holder["h"].clock.now)
     checker = CachedRevocationChecker(
-        revocations, ttl_seconds=TTL, clock=lambda: holder["h"].clock.now
+        revocations, ttl_seconds=ttl, clock=lambda: holder["h"].clock.now
     )
     h = harness(
         *policies,
@@ -129,13 +131,14 @@ def build_rig(*policies: PrincipalPolicy, **settings: Any) -> Rig:
     )
     holder["h"] = h
     aggregates = InMemoryAggregateStore()
-    cfg = RealtimeSettings(poll_interval_seconds=POLL, **settings)
+    settings.setdefault("poll_interval_seconds", POLL)
+    cfg = RealtimeSettings(**settings)
     ticker = Ticker(h.clock)
     registry = configure_realtime(
         h.app,
         aggregate_reader=aggregates,
         settings=cfg,
-        revocation_ttl_seconds=TTL,
+        revocation_ttl_seconds=ttl,
         clock=h.clock,
         sleeper=ticker.sleeper,
     )

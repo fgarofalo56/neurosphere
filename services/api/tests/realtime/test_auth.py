@@ -18,6 +18,7 @@ from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import Role, ScopeDerivation
 from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from .rt_helpers import WS_URL, build_rig, drain, until_pong
 
@@ -140,3 +141,15 @@ def test_websocket_route_declares_data_read_for_the_route_inventory() -> None:
     entries = [e for e in route_inventory(rig.h.app) if e.path == WS_URL]
     assert [(e.methods, e.permissions) for e in entries] == [(("WEBSOCKET",), ("data.read",))]
     assert undeclared_routes(rig.h.app) == ()
+
+
+def test_close_reasons_never_contain_token_text() -> None:
+    rig = build_rig(*POLICIES)
+    probe = "not-a-real-token-0123456789"
+    with rig.client() as client:
+        with client.websocket_connect(WS_URL, subprotocols=["ns.bearer", probe]) as ws:
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_json()
+    assert closed.value.code == 4401
+    assert probe not in closed.value.reason
+    assert probe not in str(closed.value)

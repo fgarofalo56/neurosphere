@@ -17,7 +17,8 @@ Guarantees, each enforced here:
   longer permits is unsubscribed and nothing is pushed.
 * Revocation: ``GatewayRegistry.close_for_principal`` closes at once on this replica; the
   refresh re-runs scope derivation (which checks revocation) at least twice per TTL, so a
-  revocation recorded on another replica closes the socket within the TTL.
+  revocation recorded on another replica closes the socket within the TTL plus one interval
+  (the pump sleeps ``min(poll interval, refresh period)``).
 * Fail closed: any authorization, policy or revocation error closes the socket (4401, 4403 or
   1013); no ``except`` in this module turns an error into a delivery.
 * Budgets: a token bucket per session for inbound messages (``rate_limited`` error, then 4429
@@ -374,8 +375,17 @@ class _Connection:
     # ------------------------------------------------------------------ outbound
 
     async def _pump_loop(self, session: Session) -> None:
+        # Sleep no longer than the scope refresh period, so the refresh cadence holds even when
+        # the poll interval is longer than half the revocation TTL. A zero refresh period means
+        # "refresh every poll", never a busy loop.
+        refresh = self._gw.refresh_seconds
+        interval = (
+            min(self._cfg.poll_interval_seconds, refresh)
+            if refresh > 0
+            else self._cfg.poll_interval_seconds
+        )
         while True:
-            await self._gw.sleeper(self._cfg.poll_interval_seconds)
+            await self._gw.sleeper(interval)
             # Refresh even with no subscriptions: an idle socket of a revoked principal closes.
             await self._refresh_scope(session)
             for domain_id in tuple(session.subscriptions):
