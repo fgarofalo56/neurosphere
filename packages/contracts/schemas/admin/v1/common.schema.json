@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/common.schema.json",
+  "title": "AdminCommon",
+  "description": "Shared definitions for the operator control-plane contracts (admin v1, PRP-37). Definition library only: it declares no root instance shape and is never validated against directly, so it has no examples. No definition here can hold a credential value (A7): credentials appear only as a credential-reference.schema.json document.",
+  "$defs": {
+    "schema_version": {
+      "description": "Contract version of the document, major 1 with additive minor revisions (ADR-0004).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "admin_kind": {
+      "description": "Kind of a versioned operator configuration document (AdminConfigDocument.kind). Each kind's body is validated in core by ADMIN_KIND_MODELS (PRP-65).",
+      "type": "string",
+      "enum": [
+        "producer",
+        "connector_config",
+        "domain",
+        "budget",
+        "price_sheet",
+        "review_policy",
+        "system_setting"
+      ]
+    },
+    "config_version": {
+      "description": "Monotonic version of an operator configuration document, incremented on every accepted write.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "reason_code": {
+      "description": "Machine reason code in snake_case, never free text (free text could carry names, UPNs or secrets into the audit trail).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "principal_id": {
+      "description": "Canonical pseudonymous principal id minted by the PRP-06 pseudonymizer: cloud:customer:entra:(person|principal):p-<64 hex>. Never a UPN, email address or raw directory object id.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$"
+    },
+    "customer_id": {
+      "description": "Customer segment of the canonical id grammar (the tenant deployment).",
+      "type": "string",
+      "pattern": "^[a-z0-9._-]{1,128}$"
+    },
+    "cloud": {
+      "description": "Azure cloud boundary. Government data is never bridged to Commercial.",
+      "type": "string",
+      "enum": ["commercial", "government"]
+    },
+    "canonical_id": {
+      "description": "Canonical id cloud:customer:source:type:id (PRP-01 clarification 7). Grammar owned by catalog/v1; duplicated here as a pattern so admin v1 has no cross-area dependency.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "domain_id": {
+      "description": "Canonical Domain id (type segment 'domain'). No wildcard or all-domains form exists.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$"
+    },
+    "record_id": {
+      "description": "Identifier of a record inside a policy or configuration document (assignment, grant, budget, item).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,128}$"
+    },
+    "slug": {
+      "description": "Lowercase operator-chosen identifier.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "display_name": {
+      "description": "Human-readable label shown in the console. Not an identity attribute: never a person's name, UPN or email.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
+    "date": {
+      "description": "Calendar date YYYY-MM-DD.",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "etag": {
+      "description": "Opaque optimistic-concurrency token. A mismatch on write returns the stale_version error.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "role": {
+      "description": "Platform role (NS-08). admin and security_auditor are privileged and always time-bound.",
+      "type": "string",
+      "enum": ["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+    },
+    "grant_permission": {
+      "description": "Permission a resource-scoped grant may carry (mirrors scope/v1 resource_grant).",
+      "type": "string",
+      "enum": ["read", "export", "propose_action", "approve", "execute"]
+    },
+    "decimal_amount": {
+      "description": "Non-negative decimal string, up to 18 integer and 12 fractional digits; no exponent, no float.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,17})(\\.[0-9]{1,12})?$"
+    },
+    "currency": {
+      "description": "ISO 4217 alphabetic currency code.",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "https_url": {
+      "description": "HTTPS URL with no query string, fragment or userinfo (so no SAS or signed URL can be stored).",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%-]{1,128})*/?$"
+    },
+    "azure_resource_id": {
+      "description": "Azure Resource Manager resource id (/subscriptions/<guid>/resourceGroups/<name>/providers/<namespace>/<type>/<name>...).",
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^/subscriptions/[0-9a-fA-F-]{36}/resourceGroups/[A-Za-z0-9._()-]{1,90}/providers/[A-Za-z0-9.]+(/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+)+$"
+    },
+    "doc_path": {
+      "description": "Repository-relative documentation path (docs/...md), optionally with an anchor.",
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^docs/[A-Za-z0-9._/-]{1,200}\\.md(#[a-z0-9-]{1,64})?$"
+    }
+  }
+}

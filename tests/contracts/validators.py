@@ -25,6 +25,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
+from urllib.parse import urlsplit
 
 from contract_support import jcs, sha256_jcs
 
@@ -1145,6 +1146,31 @@ _RELATIONS = (
     "uses_model",
     "writes",
 )
+
+
+# --------------------------------------------------------------------------- admin v1 (PRP-37)
+
+_VAULT_SUFFIX_BY_CLOUD: Mapping[str, str] = {
+    "commercial": ".vault.azure.net",
+    "government": ".vault.usgovcloudapi.net",
+}
+
+
+def check_credential_reference_cloud(reference: Doc, cloud: str) -> Problems:
+    """A key_vault_secret CredentialReference names a vault on the owning document's cloud.
+
+    Commercial references use ``vault.azure.net``, Government ``vault.usgovcloudapi.net``; a
+    Government document never resolves a credential from a Commercial vault (or the reverse).
+    """
+    if reference.get("kind") != "key_vault_secret":
+        return []
+    suffix = _VAULT_SUFFIX_BY_CLOUD.get(cloud)
+    if suffix is None:
+        return [f"unknown cloud {cloud!r}"]
+    host = urlsplit(str(reference.get("secret_uri", ""))).hostname or ""
+    if not host.endswith(suffix):
+        return [f"secret_uri host {host!r} is not a {cloud} Key Vault ({suffix})"]
+    return []
 
 
 def single_document_validators(

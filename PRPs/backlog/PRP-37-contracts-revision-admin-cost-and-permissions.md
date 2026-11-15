@@ -182,8 +182,8 @@ Ingest tag mapping, ledger tag queries, API error handler changes, catalog prove
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | verifying | prp-37-contracts-admin | admin/v1 common, credential-reference and identity schemas, examples, bindings, credential walker; admin-config-document moved to item 2 (its body is the item-2 kind schemas) |
+| 2 | in-progress | prp-37-contracts-admin | |
 | 3 | todo | | |
 | 4 | todo | | |
 

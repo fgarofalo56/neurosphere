@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0.0",
+  "op": "add",
+  "principal_id": "svc-hr@contoso.onmicrosoft.com",
+  "domain_id": "commercial:contoso:neurosphere:domain:hr",
+  "reason": "service_onboarding"
+}

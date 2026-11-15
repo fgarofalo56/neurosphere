@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "reason": "compromised_device",
+  "mode": "until_lifted"
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/revocation-status.schema.json",
+  "title": "RevocationStatus",
+  "description": "OUTPUT-ONLY. Current revocation state of one principal (PRP-39; PRP-06 RevocationEntry). When revoked is false every revocation member is null. propagation_bound_seconds is the documented worst-case delay before every API replica denies (NS_REVOCATION_TTL_SECONDS); revocation is never claimed to be instant.",
+  "readOnly": true,
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "principal_id",
+    "revoked",
+    "mode",
+    "revoked_at",
+    "reason",
+    "revoked_by",
+    "propagation_bound_seconds"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "principal_id": { "$ref": "common.schema.json#/$defs/principal_id" },
+    "revoked": { "type": "boolean" },
+    "mode": {
+      "anyOf": [{ "type": "string", "enum": ["issued_before", "until_lifted"] }, { "type": "null" }]
+    },
+    "revoked_at": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/timestamp" }, { "type": "null" }]
+    },
+    "reason": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/reason_code" }, { "type": "null" }]
+    },
+    "revoked_by": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/principal_id" }, { "type": "null" }]
+    },
+    "propagation_bound_seconds": { "type": "integer", "minimum": 1, "maximum": 900 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "revoked": { "const": true } }, "required": ["revoked"] },
+      "then": {
+        "properties": {
+          "mode": { "type": "string" },
+          "revoked_at": { "type": "string" },
+          "reason": { "type": "string" },
+          "revoked_by": { "type": "string" }
+        }
+      },
+      "else": {
+        "properties": {
+          "mode": { "type": "null" },
+          "revoked_at": { "type": "null" },
+          "reason": { "type": "null" },
+          "revoked_by": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

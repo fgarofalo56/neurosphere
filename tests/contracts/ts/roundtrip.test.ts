@@ -22,7 +22,7 @@ const schemaRoot = join(repoRoot, "packages", "contracts", "schemas");
 const tsPackage = join(repoRoot, "packages", "contracts", "ts");
 const srcDir = join(tsPackage, "src");
 const SUFFIX = ".schema.json";
-const LIBRARY_SCHEMAS = new Set(["catalog/v1/common.schema.json"]);
+const LIBRARY_SCHEMAS = new Set(["admin/v1/common.schema.json", "catalog/v1/common.schema.json"]);
 const MANIFEST_NAMES = ["index.json", "manifest.json", "expectations.json"];
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
