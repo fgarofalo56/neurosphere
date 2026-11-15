@@ -143,3 +143,70 @@ positives went from 1 per seed to 1, 2 and 4.
   action executor do not exist yet. Execution is refused with `capability_unavailable` (409).
 - A production `AgentSeriesSource` needs an agent dimension on the PRP-11 analytics contract and
   its adapters (OPEN, PRP-15 delta D1). The sandbox file reader is the only implementation.
+
+## Round 2: held-out re-measurement (2026-11-15)
+
+Reproduce with `uv run python tests/integration/recommendations/measure_detection.py` (about 4
+minutes, in-memory, fixed seeds). The harness now labels every row `held_out`. Tuning seeds are
+1, 2, 3, 7 and 11 (3, 7 and 11 were used in round 1, 1 and 2 were added and inspected in round
+2); held-out seeds are 5, 13 and 17 and were not used to choose any threshold, ratio or floor.
+
+No threshold was changed in round 2. The duplicate scores of every true pair on the five tuning
+seeds range from 0.932 to 1.0 and no false pair appears on them, so the tuning seeds give no
+evidence for a different `min_similarity` (raising it to 0.95 would lose true pairs at 0.932 and
+0.948). The held-out false pairs score 0.974 (seed 5) and 0.920 twice (seed 13); the 0.974 pair is
+above three true pairs on other seeds (0.932, 0.948, 0.954), so no score threshold separates them.
+Tuning against the held-out seeds would defeat their purpose, so the criterion is amended to the
+measured numbers instead (the lane A alternative).
+
+### Dense profile, 3 duplicate pairs (40 agents, 4 domains, ~20 traces/agent-day)
+
+| Seed | held out | cost_spike | latency | unused | duplicates (predicted / TP / labelled) | precision | recall |
+|------|----------|-----------|---------|--------|----------------------------------------|-----------|--------|
+| 1    | no  | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+| 2    | no  | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+| 3    | no  | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+| 7    | no  | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+| 11   | no  | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+| 5    | yes | 3/3 | 3/3 | 3/3 | 4 / 3 / 3 | 0.75 | 1.0 |
+| 13   | yes | 3/3 | 2/3 (1 silent miss) | 3/3 | 5 / 3 / 3 | 0.60 | 1.0 |
+| 17   | yes | 3/3 | 3/3 | 3/3 | 3 / 3 / 3 | 1.0  | 1.0 |
+
+Duplicate precision on the dense held-out seeds is 0.75, 0.60 and 1.0: the 0.80 target is NOT met
+on two of three seeds, recall is 1.0 everywhere. Zero unlabelled false positives for the cost,
+latency and unused rules on every dense seed. A new finding: dense held-out seed 13 has one
+latency regression that is neither detected nor reported (a silent miss); the dense 3/3 claim of
+round 1 holds on 7 of 8 dense seeds, not all. Both are OPEN quality items, not fixed here.
+
+### Pilot density (200 agents, 8 domains, ~2 traces/agent-day)
+
+| Seed | held out | cost_spike | latency detected | latency insufficient (injected) | latency silent misses | latency false alarms | unused | unused FP | duplicates P / R |
+|------|----------|-----------|------------------|-------------------------------|----------------------|----------------------|--------|-----------|------------------|
+| 3    | no  | 5/5 | 0/5 | 5 | 0 | 1 | 4/4 | 0 | 1.0 / 1.0 |
+| 11   | no  | 5/5 | 3/5 | 2 | 0 | 2 | 4/4 | 1 | 1.0 / 1.0 |
+| 5    | yes | 5/5 | 3/5 | 2 | 0 | 4 | 4/4 | 0 | 1.0 / 1.0 |
+| 13   | yes | 5/5 | 2/5 | 3 | 0 | 1 | 4/4 | 0 | 1.0 / 1.0 |
+| 17   | yes | 5/5 | 4/5 | 1 | 0 | 0 | 4/4 | 0 | 1.0 / 1.0 |
+
+Held-out pilot latency: 3, 2 and 4 of 5 detected with 4, 1 and 0 false alarms, and no silent miss.
+The assumption target (at least 3 of 5 and at most 1 false alarm per seed) is met on one of three
+held-out seeds (17). The measured numbers replace the target: 9 of 15 detected on held-out seeds
+(60 percent), 5 false alarms in total, 0 silent misses. The rule is unchanged from round 1
+(version 2.0.0, ratio 2.0, floor 8 durations per window); lowering false alarms by raising the
+ratio was already measured in round 1 to cost a dense-profile regression.
+
+Next step if quality matters before hosting: evaluate mutual-best matching for duplicate pairs
+(each agent in at most one candidate pair) and a multiple-comparison correction for the latency
+ratio on FRESH seeds (not 5, 13, 17, which this section has now looked at).
+
+## Round 2: production series source (archive)
+
+`ArchiveSeriesSource` (`rules/archive_source.py`) reads the redacted archive window and shares
+the bucketing, dedupe and coverage rules with `SandboxSeriesSource` (`SeriesAccumulator`). The
+parity test serves the same generated sandbox documents as files and as archive blobs (in-memory
+fake container) and requires equal series on seeds 3 and 11; the pipeline test requires the same
+stored recommendation ids from `run_pipeline` and `run_pipeline_archive`. NOT measured: archive
+listing sizing and RU cost on a real storage account and Cosmos (OPEN, G07 and G12), the hosted
+role and a real-stack run (OPEN, PRP-58). The listing is bounded (`ArchiveReader.max_blobs`,
+20000 by default); at that bound coverage is reported unknown and the run records
+`archive_truncated`.
