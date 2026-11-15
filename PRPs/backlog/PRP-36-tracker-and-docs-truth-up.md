@@ -214,7 +214,7 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. Nothing here changes a gate 
 | 4 | merged | prp-36-docs-truth-up | see commit |
 | 5 | merged | prp-36-docs-truth-up | see commit |
 | 6 | merged | prp-36-docs-truth-up | see commit |
-| 7 | in-progress | prp-36-docs-truth-up | gates, PR; CHANGELOG, INDEX, status table are merge-step Tier 3 |
+| 7 | verifying | prp-36-docs-truth-up | gates run locally; CHANGELOG, INDEX, status table, close-out are merge-step Tier 3 |
 
 ## Completion note (filled at ship)
 - Date and PR:
