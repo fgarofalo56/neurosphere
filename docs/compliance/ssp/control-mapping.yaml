@@ -190,7 +190,9 @@ controls:
     owner: "PRP-23 lifecycle engine (mechanism); customer records policy (retention periods, gate G06)"
     narrative: >-
       Retention periods are a customer input and no built-in values are shipped. The mechanism
-      that keeps audit records out of deletion scope is planned under PRP-23 item 1.
+      that keeps audit records out of deletion scope exists (the engine refuses the audit store
+      by name and content) and is covered by in-memory tests. The emulator integration test
+      has not run, so the status stays planned.
     evidence: []
   - id: AU-12
     title: Audit Record Generation
@@ -611,9 +613,10 @@ controls:
     prps: [PRP-23]
     owner: "PRP-23 item 1 (lifecycle engine); customer records officer (retention periods, gate G06)"
     narrative: >-
-      Policy-driven retention, pseudonymization, deletion, export and legal hold are specified
-      under PRP-23 item 1 with fail-closed defaults. They are not cited as evidence until
-      merged and tested.
+      Retention policy, pseudonymization, deletion with a dry-run default, export and legal
+      hold are implemented in the lifecycle engine, API and worker with fail-closed defaults
+      and in-memory tests. The emulator integration test has not run, so the status stays
+      planned; retention periods remain a customer input.
     evidence: []
   # ---------------------------------------------------------------- SR
   - id: SR-3

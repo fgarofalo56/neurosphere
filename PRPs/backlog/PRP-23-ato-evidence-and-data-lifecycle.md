@@ -241,7 +241,7 @@ Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md`
 | 2 | merged | prp-23-round2-lifecycle-runtime | backends done; emulator test written, NOT RUN (PRP-38 holds compose) |
 | 3 | merged | prp-23-round2-lifecycle-runtime | API + builder done; openapi.json NOT regenerated (Tier 3, merge step) |
 | 4 | merged | prp-23-round2-lifecycle-runtime | worker wiring, runbook; worker /readyz detail of mode NOT done (supervisor has no detail field) |
-| 5 | todo | | |
+| 5 | in-progress | prp-23-round2-lifecycle-runtime | AU-11/SI-12 text updated; Tier 3 regen, review, completion note left for merge step |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:
