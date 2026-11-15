@@ -13,8 +13,9 @@ endpoint to record the live-vs-stub delta and the stub's applied shims (G12), th
 schema unless ``--keep``. Every request carries a budget (timeout, rows, cost).
 
 Backends:
-  databricks  real executor in this script: ``httpx`` against the Azure Databricks SQL Statement
-              Execution API with named parameters; Entra token from ``DefaultAzureCredential``.
+  databricks  product executor (neurosphere_core.analytics.databricks.executor): httpx against
+              the Azure Databricks SQL Statement Execution API with named parameters; Entra
+              token from ``DefaultAzureCredential``.
   fabric      OPEN. Fabric SQL endpoints speak TDS and no TDS driver is approved (it would need an
   synapse     ADR-0002 stack-pin row and operator approval for mssql-python or ODBC Driver 18).
               Recorded OPEN with that reason; no connection is attempted.
@@ -59,7 +60,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import contextlib
 import importlib
 import json
 import os
@@ -67,8 +67,7 @@ import re
 import sys
 import time
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
-from contextlib import asynccontextmanager
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -95,11 +94,7 @@ DRIVER_REASON = (
     "needs mssql-python or ODBC Driver 18, which requires an ADR-0002 stack-pin row and "
     "operator approval. No connection was attempted."
 )
-# Azure Databricks Entra application (resource) id; verified on Learn 2026-10-18 (aad-token-manual).
-DATABRICKS_RESOURCE_ID = "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
-DATABRICKS_SCOPE = f"{DATABRICKS_RESOURCE_ID}/.default"
-STATEMENTS_PATH = "/api/2.0/sql/statements"
-MAX_PARAMETERS = 256  # Statement Execution API limit on parameters per statement (unverified)
+SETUP_TIMEOUT_S = 120.0  # per setup or teardown statement (warehouse cold start)
 INSERT_BATCH_ROWS = 15  # 14 columns x 15 rows = 210 parameters, under the limit
 DEFAULT_TIMEOUT_MS = 30_000  # the Budget contract ceiling; covers warehouse cold start
 
@@ -147,10 +142,6 @@ def confine_evidence_dir(raw: str, allowed_roots: Sequence[Path]) -> Path:
         if resolved.is_relative_to(Path(root).resolve()):
             return resolved
     raise RefusedError("--evidence-dir must resolve inside the G01 analytics evidence directory.")
-
-
-class ExecutorError(RuntimeError):
-    """A live statement failed. The message never carries query text, values or credentials."""
 
 
 # --------------------------------------------------------------------------- scrubber
@@ -348,177 +339,15 @@ def validate_adapter(adapter: str) -> AdapterSettings:
     )
 
 
-# --------------------------------------------------------------------------- Databricks executor
-
-TokenProvider = Callable[[], Awaitable[str]]
-
-
-def _param_type(value: object) -> str:
-    if isinstance(value, bool):
-        return "BOOLEAN"
-    if isinstance(value, int):
-        return "BIGINT"
-    if isinstance(value, Decimal):
-        return "DECIMAL(38,12)"
-    if isinstance(value, float):
-        return "DOUBLE"
-    return "STRING"
-
-
-def build_statement_body(
-    warehouse_id: str, sql: str, params: Sequence[object], *, wait_timeout: str = "0s"
-) -> dict[str, Any]:
-    """Statement Execution API request body. Values travel ONLY in ``parameters`` as named
-    entries ``p1..pN`` matching the ``:pN`` markers; they are never interpolated into ``sql``."""
-    if len(params) > MAX_PARAMETERS:
-        raise ExecutorError("too many bound parameters for one statement")
-    parameters: list[dict[str, Any]] = []
-    for index, value in enumerate(params, start=1):
-        entry: dict[str, Any] = {"name": f"p{index}", "type": _param_type(value)}
-        if value is not None:
-            entry["value"] = format(value, "f") if isinstance(value, Decimal) else str(value)
-        parameters.append(entry)
-    return {
-        "warehouse_id": warehouse_id,
-        "statement": sql,
-        "parameters": parameters,
-        # "0s" = asynchronous submit: the statement id is known immediately, so a cancellation
-        # (budget or timeout) can always cancel the server-side statement.
-        "wait_timeout": wait_timeout,
-        "disposition": "INLINE",
-        "format": "JSON_ARRAY",
-    }
-
-
-class DatabricksStatementExecutor:
-    """``SqlExecutor`` over the Databricks SQL Statement Execution API (httpx, Entra bearer).
-
-    * cancellation of the awaiting task (time budget) cancels the server-side statement;
-    * the engine does not report rows scanned or cost via this API: ``rows_scanned`` is the
-      returned row count (a lower bound) and ``cost_units`` is 0, a documented G12 gap;
-    * errors carry the HTTP status or the API ``error_code`` only: no query text, value or token.
-    """
-
-    def __init__(
-        self,
-        client: Any,
-        token_provider: TokenProvider,
-        *,
-        warehouse_id: str,
-        poll_interval_s: float = 1.0,
-    ) -> None:
-        self._client = client
-        self._token = token_provider
-        self._warehouse_id = warehouse_id
-        self._poll = poll_interval_s
-        self.cancelled_statements: list[str] = []
-
-    async def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {await self._token()}"}
-
-    @staticmethod
-    def _payload(response: Any) -> dict[str, Any]:
-        status = int(response.status_code)
-        try:
-            data = response.json()
-        except ValueError:
-            data = {}
-        if status >= 400:
-            code = str(data.get("error_code", "")) if isinstance(data, dict) else ""  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-            code = code if re.fullmatch(r"[A-Z_]{1,64}", code) else "unspecified"
-            raise ExecutorError(f"databricks API returned HTTP {status} ({code})")
-        if not isinstance(data, dict):
-            raise ExecutorError("databricks API returned an unexpected payload")
-        return data  # pyright: ignore[reportUnknownVariableType]
-
-    async def _cancel(self, statement_id: str) -> None:
-        self.cancelled_statements.append(statement_id)
-        with contextlib.suppress(Exception):
-            await self._client.post(
-                f"{STATEMENTS_PATH}/{statement_id}/cancel", headers=await self._headers()
-            )
-
-    async def execute(self, statement: Any, *, limits: Any) -> Any:
-        from neurosphere_core.analytics.base import BudgetBreach, ExecutionOutcome
-
-        body = build_statement_body(self._warehouse_id, statement.sql, statement.params)
-        statement_id: str | None = None
-        try:
-            payload = self._payload(
-                await self._client.post(STATEMENTS_PATH, json=body, headers=await self._headers())
-            )
-            statement_id = str(payload.get("statement_id", ""))
-            if not statement_id:
-                raise ExecutorError("databricks API returned no statement id")
-            state = str(payload.get("status", {}).get("state", ""))
-            while state in ("PENDING", "RUNNING"):
-                await asyncio.sleep(self._poll)
-                payload = self._payload(
-                    await self._client.get(
-                        f"{STATEMENTS_PATH}/{statement_id}", headers=await self._headers()
-                    )
-                )
-                state = str(payload.get("status", {}).get("state", ""))
-        except asyncio.CancelledError:
-            if statement_id:
-                await self._cancel(statement_id)
-            raise
-        except ExecutorError:
-            raise
-        except Exception as exc:
-            # Transport errors: the class name only (their text could echo a URL or header).
-            raise ExecutorError(f"databricks transport error ({type(exc).__name__})") from None
-        if state != "SUCCEEDED":
-            err = payload.get("status", {}).get("error", {})
-            code = str(err.get("error_code", "")) if isinstance(err, dict) else ""  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-            code = code if re.fullmatch(r"[A-Z_]{1,64}", code) else "unspecified"
-            raise ExecutorError(f"databricks statement ended {state or 'UNKNOWN'} ({code})")
-        result = payload.get("result", {}) or {}
-        if result.get("next_chunk_internal_link"):
-            raise ExecutorError("result is chunked; narrow the request")
-        rows = tuple(tuple(r) for r in (result.get("data_array") or []))
-        scanned = len(rows)
-        if scanned > limits.max_rows_scanned:
-            raise BudgetBreach("rows_scanned_budget_exceeded")
-        return ExecutionOutcome(rows=rows, rows_scanned=scanned, cost_units=Decimal(0))
-
-
-@asynccontextmanager
-async def open_databricks_executor(
-    settings: AdapterSettings,
-) -> AsyncIterator[DatabricksStatementExecutor]:
-    """The real client: httpx plus an Entra token from DefaultAzureCredential (lazy imports)."""
-    import httpx
-    from azure.identity.aio import DefaultAzureCredential
-
-    credential = DefaultAzureCredential()
-
-    async def token() -> str:
-        return (await credential.get_token(DATABRICKS_SCOPE)).token
-
-    try:
-        async with httpx.AsyncClient(
-            base_url=f"https://{settings.config['host']}",
-            timeout=httpx.Timeout(60.0),
-            follow_redirects=False,
-        ) as client:
-            yield DatabricksStatementExecutor(
-                client, token, warehouse_id=settings.config["warehouse_id"]
-            )
-    finally:
-        await credential.close()
-
-
 # --------------------------------------------------------------------------- workload
 
 
 def load_workload() -> Any:
-    """The equivalence suite's cases and builders (imported lazily; synthetic data only)."""
+    """The stub-endpoint builders of the equivalence suite (imported lazily; synthetic data
+    only). The request set itself comes from ``neurosphere_core.analytics.fixture``."""
     if str(REPO) not in sys.path:
         sys.path.insert(0, str(REPO))
-    support = importlib.import_module("tests.integration.analytics.support")
-    equivalence = importlib.import_module("tests.integration.analytics.test_equivalence")
-    return support, equivalence
+    return importlib.import_module("tests.integration.analytics.support")
 
 
 def _q(name: str) -> str:
@@ -655,7 +484,11 @@ async def run_databricks(
     """Run the Databricks workload. ``executor`` is injected by tests; None builds the real one."""
     started = time.monotonic()
     if executor is None:
-        async with open_databricks_executor(settings) as live_executor:
+        from neurosphere_core.analytics.databricks import open_databricks_executor
+
+        async with open_databricks_executor(
+            host=settings.config["host"], warehouse_id=settings.config["warehouse_id"]
+        ) as live_executor:
             result = await run_databricks(
                 settings, options, executor=live_executor, stub_builder=stub_builder
             )
@@ -666,10 +499,10 @@ async def run_databricks(
     from neurosphere_core.analytics.base.records import ANALYTICS_TABLE
     from neurosphere_core.analytics.databricks import DatabricksConfig
     from neurosphere_core.analytics.databricks.migrations import apply_migrations
-    from neurosphere_core.analytics.fixture import build_dataset
+    from neurosphere_core.analytics.fixture import build_dataset, equivalence_cases
     from neurosphere_core.errors import CapabilityUnavailableError
 
-    support, equivalence = load_workload()
+    support = load_workload()
     schema = f"ns_g01a_{options.run_id}"
     catalog = settings.config["catalog"]
     config = DatabricksConfig.model_validate(
@@ -715,7 +548,7 @@ async def run_databricks(
     )
     scope = support.make_scope("commercial")
     fixture = support.fixture_adapter("commercial")
-    cases = equivalence._cases("commercial")  # pyright: ignore[reportPrivateUsage]
+    cases = equivalence_cases("commercial")
     from neurosphere_core.analytics.base import ExecutionLimits
 
     limits = ExecutionLimits(max_rows_scanned=10_000_000, max_cost_units=Decimal(1_000_000))
@@ -723,11 +556,14 @@ async def run_databricks(
     async def run_sql(sql: str, params: tuple[object, ...] = ()) -> None:
         from neurosphere_core.analytics.base import Statement
 
-        await executor.execute(Statement(sql=sql, params=params), limits=limits)
+        # A time budget per setup/teardown statement; a timeout cancels the server statement
+        # (the executor posts the cancel endpoint on CancelledError).
+        async with asyncio.timeout(SETUP_TIMEOUT_S):
+            await executor.execute(Statement(sql=sql, params=params), limits=limits)
 
     setup_ok = False
     try:
-        await run_sql(f"CREATE SCHEMA IF NOT EXISTS {_q(catalog)}.{_q(schema)}")
+        await run_sql(f"CREATE SCHEMA {_q(catalog)}.{_q(schema)}")
         applied = await apply_migrations(executor, catalog=catalog, schema=schema)
         records = build_dataset("commercial")
         for sql, params in insert_statements(catalog, schema, records):

@@ -26,7 +26,14 @@ from neurosphere_core.analytics.base import (
     StubSqlEndpoint,
     run_budgeted,
 )
-from neurosphere_core.analytics.databricks import DatabricksConfig, sqlite_shims
+from neurosphere_core.analytics.databricks import (
+    DatabricksConfig,
+    DatabricksStatementExecutor,
+    ExecutorError,
+    build_statement_body,
+    sqlite_shims,
+)
+from neurosphere_core.analytics.databricks.executor import MAX_PARAMETERS
 from neurosphere_core.analytics.fixture import build_dataset
 from neurosphere_core.errors import RateLimitedError
 
@@ -65,7 +72,7 @@ class Server:
         client = httpx.AsyncClient(
             transport=httpx.MockTransport(self.handler), base_url=f"https://{HOST}"
         )
-        return mod.DatabricksStatementExecutor(
+        return DatabricksStatementExecutor(
             client, token, warehouse_id="0123456789abcdef", poll_interval_s=0.01
         )
 
@@ -116,8 +123,7 @@ async def test_named_parameters_and_values_never_in_statement_text() -> None:
 
 
 async def test_null_parameter_has_no_value_and_decimal_is_plain_text() -> None:
-    mod = load()
-    body = mod.build_statement_body("w", "SELECT :p1, :p2", (None, Decimal("0.000100000000")))
+    body = build_statement_body("w", "SELECT :p1, :p2", (None, Decimal("0.000100000000")))
     assert body["parameters"][0] == {"name": "p1", "type": "STRING"}
     assert body["parameters"][1] == {
         "name": "p2",
@@ -194,7 +200,7 @@ async def test_chunked_result_is_refused_not_truncated() -> None:
         "result": {"data_array": [["1"]], "next_chunk_internal_link": "/x"},
     }
     server = Server(lambda r: httpx.Response(200, json=body))
-    with pytest.raises(mod.ExecutorError):
+    with pytest.raises(ExecutorError):
         await server.executor(mod).execute(Statement("SELECT 1", ()), limits=LIMITS)
 
 
@@ -215,7 +221,7 @@ async def test_token_never_appears_in_errors() -> None:
         )
 
     server = Server(echo)
-    with pytest.raises(mod.ExecutorError) as raised:
+    with pytest.raises(ExecutorError) as raised:
         await server.executor(mod).execute(Statement("SELECT secretish", ("v",)), limits=LIMITS)
     text = str(raised.value)
     assert FAKE_TOKEN not in text
@@ -230,7 +236,7 @@ async def test_transport_error_text_is_not_echoed() -> None:
     def boom(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError(f"cannot reach {request.headers['authorization']}")
 
-    with pytest.raises(mod.ExecutorError) as raised:
+    with pytest.raises(ExecutorError) as raised:
         await Server(boom).executor(mod).execute(Statement("SELECT 1", ()), limits=LIMITS)
     assert FAKE_TOKEN not in str(raised.value)
     assert "ConnectError" in str(raised.value)
@@ -246,7 +252,7 @@ async def test_failed_statement_reports_only_the_code() -> None:
         },
     }
     server = Server(lambda r: httpx.Response(200, json=body))
-    with pytest.raises(mod.ExecutorError) as raised:
+    with pytest.raises(ExecutorError) as raised:
         await server.executor(mod).execute(Statement("SELECT 1", ()), limits=LIMITS)
     assert "FAILED" in str(raised.value)
     assert "BAD_REQUEST" in str(raised.value)
@@ -262,7 +268,7 @@ def test_insert_statements_batch_and_bind_values_only_as_parameters() -> None:
     statements = mod.insert_statements("main", "ns_g01a_x", records)
     assert len(statements) == 3  # 15 + 15 + 10
     for sql, params in statements:
-        assert len(params) <= mod.MAX_PARAMETERS
+        assert len(params) <= MAX_PARAMETERS
         assert "`main`.`ns_g01a_x`.`ns_analytics_events`" in sql
         assert "commercial-" not in sql  # no value text in the statement
         assert sql.count(":p") == len(params)
@@ -337,7 +343,7 @@ async def test_full_workload_passes_against_an_equivalent_backend() -> None:
     assert kinds == {"exact", "approx_quantile"}
     assert result.stub_shims and all(s["name"] and s["rule"] for s in result.stub_shims)
     # order: schema, migrations, load, queries, drop
-    assert live.sql[0].startswith(f"CREATE SCHEMA IF NOT EXISTS `main`.`ns_g01a_{RUN_ID}`")
+    assert live.sql[0].startswith(f"CREATE SCHEMA `main`.`ns_g01a_{RUN_ID}`")
     assert any(s.startswith("INSERT INTO `main`") for s in live.sql)
     assert live.sql[-1] == f"DROP SCHEMA IF EXISTS `main`.`ns_g01a_{RUN_ID}` CASCADE"
     assert result.teardown == {"status": "DROPPED"}

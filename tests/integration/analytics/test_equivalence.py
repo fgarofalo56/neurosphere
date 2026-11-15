@@ -32,11 +32,10 @@ from neurosphere_core.analytics.base import (
     Dimension,
     FilterClause,
     FilterOp,
-    Granularity,
     Metric,
     compare_results,
 )
-from neurosphere_core.analytics.fixture import domain_id
+from neurosphere_core.analytics.fixture import domain_id, equivalence_cases
 from neurosphere_core.errors import CapabilityUnavailableError
 
 from .support import ADAPTERS, build_adapter, fixture_adapter, make_request, make_scope
@@ -49,94 +48,11 @@ def tolerance_text() -> str:
     return f"quantile rel<={QUANTILE_REL_TOL} abs<={QUANTILE_ABS_TOL}; all else exact"
 
 
-def _domain_filter(cloud: str) -> FilterClause:
-    return FilterClause(
-        field=Dimension.DOMAIN_ID,
-        op=FilterOp.IN,
-        values=(domain_id(cloud, "contoso", "retail"), domain_id(cloud, "contoso", "finance")),  # type: ignore[arg-type]
-    )
-
-
-def _cases(cloud: str) -> list[tuple[str, AggregateRequest]]:
-    return [
-        ("count", make_request()),
-        ("count-by-model-outcome", make_request(group_by=(Dimension.MODEL, Dimension.OUTCOME))),
-        (
-            "count-day-provider",
-            make_request(time_bucket=Granularity.DAY, group_by=(Dimension.PROVIDER,)),
-        ),
-        ("count-hour", make_request(time_bucket=Granularity.HOUR)),
-        (
-            "sum-tokens-by-domain",
-            make_request(Metric.INPUT_TOKENS, Aggregation.SUM, group_by=(Dimension.DOMAIN_ID,)),
-        ),
-        (
-            "sum-cost-usd-by-model",
-            make_request(
-                Metric.COST_AMOUNT, Aggregation.SUM, filters=(USD,), group_by=(Dimension.MODEL,)
-            ),
-        ),
-        (
-            "sum-cost-by-currency",
-            make_request(Metric.COST_AMOUNT, Aggregation.SUM, group_by=(Dimension.CURRENCY,)),
-        ),
-        (
-            "min-duration",
-            make_request(Metric.DURATION_MS, Aggregation.MIN, group_by=(Dimension.MODEL,)),
-        ),
-        (
-            "max-duration-by-kind",
-            make_request(Metric.DURATION_MS, Aggregation.MAX, group_by=(Dimension.SPAN_KIND,)),
-        ),
-        (
-            "all-null-group-max-output",
-            make_request(Metric.OUTPUT_TOKENS, Aggregation.MAX, group_by=(Dimension.MODEL,)),
-        ),
-        (
-            "domain-narrowing-filter",
-            make_request(group_by=(Dimension.DOMAIN_ID,), filters=(_domain_filter(cloud),)),
-        ),
-        (
-            "filter-in-and-unknown",
-            make_request(
-                group_by=(Dimension.OUTCOME,),
-                filters=(
-                    FilterClause(
-                        field=Dimension.PROVIDER,
-                        op=FilterOp.IN,
-                        values=("azure_openai", "anthropic"),
-                    ),
-                    FilterClause(field=Dimension.SPAN_KIND, op=FilterOp.IS_UNKNOWN),
-                ),
-            ),
-        ),
-        (
-            "p95-duration",
-            make_request(
-                Metric.DURATION_MS,
-                Aggregation.APPROX_QUANTILE,
-                quantile=0.95,
-                group_by=(Dimension.MODEL,),
-            ),
-        ),
-        (
-            "p50-cost-usd",
-            make_request(
-                Metric.COST_AMOUNT,
-                Aggregation.APPROX_QUANTILE,
-                quantile=0.5,
-                filters=(USD,),
-                group_by=(Dimension.DOMAIN_ID,),
-            ),
-        ),
-    ]
-
-
 MATRIX = [
     pytest.param(kind, cloud, name, request_, id=f"{kind}-{cloud}-{name}")
     for cloud in CLOUDS
     for kind in ADAPTERS
-    for name, request_ in _cases(cloud)
+    for name, request_ in equivalence_cases(cloud)
 ]
 
 
