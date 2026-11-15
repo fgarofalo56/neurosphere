@@ -168,6 +168,10 @@ jobs:
           python-version-file: .python-version
       - name: Validate planning artefacts
         run: python scripts/validate_planning.py
+      - name: Execution plan is current
+        run: python scripts/prp_execution_plan.py --check
+      - name: Changelog fragments are well formed
+        run: python scripts/changelog_assemble.py --check
       # The licence register reads licences from installed metadata (no network lookups), so
       # the toolchains and both dependency trees must be present first.
       - uses: astral-sh/setup-uv@v7

@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W11
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-68: Changelog fragments and index freshness](backlog/PRP-68-changelog-fragments-and-index-freshness.md) | sonnet | none | none | PRP-36 | - | `prp-68-changelog-fragments` |
-
-Gate before the next wave: Docs and tracker match the repo; contracts reviewed (Opus); changelog fragments in use; `python scripts/validate_planning.py` passes.
-
 ### W12
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -170,9 +162,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W11
-    P68["PRP-68"]
-  end
   subgraph W12
     P38["PRP-38"]
     P11["PRP-11"]
@@ -284,7 +273,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W11 | PRP-68 | `.github/workflows/ci.yml` |
 | W12 | PRP-38 | `docker-compose.yml`<br>`Makefile` |
 | W12 | PRP-11 | `services/api/neurosphere_api/runtime/compose.py`<br>`services/api/neurosphere_api/runtime/status.py` |
 | W12 | PRP-23 | `services/workers/neurosphere_workers/runtime/factories.py` |
@@ -315,14 +303,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-68 (W11)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-68-changelog-fragments-and-index-freshness.md
-
-Context for this run: wave W11 of PRPs/EXECUTION-PLAN.md, branch prp-68-changelog-fragments cut from origin/main, implementer model sonnet, review none. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-38 (W12)
 

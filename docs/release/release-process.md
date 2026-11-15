@@ -9,7 +9,17 @@ an environment is a separate, operator-run step.
 
 1. **Branch.** From an up-to-date `main`, create `release/vX.Y` (for example
    `release/v0.2`). Patch releases for the same minor reuse that branch.
-2. **Generate the changelog section.** Use the previous tag as `--from` (for the first
+2. **Assemble fragments, then generate the changelog section.** PRP close-outs write
+   `changelog.d/<PRP file stem>.md` instead of editing `CHANGELOG.md`. Assemble them into
+   the `[Unreleased]` block first and commit the result (and the deleted fragments) in the
+   release PR:
+
+   ```bash
+   python scripts/changelog_assemble.py --preview
+   python scripts/changelog_assemble.py --write
+   ```
+
+   Then use the previous tag as `--from` (for the first
    release, the root commit: `git rev-list --max-parents=0 HEAD`). Preview first:
 
    ```bash
