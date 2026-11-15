@@ -9,8 +9,8 @@ Tolerance: counts, sums, min and max compare exactly (Decimal cost included); ap
 quantiles compare within ``QUANTILE_REL_TOL`` relative / ``QUANTILE_ABS_TOL`` absolute, the
 constants imported from ``compare`` (see ``tolerance_text``), never copied numbers.
 
-Synapse refuses approximate quantiles by design; that is asserted as a refusal
-(``CapabilityUnavailableError``), not skipped.
+Synapse serves quantiles through the exact windowed ``PERCENTILE_CONT`` (issue #59),
+compared with the same documented tolerance.
 
 Scope: pure in-process. No emulator, no network, no cloud call, so this runs in the default
 ``uv run pytest -q`` (deliberately NOT marked ``integration``/``live``). It proves contract
@@ -36,12 +36,29 @@ from neurosphere_core.analytics.base import (
     compare_results,
 )
 from neurosphere_core.analytics.fixture import domain_id, equivalence_cases
-from neurosphere_core.errors import CapabilityUnavailableError
 
 from .support import ADAPTERS, build_adapter, fixture_adapter, make_request, make_scope
 
 CLOUDS: tuple[str, ...] = get_args(Cloud)
 USD = FilterClause(field=Dimension.CURRENCY, op=FilterOp.EQ, values=("USD",))
+
+
+EXPECTED_SHIMS: dict[str, list[str]] = {
+    "fabric": [
+        "fabric-tsql-rewrite",
+        "decimal-cost",
+        "quantile-ns_fabric_percentile",
+        "scan-counter",
+    ],
+    "synapse-serverless": ["tsql-query-rewrites", "decimal-cost", "scan-counter"],
+    "synapse-dedicated": ["tsql-query-rewrites", "decimal-cost", "scan-counter"],
+    "databricks": [
+        "databricks-dialect",
+        "decimal-cost",
+        "quantile-percentile_approx",
+        "scan-counter",
+    ],
+}
 
 
 def tolerance_text() -> str:
@@ -62,10 +79,6 @@ async def test_adapter_equals_fixture(
 ) -> None:
     built = build_adapter(kind, cloud)
     scope = make_scope(cloud)
-    if request_.aggregation is Aggregation.APPROX_QUANTILE and kind.startswith("synapse-"):
-        with pytest.raises(CapabilityUnavailableError):  # a refusal, not a skip
-            await built.adapter.aggregate(request_, scope=scope)
-        return
     expected = await fixture_adapter(cloud).aggregate(request_, scope=scope)
     actual = await built.adapter.aggregate(request_, scope=scope)
     assert compare_results(expected, actual) == [], tolerance_text()
@@ -74,12 +87,23 @@ async def test_adapter_equals_fixture(
 
 
 @pytest.mark.parametrize("kind", [k for k in ADAPTERS if k.startswith("synapse-")])
-async def test_synapse_refuses_quantile(kind: str) -> None:
+async def test_synapse_quantile_runs_windowed_and_matches_the_fixture(kind: str) -> None:
+    """Issue #59: the refusal became a pass; the statement is the windowed PERCENTILE_CONT."""
     built = build_adapter(kind, "commercial")
-    request_ = make_request(Metric.DURATION_MS, Aggregation.APPROX_QUANTILE, quantile=0.95)
-    with pytest.raises(CapabilityUnavailableError) as refusal:
-        await built.adapter.aggregate(request_, scope=make_scope())
-    assert refusal.value.code == "capability_unavailable"
+    request_ = make_request(
+        Metric.DURATION_MS,
+        Aggregation.APPROX_QUANTILE,
+        quantile=0.95,
+        group_by=(Dimension.MODEL,),
+    )
+    scope = make_scope()
+    actual = await built.adapter.aggregate(request_, scope=scope)
+    expected = await fixture_adapter("commercial").aggregate(request_, scope=scope)
+    assert expected.rows
+    assert compare_results(expected, actual) == [], tolerance_text()
+    assert "tsql-query-rewrites" in [name for name, _ in built.endpoint.applied_shims]
+    assert built.endpoint.last_sql is not None
+    assert "OVER" in built.endpoint.last_sql  # the window form reached the engine text
 
 
 @pytest.mark.parametrize("cloud", CLOUDS)
@@ -113,7 +137,8 @@ async def test_out_of_scope_never_appears(kind: str, cloud: Cloud) -> None:
         field=Dimension.DOMAIN_ID, op=FilterOp.EQ, values=(domain_id(cloud, "fabrikam", "retail"),)
     )
     narrowed = await adapter.aggregate(make_request(filters=(other,)), scope=scope)
-    assert all(r.value in (None, 0) for r in narrowed.rows)
+    assert all(r.row_count == 0 and r.value in (None, 0) for r in narrowed.rows)
+    assert sum(r.row_count for r in narrowed.rows) == 0
 
 
 @pytest.mark.parametrize("cloud", CLOUDS)
@@ -128,3 +153,4 @@ async def test_stub_shims_are_recorded_and_nonempty(kind: str, cloud: Cloud) -> 
     applied = built.endpoint.applied_shims
     assert applied, f"{kind} ran with no declared shim: the parity gap would be hidden"
     assert all(name and rule for name, rule in applied)
+    assert [name for name, _ in applied] == EXPECTED_SHIMS[kind]

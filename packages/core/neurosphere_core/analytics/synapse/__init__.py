@@ -33,9 +33,11 @@ G12_PARITY_GAPS: Final[tuple[str, ...]] = (
     "the stub scan counter (whose regex matches the ANSI-quoted table name); OPTION (LABEL) is "
     "stripped; DATEADD/DATEDIFF bucketing is replaced by SUBSTR on ISO text. Synapse acceptance "
     "of the real text is untested.",
-    "Quantile: neither mode has an approximate quantile, so the adapter refuses it "
-    "(CapabilityUnavailableError); the stub cannot show that PERCENTILE_CONT window use is "
-    "impractical here, nor any future engine-side function.",
+    "Quantile: approx_quantile is served by the exact windowed PERCENTILE_CONT ... OVER "
+    "(SELECT DISTINCT keys, no GROUP BY). The stub emulates the window function with a "
+    "Python window class (linear interpolation); real PERCENTILE_CONT semantics, result "
+    "type (float) and cost on a real pool or serverless endpoint are unproven until the "
+    "live run.",
     "Billing: serverless bills data processed (TB), dedicated bills DWU-hours; the stub's cost "
     "units are a flat per-row figure and match neither.",
     "Concurrency and throttling: dedicated resource classes and concurrency slots, serverless "

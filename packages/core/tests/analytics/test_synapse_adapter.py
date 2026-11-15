@@ -101,11 +101,6 @@ def build(
 async def test_mode_equals_fixture(mode: str, name: str, request_: AggregateRequest) -> None:
     adapter, _, endpoint = build(mode)
     scope = make_scope()
-    if request_.aggregation is Aggregation.APPROX_QUANTILE:
-        with pytest.raises(CapabilityUnavailableError) as refusal:
-            await adapter.aggregate(request_, scope=scope)
-        assert refusal.value.reason == "synapse_no_approx_percentile"
-        return
     expected = await fixture_adapter().aggregate(request_, scope=scope)
     actual = await adapter.aggregate(request_, scope=scope)
     assert compare_results(expected, actual) == []
@@ -132,12 +127,68 @@ async def test_both_clouds_and_null_groups(mode: str, cloud: Cloud) -> None:
 
 
 @pytest.mark.parametrize("mode", MODES)
-async def test_quantile_refused_before_any_statement_is_sent(mode: str) -> None:
+async def test_quantile_renders_the_windowed_percentile_cont(mode: str) -> None:
     adapter, recording, _ = build(mode)
-    quantile = make_request(Metric.DURATION_MS, Aggregation.APPROX_QUANTILE, quantile=0.95)
-    with pytest.raises(CapabilityUnavailableError):
-        await adapter.aggregate(quantile, scope=make_scope())
-    assert recording.statements == []
+    quantile = make_request(
+        Metric.DURATION_MS,
+        Aggregation.APPROX_QUANTILE,
+        quantile=0.95,
+        group_by=(Dimension.MODEL,),
+    )
+    result = await adapter.aggregate(quantile, scope=make_scope())
+    assert result.rows
+    (statement,) = recording.statements
+    sql = statement.sql
+    assert sql.startswith("SELECT DISTINCT TOP ")
+    assert (
+        "PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY [duration_ms]) OVER (PARTITION BY [model])"
+        in sql
+    )
+    assert "GROUP BY" not in sql
+    assert "0.95" not in str(statement.params)  # the quantile is a validated literal, not a value
+
+
+@pytest.mark.parametrize("mode", MODES)
+async def test_ungrouped_quantile_uses_an_empty_window(mode: str) -> None:
+    adapter, recording, _ = build(mode)
+    quantile = make_request(Metric.DURATION_MS, Aggregation.APPROX_QUANTILE, quantile=0.5)
+    result = await adapter.aggregate(quantile, scope=make_scope())
+    assert len(result.rows) == 1
+    assert "WITHIN GROUP (ORDER BY [duration_ms]) OVER ()" in recording.statements[0].sql
+
+
+@pytest.mark.parametrize("mode", MODES)
+async def test_windowed_quantile_still_enforces_the_row_limit(mode: str) -> None:
+    from neurosphere_core.errors import RateLimitedError
+
+    adapter, _, _ = build(mode)
+    quantile = make_request(
+        Metric.DURATION_MS,
+        Aggregation.APPROX_QUANTILE,
+        quantile=0.95,
+        group_by=(Dimension.MODEL, Dimension.DOMAIN_ID),
+    )
+    unlimited = await adapter.aggregate(quantile, scope=make_scope())
+    assert len(unlimited.rows) > 1
+    tight = quantile.model_copy(
+        update={
+            "budget": quantile.budget.model_copy(
+                update={"query": quantile.budget.query.model_copy(update={"limit": 1})}
+            )
+        }
+    )
+    with pytest.raises(RateLimitedError):
+        await adapter.aggregate(tight, scope=make_scope())
+
+
+def test_plain_approx_quantile_method_still_refuses() -> None:
+    from decimal import Decimal
+
+    from neurosphere_core.analytics.synapse.dialect import SynapseServerlessDialect
+
+    with pytest.raises(CapabilityUnavailableError) as refusal:
+        SynapseServerlessDialect().approx_quantile("[duration_ms]", Decimal("0.5"))
+    assert refusal.value.reason == "synapse_no_approx_percentile"
 
 
 # --- mode selection and statement shape ------------------------------------------------------
