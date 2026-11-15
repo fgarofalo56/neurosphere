@@ -191,6 +191,24 @@ def check_prps(texts: dict[str, str]) -> None:
         if backlog and tag not in ns_covered:
             fail(f"NS-{tag} is not covered by any PRP frontmatter 'ns' field")
     check_status_table()
+    check_index_file()
+
+
+def check_index_file() -> None:
+    """PRPs/INDEX.md must list every PRP file once, in the right section (structural check)."""
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "prp_index_check.py")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if result.returncode != 0:
+        for line in result.stdout.splitlines():
+            fail(line.removeprefix("FAIL: "))
+        if not result.stdout.strip():
+            fail(result.stderr.strip() or "prp_index_check.py failed")
 
 
 def check_status_table() -> None:
@@ -219,7 +237,7 @@ def main() -> int:
         return 1
     print(
         "PASS: baseline artifacts, NS-01..10 mapping, platform choices, JSON, fences, "
-        "workflow hygiene, tracked paths, PRP index coverage"
+        "workflow hygiene, tracked paths, PRP index coverage, PRPs/INDEX.md membership"
     )
     print("NOT VALIDATED: Mermaid render, live cloud adapters, compliance, product tests or DR")
     return 0

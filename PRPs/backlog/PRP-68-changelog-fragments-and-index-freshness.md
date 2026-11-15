@@ -224,12 +224,12 @@ None. No cloud call, no `NS_LIVE_APPROVED=1`, no paid call. The first real relea
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | merged | prp-68-changelog-fragments | assembler + README + tests |
+| 2 | merged | prp-68-changelog-fragments | index check wired into validate_planning |
+| 3 | merged | prp-68-changelog-fragments | two planning steps added |
+| 4 | merged | prp-68-changelog-fragments | release-process + reference |
+| 5 | blocked | | serial-after PRP-36 (not shipped) |
+| 6 | todo | | merge step: Tier-3 regen, fragment, completion note |
 
 ## Completion note (filled at ship)
 - Date and PR:

@@ -85,9 +85,9 @@ rebasing on the current `main`, immediately before merge.
 | `services/api/openapi.json` | `uv run python -m neurosphere_api.openapi_export` (drift test `services/api/tests/test_openapi_drift.py`) |
 | `docs/reference/**` and `SOURCE_STAMP.json` | `uv run python docs/reference/generate.py` |
 | `PRPs/PRP-MASTER-neurosphere.md` status table | `python scripts/prp_status.py --write` |
-| `PRPs/INDEX.md` | `python -S -E ~/.claude/kits/orchestrated-prp/prp_index.py build` |
-| `PRPs/EXECUTION-PLAN.md` | `python scripts/prp_execution_plan.py --write` (after a PRP file moves or its frontmatter or Ownership block changes) |
-| `CHANGELOG.md` `[Unreleased]` | hand-written, one entry per PRP, added in the close-out commit only |
+| `PRPs/INDEX.md` | `python -S -E ~/.claude/kits/orchestrated-prp/prp_index.py build` (CI checks membership, section, priority, order and review through `validate_planning.py`) |
+| `PRPs/EXECUTION-PLAN.md` | `python scripts/prp_execution_plan.py --write` (after a PRP file moves or its frontmatter or Ownership block changes; CI runs `--check`) |
+| `changelog.d/<PRP file stem>.md` | written by the PRP in its close-out commit; assembled into `CHANGELOG.md` only at release (`scripts/changelog_assemble.py`). Never edit `CHANGELOG.md` in a PRP branch |
 | `docs/RESEARCH-AND-GATES.md` | hand-edited; only the row the PRP names, in the close-out commit only |
 | Visual baselines | `pnpm --filter @neurosphere/frontend visual:update` (Docker only; baselines are Linux) |
 
@@ -173,8 +173,9 @@ open and CI is green including the non-required `contracts`, `frontend-e2e`,
 ## 6. Close-out
 
 1. Rebase on `main`; regenerate Tier 3 files; run section 3.
-2. Fill `## Completion note`: date, PR, deviations, descoped items, OPEN gates,
-   "Env vars for the operator", follow-up issue numbers.
+2. Write the changelog fragment `changelog.d/<PRP file stem>.md`; never edit
+   `CHANGELOG.md`. Fill `## Completion note`: date, PR, deviations, descoped items,
+   OPEN gates, "Env vars for the operator", follow-up issue numbers.
 3. `/prp:prp-close` moves the file to `PRPs/shipped/` and sets `shipped:`.
 4. Close the issues listed in the PRP's `issues:` frontmatter that the PR
    fixed; leave operator-only ones open.
