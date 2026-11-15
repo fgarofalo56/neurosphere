@@ -210,7 +210,7 @@ Console UI, Entra group sync, Graph lookups of display names, bulk import of ass
 | 1 | verifying | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
 | 2 | verifying | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
 | 3 | verifying | prp-39-identity-admin | list/detail + role/membership/grant PUT/DELETE with If-Match; scope, self, customer-wide checks; multi-chain audit; replica cache invalidation via REVOCATION_HOOKS.invalidate_caches; route inventory pin added |
-| 4 | todo | | |
+| 4 | verifying | prp-39-identity-admin | POST/GET/DELETE revocation through the composed RevocationService; issued_before and until_lifted proven on the composed app with a fake clock; push closer called once per revoke |
 | 5 | todo | | |
 | 6 | todo | | |
 
