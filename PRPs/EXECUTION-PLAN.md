@@ -57,9 +57,8 @@ on a red `main`.
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-46: Cost-center attribution and ingest follow-ups](backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md) | sonnet | required | none | - | - | `prp-46-cost-center` |
-| 2 | [PRP-47: Frontend shell fixes and test infrastructure](backlog/PRP-47-frontend-shell-and-test-infrastructure.md) | sonnet | none | none | PRP-18 | - | `prp-47-shell-test-infra` |
-| 3 | [PRP-48: Authorization and audit-chain hardening](backlog/PRP-48-authorization-and-audit-chain-hardening.md) | opus | required | none | - | - | `prp-48-authz-audit-hardening` |
-| 4 | [PRP-44: Platform configuration (domains, budgets, price sheets, review policy)](backlog/PRP-44-platform-configuration.md) | sonnet | required | none | PRP-39, PRP-48 | - | `prp-44-platform-config` |
+| 2 | [PRP-48: Authorization and audit-chain hardening](backlog/PRP-48-authorization-and-audit-chain-hardening.md) | opus | required | none | - | - | `prp-48-authz-audit-hardening` |
+| 3 | [PRP-44: Platform configuration (domains, budgets, price sheets, review policy)](backlog/PRP-44-platform-configuration.md) | sonnet | required | none | PRP-39, PRP-48 | - | `prp-44-platform-config` |
 
 Gate before the next wave: Authz and audit-chain suites green; cost-center attribution visible in the ledger.
 
@@ -132,7 +131,6 @@ flowchart LR
   subgraph W15
     P44["PRP-44"]
     P46["PRP-46"]
-    P47["PRP-47"]
     P48["PRP-48"]
   end
   subgraph W16
@@ -198,7 +196,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
 | W15 | PRP-44 | `services/api/neurosphere_api/runtime/builders/data.py`<br>`services/api/neurosphere_api/runtime/builders/planes.py`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
-| W15 | PRP-47 | `frontend/src/app/Shell.tsx`<br>`frontend/src/app/Providers.tsx`<br>`frontend/src/app/App.tsx`<br>`frontend/src/app/domain.tsx`<br>`frontend/tests/mock-api/server.ts` |
 | W15 | PRP-48 | `services/api/neurosphere_api/authz/dependencies.py` |
 | W16 | PRP-45 | `services/api/neurosphere_api/runtime/compose.py`<br>`services/api/neurosphere_api/runtime/builders/copilot.py`<br>`services/api/neurosphere_api/runtime/builders/mcp.py`<br>`services/api/neurosphere_api/runtime/builders/search.py`<br>`services/api/neurosphere_api/runtime/builders/write_targets.py`<br>`services/api/neurosphere_api/runtime/status.py`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
 | W16 | PRP-52 | `.github/workflows/ci.yml`<br>`.github/workflows/security.yml`<br>`.github/workflows/contracts.yml`<br>`infra/bicep/modules/**`<br>`infra/helm/**`<br>`services/api/Dockerfile`<br>`services/workers/Dockerfile`<br>`services/docs-assistant/Dockerfile`<br>`.grype.yaml` |
@@ -231,14 +228,6 @@ Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-44-platform
 /prp:prp-execute PRPs/backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md
 
 Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-46-cost-center cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-47 (W15)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-47-frontend-shell-and-test-infrastructure.md
-
-Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-47-shell-test-infra cut from origin/main, implementer model sonnet, review none. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-48 (W15)

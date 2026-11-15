@@ -113,6 +113,7 @@ function meDomainItems(): readonly Record<string, unknown>[] {
     display_name: string,
     display_name_source: "catalog" | "derived",
     // PRP-34 item 8: the populated Finance domain also lets the caller draft actions.
+    // PRP-47 item 6: and curate the catalog, so catalog create and edit actions show in the demo.
     permissions: readonly string[] = ["data.read"],
   ): Record<string, unknown> => ({
     domain_id,
@@ -125,7 +126,7 @@ function meDomainItems(): readonly Record<string, unknown>[] {
   // first visit lands on data. The analytics-down fixture is named to sort after it.
   return [
     entry(DOMAIN_ANALYTICS_DOWN, "Telemetry (batch down)", "catalog"),
-    entry(DOMAIN_OK, "Finance", "catalog", ["data.read", "action.propose"]),
+    entry(DOMAIN_OK, "Finance", "catalog", ["data.read", "action.propose", "catalog.curate"]),
     entry(DOMAIN_VIEWER, "Viewer Only", "derived"),
   ].sort((a, b) => String(a["display_name"]).localeCompare(String(b["display_name"])));
 }

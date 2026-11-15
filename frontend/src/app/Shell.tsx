@@ -7,7 +7,16 @@ import {
   mergeClasses,
   tokens,
 } from "@fluentui/react-components";
-import { useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+} from "react";
 import { Outlet, useHref, useLinkClickHandler, useLocation } from "react-router";
 import { useRoles } from "../auth";
 import {
@@ -19,7 +28,6 @@ import {
 } from "../design-system";
 import { CopilotDock } from "../features/copilot/CopilotDock";
 import { SandboxBanner } from "../features/sandbox/SandboxBanner";
-import { ConfigContext } from "./ConfigContext";
 import { DomainSwitcher } from "./DomainSwitcher";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { UserMenu } from "./UserMenu";
@@ -210,6 +218,7 @@ function ShellNav({
   const { pathname } = useLocation();
   const { domainId } = useSelectedDomain();
   const selected = selectedNavTo(allItems, pathname);
+  const onNavKeyDown = useNavArrowKeys();
   return (
     <NavDrawer
       aria-label="Primary"
@@ -222,7 +231,7 @@ function ShellNav({
       onOpenChange={(_event, data) => setNavOpen(data.open)}
       {...(selected === undefined ? {} : { selectedValue: selected })}
     >
-      <div className={styles.navBody}>
+      <div className={styles.navBody} onKeyDown={onNavKeyDown}>
         {sections.map((section, index) => {
           const links = section.items.map((item) => (
             <ShellNavLink
@@ -256,6 +265,34 @@ function ShellNav({
       </div>
     </NavDrawer>
   );
+}
+
+const NAV_ARROW_KEYS: readonly string[] = ["ArrowDown", "ArrowUp", "Home", "End"];
+
+/**
+ * Arrow-key movement between the navigation links (ArrowDown and ArrowUp, Home and End). A plain
+ * handler on the container, not a Tabster Mover: Tabster injects aria-hidden focus sentinels that
+ * axe reports as aria-hidden-focus. Tab order is unchanged; every link stays a tab stop.
+ */
+function useNavArrowKeys(): (event: KeyboardEvent<HTMLElement>) => void {
+  return useCallback((event: KeyboardEvent<HTMLElement>): void => {
+    const pressed = event.key;
+    if (!NAV_ARROW_KEYS.includes(pressed) || event.altKey || event.ctrlKey || event.metaKey) return;
+    const links = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("a[href]"));
+    const current = links.indexOf(document.activeElement as HTMLElement);
+    if (links.length === 0 || current === -1) return;
+    const last = links.length - 1;
+    const next =
+      pressed === "Home"
+        ? 0
+        : pressed === "End"
+          ? last
+          : pressed === "ArrowDown"
+            ? Math.min(current + 1, last)
+            : Math.max(current - 1, 0);
+    event.preventDefault();
+    links[next]?.focus();
+  }, []);
 }
 
 /** The active theme pack's header logo beside the mark; nothing at all when the pack ships none. */
@@ -309,22 +346,9 @@ export function Shell({ staticItems, useNavItems }: ShellProps): ReactElement {
   const compact = useCompact();
   const [navOpen, setNavOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const config = useContext(ConfigContext);
-  const applyDeploymentDefault = useThemeStore((s) => s.applyDeploymentDefault);
-  const defaultThemePack = config?.defaultThemePack;
-  const defaultThemeMode = config?.defaultThemeMode;
-  const defaultUiStyle = config?.defaultUiStyle;
   const { id: styleId } = useUiStyle();
   const ops = styleId === "ops-console";
-
-  // Deployment default theme from runtime config; a saved user choice wins inside the store.
-  useEffect(() => {
-    applyDeploymentDefault({
-      ...(defaultThemePack === undefined ? {} : { packId: defaultThemePack }),
-      ...(defaultThemeMode === undefined ? {} : { themeName: defaultThemeMode }),
-      ...(defaultUiStyle === undefined ? {} : { styleId: defaultUiStyle }),
-    });
-  }, [applyDeploymentDefault, defaultThemePack, defaultThemeMode, defaultUiStyle]);
+  // The deployment default theme is applied in Providers, before the shell and the sign-in screen.
 
   // The browser's default 8px body margin would inset the shell; there is no global stylesheet.
   useEffect(() => {

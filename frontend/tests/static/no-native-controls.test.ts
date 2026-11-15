@@ -11,8 +11,9 @@ import { describe, expect, it } from "vitest";
 
 const NATIVE_TAGS: ReadonlySet<string> = new Set(["input", "select", "button", "textarea"]);
 
-// Vitest runs with the frontend package as cwd (pnpm --filter / cd frontend).
-const FRONTEND_ROOT = resolve(process.cwd());
+// Anchored on this file (frontend/tests/static), not on the process cwd. import.meta.url is a
+// jsdom URL under this environment and cannot go through fileURLToPath; dirname is the same anchor.
+const FRONTEND_ROOT = resolve(import.meta.dirname, "..", "..");
 const SCAN_DIRS = ["src/features", "src/app"];
 
 /** One allowed native control: file (posix, relative to `frontend/`), tag and exact count. */
@@ -54,18 +55,50 @@ function findNativeControls(source: string, fileName = "fixture.tsx"): string[] 
   return found;
 }
 
+/** `document.createElement("button")` and `createElement("input", ...)` in plain .ts or .tsx. */
+function findCreatedControls(source: string, fileName = "fixture.ts"): string[] {
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const found: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      const name = ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : ts.isIdentifier(callee)
+          ? callee.text
+          : "";
+      const first = node.arguments[0];
+      if (
+        name === "createElement" &&
+        first !== undefined &&
+        ts.isStringLiteralLike(first) &&
+        NATIVE_TAGS.has(first.text)
+      ) {
+        found.push(first.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return found;
+}
+
+function isTsSource(path: string): boolean {
+  return /\.tsx?$/.test(path) && !/\.(test|spec)\.tsx?$/.test(path) && !path.includes("__tests__");
+}
+
 function isScanned(path: string): boolean {
   return path.endsWith(".tsx") && !/\.(test|spec)\.tsx$/.test(path) && !path.includes("__tests__");
 }
 
-function listFiles(dir: string): string[] {
+function listFiles(dir: string, accept: (path: string) => boolean = isScanned): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
       if (name === "__tests__" || name === "__fixtures__" || name === "node_modules") continue;
-      out.push(...listFiles(full));
-    } else if (isScanned(full)) {
+      out.push(...listFiles(full, accept));
+    } else if (accept(full)) {
       out.push(full);
     }
   }
@@ -128,6 +161,30 @@ describe("no native form controls in features and app", () => {
     }
     const allowed = new Map(ALLOWLIST.map((a) => [`${a.file}::${a.tag}`, a.count]));
     expect(Object.fromEntries(actual)).toEqual(Object.fromEntries(allowed));
+  });
+
+  it("scanner finds createElement of a native control and nothing else", () => {
+    const src = [
+      'const a = document.createElement("button");',
+      'const b = React.createElement("input", { value: 1 });',
+      'const c = createElement("textarea");',
+      'const d = document.createElement("div");',
+      "const e = createElement(Button);",
+    ].join("\n");
+    expect(findCreatedControls(src).sort()).toEqual(["button", "input", "textarea"]);
+  });
+
+  it("creates no native control through createElement in features or app", () => {
+    const offenders: string[] = [];
+    for (const dir of SCAN_DIRS) {
+      for (const file of listFiles(join(FRONTEND_ROOT, dir), isTsSource)) {
+        const tags = findCreatedControls(readFileSync(file, "utf8"), file);
+        if (tags.length > 0) {
+          offenders.push(`${relative(FRONTEND_ROOT, file).split(sep).join("/")}: ${tags.join()}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("documents a reason for every allowlist entry", () => {
