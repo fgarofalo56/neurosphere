@@ -1,7 +1,9 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
-import { LOCALHOST_IPV4 } from "../../playwright.real-stack.config";
+import { CI_MODE, LOCALHOST_IPV4, STAND_IN_TOKEN_FILE } from "../../playwright.real-stack.config";
+import { standInConfig } from "./stand-in.ts";
 
 /**
  * Waits for a HUMAN to complete the real Entra sign-in in a headed browser window, then saves
@@ -15,9 +17,79 @@ import { LOCALHOST_IPV4 } from "../../playwright.real-stack.config";
 export const SESSION_FILE = "test-results/real-stack/session-storage.json";
 const SIGN_IN_TIMEOUT_MS = 10 * 60_000;
 
+/**
+ * CI mode: seed the stack through the stand-in launcher (the API + workers it started run beside
+ * the seed, as the compose `workers` service does), then build the MSAL cache from the stand-in
+ * token. MSAL's own `loadExternalTokens` writes the cache, so the key shapes are never guessed.
+ */
+async function ciSetup(baseURL: string): Promise<void> {
+  const seeded = spawnSync(
+    "uv",
+    ["run", "python", "../tests/integration/real_stack/serve_stand_in_api.py", "seed"],
+    { stdio: "inherit", timeout: 12 * 60_000, shell: process.platform === "win32" },
+  );
+  if (seeded.status !== 0) throw new Error(`stack seed failed (exit ${String(seeded.status)})`);
+  const token = readFileSync(STAND_IN_TOKEN_FILE, "utf8").trim();
+  const appConfig = standInConfig();
+
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const page = await (await browser.newContext()).newPage();
+    await page.route("**/config.json", (route) => route.fulfill({ json: appConfig }));
+    await page.goto(baseURL);
+    const session = await page.evaluate(
+      async ({ cfg, accessToken }) => {
+        const { buildMsalConfiguration } = (await import(
+          /* @vite-ignore */ "/src/auth/msal.ts"
+        )) as typeof import("../../src/auth/msal");
+        const msal = (await import(
+          /* @vite-ignore */ "/@id/@azure/msal-browser"
+        )) as typeof import("@azure/msal-browser");
+        const configuration = buildMsalConfiguration({
+          cloud: "commercial",
+          tenantId: cfg.tenantId,
+          clientId: cfg.clientId,
+          apiScope: cfg.apiScope,
+        });
+        const now = Math.floor(Date.now() / 1000);
+        await msal.loadExternalTokens(
+          configuration,
+          {
+            scopes: [cfg.apiScope],
+            authority: `https://login.microsoftonline.com/${cfg.tenantId}`,
+          },
+          {
+            id_token: accessToken,
+            access_token: accessToken,
+            token_type: "Bearer",
+            scope: cfg.apiScope,
+            expires_in: 6 * 3600,
+            ext_expires_in: 6 * 3600,
+            not_before: now,
+          } as never,
+          { extendedExpiresOn: now + 6 * 3600 },
+        );
+        return JSON.stringify(Object.fromEntries(Object.entries(window.sessionStorage)));
+      },
+      { cfg: appConfig, accessToken: token },
+    );
+    mkdirSync(dirname(SESSION_FILE), { recursive: true });
+    writeFileSync(SESSION_FILE, session, { mode: 0o600 });
+  } finally {
+    await browser.close();
+  }
+}
+
 export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
   const baseURL = config.projects[0]?.use.baseURL;
   if (baseURL === undefined) throw new Error("real-stack config has no baseURL");
+  if (CI_MODE) {
+    await ciSetup(baseURL);
+    return async () => {
+      rmSync(SESSION_FILE, { force: true });
+      rmSync(STAND_IN_TOKEN_FILE, { force: true });
+    };
+  }
 
   const browser = await chromium.launch({ headless: false, args: LOCALHOST_IPV4 });
   try {

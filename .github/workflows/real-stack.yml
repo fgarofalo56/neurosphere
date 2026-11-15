@@ -62,3 +62,45 @@ jobs:
       - name: Stop the emulators
         if: always()
         run: docker compose down -v --remove-orphans
+
+  # PRP-38 item 6: headless browser run. Signs in with the in-process dev issuer (never Entra):
+  # tests/integration/real_stack/serve_stand_in_api.py serves the composed API + workers behind a
+  # stand-in validator, vite proxies /api to it, and global-setup seeds the stack and builds the
+  # MSAL session cache. A separate job (own emulators) so the pytest suites' Event Hubs backlog
+  # cannot leak into the seed.
+  real-stack-browser:
+    name: real-stack-browser (headless Playwright, dev issuer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NS_PROBE_COSMOS_URL: http://127.0.0.1:8081/
+      NS_E2E_APP_PORT: "5300"
+      NS_STAND_IN_API_PORT: "8765"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      - name: Install frontend
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browser
+        run: pnpm --filter @neurosphere/frontend exec playwright install --with-deps chromium
+      - name: Start the emulators (Cosmos, Event Hubs, Azurite) and wait for health
+        run: docker compose up -d --wait
+      - name: Headless real-stack run (routes + flow specs)
+        env:
+          NS_REAL_STACK_MODE: ci
+        run: pnpm --filter @neurosphere/frontend exec playwright test -c playwright.real-stack.config.ts
+      - name: Emulator logs (on failure)
+        if: failure()
+        run: docker compose logs --no-color --tail 400
+      - name: Stop the emulators
+        if: always()
+        run: docker compose down -v --remove-orphans

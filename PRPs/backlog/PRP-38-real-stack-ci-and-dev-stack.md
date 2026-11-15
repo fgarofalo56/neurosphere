@@ -235,7 +235,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call: everything runs on emulators. Ope
 | 3 | verifying | prp-38-real-stack-ci | unit-tested; live make replay counts not run |
 | 4 | partial | prp-38-real-stack-ci | gateway seeded + OPT_IN_ROLES removed; forecast 409 OPEN: ingestion prices from infra/dev/ledger-prices.dev.json (synthetic-model only), outside ownership |
 | 5 | verifying | prp-38-real-stack-ci | real-stack.yml written, actionlint ok; first CI run URL pending; seeded-stack suites skip in CI (no seeded stack) |
-| 6 | todo | | NOT done in this run (out of budget). Finding: msal-browser 5.26 sessionStorage cache is NOT encrypted (encryption is localStorage-only) and TokenCache.loadExternalTokens exists, so a synthesised cache or authority interception is feasible; no frontend/src hook needed |
+| 6 | verifying | prp-38-real-stack-ci | headless run passes locally (route walk 44 + 4 flow specs on a freshly seeded stack, ports 5300/8765); sign-in via msal loadExternalTokens in global-setup, no frontend/src change; CI job real-stack-browser added, first CI run pending |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
