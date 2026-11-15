@@ -230,7 +230,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call: everything runs on emulators. Ope
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | verifying | prp-38-real-stack-ci | --grants-only + Makefile reorder + pins; real fresh stack-up UNVERIFIED so far |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |

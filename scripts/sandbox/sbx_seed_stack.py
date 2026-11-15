@@ -1316,6 +1316,28 @@ async def run_seed(
     return tally.summary()
 
 
+async def run_grants_only(
+    config: SeedConfig,
+    backends: Backends,
+    workdir: Path,
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> Doc:
+    """Apply only the grants (worker principal, personas, operator).
+
+    The workers' evaluation role refuses to start until the worker principal holds its pilot
+    domain (``evaluation_pilot_domain_out_of_scope``), so a fresh ``make stack-up`` grants first
+    and starts the app profile second (#205). This publishes nothing and waits for no worker; the
+    full seed afterwards finds the grants and reports them unchanged.
+    """
+    env = dict(os.environ) if environ is None else environ
+    tally = Tally()
+    gen = generate_config(config)
+    await asyncio.to_thread(generate, gen, workdir)
+    await seed_grants(backends, config, World(gen), tally, env)
+    return tally.summary()
+
+
 # -- real backends ---------------------------------------------------------------------------
 
 
@@ -1470,10 +1492,12 @@ def assemble_backends(
     )
 
 
-async def _seed(config: SeedConfig) -> Doc:
+async def _seed(config: SeedConfig, *, grants_only: bool = False) -> Doc:
     with tempfile.TemporaryDirectory(prefix="ns-seed-") as tmp:
         async with AsyncExitStack() as stack:
             backends = await open_backends(config, stack)
+            if grants_only:
+                return await run_grants_only(config, backends, Path(tmp))
             return await run_seed(config, backends, Path(tmp))
 
 
@@ -1588,6 +1612,11 @@ def _parser() -> argparse.ArgumentParser:
         "--operator-object-id", help="also grant this Entra object id admin (your sign-in)"
     )
     parser.add_argument(
+        "--grants-only",
+        action="store_true",
+        help="apply the grants and nothing else (no publish, no wait for workers); local only",
+    )
+    parser.add_argument(
         "--hosted",
         type=Path,
         metavar="REGISTRATION",
@@ -1642,6 +1671,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     args = _parser().parse_args(argv)
     environ = dict(os.environ) if env is None else dict(env)
     if args.hosted is not None:
+        if args.grants_only:
+            print("REFUSED: --grants-only is for the local stack only", file=sys.stderr)
+            return EXIT_REFUSED
         return _main_hosted(args, environ)
     try:
         config = resolve_config(args.profile, args.operator_object_id, environ)
@@ -1650,7 +1682,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
         return EXIT_REFUSED
     try:
         with scoped_environ({**environ, **config.environ()}):
-            summary = asyncio.run(_seed(config))
+            summary = asyncio.run(
+                _seed(config, grants_only=True) if args.grants_only else _seed(config)
+            )
     except (SeedError, NeuroSphereError, ValidationError, OSError) as exc:
         print(f"FAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
         return EXIT_FAILED

@@ -297,6 +297,28 @@ def test_seeding_refuses_to_go_past_awaiting_confirmation(tmp_path: Path) -> Non
 # -- idempotency ---------------------------------------------------------------------------
 
 
+def test_grants_only_publishes_nothing_and_waits_for_nothing(tmp_path: Path) -> None:
+    """PRP-38 item 1 (#205): grants land before the app profile starts, with no worker running."""
+    stack = Stack(lands=False)  # a worker-less stack: any wait would time out
+
+    summary = asyncio.run(seed.run_grants_only(_config(), stack.backends, tmp_path, environ={}))
+
+    assert summary["seeded"]["grants"] > 0
+    assert sum(v for k, v in summary["seeded"].items() if k != "grants") == 0
+    assert stack.hub.published == []
+
+
+def test_grants_only_is_idempotent_and_the_full_seed_finds_the_grants(tmp_path: Path) -> None:
+    stack = Stack()
+    asyncio.run(seed.run_grants_only(_config(), stack.backends, tmp_path / "g", environ={}))
+    again = asyncio.run(
+        seed.run_grants_only(_config(), stack.backends, tmp_path / "g2", environ={})
+    )
+    assert again["seeded"]["grants"] == 0
+    full = _run(stack, tmp_path / "full")
+    assert full["seeded"]["grants"] == 0
+
+
 def test_second_run_creates_nothing_and_reports_skipped_existing(tmp_path: Path) -> None:
     stack = Stack()
     first = _run(stack, tmp_path / "one")
