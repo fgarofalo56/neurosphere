@@ -10,7 +10,7 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 6
 ns: NS-06, NS-08, NS-09, NS-10
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identity-admin-api-and-revocation, PRP-48-authorization-and-audit-chain-hardening]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store, PRP-39-identity-admin-api-and-revocation, PRP-48-authorization-and-audit-chain-hardening]
 wave: W16
 branch: prp-45-system-status-settings
 allow_parallel: true
@@ -22,7 +22,7 @@ issues: [242]
 ## Goal
 Give an operator one authenticated place that answers "what is configured, what is off and why, and what do I do next", and let them change the runtime feature settings that today are env vars plus a redeploy: copilot mode and model endpoint, evaluation judge, search provider, deployment scan, the NeuroSphere MCP server, and write-target entries. Ships a system-status API and a first-run checklist API derived from the same component registry `/readyz` uses, plus audited, ETag-guarded stored settings that the API builders and the worker evaluation role read at startup (stored value over env, restart to apply). It is for the operator standing up a deployment and for the admin console page that PRP-53 builds on it. Now, because step 1 of the 2026-11-06 re-plan (operator control plane) is still MISSING and every admin page in W17-W18 needs this API.
 
-Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-58; turning stored write-target entries into registered connectors, more than one target per connector kind and profile wiring are PRP-54; the admin console pages are PRP-53 (status, checklist) and PRP-57 (models and feature settings); producers and connector credentials are PRP-41 and PRP-42; domains, budgets, price sheets and review policy are PRP-44; the schemas, the `admin-config` container and the permissions are PRP-37.
+Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-58; turning stored write-target entries into registered connectors, more than one target per connector kind and profile wiring are PRP-54; the admin console pages are PRP-53 (status, checklist) and PRP-57 (models and feature settings); producers and connector credentials are PRP-41 and PRP-42; domains, budgets, price sheets and review policy are PRP-44; the schemas, the `admin-config` container and the permissions are PRP-37/PRP-65.
 
 ## Why
 - No admin, settings or status router exists: `services/api/neurosphere_api/routers.py:222-251` (`REGISTERED`) has no such hook (lane-d step 1).
@@ -37,8 +37,8 @@ Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-5
 - [ ] Given a caller without the deployment-scoped admin permission (including `config.manage` in an ordinary domain only), When any `/api/v1/admin/system/*` route is called, Then it is 403 and the denial is recorded by the denial recorder.
 - [ ] `GET /api/v1/admin/system/checklist` returns one item per checklist entry (optional components, ingest producers, write targets, stored-settings store reachable, auth customer binding) with state `done | todo | blocked | not_applicable`, a reason code and a docs anchor; the item ids are stable and listed in the runbook.
 - [ ] `GET /api/v1/admin/system/settings` lists the six setting keys (`copilot`, `judge`, `search`, `scan`, `mcp_server`, `write_targets`) with source `stored | env | default`, stored revision, applied revision and `restart_required`.
-- [ ] `PUT /api/v1/admin/system/settings/{key}` validates the body through the same settings class the builder uses, needs `If-Match` (missing is `invalid_schema`, stale is `stale_version`, the catalog convention), stores through the PRP-37 `admin-config` repository with an audit record, and returns the diff and the new revision.
-- [ ] A stored value that names a credential (any field matching the copilot `KEY|SECRET|PASSWORD` markers) or a value in another cloud than the deployment's is refused with 422 and nothing is stored; references only (A7 vocabulary from PRP-37).
+- [ ] `PUT /api/v1/admin/system/settings/{key}` validates the body through the same settings class the builder uses, needs `If-Match` (missing is `invalid_schema`, stale is `stale_version`, the catalog convention), stores through the PRP-37/PRP-65 `admin-config` repository with an audit record, and returns the diff and the new revision.
+- [ ] A stored value that names a credential (any field matching the copilot `KEY|SECRET|PASSWORD` markers) or a value in another cloud than the deployment's is refused with 422 and nothing is stored; references only (A7 vocabulary from PRP-37/PRP-65).
 - [ ] Given stored `copilot`, `search`, `mcp_server` or `scan` settings, When the API starts, Then the builders use them over env (A1) and status reports source `stored`; Given the store unreachable at startup, Then builders use env and the checklist shows `stored_settings_unavailable`.
 - [ ] Given a stored `judge` setting, When the evaluation worker role starts, Then `_evaluation_judge` builds from it; a Commercial endpoint in a Government deployment fails the role with the existing `evaluation_judge_*` reason, never a cross-cloud call.
 - [ ] Stored `write_targets` entries are validated and listed but not registered by this PRP (PRP-54 consumes them); status says so.
@@ -50,8 +50,8 @@ Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-5
 |---|----------|-----------------|----------|
 | 1 | When do stored settings apply | Startup only with a restart signal; live rebuild of the builder | ASSUMPTION: A1. Startup only; status shows `restart_required` when stored revision differs from applied revision. No hot reload. |
 | 2 | Precedence of stored over env | Stored wins; env wins; per-field merge | ASSUMPTION: a stored setting, when present and valid, is passed as init arguments to the existing settings class (pydantic-settings init args beat env), so env stays the bootstrap default and validation is unchanged. |
-| 3 | Which permission gates the routes | `config.manage` anywhere; deployment-scoped admin | Deployment-scoped admin permission from PRP-37 (#114 direction): these settings act on the whole deployment. Reads and writes both need it. |
-| 4 | Do settings writes go through the action executor | Executor intent; audited config write | Audited, ETag-guarded config write through the PRP-37 `admin-config` repository with a returned diff. They change NeuroSphere's own configuration, not an external system, so the executor is not used. ASSUMPTION, flag to the user at plan approval. |
+| 3 | Which permission gates the routes | `config.manage` anywhere; deployment-scoped admin | Deployment-scoped admin permission from PRP-37/PRP-65 (#114 direction): these settings act on the whole deployment. Reads and writes both need it. |
+| 4 | Do settings writes go through the action executor | Executor intent; audited config write | Audited, ETag-guarded config write through the PRP-37/PRP-65 `admin-config` repository with a returned diff. They change NeuroSphere's own configuration, not an external system, so the executor is not used. ASSUMPTION, flag to the user at plan approval. |
 | 5 | Store failure at startup | Fail readiness; fall back to env | ASSUMPTION: fall back to env with a checklist item `stored_settings_unavailable`; env is operator-controlled, so this cannot widen access. |
 | 6 | Where the scan setting is applied | `main.py`; `deploy/scan/bootstrap.py` | `deploy/scan/bootstrap.py` reads the same cached stored snapshot; `main.py` is not a W16 Tier-1 file for this PRP. |
 
@@ -71,7 +71,7 @@ Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-5
 - `services/api/neurosphere_api/actions/customer_control.py:91-110` - customer-level check pattern.
 
 ### Interfaces consumed
-- From PRP-37 (names in PRP-37's "Interfaces provided"): the system-setting schema and the first-run checklist item schema (generated Python and TS models), the audited, ETag-guarded `admin-config` Cosmos container and its repository with an in-memory twin, the deployment-scoped admin role and permission, the credential-reference vocabulary.
+- From PRP-37/PRP-65 (names in PRP-37/PRP-65's "Interfaces provided"): the system-setting schema and the first-run checklist item schema (generated Python and TS models), the audited, ETag-guarded `admin-config` Cosmos container and its repository with an in-memory twin, the deployment-scoped admin role and permission, the credential-reference vocabulary.
 - From PRP-39: the `neurosphere_api.admin` package root and the `runtime/builders/admin.py` builder pattern for admin routers.
 - From PRP-48 (W15, merged before W16): the deployment-scoped admin dependency under `services/api/neurosphere_api/authz/`. If it is not on `main` at session start, stop and report rather than re-implementing it.
 - Existing: `ComponentRegistry` snapshot on `app.state.composition`; `run_probes`/`probes_from_env` (`health/probes.py`).
@@ -139,7 +139,7 @@ must_not_touch:
 ### Item 1 - stored-settings core  [P]
 - Deliverable: `neurosphere_core.admin.runtime` with `SETTING_KEYS`, one validator per key that builds the target settings class from stored fields (copilot, search, MCP server, scan in the API; judge in workers; write-target entries as a list), credential-name and cloud checks, and `load_stored_settings(repository, timeout)` returning an immutable snapshot (key to value, revision) cached per process; unreachable store returns an empty snapshot with reason `stored_settings_unavailable`.
 - Owned files: `packages/core/neurosphere_core/admin/runtime/**`, `packages/core/tests/admin_runtime/**`.
-- Must NOT touch: PRP-37 schemas and repository modules.
+- Must NOT touch: PRP-37/PRP-65 schemas and repository modules.
 - Depends on: none.
 - Acceptance criteria: each key round-trips; a `*_KEY`/`SECRET`/`PASSWORD` field is refused; a Commercial endpoint in a Government profile is refused; timeout yields the empty snapshot.
 - Tests: `packages/core/tests/admin_runtime/test_validators.py`, `test_snapshot.py`.
@@ -155,7 +155,7 @@ must_not_touch:
 - Pattern references: `runtime/readiness.py:54-76`, `actions/customer_control.py:91-110`.
 
 ### Item 3 - settings API
-- Deliverable: `GET/PUT` settings routes with `If-Match`, diff, audit through the PRP-37 repository, validation from item 1; `restart_required` from stored versus applied revision (applied revision recorded at startup by item 4).
+- Deliverable: `GET/PUT` settings routes with `If-Match`, diff, audit through the PRP-37/PRP-65 repository, validation from item 1; `restart_required` from stored versus applied revision (applied revision recorded at startup by item 4).
 - Owned files: `services/api/neurosphere_api/admin/system/settings_router.py` (new), `services/api/tests/admin_system_api/test_settings*.py`.
 - Must NOT touch: builders.
 - Depends on: item 1.
@@ -201,7 +201,7 @@ python scripts/validate_planning.py
 ```
 
 ## Migration and rollback
-No data migration: stored settings are new documents in the PRP-37 `admin-config` container. With no stored document every builder behaves exactly as today (env). To turn a stored setting off, delete it through the API (or set it back) and restart; to revert the feature, revert the PR: builders return to env-only and the documents are ignored.
+No data migration: stored settings are new documents in the PRP-37/PRP-65 `admin-config` container. With no stored document every builder behaves exactly as today (env). To turn a stored setting off, delete it through the API (or set it back) and restart; to revert the feature, revert the PR: builders return to env-only and the documents are ignored.
 
 ## Live and open gates
 None run here. A stored copilot or judge endpoint pointing at a real model is only exercised by PRP-64's G16 judge item and a hosted copilot check, each needing `NS_LIVE_APPROVED=1`; both handed to PRP-64 and reported OPEN in the completion note.

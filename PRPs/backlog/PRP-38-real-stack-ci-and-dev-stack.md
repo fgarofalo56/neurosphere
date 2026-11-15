@@ -55,7 +55,7 @@ PRP exit: all boxes ticked, the new workflow run linked, `verify-gates.ps1` full
 | 4 | New workflow vs editing `ci.yml` | New file; extend `ci.yml` | New `real-stack.yml` (assigned; `ci.yml` is not touched). |
 | 5 | Required check | Required now; non-required first | Non-required until it has been green for a week. ASSUMPTION: the operator flips branch protection; this PRP only records the job name. |
 | 6 | #162 cause | Generator emits the wrong shape; publisher omits the envelope | ASSUMPTION: the publisher omits the envelope (code read, not reproduced). Item 3 reproduces first; if the cause differs, fix the real one and record it. |
-| 7 | CI runner capacity | Accept; shard | The Cosmos emulator is heavy and runner saturation is a known risk (memory note). ASSUMPTION: one job fits `ubuntu-latest`; UNVERIFIED until the first run. |
+| 7 | CI runner capacity | Accept; shard | The Cosmos emulator is heavy and runner saturation is a known risk (memory note). Verified 2026-11-14 on Microsoft Learn: the vNext emulator image this repo's compose file uses (`mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest`) is documented for GitHub Actions on `ubuntu` runners, as a service container or via `docker run` (https://learn.microsoft.com/azure/cosmos-db/emulator-linux#use-in-continuous-integration-workflow). ASSUMPTION that remains: the emulator plus Event Hubs emulator, Azurite and the app fit one `ubuntu-latest` job; UNVERIFIED until the first run. |
 
 ## Context manifest
 

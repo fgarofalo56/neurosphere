@@ -10,7 +10,7 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 6
 ns: NS-08, NS-09
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store]
 wave: W14
 branch: prp-40-audit-siem
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [234]
 # PRP-40: Audit search, export, readable denials and an Event Hubs SIEM sink
 
 ## Goal
-Make the audit trail usable by a security auditor and by the customer's SIEM. Ship an Event Hubs SIEM sink (A2) authenticated by managed identity, with its configuration state in readiness and its runtime health on an authenticated status route; an audit search API that filters by domain, operation, kind, outcome, actor pseudonym, correlation id and time range over the chains the caller may read; a bounded NDJSON/CSV export that needs the new `audit.export` permission and is itself audited; a customer-level route that finally lets an auditor read the `<customer>.authz-denials` chain; and a recorded decision plus implementation for auditing pre-scope failures (401, 503, revoked), the open PRP-06 follow-up (6). It is the backend for the PRP-53 audit page and closes lane-d step 6 except push revocation (PRP-39). It runs in W14, after PRP-37 adds `audit.export` and the customer-wide helper.
+Make the audit trail usable by a security auditor and by the customer's SIEM. Ship an Event Hubs SIEM sink (A2) authenticated by managed identity, with its configuration state in readiness and its runtime health on an authenticated status route; an audit search API that filters by domain, operation, kind, outcome, actor pseudonym, correlation id and time range over the chains the caller may read; a bounded NDJSON/CSV export that needs the new `audit.export` permission and is itself audited; a customer-level route that finally lets an auditor read the `<customer>.authz-denials` chain; and a recorded decision plus implementation for auditing pre-scope failures (401, 503, revoked), the open PRP-06 follow-up (6). It is the backend for the PRP-53 audit page and closes lane-d step 6 except push revocation (PRP-39). It runs in W14, after PRP-37/PRP-65 adds `audit.export` and the customer-wide helper.
 
 Out of scope: audit chain internals and #206 chain follow-ups (PRP-48 owns `packages/core/neurosphere_core/audit/` chain files in W15); allowed-read audit for search and analytics (#69, PRP-48); the audit UI (PRP-53); Bicep, Helm and App Service settings for the sink (PRP-58 hosted wiring, PRP-52 for Helm/Bicep modules); Azure Monitor Logs Ingestion, Splunk or syslog sinks; the revoke route (PRP-39); WORM storage for the audit container.
 
@@ -49,8 +49,8 @@ Out of scope: audit chain internals and #206 chain follow-ups (PRP-48 owns `pack
 | 1 | SIEM target | Event Hubs; Logs Ingestion; both | ASSUMPTION A2: Event Hubs only. Sentinel, Splunk and others read from the hub. RBAC role for the API identity: "Azure Event Hubs Data Sender" (verified on Microsoft Learn, `event-hubs/authenticate-managed-identity`) |
 | 2 | Search engine | Cosmos parameterized queries per chain; AI Search index; scan with `read_range` | Parameterized single-partition Cosmos queries per readable chain behind an `AuditSearchStore` protocol, with an in-memory twin; no new index |
 | 3 | Pre-scope failures | audit all; audit none; split | ASSUMPTION (recommended, confirm at plan approval): identity-known failures (revoked, policy-store 503) get a denial record on `<customer>.authz-denials`; unauthenticated 401s get a SIEM event and a counter only, because an anonymous caller could otherwise flood the hash chain |
-| 4 | Export permission | `audit.read`; `data.export`; `audit.export` | `audit.export` from PRP-37 (Security Auditor only) |
-| 5 | Who reads `authz-denials` | any auditor; customer-wide auditor | Customer-wide auditor via the control domain (PRP-37 helper); the chain names other domains' targets |
+| 4 | Export permission | `audit.read`; `data.export`; `audit.export` | `audit.export` from PRP-37/PRP-65 (Security Auditor only) |
+| 5 | Who reads `authz-denials` | any auditor; customer-wide auditor | Customer-wide auditor via the control domain (PRP-37/PRP-65 helper); the chain names other domains' targets |
 | 6 | Export form | async job + blob; bounded stream | Bounded synchronous stream; async jobs are a follow-up if the cap proves too small |
 | 7 | `NS_AUDIT_SIEM_SINK` literal | new settings class; extend existing | Extend the existing `AuditSiemSettings.sink` literal with `eventhubs` and add new `NS_AUDIT_SIEM_EVENTHUBS_*` fields; this is the one existing-line edit in `runtime/settings.py` |
 
@@ -70,7 +70,7 @@ Out of scope: audit chain internals and #206 chain follow-ups (PRP-48 owns `pack
 - `services/api/tests/runtime_data/test_audit_siem.py` and `services/api/tests/auditor_access/` - tests that pin current behaviour.
 
 ### Interfaces consumed
-- From PRP-37: `Permission.AUDIT_EXPORT`, `Permission.AUDIT_READ`, `permits_customer_wide`, `customer_control_domain_id`, `NotFoundError`.
+- From PRP-37/PRP-65: `Permission.AUDIT_EXPORT`, `Permission.AUDIT_READ`, `permits_customer_wide`, `customer_control_domain_id`, `NotFoundError`.
 - From PRP-06 / PRP-31 (shipped): `AuditRepository`, `AuditRecord`, `domain_audit_chain_id`, `domain_from_audit_chain`, `require`, `AuditDenialRecorder`, `DENIAL_CHAIN_NAME`.
 - From PRP-21 (W13): the merged `authz/dependencies.py` (pre-scope hook point).
 
@@ -151,7 +151,7 @@ Parallelization: items 1 and 3 are [P] (core sink vs API search store). Item 2 a
 - Deliverable: `audit/search_store.py` (`AuditSearchStore` protocol, in-memory twin, Cosmos implementation over the `audit` container), `audit/search.py` router with filters, readable-chain resolution through `auditable_chain`, cursor, caps; `audit/models.py`.
 - Owned files: `services/api/neurosphere_api/audit/{search_store,search,models}.py` (new), `audit/__init__.py`, `services/api/tests/audit_api/test_search.py` (new).
 - Must NOT touch: `ui_adapters/audit.py` (item 4), `builders/data.py` (item 2 publishes the store; this item takes it from `app.state` with a 503 `capability_unavailable` fallback until then).
-- Depends on: PRP-37 merged.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: search criteria above; a Cosmos-emulator test marked `integration`.
 - Tests: `services/api/tests/audit_api`.
 - Pattern references: `ui_adapters/audit.py:140-190`, `gateway/cosmos_store.py:156-192`.

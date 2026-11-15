@@ -52,7 +52,7 @@ Out of scope: the settings API, schema and validation of the `write_targets` ent
 | 4 | Registry API change | New registry type; additive keys | Additive keys on the SDK registry; PRP-50 (W16) has merged first, so rebase and re-run `connectors/sdk-python/tests/write` |
 | 5 | Foundry accounts per domain | Many; one | ASSUMPTION: one Foundry account per domain; a model swap routes by the intent's domain. Multiple accounts in one domain would need the swap target to name an account, which the action contract does not carry (no change here) |
 | 6 | Write permission on the target | Grant by IaC; operator | Operator-owned role assignment (`Cognitive Services` contributor-class role on the account, APIM contributor on the service), documented in the runbook and checked by the existing permission read, which yields the advisory connector on a shortfall; hosted role assignments for write are not added by this PRP |
-| 7 | Key name of the stored setting | `write_target` (PRP-37 schema), `write_targets` (PRP-45 text) | Use the constant and the entry model PRP-45 ships (`SETTING_KEYS`, its snapshot accessor); do not hard-code a spelling |
+| 7 | Key name of the stored setting | `write_target` (PRP-37/PRP-65 schema), `write_targets` (PRP-45 text) | Use the constant and the entry model PRP-45 ships (`SETTING_KEYS`, its snapshot accessor); do not hard-code a spelling |
 
 ## Context manifest
 
@@ -68,7 +68,7 @@ Out of scope: the settings API, schema and validation of the `write_targets` ent
 - `infra/helm/values.yaml`, `infra/helm/templates/deployment.yaml:44-205`, `infra/demo/main.bicep:225-285` - env plumbing.
 
 ### Interfaces consumed
-- PRP-45: the stored `write_targets` entries (validated, listed), `neurosphere_core.admin.runtime.load_stored_settings` snapshot, the `admin_system` component; PRP-37: `SystemSetting` write-target definitions, `CredentialReference` vocabulary (not used for values here), `admin_config` container.
+- PRP-45: the stored `write_targets` entries (validated, listed), `neurosphere_core.admin.runtime.load_stored_settings` snapshot, the `admin_system` component; PRP-37/PRP-65: `SystemSetting` write-target definitions, `CredentialReference` vocabulary (not used for values here), `admin_config` container.
 - Shipped: `FoundryWriteSettings`, `ApimWriteSettings`, `WriteTargetSources`, `WriteTargetSeams`, `create_swap_connector`, `build_http_apim_gateway_connector`, `GatewayStore`, `check_gateway_binding`, `ActionService`, maker-checker `ReviewPolicy` for `maker_checker` (PRP-44 may have stored a policy; behaviour is policy-driven).
 - PRP-50 (W16): the SDK write-verify changes in the same registry package.
 
@@ -192,6 +192,11 @@ Parallelization: item 1 first (shared SDK and core). Items 2 and 3 [P] after it 
 - Owned files: this PRP file, Tier-3 files per reference section 2.
 - Depends on: items 1-5.
 - Acceptance criteria: validation gates pass; CI green including `helm`; live items listed OPEN.
+
+## Cut line
+If context runs low, stop after Item 3 and run Item 6 (close-out) on what exists. Items 1 to 3 are a closed unit: the keyed registry (additive, `get(name)` unchanged for one target), the worker registration and the API planning path with all nine `connector_for` call sites passing the domain. It merges safely on its own because `NS_WRITE_TARGETS_FROM_STORE` defaults to off, so behaviour stays today's env path until someone sets it by hand; there is no registry that is filled but never read. Never stop inside Item 3 (a partial set of `connector_for` call sites is the half-wired state to avoid) and never run Item 5 without Items 2 to 4.
+
+Recorded as unmet in the completion note: criterion 7 (emulator proof of approvals and read-back verify, Item 5) and criterion 8 (compose, Helm and Bicep opt-in, Item 4). Criteria 1 to 6 and 9 must hold at the cut. The remainder (Items 4 and 5) is filed as a follow-up issue linked to this PRP's tracking issue (#247), listing the unmet criteria verbatim; Items 4 and 5 are marked `descoped` in the Execution state with that issue number.
 
 ## Validation gates
 ```bash

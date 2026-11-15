@@ -10,7 +10,7 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 6
 ns: NS-08, NS-09
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store]
 wave: W15
 branch: prp-48-authz-audit-hardening
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [241, 91, 114, 69, 70, 206]
 # PRP-48: Authorization and audit-chain hardening
 
 ## Goal
-Close the authorization and audit gaps found by the PRP-06, PRP-12, PRP-22, PRP-28 and PRP-31 reviews, so the control-plane APIs built in W16-W18 sit on honest primitives. Ships: a role-gated route category with tenancy and denial audit for `/workspaces/{role}` (#91); the behaviour of the deployment-scoped admin role that PRP-37 declares, applied to MCP administration, deploy scan and plan, and the emergency-disable kill switch (#114 and the PRP-17 leftover); allowed-read audit for catalog search and analytics dashboards (#69); audit-chain fixes for dotted customer ids, over-long domain names and reserved customer-level chain names (#206 items 1-3); and the injection corpus README and stub clarifications (#70). For security reviewers and for every later admin route. Now, because PRP-45, PRP-53 and PRP-57 gate deployment-wide settings on this behaviour.
+Close the authorization and audit gaps found by the PRP-06, PRP-12, PRP-22, PRP-28 and PRP-31 reviews, so the control-plane APIs built in W16-W18 sit on honest primitives. Ships: a role-gated route category with tenancy and denial audit for `/workspaces/{role}` (#91); the behaviour of the deployment-scoped admin role that PRP-37/PRP-65 declares, applied to MCP administration, deploy scan and plan, and the emergency-disable kill switch (#114 and the PRP-17 leftover); allowed-read audit for catalog search and analytics dashboards (#69); audit-chain fixes for dotted customer ids, over-long domain names and reserved customer-level chain names (#206 items 1-3); and the injection corpus README and stub clarifications (#70). For security reviewers and for every later admin route. Now, because PRP-45, PRP-53 and PRP-57 gate deployment-wide settings on this behaviour.
 
 Out of scope: the SIEM sink, audit search and export, the auditor-readable denial chain and pre-scope failure auditing are PRP-40; the APIM UI-to-API rate limit (#69 Bicep bullet) is PRP-52; the threat-model stale-row rewrite (#69 doc part) is PRP-36; the identity admin routes and revocation route are PRP-39; domain creation that must call the reserved-name check is PRP-44; #206 item 4 (legacy chains not migrated) is accepted and documented, not built.
 
@@ -36,7 +36,7 @@ Out of scope: the SIEM sink, audit search and export, the auditor-readable denia
 - [ ] #91: `authz/routes.py` has a role-gated category; `GET /api/v1/workspaces/{role}` is listed in it and no longer claims `data.read`; `undeclared_routes` stays empty.
 - [ ] #91: Given a viewer assignment that names only another customer's domain, When `/workspaces/viewer` is called, Then 403 `role_not_held`; the 403 is recorded by the denial recorder (test asserts one `denied` record).
 - [ ] #91: `/me/domains` for a caller whose only `data.read` comes from a resource grant returns 200 with an empty list and the OpenAPI description says so; exceeding `_MAX_CATALOG_PAGES` logs one warning with the domain count only.
-- [ ] #114: Given `config.manage` only in an ordinary domain, When the caller registers an MCP server, runs a deploy scan or plan, or sets emergency-disable, Then 403 `deployment_scope_required` (or the existing `customer_scope_required` code if PRP-37 keeps it) and a denial record; Given the PRP-37 deployment-scoped admin assignment, Then each route succeeds as before.
+- [ ] #114: Given `config.manage` only in an ordinary domain, When the caller registers an MCP server, runs a deploy scan or plan, or sets emergency-disable, Then 403 `deployment_scope_required` (or the existing `customer_scope_required` code if PRP-37/PRP-65 keeps it) and a denial record; Given the PRP-37/PRP-65 deployment-scoped admin assignment, Then each route succeeds as before.
 - [ ] #114: the deployment-scoped check is one dependency under `services/api/neurosphere_api/authz/`, used by all four route groups; `require_customer_control` delegates to it; no unrestricted bypass is introduced (security case added to `tests/security/authz`).
 - [ ] #69: an allowed catalog search (both routes) and an allowed dashboard read append one `allowed` audit record with actor pseudonym, operation, domain and result count only (no query text, no rows); a failed audit write on these reads is logged and counted, never blocks the read (read path, not mutation) - decision row 3.
 - [ ] #206.1: API start with a dotted `NS_AUTH_CUSTOMER_ID` fails the `authz` component with reason `customer_id_invalid`.
@@ -48,7 +48,7 @@ Out of scope: the SIEM sink, audit search and export, the auditor-readable denia
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Shape of the deployment-scoped role | New role; new permission on existing admin; assignment on the reserved control domain | Defined by PRP-37 (see its "Interfaces provided"). ASSUMPTION: it is evaluated against the reserved per-customer control domain the operator approved on 2026-11-05 (`customer_control.py:9-18`), so existing kill-switch grants keep working; if PRP-37 chose otherwise, item 3 follows PRP-37. |
+| 1 | Shape of the deployment-scoped role | New role; new permission on existing admin; assignment on the reserved control domain | Defined by PRP-37/PRP-65 (see its "Interfaces provided"). ASSUMPTION: it is evaluated against the reserved per-customer control domain the operator approved on 2026-11-05 (`customer_control.py:9-18`), so existing kill-switch grants keep working; if PRP-37/PRP-65 chose otherwise, item 3 follows PRP-37/PRP-65. |
 | 2 | Which routes move to it | MCP admin, deploy scan/plan, kill switch; plus sandbox reset | The four groups #114 names. Sandbox reset stays `config.manage` (local-only, 503 elsewhere). |
 | 3 | Allowed-read audit failure on a read | Fail closed (503); log and continue | ASSUMPTION: log and count, do not block a read; mutations keep failing closed. Recorded in the threat model. |
 | 4 | `/me/domains` empty 200 | 403; documented 200 | Documented 200 (frontend already handles it, #91 bullet 4). |
@@ -68,7 +68,7 @@ Out of scope: the SIEM sink, audit search and export, the auditor-readable denia
 - `tests/security/authz/cases.py`, `tests/security/injection/README.md`, `stubs.py`.
 
 ### Interfaces consumed
-- From PRP-37 (names in PRP-37's "Interfaces provided"): the deployment-scoped admin role and its permission(s) in `permissions.py`, and their role-set pins.
+- From PRP-37/PRP-65 (names in PRP-37/PRP-65's "Interfaces provided"): the deployment-scoped admin role and its permission(s) in `permissions.py`, and their role-set pins.
 - Existing: `DeniedAttempt`, `AuthzState.denial_recorder`, `AuditRepository.append`, `build_allowed`, `build_denied`.
 
 ### Interfaces provided
@@ -157,9 +157,9 @@ must_not_touch:
 - Pattern references: `me/router.py:83-118`.
 
 ### Item 3 - deployment-scoped admin behaviour
-- Deliverable: `authz/deployment_scope.py` (new) generalising the control-domain check over the PRP-37 permission; `require_customer_control` delegates to it; MCP admin, deploy scan, deploy plan and `PUT /emergency-disable` use it; grant script and kill-switch runbook updated for the new assignment.
+- Deliverable: `authz/deployment_scope.py` (new) generalising the control-domain check over the PRP-37/PRP-65 permission; `require_customer_control` delegates to it; MCP admin, deploy scan, deploy plan and `PUT /emergency-disable` use it; grant script and kill-switch runbook updated for the new assignment.
 - Owned files: `authz/deployment_scope.py`, `actions/customer_control.py`, `actions/router.py` (dependency line only), `mcp/admin/router.py:53`, `deploy/scan/router.py:58`, `deploy/plan/router.py:108`, `scripts/sandbox/sbx_grant_operator.py`, `tests/unit/sandbox_stack/test_grant_operator.py`, `services/api/tests/deployment_scope_api/**`, `services/api/tests/actions_api/test_customer_control.py`, `tests/security/authz/**`, `docs/runbooks/action-plane-kill-switch.md`.
-- Must NOT touch: `permissions.py` (PRP-37 owns it), route handlers' bodies.
+- Must NOT touch: `permissions.py` (PRP-37/PRP-65 owns it), route handlers' bodies.
 - Depends on: item 1 (`dependencies.py`).
 - Acceptance criteria: #114 criteria; existing `mcp_api`, `deployment`, `actions_api` suites green with fixtures granting the new assignment.
 - Tests: `services/api/tests/deployment_scope_api/test_routes.py`, new case rows in `tests/security/authz/cases.py`.
@@ -210,7 +210,7 @@ python scripts/validate_planning.py
 ```
 
 ## Migration and rollback
-Authorization migration: operators who today hold `config.manage` only in an ordinary domain lose MCP admin and deploy scan/plan; they need the deployment-scoped assignment from PRP-37 (sandbox grant script updated; hosted operators re-run `scripts/sandbox/sbx_grant_operator.py` or, after PRP-39, the identity admin route, documented in the kill-switch runbook). A catalog domain already named like a reserved chain would fail its next audited write: item 5 test asserts none exists in seed data; a hosted check is listed for the operator. Rollback is a PR revert; no data is rewritten and no chain is migrated.
+Authorization migration: operators who today hold `config.manage` only in an ordinary domain lose MCP admin and deploy scan/plan; they need the deployment-scoped assignment from PRP-37/PRP-65 (sandbox grant script updated; hosted operators re-run `scripts/sandbox/sbx_grant_operator.py` or, after PRP-39, the identity admin route, documented in the kill-switch runbook). A catalog domain already named like a reserved chain would fail its next audited write: item 5 test asserts none exists in seed data; a hosted check is listed for the operator. Rollback is a PR revert; no data is rewritten and no chain is migrated.
 
 ## Live and open gates
 None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted operator checks (needs `NS_LIVE_APPROVED=1`), reported OPEN here.

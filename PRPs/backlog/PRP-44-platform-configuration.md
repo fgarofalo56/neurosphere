@@ -10,7 +10,7 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-04, NS-08
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identity-admin-api-and-revocation]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store, PRP-39-identity-admin-api-and-revocation]
 wave: W15
 branch: prp-44-platform-config
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [238, 209]
 # PRP-44: Platform configuration (domains, budgets, price sheets, review policy)
 
 ## Goal
-Give an admin an audited API for the four platform objects the product has no home for today: a domain registry (create, list, retire), budgets with alert thresholds per domain, versioned price sheet uploads, and a stored human-review policy. Price sheets go into the existing append-only `price_snapshots` store and are consumed by the ingestion cost ledger, so cost estimation no longer depends on a seeder or an env-named JSON file; the stored review policy replaces the argument-less `ReviewPolicyRegistry()` in the API and the workers. Each object is an `admin_config` document (PRP-37) guarded by `If-Match` and an audit record. It is for the operator who needs real cost estimates and real SLA and expiry rules on a hosted stack, and for the console pages in PRP-53 and PRP-57. It runs in W15 on PRP-37 and PRP-39, and owns `runtime/builders/data.py`, `runtime/planes.py` and the worker `factories.py` bodies for the wave.
+Give an admin an audited API for the four platform objects the product has no home for today: a domain registry (create, list, retire), budgets with alert thresholds per domain, versioned price sheet uploads, and a stored human-review policy. Price sheets go into the existing append-only `price_snapshots` store and are consumed by the ingestion cost ledger, so cost estimation no longer depends on a seeder or an env-named JSON file; the stored review policy replaces the argument-less `ReviewPolicyRegistry()` in the API and the workers. Each object is an `admin_config` document (PRP-37/PRP-65) guarded by `If-Match` and an audit record. It is for the operator who needs real cost estimates and real SLA and expiry rules on a hosted stack, and for the console pages in PRP-53 and PRP-57. It runs in W15 on PRP-37/PRP-65 and PRP-39, and owns `runtime/builders/data.py`, `runtime/planes.py` and the worker `factories.py` bodies for the wave.
 
 Out of scope: budget alert delivery (email, webhook) and anything that evaluates a budget against spend (nothing consumes budgets in this PRP; ASSUMPTION); scraping or fetching provider price lists (the admin uploads a sheet); sandbox seed data and the seeded price coverage in the dev stack (PRP-38 owns `scripts/sandbox/**`, #209 items 2 and 3); the forecast route and FinOps (PRP-21, `services/api/neurosphere_api/finops/**`); system-wide feature settings (PRP-45); the console pages (PRP-53, PRP-57); write targets (PRP-54); `main.py` and `routers.py` structure beyond one hook line.
 
@@ -46,7 +46,7 @@ Out of scope: budget alert delivery (email, webhook) and anything that evaluates
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Where the four objects live | New containers; `admin_config` kinds | `admin_config` kinds `domain`, `budget`, `price_sheet` (metadata and coverage), `review_policy` (PRP-37); price rows themselves go to the existing `price_snapshots` container (partition `/snapshot_id`, append-only) |
+| 1 | Where the four objects live | New containers; `admin_config` kinds | `admin_config` kinds `domain`, `budget`, `price_sheet` (metadata and coverage), `review_policy` (PRP-37/PRP-65); price rows themselves go to the existing `price_snapshots` container (partition `/snapshot_id`, append-only) |
 | 2 | Price sheet versioning | Mutable sheet; append-only snapshots | Append-only snapshots (`packages/core/neurosphere_core/pricing/store.py`): a changed list is a new `snapshot_id`; no update or delete route |
 | 3 | Permission | Per-domain `config.manage`; customer-level | Customer-level `config.manage` through `require_customer_control(Permission.CONFIG_MANAGE)` (`actions/customer_control.py:91`) for every route; ASSUMPTION: budgets could be domain-scoped later |
 | 4 | When changes apply | Hot reload; restart | A1: applied at startup (review policy, price table); the API reports `restart_required` only through PRP-45's settings view, not here |
@@ -70,7 +70,7 @@ Out of scope: budget alert delivery (email, webhook) and anything that evaluates
 - `PRPs/backlog/PRP-37-*.md`, `PRP-39-*.md`, `PRP-45-*.md` - "Interfaces provided".
 
 ### Interfaces consumed
-- PRP-37: `DomainDefinition`, `Budget`, `PriceSheetUpload`, `ReviewPolicyDocument` (`neurosphere_contracts.admin.v1`; `PriceSheetUpload` maps to `PriceSnapshot` minus `content_hash`, `ReviewPolicyDocument` maps to `ReviewPolicyRegistry` inputs, per PRP-37 Item 2); `neurosphere_core.admin` `AdminConfigRepository`, `CosmosAdminConfigRepository`, `InMemoryAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id`; `customer_control_domain_id`; container `admin_config`.
+- PRP-37/PRP-65: `DomainDefinition`, `Budget`, `PriceSheetUpload`, `ReviewPolicyDocument` (`neurosphere_contracts.admin.v1`; `PriceSheetUpload` maps to `PriceSnapshot` minus `content_hash`, `ReviewPolicyDocument` maps to `ReviewPolicyRegistry` inputs, per PRP-37/PRP-65 Item 2); `neurosphere_core.admin` `AdminConfigRepository`, `CosmosAdminConfigRepository`, `InMemoryAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id`; `customer_control_domain_id`; container `admin_config`.
 - PRP-39: `neurosphere_api.admin` package root; identity routes under `admin/identity/` (one call site is edited here after PRP-39 has merged, item 6).
 - PRP-45 (W16, later): reads this PRP's documents for the checklist; no code dependency.
 - Shipped: `PriceSnapshotStore`, `CosmosPriceSnapshotStore`, `InMemoryPriceSnapshotStore`, `HitlService`, `ReviewPolicyRegistry`, `require_customer_control`, `AUDIT_REPOSITORY`, `HITL_SERVICE`.
@@ -146,8 +146,8 @@ Parallelization: item 1 first. Items 2 and 3 [P] after it (separate router files
 ### Item 1 - Platform administration in core
 - Deliverable: `neurosphere_core/admin/platform/` with `DomainRegistry` and domain admin (canonical id check, reserved control domain, no retire of the control domain), budget admin (domain must exist, threshold rules, decimal amounts), `price_sheet_to_snapshot` and `coverage_report`, review-policy conversion and the safety rules, `LoadableReviewPolicyRegistry`, and `merge_price_tables`.
 - Owned files: `packages/core/neurosphere_core/admin/platform/**`, `packages/core/tests/admin_platform/**`.
-- Must NOT touch: `neurosphere_core/pricing/**`, `hitl/**`, PRP-37 modules in `neurosphere_core/admin/*.py`.
-- Depends on: PRP-37 merged.
+- Must NOT touch: `neurosphere_core/pricing/**`, `hitl/**`, PRP-37/PRP-65 modules in `neurosphere_core/admin/*.py`.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: criteria 1 (rules), 3, 4 (conversion and conflict), 5, 7 and the loadable registry (second `load_from` raises; no stored policy equals `default_policies()`); a `PriceSheetUpload` example round-trips through `PriceSnapshot` with a matching hash; `merge_price_tables` refuses equal ids with different content.
 - Tests: `packages/core/tests/admin_platform/test_domains.py`, `test_budgets.py`, `test_price_sheet.py`, `test_review_policy.py`, `test_merge_price_tables.py`.
 - Pattern references: `pricing/models.py:232`, `pricing/store.py`, `hitl/policy.py:60-110`.

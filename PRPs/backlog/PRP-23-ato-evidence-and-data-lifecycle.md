@@ -23,7 +23,7 @@ issues: [229, 119, 120]
 ## Goal
 Make the shipped data lifecycle engine do real work behind an explicit safety switch, and finish the compliance documentation polish. Today the lifecycle worker role is registered but idle (`_lifecycle_job_source()` returns `None`) and its target registry is empty, there is no API to place a legal hold or request a job, no store has a delete, and a FAILED queue outcome is silently dropped. This PRP adds a Cosmos-backed job source and a lifecycle API (holds, requests, status), delete backends for the catalog, ledger and archive stores, retry of FAILED queued outcomes, a retention-policy file source, and a dry-run mode that is the default, so nothing is deleted until an operator sets execute mode. It also lands the #120 documentation and tooling polish and upgrades the CA-7, CP-2 and PM-5 control statuses (their documents now exist). It is for customer security teams and records officers; it is `review: required` because it deletes data. G06 stays OPEN: classification, payload opt-in, retention periods and the legal-hold process are customer inputs.
 
-Out of scope: contracts and permission restructuring (PRP-37 owns `packages/contracts/**` and `permissions.py` restructuring); catalog repository internals beyond a new delete module (PRP-43); the compliance control library for NIST AI RMF, SR 11-7, HIPAA and OMB M-25-21 (PRP-56); scheduled expiry sweeps from policy rules (follow-up issue); a lifecycle UI (not planned); live Azure runs (none needed).
+Out of scope: contracts and permission restructuring (PRP-37/PRP-65 owns `packages/contracts/**` and `permissions.py` restructuring); catalog repository internals beyond a new delete module (PRP-43); the compliance control library for NIST AI RMF, SR 11-7, HIPAA and OMB M-25-21 (PRP-56); scheduled expiry sweeps from policy rules (follow-up issue); a lifecycle UI (not planned); live Azure runs (none needed).
 
 ## Why
 - The role runs nothing: `services/workers/neurosphere_workers/runtime/factories.py:698-705` `_lifecycle_job_source()` returns `None`, so `build_lifecycle` (`:714`) returns `IdleRole` (reason `lifecycle_no_job_source`, `:253`), and `_lifecycle_targets()` (`:708-711`) is an empty `TargetRegistry`.
@@ -49,9 +49,9 @@ Out of scope: contracts and permission restructuring (PRP-37 owns `packages/cont
 | # | Question | Options offered | Decision |
 |---|---|---|---|
 | 1 | Default mutation mode | Execute by default; dry-run by default | Dry-run by default (`NS_LIFECYCLE_MODE=dry_run`); `execute` is explicit. Jobs may also request dry-run individually; a job can only make the run safer, never override dry-run mode |
-| 2 | Where requested jobs are stored | New container; reuse `lifecycle_requests` | ASSUMPTION: reuse the existing `lifecycle_requests` container with job documents marked `job_state`, because a new container is a Tier-1 stores edit owned by PRP-37 in W12; the queue's `pending()` query is changed to exclude job documents |
+| 2 | Where requested jobs are stored | New container; reuse `lifecycle_requests` | ASSUMPTION: reuse the existing `lifecycle_requests` container with job documents marked `job_state`, because a new container is a Tier-1 stores edit owned by PRP-37/PRP-65 in W12; the queue's `pending()` query is changed to exclude job documents |
 | 3 | Retention policy source | Cosmos admin store; settings; file | ASSUMPTION: a JSON file at `NS_LIFECYCLE_POLICY_FILE` loaded through `load_policy`; unset or invalid means unset and nothing expires. The admin-store source can replace it later through the same loader |
-| 4 | New permission | Reuse `config.manage`; new `lifecycle.manage` | New `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`), granted to the admin role. PRP-37 (same wave) is adding lifecycle permissions to `permissions.py`; after rebase use its name if it exists, otherwise append this one (Tier 2) and say so in the completion note |
+| 4 | New permission | Reuse `config.manage`; new `lifecycle.manage` | New `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`), granted to the admin role. PRP-37/PRP-65 (same wave) is adding lifecycle permissions to `permissions.py`; after rebase use its name if it exists, otherwise append this one (Tier 2) and say so in the completion note |
 | 5 | FAILED retry policy | Retry forever; bounded | Bounded: `NS_LIFECYCLE_MAX_ATTEMPTS` (default 5) with exponential `not_before` backoff; then `failed_final`, audited and removed |
 | 6 | Archive delete | Edit the archive writer; own backend module | Own backend in `lifecycle/archive_backend.py` over the blob container client; the PRP-07 archive writer is not edited |
 | 7 | Conversation target | Build the shim here | Not built: the `ConversationBackend` shim over the API conversation store needs API-hosted wiring; filed as a follow-up. The worker registers catalog, ledger and archive only |
@@ -72,7 +72,7 @@ Out of scope: contracts and permission restructuring (PRP-37 owns `packages/cont
 
 ### Interfaces consumed
 - Audit chain: `neurosphere_core.audit.builders.AuditContext.from_scope`, `run_audited_mutation` (PRP-06, shipped).
-- `Permission` and role mapping (`auth/scope/permissions.py`); lifecycle permission naming coordinated with PRP-37.
+- `Permission` and role mapping (`auth/scope/permissions.py`); lifecycle permission naming coordinated with PRP-37/PRP-65.
 - Hold, queue and mapping Cosmos stores (PRP-23 round 1).
 
 ### Interfaces provided
@@ -168,7 +168,7 @@ Items A, 1 and 2 are independent [P] (disjoint files). Item 3 waits for 1; item 
 - Pattern references: `lifecycle/adapters.py:31-120`, `ledger/cosmos.py:32-100`.
 
 ### Item 3 - Lifecycle API (holds, requests, status)
-- Deliverable: `services/api/neurosphere_api/lifecycle/` router, models and dependencies; `LIFECYCLE_MANAGE` permission (see Clarification 4) appended in `permissions.py` unless PRP-37 already added it, granted to the admin role; routes listed under Interfaces provided; every write audited with `AuditContext.from_scope`; a builder is not required if the router reads stores from `app.state` set by a new `runtime/builders` helper registered as a Tier-2 line (state: job store, hold registry, queue, engine policy status); route allowlist and inventory lines; `openapi.json` regenerated last.
+- Deliverable: `services/api/neurosphere_api/lifecycle/` router, models and dependencies; `LIFECYCLE_MANAGE` permission (see Clarification 4) appended in `permissions.py` unless PRP-37/PRP-65 already added it, granted to the admin role; routes listed under Interfaces provided; every write audited with `AuditContext.from_scope`; a builder is not required if the router reads stores from `app.state` set by a new `runtime/builders` helper registered as a Tier-2 line (state: job store, hold registry, queue, engine policy status); route allowlist and inventory lines; `openapi.json` regenerated last.
 - Owned files: `services/api/neurosphere_api/lifecycle/**`, `services/api/tests/lifecycle_api/**`, Tier-2 lines in `routers.py`, `authz/routes.py`, `permissions.py` and the four inventories.
 - Must NOT touch: `runtime/builders/data.py`, `authz/dependencies.py`, contracts.
 - Depends on: item 1.
@@ -222,7 +222,7 @@ Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md`
 
 ## NOT building
 - A conversation target shim, scheduled expiry sweeps from policy rules, a lifecycle UI, a soft-delete or undo feature.
-- New contracts, new Cosmos containers or Bicep changes (PRP-37 owns those).
+- New contracts, new Cosmos containers or Bicep changes (PRP-37/PRP-65 owns those).
 - The extended compliance control library (PRP-56) or any compliance, authorization or certification claim.
 - Edits to existing catalog or ledger repository code.
 

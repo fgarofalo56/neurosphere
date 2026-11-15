@@ -22,8 +22,8 @@ OUT = PRPS / "EXECUTION-PLAN.md"
 BEGIN, END = "<!-- execution-plan:begin -->", "<!-- execution-plan:end -->"
 
 WAVE_GATES = {
-    "W11": "Docs and tracker match the repo; `python scripts/validate_planning.py` passes.",
-    "W12": "Contracts reviewed (Opus). `make stack-up` completes on a fresh machine and the real-stack job is green in CI.",
+    "W11": "Docs and tracker match the repo; contracts reviewed (Opus); changelog fragments in use; `python scripts/validate_planning.py` passes.",
+    "W12": "Permissions and the admin store reviewed (Opus). `make stack-up` completes on a fresh machine and the real-stack job is green in CI.",
     "W13": "Identity admin routes pass the authz suites; admission is on in compose; pilot re-run filed.",
     "W14": "Producers and connector configs are stored, not file-only; audit export works on the emulator stack.",
     "W15": "Authz and audit-chain suites green; cost-center attribution visible in the ledger.",
@@ -31,10 +31,11 @@ WAVE_GATES = {
     "W17": "An operator can assign a role and read the first-run checklist in the UI; a write target is enabled from configuration.",
     "W18": "An operator can register a producer and a connector in the UI; hosted IaC builds offline with the connector roles.",
     "W19": "Delivery workflow passes its dry run; no open critical or high security finding.",
-    "W20": "Every gate has evidence or is recorded OPEN with its reason.",
+    "W20": "Hosted profiles carry probe settings and build offline; the MCP private-network ADR is accepted or its items are descoped.",
+    "W21": "Every gate has evidence or is recorded OPEN with its reason.",
 }
 
-HEADER = """# Execution plan: parallel build, waves W11 to W20
+HEADER = """# Execution plan: parallel build, waves W11 to W21
 
 This plan covers every PRP that is not shipped. It was produced by the
 2026-11-14 audit (`/prp:prp-audit`). Shared rules, file-ownership tiers,

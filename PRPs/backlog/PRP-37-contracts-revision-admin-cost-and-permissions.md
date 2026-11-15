@@ -11,26 +11,24 @@ implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-08, NS-09
 depends_on: []
-wave: W12
+wave: W11
 branch: prp-37-contracts-admin
 allow_parallel: true
 issues: [226, 190, 114, 195, 148]
 ---
 
-# PRP-37: Contracts revision for the control plane (admin schemas, cost tags, permissions, stores)
+# PRP-37: Contracts revision for the control plane (admin schemas, cost tags, query enum, error taxonomy)
 
 ## Goal
-Ship the wire and storage layer that every operator control-plane PRP codes against, and nothing above it: a new `admin/v1` schema family (identity changes, revocation, producers, connector configs with credential references, domains, budgets, price-sheet uploads, review policy, system settings, first-run checklist), a write side for the policy store (`PolicyAdminRepository`), a versioned, ETag-guarded `admin_config` Cosmos container with an in-memory twin, two new permissions plus a core helper for deployment-scoped (customer-wide) authority, and the contract revisions that issues and shipped-PRP leftovers have queued: `CostRecord.tags` (#190, #178), the structured-query entity enum (#148 item 1), tighter `ConnectorManifest` caps and an additive-only baseline test (PRP-01 leftovers), 404/405/413/500 taxonomy codes (PRP-05 leftover) and a provenance guarantee for presented edges (#195). It is for the authors of PRP-39, 41, 42, 44, 45, 46, 48, 53 and 57, who must build against these names instead of inventing shapes. It runs first in W12 because contracts are Tier 1 and a wrong field here is refactored everywhere; that is why it is Opus with a required review.
+Ship the wire layer that every operator control-plane PRP codes against, and nothing above it: a new `admin/v1` schema family (identity changes, revocation, producers, connector configs with credential references, domains, budgets, price-sheet uploads, review policy, system settings, first-run checklist) and the contract revisions that issues and shipped-PRP leftovers have queued: `CostRecord.tags` (#190, #178), the structured-query entity enum (#148 item 1), tighter `ConnectorManifest` caps and an additive-only baseline test (PRP-01 leftovers), 404/405/413/500 taxonomy codes with their core error classes (PRP-05 leftover) and a provenance guarantee for presented edges (#195). It is for the authors of PRP-39, 41, 42, 44, 45, 46, 53 and 57, who must build against these names instead of inventing shapes, and for PRP-65, which builds the permissions and stores on top of these schemas. It runs in W11 (beside PRP-36, docs only, and PRP-68, changelog and CI planning job) because contracts are Tier 1 and a wrong field here is refactored everywhere; it is the only owner of `packages/contracts/**`, which is why it is Opus with a required review.
 
-Out of scope: every route and UI (PRP-39 identity API, PRP-40 audit search and SIEM, PRP-41 producers, PRP-42 connectors, PRP-44 domains/budgets/prices/review policy, PRP-45 system settings, PRP-53 and PRP-57 console pages); ingest reading `nscostcenter` and the ledger using tags (PRP-46); applying the deployment-scope helper to MCP admin, deploy scan and the kill switch (PRP-48, #114 behaviour half); populating edge provenance in `PresentedEdge` (PRP-43); API handlers emitting the new error codes (follow-up issue, see Item 3).
+Out of scope: the permission additions (`lifecycle.manage`, `audit.export`), the deployment-scope helper, the policy write repository and the `admin_config` container and store (PRP-65, W12); every route and UI (PRP-39 identity API, PRP-40 audit search and SIEM, PRP-41 producers, PRP-42 connectors, PRP-44 domains/budgets/prices/review policy, PRP-45 system settings, PRP-53 and PRP-57 console pages); ingest reading `nscostcenter` and the ledger using tags (PRP-46); populating edge provenance in `PresentedEdge` (PRP-43); API handlers emitting the new error codes (follow-up issue, see Item 3).
 
 ## Why
-- No admin contract or store exists: `PolicyRepository` is read-only (`packages/core/neurosphere_core/auth/scope/policy.py:108-116`, "Writes belong to the (audited) admin path"), and the only writer is `scripts/sandbox/sbx_grant_operator.py:101-167` (lane-d step 1, unit A).
-- `Permission.POLICY_MANAGE` and `REVOCATION_MANAGE` are declared (`permissions.py:74-75`) but have zero uses in `services/` (lane-d step 1); there is no deployment-scoped permission (#114, lane-e).
+- No admin contract exists: there is no `packages/contracts/schemas/admin/` family, so PRP-39+ would each invent request and document shapes (lane-d step 1, unit A).
 - `CostRecord` has no `tags` (schema properties end at `recorded_at`; `cost/v1/cost-record.schema.json`), so `nscostcenter` is dropped after ingest (#190, #178 duplicate, lane-f).
 - `structured-query.schema.json:139-152` enumerates only the original 12 catalog entities; `grant`, `mcp_server` and `grants_access_to` cannot be queried (#148 item 1).
 - `problem-details.schema.json:31` allows only 401/403/409/422/429/502/503, so 404/405/500 return a body without `code` (`PRPs/shipped/PRP-05-*.md:296`); `ConnectorManifest` caps on `scopes` and `documentation_url` are loose enough to carry a secret (`PRPs/shipped/PRP-01-*.md:303`).
-- `CONTAINERS` (`packages/core/neurosphere_core/stores/containers.py:96-183`) has no container for operator configuration; every later control-plane PRP needs one.
 
 ## Acceptance criteria
 - [ ] Every schema named in "Interfaces provided" exists under `packages/contracts/schemas/admin/v1/`, forbids additional properties, has valid and invalid examples, and generates Python and TypeScript bindings; `python packages/contracts/scripts/generate.py --check` passes.
@@ -41,25 +39,17 @@ Out of scope: every route and UI (PRP-39 identity API, PRP-40 audit search and S
 - [ ] `ConnectorManifest` `scopes` items, `credential_ref.name` and `documentation_url` path are capped (Item 3 values); every manifest under `connectors/**` still validates (PRP-01 leftover).
 - [ ] An additive-only baseline test fails when a `v1` schema removes a property, removes an enum value, adds a required property or narrows a type, compared with a committed snapshot; the one deliberate tightening (manifest caps) is listed in the test's allowlist with a reason and recorded in ADR-0004.
 - [ ] A contract test asserts every catalog relation schema requires `provenance` with `common.schema.json#/$defs/provenance` (#195 provenance bullet, contract half).
-- [ ] `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`, Admin) and `Permission.AUDIT_EXPORT` (`audit.export`, Security Auditor) exist; role sets are pinned by `test_roles.py` and `test_privileged_roles.py`; no role gains anything else.
-- [ ] `customer_control_domain_id(cloud, customer_id)` and `permits_customer_wide(scope, permission, *, now)` live in core and return True only for an unexpired assignment on `<cloud>:<customer>:neurosphere:domain:customer-control` (#114 schema half); `actions/customer_control.py` behaviour is unchanged.
-- [ ] `PolicyAdminRepository` (in-memory and Cosmos) writes `PrincipalPolicy` with an ETag precondition and bumps `PolicyHead.policy_version` in the same partition; a stale ETag raises `stale_version`; the read protocol is unchanged.
-- [ ] `admin_config` is declared in `CONTAINERS`, exported to `infra/compose/cosmos-containers.json`, and `AdminConfigRepository` (in-memory and Cosmos) supports create, get, list by kind, replace with `If-Match` and retire, with a monotonic `version`; tested on the in-memory twin and, marked `integration`, on the emulator.
 - [ ] PRP exit: the touched suites, `generate.py --check`, ruff, pyright and `validate_planning.py` pass; PR open with CI green including the `contracts` job; Tier-3 files regenerated at merge.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
 | 1 | Where admin wire shapes live | contracts family; API-local models | `packages/contracts/schemas/admin/v1/` so Python, TS and the mock API share them (lane-d unit A) |
-| 2 | Container name | `admin-config` (lane-d text); `admin_config` | `admin_config`: every container added since PRP-17 is snake_case (`action_intents`, `price_snapshots`, `catalog_review_queue`); partition `/customer_id` |
-| 3 | Policy writes: new container or existing `policy` | new; existing | Existing `policy` container and documents (`PrincipalPolicy`, `PolicyHead`), so derivation reads what admin writes with no migration |
-| 4 | Deployment-scoped admin (#114) | new role; new permission; reserved control domain | Reserved control domain already used by the kill switch (`actions/customer_control.py`); roles stay the closed set of five (PRP-06 C6/C7). Core gets the helper; PRP-48 applies it |
 | 5 | Credentials in admin records | values; references | References only: Key Vault secret URI or managed identity (A7) |
 | 6 | CostRecord tag shape | `cost_center` field; `tags` map | `tags` map, at most 16 entries, values 128 chars, reserved key `cost_center` with the Grant `cost_center` pattern (#190 proposal) |
 | 7 | ConnectorManifest caps are a tightening inside `v1` | allow with evidence; new `v2` | ASSUMPTION: allowed because no manifest in the repo exceeds them (test proves it); recorded as the single ADR-0004 exception |
-| 8 | New permission for audit export | reuse `audit.read`; `data.export`; new `audit.export` | ASSUMPTION: new `audit.export` held by Security Auditor only (lane-d unit J "data.export-style permission"; Admin never reads audit) |
-| 9 | Lifecycle permission (PRP-23 needs one in the same wave) | each PRP adds its own; PRP-37 adds | PRP-37 adds `lifecycle.manage` (Admin). If PRP-23 merges first with the same member, keep one line at rebase (Tier-2 rule) |
-| 10 | Typed setting bodies vs one generic body | per-kind schema; free map | Per-kind `$defs` in `system-setting.schema.json`; `AdminConfigDocument.body` is validated by kind in core (`ADMIN_KIND_MODELS`) |
+| 10 | Typed setting bodies vs one generic body | per-kind schema; free map | Per-kind `$defs` in `system-setting.schema.json`; `AdminConfigDocument.body` is validated by kind in core (`ADMIN_KIND_MODELS`, built by PRP-65) |
+| 11 | Split from the original PRP-37 (2026-11-14 second pass) | one PRP; split | Split: rows 2, 3, 4, 8 and 9 and the permission, policy-write and store items moved to PRP-65 with their numbering kept there |
 
 ## Context manifest
 
@@ -68,17 +58,12 @@ Out of scope: every route and UI (PRP-39 identity API, PRP-40 audit search and S
 - `docs/adr/0004-contract-versioning.md` - `v1` additive-only rule this PRP enforces with a test.
 - `packages/contracts/schemas/catalog/v1/grant.schema.json` - `cost_center` pattern; `catalog/v1/common.schema.json` `$defs` (`provenance` at :166, `etag`, `timestamp`).
 - `packages/contracts/schemas/connectors/v1/connector-manifest.schema.json` - `$defs/credential_ref` (`vault_ref` pattern to reuse in `CredentialReference`).
-- `packages/core/neurosphere_core/auth/scope/permissions.py` - `Permission`, role sets, `PRIVILEGED_ROLES`, `permits`.
-- `packages/core/neurosphere_core/auth/scope/policy.py` - `PrincipalPolicy`, `PolicyHead`, `PolicyRepository`; `cosmos_repository.py` and `memory.py` twins.
-- `services/api/neurosphere_api/actions/customer_control.py` - control domain convention (read only).
-- `packages/core/neurosphere_core/stores/containers.py` and `stores/__main__.py` - registry and export writer.
-- `packages/core/neurosphere_core/mcp/cosmos_store.py:86-140` - ETag create/replace pattern with mapped errors.
 - `packages/core/neurosphere_core/hitl/policy.py:37-110` and `pricing/models.py:64-160` - shapes `ReviewPolicyDocument` and `PriceSheetUpload` must map onto.
 - `services/api/neurosphere_api/ingest/auth.py:34-47` - `ProducerRegistration` fields `ProducerRecord` must carry.
 - `tests/contracts/validators.py:661` (`FIELD_APPLICABILITY`), `tests/contracts/test_error_taxonomy.py`, `packages/core/tests/test_errors.py`.
 
 ### Interfaces consumed
-- PRP-01 contract conventions (`schema_version` `1.x.y`, `x-ns-name`, `additionalProperties: false`), PRP-05 `neurosphere_core.errors`, PRP-06 policy and revocation models, PRP-29 container registry. All shipped.
+- PRP-01 contract conventions (`schema_version` `1.x.y`, `x-ns-name`, `additionalProperties: false`), PRP-05 `neurosphere_core.errors`, PRP-06 policy and revocation models (shape reference for the identity schemas). All shipped.
 
 ### Interfaces provided
 Schemas (file under `packages/contracts/schemas/admin/v1/`; Python `neurosphere_contracts.admin.v1.<snake_file>`; TS `packages/contracts/ts/src/admin/v1/<file>.ts`):
@@ -92,14 +77,12 @@ Schemas (file under `packages/contracts/schemas/admin/v1/`; Python `neurosphere_
 - Revised existing: `CostRecord.tags`; `StructuredQuery` entity and relation enums; `ProblemDetails` codes `not_found`, `method_not_allowed`, `payload_too_large`, `internal_error`; tighter `ConnectorManifest`.
 
 Core (Python):
-- `neurosphere_core.auth.scope.permissions`: `Permission.LIFECYCLE_MANAGE`, `Permission.AUDIT_EXPORT`, `CUSTOMER_CONTROL_SOURCE`, `CUSTOMER_CONTROL_DOMAIN_NAME`, `customer_control_domain_id()`, `permits_customer_wide()`.
-- `neurosphere_core.auth.scope.policy_admin`: `PolicyAdminRepository` protocol (`get_with_etag`, `list_principals`, `put_principal_policy(policy, *, if_match)`), `InMemoryPolicyAdminRepository`, `CosmosPolicyAdminRepository`, pure `apply_role_change`, `apply_membership_change`, `apply_grant_change`, `next_policy_version`.
-- `neurosphere_core.admin`: `ADMIN_CONFIG_CONTAINER = "admin_config"`, `AdminConfigRepository` protocol, `InMemoryAdminConfigRepository`, `CosmosAdminConfigRepository`, `ADMIN_KIND_MODELS` (kind -> generated model), `admin_config_chain_id(customer_id)` naming `<customer>.admin-config` for audited writes.
 - Errors: `NotFoundError`, `MethodNotAllowedError`, `PayloadTooLargeError`, `InternalError` in `neurosphere_core.errors`.
+
+Permissions, `policy_admin` and `neurosphere_core.admin` names are provided by PRP-65.
 
 ### Patterns to match
 - Schema file and `$id` style: `packages/contracts/schemas/cost/v1/cost-record.schema.json:1-10`.
-- Container spec entry: `stores/containers.py:157-182`; ETag replace: `mcp/cosmos_store.py:110-133`; policy write and head bump: `scripts/sandbox/sbx_grant_operator.py:113-167`.
 - Contract tests per family: `tests/contracts/test_grant_and_mcp_server.py`, `test_connector_manifest.py`.
 
 ### Gotchas
@@ -107,42 +90,34 @@ Core (Python):
 - Pydantic ignores `if/then/else` (PRP-01 deviation): cross-field rules need JSON Schema tests plus a core validator.
 - `StructuredQuery` is a `response_model` in `services/api/openapi.json`; the enum change regenerates it (Tier 3, at merge, not before).
 - Adding error codes breaks `test_every_contract_code_has_exactly_one_class` until core error classes exist: same item.
-- `PolicyHead` and `PrincipalPolicy` share partition `/customer_id`; write both in one transactional batch on Cosmos so a crash cannot leave a stale cache version.
-- Never log `secret_uri`, `secret_sha256` or a tag value (CodeQL secret-name rule, #190 item 3).
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
 ## Ownership
 ```ownership
 owns:
   - packages/contracts/**
-  - packages/core/neurosphere_core/admin/**
-  - packages/core/neurosphere_core/auth/scope/policy_admin.py
   - packages/core/neurosphere_core/errors/**
-  - packages/core/tests/admin/**
   - packages/core/tests/test_errors.py
   - tests/contracts/**
   - docs/adr/0004-contract-versioning.md
 tier1:
   - packages/contracts/schemas/**
-  - packages/core/neurosphere_core/stores/containers.py
-  - infra/compose/cosmos-containers.json
-  - infra/demo/modules/cosmos-data.bicep
-  - infra/bicep/modules/cosmos.bicep
-  - packages/core/neurosphere_core/auth/scope/permissions.py
-tier2_appends:
-  - packages/core/tests/auth/scope/test_roles.py
-  - tests/security/authz/test_privileged_roles.py
+tier2_appends: []
 must_not_touch:
   - services/api/**
   - services/workers/**
   - frontend/**
   - packages/core/neurosphere_core/catalog/**
-  - packages/core/neurosphere_core/auth/revocation/**
+  - packages/core/neurosphere_core/auth/**
+  - packages/core/neurosphere_core/admin/**
+  - packages/core/neurosphere_core/stores/**
+  - infra/**
+  - .github/workflows/ci.yml
 ```
 
 ## Implementation blueprint
 
-Parallelization: items 1, 2, 3 are serial (shared generated output). Item 4 [P] with 1-3. Item 5 after 1. Item 6 after 2. Item 7 last.
+Parallelization: items 1, 2, 3 are serial (shared generated output). Item 4 last.
 
 ### Item 1 - Admin schema family, identity and common
 - Deliverable: `admin/v1/common`, `credential-reference`, `admin-config-document`, `role-assignment-change`, `domain-membership-change`, `resource-grant-change`, `principal-access-summary`, `revocation-request`, `revocation-status` schemas with examples; regenerated bindings; credential-field walker test.
@@ -171,37 +146,10 @@ Parallelization: items 1, 2, 3 are serial (shared generated output). Item 4 [P] 
 - Tests: `tests/contracts`, `packages/core/tests/test_errors.py`, `tests/unit/connector_conformance`.
 - Pattern references: `tests/contracts/test_error_taxonomy.py`, `test_connector_manifest.py`.
 
-### Item 4 - Permissions and deployment scope  [P]
-- Deliverable: `LIFECYCLE_MANAGE` (Admin), `AUDIT_EXPORT` (Security Auditor), the customer-control constants and `customer_control_domain_id` / `permits_customer_wide`; docstring table updated; role pin tests updated (#148 item 5 `SHARED_ADMIN_STEWARD` reviewed).
-- Owned files: `packages/core/neurosphere_core/auth/scope/permissions.py`, `auth/scope/__init__.py` exports, `packages/core/tests/auth/scope/test_roles.py`, `tests/security/authz/test_privileged_roles.py`, `packages/core/tests/admin/test_customer_wide.py` (new).
-- Must NOT touch: `services/api/**` (customer_control.py keeps its constants until PRP-48 moves it).
-- Depends on: none.
-- Acceptance criteria: expired, cross-cloud and cross-customer assignments on the control domain return False; ordinary domains never satisfy `permits_customer_wide`; no wildcard introduced.
-- Tests: the three files above.
-- Pattern references: `permissions.py:146-190`, `customer_control.py`.
-
-### Item 5 - Policy write repository
-- Deliverable: `policy_admin.py` with protocol, twins and pure change functions; transactional head bump; stale ETag -> `StaleVersionError`; store failure -> `DependencyTransientError`.
-- Owned files: `packages/core/neurosphere_core/auth/scope/policy_admin.py` (new), `packages/core/tests/admin/test_policy_admin.py` (new), `packages/core/tests/admin/test_policy_admin_cosmos.py` (new, `integration`).
-- Must NOT touch: `policy.py`, `cosmos_repository.py`, `derivation.py` (read path unchanged).
-- Depends on: item 1.
-- Acceptance criteria: removing the last assignment leaves a valid document; applying a change for another customer raises; derivation over the twin sees the change after the head bump.
-- Tests: the two new files.
-- Pattern references: `sbx_grant_operator.py:113-167`, `cosmos_repository.py:38-90`.
-
-### Item 6 - Admin config store
-- Deliverable: `neurosphere_core/admin/` package (`models.py`, `store.py`, `cosmos_store.py`, `chains.py`), `admin_config` container spec, regenerated `infra/compose/cosmos-containers.json`.
-- Owned files: `packages/core/neurosphere_core/admin/**` (new), `stores/containers.py`, `infra/compose/cosmos-containers.json`, `packages/core/tests/admin/test_config_store.py` (new), `test_config_store_cosmos.py` (new, `integration`), `packages/core/tests/stores_registry/**` only if a pin needs the new entry.
-- Must NOT touch: the two Bicep modules unless the export test proves they need a change (`cosmos-data.bicep` loads the JSON).
-- Depends on: item 2.
-- Acceptance criteria: version increments by one per replace; `If-Match` mismatch raises `stale_version`; a body that fails its kind model is `invalid_schema`; retire keeps the document readable; the export drift test passes.
-- Tests: the new files plus `packages/core/tests/stores_registry`.
-- Pattern references: `stores/containers.py:157-182`, `gateway/cosmos_store.py:94-200`.
-
-### Item 7 - Integration and close-out
-- Deliverable: rebase on `main`; regenerate contracts and Tier-3 files (`services/api/openapi.json`, `docs/reference/**`, PRP status table, `PRPs/INDEX.md`); CHANGELOG entry; completion note listing every provided name for PRP-39..57 authors; follow-up issue numbers.
+### Item 4 - Integration and close-out
+- Deliverable: rebase on `main`; regenerate contracts and Tier-3 files (`services/api/openapi.json`, `docs/reference/**`, PRP status table, `PRPs/INDEX.md`); CHANGELOG entry (a `changelog.d/` fragment instead if PRP-68 has merged first); completion note listing every provided schema and error name for PRP-39..57 and PRP-65 authors; follow-up issue numbers.
 - Owned files: this PRP file, Tier-3 files per reference section 2.
-- Depends on: items 1-6.
+- Depends on: items 1-3.
 - Acceptance criteria: validation gates below pass; CI green.
 
 ## Validation gates
@@ -210,28 +158,26 @@ uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 python packages/contracts/scripts/generate.py --check
-uv run python -m neurosphere_core.stores --check
-uv run pytest -q tests/contracts packages/core/tests/admin packages/core/tests/test_errors.py packages/core/tests/auth/scope packages/core/tests/stores_registry tests/security/authz/test_privileged_roles.py tests/unit/connector_conformance services/api/tests/test_openapi_drift.py
+uv run pytest -q tests/contracts packages/core/tests/test_errors.py tests/unit/connector_conformance services/api/tests/test_openapi_drift.py
 pnpm --filter ./packages/contracts/ts test
 python scripts/validate_planning.py
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 ```
-Emulator suites (local, not CI): `docker compose up -d --wait` then `uv run pytest -q -m integration packages/core/tests/admin`.
 
 ## Migration and rollback
-All schema changes are additive inside `v1` except the documented manifest cap. Stored `CostRecord`s without `tags` stay valid. The `admin_config` container is new: local emulators create it; hosted environments get it from `cosmos-data.bicep` on the next deploy (PRP-58 / operator). Nothing reads the new store until PRP-39+ ship, so revert is a plain `git revert` plus leaving an empty container.
+All schema changes are additive inside `v1` except the documented manifest cap. Stored `CostRecord`s without `tags` stay valid. No data is migrated and no container is added here. Nothing reads the new `admin/v1` schemas until PRP-65 and PRP-39+ ship, so revert is a plain `git revert` plus a contracts regeneration.
 
 ## Live and open gates
-None. Cosmos behaviour is proven on the emulator only; hosted container creation happens at the next operator deploy (PRP-58, PRP-64).
+None. Contract work is fully provable offline.
 
 ## NOT building
-Routes, UI, mock handlers, worker pickup, ingest tag mapping, ledger tag queries, API error handler changes, catalog provenance population, budget alert delivery, any secret value storage.
+Ingest tag mapping, ledger tag queries, API error handler changes, catalog provenance population, budget alert delivery; and everything PRP-65 builds (permissions, deployment-scope helper, policy write repository, `admin_config` store).
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 7 and 8 are ASSUMPTIONS for plan approval)
+- [ ] All clarification questions are decided, not guessed (row 7 is an ASSUMPTION for plan approval)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
@@ -240,9 +186,6 @@ Routes, UI, mock handlers, worker pickup, ingest tag mapping, ledger tag queries
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
 
 ## Completion note (filled at ship)
 - Date and PR:

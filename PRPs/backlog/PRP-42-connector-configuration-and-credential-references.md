@@ -10,7 +10,7 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-09
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identity-admin-api-and-revocation]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store, PRP-39-identity-admin-api-and-revocation]
 wave: W14
 branch: prp-42-connector-config
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [236]
 # PRP-42: Connector configuration with credential references
 
 ## Goal
-Let an admin configure the data-collection roles (Azure Monitor and APIM gateway polling, Foundry discovery, billing export, and an OTel record) through an audited API, and make the worker roles read that configuration from the `admin_config` store with the environment as fallback. Credentials are stored as references only: a Key Vault secret URI or a managed-identity client id, never a value. The roles that need a secret (the producer secret of `gateway_poll` and `billing_export`) resolve it from Key Vault at startup with the workload identity; nothing secret is stored, logged or returned. It is for the operator who today must set 15 or more `NS_GATEWAY_POLL_*`, `NS_FOUNDRY_DISCOVERY_*` and `NS_BILLING_EXPORT_*` variables per profile and still gets idle roles because no profile sets them (lane-d step 2), and for PRP-57 (console) and PRP-58 (hosted wiring). It runs in W14 on PRP-37 and PRP-39, in parallel with PRP-41, which owns the API ingest auth, `edge.py` and `main.py`.
+Let an admin configure the data-collection roles (Azure Monitor and APIM gateway polling, Foundry discovery, billing export, and an OTel record) through an audited API, and make the worker roles read that configuration from the `admin_config` store with the environment as fallback. Credentials are stored as references only: a Key Vault secret URI or a managed-identity client id, never a value. The roles that need a secret (the producer secret of `gateway_poll` and `billing_export`) resolve it from Key Vault at startup with the workload identity; nothing secret is stored, logged or returned. It is for the operator who today must set 15 or more `NS_GATEWAY_POLL_*`, `NS_FOUNDRY_DISCOVERY_*` and `NS_BILLING_EXPORT_*` variables per profile and still gets idle roles because no profile sets them (lane-d step 2), and for PRP-57 (console) and PRP-58 (hosted wiring). It runs in W14 on PRP-37/PRP-65 and PRP-39, in parallel with PRP-41, which owns the API ingest auth, `edge.py` and `main.py`.
 
 Out of scope: the producer registry and generated producer secrets (PRP-41); the connector SDK and reference connectors (PRP-50, which also owns `foundry_discovery` and `billing_export` internals); the `gateway_poll` poller internals beyond its settings loader (PRP-46); the console pages (PRP-57); role, identity and RBAC wiring in hosted profiles and the G04 live run (PRP-58, PRP-64); catalog quarantine wiring in `factories.py` (PRP-43, serial after this PRP); an OTel collector deployment (it stays a compose profile; the OTel record is stored and validated, nothing consumes it yet).
 
@@ -28,7 +28,7 @@ Out of scope: the producer registry and generated producer secrets (PRP-41); the
 - All three connector roles idle unless env is set and no profile sets it: compose has no `NS_GATEWAY_POLL_*`, `NS_FOUNDRY_DISCOVERY_*` or `NS_BILLING_EXPORT_*`; Helm `workers.roles` is empty (`infra/helm/values.yaml:150`); hosted Bicep runs seven roles without any connector role (`infra/demo/main.bicep:273`) (lane-d step 2, #220).
 - Each builder starts from a settings object read only from env (`services/workers/neurosphere_workers/runtime/factories.py:1125,1179,1242`), and treats a partial configuration as a terminal `RoleConfigError`; there is no store, no API and no UI (lane-d step 1, "Connector registration with credential refs").
 - The producer secret is a plaintext `SecretStr` from env (`ingestion/gateway_poll/settings.py:35`, `ingestion/billing_export/settings.py:48`); the repo has no Key Vault secret reader (`grep` for `SecretClient` in `packages/` and `connectors/` is empty) and no `azure-keyvault-secrets` dependency.
-- Connector credentials "live nowhere in product" (`docs/validation/lane4-identity-docs-operator-setup.md:123`); PRP-37 defines the reference-only vocabulary (`CredentialReference`, A7).
+- Connector credentials "live nowhere in product" (`docs/validation/lane4-identity-docs-operator-setup.md:123`); PRP-37/PRP-65 defines the reference-only vocabulary (`CredentialReference`, A7).
 - Gateway registrations already live in a Cosmos registry (`POST /domains/{d}/gateways`, `services/api/neurosphere_api/gateway/router.py:205`); `gateway_poll` only picks domains from it (`factories.py:1130-1136`).
 
 ## Acceptance criteria
@@ -39,7 +39,7 @@ Out of scope: the producer registry and generated producer secrets (PRP-41); the
 - [ ] Given a stored config with `enabled=false`, Then the role idles with an info log and does not fall back to env for that kind; given a Key Vault read failure (403, 404, timeout), Then the role fails with `RoleConfigError("connector_credential_unavailable")` and no URI or secret in any message.
 - [ ] Given a config naming `producer_id`, Then creation checks the admin store: a producer that exists with the wrong cloud, a missing source id or the wrong source kind (`gateway` for polling, `billing` for billing export) is 422; a producer absent from the store (file-based) is accepted and the response lists `producer_not_in_store` under `warnings`.
 - [ ] The role-specific Government guards are unchanged: `billing_export` in Government fails `billing_export_cloud_unsupported`, gateway metrics are skipped in Government, and a stored value cannot widen them.
-- [ ] No response, log line, audit payload or exception contains a secret value; `secret_uri` is never logged (CodeQL secret-name rule, PRP-37 gotcha); callers without customer-level `config.manage` get 403 and a denial record on every route.
+- [ ] No response, log line, audit payload or exception contains a secret value; `secret_uri` is never logged (CodeQL secret-name rule, PRP-37/PRP-65 gotcha); callers without customer-level `config.manage` get 403 and a denial record on every route.
 - [ ] The routes are in the route inventories and boot under `verify_route_permissions`; `docs/runbooks/connector-config.md` explains create, the Key Vault role assignment the operator must make (Key Vault Secrets User for the worker identity), restart-to-apply, and the env fallback.
 - PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated.
 
@@ -68,7 +68,7 @@ Out of scope: the producer registry and generated producer secrets (PRP-41); the
 - `PRPs/backlog/PRP-37-*.md`, `PRP-39-*.md` - "Interfaces provided"; `PRP-41-producer-registry.md` for the `admin/sources` package file.
 
 ### Interfaces consumed
-- PRP-37: `ConnectorConfig` {`connector_kind` `gateway_poll|foundry_discovery|billing_export|otel`, `domain_ids`, `settings`, `credential`, `enabled`}, `CredentialReference`, `AdminConfigDocument`; `neurosphere_core.admin` `AdminConfigRepository`, `CosmosAdminConfigRepository`, `InMemoryAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id`; container `admin_config`; `Permission.CONFIG_MANAGE`.
+- PRP-37/PRP-65: `ConnectorConfig` {`connector_kind` `gateway_poll|foundry_discovery|billing_export|otel`, `domain_ids`, `settings`, `credential`, `enabled`}, `CredentialReference`, `AdminConfigDocument`; `neurosphere_core.admin` `AdminConfigRepository`, `CosmosAdminConfigRepository`, `InMemoryAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id`; container `admin_config`; `Permission.CONFIG_MANAGE`.
 - PRP-39: package `neurosphere_api.admin` (root file not edited here).
 - PRP-41 (same wave, no code dependency): documents of kind `producer` read through the repository as `ProducerRecord` for the producer-reference check.
 - Shipped: `GatewayPollSettings`, `FoundryDiscoverySettings`, `BillingExportSettings`, `RoleConfigError`, `ClientLifetime.register`, `default_token_provider`, `cfg.settings.cloud_profile.login_host`.
@@ -142,8 +142,8 @@ Parallelization: items 1 and 2 [P] (core and worker package share no file). Item
 ### Item 1 - Connector administration in core  [P]
 - Deliverable: `neurosphere_core/admin/connectors/` with `ConnectorConfigAdmin` over `AdminConfigRepository` (create, replace with `If-Match`, enable, disable, retire, get, list by kind, bounded page), `check_credential_reference(reference, cloud)` (Key Vault host compared as labels with a leading dot, cloud match, no userinfo or query), secret-name and scalar bounds on `settings`, domain ids canonical for the deployment customer and cloud, and the `ConnectorKindValidator` protocol that returns normalised settings or raises with field pointers.
 - Owned files: `packages/core/neurosphere_core/admin/connectors/**`, `packages/core/tests/admin_connectors/**`.
-- Must NOT touch: PRP-37 modules in `neurosphere_core/admin/*.py`.
-- Depends on: PRP-37 merged.
+- Must NOT touch: PRP-37/PRP-65 modules in `neurosphere_core/admin/*.py`.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: Government deployment refuses a `vault.azure.net` reference and the reverse; `evil-vault.azure.net` and `vault.azure.net.evil.test` are refused; secret-named settings keys refused; a stale `If-Match` raises `stale_version`; retire keeps the document readable.
 - Tests: `packages/core/tests/admin_connectors/test_credential_reference.py`, `test_connector_admin.py`.
 - Pattern references: `billing_export/settings.py:86-95`, `mcp/cosmos_store.py:86-140`.
@@ -152,7 +152,7 @@ Parallelization: items 1 and 2 [P] (core and worker package share no file). Item
 - Deliverable: `neurosphere_workers/connector_config/` with `ConnectorConfigSettings`, a bounded-timeout loader over `CosmosAdminConfigRepository` for the worker's customer, `KeyVaultSecretReader` (REST, workload identity, host check, `SecretStr` result, no URI in errors), `resolve_*_settings(cfg, lifetime)` returning the existing settings classes built from init arguments (stored wins per kind; `enabled=false` returns an "idle" marker; no record or read failure returns the env-built object), and per-kind validators that construct the settings class to prove the stored fields are acceptable.
 - Owned files: `services/workers/neurosphere_workers/connector_config/**`, `services/workers/tests/connector_config_worker/test_loader.py`, `test_keyvault_reader.py`, `test_resolve.py`.
 - Must NOT touch: `factories.py` (item 4), the three `ingestion/*/settings.py` files.
-- Depends on: PRP-37 merged.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: stored config beats env and env `NS_API_BASE_URL` does not leak in; no record leaves env behaviour byte-identical; Key Vault 403, 404 and timeout map to `connector_credential_unavailable`; the reader refuses a host that is not a label-suffix match for the deployment cloud and never logs the URI or value.
 - Tests: the three files above (fake `httpx.MockTransport`, no network).
 - Pattern references: `factories.py:1124-1171`, `gateway_poll/settings.py:27-95`, `ingestion/billing_export/settings.py:86-95`.
@@ -202,7 +202,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates
 ```
 
 ## Migration and rollback
-No data migration: configs are new `admin_config` documents (container from PRP-37; hosted environments get it at the next deploy, PRP-58). Rollback: set `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` (the roles ignore the store) or revert the PR; stored documents are inert. With no stored config every role behaves as before, so the change is safe to ship before any profile uses it.
+No data migration: configs are new `admin_config` documents (container from PRP-37/PRP-65; hosted environments get it at the next deploy, PRP-58). Rollback: set `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` (the roles ignore the store) or revert the PR; stored documents are inert. With no stored config every role behaves as before, so the change is safe to ship before any profile uses it.
 
 ## Live and open gates
 OPEN, not run here: a real Key Vault secret read and a real billing, Foundry or Azure Monitor call with stored config (needs `NS_LIVE_APPROVED=1`, an approved vault and identity role assignment); handed to PRP-58 for wiring and PRP-64 for the G04 live run. Local proof is in-memory twins, `httpx.MockTransport` and the compose emulators only.

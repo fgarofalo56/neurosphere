@@ -10,7 +10,7 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-09
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-39-identity-admin-api-and-revocation]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store, PRP-39-identity-admin-api-and-revocation]
 wave: W14
 branch: prp-41-producer-registry
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [235]
 # PRP-41: Ingest producer registry (store-backed, secret shown once)
 
 ## Goal
-Let an admin register, rotate and disable ingest producers through an audited API instead of hand-editing a JSON file, and make the ingest edge authenticate against that store. A producer is created with a generated secret that is returned exactly once, stored only as a SHA-256 digest, and rotated or disabled later without a redeploy. The producers file stays as a fallback layer so every existing compose, Helm and test setup keeps working. It is for the operator who today gets `503 ingest_not_configured` in every hosted environment because no profile ever sets `NS_INGEST_PRODUCERS_FILE` (lane-d step 1 and step 2), and for PRP-42 and PRP-58, which need a producer id and a place to keep its secret reference. It runs in W14 on top of PRP-37 (schemas, `admin_config` container) and PRP-39 (the `neurosphere_api.admin` package root).
+Let an admin register, rotate and disable ingest producers through an audited API instead of hand-editing a JSON file, and make the ingest edge authenticate against that store. A producer is created with a generated secret that is returned exactly once, stored only as a SHA-256 digest, and rotated or disabled later without a redeploy. The producers file stays as a fallback layer so every existing compose, Helm and test setup keeps working. It is for the operator who today gets `503 ingest_not_configured` in every hosted environment because no profile ever sets `NS_INGEST_PRODUCERS_FILE` (lane-d step 1 and step 2), and for PRP-42 and PRP-58, which need a producer id and a place to keep its secret reference. It runs in W14 on top of PRP-37/PRP-65 (schemas, `admin_config` container) and PRP-39 (the `neurosphere_api.admin` package root).
 
 Out of scope: connector configuration and the Key Vault secret reader (PRP-42, which owns the worker `runtime/factories.py` bodies); the console page for producers (PRP-57); enabling the store switch in the hosted, Helm and App Service profiles (PRP-58); per-producer rate-limit or source editing beyond the `sources` map; Entra-token producer auth (the seam in `ingest/auth.py` stays as is); ingest counters and reason families (PRP-46, which owns the rest of `ingest/**` one wave later).
 
@@ -46,12 +46,12 @@ Out of scope: connector configuration and the Key Vault secret reader (PRP-42, w
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Where producers live | New container; `admin_config` documents of kind `producer` | `admin_config` (PRP-37), `AdminConfigDocument.kind = producer`, body `ProducerRecord`, document id = `producer_id` |
+| 1 | Where producers live | New container; `admin_config` documents of kind `producer` | `admin_config` (PRP-37/PRP-65), `AdminConfigDocument.kind = producer`, body `ProducerRecord`, document id = `producer_id` |
 | 2 | Secret handling | Store value; store digest | Generated server-side (`secrets.token_urlsafe(32)`), returned once, only `hash_secret` digest stored (A7: references or digests, never values) |
 | 3 | Permission | `config.manage` in any domain; customer-level | Customer-level `config.manage` through the shipped `require_customer_control(Permission.CONFIG_MANAGE)` (`services/api/neurosphere_api/actions/customer_control.py:91`); PRP-48 later moves the check, the route code does not change |
 | 4 | Store vs file | Replace the file; layer both | Layer: store first, file fallback (lane-d unit C: "file stays as a fallback") |
 | 5 | Sync registry vs async store | Async authenticator; cached snapshot | ASSUMPTION: cached snapshot refreshed by a background task every `NS_INGEST_PRODUCER_REFRESH_SECONDS` (default 30) plus immediate local invalidation on writes, because `ProducerRegistry.get` is sync and PRP-46 owns the ingest service. Propagation to other replicas is bounded by the refresh interval and stated in the runbook |
-| 6 | Rotation overlap | Immediate cut-over; two valid secrets for a window | ASSUMPTION: immediate cut-over. A grace window needs a second digest field in `ProducerRecord` (PRP-37 contract); file a follow-up if operators need it |
+| 6 | Rotation overlap | Immediate cut-over; two valid secrets for a window | ASSUMPTION: immediate cut-over. A grace window needs a second digest field in `ProducerRecord` (PRP-37/PRP-65 contract); file a follow-up if operators need it |
 | 7 | When the store layer is on | Always; opt-in | ASSUMPTION: opt-in `NS_INGEST_PRODUCER_STORE=true` (default false), so a stack without the store behaves as today; PRP-58 turns it on in hosted and Helm profiles |
 | 8 | Credential vocabulary | Values; references | A7: this PRP stores a digest of a secret the producer already holds; the internal pollers keep their secret in Key Vault and reference it from the connector config (PRP-42) |
 
@@ -69,7 +69,7 @@ Out of scope: connector configuration and the Key Vault secret reader (PRP-42, w
 - `services/api/tests/ingest/test_bootstrap.py` - producers-file test precedent; `docs/runbooks/ingest.md`.
 
 ### Interfaces consumed
-- PRP-37: `neurosphere_contracts.admin.v1` `ProducerRecord` {`producer_id`, `customer_id`, `cloud`, `sources`, `secret_sha256`, `status` `active|disabled`, `rotated_at`} and `ProducerSecretIssued` (response only); `AdminConfigDocument`; `neurosphere_core.admin` `ADMIN_CONFIG_CONTAINER = "admin_config"`, `AdminConfigRepository` (create, get, list by kind, replace with `If-Match`, retire; monotonic `version`), `InMemoryAdminConfigRepository`, `CosmosAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id(customer_id)`; `Permission.CONFIG_MANAGE`; errors `StaleVersionError`, `NotFoundError`, `DependencyTransientError`.
+- PRP-37/PRP-65: `neurosphere_contracts.admin.v1` `ProducerRecord` {`producer_id`, `customer_id`, `cloud`, `sources`, `secret_sha256`, `status` `active|disabled`, `rotated_at`} and `ProducerSecretIssued` (response only); `AdminConfigDocument`; `neurosphere_core.admin` `ADMIN_CONFIG_CONTAINER = "admin_config"`, `AdminConfigRepository` (create, get, list by kind, replace with `If-Match`, retire; monotonic `version`), `InMemoryAdminConfigRepository`, `CosmosAdminConfigRepository`, `ADMIN_KIND_MODELS`, `admin_config_chain_id(customer_id)`; `Permission.CONFIG_MANAGE`; errors `StaleVersionError`, `NotFoundError`, `DependencyTransientError`.
 - PRP-39: package root `neurosphere_api.admin` (`admin/__init__.py`, `register(registry)`) and the builder pattern in `runtime/builders/admin.py`. This PRP does not edit either file; it adds its own hook line in `routers.py`.
 - Shipped: `IngestService.authorize` (`ingest/service.py`), `RouterRegistry`, `run_audited_mutation`, `AUDIT_REPOSITORY` shared key, `require_customer_control`.
 
@@ -143,8 +143,8 @@ Parallelization: items 1 and 2 [P] (core and API ingest side share no file). Ite
 ### Item 1 - Producer administration in core  [P]
 - Deliverable: `neurosphere_core/admin/producers/` with `issue_secret()` (token plus digest), `ProducerAdmin` over `AdminConfigRepository` (create refuses a duplicate id, rotate, `set_status`, get, list with page bound), `registration_from_record(ProducerRecord)` producing an ingest-compatible registration dict, and customer and cloud binding checks.
 - Owned files: `packages/core/neurosphere_core/admin/producers/**`, `packages/core/tests/admin_producers/**`.
-- Must NOT touch: PRP-37 modules in `neurosphere_core/admin/*.py`, ingest code.
-- Depends on: PRP-37 merged.
+- Must NOT touch: PRP-37/PRP-65 modules in `neurosphere_core/admin/*.py`, ingest code.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: the stored body validates as `ProducerRecord` and holds a digest only; two creations with the same id raise; a stale `If-Match` raises `stale_version`; cloud or customer mismatch raises before any write; secret has at least 256 bits of entropy and never appears in `repr` or exception text.
 - Tests: `packages/core/tests/admin_producers/test_producer_admin.py`, `test_secret_hygiene.py`.
 - Pattern references: `packages/core/neurosphere_core/mcp/cosmos_store.py:86-140`, `ingest/auth.py:44-47`.

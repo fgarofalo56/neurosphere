@@ -10,7 +10,7 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 6
 ns: NS-08
-depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions]
+depends_on: [PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store]
 wave: W13
 branch: prp-39-identity-admin
 allow_parallel: true
@@ -20,7 +20,7 @@ issues: [230]
 # PRP-39: Identity admin API and principal revocation
 
 ## Goal
-Give an admin an audited API to see who has access and to change it: list principals, assign and remove role assignments, domain memberships and resource-scoped grants (each with expiry and reason), and revoke a principal, either bounded by token issue time (today's model) or blocked until an admin lifts it. Every write goes through `run_audited_mutation`, is deny-by-default, refuses self-modification and refuses anything outside the actor's own managed domains; there is no bypass. The composed app finally instantiates `RevocationService`, so the push fan-out that PRP-06 built has a production caller. This is the backend for the PRP-53 users/roles page and the base package (`neurosphere_api.admin`) that PRP-41, 42, 44 and 45 add sub-packages to. It runs in W13, right after PRP-37 supplies the contracts and the policy write repository; the first admin is still bootstrapped by `make grant-operator`.
+Give an admin an audited API to see who has access and to change it: list principals, assign and remove role assignments, domain memberships and resource-scoped grants (each with expiry and reason), and revoke a principal, either bounded by token issue time (today's model) or blocked until an admin lifts it. Every write goes through `run_audited_mutation`, is deny-by-default, refuses self-modification and refuses anything outside the actor's own managed domains; there is no bypass. The composed app finally instantiates `RevocationService`, so the push fan-out that PRP-06 built has a production caller. This is the backend for the PRP-53 users/roles page and the base package (`neurosphere_api.admin`) that PRP-41, 42, 44 and 45 add sub-packages to. It runs in W13, right after PRP-37/PRP-65 supplies the contracts and the policy write repository; the first admin is still bootstrapped by `make grant-operator`.
 
 Out of scope: the console page (PRP-53); route-category and `/workspaces/{role}` tenancy and applying deployment scope to MCP admin, deploy scan and the kill switch (PRP-48, #91, #114); audit search, export and SIEM (PRP-40); cross-replica WebSocket close e2e (deferred by PRP-18, issue to be filed there); producer, connector and platform admin (PRP-41, 42, 44).
 
@@ -35,7 +35,7 @@ Out of scope: the console page (PRP-53); route-category and `/workspaces/{role}`
 - [ ] Given an admin holding `policy.manage` in domain D, when they `PUT` a role assignment for principal P in D with `expires_at` and `reason`, then P's policy document changes, `PolicyHead.policy_version` advances, P's next request derives the new scope, and before/after audit records land on D's chain.
 - [ ] A change naming any domain where the actor lacks `policy.manage` returns 403 `target_out_of_scope` and writes a denial record; nothing is written to the policy store.
 - [ ] An actor changing their own policy document gets 403 `self_modification_forbidden` (ASSUMPTION row 3).
-- [ ] Assigning `security_auditor` or `admin`, or any change on the customer-control domain, requires `permits_customer_wide(actor, POLICY_MANAGE)` (PRP-37); privileged assignments without `expires_at` are 422 (contract rule, C7).
+- [ ] Assigning `security_auditor` or `admin`, or any change on the customer-control domain, requires `permits_customer_wide(actor, POLICY_MANAGE)` (PRP-37/PRP-65); privileged assignments without `expires_at` are 422 (contract rule, C7).
 - [ ] Resource-scoped grants require `policy.manage` on the domain that owns the resource and always carry `expires_at` and `reason`; `grant.write` is not accepted for them (Clarification 2).
 - [ ] Concurrent edits: a stale `If-Match` returns 409 `stale_version`; a missing `If-Match` on update returns 428-equivalent `invalid_schema` reason `precondition_required` (no lost update).
 - [ ] `GET /api/v1/admin/identity/principals` lists only principals that have a membership or assignment in a domain the actor manages, and shows only those domains' entries; page size bounded; no UPN, email or raw object id in any response or log.
@@ -59,7 +59,7 @@ Out of scope: the console page (PRP-53); route-category and `/workspaces/{role}`
 
 ### Files to read first
 - `PRPs/shipped/PRP-37-contracts-revision-admin-cost-and-permissions.md` completion note (once shipped) - exact names delivered.
-- `packages/core/neurosphere_core/auth/scope/policy_admin.py` (PRP-37) - write repository and pure change functions.
+- `packages/core/neurosphere_core/auth/scope/policy_admin.py` (PRP-37/PRP-65) - write repository and pure change functions.
 - `packages/core/neurosphere_core/auth/revocation/service.py:70-240` - `RevocationService`, authorizer, auditor protocols.
 - `packages/core/neurosphere_core/auth/revocation/{model,checker,store,cosmos_store}.py` - entry, TTL cache, store; where `mode` and lift go.
 - `services/api/neurosphere_api/runtime/builders/authz.py:101-374` - published keys `POLICY_REPOSITORY`, `REVOCATION_STORE`, `REVOCATION_HOOKS`, `REVOCATION_CHECKER`; `AuditDenialRecorder`.
@@ -71,7 +71,7 @@ Out of scope: the console page (PRP-53); route-category and `/workspaces/{role}`
 - `tests/security/authz/{world.py,cases.py,test_api_paths.py}` - ABAC negative-suite harness.
 
 ### Interfaces consumed
-- From PRP-37: `RoleAssignmentChange`, `DomainMembershipChange`, `ResourceGrantChange`, `PrincipalAccessSummary`, `RevocationRequest`, `RevocationStatus` (`neurosphere_contracts.admin.v1`); `PolicyAdminRepository`, `CosmosPolicyAdminRepository`, `InMemoryPolicyAdminRepository`, `apply_role_change`, `apply_membership_change`, `apply_grant_change`; `Permission.POLICY_MANAGE`, `Permission.REVOCATION_MANAGE`, `permits_customer_wide`, `customer_control_domain_id`; `NotFoundError` for an unknown principal.
+- From PRP-37/PRP-65: `RoleAssignmentChange`, `DomainMembershipChange`, `ResourceGrantChange`, `PrincipalAccessSummary`, `RevocationRequest`, `RevocationStatus` (`neurosphere_contracts.admin.v1`); `PolicyAdminRepository`, `CosmosPolicyAdminRepository`, `InMemoryPolicyAdminRepository`, `apply_role_change`, `apply_membership_change`, `apply_grant_change`; `Permission.POLICY_MANAGE`, `Permission.REVOCATION_MANAGE`, `permits_customer_wide`, `customer_control_domain_id`; `NotFoundError` for an unknown principal.
 - From PRP-06 (shipped): `RevocationService`, `ScopePermissionRevocationAuthorizer`, `RevocationHookRegistry`, `CachedRevocationChecker`, `require(permission, resource=...)`, `AuditRepository`, `domain_audit_chain_id`.
 
 ### Interfaces provided
@@ -142,7 +142,7 @@ Parallelization: item 1 [P] (core only). Items 2-4 share the admin package: seri
 - Deliverable: `neurosphere_api/admin/__init__.py` with `register`; `runtime/builders/admin.py` composing `CosmosPolicyAdminRepository` (container `NS_AUTH_POLICY_CONTAINER`) or a backend override, and `RevocationService` with the shipped authorizer, an auditor adapter onto `AuditRepository` (customer chain `<customer>.identity-admin`), and the published hooks.
 - Owned files: `admin/__init__.py`, `runtime/builders/admin.py`, `services/api/tests/admin_identity_api/test_builder.py` (new), Tier-2 lines in `builders/__init__.py` and `status.py`.
 - Must NOT touch: `builders/authz.py`, `builders/data.py`.
-- Depends on: PRP-37 merged.
+- Depends on: PRP-37/PRP-65 merged.
 - Acceptance criteria: with authz disabled both components report `disabled` with a reason; with authz configured both are `ok`; the revocation service's hooks object is identical to `REVOCATION_HOOKS`.
 - Tests: `services/api/tests/admin_identity_api/test_builder.py`.
 - Pattern references: `runtime/builders/gateway.py`, `authz.py:230-302`.

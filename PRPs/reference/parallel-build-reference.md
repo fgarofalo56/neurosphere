@@ -1,6 +1,6 @@
-# Parallel build reference (shared by PRP-11, 15, 18, 21, 23 and PRP-36 to PRP-64)
+# Parallel build reference (shared by PRP-11, 15, 18, 21, 23 and PRP-36 to PRP-69)
 
-Every PRP in waves W11 to W20 links here instead of repeating this. Read it once
+Every PRP in waves W11 to W21 links here instead of repeating this. Read it once
 at the start of a session. The wave plan, merge order and kickoff prompts are in
 `PRPs/EXECUTION-PLAN.md`.
 
