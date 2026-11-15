@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from neurosphere_core.clients import ClientLifetime
 from neurosphere_core.cloud import Settings
-from neurosphere_workers.runtime import RoleConfigError
+from neurosphere_workers.runtime import RoleConfigError, factories
 from neurosphere_workers.runtime.adapters import IngestionRole, PeriodicTick, TickWorker, WorkerRole
 from neurosphere_workers.runtime.factories import (
     RuntimeConfig,
@@ -16,7 +16,13 @@ from neurosphere_workers.runtime.factories import (
     build_recommendations,
 )
 from neurosphere_workers.runtime.identity import EnvClaimsSource, resolve_pseudonym_key
-from neurosphere_workers.runtime.settings import AuthSettings, StoreSettings, WorkerSettings
+from neurosphere_workers.runtime.settings import (
+    AuthSettings,
+    RecommendationSettings,
+    StoreSettings,
+    WorkerSettings,
+)
+from pydantic import ValidationError
 
 
 def _config(**auth: str) -> RuntimeConfig:
@@ -44,6 +50,49 @@ async def test_recommendations_data_dir_must_exist(
         with pytest.raises(RoleConfigError) as caught:
             await build_recommendations(_config(), lifetime)
     assert caught.value.reason == "recommendations_data_dir_invalid"
+
+
+def test_recommendation_source_defaults_to_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NS_WORKER_REC_SOURCE", raising=False)
+    monkeypatch.delenv("NS_WORKER_REC_LOOKBACK_DAYS", raising=False)
+    settings = RecommendationSettings()
+    assert settings.source == "sandbox"
+    assert settings.lookback_days is None
+
+
+def test_recommendation_source_rejects_unknown_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NS_WORKER_REC_SOURCE", "files")
+    with pytest.raises(ValidationError):
+        RecommendationSettings()
+
+
+async def test_recommendations_archive_source_needs_no_data_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``archive`` skips the data-dir checks: the build proceeds to the Cosmos client (stubbed
+    here to a sentinel error, so no emulator is needed) instead of failing on the data dir."""
+
+    async def no_cosmos(*_args: object, **_kw: object) -> object:
+        raise RoleConfigError("cosmos_stubbed")
+
+    monkeypatch.delenv("NS_WORKER_REC_DATA_DIR", raising=False)
+    monkeypatch.setattr(factories, "_cosmos", no_cosmos)
+    monkeypatch.setenv("NS_WORKER_REC_SOURCE", "archive")
+    async with ClientLifetime() as lifetime:
+        with pytest.raises(RoleConfigError) as caught:
+            await build_recommendations(_config(), lifetime)
+    assert caught.value.reason == "cosmos_stubbed"
+
+
+async def test_recommendations_sandbox_source_keeps_data_dir_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("NS_WORKER_REC_DATA_DIR", raising=False)
+    monkeypatch.setenv("NS_WORKER_REC_SOURCE", "sandbox")
+    async with ClientLifetime() as lifetime:
+        with pytest.raises(RoleConfigError) as caught:
+            await build_recommendations(_config(), lifetime)
+    assert caught.value.reason == "recommendations_data_dir_missing"
 
 
 async def test_evaluation_needs_its_data_dir(monkeypatch: pytest.MonkeyPatch) -> None:

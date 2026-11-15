@@ -21,23 +21,27 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
+from neurosphere_contracts.query.v1.budget import Budget
 from neurosphere_contracts.recommendations.v1.recommendation import Recommendation, TimeRange
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
+from neurosphere_core.catalog.protocol import EdgeFilter, EntityFilter, GraphQuery, NeighborsRequest
 from neurosphere_core.catalog.repo import InMemoryCatalogRepository
 from neurosphere_core.catalog.repo.documents import EDGE_MODELS, ENTITY_MODELS
 from neurosphere_core.ledger.models import TokenCounts
+from neurosphere_core.paging import PageRequest
 from neurosphere_core.pricing import PriceSnapshotStore
 from neurosphere_core.recommendations import RecommendationStore
 from neurosphere_core.scope import IdentityScope
 from neurosphere_core.search.fixture import FixtureSearchIndex, documents_from_catalog
 
 from neurosphere_workers.recommendations.duplicates import (
+    AgentLister,
     DuplicateConfig,
     DuplicateDetector,
     ReviewCandidate,
@@ -51,13 +55,24 @@ from neurosphere_workers.recommendations.projection import (
 )
 from neurosphere_workers.recommendations.rules import (
     DEFAULT_RULES,
+    AgentSeriesSource,
+    ArchiveSeriesSource,
     RuleSet,
     SandboxSeriesSource,
     evaluate_rules,
     recommendations,
+    window_ending,
 )
+from neurosphere_workers.runtime.archive_reader import ArchiveReader
 
-__all__ = ["PipelineSummary", "load_sandbox_catalog", "run_pipeline", "summarize_usage"]
+__all__ = [
+    "PipelineSummary",
+    "load_sandbox_catalog",
+    "run_pipeline",
+    "run_pipeline_archive",
+    "summarize_usage",
+    "summarize_usage_docs",
+]
 
 _ENTITY_FILES = (
     "domains.ndjson",
@@ -85,6 +100,10 @@ class PipelineSummary:
     duplicate_truncation_reasons: tuple[str, ...]
     usage_summaries: int
     stored_ids: tuple[str, ...] = field(default=())
+    archive_truncated: bool = False
+    """Archive mode: the listing or per-run bound was hit, so coverage is unknown."""
+    archive_skipped: int = 0
+    """Archive mode: blobs and documents skipped (unreadable, malformed, invalid)."""
 
 
 def _read_ndjson(path: Path) -> Iterator[dict[str, Any]]:
@@ -142,9 +161,23 @@ def summarize_usage(
     *,
     scope: IdentityScope,
     window: tuple[date, date],
-    source: SandboxSeriesSource,
+    source: AgentSeriesSource,
 ) -> list[UsageSummary]:
-    """Per agent and model token usage from the sandbox ``cost.ndjson``.
+    """Per agent and model token usage from the sandbox ``cost.ndjson`` (see
+    ``summarize_usage_docs``)."""
+    return summarize_usage_docs(
+        _read_ndjson(directory / "cost.ndjson"), scope=scope, window=window, source=source
+    )
+
+
+def summarize_usage_docs(
+    docs: Iterable[dict[str, Any]],
+    *,
+    scope: IdentityScope,
+    window: tuple[date, date],
+    source: AgentSeriesSource,
+) -> list[UsageSummary]:
+    """Per agent and model token usage from cost documents.
 
     Only ``estimated`` records that carry a token breakdown are summed (invoiced billing rows have
     no tokens); gateway and application views of one request share a ``dedupe_key`` and count
@@ -165,7 +198,7 @@ def summarize_usage(
     totals: dict[tuple[str, str, str, str | None], list[int]] = {}
     evidence: dict[tuple[str, str, str, str | None], list[str]] = {}
     seen: set[str] = set()
-    for doc in _read_ndjson(directory / "cost.ndjson"):
+    for doc in docs:
         if doc.get("kind") != "estimated" or "token_breakdown" not in doc:
             continue
         agent_id = doc.get("canonical_agent_id")
@@ -264,6 +297,184 @@ async def run_pipeline(
             usage_summaries=0,
         )
 
+    graph, repo = await load_sandbox_catalog(directory, scope=scope)
+    usages = summarize_usage(directory, scope=scope, window=window, source=source)
+    return await _evaluate_and_store(
+        source,
+        window,
+        graph,
+        repo,
+        usages,
+        scope=scope,
+        store=store,
+        prices=prices,
+        pairs=pairs,
+        created_at=created_at,
+        rules=rules,
+        duplicate_config=duplicate_config,
+        signal_provider=signal_provider,
+    )
+
+
+def default_lookback_days(rules: RuleSet = DEFAULT_RULES) -> int:
+    """The longest window any rule looks at (the archive window when none is configured)."""
+    return max(
+        rules.cost_spike.lookback_days,
+        rules.latency_degradation.lookback_days,
+        rules.error_rate_degradation.lookback_days,
+        rules.unused_agent.window_days,
+    )
+
+
+_ARCHIVE_LIFECYCLE: list[Literal["draft", "active", "deprecated"]] = [
+    "draft",
+    "active",
+    "deprecated",
+]
+_MAX_CATALOG_AGENTS = 5_000
+_MAX_OWNER_EDGES = 50
+
+
+def _text(value: Any) -> str:
+    """Contract scalars are plain strings or single-field root models; return the string."""
+    return str(getattr(value, "root", value))
+
+
+async def _catalog_agents(
+    graph: GraphQuery, lister: AgentLister, scope: IdentityScope
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Agents and owners of ``scope`` from the live catalog (read-only calls only).
+
+    The owner of an agent is its ``owned_by`` target, an asserted edge before an inferred one and
+    then the smallest target id, the rule the sandbox source uses.
+    """
+    allowed = list(scope.allowed_domains)
+    if not allowed:
+        return [], {}
+    flt = EntityFilter(
+        entity_types=["agent"], domain_ids=allowed, lifecycle_statuses=list(_ARCHIVE_LIFECYCLE)
+    )
+    agents: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while len(agents) < _MAX_CATALOG_AGENTS:
+        page = await lister.list_entities(scope, flt, PageRequest(page_size=500, cursor=cursor))
+        for entity in page.items:
+            if (
+                getattr(entity, "entity_type", None) != "agent"
+                or _text(getattr(entity, "customer_id", "")) != scope.customer_id
+                or _text(getattr(entity, "cloud", "")) != scope.cloud
+                or _text(getattr(entity, "domain_id", "")) not in allowed
+            ):
+                continue
+            created = getattr(entity, "created_at", None)  # datetime or RFC 3339 root model
+            agents.append(
+                {
+                    "id": _text(getattr(entity, "id", "")),
+                    "cloud": scope.cloud,
+                    "customer_id": scope.customer_id,
+                    "domain_id": _text(getattr(entity, "domain_id", "")),
+                    "lifecycle_status": _text(getattr(entity, "lifecycle_status", "unknown")),
+                    "created_at": None if created is None else _text(created),
+                }
+            )
+        if page.next_cursor is None:
+            break
+        cursor = page.next_cursor
+    owners: dict[str, str] = {}
+    for agent in agents:
+        result = await graph.neighbors(
+            scope,
+            NeighborsRequest(
+                node_id=agent["id"],
+                direction="out",
+                filters=EdgeFilter(relation_types=["owned_by"]),
+                budget=Budget(timeout_ms=2_000, limit=_MAX_OWNER_EDGES, max_depth=1),
+                view="presented",
+            ),
+        )
+        chosen: tuple[int, str] | None = None
+        for edge in result.edges:
+            if edge.hidden or edge.source_id != agent["id"] or edge.relation_type != "owned_by":
+                continue
+            rank = (0 if edge.status == "asserted" else 1, edge.target_id)
+            if chosen is None or rank < chosen:
+                chosen = rank
+        if chosen is not None:
+            owners[agent["id"]] = chosen[1]
+    return agents, owners
+
+
+async def run_pipeline_archive(
+    reader: ArchiveReader,
+    *,
+    graph: GraphQuery,
+    lister: AgentLister,
+    scope: IdentityScope,
+    store: RecommendationStore,
+    prices: PriceSnapshotStore,
+    pairs: CandidatePairConfig,
+    created_at: datetime,
+    lookback_days: int | None = None,
+    rules: RuleSet = DEFAULT_RULES,
+    duplicate_config: DuplicateConfig | None = None,
+    signal_provider: SimilaritySignalProvider | None = None,
+    max_docs: int | None = None,
+) -> PipelineSummary:
+    """Rules, duplicates and right-sizing over the live catalog and the redacted archive.
+
+    Agents, owners and duplicate candidates come from the live catalog through the read-only
+    ``GraphQuery`` and ``AgentLister`` (nothing is written to it); telemetry and cost come from
+    the archive window of the last ``lookback_days`` complete UTC days ending at ``created_at``'s
+    date. A truncated archive makes coverage unknown (no ``unused_agent``) and is reported in
+    ``PipelineSummary.archive_truncated``. No wall clock is read: ``created_at`` is a parameter.
+    """
+    days = lookback_days if lookback_days is not None else default_lookback_days(rules)
+    window = window_ending(created_at.astimezone(UTC).date(), days)
+    agents, owners = await _catalog_agents(graph, lister, scope)
+    extra = {} if max_docs is None else {"max_docs": max_docs}
+    source = await ArchiveSeriesSource.load(
+        reader, scope=scope, agents=agents, owners=owners, window=window, **extra
+    )
+    usages = summarize_usage_docs(source.usage_docs, scope=scope, window=window, source=source)
+    stats, tele = source.archive_stats, source.stats
+    skipped = stats.unreadable + stats.malformed + tele.telemetry_skipped + tele.cost_skipped
+    return await _evaluate_and_store(
+        source,
+        window,
+        graph,
+        lister,
+        usages,
+        scope=scope,
+        store=store,
+        prices=prices,
+        pairs=pairs,
+        created_at=created_at,
+        rules=rules,
+        duplicate_config=duplicate_config,
+        signal_provider=signal_provider,
+        archive_truncated=source.truncated,
+        archive_skipped=skipped,
+    )
+
+
+async def _evaluate_and_store(
+    source: AgentSeriesSource,
+    window: tuple[date, date],
+    graph: GraphQuery,
+    lister: AgentLister,
+    usages: list[UsageSummary],
+    *,
+    scope: IdentityScope,
+    store: RecommendationStore,
+    prices: PriceSnapshotStore,
+    pairs: CandidatePairConfig,
+    created_at: datetime,
+    rules: RuleSet,
+    duplicate_config: DuplicateConfig | None,
+    signal_provider: SimilaritySignalProvider | None,
+    archive_truncated: bool = False,
+    archive_skipped: int = 0,
+) -> PipelineSummary:
     records: list[Recommendation] = []
 
     results = evaluate_rules(
@@ -272,12 +483,12 @@ async def run_pipeline(
         window_start=window[0],
         window_end=window[1],
         created_at=created_at,
+        rules=rules,
     )
     records.extend(recommendations(results))
     outcomes = Counter(r.outcome for r in results)
 
-    graph, repo = await load_sandbox_catalog(directory, scope=scope)
-    detector = DuplicateDetector(graph, repo, duplicate_config, signal_provider=signal_provider)
+    detector = DuplicateDetector(graph, lister, duplicate_config, signal_provider=signal_provider)
     run = await detector.run(
         scope=scope,
         window=TimeRange.model_validate({"start": _iso(window[0]), "end": _iso(window[1])}),
@@ -285,7 +496,6 @@ async def run_pipeline(
     )
     records.extend(c.recommendation for c in run.candidates)
 
-    usages = summarize_usage(directory, scope=scope, window=window, source=source)
     batch = project_right_sizing_candidates(usages, pairs, prices, created_at=created_at)
     records.extend(batch.recommendations)
 
@@ -307,4 +517,6 @@ async def run_pipeline(
         duplicate_truncation_reasons=run.truncation_reasons,
         usage_summaries=len(usages),
         stored_ids=tuple(ids),
+        archive_truncated=archive_truncated,
+        archive_skipped=archive_skipped,
     )
