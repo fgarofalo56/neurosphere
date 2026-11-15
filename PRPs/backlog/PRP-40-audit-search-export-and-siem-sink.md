@@ -211,7 +211,7 @@ Logs Ingestion, Splunk HEC or syslog sinks; async export jobs; audit retention o
 | 2 | verifying | prp-40-audit-siem | `audit_siem` optional component, `SIEM_SINK_HEALTH`; deviation: one-line allowance in `runtime_data/test_data_builder.py` for `audit_siem` disabled |
 | 3 | verifying | prp-40-audit-siem | `audit/{search_store,search,models,access}.py`; store published from `data.py` (Cosmos, or the repository twin with an overridden repository); emulator test written, not run (no compose) |
 | 4 | verifying | prp-40-audit-siem | `audit/{export,denials,siem_status}.py` registered from `audit.register`; `ui_adapters/audit.py` unchanged (shared `auditable_chain` imported); route inventory test added |
-| 5 | todo | | |
+| 5 | verifying | prp-40-audit-siem | PRP-21 shipped; no W14 PRP holds `authz/dependencies.py` (PRP-41 lists it must_not_touch; PRP-48 owns it in W15). Hook `PrescopeAudit` in `current_derivation`, `audit/prescope.py`, installed by `data.py` |
 | 6 | todo | | |
 
 ## Completion note (filled at ship)

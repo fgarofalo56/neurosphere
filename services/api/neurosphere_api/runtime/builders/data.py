@@ -90,11 +90,13 @@ from neurosphere_workers.projections.outbox.reader import SINK_AGGREGATES, SINK_
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from neurosphere_api.audit.prescope import PrescopeAuditor
 from neurosphere_api.audit.search_store import (
     AuditSearchStore,
     CosmosAuditSearchStore,
     RepositoryAuditSearchStore,
 )
+from neurosphere_api.authz.dependencies import PRESCOPE_AUDIT_ATTRIBUTE
 from neurosphere_api.federation.cache import SummaryCache
 from neurosphere_api.federation.client import CellClient, HttpCellClient, InProcessCellClient
 from neurosphere_api.federation.service import FederationState, Federator
@@ -479,6 +481,36 @@ def _audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
     ctx.publish(AUDIT_REPOSITORY, repository)
     ctx.app.state.audit_search_store = search
     ctx.publish(AUDIT_SEARCH_STORE, search)
+    _install_prescope_audit(ctx, exporter)
+
+
+def _install_prescope_audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
+    """PRP-40 item 5: the pre-scope audit hook ``authz.dependencies`` calls on a failure.
+
+    Needs the composed pseudonymizer and customer binding (absent when authz is overridden:
+    then there is no hook, as before). The repository is read per call from ``app.state``.
+    """
+    pseudonymizer = ctx.maybe_shared(PSEUDONYMIZER)
+    auth = ctx.maybe_shared(AUTH_SETTINGS)
+    customer = auth.resolved_customer_id(ctx.settings.env) if auth is not None else None
+    if pseudonymizer is None or customer is None:
+        return
+    app = ctx.app
+
+    def repository() -> AuditRepository | None:
+        current = getattr(app.state, "audit_repository", None)
+        return current if isinstance(current, AuditRepository) else None
+
+    setattr(
+        app.state,
+        PRESCOPE_AUDIT_ATTRIBUTE,
+        PrescopeAuditor(
+            repository=repository,
+            pseudonymizer=pseudonymizer,
+            customer_id=customer,
+            exporter=exporter,
+        ),
+    )
 
 
 def _hitl_service(ctx: BuildContext) -> HitlService:

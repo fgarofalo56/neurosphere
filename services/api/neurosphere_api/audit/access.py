@@ -20,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Final, Literal
 
 from fastapi import Depends, Query, Request
-from neurosphere_core.audit import AuditContext
+from neurosphere_core.audit import AuditContext, find_sensitive_content
 from neurosphere_core.auth.scope import Permission, domains_with_permission, permits_customer_wide
 from neurosphere_core.errors import DependencyTransientError, ForbiddenError, InvalidSchemaError
 from neurosphere_core.observability import get_logger
@@ -48,6 +48,7 @@ __all__ = [
     "record_denial",
     "require_customer_wide",
     "resolve_chains",
+    "safe_correlation_id",
 ]
 
 #: The longest ``until - since`` a search or export may cover (documented in the runbook).
@@ -293,15 +294,20 @@ def decode_cursor(cursor: str | None, chains: set[str]) -> SearchPosition | None
 
 def audit_context(request: Request, scope: IdentityScope, operation: str) -> AuditContext:
     """Audit context with the request's correlation id in audit-safe form (else generated)."""
-    request_id = correlation_id_of(request.scope)
-    correlation = None
-    if request_id:
-        candidate = "corr-" + request_id.replace("-", "")
-        if candidate != "corr-" and _CORRELATION.fullmatch(candidate):
-            correlation = candidate
     return AuditContext.from_scope(
         scope,
-        correlation_id=correlation or f"corr-{uuid.uuid4().hex}",
+        correlation_id=safe_correlation_id(correlation_id_of(request.scope)),
         operation=operation,
         channel="rest",
     )
+
+
+def safe_correlation_id(request_id: str | None) -> str:
+    """The middleware correlation id in audit-safe form (``corr-`` plus the id without dashes,
+    the ``actions.common`` convention) when it passes the guard, else a generated one."""
+    if request_id:
+        candidate = "corr-" + request_id.replace("-", "")
+        if candidate != "corr-" and _CORRELATION.fullmatch(candidate):
+            if not find_sensitive_content({"correlation_id": candidate}):
+                return candidate
+    return f"corr-{uuid.uuid4().hex}"
