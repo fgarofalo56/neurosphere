@@ -32,6 +32,7 @@ from neurosphere_core.auth.scope import (
 from neurosphere_core.catalog.repo.memory import InMemoryCatalogRepository
 from neurosphere_core.cloud import CloudName
 from neurosphere_core.evaluation.store import InMemoryEvaluationStore
+from neurosphere_core.gateway import InMemoryGatewayStore
 from neurosphere_core.hitl.decisions import InMemoryDecisionStore
 from neurosphere_core.hitl.store import InMemoryHitlStore
 from neurosphere_core.mcp.store import InMemoryMcpServerStore
@@ -128,6 +129,7 @@ class Stack:
         self.evaluations = InMemoryEvaluationStore()
         self.intents = InMemoryIntentStore()
         self.mcp = InMemoryMcpServerStore()
+        self.gateways = InMemoryGatewayStore()
         audit = AuditRepository(InMemoryAuditStore())
         key = resolve_pseudonym_key(AuthSettings(), env="local")
         self.reports = InMemoryReportStore()
@@ -154,6 +156,7 @@ class Stack:
             ),
             reports=self.reports,
             mcp=self.mcp,
+            gateways=self.gateways,
         )
 
 
@@ -295,6 +298,19 @@ def test_seeding_refuses_to_go_past_awaiting_confirmation(tmp_path: Path) -> Non
 
 
 # -- idempotency ---------------------------------------------------------------------------
+
+
+def test_one_synthetic_gateway_is_registered_once(tmp_path: Path) -> None:
+    """#209 item 3: /gateways/detail needs a registration; the seed makes exactly one."""
+    stack = Stack()
+    first = _run(stack, tmp_path / "one")
+    second = _run(stack, tmp_path / "two")
+    assert first["seeded"]["gateways"] == 1
+    assert second["seeded"]["gateways"] == 0
+    domain = seed.World(seed.generate_config(_config())).domain_id(0)
+    page = asyncio.run(stack.gateways.list("synthco", domain))
+    assert [g.name for g in page.items] == ["apim-synthetic-sandbox"]
+    assert page.items[0].mode == "observe"
 
 
 def test_grants_only_publishes_nothing_and_waits_for_nothing(tmp_path: Path) -> None:

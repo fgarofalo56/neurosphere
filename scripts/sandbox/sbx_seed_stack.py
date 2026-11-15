@@ -129,6 +129,8 @@ from neurosphere_core.evaluation.judge import (  # noqa: E402
     request_hash,
 )
 from neurosphere_core.evaluation.store import EvaluationStore  # noqa: E402
+from neurosphere_core.gateway import GatewayRegistration, GatewayStore  # noqa: E402
+from neurosphere_core.gateway.models import gateway_id_for  # noqa: E402
 from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry  # noqa: E402
 from neurosphere_core.hitl.decisions import DecisionLog, DecisionStore  # noqa: E402
 from neurosphere_core.hitl.store import HitlStore  # noqa: E402
@@ -245,6 +247,7 @@ CATEGORIES: Final = (
     "intents",
     "reports",
     "mcp_servers",
+    "gateways",
     "grants",
 )
 #: Categories the workers fill from the pushed events.
@@ -601,6 +604,7 @@ class Backends:
     actions: ActionService
     reports: ReportStore
     mcp: McpServerStore
+    gateways: GatewayStore
 
 
 class Tally:
@@ -1063,6 +1067,48 @@ async def seed_mcp_servers(
         tally.record("mcp_servers", created=1, existing=0)
 
 
+# -- gateway registration --------------------------------------------------------------------
+
+#: SYNTHETIC APIM service id (a fixture subscription GUID; nothing resolves it).
+SEED_GATEWAY_ARM_ID: Final = (
+    "/subscriptions/00000000-0000-4000-8000-000000000001/resourceGroups/rg-synthetic-sandbox"
+    "/providers/Microsoft.ApiManagement/service/apim-synthetic-sandbox"
+)
+
+
+async def seed_gateways(
+    backends: Backends,
+    config: SeedConfig,
+    world: World,
+    principals: Mapping[str, str],
+    tally: Tally,
+) -> None:
+    """One SYNTHETIC observe-mode gateway registration in the first domain, so the gateways pages
+    have data (#209). Registered through ``GatewayStore.create``; the id is deterministic, so a
+    re-run finds it and creates nothing. It carries no workspace, so the poll role skips it."""
+    domain = world.domain_id(0)
+    gateway_id = gateway_id_for(config.customer, domain, SEED_GATEWAY_ARM_ID)
+    if await backends.gateways.get(config.customer, domain, gateway_id) is not None:
+        tally.record("gateways", created=0, existing=1)
+        return
+    stamp = datetime.now(UTC).replace(microsecond=0)
+    await backends.gateways.create(
+        GatewayRegistration(
+            id=gateway_id,
+            customer_id=config.customer,
+            domain_id=domain,
+            cloud=cast(Any, config.cloud),
+            arm_resource_id=SEED_GATEWAY_ARM_ID,
+            name="apim-synthetic-sandbox",
+            tier="standard_v2",
+            created_at=stamp,
+            updated_at=stamp,
+            registered_by=principals["admin"].rsplit(":", 1)[-1],
+        )
+    )
+    tally.record("gateways", created=1, existing=0)
+
+
 # -- catalog entities ------------------------------------------------------------------------
 
 
@@ -1276,6 +1322,7 @@ async def run_seed(
     await seed_intents(backends, world, principals, tally)
     await seed_reports(backends, world, principals, tally)
     await seed_mcp_servers(backends, config, principals, tally)
+    await seed_gateways(backends, config, world, principals, tally)
 
     log(f"waiting up to {config.wait_seconds:.0f}s for the workers to land the events")
     after = await wait_for_landing(
@@ -1438,6 +1485,7 @@ def assemble_backends(
     from neurosphere_core.actions.cosmos_store import CosmosExecutionControl as Control
     from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
     from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
+    from neurosphere_core.gateway import CosmosGatewayStore
     from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
     from neurosphere_core.mcp.cosmos_store import CosmosMcpServerStore
     from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
@@ -1485,6 +1533,7 @@ def assemble_backends(
         ),
         reports=CosmosReportStore.from_client(cosmos, database=config.database),
         mcp=CosmosMcpServerStore.from_client(cosmos, database=config.database),
+        gateways=CosmosGatewayStore.from_client(cosmos, database=config.database),
     )
 
 
