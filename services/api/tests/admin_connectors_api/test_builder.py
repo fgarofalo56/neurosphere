@@ -77,6 +77,6 @@ def test_without_cosmos_the_component_is_disabled_and_routes_answer_503() -> Non
     assert composed.app.state.admin_connectors is None
 
 
-def test_without_audit_the_component_is_disabled() -> None:
+def test_without_cosmos_or_backend_the_component_is_disabled() -> None:
     composed = compose(CompositionOverrides(backends={}), builders=(builder.BUILDER,))
     assert composed.registry.get("admin_connectors").state == "disabled"

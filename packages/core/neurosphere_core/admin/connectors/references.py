@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, NoReturn
 from urllib.parse import urlsplit
 
 from neurosphere_contracts.admin.v1.credential_reference import CredentialReference
@@ -59,7 +59,7 @@ def key_vault_labels(cloud: str) -> tuple[str, ...]:
     return _VAULT_LABELS[cloud]
 
 
-def _refuse(pointer: str, detail: str, *, reason: str = "credential_reference_invalid") -> None:
+def _refuse(pointer: str, detail: str, *, reason: str = "credential_reference_invalid") -> NoReturn:
     raise InvalidSchemaError(
         "credential reference is invalid",
         errors=[ValidationIssue(pointer, detail)],

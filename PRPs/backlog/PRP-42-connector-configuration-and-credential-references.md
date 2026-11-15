@@ -223,8 +223,8 @@ A Key Vault client library dependency; secret creation or rotation in Key Vault;
 | 2 | merged | prp-42-connector-config | worker connector_config package + 31 tests; httpx INFO log filter for vault URLs |
 | 3 | merged | prp-42-connector-config | routes, service, models, router hook; 36 API tests |
 | 4 | merged | prp-42-connector-config | admin_connectors builder + factories use resolve_*; 40 worker tests, existing suites unchanged |
-| 5 | todo | | |
-| 6 | todo | | |
+| 5 | merged | prp-42-connector-config | authz + secrecy suites (tests/security/authz) pass |
+| 6 | in-progress | prp-42-connector-config | Tier-2 hooks, runbook, nav done; Tier-3 regen (openapi.json, docs/reference, status table, INDEX, changelog fragment), rebase and completion note left for merge step |
 
 ## Completion note (filled at ship)
 - Date and PR:

@@ -88,7 +88,7 @@ async def test_stored_billing_config_reads_secret_and_carries_identity(
     assert not isinstance(settings, ConnectorIdle)
     assert settings.container == "exports"
     assert settings.domain_id is not None and settings.storage_url_valid
-    assert settings.managed_identity_client_id == CLIENT_ID
+    assert settings.managed_identity_client_id == CLIENT_ID  # type: ignore[attr-defined]
 
 
 async def test_stored_foundry_config_builds_projects_without_secret() -> None:

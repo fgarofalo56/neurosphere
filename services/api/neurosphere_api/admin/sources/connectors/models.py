@@ -8,7 +8,7 @@ store to return.
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, cast
 
 from neurosphere_contracts.admin.v1.admin_config_document import AdminConfigDocument
 from neurosphere_contracts.admin.v1.connector_config import ConnectorConfig
@@ -58,7 +58,9 @@ def view(document: AdminConfigDocument, warnings: tuple[str, ...] = ()) -> Conne
         connector_id=body.connector_id.root,
         connector_kind=body.connector_kind,
         domain_ids=[d.root for d in body.domain_ids],
-        settings={k: getattr(v, "root", v) for k, v in body.settings.items()},
+        settings={
+            k: cast("str | int | bool", getattr(v, "root", v)) for k, v in body.settings.items()
+        },
         credential=None
         if credential is None
         else CredentialView(

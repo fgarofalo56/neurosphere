@@ -53,7 +53,8 @@ class ConnectorAdminPlane:
     """What the routes need; installed on ``app.state.admin_connectors`` by the builder."""
 
     admin: ConnectorConfigAdmin
-    audit: AuditRepository
+    #: Resolved per request: a missing audit store fails every mutation closed (503).
+    audit: Callable[[], AuditRepository | None]
 
 
 def configure_admin_connectors(app: FastAPI, plane: ConnectorAdminPlane | None) -> None:
@@ -86,6 +87,14 @@ class ConnectorAdminService:
         self._scope = scope
 
     # -- audit ---------------------------------------------------------------------------------
+
+    def _audit_repository(self) -> AuditRepository:
+        repository = self._plane.audit()
+        if repository is None:
+            raise DependencyTransientError(
+                "audit store is not configured", reason="audit_store_unconfigured"
+            )
+        return repository
 
     def _subject(
         self, operation: str, config_id: str, *, kind: str | None, etag: str | None, stage: str
@@ -126,7 +135,7 @@ class ConnectorAdminService:
             )
 
         return await run_audited_mutation(
-            self._plane.audit,
+            self._audit_repository(),
             admin_config_chain_id(scope.customer_id),
             before=build_before(
                 ctx, self._subject(operation, config_id, kind=kind, etag=None, stage="before")

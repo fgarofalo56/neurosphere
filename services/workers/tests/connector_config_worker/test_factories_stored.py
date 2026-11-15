@@ -41,10 +41,11 @@ class Capture:
     """Records constructor keyword arguments of a stubbed collaborator."""
 
     kwargs: ClassVar[dict[str, Any]] = {}
+    own: dict[str, Any]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         type(self).kwargs = kwargs
-        self.kwargs = kwargs
+        self.own = kwargs
 
     async def tick(self) -> None:
         return None
@@ -110,9 +111,9 @@ async def test_gateway_poll_runs_from_the_stored_config_and_ignores_env(
     assert ingest["settings"].interval_seconds == 600
     assert ingest["settings"].api_base_url == "http://api.invalid"
     assert ingest["settings"].producer_secret.get_secret_value() == SECRET_VALUE
-    assert ingest["ingest"].kwargs["secret"] == SECRET_VALUE
-    assert ingest["ingest"].kwargs["base_url"] == "http://api.invalid"
-    assert ingest["ingest"].kwargs["producer_id"] == "stored-producer"
+    assert ingest["ingest"].own["secret"] == SECRET_VALUE
+    assert ingest["ingest"].own["base_url"] == "http://api.invalid"
+    assert ingest["ingest"].own["producer_id"] == "stored-producer"
 
 
 async def test_disabled_gateway_config_idles_and_does_not_use_env(
@@ -159,7 +160,7 @@ async def test_store_failure_behaves_exactly_like_env(monkeypatch: pytest.Monkey
     async with ClientLifetime() as lifetime:
         await f.build_gateway_poll(_cfg(), lifetime)
     assert Capture.kwargs["domain_ids"] == ("env-domain",)
-    assert Capture.kwargs["ingest"].kwargs["secret"] == "env-secret"  # noqa: S105
+    assert Capture.kwargs["ingest"].own["secret"] == "env-secret"  # noqa: S105
 
 
 async def test_env_source_switch_ignores_a_stored_config(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -252,7 +253,7 @@ async def test_billing_export_runs_from_the_stored_config_with_the_pinned_identi
         await f.build_billing_export(_cfg(), lifetime)
     assert seen["credential"]["managed_identity_client_id"] == CLIENT_ID
     assert seen["source"]["container"] == "exports"
-    assert Capture.kwargs["ingest"].kwargs["secret"] == SECRET_VALUE
+    assert Capture.kwargs["ingest"].own["secret"] == SECRET_VALUE
     assert Capture.kwargs["domain_id"] == "commercial:synthco:neurosphere:domain:d1"
 
 
