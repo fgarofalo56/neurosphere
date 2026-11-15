@@ -53,6 +53,11 @@ from neurosphere_workers.recommendations.tests.support import (  # noqa: E402
 
 from sandbox.config import Profile  # noqa: E402
 
+# Seeds that thresholds were tuned or inspected on (round 1 used 3, 7 and 11; round 2 added 1
+# and 2). Held-out seeds are never used to choose a threshold, a ratio or a floor.
+TUNING_SEEDS = (1, 2, 3, 7, 11)
+HELD_OUT_SEEDS = (5, 13, 17)
+
 # manifest anomaly type -> recommendation kind
 KINDS = {
     "cost_spike": "cost_spike",
@@ -89,11 +94,16 @@ def setups() -> list[Setup]:
             parity,
             (3, 11),
         ),
-        Setup("dense (40 agents, 4 domains, 7 days, 20 traces/agent-day)", dense, (3, 11, 7, 5)),
-        # Seed 5 is held out for the pilot density and the dense profile (never used to set a
-        # threshold).
         Setup(
-            "pilot density (200 agents, 8 domains, 7 days, 2 traces/agent-day)", sparse, (3, 11, 5)
+            "dense (40 agents, 4 domains, 7 days, 20 traces/agent-day)",
+            dense,
+            (*TUNING_SEEDS, *HELD_OUT_SEEDS),
+        ),
+        # Pilot density is slower: the round 1 tuned seeds plus the held-out seeds.
+        Setup(
+            "pilot density (200 agents, 8 domains, 7 days, 2 traces/agent-day)",
+            sparse,
+            (3, 11, *HELD_OUT_SEEDS),
         ),
     ]
 
@@ -186,7 +196,9 @@ async def main() -> None:
     for setup in setups():
         print(f"## {setup.name}")
         for seed in setup.seeds:
-            print(json.dumps({"profile": setup.name, **await measure(setup.profile, seed)}))
+            result = await measure(setup.profile, seed)
+            held_out = seed in HELD_OUT_SEEDS
+            print(json.dumps({"profile": setup.name, "held_out": held_out, **result}))
 
 
 if __name__ == "__main__":

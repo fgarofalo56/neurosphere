@@ -129,15 +129,24 @@ class CosmosRecommendationStore:
         body["sort_key"] = recommendation.recommendation_id.root
         try:
             await self._container.upsert_item(body=body)
-            # ``recommendation_id`` is caller-supplied (not derived from the domain), and the
-            # in-memory store replaces by id alone: drop any copy left in another partition.
-            async for row in self._container.query_items(
-                BY_ID_QUERY,
-                parameters=[{"name": "@id", "value": body["id"]}],
-            ):
-                key = [row["customer_id"], row["domain_id"]]
-                if key != [body["customer_id"], body["domain_id"]]:
-                    await self._container.delete_item(item=row["id"], partition_key=key)
+            # ``recommendation_id`` is caller-supplied (not derived from the domain), so copies
+            # can land in several partitions and Cosmos has no cross-partition transaction.
+            # Deterministic winner: the copy in the smallest ``[customer, domain]`` partition.
+            # Every writer, after its own upsert, deletes the copies it sees in LARGER partitions
+            # and never the smallest one it sees, so the smallest copy always survives and two
+            # concurrent puts converge on exactly one copy (a double delete is a no-op).
+            rows = [
+                row
+                async for row in self._container.query_items(
+                    BY_ID_QUERY, parameters=[{"name": "@id", "value": body["id"]}]
+                )
+            ]
+            keys = sorted([row["customer_id"], row["domain_id"]] for row in rows)
+            for key in keys[1:]:
+                try:
+                    await self._container.delete_item(item=body["id"], partition_key=key)
+                except CosmosResourceNotFoundError:
+                    continue
         except Exception as exc:
             _raise_mapped(exc)
 

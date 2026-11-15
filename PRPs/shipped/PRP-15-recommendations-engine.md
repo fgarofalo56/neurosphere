@@ -1,6 +1,8 @@
 ---
 name: PRP-15-recommendations-engine
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 281
 priority: P1
 order: 25
 review: required
@@ -34,16 +36,16 @@ Out of scope: enabling the recommendations role in Bicep, App Service and Helm a
 - #133 bullets 1 and 2 are still true: `HitlReviewRouter.route` serialises only inside one process (`services/api/neurosphere_api/recommendations/review_hitl.py:54-79`, its docstring admits two processes can open two items) and `CosmosRecommendationStore.put` upserts then deletes copies in other partitions (`packages/core/neurosphere_core/recommendations/cosmos_store.py:125-142`), so two concurrent puts into different partitions can both survive or delete each other.
 
 ## Acceptance criteria
-- [ ] Given `NS_WORKER_REC_SOURCE=archive`, When the role starts, Then it needs no `NS_WORKER_REC_DATA_DIR`; Given `sandbox` (the default) or unset, Then behaviour and the existing `recommendations_data_dir_missing` and `recommendations_data_dir_invalid` errors are unchanged (`services/workers/tests/worker_roles/test_builders.py` still passes).
-- [ ] Given archive blobs of telemetry and cost documents for a cloud, customer and domains, When `ArchiveSeriesSource` loads a window, Then each in-scope agent in the live catalog gets one `AgentDay` per day with events, requests, errors, p50 and p95 latency, cost and `covered` computed with the same rules as `SandboxSeriesSource` (same fixtures give equal series: parity test).
-- [ ] Given a day on which no event from any agent of a source was archived, Then the day is `covered=False` and rules report unknown coverage, never zero usage; Given the archive listing hit its bound (`ArchiveReader.truncated`), Then the affected window is marked unknown and the run records `archive_truncated` instead of emitting `unused_agent`.
-- [ ] Given a blob for another customer, another cloud or a domain outside the scope, When the source loads, Then it is never read into a series (cross-customer leak test); a malformed blob is skipped and counted, never fatal.
-- [ ] Given `archive`, When the pipeline runs, Then agents, owners and duplicate candidates come from the live `CatalogRepository` through the read-only `GraphQuery` and `AgentLister`, token usage for right-sizing comes from archive cost documents (deduped by `dedupe_key`), and nothing is written to the catalog.
-- [ ] Given the duplicate thresholds are tuned on tuning seeds and measured on held-out seeds that were never used for tuning, Then duplicate precision is at least 0.80 on each held-out dense seed, or the criterion text and the evidence README are amended to the measured numbers with the reason (the lane A alternative); recall is reported.
-- [ ] At pilot density (about 2 traces per agent-day) latency detection and false alarms are re-measured on held-out seeds with no silent miss; ASSUMPTION target: at least 3 of 5 detected and at most 1 false alarm per seed, otherwise the measured numbers replace the target in the evidence and completion note.
-- [ ] Given two `HitlReviewRouter.route` calls for one recommendation racing in two router instances over one store, Then exactly one review item exists and both calls return its id (#133 bullet 1), via a deterministic item id and a create-only write.
-- [ ] Given two concurrent `CosmosRecommendationStore.put` calls with the same `recommendation_id` in different domain partitions, Then exactly one copy remains after both finish (#133 bullet 2), and the in-memory store follows the same rule.
-- [ ] No route, UI control or worker path executes a change; the executions refusal stays 409 `capability_unavailable` (unchanged round 1 behaviour).
+- [x] Given `NS_WORKER_REC_SOURCE=archive`, When the role starts, Then it needs no `NS_WORKER_REC_DATA_DIR`; Given `sandbox` (the default) or unset, Then behaviour and the existing `recommendations_data_dir_missing` and `recommendations_data_dir_invalid` errors are unchanged (`services/workers/tests/worker_roles/test_builders.py` still passes).
+- [x] Given archive blobs of telemetry and cost documents for a cloud, customer and domains, When `ArchiveSeriesSource` loads a window, Then each in-scope agent in the live catalog gets one `AgentDay` per day with events, requests, errors, p50 and p95 latency, cost and `covered` computed with the same rules as `SandboxSeriesSource` (same fixtures give equal series: parity test).
+- [x] Given a day on which no event from any agent of a source was archived, Then the day is `covered=False` and rules report unknown coverage, never zero usage; Given the archive listing hit its bound (`ArchiveReader.truncated`), Then the affected window is marked unknown and the run records `archive_truncated` instead of emitting `unused_agent`.
+- [x] Given a blob for another customer, another cloud or a domain outside the scope, When the source loads, Then it is never read into a series (cross-customer leak test); a malformed blob is skipped and counted, never fatal.
+- [x] Given `archive`, When the pipeline runs, Then agents, owners and duplicate candidates come from the live `CatalogRepository` through the read-only `GraphQuery` and `AgentLister`, token usage for right-sizing comes from archive cost documents (deduped by `dedupe_key`), and nothing is written to the catalog.
+- [x] AMENDED to measured numbers (lane A alternative): held-out dense seeds 5, 13, 17 give duplicate precision 0.75, 0.60, 1.0 (recall 1.0); no score threshold separates the false pairs from true pairs on other seeds, and tuning on held-out seeds was refused; reason and numbers in the evidence README.
+- [x] AMENDED to measured numbers: pilot density held-out seeds 5, 13, 17 detect 3, 2, 4 of 5 latency regressions with 4, 1, 0 false alarms and no silent miss (the assumption target of 3 of 5 and at most 1 false alarm holds on seed 17 only). Dense held-out seed 13 has one silent latency miss (OPEN).
+- [x] Given two `HitlReviewRouter.route` calls for one recommendation racing in two router instances over one store, Then exactly one review item exists and both calls return its id (#133 bullet 1), via a deterministic item id and a create-only write.
+- [x] Given two concurrent `CosmosRecommendationStore.put` calls with the same `recommendation_id` in different domain partitions, Then exactly one copy remains after both finish (#133 bullet 2), and the in-memory store follows the same rule.
+- [x] No route, UI control or worker path executes a change; the executions refusal stays 409 `capability_unavailable` (unchanged round 1 behaviour).
 - [ ] The hosted enablement and the real-stack run are written OPEN and handed to PRP-58.
 - [ ] PRP exit: the touched suites pass, `verify-gates.ps1 -Mode full` is green, `python scripts/validate_planning.py` passes, the measured numbers are in `docs/evidence/G12/recommendations/README.md`.
 
@@ -216,21 +218,21 @@ No schema change and no new container. `NS_WORKER_REC_SOURCE` defaults to `sandb
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-15-round2-production-series | ArchiveSeriesSource + SeriesAccumulator shared with sandbox; parity, scope, coverage tests |
+| 2 | merged | prp-15-round2-production-series | run_pipeline_archive, NS_WORKER_REC_SOURCE and NS_WORKER_REC_LOOKBACK_DAYS, build_recommendations branch; compose-only checks not run |
+| 3 | merged | prp-15-round2-production-series | no threshold change; held-out seeds 5,13,17 measured, targets amended to measured numbers (README); dup precision 0.75, 0.60, 1.0; pilot latency 3, 2, 4 of 5, FA 4, 1, 0 |
+| 4 | merged | prp-15-round2-production-series | deterministic UUIDv5 review item id via HitlService.open_item(item_id) (outside Ownership listing in assignment, allowed by PRP Ownership); smallest-partition-wins put in Cosmos and in-memory stores; winner also deletes larger copies (deviation from Clarification 8 text, needed to converge) |
+| 5 | merged | prp-15-round2-production-series | Tier-3 regeneration, completion note, changelog fragment, reviewer follow-ups |
 
 ## Completion note (filled at ship)
-- Date, PR, merged commits:
-- Deviations from the blueprint and why:
-- Descoped items:
-- Measured results (tuning seeds, held-out seeds, dense and pilot density):
-- OPEN gates (hosted enablement, archive sizing, G04, G01 Government):
-- Env vars for the operator (`NS_WORKER_REC_SOURCE`, `NS_WORKER_REC_LOOKBACK_DAYS`):
-- Follow-up issue numbers:
-- Product check (can an operator see recommendations about their own agents without editing files?):
+- Date, PR, merged commits: 2026-11-15, PR #281 (squash merge of branch `prp-15-round2-production-series`).
+- Deviations from the blueprint and why: item 4 also deletes the larger-partition copies after a `put` (needed so two concurrent puts converge on one copy; differs from the text of Clarification 8). `HitlService.open_item(item_id=...)` lives in `packages/core/neurosphere_core/hitl/service.py`, which the PRP Ownership allows. Item 3 changed no threshold: held-out seeds 5, 13 and 17 were measured and the two targets amended to the measured numbers, as the blueprint permits. No `[serial-after]` item exists in this PRP.
+- Descoped items: none. Reviewer follow-ups done in the close-out commit: store docs now state the silent-discard rule (`recommendations/store.py` module docstring); `test_duplicate_detection_never_searches` pins that `run_pipeline_archive` never searches; a comment in `archive_source.py` explains why `add_cost` returning True for lower-priority duplicates is harmless (`summarize_usage_docs` dedupes by `dedupe_key`).
+- Measured results (tuning seeds, held-out seeds, dense and pilot density): see `docs/evidence/G12/recommendations/README.md`. Duplicate precision on held-out dense seeds 5, 13, 17 is 0.75, 0.60, 1.0 (recall 1.0). Pilot density latency regressions detected 3, 2, 4 of 5 with 4, 1, 0 false alarms; dense held-out seed 13 has one silent latency miss (OPEN).
+- OPEN gates (hosted enablement, archive sizing, G04, G01 Government): hosted enablement of the role and a real-stack run against Cosmos and the real archive (PRP-58); archive listing sizing and RU cost (G07, G12); G04 price sheet coverage; G01 Government projections; compose-only checks of the archive path were not run in this session; the dense seed 13 silent latency miss.
+- Env vars for the operator (`NS_WORKER_REC_SOURCE`, `NS_WORKER_REC_LOOKBACK_DAYS`): `NS_WORKER_REC_SOURCE` (`sandbox` default, or `archive`; `archive` needs no `NS_WORKER_REC_DATA_DIR`) and `NS_WORKER_REC_LOOKBACK_DAYS` (complete UTC days of archive window). `.env.example` was not edited; the operator adds both.
+- Follow-up issue numbers: #133 stays open (evaluation_id half in PRP-16, archive reader sizing bullet); tracking issue #231 closed by this PR. Store note: a later `put` of an id that already exists in a smaller `[customer, domain]` partition is silently discarded (documented in the store docstring).
+- Product check (can an operator see recommendations about their own agents without editing files?): not yet in a hosted environment. With `NS_WORKER_REC_SOURCE=archive` the role reads the live catalog and the archive, but enabling it in the hosted deployment is PRP-58 and OPEN.
 
 ## History
 - Round 1 shipped as PR #79 (merged 2026-10-19; seven items including the fix-forward latency rule): rules engine, duplicate candidates, cost projection, recommendations API and UI, the worker role over sandbox files, `HitlReviewRouter` and `CosmosRecommendationStore` wiring afterwards (PRP-29).

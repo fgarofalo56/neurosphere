@@ -5,6 +5,12 @@ and the domain (which must be in the scope's allowed domains) are mandatory pred
 recommendation of another customer, cloud or domain is simply absent (``get`` returns ``None``,
 ``list`` omits it). ``q`` is a bounded plain-text, case-insensitive substring match over the kind
 and the subject ids; it is not a query language. A Cosmos implementation is OPEN (not built here).
+
+One copy per ``recommendation_id``: when a copy already exists in a smaller ``[customer, domain]``
+partition, a later ``put`` of the same id into a larger partition is silently discarded, including
+an update to that recommendation. The rule is deterministic and identical in the in-memory and the
+Cosmos store (the latter also deletes the larger-partition copies it sees); callers that need to
+change a recommendation must write it to the partition that already holds it.
 """
 
 from __future__ import annotations
@@ -80,6 +86,11 @@ def _matches(rec: Recommendation, needle: str) -> bool:
     return any(needle in part.lower() for part in haystack)
 
 
+def _partition(recommendation: Recommendation) -> tuple[str, str]:
+    customer, domain = recommendation.customer_id, recommendation.domain_id
+    return str(getattr(customer, "root", customer)), str(getattr(domain, "root", domain))
+
+
 class InMemoryRecommendationStore:
     def __init__(self, recommendations: Sequence[Recommendation] = ()) -> None:
         self._items: dict[str, Recommendation] = {}
@@ -87,7 +98,13 @@ class InMemoryRecommendationStore:
             self._items[rec.recommendation_id.root] = rec.model_copy(deep=True)
 
     async def put(self, recommendation: Recommendation) -> None:
-        self._items[recommendation.recommendation_id.root] = recommendation.model_copy(deep=True)
+        # Same rule as the Cosmos store: one copy per id, and a copy in a smaller
+        # ``[customer, domain]`` partition is never displaced by one in a larger partition.
+        key = recommendation.recommendation_id.root
+        existing = self._items.get(key)
+        if existing is not None and _partition(existing) < _partition(recommendation):
+            return
+        self._items[key] = recommendation.model_copy(deep=True)
 
     async def list(
         self,

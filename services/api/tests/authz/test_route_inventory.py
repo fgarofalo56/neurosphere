@@ -325,3 +325,31 @@ def test_configured_extra_public_paths_are_used_by_default() -> None:
 def test_extra_public_paths_must_be_exact(bad: str) -> None:
     with pytest.raises(InvalidSchemaError):
         public_paths_for(FastAPI(), extra=[bad])
+
+
+def test_identity_admin_routes_declare_their_permissions() -> None:
+    """PRP-39: policy routes need policy.manage, revocation routes revocation.manage."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/identity/principals"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    policy = ("policy.manage",)
+    revocation = ("revocation.manage",)
+    principal = f"{base}/{{principal_id}}"
+    assert found == {
+        (base, "GET"): policy,
+        (principal, "GET"): policy,
+        (f"{principal}/role-assignments/{{assignment_id}}", "PUT"): policy,
+        (f"{principal}/role-assignments/{{assignment_id}}", "DELETE"): policy,
+        (f"{principal}/domain-memberships/{{domain_id:path}}", "PUT"): policy,
+        (f"{principal}/domain-memberships/{{domain_id:path}}", "DELETE"): policy,
+        (f"{principal}/grants/{{grant_id}}", "PUT"): policy,
+        (f"{principal}/grants/{{grant_id}}", "DELETE"): policy,
+        (f"{principal}/revocation", "POST"): revocation,
+        (f"{principal}/revocation", "GET"): revocation,
+        (f"{principal}/revocation", "DELETE"): revocation,
+    }

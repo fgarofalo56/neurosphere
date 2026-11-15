@@ -126,6 +126,7 @@ nav:
       - runbooks/ingest-cost-attribution.md
       - runbooks/lifecycle.md
       - runbooks/runtime-composition.md
+      - runbooks/identity-admin.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md
