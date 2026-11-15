@@ -11,7 +11,7 @@ Each builder module defines three names::
 
 :func:`default_builders` returns the fixed order (the ``routers.py`` hook pattern)::
 
-    authz -> data -> planes -> copilot -> mcp -> gateway -> edge
+    authz -> data -> planes -> copilot -> mcp -> gateway -> edge -> lifecycle
 
 so a builder may consume anything an EARLIER builder published. ``compose_app(...,
 builders=...)`` accepts any sequence of :class:`BuilderSpec` (tests pass stubs for components
@@ -361,6 +361,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         data,
         edge,
         gateway,
+        lifecycle,
         mcp,
         planes,
     )
@@ -373,4 +374,5 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         mcp.BUILDER,
         gateway.BUILDER,
         edge.BUILDER,
+        lifecycle.BUILDER,
     )

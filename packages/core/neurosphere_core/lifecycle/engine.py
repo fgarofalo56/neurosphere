@@ -85,6 +85,20 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
 
 
+def lifecycle_canonical_id(
+    cloud: str, customer_id: str, entity: str, ident: str, container: str = "-"
+) -> str:
+    """Audit subject id for a lifecycle object: a digest of ``ident``, never the id itself.
+
+    Shared by the engine and the lifecycle API so both write the same subject for the same hold,
+    request or record.
+    """
+    return (
+        f"{cloud}:{_slug(customer_id)}:lifecycle:{_slug(entity)}:"
+        f"{_slug(container)}/{_digest(ident)}"
+    )
+
+
 class LifecycleEngine:
     def __init__(
         self,
@@ -149,10 +163,7 @@ class LifecycleEngine:
         return ctx.model_copy(update={"operation": operation})
 
     def _canonical(self, entity: str, ident: str, container: str = "-") -> str:
-        return (
-            f"{self._cloud}:{self._customer}:lifecycle:{_slug(entity)}:"
-            f"{_slug(container)}/{_digest(ident)}"
-        )
+        return lifecycle_canonical_id(self._cloud, self._customer, entity, ident, container)
 
     def _subject(
         self, request: LifecycleRequest, record: TargetRecord | None, *, after: bool

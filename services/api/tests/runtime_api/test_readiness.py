@@ -186,6 +186,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "mcp",
         "gateway",
         "edge",
+        "lifecycle",
     ]
     assert copilot_builder.BUILDER in default_builders()
 
@@ -208,7 +209,16 @@ def test_registry_rules() -> None:
 
 def test_stub_builders_only_replace_placeholders() -> None:
     names = [spec.name for spec in builders_with_stubs()]
-    assert names == ["authz", "stub-data", "stub-planes", "copilot", "mcp", "stub-gateway", "edge"]
+    assert names == [
+        "authz",
+        "stub-data",
+        "stub-planes",
+        "copilot",
+        "mcp",
+        "stub-gateway",
+        "edge",
+        "lifecycle",
+    ]
     assert {spec.components for spec in builders_with_stubs()} == {
         spec.components for spec in default_builders()
     }

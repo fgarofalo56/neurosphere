@@ -11,7 +11,7 @@ viewer             data.read, grant.read
 analyst            viewer + data.export, report.create, action.propose
 domain_steward     analyst + catalog.curate, action.approve, action.execute, grant.write
 admin              data.read, config.manage, policy.manage, revocation.manage, grant.read,
-                   grant.write
+                   grant.write, lifecycle.manage
 security_auditor   audit.read, evidence.read  (no data.read: auditors read evidence, not data)
 =================  ====================================================================
 
@@ -77,6 +77,7 @@ class Permission(StrEnum):
     EVIDENCE_READ = "evidence.read"
     GRANT_READ = "grant.read"
     GRANT_WRITE = "grant.write"
+    LIFECYCLE_MANAGE = "lifecycle.manage"
 
 
 _VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ})
@@ -95,6 +96,7 @@ _ADMIN = frozenset(
         Permission.REVOCATION_MANAGE,
         Permission.GRANT_READ,
         Permission.GRANT_WRITE,
+        Permission.LIFECYCLE_MANAGE,
     }
 )
 _AUDITOR = frozenset({Permission.AUDIT_READ, Permission.EVIDENCE_READ})
