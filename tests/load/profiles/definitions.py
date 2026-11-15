@@ -21,12 +21,22 @@ LOCAL_COMPOSE_HOST = "http://localhost:8000"
 
 # Provisional thresholds. The PRD gives rates but no ingest-latency figure; the 2 s p95 bound is a
 # stand-in borrowed from the dashboard planning target (PRD section 3) and is labelled as such.
+# PROVISIONAL, OWNER DECISION OPEN (PRP-21 round 2, clarification 7): no ingest latency target is
+# invented here. The owner sets the real figure; until then a pass or fail against 2000 ms says
+# nothing about an agreed target.
 PROVISIONAL_NOTE = (
     "Provisional planning targets from the PRD, measured not guaranteed. The p95 bound has no "
     "ingest-specific PRD figure; it reuses the 2 s dashboard planning target as a placeholder."
 )
 
-SCENARIOS = ("baseline_skew", "hot_key", "fan_out", "multi_domain", "otlp_traces")
+SCENARIOS = (
+    "baseline_skew",
+    "hot_key",
+    "fan_out",
+    "multi_domain",
+    "otlp_traces",
+    "otlp_metrics",
+)
 
 
 @dataclass(frozen=True)
@@ -63,11 +73,12 @@ class Profile:
     scenario_weights: MappingProxyType[str, int] = field(
         default_factory=lambda: MappingProxyType(
             {
-                "baseline_skew": 60,
+                "baseline_skew": 55,
                 "hot_key": 10,
                 "fan_out": 10,
                 "multi_domain": 10,
                 "otlp_traces": 10,
+                "otlp_metrics": 5,
             }
         )
     )

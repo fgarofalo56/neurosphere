@@ -3,5 +3,5 @@
 # pytest session. The suite runs it as an isolated subprocess:
 #   uv run --isolated --no-project --with-requirements tests/load/profiles/requirements.txt \
 #       locust -f tests/load/profiles/locustfile.py --headless ...
-# Licence: locust is MIT. An ADR-0002 row is a follow-up (see README.md).
+# Licence: locust is MIT (ADR-0002 row).
 locust==2.47.0
