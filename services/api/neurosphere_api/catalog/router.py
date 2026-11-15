@@ -64,6 +64,7 @@ from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz import require
+from neurosphere_api.authz.read_audit import ReadAudit, audited_read
 from neurosphere_api.catalog.curation.router import audit_correlation_id
 from neurosphere_api.catalog.dependencies import (
     EntityAccess,
@@ -112,6 +113,8 @@ MAX_LIMIT: Final = 500
 ReadAccess = Annotated[EntityAccess, Depends(entity_access(Permission.DATA_READ))]
 CurateAccess = Annotated[EntityAccess, Depends(entity_access(Permission.CATALOG_CURATE))]
 ReadScope = Annotated[IdentityScope, Depends(require(Permission.DATA_READ))]
+#: ``data.read`` plus the allowed-read audit (PRP-48 item 4, #69).
+SearchAudit = Annotated[ReadAudit, Depends(audited_read(Permission.DATA_READ, "catalog.search"))]
 CurateScope = Annotated[IdentityScope, Depends(require(Permission.CATALOG_CURATE))]
 ExportScope = Annotated[IdentityScope, Depends(require(Permission.DATA_EXPORT))]
 Service = Annotated[CatalogService, Depends(get_service)]
@@ -258,9 +261,16 @@ def build_router() -> APIRouter:
     # ------------------------------------------------------------------ search / lineage
 
     @router.post("/search", response_model=GraphResult)
-    async def search(body: GraphSearchRequest, scope: ReadScope, graph: Graph) -> GraphResult:
+    async def search(body: GraphSearchRequest, audit: SearchAudit, graph: Graph) -> GraphResult:
         request = body.model_copy(update={"budget": clamp_budget(body.budget)})
-        return await graph.search(scope, request)
+        result = await graph.search(audit.scope, request)
+        # Allowed-read audit (PRP-48 item 4): the in-scope domains searched and the result
+        # count, never the term. Requested ids outside the scope were never read: not recorded.
+        readable = audit.scope.allowed_domains
+        requested = request.filters.domain_ids
+        searched = [d for d in requested if d in readable] if requested else readable
+        await audit.allowed(searched, len(result.nodes))
+        return result
 
     @router.post("/lineage/neighbors", response_model=GraphResult)
     async def neighbors(

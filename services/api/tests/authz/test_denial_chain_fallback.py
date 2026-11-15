@@ -17,6 +17,7 @@ from neurosphere_api.actions.emergency import control_chain_id
 from neurosphere_api.admin.identity.plane import identity_admin_chain
 from neurosphere_api.audit.access import DENIALS_CHAIN_NAME
 from neurosphere_api.authz import domain_from_path, require
+from neurosphere_api.authz.read_audit import read_audit_chain_id
 from neurosphere_api.deploy.scan.audit import audit_chain as deploy_chain_id
 from neurosphere_api.gateway.service import audit_chain_id as gateway_chain_id
 from neurosphere_api.mcp.admin.service import audit_chain_id as mcp_admin_chain_id
@@ -61,6 +62,7 @@ def test_reserved_names_are_pinned_to_the_chain_constants() -> None:
             deploy_chain_id(CUSTOMER),
             mcp_admin_chain_id(CUSTOMER),
             admin_config_chain_id(CUSTOMER),
+            read_audit_chain_id(CUSTOMER),
             identity_admin_chain(CUSTOMER),
         )
     }

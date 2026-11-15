@@ -90,8 +90,8 @@ CATALOG_SOURCE: Final = "catalog"
 #: not use one (its chain would be the customer-level chain). Pinned by tests against the
 #: constants that name each chain: the denial recorder (``authz-denials``), the APIM gateway
 #: registry (``gateway``), the execution kill switch (``execution-control``), deploy scan/plan
-#: (``deploy``), MCP administration (``mcp-admin``), admin configuration (``admin-config``) and
-#: identity administration (``identity-admin``).
+#: (``deploy``), MCP administration (``mcp-admin``), admin configuration (``admin-config``),
+#: identity administration (``identity-admin``) and multi-domain allowed reads (``read-audit``).
 RESERVED_CHAIN_NAMES: Final = frozenset(
     {
         "authz-denials",
@@ -101,6 +101,7 @@ RESERVED_CHAIN_NAMES: Final = frozenset(
         "mcp-admin",
         "admin-config",
         "identity-admin",
+        "read-audit",
     }
 )
 #: First character of the source-qualified remainder; never the first character of a catalog name.

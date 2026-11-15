@@ -35,9 +35,9 @@ from neurosphere_core.aggregates import (
 )
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError, NeuroSphereError
-from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import domain_from_path, require
+from neurosphere_api.authz import domain_from_path
+from neurosphere_api.authz.read_audit import ReadAudit, audited_read
 from neurosphere_api.dashboards.analytics import AnalyticsProbe, resolve_analytics
 from neurosphere_api.dashboards.dependencies import (
     Clock,
@@ -60,8 +60,10 @@ __all__ = ["PREFIX", "SERVER_TIMING", "build_router", "register"]
 PREFIX: Final = "/api/v1/dashboards"
 SERVER_TIMING: Final = "Server-Timing"
 
-ReadScope = Annotated[
-    IdentityScope, Depends(require(Permission.DATA_READ, domain_from_path("domain")))
+#: ``data.read`` on ``{domain}`` plus the allowed-read audit (PRP-48 item 4, #69).
+ReadAuditDep = Annotated[
+    ReadAudit,
+    Depends(audited_read(Permission.DATA_READ, "dashboard.read", domain_from_path("domain"))),
 ]
 Reader = Annotated[AggregateReader, Depends(get_aggregate_reader)]
 Probe = Annotated[AnalyticsProbe, Depends(get_analytics_probe)]
@@ -99,7 +101,7 @@ def build_router() -> APIRouter:
     async def get_dashboard(
         domain: DomainPath,
         metric: MetricName,
-        scope: ReadScope,
+        audit: ReadAuditDep,
         reader: Reader,
         probe: Probe,
         clock: Now,
@@ -115,7 +117,7 @@ def build_router() -> APIRouter:
         step = timedelta(days=1) if grain == "day" else timedelta(hours=1)
         end = bucket_start(clock(), grain) + step
         window = AggregateWindow(start=end - timedelta(days=days), end=end)
-        customer_id = scope.customer_id  # derived scope only; never a request value
+        customer_id = audit.scope.customer_id  # derived scope only; never a request value
         try:
             result = await reader.query(
                 customer_id,
@@ -136,6 +138,8 @@ def build_router() -> APIRouter:
         lag = status.lag_seconds(clock()) if status is not None else None
         mapped = map_result(metric, result)
         analytics = await resolve_analytics(probe, lag)
+        # Allowed-read audit (PRP-48 item 4): domain and series count only, never the data.
+        await audit.allowed([domain], len(mapped.series))
         return DashboardResponse(
             metric=metric,
             domain_id=domain,

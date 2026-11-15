@@ -28,6 +28,7 @@ def test_reserved_set_is_exact() -> None:
                 "mcp-admin",
                 "admin-config",
                 "identity-admin",
+                "read-audit",
             }
         )
         == RESERVED_CHAIN_NAMES
