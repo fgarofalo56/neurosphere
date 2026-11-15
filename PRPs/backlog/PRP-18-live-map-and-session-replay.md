@@ -217,7 +217,7 @@ No data or schema migration: the bulk call is additive and read-only. Rollback i
 | 1 | merged | prp-18-round2-map-edge-batching | EdgesAmongQuery + RepositoryGraphQuery.edges_among, 7 tests |
 | 2 | merged | prp-18-round2-map-edge-batching | guard + generic gap text + unique badge keys |
 | 3 | merged | prp-18-round2-map-edge-batching | pump cadence + slow consumer, 1011, token-text tests |
-| 4 | todo | | |
+| 4 | merged | prp-18-round2-map-edge-batching | service bulk call, revoke delta guard, map-table focus, mock 404 problem+json, e2e |
 | 5 | todo | | |
 
 ## Completion note (filled at ship)

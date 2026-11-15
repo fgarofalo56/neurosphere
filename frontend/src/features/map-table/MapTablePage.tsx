@@ -32,6 +32,7 @@ import { ForbiddenState } from "../workspaces/ForbiddenState";
 import {
   COLUMN_COUNT,
   GridContext,
+  rowKeyOf,
   SectionRows,
   type GridContextValue,
   type SectionData,
@@ -193,6 +194,22 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
     return false;
   }, []);
 
+  const focusInGrid = useCallback((): boolean => {
+    const active = document.activeElement;
+    return (
+      active === null || active === document.body || gridRef.current?.contains(active) === true
+    );
+  }, []);
+
+  // A stale active key (its row was collapsed away) must not leave the grid with no tabbable row.
+  const liveActiveKey = useMemo(() => {
+    if (activeKey === null) return null;
+    for (const [section, data] of sections) {
+      if (data.nodes.some((n) => rowKeyOf(section, n) === activeKey)) return activeKey;
+    }
+    return null;
+  }, [activeKey, sections]);
+
   const ctx = useMemo<GridContextValue>(() => {
     const expand = (key: string, node: ViewportNode): void => {
       setExpanded((prev) => new Set(prev).add(key));
@@ -208,7 +225,7 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
     };
     return {
       domainId,
-      activeKey,
+      activeKey: liveActiveKey,
       selectedKey: selected?.key ?? null,
       expanded,
       setActive: setActiveKey,
@@ -216,6 +233,7 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
       collapse,
       report,
       focusRow,
+      focusInGrid,
       activate: (key, node) => {
         setActiveKey(key);
         setSelected({ key, node });
@@ -225,7 +243,7 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
         }
       },
     };
-  }, [domainId, activeKey, selected, expanded, report, focusRow]);
+  }, [domainId, activeKey, liveActiveKey, selected, expanded, report, focusRow, focusInGrid]);
 
   const edges = useMemo(() => {
     const seen = new Map<string, ViewportEdge>();

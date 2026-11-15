@@ -1035,6 +1035,21 @@ describe("MapView", () => {
     expect(screen.queryByTestId("truncation-banner")).toBeNull();
   });
 
+  it("ignores deltas that arrive after a 4403 revoke: the graph stays empty", async () => {
+    const sched = manualScheduler();
+    await mount({}, 200, sched.scheduler);
+    const socket = await goLive();
+    expect(screen.getByTestId("node-count")).toHaveTextContent("4 nodes");
+
+    act(() => socket.drop(4403));
+    await waitFor(() => expect(screen.getByTestId("access-revoked")).toBeInTheDocument());
+    act(() => socket.receive(liveDelta(5, "complete")));
+    act(() => socket.receive(liveDelta(6, "complete")));
+    expect(screen.getByTestId("node-count")).toHaveTextContent("0 nodes, 0 edges");
+    expect(screen.getByTestId("map-canvas")).toHaveAttribute("data-node-count", "0");
+    expect(screen.queryByTestId("coverage-label")).toBeNull();
+  });
+
   it.each([
     ["delayed", "Edge animation paused: data delayed", 120],
     ["unknown", "Edge animation paused: coverage unknown", null],

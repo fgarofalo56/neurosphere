@@ -206,6 +206,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
   const onDelta = useCallback(
     (delta: DeltaMessage) => {
+      if (revokedRef.current) return; // a delta racing the 4403 close must not re-add nodes
       mapGraph.applyDelta(delta.nodes, delta.edges);
       setLiveCoverage(delta.coverage);
       bump();

@@ -61,6 +61,8 @@ export function useLiveUpdates(
   const [status, setStatus] = useState<LiveStatus>("connecting");
   const [lastErrorCode, setLastErrorCode] = useState<string | null>(null);
   const onDeltaRef = useRef(onDelta);
+  // Set synchronously on the revoke close so a delta racing the close can never reach the map.
+  const revokedRef = useRef(false);
   onDeltaRef.current = onDelta;
   const apiBaseUrl = config?.apiBaseUrl ?? null;
 
@@ -71,12 +73,18 @@ export function useLiveUpdates(
       return;
     }
     setLastErrorCode(null);
+    revokedRef.current = false;
     const client = createLiveClient({
       url: realtimeUrl(apiBaseUrl),
       domainId,
       getToken,
-      onStatus: setStatus,
-      onDelta: (delta) => onDeltaRef.current(delta),
+      onStatus: (next) => {
+        if (next === "revoked") revokedRef.current = true;
+        setStatus(next);
+      },
+      onDelta: (delta) => {
+        if (!revokedRef.current) onDeltaRef.current(delta);
+      },
       onError: setLastErrorCode,
     });
     client.start();
