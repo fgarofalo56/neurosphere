@@ -35,6 +35,11 @@ from neurosphere_api.authz.dependencies import (
     require_role,
     resource_from_path,
 )
+from neurosphere_api.authz.deployment_scope import (
+    CUSTOMER_SCOPE_REQUIRED,
+    DEPLOYMENT_ADMIN_MARKER,
+    require_deployment_admin,
+)
 from neurosphere_api.authz.recorder import SAFE_METHODS, DenialRecorder, DeniedAttempt
 from neurosphere_api.authz.routes import (
     PRODUCER_AUTHENTICATED_PATHS,
@@ -57,7 +62,9 @@ from neurosphere_api.authz.state import (
 
 __all__ = [
     "AUDIT_PERMISSIONS",
+    "CUSTOMER_SCOPE_REQUIRED",
     "DEFAULT_AUTHZ_TIMEOUT_SECONDS",
+    "DEPLOYMENT_ADMIN_MARKER",
     "PERMISSION_MARKER",
     "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
@@ -87,6 +94,7 @@ __all__ = [
     "holds_role",
     "public_paths_for",
     "require",
+    "require_deployment_admin",
     "require_role",
     "resource_from_path",
     "route_inventory",

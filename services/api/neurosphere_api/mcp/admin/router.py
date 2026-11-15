@@ -11,7 +11,9 @@
 | POST   | ``/servers/{server_id}/tools/{tool}/approval`` (``If-Match``) | ``config.manage`` |
 | DELETE | ``/servers/{server_id}/tools/{tool}/approval`` (``If-Match``) | ``config.manage`` |
 
-Every route requires ``config.manage`` on the server side (held in any domain; the same precedent
+Every route requires the deployment-scoped ``config.manage`` on the server side
+(``require_deployment_admin``, PRP-48 item 3, #114: held on the customer's reserved control
+domain; ``config.manage`` in an ordinary domain is 403 ``customer_scope_required``, the same check
 as the action kill switch and the discovery scan); hiding the navigation item is cosmetic. A new
 or changed tool stays disabled until an administrator approves the exact hash they reviewed.
 Until :func:`configure_mcp_admin` ran, routes fail closed with 503.
@@ -27,7 +29,7 @@ from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import require
+from neurosphere_api.authz.deployment_scope import require_deployment_admin
 from neurosphere_api.mcp.admin.models import (
     ApproveToolBody,
     RegisterServerBody,
@@ -50,7 +52,9 @@ PREFIX: Final = "/api/v1/mcp/admin"
 STATE_ATTRIBUTE: Final = "mcp_admin"
 DEFAULT_REVOKE_REASON: Final = "revoked_by_administrator"
 
-ConfigScope = Annotated[IdentityScope, Depends(require(Permission.CONFIG_MANAGE))]
+#: Deployment-scoped ``config.manage`` (PRP-48 item 3, #114): the MCP server registry serves the
+#: whole deployment, so ``config.manage`` in one ordinary domain is not enough.
+ConfigScope = Annotated[IdentityScope, Depends(require_deployment_admin(Permission.CONFIG_MANAGE))]
 ServerPath = Annotated[str, Path(pattern=r"^mcp-[0-9a-f]{32}$")]
 ToolPath = Annotated[str, Path(pattern=r"^[A-Za-z0-9_.-]{1,128}$")]
 IfMatch = Annotated[str, Header(alias="If-Match", min_length=1, max_length=300)]

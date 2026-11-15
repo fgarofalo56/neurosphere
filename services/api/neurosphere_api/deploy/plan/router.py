@@ -1,9 +1,10 @@
 """Thin HTTP handler for the deployment planner. Logic lives in :mod:`planner`.
 
-``POST /api/v1/deploy/plan`` (deprecated alias ``/v1/deploy/plan``) is gated by
-``config.manage``. The scan input is a server-side ``scan_id`` issued to the same caller by the
-scan service (preferred), or a scan result in the request body (validated fallback). The planner
-itself makes no ARM or HTTP call. Scan-id misuse fails closed: another caller's id is
+``POST /api/v1/deploy/plan`` (deprecated alias ``/v1/deploy/plan``) is gated by the
+deployment-scoped ``config.manage`` (``require_deployment_admin``, PRP-48 item 3, #114). The
+scan input is a server-side ``scan_id`` issued to the same caller by the scan service
+(preferred), or a scan result in the request body (validated fallback). The planner itself
+makes no ARM or HTTP call. Scan-id misuse fails closed: another caller's id is
 ``forbidden``, an unknown or expired id is a typed ``invalid_schema`` (``scan_not_found`` /
 ``scan_expired``). Every plan, and every consent decision it evaluates, is audited.
 """
@@ -18,7 +19,7 @@ from neurosphere_core.capabilities import CapabilityMatrix
 from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError, NeuroSphereError
 from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import require
+from neurosphere_api.authz.deployment_scope import require_deployment_admin
 from neurosphere_api.deploy.plan.models import PlanRequest, PlanResponse
 from neurosphere_api.deploy.plan.planner import build_plan, to_manifest
 from neurosphere_api.deploy.scan import ScanResponse, ScanService
@@ -105,7 +106,9 @@ def build_router(matrix: CapabilityMatrix | None = None) -> APIRouter:
     async def plan(
         body: PlanRequest,
         request: Request,
-        scope: Annotated[IdentityScope, Depends(require(Permission.CONFIG_MANAGE))],
+        scope: Annotated[
+            IdentityScope, Depends(require_deployment_admin(Permission.CONFIG_MANAGE))
+        ],
     ) -> PlanResponse:
         auditor = auditor_for(request, scope)  # fails closed when audit is not configured
         try:

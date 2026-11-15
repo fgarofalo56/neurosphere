@@ -37,9 +37,10 @@ from neurosphere_api.deploy.scan import (
     build_router as build_scan_router,
 )
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
-from neurosphere_core.auth.scope import Role
+from neurosphere_core.auth.scope import Role, customer_control_domain_id
 from neurosphere_core.capabilities import DeploymentProfile
 
+CONTROL = customer_control_domain_id("commercial", "contoso")
 SUB_A = "aaaaaaaa-0000-4000-8000-000000000001"
 SUB_B = "bbbbbbbb-0000-4000-8000-000000000002"
 SUB_C = "cccccccc-0000-4000-8000-000000000003"
@@ -85,7 +86,12 @@ class MockResourceGraph:
 @pytest.fixture
 def stack() -> tuple[Harness, MockResourceGraph]:
     h = harness(
-        policy(BOB, role(Role.ADMIN, FINANCE)),
+        # Deployment-scoped admin (PRP-48 item 3): config.manage on the control domain.
+        policy(
+            BOB,
+            role(Role.ADMIN, FINANCE, CONTROL),
+            memberships=(FINANCE, CONTROL),
+        ),
         routers={"/v1/deploy/scan": build_scan_router(), "/v1/deploy/plan": build_plan_router()},
     )
     h.app.state.audit_repository = AuditRepository(InMemoryAuditStore())

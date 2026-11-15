@@ -140,3 +140,13 @@ def test_prp65_permissions_stay_on_their_one_privileged_role() -> None:
     for role, permissions in ROLE_PERMISSIONS.items():
         if role not in (Role.ADMIN, Role.SECURITY_AUDITOR):
             assert not {Permission.AUDIT_EXPORT, Permission.LIFECYCLE_MANAGE} & permissions
+
+
+def test_ordinary_domain_admin_is_never_deployment_scoped(ro_world: World) -> None:
+    """PRP-48 item 3 (#114): Admin in an ordinary domain holds no deployment-wide authority."""
+    from neurosphere_core.auth.scope import permits_customer_wide
+
+    scope = ro_world["contoso"].scope(ADMIN_C_FIN)
+    now = ro_world.clock.dt()
+    for permission in (Permission.CONFIG_MANAGE, Permission.POLICY_MANAGE):
+        assert permits_customer_wide(scope, permission, now=now) is False
