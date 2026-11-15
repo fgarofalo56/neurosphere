@@ -297,7 +297,10 @@ describe("last selected domain is removed when the account disappears", () => {
 
   it.each([
     ["sign-out in this tab", EventType.LOGOUT_SUCCESS],
-    ["sign-out in another tab (active account changed through the shared cache)", EventType.ACTIVE_ACCOUNT_CHANGED],
+    [
+      "sign-out in another tab (active account changed through the shared cache)",
+      EventType.ACTIVE_ACCOUNT_CHANGED,
+    ],
   ])("removes the stored key after %s", async (_name, eventType) => {
     const account = newAccount();
     const userKey = await pseudonymousUserKey(account.homeAccountId);

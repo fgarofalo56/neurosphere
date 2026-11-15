@@ -14,8 +14,6 @@ export const STRINGS = {
   intro:
     "Agent topology for one domain. Pseudonyms are shown exactly as served. This view is read-only.",
   domainRequired: "Choose a domain to view its map.",
-  domainLabel: "Domain",
-  domainSubmit: "Show map",
   loading: "Loading map...",
   mapRegionName: "Agent topology map (WebGL graphic). The table view is the accessible equivalent.",
   viewAsTable: "View as table",

@@ -244,9 +244,9 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. The human accessibility sign
 | 2 | merged | prp-47-shell-test-infra | comment + tests |
 | 3 | merged | prp-47-shell-test-infra | onUnhandledFrame + afterEach rethrow, CI retry 1; flakes not reproducible locally (20x30 pass), hardened map-table focus polls and approve click |
 | 4 | merged | prp-47-shell-test-infra | demo positive control, real config, import.meta.dirname |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 5 | merged | prp-47-shell-test-infra | paths.ts x3, overview imports, createElement scan, import.meta.dirname anchor (import.meta.url is a jsdom URL), TILE_PERMISSION test; no __fixtures__ UI (actions has one JSON) |
+| 6 | merged | prp-47-shell-test-infra | Finance holds catalog.curate; catalog.spec negative test now revokes on the wire (one file outside Ownership, test-only) |
+| 7 | merged | prp-47-shell-test-infra | PRP-18 shipped; removed domainLabel and domainSubmit from map/strings.ts |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
