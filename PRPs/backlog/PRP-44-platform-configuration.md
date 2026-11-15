@@ -233,13 +233,13 @@ Budget evaluation, alerts or notifications; fetching or scraping prices; a price
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-44-platform-config | core `admin/platform` (domains, budgets, price sheet, review policy, loadable registry, merge) |
+| 2 | merged | prp-44-platform-config | domain and budget routes |
+| 3 | merged | prp-44-platform-config | price sheet and review policy routes; price_sheet metadata kept in `price_snapshots` only (see deviations) |
+| 4 | merged | prp-44-platform-config | builder; data.py publishes shared `REVIEW_POLICIES`, planes.py consumes it |
+| 5 | merged | prp-44-platform-config | worker `admin_platform` package, `price_table` parameter, `_hitl_service` loads stored policy |
+| 6 | in-progress | prp-44-platform-config | identity domain check and authz/secrecy suites done; `[serial-after: PRP-48]` reserved-chain call waits (local reserved-name set used meanwhile) |
+| 7 | todo | | merge step: Tier-3 regeneration, changelog fragment, close-out, completion note |
 
 ## Completion note (filled at ship)
 - Date and PR:
