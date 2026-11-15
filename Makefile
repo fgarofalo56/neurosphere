@@ -60,9 +60,11 @@ docs: ## Build the docs site (available after PRP-25)
 clean: ## Remove local build artefacts
 	rm -rf .pytest_cache .ruff_cache .venv node_modules frontend/dist temp/*
 
-# Order (PRP-38 item 1, #205): the worker principal needs its domain grants BEFORE the app profile
-# starts, or the evaluation role stays unhealthy and `up --wait` aborts. Real stack (PRP-29 item 11): api + workers + frontend on the compose emulators, then the host
-# seed. Needs NS_ENTRA_TENANT_ID / NS_ENTRA_CLIENT_ID exported (never committed; see
+# Real stack (PRP-29 item 11): api + workers + frontend on the compose emulators, then the host
+# seed. Order (PRP-38 item 1, #205): the worker principal needs its domain grants BEFORE the app
+# profile starts, or the evaluation role stays unhealthy and `up --wait` aborts, so the grants-only
+# seed runs first and the full seed after the app is up (it is idempotent).
+# Needs NS_ENTRA_TENANT_ID / NS_ENTRA_CLIENT_ID exported (never committed; see
 # docs/dev/local-setup.md "Real stack"). The seed runs from the host against 127.0.0.1 because
 # sbx_guard accepts loopback hosts only; it must use the same tenant and worker object id as the
 # compose workers, so both get STACK_WORKER_OID (its default equals docker-compose.yml's; a test
