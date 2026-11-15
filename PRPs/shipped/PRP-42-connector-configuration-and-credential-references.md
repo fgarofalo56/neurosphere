@@ -1,6 +1,8 @@
 ---
 name: PRP-42-connector-configuration-and-credential-references
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 293
 priority: P0
 order: 30
 review: required
@@ -32,15 +34,15 @@ Out of scope: the producer registry and generated producer secrets (PRP-41); the
 - Gateway registrations already live in a Cosmos registry (`POST /domains/{d}/gateways`, `services/api/neurosphere_api/gateway/router.py:205`); `gateway_poll` only picks domains from it (`factories.py:1130-1136`).
 
 ## Acceptance criteria
-- [ ] Given customer-level `config.manage`, When an admin `POST`s a `ConnectorConfig` of kind `gateway_poll`, `foundry_discovery`, `billing_export` or `otel`, Then it is validated by the SAME settings class the worker uses (a value the worker would refuse is a 422 with the field pointer and no stored document), stored as an `admin_config` document of kind `connector_config`, audited, and returned with an `ETag`.
-- [ ] Given a request body carrying any secret-looking field, an `https` URL with userinfo or a query string, a Key Vault URI of another cloud, or a `settings` value that is not a bounded scalar, Then it is 422 and nothing is stored; a `CredentialReference` of kind `key_vault_secret` must use the deployment cloud's vault suffix, compared as DNS labels with a leading dot.
-- [ ] Given a stored enabled `gateway_poll` or `billing_export` config whose `credential` is a Key Vault reference, When the worker role starts, Then it builds its settings from the stored fields, reads the producer secret from Key Vault through the workload identity (REST, no new dependency), and posts to ingest with it; env values for the same kind are ignored when a stored config exists (stored wins, A1).
-- [ ] Given no stored config for a kind, a store read failure, or `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env`, Then the role behaves exactly as today (existing `services/workers/tests/{gateway_poll,billing_export_role,foundry_discovery_role,worker_roles}` pass unchanged); a store failure is one structured log line with a reason code, never a startup failure.
-- [ ] Given a stored config with `enabled=false`, Then the role idles with an info log and does not fall back to env for that kind; given a Key Vault read failure (403, 404, timeout), Then the role fails with `RoleConfigError("connector_credential_unavailable")` and no URI or secret in any message.
-- [ ] Given a config naming `producer_id`, Then creation checks the admin store: a producer that exists with the wrong cloud, a missing source id or the wrong source kind (`gateway` for polling, `billing` for billing export) is 422; a producer absent from the store (file-based) is accepted and the response lists `producer_not_in_store` under `warnings`.
-- [ ] The role-specific Government guards are unchanged: `billing_export` in Government fails `billing_export_cloud_unsupported`, gateway metrics are skipped in Government, and a stored value cannot widen them.
-- [ ] No response, log line, audit payload or exception contains a secret value; `secret_uri` is never logged (CodeQL secret-name rule, PRP-37/PRP-65 gotcha); callers without customer-level `config.manage` get 403 and a denial record on every route.
-- [ ] The routes are in the route inventories and boot under `verify_route_permissions`; `docs/runbooks/connector-config.md` explains create, the Key Vault role assignment the operator must make (Key Vault Secrets User for the worker identity), restart-to-apply, and the env fallback.
+- [x] Given customer-level `config.manage`, When an admin `POST`s a `ConnectorConfig` of kind `gateway_poll`, `foundry_discovery`, `billing_export` or `otel`, Then it is validated by the SAME settings class the worker uses (a value the worker would refuse is a 422 with the field pointer and no stored document), stored as an `admin_config` document of kind `connector_config`, audited, and returned with an `ETag`.
+- [x] Given a request body carrying any secret-looking field, an `https` URL with userinfo or a query string, a Key Vault URI of another cloud, or a `settings` value that is not a bounded scalar, Then it is 422 and nothing is stored; a `CredentialReference` of kind `key_vault_secret` must use the deployment cloud's vault suffix, compared as DNS labels with a leading dot.
+- [x] Given a stored enabled `gateway_poll` or `billing_export` config whose `credential` is a Key Vault reference, When the worker role starts, Then it builds its settings from the stored fields, reads the producer secret from Key Vault through the workload identity (REST, no new dependency), and posts to ingest with it; env values for the same kind are ignored when a stored config exists (stored wins, A1).
+- [x] Given no stored config for a kind, a store read failure, or `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env`, Then the role behaves exactly as today (existing `services/workers/tests/{gateway_poll,billing_export_role,foundry_discovery_role,worker_roles}` pass unchanged); a store failure is one structured log line with a reason code, never a startup failure.
+- [x] Given a stored config with `enabled=false`, Then the role idles with an info log and does not fall back to env for that kind; given a Key Vault read failure (403, 404, timeout), Then the role fails with `RoleConfigError("connector_credential_unavailable")` and no URI or secret in any message.
+- [x] Given a config naming `producer_id`, Then creation checks the admin store: a producer that exists with the wrong cloud, a missing source id or the wrong source kind (`gateway` for polling, `billing` for billing export) is 422; a producer absent from the store (file-based) is accepted and the response lists `producer_not_in_store` under `warnings`.
+- [x] The role-specific Government guards are unchanged: `billing_export` in Government fails `billing_export_cloud_unsupported`, gateway metrics are skipped in Government, and a stored value cannot widen them.
+- [x] No response, log line, audit payload or exception contains a secret value; `secret_uri` is never logged (CodeQL secret-name rule, PRP-37/PRP-65 gotcha); callers without customer-level `config.manage` get 403 and a denial record on every route.
+- [x] The routes are in the route inventories and boot under `verify_route_permissions`; `docs/runbooks/connector-config.md` explains create, the Key Vault role assignment the operator must make (Key Vault Secrets User for the worker identity), restart-to-apply, and the env fallback.
 - PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green; `services/api/openapi.json` regenerated.
 
 ## Clarifications (decided)
@@ -224,13 +226,14 @@ A Key Vault client library dependency; secret creation or rotation in Key Vault;
 | 3 | merged | prp-42-connector-config | routes, service, models, router hook; 36 API tests |
 | 4 | merged | prp-42-connector-config | admin_connectors builder + factories use resolve_*; 40 worker tests, existing suites unchanged |
 | 5 | merged | prp-42-connector-config | authz + secrecy suites (tests/security/authz) pass |
-| 6 | in-progress | prp-42-connector-config | Tier-2 hooks, runbook, nav done; Tier-3 regen (openapi.json, docs/reference, status table, INDEX, changelog fragment), rebase and completion note left for merge step |
+| 6 | merged | prp-42-connector-config | Tier-2 hooks, runbook, nav done; Tier-3 regen (openapi.json, docs/reference, status table, INDEX, changelog fragment), rebase and completion note left for merge step |
+
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-15, PR #293 (branch prp-42-connector-config).
+- Deviations: ASSUMPTION rows 2, 4, 7 and 8 were taken as stated (REST Key Vault reader without a new dependency; gateways stay in the `gateways` container; OTel record stored and validated only; managed-identity client id applied to credentials this PRP builds). PRP-41 and PRP-42 both added `test_routes.py` under `services/api/tests/admin_*_api/`, which clash in one pytest session, so the connector suite files were renamed `test_connector_routes.py` and `test_connectors_builder.py`. `services/api/tests/runtime_api/test_readiness.py` is outside the declared Ownership and tier2_appends: the edit (adding `admin_connectors` to the two expected builder lists) is a required companion to the tier-2 registration in `runtime/builders/__init__.py`. It is not a Tier-1 change.
+- Descoped items: nothing consumes the OTel record (collector stays a compose profile); no hot reload (applies on restart, A1). No `[serial-after]` blueprint items existed.
+- OPEN gates: live Key Vault secret read with a real workload identity (and Government vault suffix) did not run; needs `NS_LIVE_APPROVED=1` and an approved environment. Hosted wiring of connector roles is PRP-58. Visual and e2e coverage: none (no UI in this PRP).
+- Env vars for the operator: `NS_WORKER_CONNECTOR_CONFIG_SOURCE` (`auto|env|store`, default `auto`), `NS_WORKER_CONNECTOR_CONFIG_TIMEOUT_SECONDS`. Not added to `.env.example` (agent-blocked). The worker identity needs Key Vault Secrets User on the vault (see `docs/runbooks/connector-config.md`).
+- Follow-up issues: reviewer follow-ups, to be filed. (1) `services/workers/neurosphere_workers/connector_config/` and `runtime/factories.py`: the new `assert not isinstance(poll, ConnectorIdle)` guards are production asserts that disappear under `python -O`; convert to an explicit branch or typed narrowing. (2) Console pages (PRP-57) and hosted role wiring (PRP-58) consume this API.
+- Product check (can an operator use it without editing files): API only. An operator can create, enable, disable and delete connector configs through the audited admin API without editing files, but there is no console page until PRP-57; raw API calls are needed until then.
