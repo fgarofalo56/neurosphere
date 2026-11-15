@@ -16,12 +16,35 @@ from pathlib import Path
 
 import pytest
 
-from .compose_pilot import run_pilot
+from .compose_pilot import (
+    ComposeApiUnavailableError,
+    require_compose_api,
+    run_pilot,
+    run_pilot_on_compose_api,
+)
 from .definitions import PILOT
 
 pytestmark = pytest.mark.integration
 
 SHORT_RUN_SECONDS = 20
+
+
+def test_pilot_on_compose_api_records_admission_honestly(tmp_path: Path) -> None:
+    """Targets the compose ``api`` container (profile app); skips cleanly when it is not up."""
+    try:
+        require_compose_api()
+    except ComposeApiUnavailableError as exc:
+        pytest.skip(str(exc))
+    code, path, tail = run_pilot_on_compose_api(tmp_path, duration_seconds=SHORT_RUN_SECONDS)
+    assert path is not None, f"no evidence written (locust exit {code}):\n{tail}"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert doc["environment_label"].startswith("compose (emulators), bounded feasibility")
+    assert doc["measured"]["requests"] > 0, tail
+    notes = doc["environment_notes"]
+    assert notes["admission_charges_ingest"] is False
+    assert notes["admission"].get("NS_ADMISSION_ENABLED") == "true"
+    assert any("OPEN" in line for line in doc["open"])
+    assert all(isinstance(row["passed"], bool) for row in doc["thresholds"])
 
 
 def test_pilot_run_writes_complete_evidence(tmp_path: Path) -> None:

@@ -1,6 +1,113 @@
 {
   "components": {
     "schemas": {
+      "AccessSummaryAssignment": {
+        "additionalProperties": false,
+        "description": "A stored role assignment. expires_at is null only for non-privileged roles.",
+        "properties": {
+          "assignment_id": {
+            "$ref": "#/components/schemas/RecordId"
+          },
+          "domain_ids": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalId"
+            },
+            "maxItems": 1024,
+            "minItems": 1,
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StoredReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "role",
+          "domain_ids",
+          "expires_at",
+          "reason"
+        ],
+        "title": "AccessSummaryAssignment",
+        "type": "object"
+      },
+      "AccessSummaryGrant": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+          },
+          "grant_id": {
+            "$ref": "#/components/schemas/RecordId"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/GrantPermission"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Permissions",
+            "type": "array"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/StoredReason"
+          },
+          "resource_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          }
+        },
+        "required": [
+          "grant_id",
+          "resource_id",
+          "permissions",
+          "expires_at",
+          "reason"
+        ],
+        "title": "AccessSummaryGrant",
+        "type": "object"
+      },
+      "AccessSummaryPrincipal": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "principal_kind": {
+            "enum": [
+              "user",
+              "service_principal"
+            ],
+            "title": "Principal Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_id",
+          "principal_kind"
+        ],
+        "title": "AccessSummaryPrincipal",
+        "type": "object"
+      },
       "ActionIntent": {
         "additionalProperties": false,
         "description": "Durable intent executed by the single action executor shared by button, chat, REST and MCP (PRP.md section 3, PRD NS-06). The intent binds actor, target, target_version, proposed_diff and confirmation expiry into confirmation_hash, defined field-by-field in ./confirmation-hash.json, so every channel computes the same value. Legal state changes are the allowlist in ./transitions.json; enforcement belongs to PRP-17. Rules JSON Schema cannot express are checked by Python validators in tests/contracts/test_action_transitions.py: `validate_confirmation_hash` (confirmation_hash equals the recomputed hash), `validate_state_transition` (every state change is an allowlisted (from, to) pair) and `validate_intent_timestamps` (created_at <= state_changed_at, and confirmation_expires_at > created_at).",
@@ -357,7 +464,7 @@
             ]
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "description": {
             "anyOf": [
@@ -495,7 +602,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -3019,7 +3126,7 @@
         "title": "Cursor",
         "type": "string"
       },
-      "CustomerId": {
+      "CustomerId-Input": {
         "maxLength": 128,
         "pattern": "^[a-z0-9._-]+$",
         "title": "CustomerId",
@@ -3603,7 +3710,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -3676,6 +3783,41 @@
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
         "title": "DomainId",
         "type": "string"
+      },
+      "DomainMembershipChange": {
+        "additionalProperties": false,
+        "description": "Request to add or remove one pseudonymous principal's membership of one domain (PRP-39 identity API). Maps onto PRP-06 PrincipalPolicy.domain_memberships. Membership alone grants no permission; roles and grants do.",
+        "properties": {
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "op": {
+            "enum": [
+              "add",
+              "remove"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "principal_id": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ReasonCode-Input"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "op",
+          "principal_id",
+          "domain_id",
+          "reason"
+        ],
+        "title": "DomainMembershipChange",
+        "type": "object"
       },
       "DomainSummary": {
         "additionalProperties": false,
@@ -4061,7 +4203,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/CustomerId-Input"
           },
           "decided_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -4196,7 +4338,7 @@
             "$ref": "#/components/schemas/Cloud"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "decided_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -6094,7 +6236,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -6192,6 +6334,17 @@
         ],
         "title": "Grant",
         "type": "object"
+      },
+      "GrantPermission": {
+        "enum": [
+          "read",
+          "export",
+          "propose_action",
+          "approve",
+          "execute"
+        ],
+        "title": "GrantPermission",
+        "type": "string"
       },
       "GrantPublishBody": {
         "additionalProperties": false,
@@ -6524,7 +6677,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -6869,7 +7022,7 @@
             "type": "string"
           },
           "reason_code": {
-            "$ref": "#/components/schemas/ReasonCode"
+            "$ref": "#/components/schemas/neurosphere_api__ingest__reasons__ReasonCode"
           }
         },
         "required": [
@@ -7865,7 +8018,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -8354,7 +8507,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "deployment_name": {
             "maxLength": 256,
@@ -9164,7 +9317,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "domain_id": {
             "anyOf": [
@@ -9841,7 +9994,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -10416,6 +10569,114 @@
         "title": "Principal",
         "type": "object"
       },
+      "PrincipalAccessSummary": {
+        "additionalProperties": false,
+        "description": "OUTPUT-ONLY. Everything one pseudonymous principal can do, as stored in the PRP-06 policy store, for the PRP-39 identity console: domain memberships, role assignments with expiry, resource-scoped grants and the current revocation state. It is a view of stored policy, not a derived IdentityScope, and is never accepted as input. No name, email, UPN or raw directory object id appears; re-identification is a policy-store concern.",
+        "properties": {
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/AccessSummaryAssignment"
+            },
+            "maxItems": 64,
+            "title": "Assignments",
+            "type": "array"
+          },
+          "cloud": {
+            "$ref": "#/components/schemas/Cloud"
+          },
+          "customer_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__CustomerId"
+          },
+          "generated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/AccessSummaryGrant"
+            },
+            "maxItems": 4096,
+            "title": "Grants",
+            "type": "array"
+          },
+          "memberships": {
+            "items": {
+              "$ref": "#/components/schemas/CanonicalId"
+            },
+            "maxItems": 1024,
+            "title": "Memberships",
+            "type": "array"
+          },
+          "policy_version": {
+            "pattern": "^[A-Za-z0-9._+-]{1,64}$",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "principal": {
+            "$ref": "#/components/schemas/AccessSummaryPrincipal"
+          },
+          "revocation": {
+            "$ref": "#/components/schemas/RevocationStatus"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "principal",
+          "customer_id",
+          "cloud",
+          "policy_version",
+          "memberships",
+          "assignments",
+          "grants",
+          "revocation",
+          "generated_at"
+        ],
+        "title": "PrincipalAccessSummary",
+        "type": "object"
+      },
+      "PrincipalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+        "title": "PrincipalId",
+        "type": "string"
+      },
+      "PrincipalPage": {
+        "additionalProperties": false,
+        "description": "One bounded page of principals the actor manages, ordered by principal id.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PrincipalAccessSummary"
+            },
+            "maxItems": 200,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PrincipalPage",
+        "type": "object"
+      },
       "ProductApiLink": {
         "additionalProperties": false,
         "properties": {
@@ -10834,28 +11095,8 @@
         "title": "Reason",
         "type": "string"
       },
-      "ReasonCode": {
-        "enum": [
-          "body_too_large",
-          "depth_exceeded",
-          "malformed_json",
-          "unsupported_media_type",
-          "invalid_envelope",
-          "claim_mismatch",
-          "cloud_mismatch",
-          "rate_limited",
-          "invalid_event",
-          "missing_time",
-          "invalid_trace_id",
-          "invalid_metric_value",
-          "invalid_cloudevent",
-          "unsupported_event_type",
-          "request_id_mismatch",
-          "invoiced_not_billing",
-          "unsupported_metric_type",
-          "unmapped_metric_name",
-          "unsupported_temporality"
-        ],
+      "ReasonCode-Input": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
         "title": "ReasonCode",
         "type": "string"
       },
@@ -11236,7 +11477,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -11377,6 +11618,11 @@
         "title": "ReconciliationResponse",
         "type": "object"
       },
+      "RecordId": {
+        "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+        "title": "RecordId",
+        "type": "string"
+      },
       "Reference": {
         "additionalProperties": false,
         "properties": {
@@ -11511,7 +11757,7 @@
             "type": "integer"
           },
           "reason_code": {
-            "$ref": "#/components/schemas/ReasonCode"
+            "$ref": "#/components/schemas/neurosphere_api__ingest__reasons__ReasonCode"
           }
         },
         "required": [
@@ -11870,6 +12116,50 @@
         "title": "ResetResult",
         "type": "object"
       },
+      "ResourceGrantChange": {
+        "additionalProperties": false,
+        "description": "Request to create or replace one custom resource-scoped grant for one pseudonymous principal (PRP-39 identity API). Maps onto PRP-06 PolicyGrant: one named resource, time-bound (expires_at always required) and reason-bearing. Removing a grant is a delete of grant_id on the route, not a body. Rules JSON Schema cannot express (expires_at is in the future) are enforced by the PRP-39 handler.",
+        "properties": {
+          "expires_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+          },
+          "grant_id": {
+            "$ref": "#/components/schemas/RecordId"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/GrantPermission"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Permissions",
+            "type": "array"
+          },
+          "principal_id": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ReasonCode-Input"
+          },
+          "resource_id": {
+            "$ref": "#/components/schemas/CanonicalId"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "principal_id",
+          "grant_id",
+          "resource_id",
+          "permissions",
+          "expires_at",
+          "reason"
+        ],
+        "title": "ResourceGrantChange",
+        "type": "object"
+      },
       "ResourceRef": {
         "maxLength": 1024,
         "minLength": 1,
@@ -12158,6 +12448,194 @@
         "title": "ReviewState",
         "type": "object"
       },
+      "RevocationRequest": {
+        "additionalProperties": false,
+        "description": "Request to revoke one principal's sessions (PRP-39; PRP-06 revocation service). The target principal is named by the route, never by this body. issued_before: deny every token issued at or before the revocation (plus clock skew); the principal may sign in again. until_lifted: deny every token until an operator lifts the revocation. Revocation is bounded by NS_REVOCATION_TTL_SECONDS, not instant.",
+        "properties": {
+          "mode": {
+            "enum": [
+              "issued_before",
+              "until_lifted"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ReasonCode-Input"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "reason",
+          "mode"
+        ],
+        "title": "RevocationRequest",
+        "type": "object"
+      },
+      "RevocationStatus": {
+        "additionalProperties": false,
+        "description": "OUTPUT-ONLY. Current revocation state of one principal (PRP-39; PRP-06 RevocationEntry). When revoked is false every revocation member is null. propagation_bound_seconds is the documented worst-case delay before every API replica denies (NS_REVOCATION_TTL_SECONDS); revocation is never claimed to be instant.",
+        "properties": {
+          "mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "issued_before",
+                  "until_lifted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "principal_id": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "propagation_bound_seconds": {
+            "maximum": 900.0,
+            "minimum": 1.0,
+            "title": "Propagation Bound Seconds",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrincipalId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "principal_id",
+          "revoked",
+          "mode",
+          "revoked_at",
+          "reason",
+          "revoked_by",
+          "propagation_bound_seconds"
+        ],
+        "title": "RevocationStatus",
+        "type": "object"
+      },
+      "Role": {
+        "enum": [
+          "viewer",
+          "analyst",
+          "domain_steward",
+          "admin",
+          "security_auditor"
+        ],
+        "title": "Role",
+        "type": "string"
+      },
+      "RoleAssignmentChange": {
+        "additionalProperties": false,
+        "description": "Request to assign or remove one domain-scoped role for one pseudonymous principal (PRP-39 identity API). Maps onto PRP-06 PolicyRoleAssignment: assign upserts the assignment with assignment_id, remove deletes it. Privileged roles (admin, security_auditor) must carry expires_at, as PolicyRoleAssignment requires; there is no tenant-wide, wildcard or permanent privileged form. The caller's identity and permission come from the server-derived IdentityScope, never from this body. Rules JSON Schema cannot express (expires_at is in the future) are enforced by the PRP-39 handler.",
+        "properties": {
+          "assignment_id": {
+            "$ref": "#/components/schemas/RecordId"
+          },
+          "domain_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DomainId"
+                },
+                "maxItems": 1024,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Ids"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "op": {
+            "enum": [
+              "assign",
+              "remove"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "principal_id": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ReasonCode-Input"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "op",
+          "principal_id",
+          "assignment_id",
+          "reason"
+        ],
+        "title": "RoleAssignmentChange",
+        "type": "object"
+      },
       "Rubric": {
         "additionalProperties": false,
         "properties": {
@@ -12235,7 +12713,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -12989,7 +13467,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -13756,6 +14234,12 @@
         ],
         "title": "StatusView",
         "type": "object"
+      },
+      "StoredReason": {
+        "maxLength": 512,
+        "minLength": 1,
+        "title": "StoredReason",
+        "type": "string"
       },
       "StructuredQuery": {
         "additionalProperties": false,
@@ -15552,6 +16036,31 @@
         "title": "Window",
         "type": "object"
       },
+      "neurosphere_api__ingest__reasons__ReasonCode": {
+        "enum": [
+          "body_too_large",
+          "depth_exceeded",
+          "malformed_json",
+          "unsupported_media_type",
+          "invalid_envelope",
+          "claim_mismatch",
+          "cloud_mismatch",
+          "rate_limited",
+          "invalid_event",
+          "missing_time",
+          "invalid_trace_id",
+          "invalid_metric_value",
+          "invalid_cloudevent",
+          "unsupported_event_type",
+          "request_id_mismatch",
+          "invoiced_not_billing",
+          "unsupported_metric_type",
+          "unmapped_metric_name",
+          "unsupported_temporality"
+        ],
+        "title": "ReasonCode",
+        "type": "string"
+      },
       "neurosphere_api__map__models__Coverage": {
         "additionalProperties": false,
         "properties": {
@@ -15752,6 +16261,21 @@
         "title": "TargetRef",
         "type": "object"
       },
+      "neurosphere_contracts__admin__v1__common__CustomerId": {
+        "pattern": "^[a-z0-9._-]{1,128}$",
+        "title": "CustomerId",
+        "type": "string"
+      },
+      "neurosphere_contracts__admin__v1__common__ReasonCode": {
+        "pattern": "^[a-z][a-z0-9_]{0,63}$",
+        "title": "ReasonCode",
+        "type": "string"
+      },
+      "neurosphere_contracts__admin__v1__common__Timestamp": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$",
+        "title": "Timestamp",
+        "type": "string"
+      },
       "neurosphere_contracts__audit__v1__audit_record__UtcTimestamp": {
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
         "title": "UtcTimestamp",
@@ -15761,6 +16285,12 @@
         "maxLength": 2000,
         "minLength": 1,
         "title": "Description",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__common__CustomerId": {
+        "maxLength": 128,
+        "pattern": "^[a-z0-9._-]+$",
+        "title": "CustomerId",
         "type": "string"
       },
       "neurosphere_contracts__catalog__v1__common__Date": {
@@ -15851,7 +16381,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "anyOf": [
@@ -15992,7 +16522,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
           },
           "customer_id": {
-            "$ref": "#/components/schemas/CustomerId"
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
             "$ref": "#/components/schemas/DisplayName"
@@ -16982,6 +17512,744 @@
         "summary": "Set Emergency Disable",
         "tags": [
           "actions"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals": {
+      "get": {
+        "operationId": "list_principals_api_v1_admin_identity_principals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Principals",
+        "tags": [
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals/{principal_id}": {
+      "get": {
+        "operationId": "get_principal_api_v1_admin_identity_principals__principal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Principal",
+        "tags": [
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}": {
+      "delete": {
+        "operationId": "delete_domain_membership_api_v1_admin_identity_principals__principal_id__domain_memberships__domain_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "removed_by_administrator",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Domain Membership",
+        "tags": [
+          "admin-identity"
+        ]
+      },
+      "put": {
+        "operationId": "put_domain_membership_api_v1_admin_identity_principals__principal_id__domain_memberships__domain_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DomainMembershipChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Domain Membership",
+        "tags": [
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals/{principal_id}/grants/{grant_id}": {
+      "delete": {
+        "operationId": "delete_grant_api_v1_admin_identity_principals__principal_id__grants__grant_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Grant",
+        "tags": [
+          "admin-identity"
+        ]
+      },
+      "put": {
+        "operationId": "put_grant_api_v1_admin_identity_principals__principal_id__grants__grant_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResourceGrantChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Grant",
+        "tags": [
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals/{principal_id}/revocation": {
+      "delete": {
+        "operationId": "lift_revocation_api_v1_admin_identity_principals__principal_id__revocation_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "lifted_by_administrator",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "title": "Reason",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lift Revocation",
+        "tags": [
+          "admin-identity",
+          "admin-identity"
+        ]
+      },
+      "get": {
+        "operationId": "get_revocation_api_v1_admin_identity_principals__principal_id__revocation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Revocation",
+        "tags": [
+          "admin-identity",
+          "admin-identity"
+        ]
+      },
+      "post": {
+        "operationId": "revoke_principal_api_v1_admin_identity_principals__principal_id__revocation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevocationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Principal",
+        "tags": [
+          "admin-identity",
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}": {
+      "delete": {
+        "operationId": "delete_role_assignment_api_v1_admin_identity_principals__principal_id__role_assignments__assignment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "default": "removed_by_administrator",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$",
+              "title": "Reason",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Role Assignment",
+        "tags": [
+          "admin-identity"
+        ]
+      },
+      "put": {
+        "operationId": "put_role_assignment_api_v1_admin_identity_principals__principal_id__role_assignments__assignment_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "principal_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]{1,128}:entra:(person|principal):p-[0-9a-f]{64}$",
+              "title": "Principal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9._:-]{1,128}$",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalAccessSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Role Assignment",
+        "tags": [
+          "admin-identity"
         ]
       }
     },

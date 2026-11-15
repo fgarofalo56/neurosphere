@@ -1,5 +1,10 @@
 """ASGI admission middleware factory (PRP-21 item 2).
 
+NOT used by ``neurosphere_api``: it requires an upstream component that puts the derived
+``IdentityScope`` in ``scope["state"]["identity_scope"]``, and the API derives the scope inside
+a FastAPI dependency, after ASGI middleware has run. The API charges the limiter from
+``authz.dependencies.require`` instead (PRP-21 round 2).
+
 The middleware never reads a domain from headers, query or body. It asks two injected
 callables: ``scope_of`` (the server-derived ``IdentityScope`` for this request, set by auth
 middleware upstream) and optionally ``route_domain_of`` (a domain resolved from the route, which

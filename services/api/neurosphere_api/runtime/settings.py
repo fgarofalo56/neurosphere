@@ -26,6 +26,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 __all__ = [
     "LOCAL_DEFAULT_CUSTOMER_ID",
+    "AdmissionSettings",
     "AuditSiemSettings",
     "AuthSettings",
     "CorsSettings",
@@ -116,6 +117,26 @@ class CorsSettings(BaseSettings):
     @classmethod
     def _exact(cls, value: tuple[str, ...]) -> tuple[str, ...]:
         return tuple(dict.fromkeys(_exact_origin(origin) for origin in value))
+
+
+class AdmissionSettings(BaseSettings):
+    """``NS_ADMISSION_ENABLED`` and ``NS_ADMISSION_POLICY_FILE`` (PRP-21 round 2).
+
+    Off by default. When enabled with no policy file the conservative default quota applies (and
+    a warning is logged); admission is never unlimited.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_ADMISSION_", frozen=True, extra="forbid")
+
+    enabled: bool = False
+    policy_file: Path | None = None
+
+    @field_validator("policy_file", mode="before")
+    @classmethod
+    def _blank_path_is_unset(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class AuditSiemSettings(BaseSettings):

@@ -148,6 +148,7 @@ class HitlService:
         now: datetime,
         correlation_id: str,
         action_kind: str | None = None,
+        item_id: str | None = None,
         intent_id: str | None = None,
         confirmation_hash: str | None = None,
         maker_principal_id: str | None = None,
@@ -157,12 +158,16 @@ class HitlService:
         scope_hash: str = SYSTEM_SCOPE_HASH,
         channel: Channel | None = "worker",
     ) -> ReviewItem:
-        """Create a ``pending`` item with deadlines computed from the resolved policy."""
+        """Create a ``pending`` item with deadlines computed from the resolved policy.
+
+        ``item_id`` (a UUID) lets a caller choose a deterministic id; the create-only store write
+        then turns a lost race into ``StaleVersionError`` (``review_item_exists``).
+        """
         policy = self._policies.resolve(kind, action_kind)
         try:
             item = ReviewItem.model_validate(
                 {
-                    "item_id": self._ids(),
+                    "item_id": item_id if item_id is not None else self._ids(),
                     "kind": kind,
                     "state": "pending",
                     "cloud": domain_id.split(":", 1)[0],

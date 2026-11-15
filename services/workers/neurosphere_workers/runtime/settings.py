@@ -112,6 +112,11 @@ class RecommendationSettings(BaseSettings):
     #: configured, so right-sizing produces nothing (pairings are configuration, never invented).
     pairs_file: Path | None = None
     interval_seconds: float = Field(default=3600.0, gt=0)
+    #: ``sandbox`` (default) reads ``data_dir``; ``archive`` reads the redacted archive and the
+    #: live catalog and needs no ``data_dir`` (PRP-15 round 2).
+    source: Literal["sandbox", "archive"] = "sandbox"
+    #: Archive window in complete UTC days ending today; unset = the longest rule lookback.
+    lookback_days: int | None = Field(default=None, ge=1, le=120)
 
 
 class EvalSettings(BaseSettings):

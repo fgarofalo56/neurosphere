@@ -5,8 +5,8 @@
 - Environment: sandbox in-memory ledger, synthetic data (sandbox generator seed 7, one synthetic
   month, October 2026, 2 domains). No production data, no network, no paid call.
 - Method: `linear_trend_ols` - an ordinary least squares line over complete daily totals of the
-  17 days before 2026-10-18, extrapolated 14 days. The uncertainty band is the normal-approximation
-  prediction interval (z = 1.96, about 95 %), clamped at 0. Estimated and invoiced cost are
+  17 days before 2026-10-18, extrapolated 14 days. The uncertainty band is the t-based
+  prediction interval (95 %, Student-t quantile for n - 2 degrees of freedom from a documented table, 1.96 as the large-sample limit; regenerated in PRP-21 round 2), clamped at 0. Estimated and invoiced cost are
   separate series and are never summed. Unknown stays `null` (`actual_status: "unknown"`), never 0.
 - Price version: the file cites the price version id (`sandbox-prices-2026-10`) of the estimated
   observations.

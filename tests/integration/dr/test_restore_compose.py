@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import socket
 
-import ns_dr_drill as drill  # pyright: ignore[reportMissingImports]
-import ns_dr_emulator  # pyright: ignore[reportMissingImports]
+import ns_dr_drill as drill
+import ns_dr_emulator
 import pytest
 
 pytestmark = pytest.mark.integration

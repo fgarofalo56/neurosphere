@@ -45,8 +45,10 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any, Final
 
+import httpx
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
@@ -74,14 +76,14 @@ from neurosphere_core.ledger import LedgerStore
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
 from neurosphere_core.recommendations import RecommendationStore
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
-from neurosphere_workers.federation import CellRef, CellRegistry
+from neurosphere_workers.federation import CellRef, CellRegistry, load_peers
 from neurosphere_workers.ingestion.wiring import LedgerSettings
 from neurosphere_workers.projections.outbox.reader import SINK_AGGREGATES, SINK_CATALOG
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from neurosphere_api.federation.cache import SummaryCache
-from neurosphere_api.federation.client import InProcessCellClient
+from neurosphere_api.federation.client import CellClient, HttpCellClient, InProcessCellClient
 from neurosphere_api.federation.service import FederationState, Federator
 from neurosphere_api.hitl.ports import RecheckerReviewerAuthorizer
 from neurosphere_api.map.dependencies import ViewportLimits
@@ -153,6 +155,18 @@ class FederationSettings(BaseSettings):
     #: Cells of other boundaries are never contacted; defaults to ``<cloud>-local``.
     boundary_id: str | None = None
     cache_ttl_seconds: float = 30.0
+    #: Ceiling for ``cache_ttl_seconds`` (the cache refuses a larger TTL; hard cap one hour).
+    cache_max_ttl_seconds: float = 300.0
+    #: JSON file of peer cells plus per-boundary ``allowed_hosts`` (see the admission-and-
+    #: federation runbook). Unset: this deployment is a single cell.
+    peers_file: Path | None = None
+
+    @field_validator("peers_file", mode="before")
+    @classmethod
+    def _blank_peers_file_is_unset(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
 
 class EvaluationSettings(BaseSettings):
@@ -270,23 +284,40 @@ def _federation(ctx: BuildContext) -> None:
             boundary_id=boundary,
             endpoint="https://local-cell.invalid/",
         )
-        registry = CellRegistry(cells=(cell,))
-        cache = SummaryCache(conf.cache_ttl_seconds)
-    except (ValidationError, ValueError):
+        peers = _load_peers(conf, cell)
+        registry = CellRegistry(cells=(cell, *peers))
+        cache = SummaryCache(conf.cache_ttl_seconds, max_ttl_seconds=conf.cache_max_ttl_seconds)
+    except (ValidationError, ValueError, OSError):
         raise ComponentUnavailableError("federation_settings_invalid") from None
-    client = InProcessCellClient(
-        authenticator=authenticator, scope_source=scope_source, reader=reader
-    )
+    clients: dict[str, CellClient] = {
+        cell.cell_id: InProcessCellClient(
+            authenticator=authenticator, scope_source=scope_source, reader=reader
+        )
+    }
+    if peers:
+        http = _backend(ctx, "federation_http_client", httpx.AsyncClient)
+        if http is None:
+            # One shared pool; redirects are never followed so the bearer is never re-sent.
+            http = httpx.AsyncClient(follow_redirects=False)
+            ctx.on_shutdown(http.aclose)
+        peer_client = HttpCellClient(http)
+        clients.update({peer.cell_id: peer_client for peer in peers})
     ctx.app.state.federation = FederationState(
         federator=Federator(
             serving_cloud=cell.cloud,
             boundary_id=boundary,
             registry=registry,
-            clients={cell.cell_id: client},
+            clients=clients,
         ),
         cache=cache,
         local_cell=cell,
     )
+
+
+def _load_peers(conf: FederationSettings, local: CellRef) -> tuple[CellRef, ...]:
+    if conf.peers_file is None:
+        return ()
+    return load_peers(conf.peers_file, serving_cloud=local.cloud, local_cell_id=local.cell_id)
 
 
 # -- evaluation, recommendations ------------------------------------------------------------

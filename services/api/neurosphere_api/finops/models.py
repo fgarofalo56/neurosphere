@@ -159,7 +159,7 @@ class ForecastMethod(_Model):
     name: Literal["linear_trend_ols"] = "linear_trend_ols"
     description: str
     confidence_level: str  # decimal string, e.g. "0.95"
-    z: str  # normal quantile used for the band, e.g. "1.96"
+    z: str  # large-sample normal limit of the band quantile ("1.96"); small samples use Student-t
     min_fit_points: int
     history_days: int
     horizon_days: int

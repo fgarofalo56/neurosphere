@@ -1,0 +1,2 @@
+### Added
+- PRP-39: audited identity admin API under `/api/v1/admin/identity` (list and detail principals, PUT/DELETE role assignments, domain memberships and resource-scoped grants with `If-Match`, scope, self-modification and customer-wide checks), principal revocation routes (POST, GET, DELETE) with `issued_before` and block-until-lifted (`until_lifted`) modes, a composed `RevocationService` with push fan-out, and the `docs/runbooks/identity-admin.md` runbook (PR #283).

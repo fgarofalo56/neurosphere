@@ -1,5 +1,10 @@
 """PRP-15 item 1: bounded rules engine (cost spike, latency, error rate, unused agent)."""
 
+from neurosphere_workers.recommendations.rules.archive_source import (
+    ArchiveLoadStats,
+    ArchiveSeriesSource,
+    window_ending,
+)
 from neurosphere_workers.recommendations.rules.config import (
     DEFAULT_RULES,
     CostSpikeConfig,
@@ -26,6 +31,8 @@ __all__ = [
     "AgentDay",
     "AgentSeries",
     "AgentSeriesSource",
+    "ArchiveLoadStats",
+    "ArchiveSeriesSource",
     "CostSpikeConfig",
     "ErrorRateConfig",
     "LatencyDegradationConfig",
@@ -37,4 +44,5 @@ __all__ = [
     "evaluate_rules",
     "recommendation_id",
     "recommendations",
+    "window_ending",
 ]

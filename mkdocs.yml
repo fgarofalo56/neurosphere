@@ -122,9 +122,11 @@ nav:
   - Runbooks:
       - runbooks/operations.md
       - runbooks/ingest.md
+      - runbooks/admission-and-federation.md
       - runbooks/ingest-cost-attribution.md
       - runbooks/lifecycle.md
       - runbooks/runtime-composition.md
+      - runbooks/identity-admin.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md

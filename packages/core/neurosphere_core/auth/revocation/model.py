@@ -17,6 +17,13 @@ minted by Entra a few seconds before the revocation whose ``iat`` reads later th
 errs toward denial. Tokens issued after that point are accepted again (the principal signed in
 anew; disabling the account itself is an Entra action).
 
+Modes (PRP-39): ``issued_before`` (the default, everything above) and ``until_lifted``, which
+denies EVERY token of the principal, including ones issued after the revocation, until an admin
+lifts it. A blocking entry carries no per-item ``ttl`` (it never silently expires); lifting turns
+it into an ``issued_before`` entry with the original ``revoked_at`` (tokens from before the block
+stay refused) plus ``lifted_at``/``lifted_by``, and retention restarts. Entries stored before
+PRP-39 have no ``mode`` and read as ``issued_before``.
+
 Retention: each entry carries a Cosmos per-item ``ttl`` of ``NS_REVOCATION_RETENTION_SECONDS``
 (default 48 h, minimum 28 h, the longest Entra access-token lifetime including CAE tokens). After
 that every token issued before the revocation has expired and is rejected on ``exp`` anyway.
@@ -38,7 +45,14 @@ import re
 from datetime import datetime
 from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -52,10 +66,13 @@ __all__ = [
     "REVOCATION_SCHEMA_VERSION",
     "ReasonCode",
     "RevocationEntry",
+    "RevocationMode",
     "RevocationSettings",
     "is_canonical_principal_id",
     "is_reason_code",
+    "lifted_entry",
     "load_revocation_settings",
+    "merge_entries",
     "revocation_document_id",
 ]
 
@@ -82,6 +99,9 @@ REASON_CODE_PATTERN: Final = r"^[a-z][a-z0-9_]{0,63}$"
 _REASON_CODE_RE: Final = re.compile(REASON_CODE_PATTERN)
 ReasonCode = Annotated[str, StringConstraints(pattern=REASON_CODE_PATTERN)]
 PrincipalId = Annotated[str, StringConstraints(pattern=PRINCIPAL_ID_PATTERN)]
+#: ``issued_before``: deny tokens issued at or before ``revoked_at`` (+ skew). ``until_lifted``:
+#: deny every token until an admin lifts the entry.
+RevocationMode = Literal["issued_before", "until_lifted"]
 
 
 def is_canonical_principal_id(value: object) -> bool:
@@ -109,13 +129,62 @@ class RevocationEntry(BaseModel):
     revoked_at: datetime
     reason: ReasonCode
     revoked_by: PrincipalId
+    mode: RevocationMode = "issued_before"
+    #: Set when an ``until_lifted`` block was lifted (the entry then reads ``issued_before``).
+    lifted_at: datetime | None = None
+    lifted_by: PrincipalId | None = None
 
-    @field_validator("revoked_at")
+    @field_validator("revoked_at", "lifted_at")
     @classmethod
-    def _aware(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("revoked_at must be timezone-aware")
+    def _aware(cls, value: datetime | None) -> datetime | None:
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("timestamps must be timezone-aware")
         return value
+
+    @model_validator(mode="after")
+    def _lift_pair(self) -> RevocationEntry:
+        if (self.lifted_at is None) != (self.lifted_by is None):
+            raise ValueError("lifted_at and lifted_by are set together")
+        if self.lifted_at is not None and self.mode != "issued_before":
+            raise ValueError("a lifted entry is no longer blocking")
+        return self
+
+    @property
+    def blocking(self) -> bool:
+        """True for an unlifted ``until_lifted`` entry: every token is refused."""
+        return self.mode == "until_lifted"
+
+
+def merge_entries(existing: RevocationEntry | None, new: RevocationEntry) -> RevocationEntry:
+    """The entry a store keeps when ``new`` is written over ``existing``.
+
+    An active block is never weakened by an ``issued_before`` write (the block is kept). A new
+    block always applies and keeps the later ``revoked_at`` of the two, so lifting it later never
+    re-admits a token that the existing revocation refused. Otherwise the latest ``revoked_at``
+    wins (PRP-06 behaviour; equal keeps ``existing``).
+    """
+    if existing is None:
+        return new
+    if existing.blocking and not new.blocking:
+        return existing
+    if new.blocking and not existing.blocking:
+        if existing.revoked_at > new.revoked_at:
+            return new.model_copy(update={"revoked_at": existing.revoked_at})
+        return new
+    return existing if existing.revoked_at >= new.revoked_at else new
+
+
+def lifted_entry(entry: RevocationEntry, *, lifted_at: datetime, lifted_by: str) -> RevocationEntry:
+    """``entry`` after its block is lifted: ``issued_before`` from the same ``revoked_at``."""
+    return RevocationEntry(
+        principal_id=entry.principal_id,
+        revoked_at=entry.revoked_at,
+        reason=entry.reason,
+        revoked_by=entry.revoked_by,
+        mode="issued_before",
+        lifted_at=lifted_at,
+        lifted_by=lifted_by,
+    )
 
 
 class RevocationSettings(BaseSettings):

@@ -18,6 +18,7 @@ reported as "not revoked". Messages never echo SDK text, document content or pri
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any, Final
 
 from azure.core import MatchConditions
@@ -32,8 +33,11 @@ from pydantic import ValidationError
 from neurosphere_core.auth.revocation.model import (
     DEFAULT_REVOCATION_RETENTION_SECONDS,
     RevocationEntry,
+    lifted_entry,
+    merge_entries,
     revocation_document_id,
 )
+from neurosphere_core.auth.revocation.store import no_active_block
 from neurosphere_core.errors import DependencyTransientError
 
 __all__ = [
@@ -101,41 +105,81 @@ class CosmosRevocationStore:
         found = await self._read(principal_id)
         return None if found is None else found[0]
 
-    async def put(self, entry: RevocationEntry) -> RevocationEntry:
-        body = {
-            **entry.model_dump(mode="json"),
+    def _body(self, entry: RevocationEntry) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            **entry.model_dump(mode="json", exclude_none=True),
             "id": revocation_document_id(entry.principal_id),
             "doc_type": REVOCATION_DOC_TYPE,
-            "ttl": self._retention,
         }
+        if body.get("mode") == "issued_before":
+            # The default mode is not stored: a plain entry keeps the PRP-06 document shape, so
+            # code from before PRP-39 still reads it after a rollback.
+            del body["mode"]
+        if not entry.blocking:
+            # A blocking entry carries NO per-item ttl: with the container's defaultTtl = -1 it
+            # never expires, so an until_lifted block cannot silently lapse (PRP-39).
+            body["ttl"] = self._retention
+        return body
+
+    async def put(self, entry: RevocationEntry) -> RevocationEntry:
         for _ in range(MAX_PUT_ATTEMPTS):
             found = await self._read(entry.principal_id)
             try:
                 if found is None:
-                    await self._container.create_item(body=body)
+                    await self._container.create_item(body=self._body(entry))
                     return entry
                 existing, etag = found
-                if existing.revoked_at >= entry.revoked_at:
+                effective = merge_entries(existing, entry)
+                if effective is existing:
                     return existing
+                body = self._body(effective)
                 await self._container.replace_item(
                     item=body["id"],
                     body=body,
                     etag=etag,
                     match_condition=MatchConditions.IfNotModified,
                 )
-                return entry
+                return effective
             except (CosmosResourceExistsError, CosmosAccessConditionFailedError):
                 continue  # another writer won; re-read and compare again
             except Exception as exc:
                 raise _unavailable() from exc
-        raise DependencyTransientError(
-            "revocation store write contended", reason="revocation_store_conflict"
-        )
+        raise _contended()
+
+    async def lift(
+        self, principal_id: str, *, lifted_by: str, lifted_at: datetime
+    ) -> RevocationEntry:
+        for _ in range(MAX_PUT_ATTEMPTS):
+            found = await self._read(principal_id)
+            if found is None or not found[0].blocking:
+                raise no_active_block()
+            existing, etag = found
+            lifted = lifted_entry(existing, lifted_at=lifted_at, lifted_by=lifted_by)
+            body = self._body(lifted)
+            try:
+                await self._container.replace_item(
+                    item=body["id"],
+                    body=body,
+                    etag=etag,
+                    match_condition=MatchConditions.IfNotModified,
+                )
+            except CosmosAccessConditionFailedError:
+                continue  # changed under us: re-read; it may no longer be a block
+            except Exception as exc:
+                raise _unavailable() from exc
+            return lifted
+        raise _contended()
 
 
 def _strip(document: Mapping[str, Any]) -> dict[str, Any]:
     """Drop Cosmos system properties (``_rid``, ``_etag``...) and storage-only fields."""
     return {k: v for k, v in document.items() if not k.startswith("_") and k not in _STORAGE_FIELDS}
+
+
+def _contended() -> DependencyTransientError:
+    return DependencyTransientError(
+        "revocation store write contended", reason="revocation_store_conflict"
+    )
 
 
 def _invalid(detail: str) -> DependencyTransientError:
