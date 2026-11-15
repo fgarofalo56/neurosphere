@@ -10,6 +10,7 @@ from neurosphere_workers.federation.models import (
     combine_cost_totals,
     combine_domain_summaries,
 )
+from neurosphere_workers.federation.peers import load_peers, parse_peers
 from neurosphere_workers.federation.summary import MAX_DAYS, compute_cell_summary
 
 __all__ = [
@@ -23,4 +24,6 @@ __all__ = [
     "combine_cost_totals",
     "combine_domain_summaries",
     "compute_cell_summary",
+    "load_peers",
+    "parse_peers",
 ]

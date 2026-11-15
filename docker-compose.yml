@@ -161,6 +161,9 @@ services:
       NS_PROBE_TIMEOUT_SECONDS: "2"
       # Dev producer registry (sha256 digests only, see docs/runbooks/ingest.md).
       NS_INGEST_PRODUCERS_FILE: /etc/neurosphere/ingest-producers.json
+      # Per-domain admission control (PRP-21): off unless NS_ADMISSION_ENABLED=true; dev quotas.
+      NS_ADMISSION_ENABLED: ${NS_ADMISSION_ENABLED:-true}
+      NS_ADMISSION_POLICY_FILE: /etc/neurosphere/admission-quotas.json
       # Catalog search (PRP-35): in-process index fed from the catalog; `azure` is hosted-only.
       NS_SEARCH_PROVIDER: fixture
       # Write targets (PRP-35): OFF by default, so the write registry is empty and a dry run
@@ -169,6 +172,7 @@ services:
       NS_APIM_ENABLED: "false"
     volumes:
       - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
+      - ./infra/dev/admission-quotas.dev.json:/etc/neurosphere/admission-quotas.json:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
       interval: 5s

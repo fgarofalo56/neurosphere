@@ -1,7 +1,7 @@
 # Load profiles (PRP-21 item 1, gate G07)
 
 Locust suites for the **pilot**, **enterprise** and **stress** profiles against the ingest edge
-(`POST /v1/ingest/events`, `/v1/ingest/otlp/traces`; `/otlp/metrics` is not exercised). Synthetic
+(`POST /v1/ingest/events`, `/v1/ingest/otlp/traces`, `/v1/ingest/otlp/metrics`). Synthetic
 data only. Every number is a **provisional planning target** from PRD section 3, measured and
 never guaranteed.
 
@@ -27,7 +27,7 @@ uv run --isolated --no-project --with-requirements tests/load/profiles/requireme
     locust -f tests/load/profiles/locustfile.py --headless ...
 ```
 
-**Licence:** locust is MIT. An ADR-0002 row recording it is a follow-up (k6 was rejected: AGPL-3.0).
+**Licence:** locust 2.47.0 is MIT (ADR-0002 row; k6 was rejected: AGPL-3.0).
 
 ## Scenarios
 
@@ -39,6 +39,8 @@ uv run --isolated --no-project --with-requirements tests/load/profiles/requireme
   against the larger registration. (Read-side multi-domain users are not driven here.)
 - `otlp_traces`: OTLP/JSON spans. The edge maps no domain from OTLP, so these events are reported
   as `unattributed`.
+- `otlp_metrics`: OTLP/JSON delta-sum token metrics (`gen_ai.usage.input_tokens`), one event per
+  data point, also `unattributed`.
 
 Latency is per POST (one batch of 25 events). Achieved rate is accepted events divided by wall
 time. Thresholds (all provisional): achieved events/s >= the profile rate, error ratio <= 1%,
@@ -47,8 +49,18 @@ a placeholder). Pass/fail is recorded as data; nothing is tuned to the result.
 
 ## Run
 
-Pilot, against compose (needs Docker; starts a **local** uvicorn API with the ingest edge because
-the compose `api` container has no producers configured):
+Pilot against the composed API (PRP-21 round 2): the compose `api` container (profile `app`) now
+registers a dev ingest producer and runs with per-domain admission on, so `--compose-api` targets
+it (results in `docs/evidence/G07/pilot/`; ingest is not charged by admission):
+
+```
+docker compose up -d --wait
+NS_ENTRA_TENANT_ID=<any-guid> NS_ENTRA_CLIENT_ID=<any-guid> docker compose --profile app up -d --wait --build api
+uv run python tests/load/profiles/run_profile.py pilot --compose-api --duration 60 --users 20
+```
+
+Pilot against compose emulators only (starts a **local** uvicorn API with the ingest edge; round 1,
+`docs/evidence/G07/load/`):
 
 ```
 docker compose up -d --wait

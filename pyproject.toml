@@ -81,6 +81,7 @@ pythonVersion = "3.12"
 typeCheckingMode = "standard"
 include = ["scripts", "tests", "packages", "services", "sandbox", "connectors"]
 exclude = ["**/node_modules", "**/__pycache__", ".venv"]
+extraPaths = ["infra/dr"]  # tests/integration/dr imports the drill modules by bare name
 venvPath = "."
 venv = ".venv"
 

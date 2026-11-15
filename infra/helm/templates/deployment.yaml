@@ -52,12 +52,23 @@ spec:
           {{- $ingestFile = $.Values.ingest.producersFile }}
           {{- end }}
           {{- end }}
+          {{- $admissionFile := "" }}
+          {{- if eq $name "api" }}
+          {{- if and $.Values.admission.policyFile $.Values.admission.policyConfigMap }}
+          {{- fail "set only one of admission.policyFile or admission.policyConfigMap" }}
+          {{- end }}
+          {{- if $.Values.admission.policyConfigMap }}
+          {{- $admissionFile = "/etc/neurosphere/admission/quotas.json" }}
+          {{- else }}
+          {{- $admissionFile = $.Values.admission.policyFile }}
+          {{- end }}
+          {{- end }}
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
           {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
           {{- $search := and (eq $name "api") $.Values.search.provider }}
           {{- $evalApi := and (eq $name "api") $.Values.evaluation.pilotDatasetIds }}
           {{- $evalWorker := and (eq $name "workers") (or $.Values.workers.roles $.Values.evaluation.dataDir) }}
-          {{- if or $.Values.env $apimFront $ingestFile $scan $deployApply $search $evalApi $evalWorker }}
+          {{- if or $.Values.env $apimFront $ingestFile $admissionFile $scan $deployApply $search $evalApi $evalWorker }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -67,6 +78,13 @@ spec:
             # Producer registry (digests only). Unset: ingest stays 503 ingest_not_configured.
             - name: NS_INGEST_PRODUCERS_FILE
               value: {{ $ingestFile | quote }}
+            {{- end }}
+            {{- if $admissionFile }}
+            # Per-domain admission control (PRP-21). Unset: admission stays off.
+            - name: NS_ADMISSION_ENABLED
+              value: "true"
+            - name: NS_ADMISSION_POLICY_FILE
+              value: {{ $admissionFile | quote }}
             {{- end }}
             {{- if $scan }}
             # Opt-in resource scan; unset keeps POST /v1/deploy/scan failing closed (503).
@@ -180,6 +198,11 @@ spec:
               mountPath: /etc/neurosphere/ingest
               readOnly: true
             {{- end }}
+            {{- if and (eq $name "api") $.Values.admission.policyConfigMap }}
+            - name: admission-quotas
+              mountPath: /etc/neurosphere/admission
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
@@ -201,5 +224,10 @@ spec:
         - name: ingest-producers
           configMap:
             name: {{ $.Values.ingest.producersConfigMap | quote }}
+        {{- end }}
+        {{- if and (eq $name "api") $.Values.admission.policyConfigMap }}
+        - name: admission-quotas
+          configMap:
+            name: {{ $.Values.admission.policyConfigMap | quote }}
         {{- end }}
 {{- end }}

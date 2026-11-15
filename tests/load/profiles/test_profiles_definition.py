@@ -49,6 +49,15 @@ def test_locust_is_not_imported_by_the_plain_modules() -> None:
     assert "locust" not in sys.modules
 
 
+def test_otlp_metrics_scenario_is_weighted_and_targets_the_metrics_route() -> None:
+    planner, _ = _planner()
+    assert "otlp_metrics" in PILOT.scenario_weights
+    assert set(PILOT.scenario_weights) == set(SCENARIOS)
+    request = planner.build("otlp_metrics")
+    assert request.path == "/v1/ingest/otlp/metrics"
+    assert "resourceMetrics" in json.loads(request.body)
+
+
 def test_profile_numbers_match_the_prd() -> None:
     assert (PILOT.agents, PILOT.sustained_events_per_second) == (1_000, 1_000)
     assert (ENTERPRISE.agents, ENTERPRISE.sustained_events_per_second) == (100_000, 10_000)

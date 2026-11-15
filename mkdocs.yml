@@ -122,6 +122,7 @@ nav:
   - Runbooks:
       - runbooks/operations.md
       - runbooks/ingest.md
+      - runbooks/admission-and-federation.md
       - runbooks/ingest-cost-attribution.md
       - runbooks/lifecycle.md
       - runbooks/runtime-composition.md

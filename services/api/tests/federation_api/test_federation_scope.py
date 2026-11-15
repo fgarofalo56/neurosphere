@@ -396,8 +396,10 @@ def test_cell_answering_for_another_cloud_is_discarded() -> None:
     )
     env = build(overrides={"cell-b": FixedClient(gov_answer)})
     response = env.get(ALICE)
-    assert response.status_code == 409
-    assert response.json()["code"] == "capability_unavailable"
+    # PRP-21 round 2: the mismatched cell is unavailable, the others still merge.
+    assert response.status_code == 200
+    states = {c["cell_id"]: c["state"] for c in response.json()["cells"]}
+    assert states["cell-b"] == "unavailable"
     assert "777" not in response.text
 
 

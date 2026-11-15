@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import ns_dr  # pyright: ignore[reportMissingImports]
-import ns_dr_emulator  # pyright: ignore[reportMissingImports]
-import ns_dr_safety as safety  # pyright: ignore[reportMissingImports]
+import ns_dr
+import ns_dr_emulator
+import ns_dr_safety as safety
 import pytest
 
 REMOTE_COSMOS = "https://example-account.documents.azure.com:443/"

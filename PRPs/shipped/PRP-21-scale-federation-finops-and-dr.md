@@ -1,6 +1,6 @@
 ---
 name: PRP-21-scale-federation-finops-and-dr
-status: backlog
+status: shipped
 priority: P1
 order: 26
 review: required
@@ -14,6 +14,8 @@ depends_on: []
 wave: W13
 branch: prp-21-round2-admission-federation
 allow_parallel: true
+shipped: 2026-11-15
+pr: 282
 absorbs: P4.3 + P4.4, G07
 issues: [232, 105, 106, 107]
 ---
@@ -33,16 +35,16 @@ Out of scope: the sized load runs, failover, geo-replication, production restore
 - #107: `docs/adr/0002-stack-pins.md` has no locust row; `finops/service.py:51` uses `Z_95 = 1.96`; `[tool.pyright]` (`pyproject.toml:79-85`) has no `extraPaths`, so `tests/integration/dr/*` carry pyright ignores; `tests/load/profiles/compose_pilot.py:6` still says the composed API has no ingest producers although `docker-compose.yml` now sets `NS_INGEST_PRODUCERS_FILE`.
 
 ## Acceptance criteria
-- [ ] Given `NS_ADMISSION_ENABLED=true` and a quota policy file, When one domain exceeds its quota through any route that uses `require(...)`, Then it receives 429 `rate_limited` with `Retry-After` and another domain's requests still succeed (API-level test, two domains, fake clock).
-- [ ] Given admission is off (default) or the policy file is absent, Then behaviour is unchanged when off; when on with no file the conservative default applies and a warning is logged, never unlimited (#105 bullet 4).
-- [ ] The admission key comes only from the server-derived scope plus a route domain that `permits` already validated; a caller-supplied domain never selects a bucket (test); a denied-permission request is not charged to the target domain.
-- [ ] Compose mounts a dev quota file and sets the settings; Helm has a documented value and mount for an operator-supplied file; `helm template` renders the mount only when set.
-- [ ] A peer cell registered through `NS_FEDERATION_PEERS_FILE` is reached through `HttpCellClient` (MockTransport test); a peer whose host is not in its boundary allowlist, or whose scheme is not https, fails registry load at startup; a Government peer in a Commercial serving cloud (or the reverse) is refused at load.
-- [ ] One peer answering for a different cell, cloud, boundary or customer yields that cell `unavailable` and the other cells still merge; no row from the mismatched response appears in the result (test).
-- [ ] Merged window is min start / max end across answering cells; when every cell answers `denied` the route returns 403, not an empty 200; `cache.put` evicts without rebuilding the dict; the cache TTL ceiling is a setting.
-- [ ] FinOps forecast bands use a t-quantile for small samples (documented table, no new dependency) and the committed evidence is regenerated; `unknown` stays `unknown`, never 0.
-- [ ] ADR-0002 has a locust row (2.47.0, MIT, outside `uv.lock`, isolated subprocess); `[tool.pyright] extraPaths` includes `infra/dr` and the DR test pyright ignores are gone; `/otlp/metrics` is exercised by a load scenario.
-- [ ] The pilot profile runs against the composed API with admission on and the result (including noisy-neighbor behaviour under the skew scenario) is written to `docs/evidence/G07/pilot/`, labelled "compose, bounded feasibility"; thresholds that fail are reported as failed.
+- [x] Given `NS_ADMISSION_ENABLED=true` and a quota policy file, When one domain exceeds its quota through any route that uses `require(...)`, Then it receives 429 `rate_limited` with `Retry-After` and another domain's requests still succeed (API-level test, two domains, fake clock).
+- [x] Given admission is off (default) or the policy file is absent, Then behaviour is unchanged when off; when on with no file the conservative default applies and a warning is logged, never unlimited (#105 bullet 4).
+- [x] The admission key comes only from the server-derived scope plus a route domain that `permits` already validated; a caller-supplied domain never selects a bucket (test); a denied-permission request is not charged to the target domain.
+- [x] Compose mounts a dev quota file and sets the settings; Helm has a documented value and mount for an operator-supplied file; `helm template` renders the mount only when set.
+- [x] A peer cell registered through `NS_FEDERATION_PEERS_FILE` is reached through `HttpCellClient` (MockTransport test); a peer whose host is not in its boundary allowlist, or whose scheme is not https, fails registry load at startup; a Government peer in a Commercial serving cloud (or the reverse) is refused at load.
+- [x] One peer answering for a different cell, cloud, boundary or customer yields that cell `unavailable` and the other cells still merge; no row from the mismatched response appears in the result (test).
+- [x] Merged window is min start / max end across answering cells; when every cell answers `denied` the route returns 403, not an empty 200; `cache.put` evicts without rebuilding the dict; the cache TTL ceiling is a setting.
+- [x] FinOps forecast bands use a t-quantile for small samples (documented table, no new dependency) and the committed evidence is regenerated; `unknown` stays `unknown`, never 0.
+- [x] ADR-0002 has a locust row (2.47.0, MIT, outside `uv.lock`, isolated subprocess); `[tool.pyright] extraPaths` includes `infra/dr` and the DR test pyright ignores are gone; `/otlp/metrics` is exercised by a load scenario.
+- [x] The pilot profile runs against the composed API with admission on and the result (including noisy-neighbor behaviour under the skew scenario) is written to `docs/evidence/G07/pilot/`, labelled "compose, bounded feasibility"; thresholds that fail are reported as failed.
 - [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, G07 row text updated to say what was measured and what stays OPEN (#108).
 
 ## Clarifications (decided)
@@ -223,20 +225,20 @@ No data migration. New settings default to off or unset, so existing deployments
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-21-round2-admission-federation | require() charges app.state.admission after permits; builder admission.py; compose+helm+runbook; tests admission_api (12) |
+| 2 | merged | prp-21-round2-admission-federation | peers.py loader, HttpCellClient via data._federation, mismatch=unavailable, min/max window, all-denied 403, cache evict + TTL ceiling setting; tests peers_http + resilience |
+| 3 | merged | prp-21-round2-admission-federation | t-quantile table (finops), evidence regenerated, ADR locust row, pyright extraPaths + DR ignores removed, otlp_metrics scenario, provisional p95 wording; compose_pilot rationale text rewritten in item 4 |
+| 4 | merged | prp-21-round2-admission-federation | compose api container pilot x2 (skew 50, 200): 125 and 120 events/s, error ratio 0, p95 12-13 s, 1 of 3 thresholds passed (FAILED); admission not charged by ingest, per-domain counts OPEN; evidence docs/evidence/G07/pilot/ |
+| 5 | merged | prp-21-round2-admission-federation | close-out done; no serial-after items |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (#108 items, G07):
-- Env vars for the operator (`NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`, `NS_FEDERATION_PEERS_FILE`, `NS_FEDERATION_CACHE_MAX_TTL_SECONDS`):
-- Follow-up issue numbers:
-- Product check (can an operator set quotas and add a cell without editing code?):
+- Date, PR, merge commit: 2026-11-15, PR #282, squash-merged (merge commit recorded by GitHub).
+- Deviations from the blueprint and why: none of substance. The ingest edge does not charge admission (it keeps its own per-producer limiter, Clarification 3), so the pilot cannot show per-domain throttle counts; that is recorded OPEN. No `[serial-after]` items existed. The "PRP exit" box stays unticked: the full `verify-gates.ps1 -Mode full` was not run in the unattended close-out; the touched suites (459 tests), ruff, pyright and CI are the evidence.
+- Descoped items: none beyond the NOT building list.
+- OPEN gates (#108 items, G07): sized and stress profiles, failover/failback, geo-replication, production restore, AI Search rebuild, invoiced cost (all `NS_LIVE_APPROVED=1`, operator, PRP-64). The compose pilot FAILED 2 of 3 provisional thresholds (120-125 events/s, p95 12-13 s); bounded feasibility only. Per-domain throttle counts under skew are OPEN. G07 stays OPEN.
+- Env vars for the operator (`NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`, `NS_FEDERATION_PEERS_FILE`, `NS_FEDERATION_CACHE_MAX_TTL_SECONDS`): all four are new, all optional, defaults off or unset; no `.env.example` edit was made, the operator adds them.
+- Follow-up issue numbers: #108 (open, operator). Reviewer follow-ups, to be filed or handled: (1) the `_admit` charge only runs on routes that use `require_permission`; routes without it are not rate limited, and the runbook should say so. (2) `federation/service.py` now maps `CapabilityUnavailableError` from a cell to `unavailable` instead of raising; intended, but confirm no other PRP relies on the old raise. (3) The `T_975` table uses the next lower df between 30 and 120, so the band is slightly wide; conservative and acceptable. (4) The reviewer did not run the tests or review the evidence JSON, helm, compose or load-profile files in depth.
+- Product check (can an operator set quotas and add a cell without editing code?): partly. Quotas and peers are file-driven (`NS_ADMISSION_POLICY_FILE`, `NS_FEDERATION_PEERS_FILE`, Helm `admission.policyFile`) with no code edits, but there is no admin UI or API for them (PRP-44/PRP-57).
 
 ## History
 - Round 1 (PR #103, merged 2026-10-22, merge `6b43d63`) shipped the load profiles, the admission library, federation summaries, the FinOps forecast, the DR drill and the router wiring (items 1-6). The pilot failed its 1k events/s target on compose and was recorded as bounded feasibility.

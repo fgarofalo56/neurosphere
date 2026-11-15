@@ -124,14 +124,16 @@ class Federator:
                 summaries.append(result)
             elif isinstance(result, (ForbiddenError, UnauthorizedError)):
                 outcomes.append(CellOutcome(cell_id=cell.cell_id, state="denied"))
-            elif isinstance(result, CapabilityUnavailableError):
-                raise result
             elif isinstance(result, Exception):
+                # Includes a cell answering for another cell/cloud/boundary/customer: that cell
+                # is unavailable and its response is discarded; the other cells still merge.
                 _LOG.warning("federation cell failed", extra={"cell_id": cell.cell_id})
                 outcomes.append(CellOutcome(cell_id=cell.cell_id, state="unavailable"))
             else:
                 raise result
         states = {o.state for o in outcomes}
+        if states == {"denied"}:
+            raise ForbiddenError("no cell granted access", reason="cells_denied")
         if "ok" not in states and "unavailable" in states:
             raise DependencyTransientError("no cell answered", reason="cells_unavailable")
         return self._merge(scope, outcomes, summaries, days)
@@ -171,14 +173,13 @@ class Federator:
                 by_domain.setdefault(row.domain_id, []).append(row)
         domains = tuple(combine_domain_summaries(d, rows) for d, rows in sorted(by_domain.items()))
         all_costs = [c for d in domains for c in d.costs]
-        first = summaries[0] if summaries else None
         now = self._clock()
         return MergedSummary(
             cloud=self.serving_cloud,
             boundary_id=self.boundary_id,
             customer_id=scope.customer_id,
-            window_start=first.window_start if first else now,
-            window_end=first.window_end if first else now,
+            window_start=min((s.window_start for s in summaries), default=now),
+            window_end=max((s.window_end for s in summaries), default=now),
             cells=tuple(outcomes),
             domains=domains,
             totals=combine_cost_totals(all_costs),

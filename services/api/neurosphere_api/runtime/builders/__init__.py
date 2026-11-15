@@ -354,6 +354,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
     """The production order. Local imports keep builder modules out of import time."""
     from neurosphere_api.runtime.builders import (
         admin,
+        admission,
         analytics,
         authz,
         copilot,
@@ -374,6 +375,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         gateway.BUILDER,
         edge.BUILDER,
         lifecycle.BUILDER,
+        admission.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
     )

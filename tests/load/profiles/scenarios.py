@@ -11,6 +11,7 @@ Scenarios (all synthetic, all aimed at the ingest edge ``/v1/ingest/...``):
   carries a different source and domain, so every event is checked against the larger
   registration (the write-side analogue of a multi-domain user).
 * ``otlp_traces``    - OTLP/JSON spans on ``/otlp/traces``.
+* ``otlp_metrics``   - OTLP/JSON delta-sum token metrics on ``/otlp/metrics``.
 
 The read side of "permission-heavy multi-domain users" (dashboards, search) is not driven here:
 this suite targets the ingest edge only.
@@ -31,6 +32,7 @@ from .definitions import Profile, domain_weights
 
 EVENTS_PATH = "/v1/ingest/events"
 TRACES_PATH = "/v1/ingest/otlp/traces"
+METRICS_PATH = "/v1/ingest/otlp/metrics"
 BATCH_CONTENT_TYPE = "application/cloudevents-batch+json"
 OTLP_CONTENT_TYPE = "application/json"
 CLOUDEVENT_TYPE_TELEMETRY = "com.neurosphere.telemetry.v1"  # test pins it to neurosphere_core
@@ -243,6 +245,8 @@ class RequestPlanner:
                 return self._events_request(scenario, producer, picks)
             case "otlp_traces":
                 return self._otlp_request(scenario)
+            case "otlp_metrics":
+                return self._otlp_metrics_request(scenario)
             case _:
                 raise ValueError(f"unknown scenario {scenario!r}")
 
@@ -296,6 +300,48 @@ class RequestPlanner:
             producer=producer,
             domains=tuple(domains),
             agents=tuple(agents),
+        )
+
+    def _otlp_metrics_request(self, scenario: str) -> Request:
+        """One delta-sum metric of input tokens with ``batch_size`` data points (one event each).
+
+        Like traces, metric events carry no domain attribute, so they are unattributed.
+        """
+        n = self._profile.batch_size
+        producer = self._rng.choice(self._single)
+        base_ns = int(datetime.now(UTC).timestamp() * 1e9)
+        points = [
+            {
+                "asInt": str(100 + i),
+                "timeUnixNano": str(base_ns + i * 1_000_000),
+                "attributes": [_attr("request_id", self._next_id("req"))],
+            }
+            for i in range(n)
+        ]
+        metric = {
+            "name": "gen_ai.usage.input_tokens",
+            "sum": {
+                "aggregationTemporality": 2,
+                "isMonotonic": True,
+                "dataPoints": points,
+            },
+        }
+        doc = {
+            "resourceMetrics": [
+                {
+                    "resource": {"attributes": []},
+                    "scopeMetrics": [{"scope": {"name": "load"}, "metrics": [metric]}],
+                }
+            ]
+        }
+        return Request(
+            scenario=scenario,
+            path=METRICS_PATH,
+            content_type=OTLP_CONTENT_TYPE,
+            body=json.dumps(doc).encode("utf-8"),
+            producer=producer,
+            domains=(UNATTRIBUTED_DOMAIN,) * n,
+            agents=tuple(self._next_agent() for _ in range(n)),
         )
 
 

@@ -5,10 +5,11 @@ Model (simple and explainable, no ML): per kind (estimated / invoiced separately
 daily totals of the history window that are COMPLETE (every contributing entry has a known amount
 in the requested currency), fit an ordinary-least-squares line ``y = a + b * x`` (x = day index),
 and extrapolate over the horizon. The band is the normal-approximation prediction interval
-``y_hat +/- z * s * sqrt(1 + 1/n + (x - x_mean)^2 / Sxx)`` with ``z = 1.96`` (about 95 %) and ``s``
-the residual standard deviation (``n - 2`` degrees of freedom). It is clamped at 0 from below. The
-band widens away from the data, and it widens with noisy history. It is an approximation (small
-samples would need a t quantile); it is not a guarantee and not a savings claim.
+``y_hat +/- q * s * sqrt(1 + 1/n + (x - x_mean)^2 / Sxx)`` with ``q`` the two-sided 95 % Student-t
+quantile for ``n - 2`` degrees of freedom (:data:`T_975`, a documented table, no dependency; it
+tends to the normal 1.96 as the sample grows) and ``s`` the residual standard deviation. It is
+clamped at 0 from below. The band widens away from the data, and it widens with noisy history and
+small samples. It is not a guarantee and not a savings claim.
 
 Unknown handling: an incomplete day is excluded from the fit (a partial sum would bias the line
 low) and counted in ``excluded_incomplete_days``; a day with no contributing entries or only
@@ -41,14 +42,31 @@ from neurosphere_api.finops.models import (
 
 __all__ = [
     "MIN_FIT_POINTS",
+    "T_975",
     "Z_95",
     "build_forecast",
     "day_totals",
     "fit_and_predict",
+    "t_quantile_95",
 ]
 
 MIN_FIT_POINTS: Final = 5
+#: Large-sample (normal) limit of the band quantile; reported as ``method.z``.
 Z_95: Final = Decimal("1.96")
+#: Two-sided 95 % Student-t quantiles (``t_{0.975, df}``) from the standard table, rounded to 3
+#: places. Keys are degrees of freedom; between listed keys above 30 the next LOWER df is used
+#: (a slightly wider, never narrower, band).
+_T_ROWS: Final = (
+    "12.706 4.303 3.182 2.776 2.571 2.447 2.365 2.306 2.262 2.228 "
+    "2.201 2.179 2.160 2.145 2.131 2.120 2.110 2.101 2.093 2.086 "
+    "2.080 2.074 2.069 2.064 2.060 2.056 2.052 2.048 2.045 2.042"
+).split()
+T_975: Final[dict[int, Decimal]] = {
+    **{df: Decimal(q) for df, q in enumerate(_T_ROWS, start=1)},
+    40: Decimal("2.021"),
+    60: Decimal("2.000"),
+    120: Decimal("1.980"),
+}
 _ZERO: Final = Decimal(0)
 _CTX: Final = Context(prec=40)
 
@@ -104,6 +122,17 @@ def day_totals(
     return result
 
 
+def t_quantile_95(df: int) -> Decimal:
+    """Two-sided 95 % t quantile for ``df`` degrees of freedom (table lookup; 1.96 beyond 120)."""
+    if df < 1:
+        raise ValueError("degrees of freedom must be at least 1")
+    if df in T_975:
+        return T_975[df]
+    if df > 120:
+        return Z_95
+    return T_975[max(k for k in T_975 if k < df)]
+
+
 def fit_and_predict(
     history: list[tuple[int, Decimal]], horizon_x: list[int]
 ) -> tuple[list[ForecastValue], Decimal] | None:
@@ -124,10 +153,11 @@ def fit_and_predict(
         intercept = y_mean - slope * x_mean
         sse = sum(((y - (intercept + slope * Decimal(x))) ** 2 for x, y in history), _ZERO)
         s = (sse / Decimal(n - 2)).sqrt()
+        quantile = t_quantile_95(n - 2)
         out: list[ForecastValue] = []
         for x in horizon_x:
             point = intercept + slope * Decimal(x)
-            spread = Z_95 * s * (1 + 1 / count + (Decimal(x) - x_mean) ** 2 / sxx).sqrt()
+            spread = quantile * s * (1 + 1 / count + (Decimal(x) - x_mean) ** 2 / sxx).sqrt()
             out.append(
                 ForecastValue(
                     value=max(point, _ZERO),
@@ -273,8 +303,9 @@ async def build_forecast(
         as_of=as_of,
         method=ForecastMethod(
             description=(
-                "Ordinary least squares line over complete daily totals; band is the normal "
-                "approximation prediction interval (z=1.96) clamped at 0. Not a savings claim."
+                "Ordinary least squares line over complete daily totals; band is the 95% "
+                "prediction interval using a Student-t quantile for n-2 degrees of freedom "
+                "(z=1.96 is its large-sample limit), clamped at 0. Not a savings claim."
             ),
             confidence_level="0.95",
             z=str(Z_95),

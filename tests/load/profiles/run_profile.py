@@ -26,7 +26,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from profiles.compose_pilot import run_pilot
+from profiles.compose_pilot import run_pilot, run_pilot_on_compose_api
 from profiles.definitions import PROFILES, TargetRequiredError, resolve_run
 from profiles.runner import REPO_ROOT, build_command, run_locust
 
@@ -44,11 +44,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     ap.add_argument("--suffix", default="", help="evidence filename suffix, e.g. -probe")
     ap.add_argument("--dry-run", action="store_true", help="resolve and print the plan only")
+    ap.add_argument(
+        "--compose-api",
+        action="store_true",
+        help="pilot only: target the compose api container (profile app, admission on)",
+    )
     args = ap.parse_args(argv)
     evidence_dir = Path(args.evidence_dir)
 
     try:
-        if args.profile == "pilot" and not args.host:
+        if args.profile == "pilot" and args.compose_api:
+            code, path, tail = run_pilot_on_compose_api(
+                evidence_dir,
+                duration_seconds=args.duration,
+                users=args.users,
+                skew_multiple=args.skew_multiple,
+                suffix=args.suffix,
+            )
+        elif args.profile == "pilot" and not args.host:
             if args.dry_run:
                 plan = resolve_run("pilot", duration_seconds=args.duration, users=args.users)
                 print(

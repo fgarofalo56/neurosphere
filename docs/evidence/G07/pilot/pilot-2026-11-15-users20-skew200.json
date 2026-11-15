@@ -1,0 +1,237 @@
+{
+  "schema_version": "1.0",
+  "profile": "pilot",
+  "evidence_for": "pilot",
+  "not_evidence_for": [
+    "enterprise",
+    "stress"
+  ],
+  "environment_label": "compose (emulators), bounded feasibility only - not capacity evidence (G12)",
+  "date": "2026-11-15",
+  "started_at": "2026-11-15T10:48:04Z",
+  "git_sha": "17fb9ce3142276b52199a1693d849bfec3f2857b",
+  "method": "locust headless (isolated uv env, locust pinned in requirements.txt); API = the compose `api` container (profile app, one uvicorn worker) with NS_ADMISSION_ENABLED on and the dev quota file; ingest authenticated as the dev producer; sink = Event Hubs emulator; synthetic events only; latency is per POST (a batch of events)",
+  "target_host_name": "127.0.0.1",
+  "profile_definition": {
+    "source": "docs/PRD.md section 3 (scale profiles); PRP-21 item 1",
+    "note": "Provisional planning targets from the PRD, measured not guaranteed. The p95 bound has no ingest-specific PRD figure; it reuses the 2 s dashboard planning target as a placeholder.",
+    "agents": 1000,
+    "sustained_events_per_second": 1000.0,
+    "burst_events_per_second": null,
+    "entities": null,
+    "relationships": null,
+    "subject_to": null,
+    "catalog_scale_driven_by_this_suite": false
+  },
+  "run_parameters": {
+    "users": 20,
+    "duration_seconds_requested": 60,
+    "batch_size": 25,
+    "domains": 20,
+    "skew_multiple": 200.0,
+    "hot_domain_weight_over_median": 200.0,
+    "fan_out_width": 25,
+    "producers": 4,
+    "multi_domain_sources": 8,
+    "scenario_weights": {
+      "baseline_skew": 55,
+      "hot_key": 10,
+      "fan_out": 10,
+      "multi_domain": 10,
+      "otlp_traces": 10,
+      "otlp_metrics": 5
+    },
+    "overrides_of_profile_defaults": [
+      "users",
+      "skew_multiple"
+    ]
+  },
+  "measured": {
+    "duration_seconds": 59.768,
+    "requests": 287,
+    "events_sent": 7175,
+    "events_accepted": 7175,
+    "events_rejected_by_edge": 0,
+    "events_in_failed_requests": 0,
+    "achieved_events_per_second": 120.05,
+    "offered_events_per_second": 120.05,
+    "achieved_requests_per_second": 4.8,
+    "error_ratio": 0.0,
+    "error_counts_by_type": {},
+    "latency_ms": {
+      "p50": 220.0,
+      "p95": 13000.0,
+      "p99": 13000.0,
+      "max": 12733.569199976046
+    },
+    "distinct_agents_emitted": 1001
+  },
+  "thresholds": [
+    {
+      "name": "achieved_events_per_second",
+      "operator": ">=",
+      "threshold": 1000.0,
+      "measured": 120.05,
+      "passed": false,
+      "provisional": true
+    },
+    {
+      "name": "error_ratio",
+      "operator": "<=",
+      "threshold": 0.01,
+      "measured": 0.0,
+      "passed": true,
+      "provisional": true
+    },
+    {
+      "name": "request_latency_p95_ms",
+      "operator": "<=",
+      "threshold": 2000.0,
+      "measured": 13000.0,
+      "passed": false,
+      "provisional": true
+    }
+  ],
+  "thresholds_all_passed": false,
+  "scenarios": {
+    "baseline_skew": {
+      "requests": 170,
+      "events_accepted": 4250,
+      "latency_ms": {
+        "p50": 230.0,
+        "p95": 13000.0,
+        "p99": 13000.0,
+        "max": 12733.569199976046
+      }
+    },
+    "fan_out": {
+      "requests": 33,
+      "events_accepted": 825,
+      "latency_ms": {
+        "p50": 230.0,
+        "p95": 13000.0,
+        "p99": 13000.0,
+        "max": 12509.23560000956
+      }
+    },
+    "hot_key": {
+      "requests": 29,
+      "events_accepted": 725,
+      "latency_ms": {
+        "p50": 200.0,
+        "p95": 13000.0,
+        "p99": 13000.0,
+        "max": 12513.572100026067
+      }
+    },
+    "multi_domain": {
+      "requests": 24,
+      "events_accepted": 600,
+      "latency_ms": {
+        "p50": 220.0,
+        "p95": 11000.0,
+        "p99": 13000.0,
+        "max": 12518.795799987856
+      }
+    },
+    "otlp_metrics": {
+      "requests": 11,
+      "events_accepted": 275,
+      "latency_ms": {
+        "p50": 6300.0,
+        "p95": 13000.0,
+        "p99": 13000.0,
+        "max": 12516.615099972114
+      }
+    },
+    "otlp_traces": {
+      "requests": 20,
+      "events_accepted": 500,
+      "latency_ms": {
+        "p50": 260.0,
+        "p95": 13000.0,
+        "p99": 13000.0,
+        "max": 12532.294400036335
+      }
+    }
+  },
+  "domains": {
+    "count": 20,
+    "unattributed_events": 775,
+    "median_events_per_domain": 62.0,
+    "hottest_domain": "dom-0000",
+    "hottest_domain_events": 5210,
+    "hottest_over_median": 84.03,
+    "hottest_domain_accepted": 5210,
+    "hottest_domain_failed": 0,
+    "events_failed_all_other_domains": 0,
+    "top_domains": [
+      {
+        "domain": "dom-0000",
+        "sent": 5210,
+        "accepted": 5210,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0003",
+        "sent": 74,
+        "accepted": 74,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0005",
+        "sent": 72,
+        "accepted": 72,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0002",
+        "sent": 69,
+        "accepted": 69,
+        "failed": 0
+      },
+      {
+        "domain": "dom-0004",
+        "sent": 68,
+        "accepted": 68,
+        "failed": 0
+      }
+    ]
+  },
+  "environment_notes": {
+    "api": "compose api container (profile app), 1 worker, NS_ENV=local",
+    "admission": {
+      "NS_ADMISSION_ENABLED": "true",
+      "NS_ADMISSION_POLICY_FILE": "/etc/neurosphere/admission-quotas.json"
+    },
+    "admission_charges_ingest": false,
+    "admission_note": "Per-domain admission is charged by require() on authenticated read/write routes. The ingest edge authenticates producers separately and keeps its own per-producer limiter, so no request in this run was charged to a domain bucket.",
+    "sink": "Event Hubs emulator (docker compose), hub 'telemetry', 4 partitions",
+    "edge_limiter": "product defaults (20 rps per producer, burst 40); ONE dev producer",
+    "host": "Windows 11, 32 logical CPUs, Python 3.12.13",
+    "client_and_server_share_host": true,
+    "consumer_running": false,
+    "endpoints_exercised": [
+      "/v1/ingest/events",
+      "/v1/ingest/otlp/traces",
+      "/v1/ingest/otlp/metrics"
+    ],
+    "endpoints_not_exercised": []
+  },
+  "emulator_limits": {
+    "documented": [
+      "Event Hubs emulator: one namespace, ten hubs, no persistence, SAS only (no Entra); partition and consumer-group scale cannot be inferred from it.",
+      "Cosmos DB vNext emulator: no RU accounting, so no request-unit capacity is measured."
+    ],
+    "observed_in_this_run": [
+      "Achieved 120.05 accepted events/s against a 1000.0 events/s target on one single-worker API and one Event Hubs emulator (a ceiling of this setup, not of the product).",
+      "No request errors observed at this rate (no 429, 503 or connection failures).",
+      "Not observable on the emulator: persistence across restart, partition-count and consumer-group scale, RU accounting, Entra auth.",
+      "Admission was enabled on the composed API (NS_ADMISSION_ENABLED=true, NS_ADMISSION_POLICY_FILE=/etc/neurosphere/admission-quotas.json) but ingest routes are not charged by it; per-domain admitted/throttled counts on authenticated routes are OPEN (they need an Entra token against the real stack)."
+    ]
+  },
+  "open": [
+    "G07 stays OPEN: this run is bounded feasibility on emulators, not capacity evidence.",
+    "Enterprise and stress profiles are operator-run at a sized environment (not run)."
+  ]
+}
