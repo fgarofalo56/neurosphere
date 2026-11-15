@@ -21,14 +21,18 @@ from neurosphere_core.auth.scope.derivation import (
 from neurosphere_core.auth.scope.hashing import canonical_json, compute_scope_hash
 from neurosphere_core.auth.scope.memory import InMemoryPolicyRepository
 from neurosphere_core.auth.scope.permissions import (
+    CUSTOMER_CONTROL_DOMAIN_NAME,
+    CUSTOMER_CONTROL_SOURCE,
     GRANT_PERMISSIONS,
     PRIVILEGED_ROLES,
     ROLE_PERMISSIONS,
     GrantPermission,
     Permission,
     Role,
+    customer_control_domain_id,
     domains_with_permission,
     permits,
+    permits_customer_wide,
     role_permissions,
 )
 from neurosphere_core.auth.scope.policy import (
@@ -49,6 +53,8 @@ from neurosphere_core.auth.scope.pseudonym import (
 from neurosphere_core.auth.scope.revocation_hook import NoRevocationCheck, RevocationChecker
 
 __all__ = [
+    "CUSTOMER_CONTROL_DOMAIN_NAME",
+    "CUSTOMER_CONTROL_SOURCE",
     "DEFAULT_POLICY_CACHE_TTL_SECONDS",
     "DEFAULT_POLICY_CONTAINER",
     "DEFAULT_SCOPE_TTL_SECONDS",
@@ -79,8 +85,10 @@ __all__ = [
     "TtlCache",
     "canonical_json",
     "compute_scope_hash",
+    "customer_control_domain_id",
     "domains_with_permission",
     "permits",
+    "permits_customer_wide",
     "principal_document_id",
     "role_permissions",
 ]

@@ -175,8 +175,8 @@ Routes, UI, mock handlers, worker pickup, any secret value storage; schema chang
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | verifying | prp-65-admin-store | permissions, control-domain helpers, role pins; tests pass locally |
+| 2 | in-progress | prp-65-admin-store | |
 | 3 | todo | | |
 | 4 | todo | | |
 
