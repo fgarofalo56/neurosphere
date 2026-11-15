@@ -341,7 +341,8 @@ def test_grants_only_publishes_nothing_and_waits_for_nothing(tmp_path: Path) -> 
     summary = asyncio.run(seed.run_grants_only(_config(), stack.backends, tmp_path, environ={}))
 
     assert summary["seeded"]["grants"] > 0
-    assert sum(v for k, v in summary["seeded"].items() if k != "grants") == 0
+    assert summary["seeded"]["prices"] == 1  # workers must load it at start (#209)
+    assert sum(v for k, v in summary["seeded"].items() if k not in ("grants", "prices")) == 0
     assert stack.hub.published == []
 
 

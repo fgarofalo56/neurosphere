@@ -1,0 +1,64 @@
+name: real-stack
+
+# PRP-38: the real-stack pytest suites (tests/integration/real_stack) against the compose
+# emulators. ci.yml deselects the `integration` marker, so nothing ran them before. The suites
+# compose the API and the ingestion/projection roles in-process with a stand-in issuer, so only
+# the emulators are needed here (no app-profile images, no Entra ids). Every step fails loudly:
+# no suppressed exit codes and no continue-on-error. The job id and name below are what a later branch
+# protection change should require (non-required until it has been green for a week).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - ".github/workflows/real-stack.yml"
+      - "docker-compose.yml"
+      - "Makefile"
+      - "scripts/sandbox/**"
+      - "sandbox/**"
+      - "tests/integration/real_stack/**"
+      - "services/**"
+      - "packages/**"
+      - "connectors/**"
+      - "infra/compose/**"
+      - "frontend/tests/real-stack/**"
+      - "frontend/playwright.real-stack.config.ts"
+      - "pyproject.toml"
+      - "uv.lock"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-stack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-stack:
+    name: real-stack (emulators + pytest suites)
+    runs-on: ubuntu-latest
+    # Expected runtime 15 to 25 minutes (emulator start-up dominates); the limit leaves headroom.
+    timeout-minutes: 40
+    env:
+      # 127.0.0.1, never localhost: localhost resolves to ::1 first and the emulators' IPv6
+      # forwards are flaky (docs/dev/local-setup.md).
+      NS_PROBE_COSMOS_URL: http://127.0.0.1:8081/
+      NS_COSMOS_ENDPOINT: http://127.0.0.1:8081
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      - name: Start the emulators (Cosmos, Event Hubs, Azurite) and wait for health
+        run: docker compose up -d --wait
+      - name: Real-stack pytest suites
+        run: uv run pytest -q -m integration tests/integration/real_stack
+      - name: Emulator logs (on failure)
+        if: failure()
+        run: docker compose logs --no-color --tail 400
+      - name: Stop the emulators
+        if: always()
+        run: docker compose down -v --remove-orphans

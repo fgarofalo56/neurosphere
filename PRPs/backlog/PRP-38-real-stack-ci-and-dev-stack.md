@@ -234,8 +234,8 @@ No `NS_LIVE_APPROVED=1` item and no paid call: everything runs on emulators. Ope
 | 2 | verifying | prp-38-real-stack-ci | entities tally fixed (preexisting snapshot); five-run live check pending |
 | 3 | verifying | prp-38-real-stack-ci | shared sbx_wire.py; live replay count against emulator not yet run |
 | 4 | verifying | prp-38-real-stack-ci | gateway seeded + OPT_IN_ROLES removed; forecast 409 fix pending live check |
-| 5 | todo | | |
-| 6 | todo | | |
+| 5 | verifying | prp-38-real-stack-ci | real-stack.yml written, actionlint ok; first CI run URL pending; seeded-stack suites skip in CI (no seeded stack) |
+| 6 | descoped | prp-38-real-stack-ci | msal-browser 5.x cache is encrypted; no reliable sign-in without a frontend code hook, which is forbidden; OPEN |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)

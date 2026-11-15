@@ -1411,6 +1411,10 @@ async def run_grants_only(
     gen = generate_config(config)
     await asyncio.to_thread(generate, gen, workdir)
     await seed_grants(backends, config, World(gen), tally, env)
+    # The price snapshot too: a worker loads its price table at start and then refreshes it only
+    # every price_refresh_seconds, so events priced before it sees the snapshot are stored
+    # unresolved and the cost forecast answers 409 price_version_unresolved (#209 item 2).
+    await seed_prices(backends, tally)
     return tally.summary()
 
 
