@@ -56,3 +56,46 @@ off. Both set fails `helm template`.
 
 Set `NS_ADMISSION_ENABLED=false` (or clear the Helm values). The dependency is a no-op when
 `app.state.admission` is absent.
+
+## Federation
+
+`GET /api/v1/federation/summary` merges aggregate summaries from the cells registered in this
+deployment's cloud and boundary. This deployment is always a cell (its own, served in process);
+peers are optional.
+
+### Settings
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NS_FEDERATION_CELL_ID` | `local` | This deployment's cell id. |
+| `NS_FEDERATION_BOUNDARY_ID` | `<cloud>-local` | The boundary this deployment belongs to. Cells of other boundaries are never contacted. |
+| `NS_FEDERATION_CACHE_TTL_SECONDS` | `30` | Merged-summary cache TTL. |
+| `NS_FEDERATION_CACHE_MAX_TTL_SECONDS` | `300` | Ceiling for the TTL (hard cap 3600). |
+| `NS_FEDERATION_PEERS_FILE` | unset | JSON registry of peer cells (below). Unset: single cell. |
+
+### Peers file
+
+```json
+{
+  "cells": [
+    {"cell_id": "cell-b", "cloud": "commercial", "boundary_id": "prod-eus",
+     "endpoint": "https://cell-b.example.org/"}
+  ],
+  "boundaries": {"prod-eus": {"allowed_hosts": ["cell-b.example.org"]}}
+}
+```
+
+The file holds no credential: the caller's own bearer token is forwarded to each cell and the
+cell derives the scope itself. Startup fails (federation reports `federation_settings_invalid`)
+when a peer is not https, its host is not an exact member of its boundary's `allowed_hosts`, its
+cloud differs from this deployment's cloud (a Government peer in a Commercial deployment or the
+reverse), or its id repeats or equals this cell's id. Redirects are never followed.
+
+### Failure behaviour
+
+- A cell that is down, or that answers for another cell, cloud, boundary or customer, is marked
+  `unavailable` and its response is discarded. The other cells still merge and `complete` is
+  false. Unknown stays unknown, never zero.
+- Every cell denying the caller is `403`, not an empty `200`.
+- If no cell answers and at least one failed, the route answers `503`.
+- The merged window is the earliest start and the latest end across the answering cells.

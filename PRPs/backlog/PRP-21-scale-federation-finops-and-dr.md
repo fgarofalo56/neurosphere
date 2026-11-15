@@ -224,7 +224,7 @@ No data migration. New settings default to off or unset, so existing deployments
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
 | 1 | merged | prp-21-round2-admission-federation | require() charges app.state.admission after permits; builder admission.py; compose+helm+runbook; tests admission_api (12) |
-| 2 | todo | | |
+| 2 | merged | prp-21-round2-admission-federation | peers.py loader, HttpCellClient via data._federation, mismatch=unavailable, min/max window, all-denied 403, cache evict + TTL ceiling setting; tests peers_http + resilience |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

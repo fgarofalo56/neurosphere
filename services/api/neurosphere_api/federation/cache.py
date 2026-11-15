@@ -16,9 +16,10 @@ from neurosphere_core.scope import IdentityScope
 from neurosphere_api.authz import scope_cache_key
 from neurosphere_api.federation.models import MergedSummary
 
-__all__ = ["MAX_TTL_SECONDS", "SummaryCache", "summary_cache_key"]
+__all__ = ["HARD_MAX_TTL_SECONDS", "MAX_TTL_SECONDS", "SummaryCache", "summary_cache_key"]
 
-MAX_TTL_SECONDS: Final = 300.0
+MAX_TTL_SECONDS: Final = 300.0  # default ceiling; NS_FEDERATION_CACHE_MAX_TTL_SECONDS overrides
+HARD_MAX_TTL_SECONDS: Final = 3600.0  # ceiling of the ceiling: staleness stays bounded
 _MAX_ENTRIES: Final = 1024
 NAMESPACE: Final = "federation-summary"
 
@@ -35,9 +36,12 @@ class SummaryCache:
         *,
         clock: Callable[[], float] = time.monotonic,
         max_entries: int = _MAX_ENTRIES,
+        max_ttl_seconds: float = MAX_TTL_SECONDS,
     ) -> None:
-        if not 0 < ttl_seconds <= MAX_TTL_SECONDS:
-            raise ValueError(f"ttl_seconds must be in (0, {MAX_TTL_SECONDS}]")
+        if not 0 < max_ttl_seconds <= HARD_MAX_TTL_SECONDS:
+            raise ValueError(f"max_ttl_seconds must be in (0, {HARD_MAX_TTL_SECONDS}]")
+        if not 0 < ttl_seconds <= max_ttl_seconds:
+            raise ValueError(f"ttl_seconds must be in (0, {max_ttl_seconds}]")
         if max_entries < 1:
             raise ValueError("max_entries must be at least 1")
         self._ttl = ttl_seconds
@@ -60,8 +64,13 @@ class SummaryCache:
         return value
 
     def put(self, key: str, value: MergedSummary) -> None:
+        # Every entry has the same TTL, so insertion order is expiry order: evict from the front
+        # instead of rebuilding the dict on each write. Re-inserting a key moves it to the back.
         now = self._clock()
-        self._entries = {k: v for k, v in self._entries.items() if v[0] > now}
-        while len(self._entries) >= self._max:
-            del self._entries[next(iter(self._entries))]
+        self._entries.pop(key, None)
+        while self._entries:
+            oldest = next(iter(self._entries))
+            if self._entries[oldest][0] > now and len(self._entries) < self._max:
+                break
+            del self._entries[oldest]
         self._entries[key] = (now + self._ttl, value)
