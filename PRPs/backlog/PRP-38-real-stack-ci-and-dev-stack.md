@@ -230,12 +230,12 @@ No `NS_LIVE_APPROVED=1` item and no paid call: everything runs on emulators. Ope
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | verifying | prp-38-real-stack-ci | --grants-only + Makefile reorder + pins; real fresh stack-up UNVERIFIED so far |
-| 2 | verifying | prp-38-real-stack-ci | entities tally fixed (preexisting snapshot); five-run live check pending |
-| 3 | verifying | prp-38-real-stack-ci | shared sbx_wire.py; live replay count against emulator not yet run |
-| 4 | verifying | prp-38-real-stack-ci | gateway seeded + OPT_IN_ROLES removed; forecast 409 fix pending live check |
+| 1 | merged | prp-38-real-stack-ci | fresh make stack-up exit 0, api/workers/frontend healthy (live) |
+| 2 | merged | prp-38-real-stack-ci | test_seed passed 5 runs in a row on fresh emulators (live) |
+| 3 | verifying | prp-38-real-stack-ci | unit-tested; live make replay counts not run |
+| 4 | partial | prp-38-real-stack-ci | gateway seeded + OPT_IN_ROLES removed; forecast 409 OPEN: ingestion prices from infra/dev/ledger-prices.dev.json (synthetic-model only), outside ownership |
 | 5 | verifying | prp-38-real-stack-ci | real-stack.yml written, actionlint ok; first CI run URL pending; seeded-stack suites skip in CI (no seeded stack) |
-| 6 | descoped | prp-38-real-stack-ci | msal-browser 5.x cache is encrypted; no reliable sign-in without a frontend code hook, which is forbidden; OPEN |
+| 6 | todo | | NOT done in this run (out of budget). Finding: msal-browser 5.26 sessionStorage cache is NOT encrypted (encryption is localStorage-only) and TokenCache.loadExternalTokens exists, so a synthesised cache or authority interception is feasible; no frontend/src hook needed |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
