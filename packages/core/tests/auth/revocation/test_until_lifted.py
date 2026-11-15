@@ -183,6 +183,7 @@ async def test_cosmos_block_has_no_item_ttl_and_lift_restores_retention() -> Non
     await store.put(entry_for(TARGET, clock.datetime()))
     key = (revocation_document_id(TARGET), TARGET)
     assert container.items[key]["ttl"] == 120_000
+    assert "mode" not in container.items[key]  # PRP-06 shape: old code still reads it
     await store.put(_block(1, clock))
     assert "ttl" not in container.items[key]
     assert container.items[key]["mode"] == "until_lifted"

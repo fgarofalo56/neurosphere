@@ -111,6 +111,10 @@ class CosmosRevocationStore:
             "id": revocation_document_id(entry.principal_id),
             "doc_type": REVOCATION_DOC_TYPE,
         }
+        if body.get("mode") == "issued_before":
+            # The default mode is not stored: a plain entry keeps the PRP-06 document shape, so
+            # code from before PRP-39 still reads it after a rollback.
+            del body["mode"]
         if not entry.blocking:
             # A blocking entry carries NO per-item ttl: with the container's defaultTtl = -1 it
             # never expires, so an until_lifted block cannot silently lapse (PRP-39).
