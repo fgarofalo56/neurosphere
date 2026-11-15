@@ -232,7 +232,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call: everything runs on emulators. Ope
 |---|---|---|---|
 | 1 | verifying | prp-38-real-stack-ci | --grants-only + Makefile reorder + pins; real fresh stack-up UNVERIFIED so far |
 | 2 | todo | | |
-| 3 | todo | | |
+| 3 | verifying | prp-38-real-stack-ci | shared sbx_wire.py; live replay count against emulator not yet run |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |

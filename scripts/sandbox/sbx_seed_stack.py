@@ -133,7 +133,6 @@ from neurosphere_core.hitl import HitlService, ReviewPolicyRegistry  # noqa: E40
 from neurosphere_core.hitl.decisions import DecisionLog, DecisionStore  # noqa: E402
 from neurosphere_core.hitl.store import HitlStore  # noqa: E402
 from neurosphere_core.mcp import McpClientPolicy, McpRegistry, McpServerStore  # noqa: E402
-from neurosphere_core.payload import HubMessage, HubMessageKind  # noqa: E402
 from neurosphere_core.pricing import (  # noqa: E402
     InMemoryPriceSnapshotStore,
     PriceRow,
@@ -169,6 +168,7 @@ from sbx_guard import (  # noqa: E402
     require_local_endpoint,
 )
 from sbx_seam import HubSeam  # noqa: E402
+from sbx_wire import envelope, received_stamp  # noqa: E402
 
 from sandbox.config import (  # noqa: E402
     CACHED_INPUT_FACTOR,
@@ -535,7 +535,7 @@ def hub_lines(directory: Path, not_after: datetime | None = None) -> list[bytes]
     the run time that would be the future, so a record dated after ``not_after`` is stamped
     ``not_after`` instead (only the published copy; the ids are untouched).
     """
-    received = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    received = received_stamp()
     lines: list[bytes] = []
     for name, kind in (("telemetry.ndjson", "telemetry"), ("cost.ndjson", "cost")):
         for doc in read_ndjson(directory / name):
@@ -546,19 +546,15 @@ def hub_lines(directory: Path, not_after: datetime | None = None) -> list[bytes]
                 and _timestamp(doc["recorded_at"]) > not_after
             ):
                 doc = {**doc, "recorded_at": not_after.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"}
-            message = HubMessage(
-                kind=HubMessageKind(kind),
-                event_id=doc["event_id"] if telemetry else doc["cost_id"],
-                cloud=doc["cloud"],
-                customer_id=doc["customer_id"],
-                source_id=doc["source_id"],
-                producer_id=PRODUCER_ID,
-                received_at=received,
-                request_id=doc.get("request_id"),
-                observation_kind="gateway" if telemetry else "billing",
-                data=doc,
+            lines.append(
+                envelope(
+                    doc,
+                    kind=kind,
+                    event_id=doc["event_id"] if telemetry else doc["cost_id"],
+                    received_at=received,
+                    producer_id=PRODUCER_ID,
+                )
             )
-            lines.append(message.to_bytes())
     return lines
 
 
