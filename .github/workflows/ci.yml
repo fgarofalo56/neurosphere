@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     # main already took 14m39s against the old 15 minute limit (21 s margin); PRP-34 added ~650
     # tests, so the limit is raised to leave real headroom instead of a cancelled Pytest step.
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
