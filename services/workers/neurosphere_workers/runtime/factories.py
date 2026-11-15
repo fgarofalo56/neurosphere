@@ -146,6 +146,12 @@ from neurosphere_workers.actions.deploy import DeployConnector, PlanApprovals
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
+from neurosphere_workers.connector_config import (
+    ConnectorIdle,
+    resolve_billing_export_settings,
+    resolve_foundry_discovery_settings,
+    resolve_gateway_poll_settings,
+)
 from neurosphere_workers.evaluation.budget import BudgetLedger, BudgetLimits
 from neurosphere_workers.evaluation.labels import (
     HitlLabelSource,
@@ -169,17 +175,14 @@ from neurosphere_workers.evaluation.service import (
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
 from neurosphere_workers.ingestion.billing_export import (
     BillingExportPoller,
-    BillingExportSettings,
 )
 from neurosphere_workers.ingestion.consumer import IngestionConsumer
 from neurosphere_workers.ingestion.foundry_discovery import (
     FoundryDiscoveryPoller,
-    FoundryDiscoverySettings,
     ProjectTarget,
 )
 from neurosphere_workers.ingestion.gateway_poll import (
     GatewayPoller,
-    GatewayPollSettings,
     IngestClient,
     default_connector_factory,
 )
@@ -1185,9 +1188,10 @@ class _ClosableHttp:
 
 
 async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
-    poll = GatewayPollSettings()
-    if poll.unconfigured:
-        # Part of ``all``: with no gateway polling configured, idle gracefully (one info line).
+    poll = await resolve_gateway_poll_settings(cfg, lifetime)
+    if isinstance(poll, ConnectorIdle) or poll.unconfigured:
+        # Part of ``all``: with no gateway polling configured (or its stored config disabled),
+        # idle gracefully (one info line).
         logger.info(
             "gateway_poll not configured; role idles",
             extra={"event": "worker.gateway_poll_unconfigured"},
@@ -1197,6 +1201,7 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
             return None
 
         return _tick_role("gateway_poll", _noop, cfg)
+    assert not isinstance(poll, ConnectorIdle)
     if not poll.domains:
         raise RoleConfigError("gateway_poll_domain_ids_missing")
     if poll.api_base_url is None:
@@ -1239,8 +1244,8 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
 
 
 async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
-    disc = FoundryDiscoverySettings()
-    if disc.unconfigured:
+    disc = await resolve_foundry_discovery_settings(cfg, lifetime)
+    if isinstance(disc, ConnectorIdle) or disc.unconfigured:
         logger.info(
             "foundry_discovery not configured; role idles",
             extra={"event": "worker.foundry_discovery_unconfigured"},
@@ -1250,6 +1255,7 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
             return None
 
         return _tick_role("foundry_discovery", _noop, cfg)
+    assert not isinstance(disc, ConnectorIdle)
     if not disc.project_pairs_raw:
         raise RoleConfigError("foundry_discovery_projects_missing")
     if disc.domain_id is None:
@@ -1302,8 +1308,8 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
 
 
 async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
-    export = BillingExportSettings()
-    if export.unconfigured:
+    export = await resolve_billing_export_settings(cfg, lifetime)
+    if isinstance(export, ConnectorIdle) or export.unconfigured:
         logger.info(
             "billing_export not configured; role idles",
             extra={"event": "worker.billing_export_unconfigured"},
@@ -1313,6 +1319,7 @@ async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> 
             return None
 
         return _tick_role("billing_export", _noop, cfg)
+    assert not isinstance(export, ConnectorIdle)
     if export.storage_account_url is None:
         raise RoleConfigError("billing_export_storage_account_url_missing")
     if export.container is None:
@@ -1332,8 +1339,13 @@ async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> 
     if cfg.cloud != "commercial":
         # The billing connector is Commercial-only (Government export availability is unverified).
         raise RoleConfigError("billing_export_cloud_unsupported")
+    identity_options: dict[str, Any] = {}
+    client_id = getattr(export, "managed_identity_client_id", None)
+    if client_id is not None:
+        # A stored config may pin a user-assigned identity for the blob read.
+        identity_options["managed_identity_client_id"] = client_id
     credential = lifetime.register(
-        DefaultAzureCredential(authority=cfg.settings.cloud_profile.login_host)
+        DefaultAzureCredential(authority=cfg.settings.cloud_profile.login_host, **identity_options)
     )
     source = lifetime.register(
         AzureBlobExportSource(

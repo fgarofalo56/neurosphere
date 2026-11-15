@@ -221,8 +221,8 @@ A Key Vault client library dependency; secret creation or rotation in Key Vault;
 |---|---|---|---|
 | 1 | merged | prp-42-connector-config | core connectors package + tests (34 pass); null credential refused: PRP-65 Cosmos twin cannot round-trip null members |
 | 2 | merged | prp-42-connector-config | worker connector_config package + 31 tests; httpx INFO log filter for vault URLs |
-| 3 | todo | | |
-| 4 | todo | | |
+| 3 | merged | prp-42-connector-config | routes, service, models, router hook; 36 API tests |
+| 4 | merged | prp-42-connector-config | admin_connectors builder + factories use resolve_*; 40 worker tests, existing suites unchanged |
 | 5 | todo | | |
 | 6 | todo | | |
 
