@@ -102,6 +102,41 @@ test.describe("map table keyboard", () => {
     expect(await seriousOrCritical(page)).toEqual([]);
   });
 
+  test("ArrowRight expands, ArrowLeft collapses and End jumps to the last row", async ({
+    page,
+  }) => {
+    await page.goto(tableUrl(DOMAIN_OK));
+    const grid = page.getByRole("treegrid", { name: "Map nodes" });
+    await expect(grid).toBeVisible();
+    await tabUntil(page, () =>
+      page.evaluate(() => document.activeElement?.matches("tr[data-row-key]") ?? false),
+    );
+    const clusterRow = grid.locator("tr[data-row-key]").first();
+    await page.keyboard.press("ArrowRight");
+    await expect(clusterRow).toHaveAttribute("aria-expanded", "true");
+    await expect(grid.getByText("agent-0", { exact: true })).toBeVisible();
+    await page.keyboard.press("ArrowLeft");
+    await expect(clusterRow).toHaveAttribute("aria-expanded", "false");
+    await expect(grid.getByText("agent-0", { exact: true })).toHaveCount(0);
+    // exactly one row stays tabbable after the collapse
+    await expect(grid.locator("tr[data-row-key][tabindex='0']")).toHaveCount(1);
+    await page.keyboard.press("End");
+    const rows = grid.locator("tr[data-row-key]");
+    await expect(rows.last()).toBeFocused();
+  });
+
+  test("shows sign-in text on 401 and an error, not an empty table, on 503", async ({ page }) => {
+    await page.route("**/viewport**", (route) => route.fulfill({ status: 401, body: "{}" }));
+    await page.goto(tableUrl(DOMAIN_OK));
+    await expect(page.getByTestId("error-state")).toContainText("not signed in");
+    await expect(page.getByRole("treegrid")).toHaveCount(0);
+    await page.unroute("**/viewport**");
+    await page.route("**/viewport**", (route) => route.fulfill({ status: 503, body: "{}" }));
+    await page.goto(tableUrl(DOMAIN_OK));
+    await expect(page.getByTestId("error-state")).toContainText("not an empty result");
+    await expect(page.getByTestId("empty-state")).toHaveCount(0);
+  });
+
   test("shows an error, not data, for a domain the caller cannot read", async ({ page }) => {
     await page.goto(tableUrl(DOMAIN_FORBIDDEN));
     await expect(page.getByTestId("forbidden-state")).toBeVisible();

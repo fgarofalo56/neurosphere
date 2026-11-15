@@ -26,9 +26,8 @@ _none_
 | [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | PRP-58-hosted-data-path-and-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-40-audit-search-export-and-siem-sink (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
 | [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-49-per-agent-aggregates-and-map-metrics (backlog); PRP-55-real-deploy-apply (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
-| [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 27 | - | - | sonnet / sonnet | required |
 | [PRP-47-frontend-shell-and-test-infrastructure](backlog/PRP-47-frontend-shell-and-test-infrastructure.md) | P2 | 34 | - | - | sonnet / sonnet | none |
-| [PRP-49-per-agent-aggregates-and-map-metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | P2 | 37 | PRP-18-live-map-and-session-replay | PRP-18-live-map-and-session-replay (backlog) | sonnet / sonnet | required |
+| [PRP-49-per-agent-aggregates-and-map-metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | P2 | 37 | PRP-18-live-map-and-session-replay | - | sonnet / sonnet | required |
 | [PRP-50-connector-sdk-and-data-path-follow-ups](backlog/PRP-50-connector-sdk-and-data-path-follow-ups.md) | P2 | 38 | - | - | sonnet / sonnet | required |
 | [PRP-52-ci-and-infrastructure-hardening](backlog/PRP-52-ci-and-infrastructure-hardening.md) | P2 | 39 | - | - | sonnet / sonnet | required |
 | [PRP-56-compliance-control-library-and-evidence-bundles](backlog/PRP-56-compliance-control-library-and-evidence-bundles.md) | P2 | 42 | - | - | sonnet / sonnet | required |
@@ -50,6 +49,7 @@ _none_
 |---|---|---|
 | [PRP-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-11-15 | #275 |
 | [PRP-15-recommendations-engine](shipped/PRP-15-recommendations-engine.md) | 2026-11-15 | #281 |
+| [PRP-18-live-map-and-session-replay](shipped/PRP-18-live-map-and-session-replay.md) | 2026-11-15 | #280 |
 | [PRP-21-scale-federation-finops-and-dr](shipped/PRP-21-scale-federation-finops-and-dr.md) | 2026-11-15 | #282 |
 | [PRP-23-ato-evidence-and-data-lifecycle](shipped/PRP-23-ato-evidence-and-data-lifecycle.md) | 2026-11-15 | #276 |
 | [PRP-37-contracts-revision-admin-cost-and-permissions](shipped/PRP-37-contracts-revision-admin-cost-and-permissions.md) | 2026-11-15 | #273 |

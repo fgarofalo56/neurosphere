@@ -98,13 +98,16 @@ const PAGE: TracePage = {
   next_cursor: null,
 };
 
-function setup(path: string, opts: { page?: TracePage; status?: number } = {}) {
+function setup(
+  path: string,
+  opts: { page?: TracePage; status?: number; trace?: TraceDetail } = {},
+) {
   const fetchImpl = vi.fn<typeof fetch>((input) => {
     if (opts.status !== undefined) {
       return Promise.resolve(new Response("{}", { status: opts.status }));
     }
     const url = String(input);
-    const body = /\/traces\/[0-9a-f]{32}/.test(url) ? TRACE : (opts.page ?? PAGE);
+    const body = /\/traces\/[0-9a-f]{32}/.test(url) ? (opts.trace ?? TRACE) : (opts.page ?? PAGE);
     return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
   });
   const client = createApiClient({
@@ -135,6 +138,18 @@ describe("replay viewer", () => {
     expect(within(root).getByText("search-tool")).toBeTruthy();
     expect(within(tree).getByText("1.50 s")).toBeTruthy();
     expect(within(tree).getByText("duration unknown")).toBeTruthy();
+  });
+
+  it("renders duplicate-reason gap badges with unique keys", async () => {
+    const gap = TRACE.gaps[0];
+    if (gap === undefined) throw new Error("fixture has a gap");
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setup(OPEN, { trace: { ...TRACE, gaps: [gap, { ...gap }] } });
+    await screen.findByRole("tree");
+    expect(screen.getAllByTestId("gap-badge")).toHaveLength(2);
+    const keyWarnings = spy.mock.calls.filter((c) => String(c[0]).includes("same key"));
+    spy.mockRestore();
+    expect(keyWarnings).toEqual([]);
   });
 
   it("labels errors, tools, gaps, sampling and late spans as text", async () => {

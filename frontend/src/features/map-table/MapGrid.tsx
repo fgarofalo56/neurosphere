@@ -42,6 +42,8 @@ export interface GridContextValue {
   readonly expand: (key: string, node: ViewportNode) => void;
   readonly report: (section: string, data: SectionData | null) => void;
   readonly focusRow: (key: string) => boolean;
+  /** True when focus is inside the grid or lost to the body (a removed button), not elsewhere. */
+  readonly focusInGrid: () => boolean;
 }
 
 export const GridContext = createContext<GridContextValue | undefined>(undefined);
@@ -70,7 +72,7 @@ const useStyles = makeStyles({
   note: { color: tokens.colorNeutralForeground2, fontSize: tokens.fontSizeBase200 },
 });
 
-function rowKeyOf(section: string, node: ViewportNode): string {
+export function rowKeyOf(section: string, node: ViewportNode): string {
   return `${section}|${node.id}`;
 }
 
@@ -201,7 +203,7 @@ export function SectionRows({
 }: SectionRowsProps): ReactElement | null {
   const styles = useStyles();
   const grid = useGrid();
-  const { report, focusRow } = grid;
+  const { report, focusRow, focusInGrid } = grid;
   const pages = query.data?.pages;
   const nodes = pages?.flatMap((p) => p.nodes) ?? [];
   const last = pages?.[pages.length - 1];
@@ -221,6 +223,10 @@ export function SectionRows({
   const loadedCount = nodes.length;
   useLayoutEffect(() => {
     if (pendingFocus === null) return;
+    if (!focusInGrid()) {
+      setPendingFocus(null); // the user tabbed away while the page loaded: never steal focus
+      return;
+    }
     if (focusRow(pendingFocus)) {
       setPendingFocus(null);
       return;
@@ -233,7 +239,7 @@ export function SectionRows({
       if (!focusRow(section)) focusRow(grid.activeKey ?? "");
       setPendingFocus(null);
     }
-  }, [pendingFocus, loadedCount, focusRow, section, grid.activeKey]);
+  }, [pendingFocus, loadedCount, focusRow, focusInGrid, section, grid.activeKey]);
 
   if (last === undefined) return null;
 
@@ -242,7 +248,7 @@ export function SectionRows({
     const res = await query.fetchNextPage();
     const all = res.data?.pages.flatMap((p) => p.nodes) ?? [];
     const firstNew = all[before];
-    if (firstNew !== undefined) {
+    if (firstNew !== undefined && focusInGrid()) {
       setPendingFocus(rowKeyOf(section, firstNew));
     }
   };

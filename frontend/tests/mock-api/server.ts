@@ -65,6 +65,21 @@ function problem(correlationId: string, instance: string): ProblemDetails {
   };
 }
 
+/** A 404 problem+json (code `not_found`), the shape the real API answers for an unknown resource. */
+function notFoundProblem(correlationId: string, instance: string): ProblemDetails {
+  return {
+    schema_version: "1.0.0",
+    type: "https://neurosphere.invalid/problems/not_found",
+    title: "Not Found",
+    status: 404,
+    detail: "The requested resource was not found.",
+    instance,
+    code: "not_found",
+    retryable: false,
+    correlation_id: correlationId,
+  };
+}
+
 /** Role carried by the fake token ("ns-e2e-fake-token.Viewer"), lower-cased, or undefined. */
 export function roleFromAuthorization(header: string | undefined): string | undefined {
   if (header === undefined || !header.startsWith("Bearer ")) return undefined;
@@ -1341,8 +1356,15 @@ function mapReplayHandler(
     send(res, 200, viewportBody(domain, url, demo), headers);
   } else if (detail !== null) {
     const body = traceDetail(decodeURIComponent(detail[2] ?? ""));
-    if (body === undefined) send(res, 404, { error: "trace not found" }, cors);
-    else send(res, 200, body, headers);
+    if (body === undefined) {
+      send(
+        res,
+        404,
+        notFoundProblem(correlationId, url.pathname),
+        cors,
+        "application/problem+json",
+      );
+    } else send(res, 200, body, headers);
   } else {
     send(res, 200, replayList(url.searchParams.get("cursor") ?? ""), headers);
   }

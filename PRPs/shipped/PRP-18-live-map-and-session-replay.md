@@ -1,6 +1,8 @@
 ---
 name: PRP-18-live-map-and-session-replay
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 280
 priority: P2
 order: 27
 review: required
@@ -33,15 +35,15 @@ Out of scope: per-node metrics from a per-agent aggregate series (PRP-49); the 3
 - `services/api/neurosphere_api/replay/assemble.py:122-127` writes the missing-parent gap detail as "parent span is outside this domain and was withheld", which tells a caller another domain has spans; `frontend/src/features/replay/TraceTree.tsx:69` keys gap badges by reason only (duplicates); `frontend/tests/mock-api/server.ts:1344` answers an unknown trace with a bare `{ error }` 404, not problem+json.
 
 ## Acceptance criteria
-- [ ] Given a catalog of 2000 in-scope nodes and 4000 edges, When the viewport service builds a page, Then edges come from one bulk call (call count asserted, not per node) and the in-memory page completes in under 3 s (test with a recorded wall time; the threshold is ASSUMPTION A-1 below).
-- [ ] The bulk call returns exactly the edge set the per-node walk returned for the same ids (parity test over locks, overrides, hidden edges and an out-of-scope other endpoint), never includes an edge with an endpoint outside the caller's scope, and reports truncation when an edge or time budget is hit.
-- [ ] `RepositoryGraphQuery` still satisfies `GraphQuery`; a graph that lacks the bulk method falls back to the per-node walk (test with a stub graph).
-- [ ] `test_replay_readonly.py` fails on a fixture module that uses `from . import actions_x`, `from .. import executor`, `importlib.import_module("neurosphere_api.actions")` or `__import__("neurosphere_core.actions")` (negative-fixture tests), and still passes on the real replay package.
-- [ ] The gateway pump sleeps `min(poll_interval_seconds, effective refresh)`; tests cover the slow-consumer close (code 4429 reason `slow_consumer`) and close codes 1009, 1011 and 1013.
-- [ ] After a 4403 revoke the map client ignores later deltas and the graph stays empty (vitest).
-- [ ] Replay gap detail for a withheld parent is generic ("parent span is not available in this trace") and the foreign-domain reason is not distinguishable from an absent parent (test); gap badges have unique keys; the map-table `Load more` does not steal focus after the user tabbed away, and a stale `activeKey` leaves a tabbable row (vitest plus Playwright spec).
-- [ ] The mock API answers an unknown replay trace with `application/problem+json` (status 404, code `not_found`).
-- [ ] The Playwright command in the gates uses the correct cwd-relative spec paths.
+- [x] Given a catalog of 2000 in-scope nodes and 4000 edges, When the viewport service builds a page, Then edges come from one bulk call (call count asserted, not per node) and the in-memory page completes in under 3 s (test with a recorded wall time; the threshold is ASSUMPTION A-1 below).
+- [x] The bulk call returns exactly the edge set the per-node walk returned for the same ids (parity test over locks, overrides, hidden edges and an out-of-scope other endpoint), never includes an edge with an endpoint outside the caller's scope, and reports truncation when an edge or time budget is hit.
+- [x] `RepositoryGraphQuery` still satisfies `GraphQuery`; a graph that lacks the bulk method falls back to the per-node walk (test with a stub graph).
+- [x] `test_replay_readonly.py` fails on a fixture module that uses `from . import actions_x`, `from .. import executor`, `importlib.import_module("neurosphere_api.actions")` or `__import__("neurosphere_core.actions")` (negative-fixture tests), and still passes on the real replay package.
+- [x] The gateway pump sleeps `min(poll_interval_seconds, effective refresh)`; tests cover the slow-consumer close (code 4429 reason `slow_consumer`) and close codes 1009, 1011 and 1013.
+- [x] After a 4403 revoke the map client ignores later deltas and the graph stays empty (vitest).
+- [x] Replay gap detail for a withheld parent is generic ("parent span is not available in this trace") and the foreign-domain reason is not distinguishable from an absent parent (test); gap badges have unique keys; the map-table `Load more` does not steal focus after the user tabbed away, and a stale `activeKey` leaves a tabbable row (vitest plus Playwright spec).
+- [x] The mock API answers an unknown replay trace with `application/problem+json` (status 404, code `not_found`).
+- [x] The Playwright command in the gates uses the correct cwd-relative spec paths.
 - [ ] PRP exit: the touched pytest and vitest suites pass, `verify-gates.ps1 -Mode full` is green, the PRP-18 close-out lists the follow-up issues filed for the deferred items.
 
 ## Clarifications (decided)
@@ -214,20 +216,23 @@ No data or schema migration: the bulk call is additive and read-only. Rollback i
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-18-round2-map-edge-batching | EdgesAmongQuery + RepositoryGraphQuery.edges_among, 7 tests |
+| 2 | merged | prp-18-round2-map-edge-batching | guard + generic gap text + unique badge keys |
+| 3 | merged | prp-18-round2-map-edge-batching | pump cadence + slow consumer, 1011, token-text tests |
+| 4 | merged | prp-18-round2-map-edge-batching | service bulk call, revoke delta guard, map-table focus, mock 404 problem+json, e2e |
+| 5 | merged | prp-18-round2-map-edge-batching | close-out |
 
-## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (G07 map fps and live freshness):
-- Env vars for the operator (none expected):
-- Follow-up issue numbers (reveal-people-with-audit, archive index, revocation e2e):
-- Product check (can an operator use the map and replay without editing files?):
+## Completion note
+- Date, PR, merge commit: 2026-11-15, PR #280, squash-merged into main (merge commit is the PR's squash commit).
+- Deviations from the blueprint and why: no `[serial-after]` items existed. The PRP exit box ("`verify-gates.ps1 -Mode full` is green") is left unticked: the close-out ran the touched pytest suites (251 passed), repo-wide ruff, ruff format and pyright locally, and left the frontend vitest, Playwright and full gate to CI.
+- Descoped items: reveal-people-with-audit, `ArchiveTraceReader` index and cross-replica revocation e2e were not built (filed as follow-ups, see below). Per-node metrics stay with PRP-49, the fps p5 reword and headed re-measure with PRP-64.
+- OPEN gates (G07 map fps and live freshness): G07 map fps p5 and headed re-measure OPEN (PRP-64, operator hardware). Optional live freshness run (`NS_LIVE_APPROVED=1`) not run.
+- Env vars for the operator (none expected): none.
+- Follow-up issue numbers (reveal-people-with-audit #286, archive index #287, revocation e2e #288, reviewer follow-ups #289). Reviewer follow-ups checked:
+  - `RepositoryGraphQuery.edges_among` stops entity paging once past the largest wanted id. Confirmed for the repository engine: `list_entities` orders by `ref`, which is set to the entity id (`engine.py` puts `ref = str(body["id"])`), and the Cosmos backend emits `ORDER BY ref ASC`, so the ordering assumption holds for both backends. No test pins this against Cosmos itself (emulator-only); a contract test on ordering would be a cheap follow-up.
+  - In raw view `keep()` raises `ForbiddenError` for any candidate edge in a non-audited domain. This matches the per-node `_expand` walk (same check), so parity holds, but an auditor scoped to some domains can be refused by a cross-domain edge instead of having it skipped. Left as is; open as a follow-up decision.
+  - The domain-page scan can read up to 40 pages of 500 edges per domain before the per-node fallback. No load test in `tests/load/map_freshness` yet; follow-up.
+- Product check (can an operator use the map and replay without editing files?): unchanged from round 1; the map and replay are used through the UI, and no new configuration was added.
 
 ## History
 - Round 1 (PR #85, merged 2026-10-21, merge `3d14d00`) shipped the WebSocket gateway, viewport API, sigma renderer, accessible table, replay viewer, freshness test and wiring (items 1-7).

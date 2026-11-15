@@ -1,5 +1,7 @@
 """Per-session budgets: message rate, subscriptions, sessions per principal, message size."""
 
+import asyncio
+
 import pytest
 from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     ALICE,
@@ -12,6 +14,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 from neurosphere_api.realtime import RealtimeSettings
 from neurosphere_api.realtime.budgets import TokenBucket
 from neurosphere_core.auth.scope import Role
+from starlette.websockets import WebSocketDisconnect
 
 from .rt_helpers import build_rig, drain, until_pong
 
@@ -137,3 +140,24 @@ def test_settings_read_ns_realtime_environment_and_validate(
 def test_default_poll_interval_is_at_most_two_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("NS_REALTIME_POLL_INTERVAL_SECONDS", raising=False)
     assert RealtimeSettings().poll_interval_seconds <= 2.0
+
+
+def test_slow_consumer_is_closed_4429_with_reason_slow_consumer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rig = build_rig(*POLICIES, send_timeout_seconds=0.05)
+    with rig.client() as client, rig.connect(client, ALICE) as ws:
+        ws.send_json({"type": "ping"})
+        assert ws.receive_json() == {"type": "pong"}
+
+        async def stalled(self: object, data: object, mode: str = "text") -> None:
+            await asyncio.sleep(3600)
+
+        monkeypatch.setattr("starlette.websockets.WebSocket.send_json", stalled)
+        ws.send_json({"type": "ping"})
+        with pytest.raises(WebSocketDisconnect) as closed:
+            ws.receive_json()
+    assert closed.value.code == 4429
+    assert closed.value.reason == "slow_consumer"
+    assert rig.registry.counters.dropped_deltas == 1
+    assert rig.registry.session_count == 0

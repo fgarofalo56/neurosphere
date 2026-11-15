@@ -90,18 +90,22 @@ function clusterPage(page: number): ViewportResponse {
   };
 }
 
-function setup(path: string, opts: { status?: number; top?: ViewportResponse } = {}) {
-  const fetchImpl = vi.fn<typeof fetch>((input) => {
+function setup(
+  path: string,
+  opts: { status?: number; top?: ViewportResponse; gatePage2?: Promise<void> } = {},
+) {
+  const fetchImpl = vi.fn<typeof fetch>(async (input) => {
     if (opts.status !== undefined) {
-      return Promise.resolve(new Response("{}", { status: opts.status }));
+      return new Response("{}", { status: opts.status });
     }
     const url = new URL(String(input));
     let body: ViewportResponse = opts.top ?? TOP;
     if (url.searchParams.get("cluster_id") === "cluster:agents") {
       const cursor = url.searchParams.get("cursor");
+      if (cursor === "page-2" && opts.gatePage2 !== undefined) await opts.gatePage2;
       body = clusterPage(cursor === "page-3" ? 3 : cursor === "page-2" ? 2 : 1);
     }
-    return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+    return new Response(JSON.stringify(body), { status: 200 });
   });
   const client = createApiClient({
     baseUrl: "http://api.test",
@@ -224,6 +228,28 @@ describe("map table", () => {
     expect(
       within(screen.getByTestId("connections-table")).getAllByRole("row").slice(1),
     ).toHaveLength(5);
+  });
+
+  it("does not steal focus when the user tabbed away while a page was loading", async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    setup(PATH, { gatePage2: gate });
+    const grid = await screen.findByRole("treegrid");
+    const cluster = within(grid).getAllByTestId("node-row")[0] as HTMLElement;
+    cluster.focus();
+    await user.keyboard("{Enter}");
+    expect(await within(grid).findByText("member-1-0")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Load more in Agents" }));
+    const outside = screen.getByRole("link");
+    outside.focus();
+    release();
+    expect(await within(grid).findByText("member-2-0")).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(document.activeElement).toBe(outside);
   });
 
   it("moves between rows with arrow keys and announces the selected row", async () => {
