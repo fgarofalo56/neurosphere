@@ -1,0 +1,4 @@
+{
+  "default": { "rate_per_second": 50, "burst": 100 },
+  "domains": {}
+}

@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Final
 
 from fastapi import Depends, Request
+from neurosphere_core.admission import TokenBucketLimiter, derive_limiter_key
 from neurosphere_core.auth.scope import (
     Permission,
     ScopeDerivation,
@@ -189,6 +190,7 @@ def require(
         if resource is None:
             if _holds_anywhere(scope, perm, now) is not True:
                 raise await _denial(state, request, scope, perm, None, "permission_missing")
+            _admit(request, scope, None)
             return scope
         try:
             target = _resolve(resource, request, scope)
@@ -203,11 +205,30 @@ def require(
         )
         if allowed is not True:
             raise await _denial(state, request, scope, perm, target, "target_out_of_scope")
+        _admit(request, scope, target.domain_id)
         return scope
 
     setattr(require_permission, PERMISSION_MARKER, perm)
     require_permission.__name__ = f"require_{perm.value.replace('.', '_')}"
     return require_permission
+
+
+def _admit(request: Request, scope: IdentityScope, route_domain: str | None) -> None:
+    """Charge the per-domain admission limiter (PRP-21), once per request, after the permission
+    check passed. A no-op when ``app.state.admission`` is absent (admission off).
+
+    The key comes from the server-derived ``scope`` plus ``route_domain``, a domain ``permits``
+    has already validated for this caller; ``derive_limiter_key`` re-checks it against the
+    scope's allowed domains. Raises ``RateLimitedError`` (429 with ``Retry-After``). The limiter
+    call is synchronous and never awaits.
+    """
+    limiter = getattr(request.app.state, "admission", None)
+    if not isinstance(limiter, TokenBucketLimiter):
+        return
+    if getattr(request.state, "ns_admitted", False):
+        return
+    limiter.admit(derive_limiter_key(scope, route_domain))
+    request.state.ns_admitted = True
 
 
 def _resolve(

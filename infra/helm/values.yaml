@@ -52,6 +52,15 @@ ingest:
   producersFile: ""
   producersConfigMap: ""
 
+# Per-domain admission control (PRP-21). Off by default (no env set). Set exactly one source and the
+# api gets NS_ADMISSION_ENABLED=true plus NS_ADMISSION_POLICY_FILE (see docs/runbooks/admission-and-federation.md):
+#   admission.policyFile: path inside the api pod (e.g. a vault object under /mnt/vault);
+#   admission.policyConfigMap: operator-created ConfigMap with key quotas.json, mounted read-only.
+# Never unlimited: an unreadable file falls back to 10 req/s, burst 20 per domain.
+admission:
+  policyFile: ""
+  policyConfigMap: ""
+
 # Deployment resource scan (PRP-08). Off by default: POST /v1/deploy/scan answers 503
 # scan_not_configured. When enabled the api container gets NS_SCAN_ENABLED=true and reads
 # Resource Graph with its workload identity (keyless). Tuning keys are optional; empty = service default.

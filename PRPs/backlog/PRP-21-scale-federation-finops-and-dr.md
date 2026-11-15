@@ -223,7 +223,7 @@ No data migration. New settings default to off or unset, so existing deployments
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 | todo | | |
+| 1 | merged | prp-21-round2-admission-federation | require() charges app.state.admission after permits; builder admission.py; compose+helm+runbook; tests admission_api (12) |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
