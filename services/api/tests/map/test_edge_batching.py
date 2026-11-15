@@ -16,7 +16,11 @@ from neurosphere_core.catalog.graph import EdgesAmongQuery
 
 NODES = 2000
 EDGES = 4000
-TIME_BOUND_SECONDS = 3.0  # ASSUMPTION A-1: regression guard, not a promise (round 1: about 15 s)
+# ASSUMPTION A-1: regression guard, not a promise. Round 1 took about 15 s (one graph read per
+# node); the bulk call takes about 2 s on an idle machine and 3.3 s of CPU on one running a
+# parallel build, so the bound sits between the two regimes. The call-count assertions below
+# are the real proof that the per-node reads are gone.
+TIME_BOUND_SECONDS = 8.0
 
 
 class _Spy:
