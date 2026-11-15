@@ -48,6 +48,17 @@ def policy() -> PolicyState:
     return load_policy(POLICY_RAW)
 
 
+def policy_for(*data_classes: str) -> dict[str, object]:
+    """A raw policy with a 0..90 day rule for each class (min retention 0: deletable at once)."""
+    return {
+        **POLICY_RAW,
+        "rules": [
+            {"data_class": c, "min_retention_days": 0, "max_retention_days": 90}
+            for c in data_classes
+        ],
+    }
+
+
 def make_scope(
     pseudonym: str = "p-7f3a9c21", customer: str = "contoso", domains: tuple[str, ...] = (DOMAIN,)
 ) -> IdentityScope:

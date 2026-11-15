@@ -238,7 +238,7 @@ Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md`
 |------|--------|-----------------|-------|
 | A | merged | prp-23-round2-lifecycle-runtime | #120 polish done, CA-7/CP-2/PM-5 designed |
 | 1 | merged | prp-23-round2-lifecycle-runtime | dry-run, retry, policy file, job store |
-| 2 | todo | | |
+| 2 | merged | prp-23-round2-lifecycle-runtime | backends done; emulator test written, NOT RUN (PRP-38 holds compose) |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
