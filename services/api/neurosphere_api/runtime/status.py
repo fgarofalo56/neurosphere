@@ -61,6 +61,7 @@ OPTIONAL_COMPONENTS: Final = (
     "analytics_adapter",
     "policy_admin",
     "revocation_service",
+    "admin_producers",
 )
 #: Startup steps that are not components but still gate readiness when they fail.
 STARTUP_STEPS: Final = ("cosmos_containers",)
