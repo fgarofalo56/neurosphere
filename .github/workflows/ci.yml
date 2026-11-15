@@ -18,12 +18,66 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The single python job reached the 30 minute limit on PR #292 (about 12,300 tests, pytest
+  # alone 19 to 27 minutes) and was cancelled twice with no test failure. The suite is now
+  # split by top-level test root across three jobs, and lint, types and the dependency audit
+  # run beside them. `python` keeps the required-check name as a gate that fails unless the
+  # static job and every test shard succeeded; a skipped or cancelled dependency fails it too.
+  # The shard paths together must equal `testpaths` in pyproject.toml.
   python:
     name: python (ruff, pyright, pytest, pip-audit)
+    needs: [python-static, python-tests]
+    if: always()
     runs-on: ubuntu-latest
-    # main already took 14m39s against the old 15 minute limit (21 s margin); PRP-34 added ~650
-    # tests, so the limit is raised to leave real headroom instead of a cancelled Pytest step.
-    timeout-minutes: 60
+    timeout-minutes: 5
+    steps:
+      - name: Require every python job to succeed
+        env:
+          STATIC: ${{ needs.python-static.result }}
+          TESTS: ${{ needs.python-tests.result }}
+        run: |
+          echo "static=$STATIC tests=$TESTS"
+          test "$STATIC" = "success"
+          test "$TESTS" = "success"
+
+  python-tests:
+    name: python tests (${{ matrix.shard.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: tests
+            paths: tests
+          - name: packages and connectors
+            paths: packages connectors
+          - name: services
+            paths: services
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      # The Government/infra/egress static tests shell out to helm and az and now FAIL (not skip)
+      # when CI is set and the tool is missing (issue #100). az is preinstalled on ubuntu-latest.
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
+      - name: Tool versions the static egress tests need
+        run: |
+          helm version --short
+          az bicep install
+          az bicep version
+      - name: Pytest
+        run: uv run pytest -q ${{ matrix.shard.paths }}
+
+  python-static:
+    name: python checks (ruff, pyright, pip-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -37,18 +91,6 @@ jobs:
         run: uv run ruff format --check .
       - name: Pyright
         run: uv run pyright
-      # The Government/infra/egress static tests shell out to helm and az and now FAIL (not skip)
-      # when CI is set and the tool is missing (issue #100). az is preinstalled on ubuntu-latest.
-      - uses: azure/setup-helm@v5
-        with:
-          version: v4.3.0
-      - name: Tool versions the static egress tests need
-        run: |
-          helm version --short
-          az bicep install
-          az bicep version
-      - name: Pytest
-        run: uv run pytest -q
       - name: Dependency audit
         # Workspace members are not on PyPI, so audit the exported third-party pins only.
         run: |
