@@ -15,24 +15,53 @@ has none).
 
 from __future__ import annotations
 
+import logging
+
 from neurosphere_core.ledger import AllocationRecord, CostLedger, PriceTable
 from neurosphere_core.ledger.models import format_time
+from opentelemetry import metrics as otel_metrics
+from opentelemetry.metrics import Meter
 
 from neurosphere_workers.ingestion.models import NormalizedEvent
-from neurosphere_workers.projections.outbox.mapping import RequestObservation, map_event
+from neurosphere_workers.projections.outbox.mapping import (
+    RequestObservation,
+    dropped_reason,
+    map_event,
+)
 from neurosphere_workers.projections.outbox.models import OutboxEntry, event_outbox_id
 from neurosphere_workers.projections.outbox.writer import OutboxWriter
 
+_log = logging.getLogger(__name__)
+METRIC_OUTBOX_COST_DROPPED = "ns.outbox.cost_dropped"
+
 
 class CostLedgerSink:
-    def __init__(self, ledger: CostLedger, outbox: OutboxWriter, prices: PriceTable) -> None:
+    def __init__(
+        self,
+        ledger: CostLedger,
+        outbox: OutboxWriter,
+        prices: PriceTable,
+        meter: Meter | None = None,
+    ) -> None:
         self._ledger = ledger
         self._outbox = outbox
         self._prices = prices
+        # Created once per sink, not per event (#167 pattern).
+        self._dropped = (
+            meter or otel_metrics.get_meter("neurosphere_workers.outbox")
+        ).create_counter(METRIC_OUTBOX_COST_DROPPED, unit="{event}")
+        self._logged_reasons: set[str] = set()
 
     async def accept(self, event: NormalizedEvent) -> None:
         mapped = map_event(event, self._prices)
         state = None
+        if mapped is None:
+            reason = dropped_reason(event)
+            if reason is not None:
+                self._dropped.add(1, {"reason": reason})
+                if reason not in self._logged_reasons:  # reason code only, never the record
+                    self._logged_reasons.add(reason)
+                    _log.warning("outbox dropped cost records", extra={"reason": reason})
         if isinstance(mapped, RequestObservation):
             change = await self._ledger.record(
                 mapped.customer_id, mapped.request_id, mapped.cost_category, mapped.observation

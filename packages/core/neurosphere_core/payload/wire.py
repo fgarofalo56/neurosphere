@@ -43,6 +43,8 @@ class HubMessage(BaseModel):
     request_id: str | None = None
     # Stamped by the edge from the source's producer registration, never trusted from the payload.
     observation_kind: Literal["gateway", "application", "billing"] | None = None
+    # Sanitised nscostcenter CloudEvent extension (PRP-46, #190); None when absent or invalid.
+    cost_center: str | None = Field(default=None, max_length=128)
     dropped_field_counts: dict[str, int] = Field(default_factory=dict)
     data: dict[str, Any]
 

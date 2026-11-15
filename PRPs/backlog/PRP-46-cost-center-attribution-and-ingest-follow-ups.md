@@ -242,8 +242,8 @@ Unpriced `CostRecord` posting (D2 reversal); dashboards or finops grouping by co
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | after 1 |
+| 1 | merged | prp-46-cost-center | done (ingest extension, reasons, runbook) |
+| 2 | merged | prp-46-cost-center | done (ledger, outbox counter, pipeline counter) |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

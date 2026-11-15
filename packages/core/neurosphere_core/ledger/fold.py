@@ -139,6 +139,12 @@ def _first(values: Iterable[str | None]) -> str | None:
     return next((v for v in values if v is not None), None)
 
 
+def _cost_center(observations: list[Observation]) -> str | None:
+    """The one cost center every carrying observation agrees on; None when none or conflicting."""
+    values = {o.cost_center for o in observations if o.cost_center is not None}
+    return next(iter(values)) if len(values) == 1 else None
+
+
 def fold_entry(
     customer_id: str,
     request_id: str,
@@ -199,4 +205,5 @@ def fold_entry(
         retry_amount=retry_amount,
         allocation=_allocation(members),
         token_breakdown=_tokens(members),
+        cost_center=_cost_center(obs_list),
     ).with_hash()

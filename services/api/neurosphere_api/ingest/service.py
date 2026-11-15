@@ -19,9 +19,12 @@ from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from neurosphere_core.payload import (
     CLOUDEVENT_TYPE_COST,
     CLOUDEVENT_TYPE_TELEMETRY,
+    COST_CENTER_EXTENSION,
+    COST_CENTER_TAG,
     HubMessage,
     HubMessageKind,
     drop_body_fields,
+    sanitize_cost_center,
 )
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -97,6 +100,8 @@ class IngestService:
         self._publisher = publisher
         self._limiter = limiter
         self._now = now
+        # Cost records whose own tags.cost_center differed from the extension (record wins).
+        self.cost_center_mismatches = 0
 
     # -- admission -------------------------------------------------------------------------
     def authorize(self, authorization: str | None) -> ProducerRegistration:
@@ -141,6 +146,7 @@ class IngestService:
         received_at: str,
         request_id: str | None,
         data: dict[str, Any],
+        cost_center: str | None = None,
     ) -> HubMessage:
         return HubMessage(
             kind=kind,
@@ -152,11 +158,17 @@ class IngestService:
             received_at=received_at,
             request_id=request_id,
             observation_kind=producer.sources[scope.source_id],
+            cost_center=cost_center,
             data=data,
         )
 
     def _telemetry_message(
-        self, producer: ProducerRegistration, scope: om.Scope, event: TelemetryEvent, at: str
+        self,
+        producer: ProducerRegistration,
+        scope: om.Scope,
+        event: TelemetryEvent,
+        at: str,
+        cost_center: str | None = None,
     ) -> HubMessage:
         return self._message(
             producer,
@@ -166,6 +178,7 @@ class IngestService:
             received_at=at,
             request_id=event.request_id.root if event.request_id else None,
             data=event.model_dump(mode="json"),
+            cost_center=cost_center,
         )
 
     async def _finish(
@@ -305,6 +318,23 @@ class IngestService:
             raise om.MappingError(ReasonCode.REQUEST_ID_MISMATCH)
         return value
 
+    def _merge_cost_center_tag(self, data: dict[str, Any], extension: str | None) -> None:
+        """Stamp the extension cost center into ``tags``; the record's own tag wins (counted)."""
+        if extension is None:
+            return
+        tags = data.get("tags")
+        if tags is None:
+            data["tags"] = {COST_CENTER_TAG: extension}
+            return
+        if not isinstance(tags, dict):
+            return  # the contract rejects it
+        own = tags.get(COST_CENTER_TAG)
+        if own is None:
+            if len(tags) < 16:
+                data["tags"] = {**tags, COST_CENTER_TAG: extension}
+        elif own != extension:
+            self.cost_center_mismatches += 1
+
     def _cloudevent_message(
         self, producer: ProducerRegistration, item: Any, received_at: str
     ) -> HubMessage:
@@ -331,17 +361,27 @@ class IngestService:
         scope = resolve_scope(producer, claims)
         data.update(cloud=scope.cloud, customer_id=scope.customer_id, source_id=scope.source_id)
 
+        # Read only after scope resolution, from the envelope extension, never from ``data``.
+        event_cost_center = sanitize_cost_center(
+            (event.model_extra or {}).get(COST_CENTER_EXTENSION)
+        )
         try:
             if event.type == CLOUDEVENT_TYPE_TELEMETRY:
                 data["ingestion_time"] = received_at
                 telemetry = TelemetryEvent.model_validate(data)
-                return self._telemetry_message(producer, scope, telemetry, received_at)
+                return self._telemetry_message(
+                    producer, scope, telemetry, received_at, event_cost_center
+                )
             if data.get("observation_source") not in (None, producer.sources[scope.source_id]):
-                raise _forbidden(ReasonCode.CLAIM_MISMATCH)
+                # Source authority failure: one bad item must not block the batch (#169).
+                raise om.MappingError(ReasonCode.OBSERVATION_SOURCE_MISMATCH)
             request_id = self._cost_request_id(event, data)
+            self._merge_cost_center_tag(data, event_cost_center)
             cost = CostRecord.model_validate(data)
         except ValidationError as exc:
             raise om.MappingError(ReasonCode.INVALID_EVENT) from exc
+        tag = (cost.tags.root if cost.tags else {}).get(COST_CENTER_TAG)
+        cost_center = sanitize_cost_center(getattr(tag, "root", tag)) or event_cost_center
         if cost.kind == "invoiced" and producer.sources[scope.source_id] != "billing":
             raise om.MappingError(ReasonCode.INVOICED_NOT_BILLING)
         return self._message(
@@ -352,4 +392,5 @@ class IngestService:
             received_at=received_at,
             request_id=request_id,
             data=cost.model_dump(mode="json"),
+            cost_center=cost_center,
         )

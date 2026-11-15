@@ -28,6 +28,8 @@ class ReasonCode(StrEnum):
     REQUEST_ID_MISMATCH = "request_id_mismatch"
     # kind=invoiced from a producer source not registered as billing (#27).
     INVOICED_NOT_BILLING = "invoiced_not_billing"
+    # Producer-reported observation_source disagrees with its registration (#169).
+    OBSERVATION_SOURCE_MISMATCH = "observation_source_mismatch"
     # Per-item "ignored": valid input that the documented subset does not map.
     UNSUPPORTED_METRIC_TYPE = "unsupported_metric_type"
     UNMAPPED_METRIC_NAME = "unmapped_metric_name"
