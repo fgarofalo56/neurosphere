@@ -98,10 +98,11 @@ def _json_object(line: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-class SandboxSeriesSource:
-    """Loads a sandbox output directory once; ``series`` then slices it per call."""
+class SeriesAccumulator:
+    """Shared bucketing, dedupe and coverage rules (PRP-15 round 2: one rule set for the sandbox
+    and the archive source, so the same documents give equal series)."""
 
-    def __init__(self, directory: Path) -> None:
+    def __init__(self) -> None:
         self.stats = LoadStats()
         self._agents: dict[str, dict[str, Any]] = {}
         self._owners: dict[str, str] = {}
@@ -109,105 +110,72 @@ class SandboxSeriesSource:
         self._cost: dict[tuple[str, date], _DayAcc] = {}
         self._tele_cover: set[tuple[str, date]] = set()
         self._cost_cover: set[tuple[str, date]] = set()
-        self._load_agents(directory / "agents.ndjson")
-        self._load_owners(directory / "relations.ndjson")
-        self._load_telemetry(directory / "telemetry.ndjson")
-        self._load_cost(directory / "cost.ndjson")
+        self._seen_events: set[str] = set()
+        self._best_cost: dict[str, tuple[int, str, date, Decimal]] = {}
 
-    # -- loading -----------------------------------------------------------------------------
+    def add_telemetry(self, doc: dict[str, Any]) -> bool:
+        """Count one telemetry document. ``False`` when it was skipped or a duplicate."""
+        self.stats.telemetry_lines += 1
+        try:
+            TelemetryEvent.model_validate(doc)
+        except ValidationError:
+            self.stats.telemetry_skipped += 1
+            return False
+        agent_id = doc.get("canonical_agent_id")
+        day = _day_of(str(doc["event_time"]))
+        if not isinstance(agent_id, str) or day is None:
+            self.stats.telemetry_skipped += 1
+            return False
+        event_id = str(doc["event_id"])
+        if event_id in self._seen_events:
+            self.stats.telemetry_duplicates += 1
+            return False
+        self._seen_events.add(event_id)
+        self._tele_cover.add((_source_of(agent_id), day))
+        acc = self._tele.setdefault((agent_id, day), _DayAcc())
+        acc.events += 1
+        if doc.get("span_kind") == "request":
+            acc.requests += 1
+            if doc.get("outcome") in _ERROR_OUTCOMES:
+                acc.errors += 1
+            duration = doc.get("duration_ms")
+            if isinstance(duration, int) and not isinstance(duration, bool):
+                if acc.durations is None:
+                    acc.durations = []
+                acc.durations.append(duration)
+        return True
 
-    def _load_agents(self, path: Path) -> None:
-        for line in _lines(path):
-            doc = _json_object(line)
-            if doc is None:
-                continue
-            ident = doc.get("id")
-            if not all(
-                isinstance(doc.get(k), str) for k in ("id", "cloud", "customer_id", "domain_id")
-            ):
-                continue
-            self._agents[str(ident)] = doc
+    def add_cost(self, doc: dict[str, Any]) -> bool:
+        """Stage one cost document (de-duplicated by ``dedupe_key``); call ``finish_cost`` once
+        after the last one. ``False`` when it was skipped."""
+        self.stats.cost_lines += 1
+        try:
+            CostRecord.model_validate(doc)
+            amount = Decimal(str(doc["amount"]))
+        except (ValidationError, InvalidOperation, KeyError):
+            self.stats.cost_skipped += 1
+            return False
+        agent_id = doc.get("canonical_agent_id")
+        stamp = doc.get("usage_start") or doc.get("recorded_at")
+        day = _day_of(str(stamp))
+        if not isinstance(agent_id, str) or day is None:
+            self.stats.cost_skipped += 1
+            return False
+        key = str(doc["dedupe_key"])
+        rank = _COST_PRIORITY.get(str(doc.get("observation_source")), 9)
+        best = self._best_cost
+        if key in best:
+            self.stats.cost_duplicates += 1
+            if rank >= best[key][0]:
+                return True
+        best[key] = (rank, agent_id, day, amount)
+        return True
 
-    def _load_owners(self, path: Path) -> None:
-        chosen: dict[str, tuple[int, str]] = {}
-        for line in _lines(path):
-            doc = _json_object(line)
-            if doc is None or doc.get("relation_type") != "owned_by":
-                continue
-            subject, target = doc.get("source_id"), doc.get("target_id")
-            if not isinstance(subject, str) or not isinstance(target, str):
-                continue
-            rank = (0 if doc.get("status") == "asserted" else 1, target)
-            if subject not in chosen or rank < chosen[subject]:
-                chosen[subject] = rank
-        self._owners = {subject: rank[1] for subject, rank in chosen.items()}
-
-    def _load_telemetry(self, path: Path) -> None:
-        seen: set[str] = set()
-        for line in _lines(path):
-            self.stats.telemetry_lines += 1
-            doc = _json_object(line)
-            if doc is None:
-                self.stats.telemetry_skipped += 1
-                continue
-            try:
-                TelemetryEvent.model_validate(doc)
-            except ValidationError:
-                self.stats.telemetry_skipped += 1
-                continue
-            agent_id = doc.get("canonical_agent_id")
-            day = _day_of(str(doc["event_time"]))
-            if not isinstance(agent_id, str) or day is None:
-                self.stats.telemetry_skipped += 1
-                continue
-            event_id = str(doc["event_id"])
-            if event_id in seen:
-                self.stats.telemetry_duplicates += 1
-                continue
-            seen.add(event_id)
-            self._tele_cover.add((_source_of(agent_id), day))
-            acc = self._tele.setdefault((agent_id, day), _DayAcc())
-            acc.events += 1
-            if doc.get("span_kind") == "request":
-                acc.requests += 1
-                if doc.get("outcome") in _ERROR_OUTCOMES:
-                    acc.errors += 1
-                duration = doc.get("duration_ms")
-                if isinstance(duration, int) and not isinstance(duration, bool):
-                    if acc.durations is None:
-                        acc.durations = []
-                    acc.durations.append(duration)
-
-    def _load_cost(self, path: Path) -> None:
-        best: dict[str, tuple[int, str, date, Decimal]] = {}
-        for line in _lines(path):
-            self.stats.cost_lines += 1
-            doc = _json_object(line)
-            if doc is None:
-                self.stats.cost_skipped += 1
-                continue
-            try:
-                CostRecord.model_validate(doc)
-                amount = Decimal(str(doc["amount"]))
-            except (ValidationError, InvalidOperation, KeyError):
-                self.stats.cost_skipped += 1
-                continue
-            agent_id = doc.get("canonical_agent_id")
-            stamp = doc.get("usage_start") or doc.get("recorded_at")
-            day = _day_of(str(stamp))
-            if not isinstance(agent_id, str) or day is None:
-                self.stats.cost_skipped += 1
-                continue
-            key = str(doc["dedupe_key"])
-            rank = _COST_PRIORITY.get(str(doc.get("observation_source")), 9)
-            if key in best:
-                self.stats.cost_duplicates += 1
-                if rank >= best[key][0]:
-                    continue
-            best[key] = (rank, agent_id, day, amount)
-        for _rank, agent_id, day, amount in best.values():
+    def finish_cost(self) -> None:
+        for _rank, agent_id, day, amount in self._best_cost.values():
             self._cost_cover.add((_source_of(agent_id), day))
             self._cost.setdefault((agent_id, day), _DayAcc()).cost += amount
+        self._best_cost = {}
 
     # -- reading -----------------------------------------------------------------------------
 
@@ -281,3 +249,61 @@ class SandboxSeriesSource:
             cost_amount=cost,
             durations_ms=bound_durations(acc.durations) if acc.durations else None,
         )
+
+
+class SandboxSeriesSource(SeriesAccumulator):
+    """Loads a sandbox output directory once; ``series`` then slices it per call."""
+
+    def __init__(self, directory: Path) -> None:
+        super().__init__()
+        self._load_agents(directory / "agents.ndjson")
+        self._load_owners(directory / "relations.ndjson")
+        self._load_telemetry(directory / "telemetry.ndjson")
+        self._load_cost(directory / "cost.ndjson")
+
+    # -- loading -----------------------------------------------------------------------------
+
+    def _load_agents(self, path: Path) -> None:
+        for line in _lines(path):
+            doc = _json_object(line)
+            if doc is None:
+                continue
+            ident = doc.get("id")
+            if not all(
+                isinstance(doc.get(k), str) for k in ("id", "cloud", "customer_id", "domain_id")
+            ):
+                continue
+            self._agents[str(ident)] = doc
+
+    def _load_owners(self, path: Path) -> None:
+        chosen: dict[str, tuple[int, str]] = {}
+        for line in _lines(path):
+            doc = _json_object(line)
+            if doc is None or doc.get("relation_type") != "owned_by":
+                continue
+            subject, target = doc.get("source_id"), doc.get("target_id")
+            if not isinstance(subject, str) or not isinstance(target, str):
+                continue
+            rank = (0 if doc.get("status") == "asserted" else 1, target)
+            if subject not in chosen or rank < chosen[subject]:
+                chosen[subject] = rank
+        self._owners = {subject: rank[1] for subject, rank in chosen.items()}
+
+    def _load_telemetry(self, path: Path) -> None:
+        for line in _lines(path):
+            doc = _json_object(line)
+            if doc is None:
+                self.stats.telemetry_lines += 1
+                self.stats.telemetry_skipped += 1
+                continue
+            self.add_telemetry(doc)
+
+    def _load_cost(self, path: Path) -> None:
+        for line in _lines(path):
+            doc = _json_object(line)
+            if doc is None:
+                self.stats.cost_lines += 1
+                self.stats.cost_skipped += 1
+                continue
+            self.add_cost(doc)
+        self.finish_cost()
