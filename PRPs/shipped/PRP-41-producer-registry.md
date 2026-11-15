@@ -171,11 +171,11 @@ Parallelization: items 1 and 2 [P] (core and API ingest side share no file). Ite
 
 ### Item 4 - Composition: edge builder and main
 - Deliverable: edge builder builds `ProducerAdmin` over the `admin_config` repository (Cosmos on the shared client, in-memory only under `NS_ENV=local` or a backend override), attaches the store layer to the ingest registry through an `on_startup` hook, reports `admin_producers`, and invalidates the local snapshot after each write; `main.py` passes the store switch to the ingest bootstrap.
-- Owned files: `runtime/builders/edge.py`, `main.py`, `runtime/status.py` (append `admin_producers`), `services/api/tests/admin_producers_api/test_builder.py`.
+- Owned files: `runtime/builders/edge.py`, `main.py`, `runtime/status.py` (append `admin_producers`), `services/api/tests/admin_producers_api/test_producers_builder.py`.
 - Must NOT touch: `runtime/builders/data.py`, `admin.py`.
 - Depends on: item 3.
 - Acceptance criteria: with the switch off the ingest component is exactly as before; with it on and a fake repository, a created producer authenticates; cosmos unavailable reports `admin_producers` disabled with a reason code and file producers keep working; existing `runtime_api`, `runtime_routes` and `runtime_data` suites pass.
-- Tests: `services/api/tests/admin_producers_api/test_builder.py`; re-run `services/api/tests/runtime_api`, `runtime_routes`, `runtime_data`, `ingest`.
+- Tests: `services/api/tests/admin_producers_api/test_producers_builder.py`; re-run `services/api/tests/runtime_api`, `runtime_routes`, `runtime_data`, `ingest`.
 - Pattern references: `runtime/builders/edge.py:17-27`, `runtime/builders/gateway.py` (shared Cosmos client, override seam).
 
 ### Item 5 - Authorization and secrecy negative suite
