@@ -14,7 +14,7 @@ why, and what it changes.
 
 | # | Decision | Options considered | Why | Effect |
 |---|---|---|---|---|
-| D1 | Repository is **private** | keep public; private; private + move to HouseGarofalo org | Government-governance product plan; operator's default is private for new repos | Visibility flipped the same day; secret-scan comment updated; pushes still treated as publication |
+| D1 | Repository is **public** by operator decision (2026-11-14 wording; the 2026-10-08 choice was private) | keep public; private; private + move to HouseGarofalo org | Operator intent is public; the repo is public today and GHCR packages publish public (`release.yml`) | Stated by the owner (Frank Garofalo), made true in the docs by PRP-36 on 2026-11-14. A push is publication: secrets are rotated, never just removed (`SECURITY.md`). No FedRAMP, ATO or parity claim is made |
 | D2 | Harness is the **orchestrated-PRP kit only** | kit only; kit + tasks.json; tasks.json only | One convention across the operator's repos | ADR-0003; PRP.md §5 removed |
 | D3 | Legacy Kong/DAB/Artemis scaffold **deleted** | delete; delete code and keep one archive; move to docs/archive | Git history (`21ab22b`, `9fbf5f4`) already preserves it | `data/`, `services/`, `client/`, `tools/`, demo docs, `docs/archive/` removed |
 | D4 | **One PRP per epic**, 27 PRPs | per epic; per phase chunk (~9) | Each PRP stays a single session with disjoint-ownership items | `PRPs/backlog/PRP-00..27` |

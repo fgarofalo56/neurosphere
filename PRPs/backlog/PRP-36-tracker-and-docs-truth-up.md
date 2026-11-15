@@ -208,13 +208,13 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. Nothing here changes a gate 
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-36-docs-truth-up | see commit |
+| 2 | merged | prp-36-docs-truth-up | see commit |
+| 3 | merged | prp-36-docs-truth-up | see commit |
+| 4 | merged | prp-36-docs-truth-up | see commit |
+| 5 | merged | prp-36-docs-truth-up | see commit |
+| 6 | merged | prp-36-docs-truth-up | see commit |
+| 7 | in-progress | prp-36-docs-truth-up | gates, PR; CHANGELOG, INDEX, status table are merge-step Tier 3 |
 
 ## Completion note (filled at ship)
 - Date and PR:

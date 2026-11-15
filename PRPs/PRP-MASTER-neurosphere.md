@@ -8,7 +8,7 @@ design_ref: "docs/PRD.md, PRP.md, docs/ARCHITECTURE.md, docs/RESEARCH-AND-GATES.
 
 # PRP-MASTER: NeuroSphere build orchestration
 
-> **This is the file you kick off from.** It sequences PRP-00 to PRP-32, carries the
+> **This is the file you kick off from.** It sequences PRP-00 to PRP-64 (PRP-65 to PRP-69 were added by the 2026-11-14 audit), carries the
 > decisions that bind all of them, and defines what "the whole thing is done" means.
 > Individual PRPs live in `PRPs/backlog/`; run one per session with
 > `/prp:prp-execute PRPs/backlog/<file>.md`. The binding preamble is `PRP.md` §1–§3.
@@ -115,7 +115,7 @@ python scripts/validate_planning.py
 # 3. Emulators healthy; no outbound calls. Needed from PRP-03 onward.
 docker compose up -d --wait
 
-# 4. Repo is private (decision D1).
+# 4. Repo visibility: public by operator decision D1 (a push is publication; see SECURITY.md).
 gh repo view --json isPrivate
 
 # 5. Only when a live gate is about to run, and only after operator approval:
@@ -123,7 +123,7 @@ gh repo view --json isPrivate
 ```
 
 Expected: gates PASS (build reported SKIP until PRP-00 item 2 makes it required),
-validator PASS, three healthy containers, `"isPrivate": true`.
+validator PASS, three healthy containers, `"isPrivate": false` (public, D1).
 
 ## Execution order and waves
 
@@ -151,6 +151,17 @@ in `PRPs/shipped/`. Phase gates sit between waves and need operator sign-off.
 | W9 (cont.) | 25, 26 | none |
 | W10 | 33, then 34 (added 2026-10-29) | **Gateway exit**: G17 observe and manage live runs on a throwaway Standard v2 APIM with operator approval, or recorded OPEN (manage script `scripts/gates/g17_apim_manage_live.py` ships; live run OPEN until an operator-approved run writes `docs/evidence/G17/manage-*.md`); reviewer confirms no write path to a reused gateway outside an audited manage-mode switch |
 | W10 | 27 | explicit budget approval recorded in `marketing/video/APPROVAL.md` |
+| W11 | 36, 37, 68 | see `PRPs/EXECUTION-PLAN.md` (docs truth-up, contracts revision, changelog fragments) |
+| W12 | 11, 23, 38, 65 | see `PRPs/EXECUTION-PLAN.md` |
+| W13 | 15, 18, 21, 39 | see `PRPs/EXECUTION-PLAN.md` |
+| W14 | 40, 41, 42, 43 | see `PRPs/EXECUTION-PLAN.md` |
+| W15 | 44, 46, 47, 48 | see `PRPs/EXECUTION-PLAN.md` |
+| W16 | 45, 49, 50, 52 | see `PRPs/EXECUTION-PLAN.md` |
+| W17 | 53, 54, 56, 59 | see `PRPs/EXECUTION-PLAN.md` |
+| W18 | 55, 57, 58, 60 | see `PRPs/EXECUTION-PLAN.md` |
+| W19 | 51, 61, 62, 63 | see `PRPs/EXECUTION-PLAN.md` |
+| W20 | 67, 69 | see `PRPs/EXECUTION-PLAN.md` |
+| W21 | 64, 66 | see `PRPs/EXECUTION-PLAN.md` (live-gates campaign and sign-off gates; live items stay OPEN until an operator-approved run) |
 
 ```mermaid
 flowchart LR
@@ -183,6 +194,40 @@ flowchart LR
   P24 --> P30
   P29 --> P31 & P32
   P30 --> P31
+  %% Waves W11 to W21: one edge per depends_on in PRPs/backlog (round-2 PRPs 11, 15, 18, 21, 23 have none)
+  P37 --> P39 & P40 & P41 & P42 & P43 & P44 & P45 & P46 & P48 & P65
+  P65 --> P39 & P40 & P41 & P42 & P44 & P45 & P48
+  P39 --> P41 & P42 & P44 & P45 & P53
+  P48 --> P45
+  P18 --> P49
+  P40 --> P53 & P64
+  P44 --> P53 & P57 & P58
+  P45 --> P53 & P54 & P57
+  P41 --> P57 & P58
+  P42 --> P57 & P58 & P62
+  P53 --> P57
+  P15 --> P58 & P61
+  P54 --> P55 & P58
+  P56 --> P61
+  P38 --> P63
+  P58 --> P63 & P64 & P66 & P67
+  P11 --> P64
+  P62 --> P64
+  P21 --> P66
+  P49 --> P66
+  P55 --> P66
+  P63 --> P66
+  P67 --> P66
+  P23
+  P36
+  P47
+  P50
+  P51
+  P52
+  P59
+  P60
+  P68
+  P69
 ```
 
 ## PRP register
@@ -242,7 +287,7 @@ All PRPs inherit `PRP.md` §1–§3 and these operator decisions (full log in
 
 | # | Decision |
 |---|---|
-| D1 | Repository is private. A push is still publication; secrets are rotated, never just removed |
+| D1 | Repository is public by operator decision (was private until 2026-11-14; see `docs/DECISIONS-LOG.md`). A push is publication; secrets are rotated, never just removed; see `SECURITY.md` |
 | D2 | This kit is the only harness. No `tasks.json`, no `PROGRESS.md`; status lives in PRP frontmatter and git |
 | D3 | Legacy demo scaffold is deleted; git history is the archive |
 | D4 | One PRP per epic, 27 PRPs plus the video follow-up |
