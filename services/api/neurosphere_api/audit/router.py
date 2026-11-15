@@ -120,6 +120,9 @@ def register(
         prefix=ROUTE_PREFIX,
         alias_prefix=ALIAS_PREFIX,
     )
-    from neurosphere_api.audit import search
+    from neurosphere_api.audit import denials, export, search, siem_status
 
     registry.register(search.PREFIX, search.build_router())
+    registry.register(export.PREFIX, export.build_router())
+    registry.register(denials.PREFIX, denials.build_router())
+    registry.register(siem_status.PREFIX, siem_status.build_router())
