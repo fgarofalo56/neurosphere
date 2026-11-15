@@ -247,7 +247,7 @@ Unpriced `CostRecord` posting (D2 reversal); dashboards or finops grouping by co
 | 3 | merged | prp-46-cost-center | done |
 | 4 | merged | prp-46-cost-center | done |
 | 5 | merged | prp-46-cost-center | done |
-| 6 | todo | | |
+| 6 | todo | | merge step: Tier-3 regen, changelog fragment, prp_status, follow-up issues |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:

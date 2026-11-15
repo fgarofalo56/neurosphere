@@ -180,7 +180,14 @@ class _WatchingApim(InMemoryApim):
         self.during_put: list[tuple[bool, str | None]] = []
         self.watch: tuple[InMemoryGatewayRecordStore[ApplyRecord], GatewayModeSwitch] | None = None
 
-    async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
+    async def put(
+        self,
+        path: str,
+        properties: Mapping[str, Any],
+        *,
+        if_match: str | None,
+        if_none_match: bool = False,
+    ) -> None:
         if self.watch is not None:
             records, switch = self.watch
             reason: str | None = None
@@ -192,7 +199,7 @@ class _WatchingApim(InMemoryApim):
             except CapabilityUnavailableError as exc:
                 reason = exc.reason
             self.during_put.append((await records.running(GW), reason))
-        await super().put(path, properties, if_match=if_match)
+        await super().put(path, properties, if_match=if_match, if_none_match=if_none_match)
 
 
 class _FailingCanary:
