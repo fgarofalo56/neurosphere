@@ -43,6 +43,7 @@ gen = _load_generate()
 
 EXPECTED_AREAS = {
     "actions",
+    "admin",
     "audit",
     "catalog",
     "chart",
