@@ -181,10 +181,10 @@ Routes, UI, mock handlers, worker pickup, any secret value storage; schema chang
 | 4 | todo | | |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: (filled at merge)
+- Deviations (draft, items 1-3): `tests/unit/hosted_demo/test_cosmos_container_drift.py` container count 28 -> 29 (outside the Ownership block; forced by the new container, one line). `test_roles.py` pins were edited in place, not only appended (item 1 requires the role pins to change). `policy_admin` adds `remove_grant` and `empty_principal_policy` beyond the listed names. Role changes do not touch memberships (callers pair them with `apply_membership_change`). `validate_admin_body` also enforces the JSON Schema if/then rules Pydantic drops (credential members and vault cloud, system-setting member, secret-like connector keys, budget thresholds/tags, retail price sheet cloud/host, maker_checker default) and the customer/cloud of every canonical id in a body. Cosmos `admin_config` rows use the composite id `<kind>:<id>` with the contract document nested under `document`.
+- Descoped items: none.
+- OPEN gates: emulator suites `test_policy_admin_cosmos.py` and `test_config_store_cosmos.py` (marked `integration`) not run: PRP-38 held the compose stack in W12. Hosted `admin_config` container creation waits for the next operator deploy (PRP-58/64).
+- Env vars for the operator: none.
+- Follow-up issues: customer-level audit chains (`<customer>.admin-config`, like `.gateway`) share the catalog-shaped form, so a catalog domain literally named `admin-config` would decode to the same chain; PRP-44's domain write path must reserve that name (file an issue at merge).
+- Product check (can an operator use it without editing files): no, by design: storage and authority layer only; routes and console arrive in PRP-39..57.
