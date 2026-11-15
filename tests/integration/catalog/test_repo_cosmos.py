@@ -150,3 +150,41 @@ async def test_observation_documents_hold_ids_only(database: DatabaseProxy) -> N
         assert rows[0]["body"]["evidence_ids"] == ["trace:o1"]
     finally:
         await database.delete_container(container.id)
+
+
+async def test_list_edges_by_domain_pages_and_scopes(database: DatabaseProxy) -> None:
+    """PRP-43 item 4: ``list_edges_by_domain`` on the emulator (ordered, bounded, scoped)."""
+    from neurosphere_core.catalog.protocol import EdgeFilter
+    from neurosphere_core.paging import PageRequest
+
+    shape = PartitionKeyShape.FLAT_DOMAIN
+    container = await create_catalog_container(database, f"cat_dom_{uuid.uuid4().hex[:8]}", shape)
+    try:
+        ns = f"t{uuid.uuid4().hex[:10]}"
+        repo = CosmosCatalogRepository(container, shape)
+        dom_a, dom_b = helper.dom(ns, "a"), helper.dom(ns, "b")
+        wide = helper.make_scope(ns, [dom_a, dom_b])
+        for name in ("n0", "n1", "n2", "n3"):
+            await repo.create_entity(wide, helper.agent(ns, name, "a"))
+        await repo.create_entity(wide, helper.agent(ns, "m0", "b"))
+        await repo.create_entity(wide, helper.agent(ns, "m1", "b"))
+        for src, dst in (("n0", "n1"), ("n1", "n2"), ("n2", "n3")):
+            await repo.put_edge(wide, helper.edge(ns, f"{src}-{dst}", src, dst, "a"), None)
+        await repo.put_edge(wide, helper.edge(ns, "m0-m1", "m0", "m1", "b"), None)
+        narrow = helper.make_scope(ns, [dom_a])
+        first = await repo.list_edges_by_domain(
+            narrow, dom_a, EdgeFilter(), PageRequest(page_size=2)
+        )
+        assert len(first.items) == 2
+        assert first.next_cursor is not None
+        second = await repo.list_edges_by_domain(
+            narrow, dom_a, EdgeFilter(), PageRequest(page_size=2, cursor=first.next_cursor)
+        )
+        ids = [e.id for e in (*first.items, *second.items)]
+        assert ids == sorted(ids) and len(set(ids)) == 3
+        outside = await repo.list_edges_by_domain(
+            narrow, dom_b, EdgeFilter(), PageRequest(page_size=5)
+        )
+        assert outside.items == []
+    finally:
+        await database.delete_container(container.id)

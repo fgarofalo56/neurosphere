@@ -17,7 +17,9 @@ so two stewards cannot lose a write).
 from __future__ import annotations
 
 import builtins
-from collections.abc import Mapping
+import hashlib
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime, timedelta
 from typing import Any, Final, NoReturn
 
 from azure.core import MatchConditions
@@ -32,6 +34,7 @@ from azure.cosmos.exceptions import (
 from pydantic import ValidationError
 
 from neurosphere_core.catalog.review_queue import ReviewItem, ReviewResolution
+from neurosphere_core.catalog.rules import format_timestamp, parse_timestamp
 from neurosphere_core.errors import (
     DependencyTransientError,
     ForbiddenError,
@@ -52,6 +55,8 @@ DEFAULT_REVIEW_QUEUE_CONTAINER: Final = "catalog_review_queue"
 REVIEW_QUEUE_PARTITION_KEY_PATHS: Final = ("/customer_id", "/domain_id")
 _QUERY_FIELDS: Final = frozenset({"sort_key"})
 _RESOLVE_ATTEMPTS: Final = 3
+MARKER_KIND: Final = "open_marker"
+_MARKER_STALE: Final = timedelta(seconds=60)
 _SCOPE_CLAUSES: Final = (
     "c.cloud = @cloud AND c.customer_id = @customer AND ARRAY_CONTAINS(@domains, c.domain_id)"
 )
@@ -91,6 +96,26 @@ def _body(item: ReviewItem) -> dict[str, Any]:
     return body
 
 
+def _marker_id(item: ReviewItem) -> str:
+    key = "|".join((item.edge_id, item.reason, item.governing_override_id or ""))
+    return "open-" + hashlib.sha256(key.encode("utf-8")).hexdigest()[:48]
+
+
+def _marker_body(item: ReviewItem, now: datetime) -> dict[str, Any]:
+    """Deterministic open-conflict marker: same partition as the item, never listed."""
+    return {
+        "id": _marker_id(item),
+        "kind": MARKER_KIND,
+        "status": "marker",  # never matches the open-item queries
+        "item_id": item.id,
+        "edge_id": item.edge_id,
+        "cloud": item.cloud,
+        "customer_id": item.customer_id,
+        "domain_id": item.domain_id,
+        "created_at": format_timestamp(now),
+    }
+
+
 def _from_row(row: Mapping[str, Any]) -> ReviewItem:
     document = {k: v for k, v in row.items() if not k.startswith("_") and k not in _QUERY_FIELDS}
     try:
@@ -106,8 +131,14 @@ def _from_row(row: Mapping[str, Any]) -> ReviewItem:
 class CosmosReviewQueue:
     """:class:`neurosphere_core.catalog.review_queue.ReviewQueue` on one Cosmos container."""
 
-    def __init__(self, container: ContainerProxy) -> None:
+    def __init__(
+        self,
+        container: ContainerProxy,
+        *,
+        now: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
         self._container = container
+        self._now = now
 
     @classmethod
     def from_client(
@@ -123,6 +154,8 @@ class CosmosReviewQueue:
         if not _visible(scope, item):
             raise ForbiddenError("review item is outside the caller's scope")
         if await self._open_duplicate(scope, item):
+            return False  # also covers items stored before open markers existed
+        if not await self._claim_marker(item):
             return False
         try:
             await self._container.create_item(body=_body(item))
@@ -131,6 +164,70 @@ class CosmosReviewQueue:
         except Exception as exc:
             _raise_mapped(exc)
         return True
+
+    async def _claim_marker(self, item: ReviewItem) -> bool:
+        """Create the deterministic open marker; False when the conflict is already open.
+
+        Two concurrent enqueues of the same conflict race on this create (a unique id inside one
+        partition), so exactly one proceeds. A marker whose item never landed (a crash between
+        the two writes) is taken over once it is older than ``_MARKER_STALE``.
+        """
+        marker = _marker_body(item, self._now())
+        try:
+            await self._container.create_item(body=marker)
+        except CosmosResourceExistsError:
+            return await self._take_over(item, marker)
+        except Exception as exc:
+            _raise_mapped(exc)
+        return True
+
+    async def _take_over(self, item: ReviewItem, marker: dict[str, Any]) -> bool:
+        try:
+            held = await self._container.read_item(
+                item=marker["id"], partition_key=[item.customer_id, item.domain_id]
+            )
+        except CosmosResourceNotFoundError:
+            return await self._claim_marker(item)  # removed meanwhile: claim again
+        except Exception as exc:
+            _raise_mapped(exc)
+        placed = await self._item_exists(held)
+        age = self._now() - parse_timestamp(str(held.get("created_at", marker["created_at"])))
+        if placed or age < _MARKER_STALE:
+            return False
+        try:
+            await self._container.replace_item(
+                item=marker["id"],
+                body=marker,
+                etag=str(held.get("_etag", "")),
+                match_condition=MatchConditions.IfNotModified,
+            )
+        except (CosmosAccessConditionFailedError, CosmosResourceNotFoundError):
+            return False
+        except Exception as exc:
+            _raise_mapped(exc)
+        return True
+
+    async def _item_exists(self, marker: Mapping[str, Any]) -> bool:
+        try:
+            await self._container.read_item(
+                item=str(marker.get("item_id", "")),
+                partition_key=[marker["customer_id"], marker["domain_id"]],
+            )
+        except CosmosResourceNotFoundError:
+            return False
+        except Exception as exc:
+            _raise_mapped(exc)
+        return True
+
+    async def _drop_marker(self, item: ReviewItem) -> None:
+        try:
+            await self._container.delete_item(
+                item=_marker_id(item), partition_key=[item.customer_id, item.domain_id]
+            )
+        except CosmosResourceNotFoundError:
+            return
+        except Exception as exc:
+            _raise_mapped(exc)
 
     async def _open_duplicate(self, scope: IdentityScope, item: ReviewItem) -> bool:
         """A still-open item for the same edge, reason and governing decision exists."""
@@ -202,10 +299,16 @@ class CosmosReviewQueue:
                 continue  # lost a race; re-read and retry
             except Exception as exc:
                 _raise_mapped(exc)
-            return _from_row(stored)
+            result = _from_row(stored)
+            await self._drop_marker(result)
+            return result
         raise StaleVersionError("review item changed while resolving", reason="etag_mismatch")
 
     async def _get_row(self, scope: IdentityScope, item_id: str) -> Mapping[str, Any] | None:
+        row = await self._find_row(scope, item_id)
+        return None if row is None or row.get("kind") == MARKER_KIND else row
+
+    async def _find_row(self, scope: IdentityScope, item_id: str) -> Mapping[str, Any] | None:
         if not scope.allowed_domains:
             return None
         if len(scope.allowed_domains) == 1:
