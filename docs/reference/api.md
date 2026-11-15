@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `8e197a3ee8c83c28147e1515bd48b992dc32501f`. Generated: 2026-11-15.
+> Source commit: `b200a8f9585c7955ed45216abfdfe083ddd51063`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 167 operations on 143 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 171 operations on 147 paths.
 
 ## Status and verification
 
@@ -62,6 +62,10 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/rotate` | Rotate Producer |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/verify` | Verify Audit Chain |
+| audit | GET | `/api/v1/audit/denials` | List Audit Denials |
+| audit | GET | `/api/v1/audit/export` | Export Audit Records |
+| audit | GET | `/api/v1/audit/search` | Search Audit Records |
+| audit | GET | `/api/v1/audit/siem/status` | Audit Siem Status |
 | audit | GET | `/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/audit/chains/{chain_id}/verify` | Verify Audit Chain |
 | catalog | GET | `/api/v1/catalog/entities` | List Entities |
@@ -413,6 +417,33 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Verify Audit Chain
 - Parameters: `chain_id` (path, required)
 - Responses: `200` `ChainVerification`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/denials`
+
+- Operation id: `list_audit_denials_api_v1_audit_denials_get`
+- Summary: List Audit Denials
+- Parameters: `cursor` (query), `page_size` (query)
+- Responses: `200` `Page_AuditRecord_`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/export`
+
+- Operation id: `export_audit_records_api_v1_audit_export_get`
+- Summary: Export Audit Records
+- Parameters: `format` (query), `since` (query, required), `until` (query, required), `domain` (query), `operation` (query), `kind` (query), `outcome` (query), `actor` (query), `correlation_id` (query)
+- Responses: `200` no body; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/search`
+
+- Operation id: `search_audit_records_api_v1_audit_search_get`
+- Summary: Search Audit Records
+- Parameters: `cursor` (query), `page_size` (query), `since` (query, required), `until` (query, required), `domain` (query), `operation` (query), `kind` (query), `outcome` (query), `actor` (query), `correlation_id` (query)
+- Responses: `200` `AuditSearchPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/siem/status`
+
+- Operation id: `audit_siem_status_api_v1_audit_siem_status_get`
+- Summary: Audit Siem Status
+- Responses: `200` `AuditSiemStatus`
 
 #### GET `/audit/chains/{chain_id}/records`
 

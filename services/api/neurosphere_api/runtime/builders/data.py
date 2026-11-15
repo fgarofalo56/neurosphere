@@ -12,8 +12,11 @@ Component                 ``app.state`` keys
 ``federation``            ``federation`` (this deployment's cell, served in-process)
 ``evaluation``            ``evaluation_store``, ``evaluation_pilot_dataset_ids``
 ``recommendations``       ``recommendation_store``
-``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink; an
-                          invalid setting is ``audit_siem_settings_invalid``)
+``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink when
+                          ``audit_siem`` is ok; never blocked by the sink) and
+                          ``audit_search_store`` (PRP-40)
+``audit_siem``            ``siem_sink_health`` (optional, PRP-40): ``disabled`` for sink
+                          ``none``, ``failed`` ``audit_siem_settings_invalid`` on a bad setting
 ``review_router``         ``review_router`` (HITL-backed; also builds and publishes the
                           ``HitlService``)
 ``replay``                ``trace_reader``, ``replay_payload_policy``
@@ -49,12 +52,15 @@ from pathlib import Path
 from typing import Annotated, Any, Final
 
 import httpx
+from azure.identity.aio import DefaultAzureCredential
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.siem import JsonLinesFileSink, SiemExporter, SiemSink, StdoutSink
+from neurosphere_core.audit.siem_eventhubs import EventHubsSiemSink, resolve_namespace
+from neurosphere_core.audit.siem_health import SiemSinkHealth
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
@@ -64,7 +70,9 @@ from neurosphere_core.catalog.review_queue_cosmos import (
     DEFAULT_REVIEW_QUEUE_CONTAINER,
     CosmosReviewQueue,
 )
+from neurosphere_core.clients import create_eventhub_producer
 from neurosphere_core.errors import (
+    CapabilityUnavailableError,
     DependencyTransientError,
     InvalidSchemaError,
 )
@@ -82,6 +90,13 @@ from neurosphere_workers.projections.outbox.reader import SINK_AGGREGATES, SINK_
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from neurosphere_api.audit.prescope import PrescopeAuditor
+from neurosphere_api.audit.search_store import (
+    AuditSearchStore,
+    CosmosAuditSearchStore,
+    RepositoryAuditSearchStore,
+)
+from neurosphere_api.authz.dependencies import PRESCOPE_AUDIT_ATTRIBUTE
 from neurosphere_api.federation.cache import SummaryCache
 from neurosphere_api.federation.client import CellClient, HttpCellClient, InProcessCellClient
 from neurosphere_api.federation.service import FederationState, Federator
@@ -95,6 +110,7 @@ from neurosphere_api.replay.reader import ArchiveTraceReader, TraceReader
 from neurosphere_api.runtime.builders import (
     AGGREGATE_READER,
     AUDIT_REPOSITORY,
+    AUDIT_SEARCH_STORE,
     AUTH_SETTINGS,
     AUTHENTICATOR,
     CATALOG_REPOSITORY,
@@ -104,6 +120,7 @@ from neurosphere_api.runtime.builders import (
     REVOCATION_CHECKER,
     REVOCATION_HOOKS,
     SCOPE_SOURCE,
+    SIEM_SINK_HEALTH,
     BuildContext,
     BuilderSpec,
     ComponentUnavailableError,
@@ -136,6 +153,7 @@ COMPONENTS: Final = (
     "map",
     "audit",
     "realtime",
+    "audit_siem",
 )
 
 AUDIT_CHAIN_CONTAINER: Final = "audit"
@@ -348,26 +366,98 @@ def _recommendations(ctx: BuildContext) -> None:
 # -- audit, HITL review router --------------------------------------------------------------
 
 
-def _siem_exporter() -> SiemExporter | None:
-    """``NS_AUDIT_SIEM_*``: the reference sink, or ``None`` (the default, no export)."""
+_SIEM_INVALID: Final = "audit_siem_settings_invalid"
+
+
+def _eventhubs_sink(ctx: BuildContext, conf: AuditSiemSettings) -> EventHubsSiemSink:
+    """The Event Hubs sink (PRP-40): managed identity outside ``NS_ENV=local``, never a key.
+
+    ``ctx.overrides.backend("audit_siem_producer")`` supplies a fake producer in tests. The
+    namespace is resolved against this deployment's ``CloudProfile`` only, so a host from the
+    other cloud is refused (``audit_siem_settings_invalid``), never sent to.
+    """
+    producer: Any = ctx.overrides.backend("audit_siem_producer")
+    if producer is not None:
+        return EventHubsSiemSink(producer)
+    local = ctx.settings.env == "local"
+    namespace: str | None = None
+    if conf.eventhubs_namespace is not None:
+        try:
+            namespace = resolve_namespace(ctx.settings.cloud_profile, conf.eventhubs_namespace)
+        except ValueError:
+            raise ComponentUnavailableError(_SIEM_INVALID) from None
+    elif not local:
+        raise ComponentUnavailableError(_SIEM_INVALID)
+    hub = conf.eventhubs_name
+    if hub is None:  # pragma: no cover - the settings validator requires it
+        raise ComponentUnavailableError(_SIEM_INVALID)
+    credential = None
+    if not local and conf.eventhubs_client_id is not None:
+        credential = ctx.lifetime.register(
+            DefaultAzureCredential(
+                authority=ctx.settings.cloud_profile.login_host,
+                managed_identity_client_id=conf.eventhubs_client_id,
+            )
+        )
+    try:
+        # Registered with the composition lifetime: closed at app shutdown.
+        client = create_eventhub_producer(
+            ctx.settings,
+            lifetime=ctx.lifetime,
+            eventhub_name=hub,
+            namespace=namespace,
+            credential=credential,
+        )
+    except (InvalidSchemaError, CapabilityUnavailableError):
+        raise ComponentUnavailableError(_SIEM_INVALID) from None
+    return EventHubsSiemSink(client)
+
+
+def _siem_exporter(ctx: BuildContext) -> SiemExporter | None:
+    """``NS_AUDIT_SIEM_*``: the configured sink, or ``None`` (the default, no export).
+
+    Reports ``audit_siem`` and publishes ``SIEM_SINK_HEALTH`` in every outcome, so the status
+    route can always say what is configured. A failure here never fails the ``audit`` component.
+    """
     try:
         conf = AuditSiemSettings()
     except ValidationError:
-        raise ComponentUnavailableError("audit_siem_settings_invalid") from None
-    sink: SiemSink
-    if conf.sink == "stdout":
-        sink = StdoutSink()
-    elif conf.sink == "file" and conf.file_path is not None:
-        sink = JsonLinesFileSink(conf.file_path)
-    else:
+        _publish_siem_health(ctx, SiemSinkHealth("unknown", state="failed", reason=_SIEM_INVALID))
+        ctx.failed("audit_siem", _SIEM_INVALID)
         return None
-    return SiemExporter([sink])
+    if conf.sink == "none":
+        _publish_siem_health(ctx, SiemSinkHealth("none", state="disabled"))
+        ctx.disabled("audit_siem")
+        return None
+    sink: SiemSink
+    try:
+        if conf.sink == "stdout":
+            sink = StdoutSink()
+        elif conf.sink == "file" and conf.file_path is not None:
+            sink = JsonLinesFileSink(conf.file_path)
+        elif conf.sink == "eventhubs":
+            sink = _eventhubs_sink(ctx, conf)
+        else:  # pragma: no cover - the settings validators refuse every other combination
+            raise ComponentUnavailableError(_SIEM_INVALID)
+    except ComponentUnavailableError as exc:
+        _publish_siem_health(ctx, SiemSinkHealth(conf.sink, state="failed", reason=exc.reason))
+        ctx.failed("audit_siem", exc.reason)
+        return None
+    health = SiemSinkHealth(conf.sink)
+    _publish_siem_health(ctx, health)
+    ctx.ok("audit_siem")
+    return SiemExporter([sink], health=health)
 
 
-def _audit(ctx: BuildContext) -> None:
+def _publish_siem_health(ctx: BuildContext, health: SiemSinkHealth) -> None:
+    ctx.app.state.siem_sink_health = health
+    ctx.publish(SIEM_SINK_HEALTH, health)
+
+
+def _audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
     repository = _backend(ctx, "audit_repository", AuditRepository)
+    search: AuditSearchStore
     if repository is None:
-        exporter = _siem_exporter()
         repository = AuditRepository(
             CosmosAuditStore.from_client(
                 ctx.cosmos_client(),
@@ -377,8 +467,50 @@ def _audit(ctx: BuildContext) -> None:
             ),
             exporter=exporter,
         )
+        # PRP-40: search reads the same container with its own parameterized queries.
+        search = CosmosAuditSearchStore.from_client(
+            ctx.cosmos_client(),
+            database=ctx.store_settings().database,
+            container=AUDIT_CHAIN_CONTAINER,
+        )
+    else:
+        search = _backend(ctx, "audit_search_store", AuditSearchStore) or (
+            RepositoryAuditSearchStore(repository)
+        )
     ctx.app.state.audit_repository = repository
     ctx.publish(AUDIT_REPOSITORY, repository)
+    ctx.app.state.audit_search_store = search
+    ctx.publish(AUDIT_SEARCH_STORE, search)
+    _install_prescope_audit(ctx, exporter)
+
+
+def _install_prescope_audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
+    """PRP-40 item 5: the pre-scope audit hook ``authz.dependencies`` calls on a failure.
+
+    Needs the composed pseudonymizer and customer binding (absent when authz is overridden:
+    then there is no hook, as before). The repository is read per call from ``app.state``.
+    """
+    pseudonymizer = ctx.maybe_shared(PSEUDONYMIZER)
+    auth = ctx.maybe_shared(AUTH_SETTINGS)
+    customer = auth.resolved_customer_id(ctx.settings.env) if auth is not None else None
+    if pseudonymizer is None or customer is None:
+        return
+    app = ctx.app
+
+    def repository() -> AuditRepository | None:
+        current = getattr(app.state, "audit_repository", None)
+        return current if isinstance(current, AuditRepository) else None
+
+    setattr(
+        app.state,
+        PRESCOPE_AUDIT_ATTRIBUTE,
+        PrescopeAuditor(
+            repository=repository,
+            pseudonymizer=pseudonymizer,
+            customer_id=customer,
+            exporter=exporter,
+        ),
+    )
 
 
 def _hitl_service(ctx: BuildContext) -> HitlService:
@@ -503,7 +635,8 @@ def build(ctx: BuildContext) -> None:
     ctx.attempt("ledger", lambda: _ledger(ctx))
     ctx.attempt("evaluation", lambda: _evaluation(ctx))
     ctx.attempt("recommendations", lambda: _recommendations(ctx))
-    ctx.attempt("audit", lambda: _audit(ctx))
+    exporter = _siem_exporter(ctx)
+    ctx.attempt("audit", lambda: _audit(ctx, exporter))
     ctx.attempt("replay", lambda: _replay(ctx))
     ctx.attempt("federation", lambda: _federation(ctx))
     ctx.attempt("review_router", lambda: _review_router(ctx))

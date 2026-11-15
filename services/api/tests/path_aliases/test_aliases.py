@@ -38,6 +38,12 @@ from .alias_support import (
 )
 
 ADMIN = NOBODY
+AUDIT_VIEW_PREFIXES: tuple[str, ...] = (
+    "/api/v1/audit/search",
+    "/api/v1/audit/export",
+    "/api/v1/audit/denials",
+    "/api/v1/audit/siem",
+)
 #: Callers with distinct permission sets: none, viewer, steward, auditor and admin of FINANCE.
 CALLERS: tuple[str | None, ...] = (None, BOB, ALICE, CAROL, ADMIN)
 
@@ -84,6 +90,8 @@ def test_every_moved_operation_is_served_in_both_forms() -> None:
     for method, path in sorted(served):
         if path.startswith(UI_ADAPTER_PREFIXES):
             continue  # PRP-31 adapters are new routes, not moved ones: no deprecated alias
+        if path.startswith(AUDIT_VIEW_PREFIXES):
+            continue  # PRP-40 audit views are new routes under /api/v1/audit: no deprecated alias
         for alias, new in MOVES:
             if path.startswith(new + "/") or path == new:
                 assert (method, alias + path[len(new) :]) in served, path

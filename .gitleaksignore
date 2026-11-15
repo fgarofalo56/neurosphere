@@ -30,3 +30,5 @@ ceca49776fa7196a6d7bce79fe51b87f1c4ed9da:infra/dev/ingest-producers.dev.json:gen
 8a02d07ef5cad2948a0bcde2a6912a1ebf156a59:services/api/tests/runtime_planes/test_planes_builder.py:generic-api-key:138
 # PRP-09 round 2 item 10: compose hostname:port "api:8000" in the OTel collector endpoint URL, not a credential (the credential is ${env:NS_PRODUCER_CREDENTIAL}).
 aa7296602d18359fd446938e0f4b80e48793b361:connectors/reference/otel-generic/collector/otel-collector.compose.yaml:generic-api-key:62
+# PRP-40: synthetic JWT-shaped redaction fixture in the SIEM sink test, not a credential.
+86a882eee622e98c72892c9b5a102ed798ec1edd:packages/core/tests/audit_siem/test_eventhubs_sink.py:jwt:30

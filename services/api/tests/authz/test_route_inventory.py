@@ -375,3 +375,21 @@ def test_producer_admin_routes_declare_config_manage() -> None:
         (f"{one}/disable", "POST"): perm,
         (f"{one}/enable", "POST"): perm,
     }
+
+
+def test_audit_search_export_routes_declare_their_permissions() -> None:
+    """PRP-40: search, denials and SIEM status need audit.read; export needs audit.export."""
+    app = create_app(Settings(env="local"))
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith("/api/v1/audit/")
+        and e.path.split("/")[4] in {"search", "export", "denials", "siem"}
+        for m in e.methods
+    }
+    assert found == {
+        ("/api/v1/audit/search", "GET"): ("audit.read",),
+        ("/api/v1/audit/export", "GET"): ("audit.export",),
+        ("/api/v1/audit/denials", "GET"): ("audit.read",),
+        ("/api/v1/audit/siem/status", "GET"): ("audit.read",),
+    }
