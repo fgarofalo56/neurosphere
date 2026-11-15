@@ -61,7 +61,16 @@ def _capability(name: str, cloud: str, region: str) -> CapabilityResult:
             # hosting is irrelevant to the analytics row; only the analytics result is read.
             {"cloud": cloud, "regions": (region,), "hosting": "aks", "analytics": name}
         )
-    except ValidationError:
+    except ValidationError as exc:
+        # A refused Government region keeps its capability reason (issue #212, analytics bullet):
+        # the profile validator prefixes those messages with "capability_unavailable:".
+        for error in exc.errors():
+            message = str(error.get("msg", ""))
+            marker = "capability_unavailable:"
+            if marker in message:
+                raise CapabilityUnavailableError(
+                    "capability_unavailable", message.split(marker, 1)[1].strip()
+                ) from None
         raise InvalidSchemaError(
             "cloud, region or backend name is invalid", reason="analytics_profile"
         ) from None
@@ -95,7 +104,7 @@ def _load(path: str) -> Any:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError as exc:
         parent = module_name.rsplit(".", 1)[0]
-        if exc.name in (module_name, parent):
+        if exc.name in (module_name, parent) and exc.name is not None:
             raise CapabilityUnavailableError(
                 "adapter_not_installed", f"adapter module {module_name} is not installed"
             ) from None
@@ -117,6 +126,8 @@ def create_adapter(
     ``name`` is ``fabric``, ``synapse``, ``databricks`` or ``fixture`` (sandbox only)."""
     if name == "fixture":
         factory = _load(FIXTURE_FACTORY)
+        # The fixture adapter reads in-process synthetic data and has no executor: a caller
+        # supplied one is deliberately not passed on (it would never be used).
         return factory(
             cloud=cloud, region=region, config=dict(config or {}), executor=None, sandbox=sandbox
         )

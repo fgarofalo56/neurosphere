@@ -8,6 +8,12 @@ from typing import Any, cast
 from neurosphere_core.analytics.base.models import Cloud
 from neurosphere_core.analytics.fixture.adapter import FixtureAnalytics
 from neurosphere_core.analytics.fixture.data import DEFAULT_SIZE, build_dataset, domain_id
+from neurosphere_core.analytics.fixture.workload import (
+    TIME_RANGE,
+    equivalence_cases,
+    make_request,
+    make_scope,
+)
 
 
 def create_adapter(
@@ -29,4 +35,13 @@ def create_adapter(
     )
 
 
-__all__ = ["FixtureAnalytics", "build_dataset", "create_adapter", "domain_id"]
+__all__ = [
+    "TIME_RANGE",
+    "FixtureAnalytics",
+    "build_dataset",
+    "create_adapter",
+    "domain_id",
+    "equivalence_cases",
+    "make_request",
+    "make_scope",
+]

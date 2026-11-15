@@ -15,10 +15,11 @@ value, ``COUNT(*)`` (rows in group), ``COUNT(metric column)`` (known values).
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from neurosphere_core.analytics.base.models import Aggregation, FilterOp, Granularity
 from neurosphere_core.analytics.base.plan import (
@@ -67,6 +68,11 @@ class Dialect(Protocol):
     def time_bucket(self, column_sql: str, granularity: Granularity) -> str:
         """Engine expression truncating an already-quoted timestamp column."""
         ...
+
+    # Optional hook (not part of the protocol so existing dialects need no change):
+    #   def windowed_quantile(self, column_sql: str, q: Decimal, partition_sql: str) -> str
+    # returning a full ``PERCENTILE_CONT(q) WITHIN GROUP (ORDER BY col) OVER (...)``
+    # expression. A dialect that provides it gets the windowed statement layout.
 
     def timestamp_param(self, value: datetime) -> object:
         """Bound value for a UTC instant (an ISO string, a datetime, ...)."""
@@ -154,6 +160,55 @@ def _predicate(dialect: Dialect, pred: Predicate, params: list[object]) -> str:
     raise ValueError("unsupported operator")  # pragma: no cover
 
 
+def _windowed_hook(plan: QueryPlan, dialect: Dialect) -> Callable[[str, Decimal, str], str] | None:
+    """The dialect's windowed-quantile hook when this plan is a quantile that needs it."""
+    if plan.aggregation is not Aggregation.APPROX_QUANTILE or plan.quantile is None:
+        return None
+    if METRIC_COLUMN[plan.metric] is None:
+        return None
+    hook: Any = getattr(dialect, "windowed_quantile", None)
+    return cast("Callable[[str, Decimal, str], str]", hook) if callable(hook) else None
+
+
+def _render_windowed(
+    plan: QueryPlan,
+    dialect: Dialect,
+    hook: Callable[[str, Decimal, str], str],
+    keys: list[str],
+    params: list[object],
+    schema: str | None,
+) -> Statement:
+    """``SELECT DISTINCT <keys>, PERCENTILE_CONT(q) ... OVER (PARTITION BY <keys>), COUNT(*) OVER
+    (...), COUNT(col) OVER (...)``: window functions return one row per input row, so the group
+    keys are made DISTINCT and there is no GROUP BY. The limit + 1 row check still holds."""
+    column = METRIC_COLUMN[plan.metric]
+    assert column is not None and plan.quantile is not None
+    col = dialect.quote_identifier(column.value)
+    partition = ", ".join(keys)
+    over = f"OVER (PARTITION BY {partition})" if keys else "OVER ()"
+    select_list = ", ".join(
+        [
+            *keys,
+            hook(col, plan.quantile, partition),
+            f"COUNT(*) {over}",
+            f"COUNT({col}) {over}",
+        ]
+    )
+    clauses = [_predicate(dialect, p, params) for p in plan.predicates]
+    time_col = dialect.quote_identifier(Column.EVENT_TIME.value)
+    params.append(dialect.timestamp_param(plan.time_start))
+    clauses.append(f"{time_col} >= {dialect.placeholder(len(params))}")
+    params.append(dialect.timestamp_param(plan.time_end))
+    clauses.append(f"{time_col} < {dialect.placeholder(len(params))}")
+    fetch = plan.limit + 1
+    sql = (
+        f"SELECT DISTINCT {dialect.select_prefix(fetch)}{select_list} "  # noqa: S608
+        f"FROM {_table(dialect, schema)} WHERE {' AND '.join(clauses)}"
+    )
+    sql += dialect.limit_suffix(fetch)
+    return Statement(sql=sql, params=tuple(params))
+
+
 def render_statement(plan: QueryPlan, dialect: Dialect, *, schema: str | None = None) -> Statement:
     """Render ``plan`` for ``dialect``. Fetches ``plan.limit + 1`` rows so a breach of the
     returned-row limit is detectable (it raises ``rate_limited``, never truncates silently)."""
@@ -164,6 +219,9 @@ def render_statement(plan: QueryPlan, dialect: Dialect, *, schema: str | None = 
     if plan.time_bucket is not None:
         event_time = dialect.quote_identifier(Column.EVENT_TIME.value)
         keys.append(dialect.time_bucket(event_time, plan.time_bucket))
+    hook = _windowed_hook(plan, dialect)
+    if hook is not None:
+        return _render_windowed(plan, dialect, hook, keys, params, schema)
     value_expr, known_expr = _metric_expr(dialect, plan)
     select_list = ", ".join([*keys, value_expr, "COUNT(*)", known_expr])
 

@@ -88,8 +88,9 @@ def test_documented_matrix_facts_are_pinned() -> None:
     assert by_name("government", "usgovarizona")["databricks"].status == "supported"
     assert by_name("government", "usgovarizona")["fabric"].status == "disabled"
     # DoD is a separate profile that is not built: the region is refused outright (PRP-20).
-    with pytest.raises(InvalidSchemaError):
+    with pytest.raises(CapabilityUnavailableError) as dod:
         by_name("government", "usdodeast")
+    assert dod.value.reason == "capability_unavailable"  # the reason survives (issue #212)
     # Commercial: per-region rows exist for eastus2; an unlisted region falls back to unverified.
     assert {b.status for b in by_name("commercial", "eastus2").values()} == {"supported"}
     unlisted = by_name("commercial", "swedensouth")
@@ -133,10 +134,11 @@ def test_only_matrix_approved_adapters_are_constructible(cloud: str, region: str
 
     for name, item in by_name(cloud, region).items():
         if item.status == "supported":
-            kind = {"synapse": "synapse-serverless"}.get(name, name)
+            kinds = ("synapse-serverless", "synapse-dedicated") if name == "synapse" else (name,)
             assert cloud in ("commercial", "government")
-            built = build_adapter(kind, cloud, region)  # type: ignore[arg-type]
-            assert built.adapter.cloud == cloud
+            for kind in kinds:
+                built = build_adapter(kind, cloud, region)  # type: ignore[arg-type]
+                assert built.adapter.cloud == cloud
         else:
             with pytest.raises(CapabilityUnavailableError):
                 registry_create(name, cloud=cloud, region=region, config={}, executor=object())
@@ -146,10 +148,15 @@ def test_government_config_with_commercial_host_fails_at_construction() -> None:
     from neurosphere_core.analytics.base import StubSqlEndpoint
 
     endpoint = StubSqlEndpoint(())
-    cases: list[tuple[str, dict[str, Any]]] = [
-        ("fabric", {"sql_endpoint_host": FABRIC_HOST["commercial"], "database": "ns"}),
+    cases: list[tuple[str, str, dict[str, Any]]] = [
+        (
+            "fabric",
+            "sql_endpoint_host",
+            {"sql_endpoint_host": FABRIC_HOST["commercial"], "database": "ns"},
+        ),
         (
             "synapse",
+            "host",
             {
                 "mode": "dedicated",
                 "workspace": "nsdemo",
@@ -159,6 +166,7 @@ def test_government_config_with_commercial_host_fails_at_construction() -> None:
         ),
         (
             "databricks",
+            "config",
             {
                 "region": "usgovvirginia",
                 "workspace_host": DBX_HOST["commercial"],
@@ -168,12 +176,20 @@ def test_government_config_with_commercial_host_fails_at_construction() -> None:
             },
         ),
     ]
-    for name, config in cases:
+    for name, field, config in cases:
         assert by_name("government", "usgovvirginia")[name].status == "supported"
-        with pytest.raises(InvalidSchemaError):
+        # match the offending field so an unrelated config error cannot satisfy the test
+        with pytest.raises(InvalidSchemaError, match=field):
             registry_create(
                 name, cloud="government", region="usgovvirginia", config=config, executor=endpoint
             )
+    # control: the Databricks model-level error names no field, so prove the host is the cause
+    # by constructing the same config with the Government host.
+    control = {**cases[2][2], "workspace_host": DBX_HOST["government"]}
+    built = registry_create(
+        "databricks", cloud="government", region="usgovvirginia", config=control, executor=endpoint
+    )
+    assert built.cloud == "government"
 
 
 def test_government_registry_never_yields_a_commercial_adapter() -> None:
@@ -183,17 +199,16 @@ def test_government_registry_never_yields_a_commercial_adapter() -> None:
 
     for region in ("usgovvirginia", "usgovtexas", "usgovarizona", "usdodeast", "eastus2"):
         for name in BACKENDS:
-            try:
-                adapter = registry_create(
+            # an empty config can never construct an adapter, so every call must refuse:
+            # nothing is built, and nothing falls back to another cloud
+            with pytest.raises((CapabilityUnavailableError, InvalidSchemaError)):
+                registry_create(
                     name,
                     cloud="government",
                     region=region,
                     config={},
                     executor=StubSqlEndpoint(()),
                 )
-            except (CapabilityUnavailableError, InvalidSchemaError):
-                continue  # refused: no fallback to another cloud
-            assert adapter.cloud == "government"  # pragma: no cover
     for kind in ("fabric", "synapse-serverless", "synapse-dedicated", "databricks"):
         assert build_adapter(kind, "government").adapter.cloud == "government"
 

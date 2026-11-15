@@ -113,3 +113,21 @@ async def test_fixture_through_the_registry_is_sandbox_only(
     with pytest.raises(ForbiddenError):
         create_adapter("fixture", cloud="commercial", region="eastus2")
     create_adapter("fixture", cloud="commercial", region="eastus2", sandbox=True)
+
+
+@pytest.mark.parametrize("region", ["usdodeast", "usdodcentral", "usgovwest"])
+def test_refused_government_region_keeps_the_capability_reason(region: str) -> None:
+    from neurosphere_core.analytics.base import list_backends
+
+    with pytest.raises(CapabilityUnavailableError) as refusal:
+        list_backends(cloud="government", region=region)
+    assert refusal.value.reason == "capability_unavailable"
+    with pytest.raises(CapabilityUnavailableError):
+        create_adapter("databricks", cloud="government", region=region, executor=object())
+
+
+def test_malformed_region_is_still_an_invalid_schema() -> None:
+    from neurosphere_core.analytics.base import list_backends
+
+    with pytest.raises(InvalidSchemaError):
+        list_backends(cloud="commercial", region="Not A Region")

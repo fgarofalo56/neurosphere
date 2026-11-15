@@ -92,6 +92,13 @@ class AggregateShim:
 
 
 @dataclass(frozen=True)
+class WindowShim:
+    name: str
+    nargs: int
+    factory: Callable[[], Any]  # step/inverse/value/finalize
+
+
+@dataclass(frozen=True)
 class Shim:
     """One declared emulator-parity gap: what had to be faked to run this dialect on SQLite."""
 
@@ -100,6 +107,7 @@ class Shim:
     rules: tuple[RewriteRule, ...] = ()
     functions: tuple[FunctionShim, ...] = ()
     aggregates: tuple[AggregateShim, ...] = ()
+    windows: tuple[WindowShim, ...] = ()
 
 
 class _Cancelled(Exception):  # noqa: N818 - internal signal, never leaves the stub
@@ -170,6 +178,38 @@ class NearestRankQuantile:
         ordered = sorted(self.values)
         index = max(ceil(self.q * len(ordered)), 1) - 1
         return _text(ordered[index])
+
+
+class ContinuousPercentileWindow:
+    """Exact continuous percentile (linear interpolation, T-SQL ``PERCENTILE_CONT``) as an
+    SQLite window function. Nulls are skipped; all-null gives NULL (unknown)."""
+
+    def __init__(self) -> None:
+        self.values: list[int | Decimal] = []
+        self.q: Decimal | None = None
+
+    def step(self, value: object, q: object) -> None:
+        self.q = Decimal(str(q))
+        if value is not None:
+            self.values.append(_number(value))
+
+    def inverse(self, value: object, q: object) -> None:
+        if value is not None:
+            self.values.remove(_number(value))
+
+    def value(self) -> object:
+        if not self.values or self.q is None:
+            return None
+        ordered = sorted(self.values)
+        position = self.q * (len(ordered) - 1)
+        low = int(position)
+        high = min(low + 1, len(ordered) - 1)
+        fraction = position - low
+        result = Decimal(ordered[low]) + (Decimal(ordered[high]) - Decimal(ordered[low])) * fraction
+        return format(result.normalize(), "f")
+
+    def finalize(self) -> object:
+        return self.value()
 
 
 def decimal_cost_shim() -> Shim:
@@ -249,6 +289,8 @@ class StubSqlEndpoint:
                 )
             for agg in shim.aggregates:
                 self._conn.create_aggregate(agg.name, agg.nargs, agg.factory)
+            for window in shim.windows:
+                self._conn.create_window_function(window.name, window.nargs, window.factory)
         self._conn.set_progress_handler(self._progress, PROGRESS_INTERVAL)
 
     @property

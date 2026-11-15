@@ -22,12 +22,14 @@ Decisions, identical in both modes unless stated:
 * Parameters: ODBC ``?`` markers bound by the injected executor; values are never in the text.
 * Time bucket: ``DATEADD(unit, DATEDIFF(unit, 0, col), 0)``. ``DATETRUNC`` is not relied on
   (not documented for Synapse pools). Result is a naive datetime read as UTC by the decoder.
-* Approximate quantile: NOT SUPPORTED in either mode. Synapse has no ``APPROX_PERCENTILE_CONT``
-  (that is SQL Server 2022 / Azure SQL / Fabric). ``PERCENTILE_CONT ... WITHIN GROUP`` exists only
-  as an analytic (``OVER``) function, which cannot be expressed in the shared aggregate layout
-  (one aggregate expression per group), and the exact value would not be "approximate" anyway.
-  Both dialects therefore raise ``CapabilityUnavailableError`` for ``approx_quantile`` with a
-  reason; nothing is faked or silently computed client-side.
+* Quantile (round 2, issue #59): Synapse has no ``APPROX_PERCENTILE_CONT`` (that is SQL Server
+  2022 / Azure SQL / Fabric), so ``approx_quantile`` is served by the exact windowed
+  ``PERCENTILE_CONT(q) WITHIN GROUP (ORDER BY col) OVER (PARTITION BY <keys>)`` through the
+  ``windowed_quantile`` hook; the renderer emits ``SELECT DISTINCT <keys>, ...`` with
+  windowed counts and no GROUP BY. It is exact, so it is compared with the documented
+  quantile tolerance. Real ``PERCENTILE_CONT`` semantics are unproven until the live run.
+  The plain ``approx_quantile`` method still refuses (reason below) for any caller that
+  bypasses the windowed layout.
 * Dedicated only: ``OPTION (LABEL = 'ns_analytics')`` so queries are attributable in
   ``sys.dm_pdw_exec_requests``. Serverless does not accept it, so it is omitted there.
 """
@@ -68,6 +70,11 @@ class _TSqlDialect:
             f"Synapse {self.mode_label} SQL has no approximate-quantile aggregate "
             "(PERCENTILE_CONT is window-only); approx_quantile is unavailable on this backend",
         )
+
+    def windowed_quantile(self, column_sql: str, q: Decimal, partition_sql: str) -> str:
+        """Exact continuous percentile in its only Synapse form: the analytic function."""
+        over = f"OVER (PARTITION BY {partition_sql})" if partition_sql else "OVER ()"
+        return f"PERCENTILE_CONT({q}) WITHIN GROUP (ORDER BY {column_sql}) {over}"
 
     def time_bucket(self, column_sql: str, granularity: Granularity) -> str:
         unit = "hour" if granularity is Granularity.HOUR else "day"
