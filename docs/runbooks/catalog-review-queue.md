@@ -12,7 +12,7 @@ state, still stores the observation, and enqueues a review item in `catalog_revi
 | Surface | Path | Permission |
 |---|---|---|
 | List open items | `GET /api/v1/catalog/curation/review-queue` | `catalog.curate` (items in domains the caller may curate, oldest first) |
-| Resolve one item | `POST /api/v1/catalog/curation/review-queue/{item_id}/resolve` body `{"resolution": "kept_curation" \| "accepted_inference"}` | `catalog.curate` on the item's domain |
+| Resolve one item | `POST /api/v1/catalog/curation/review-queue/{item_id}/resolve`, body field `resolution` is `kept_curation` or `accepted_inference` | `catalog.curate` on the item's domain |
 | Page | `/catalog/review-queue` (Governance navigation) | same, enforced by the API |
 
 Behaviour worth knowing:
