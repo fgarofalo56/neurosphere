@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W14
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-43: Catalog hardening and the relationship review queue](backlog/PRP-43-catalog-hardening-and-review-queue.md) | sonnet | required | none | PRP-37, PRP-42 | - | `prp-43-catalog-hardening` |
-
-Gate before the next wave: Producers and connector configs are stored, not file-only; audit export works on the emulator stack.
-
 ### W15
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -137,9 +129,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W14
-    P43["PRP-43"]
-  end
   subgraph W15
     P44["PRP-44"]
     P46["PRP-46"]
@@ -208,7 +197,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W14 | PRP-43 | `packages/core/neurosphere_core/stores/containers.py`<br>`infra/compose/cosmos-containers.json`<br>`infra/demo/modules/cosmos-data.bicep`<br>`infra/bicep/modules/cosmos.bicep` |
 | W15 | PRP-44 | `services/api/neurosphere_api/runtime/builders/data.py`<br>`services/api/neurosphere_api/runtime/builders/planes.py`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
 | W15 | PRP-47 | `frontend/src/app/Shell.tsx`<br>`frontend/src/app/Providers.tsx`<br>`frontend/src/app/App.tsx`<br>`frontend/src/app/domain.tsx`<br>`frontend/tests/mock-api/server.ts` |
 | W15 | PRP-48 | `services/api/neurosphere_api/authz/dependencies.py` |
@@ -228,14 +216,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-43 (W14)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-43-catalog-hardening-and-review-queue.md
-
-Context for this run: wave W14 of PRPs/EXECUTION-PLAN.md, branch prp-43-catalog-hardening cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-44 (W15)
 

@@ -34,6 +34,7 @@ __all__ = [
     "LOCAL_DEFAULT_CUSTOMER_ID",
     "ApimWriteSettings",
     "AuthSettings",
+    "CatalogProjectionSettings",
     "EvalSettings",
     "FoundryWriteSettings",
     "RecommendationSettings",
