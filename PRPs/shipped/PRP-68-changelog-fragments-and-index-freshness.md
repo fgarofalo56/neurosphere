@@ -1,6 +1,6 @@
 ---
 name: PRP-68-changelog-fragments-and-index-freshness
-status: backlog
+status: shipped
 priority: P1
 order: 56
 review: none
@@ -15,6 +15,8 @@ wave: W11
 branch: prp-68-changelog-fragments
 allow_parallel: true
 issues: [264]
+shipped: 2026-11-15
+pr: 270
 ---
 
 # PRP-68: Changelog fragments and index freshness
@@ -32,13 +34,13 @@ Out of scope: the README, decisions log, gate register, threat model, master pro
 - Release notes do not read `CHANGELOG.md`: `.github/workflows/release.yml:333` builds them from commits with `scripts/release/changelog.py`, and `docs/release/release-process.md:12-37` says the Unreleased block is curated by hand into the version section. Fragments can therefore be assembled at release time without changing the release workflow.
 
 ## Acceptance criteria
-- [ ] Given a fragment `changelog.d/<PRP file stem>.md` (or `changelog.d/issue-<n>.md` for a change with no PRP) whose body uses only the Keep a Changelog headings `### Added|Changed|Deprecated|Removed|Fixed|Security` with list items under them, when `python scripts/changelog_assemble.py --check` runs, then it exits 0; a fragment with another heading, no list item, a bad file name or a `## ` heading exits 1 naming the file and the rule.
-- [ ] When `python scripts/changelog_assemble.py --write` runs, then every fragment's items are spliced into the `[Unreleased]` block under the matching heading (headings created in Keep a Changelog order when missing; fragments in sorted file-name order), every existing byte of the block is kept, and the fragment files are deleted; `--preview` prints the result and changes nothing; with no fragments `--write` is a no-op that exits 0.
-- [ ] The assembler reuses the Unreleased-block boundary rule of `scripts/release/changelog.py` (`UNRELEASED_RE`, `NEXT_HEADING_RE`) instead of a second definition, and uses only the standard library (no new dependency, licence register unchanged).
-- [ ] Given a PRP file under `PRPs/backlog/`, `PRPs/active/` or `PRPs/shipped/` that is missing from `PRPs/INDEX.md`, listed in the wrong section, listed twice, or a backlog row whose priority, order or review differs from its frontmatter, when `python scripts/validate_planning.py` runs, then it fails naming the PRP; the current `main` passes.
-- [ ] The CI `planning` job runs `python scripts/prp_execution_plan.py --check` and `python scripts/changelog_assemble.py --check` as separate named steps (no `|| true`), and the INDEX check runs inside `validate_planning.py` (so `tests/test_planning_alignment.py` also enforces it).
-- [ ] `docs/release/release-process.md` step 2 runs the assembler before `scripts/release/changelog.py` and says the fragments are committed in the release PR; `PRPs/reference/parallel-build-reference.md` section 2 Tier-3 table says close-outs write `changelog.d/<PRP file stem>.md` and never edit `CHANGELOG.md`, the INDEX row names the CI check, and section 6 close-out step 2 adds the fragment.
-- [ ] `changelog.d/README.md` (new) documents the file name rule, allowed headings, one example, and that the global `/prp:prp-close` "add a line under `[Unreleased]`" step is replaced by a fragment in this repository.
+- [x] Given a fragment `changelog.d/<PRP file stem>.md` (or `changelog.d/issue-<n>.md` for a change with no PRP) whose body uses only the Keep a Changelog headings `### Added|Changed|Deprecated|Removed|Fixed|Security` with list items under them, when `python scripts/changelog_assemble.py --check` runs, then it exits 0; a fragment with another heading, no list item, a bad file name or a `## ` heading exits 1 naming the file and the rule.
+- [x] When `python scripts/changelog_assemble.py --write` runs, then every fragment's items are spliced into the `[Unreleased]` block under the matching heading (headings created in Keep a Changelog order when missing; fragments in sorted file-name order), every existing byte of the block is kept, and the fragment files are deleted; `--preview` prints the result and changes nothing; with no fragments `--write` is a no-op that exits 0.
+- [x] The assembler reuses the Unreleased-block boundary rule of `scripts/release/changelog.py` (`UNRELEASED_RE`, `NEXT_HEADING_RE`) instead of a second definition, and uses only the standard library (no new dependency, licence register unchanged).
+- [x] Given a PRP file under `PRPs/backlog/`, `PRPs/active/` or `PRPs/shipped/` that is missing from `PRPs/INDEX.md`, listed in the wrong section, listed twice, or a backlog row whose priority, order or review differs from its frontmatter, when `python scripts/validate_planning.py` runs, then it fails naming the PRP; the current `main` passes.
+- [x] The CI `planning` job runs `python scripts/prp_execution_plan.py --check` and `python scripts/changelog_assemble.py --check` as separate named steps (no `|| true`), and the INDEX check runs inside `validate_planning.py` (so `tests/test_planning_alignment.py` also enforces it).
+- [x] `docs/release/release-process.md` step 2 runs the assembler before `scripts/release/changelog.py` and says the fragments are committed in the release PR; `PRPs/reference/parallel-build-reference.md` section 2 Tier-3 table says close-outs write `changelog.d/<PRP file stem>.md` and never edit `CHANGELOG.md`, the INDEX row names the CI check, and section 6 close-out step 2 adds the fragment.
+- [x] `changelog.d/README.md` (new) documents the file name rule, allowed headings, one example, and that the global `/prp:prp-close` "add a line under `[Unreleased]`" step is replaced by a fragment in this repository.
 - [ ] `[serial-after: PRP-36]` `.githooks/pre-commit` blocks a commit with a malformed staged fragment and prints a warning (no block) when `PRPs/EXECUTION-PLAN.md` is stale; `bash -n .githooks/pre-commit` passes.
 - [ ] This PRP's own close-out writes the first fragment instead of editing `CHANGELOG.md`.
 
@@ -228,14 +230,14 @@ None. No cloud call, no `NS_LIVE_APPROVED=1`, no paid call. The first real relea
 | 2 | merged | prp-68-changelog-fragments | index check wired into validate_planning |
 | 3 | merged | prp-68-changelog-fragments | two planning steps added |
 | 4 | merged | prp-68-changelog-fragments | release-process + reference |
-| 5 | blocked | | serial-after PRP-36 (not shipped) |
-| 6 | todo | | merge step: Tier-3 regen, fragment, completion note |
+| 5 | merged | prp-68-changelog-fragments | PRP-36 shipped (#271); hook fragment block + plan warning; manual run blocked a malformed fragment |
+| 6 | merged | prp-68-changelog-fragments | Tier-3 regen, fragment, completion note |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: 2026-11-15, PR 270.
+- Deviations: none. Assumptions 1, 3, 4, 5 taken as stated (structural INDEX check, file-stem fragment names, assemble at release, rule-and-review only). Item 5 done after PRP-36 shipped (#271); the hook gets a new step 4b that blocks malformed staged fragments, and the stale-plan warning is a stderr `WARNING:` line inside step 4 (the hook's `note` helper blocks, so it is not used).
+- Descoped items: none.
+- OPEN gates: first real release that runs the assembler (release-process step 2) stays OPEN until a release is cut. No live gates.
+- Env vars for the operator: none.
+- Follow-up issues: owner-side update of the global `/prp:prp-close` step (outside the repo) to write a fragment instead of editing `[Unreleased]`; optional base-diff CI check for hand edits of `[Unreleased]` (clarification 5), only if hand edits recur.
+- Product check: not an operator-facing runtime capability; contributors use `changelog.d/README.md`. Hook manual run: a staged malformed fragment was blocked with three named FAIL lines; stale-plan warning path was not exercised manually (plan was current).

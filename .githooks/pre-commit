@@ -86,6 +86,18 @@ if printf '%s\n' "$all_staged" | grep -qE '^PRPs/'; then
   else
     printf 'WARNING: %s not found; PRPs/INDEX.md was not regenerated\n' "$prp_index_script" >&2
   fi
+  # Warn (never block, never regenerate) when the execution plan is stale; Tier 3
+  # files are regenerated only at the merge step.
+  if ! python scripts/prp_execution_plan.py --check >/dev/null 2>&1; then
+    printf 'WARNING: PRPs/EXECUTION-PLAN.md is stale (regenerate at merge: python scripts/prp_execution_plan.py --write)\n' >&2
+  fi
+fi
+
+# 4b) Changelog fragments: block a malformed staged fragment.
+if printf '%s\n' "$all_staged" | grep -qE '^changelog\.d/'; then
+  if ! python scripts/changelog_assemble.py --check >&2; then
+    note "malformed changelog fragment (see changelog.d/README.md)"
+  fi
 fi
 
 # 5) Ruff on staged Python, when the toolchain is present. Lint-only, no fix.
