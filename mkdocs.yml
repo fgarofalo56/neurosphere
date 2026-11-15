@@ -123,6 +123,7 @@ nav:
       - runbooks/operations.md
       - runbooks/ingest.md
       - runbooks/ingest-cost-attribution.md
+      - runbooks/lifecycle.md
       - runbooks/runtime-composition.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md

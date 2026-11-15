@@ -3,7 +3,8 @@
 Built on the PRP-05 ``Worker`` base. A job that fails read-back verification is ``failed`` and
 audited by the engine; the batch is still durably handled (the failure is recorded), so the
 checkpoint may advance. Store outages raise and the runner retries the batch.
-Registration in the runtime entrypoint and deployment are follow-ups (not owned here).
+The runtime wiring (Cosmos job source, targets, mode) is in ``runtime/factories.py`` and
+``job_source.py``.
 """
 
 from __future__ import annotations
@@ -33,6 +34,8 @@ class RequestedJob:
     request: LifecycleRequest
     ctx: AuditContext
     checkpoint: str
+    #: The job asked for dry-run; the engine mode can only add to this, never remove it.
+    dry_run: bool = False
 
 
 class JobSource(Protocol):
@@ -106,7 +109,7 @@ class LifecycleWorker(Worker):
 
     async def process_batch(self, batch: Batch) -> BatchOutcome:
         for job in batch.items:
-            await self._emit(await self._engine.submit(job.request, job.ctx))
+            await self._emit(await self._engine.submit(job.request, job.ctx, dry_run=job.dry_run))
         for outcome in await self._engine.process_queue():
             await self._emit(outcome)
         self._last_queue_pass = self._clock()
