@@ -49,8 +49,18 @@ a placeholder). Pass/fail is recorded as data; nothing is tuned to the result.
 
 ## Run
 
-Pilot, against compose (needs Docker; starts a **local** uvicorn API with the ingest edge because
-the compose `api` container has no producers configured):
+Pilot against the composed API (PRP-21 round 2): the compose `api` container (profile `app`) now
+registers a dev ingest producer and runs with per-domain admission on, so `--compose-api` targets
+it (results in `docs/evidence/G07/pilot/`; ingest is not charged by admission):
+
+```
+docker compose up -d --wait
+NS_ENTRA_TENANT_ID=<any-guid> NS_ENTRA_CLIENT_ID=<any-guid> docker compose --profile app up -d --wait --build api
+uv run python tests/load/profiles/run_profile.py pilot --compose-api --duration 60 --users 20
+```
+
+Pilot against compose emulators only (starts a **local** uvicorn API with the ingest edge; round 1,
+`docs/evidence/G07/load/`):
 
 ```
 docker compose up -d --wait
