@@ -1,286 +1,246 @@
 ---
 name: PRP-21-scale-federation-finops-and-dr
 status: backlog
-priority: P2
-order: 17
-review: none
+priority: P1
+order: 26
+review: required
 created: 2026-10-08
-started: 2026-10-22
-branch: prp-21-scale-federation-finops-dr
-pr: 103
 model: sonnet
-phase: 4
-ns: NS-07, NS-08
-depends_on: [PRP-07-telemetry-ingestion-and-cost-ledger, PRP-11-analytics-adapters, PRP-13-release-versioning-and-container-publishing, PRP-14-dashboards-cost-latency-coverage]
-wave: W7
-absorbs: P4.3 + P4.4, G07
 orchestrator_model: sonnet
 implementer_model: sonnet
+phase: 4
+ns: NS-07, NS-08
+depends_on: []
+wave: W13
+branch: prp-21-round2-admission-federation
+allow_parallel: true
+absorbs: P4.3 + P4.4, G07
+issues: [232, 105, 106, 107]
 ---
 
-# PRP-21: Scale, federation, FinOps and DR
+# PRP-21: Scale, federation, FinOps and DR (round 2)
 
 ## Goal
-Ship the load-test profiles (pilot, enterprise, stress), per-domain admission control, authorized cross-cell federation summaries, a cost forecast with real-cost evidence hooks, and per-store backup/restore plus a failover/failback runbook. It is for SRE, FinOps and domain owners who need measured, not asserted, behaviour under skew and noisy neighbors. It lands in W7 because it needs ingestion and the ledger (PRP-07), analytics adapters (PRP-11), release images (PRP-13) and the dashboards/aggregates path (PRP-14). **Every number in the PRD scale and DR sections is a provisional planning target to be measured; nothing here may publish a target as a guarantee.**
+Wire the shipped per-domain admission limiter into the running API so a noisy domain is throttled in a real deployment, harden federation (one bad cell no longer denies the whole summary, operators can register peer cells, the cell endpoint host is allowlisted), clear the small PRP-21 follow-ups (locust ADR row, FinOps interval band, DR package imports, load scenario coverage), and re-run the pilot profile against the composed API with admission on. It is for SRE and FinOps operators and domain owners, and it runs in W13 because it is the wave owner of the API composition files (`authz/dependencies.py`, `runtime/builders/data.py`), `docker-compose.yml` and `infra/helm/**`. **Every number stays a measured result against a provisional planning target, never a guarantee.**
 
-> Planning targets, to be measured rather than guaranteed: regional core API availability 99.9%; dashboard p95 <=2s on bounded 90-day aggregates; catalog p95 <=500ms on indexed scoped queries; map freshness p95 <=10s after normalized ingestion. (PRD section 3)
+Out of scope: the sized load runs, failover, geo-replication, production restore, AI Search rebuild and invoiced-cost evidence (#108, operator only, PRP-64); the ingest edge's own per-producer limiter stays as it is (PRP-46 owns ingest follow-ups); admin UI for quotas (PRP-44/PRP-57); the APIM rate limit in Bicep (PRP-52).
 
-> Scale profiles: pilot 1k agents/1k events per second; enterprise 100k agents/10k sustained events per second; stress 1M entities/10M relationships and 50k sustained/150k burst events per second subject to partition/cost validation. (PRD section 3)
-
-> Federate domain/region cells with scope-filtered summaries; data remains in approved boundaries. ... Per-domain quotas/admission control protect noisy neighbors. (PRD section 3)
-
-> RTO <=4h/RPO <=15min are provisional profile targets requiring measured end-to-end evidence. Metadata-only Event Hubs geo-DR is insufficient for event-data RPO. (PRD section 3)
+## Why
+- The limiter is not wired: no file under `services/` imports `neurosphere_core.admission` (grep over `services/` returns nothing); #105 stays open.
+- The shipped middleware cannot work as written. `packages/core/neurosphere_core/admission/middleware.py:41-45` reads `scope["state"]["identity_scope"]`, but nothing in `neurosphere_api` ever sets `identity_scope` (zero matches). The `IdentityScope` is derived inside the FastAPI dependency `current_derivation` / `current_scope` (`services/api/neurosphere_api/authz/dependencies.py:92-123`) and checked in `require` (`:165-210`). ASGI middleware registered with `add_middleware` (`app.py:110-113`) runs before routing and before any dependency, so it sees no scope and would answer every request 401. Admission therefore has to be a dependency step (or an auth-first middleware that duplicates token validation, which is rejected).
+- Federation composes one in-process cell only: `runtime/builders/data.py:262-285` builds `CellRef(... endpoint="https://local-cell.invalid/")` and an `InProcessCellClient`; `HttpCellClient` (`federation/client.py:80`) is used only in tests; `FederationSettings` (`data.py:147-155`) has no peer setting.
+- #106 findings are all still true in code: a cell answering for another cell/cloud/boundary raises `CapabilityUnavailableError` that aborts the merge (`federation/service.py:132-156`); the window comes from `summaries[0]` (`:172-178`); all-denied returns an empty 200 `complete=false`; `cache.put` rebuilds the entry dict on every write (`federation/cache.py:62-67`) and `MAX_TTL_SECONDS` is a hard 300 (`:21`).
+- #107: `docs/adr/0002-stack-pins.md` has no locust row; `finops/service.py:51` uses `Z_95 = 1.96`; `[tool.pyright]` (`pyproject.toml:79-85`) has no `extraPaths`, so `tests/integration/dr/*` carry pyright ignores; `tests/load/profiles/compose_pilot.py:6` still says the composed API has no ingest producers although `docker-compose.yml` now sets `NS_INGEST_PRODUCERS_FILE`.
 
 ## Acceptance criteria
-- [ ] Item 1: Given the pilot profile (1k events per second, 1k agents) against the compose stack, When the suite runs, Then it produces an evidence JSON with the measured rates, p95 values and error counts and reports pass/fail against the profile thresholds. Enterprise and stress profiles are defined, parametrized by target, and run only by the operator at a sized environment.
-- [ ] Item 2: Given one domain exceeding its quota, When the limiter is under load, Then that domain is throttled with `rate_limited` and a retry hint while other domains stay within their configured limits (unit and simulated-load test).
-- [ ] Item 3: Given a federated summary request, When cells respond, Then the merged summary contains no identity, count or cost contribution outside the caller's `IdentityScope`, and no cell in one cloud contributes to a summary served in another cloud.
-- [ ] Item 4: Given a month of sandbox cost records, When the forecast runs, Then forecast and actual are reported side by side with the price version id, estimated and invoiced are separate, and unknown inputs yield `unknown`, never 0.
-- [ ] Item 5: Given the compose stack, When the restore drill runs, Then each store is restored from backup, verification queries match, and measured restore time and recovery point gap are published in `docs/ops/dr-runbook.md` with the method and the label "compose, not representative of production".
-- [ ] PRP exit: items 1-5 green under `verify-gates -Mode full`; G07 row updated to state what was measured, where, and what remains OPEN.
+- [ ] Given `NS_ADMISSION_ENABLED=true` and a quota policy file, When one domain exceeds its quota through any route that uses `require(...)`, Then it receives 429 `rate_limited` with `Retry-After` and another domain's requests still succeed (API-level test, two domains, fake clock).
+- [ ] Given admission is off (default) or the policy file is absent, Then behaviour is unchanged when off; when on with no file the conservative default applies and a warning is logged, never unlimited (#105 bullet 4).
+- [ ] The admission key comes only from the server-derived scope plus a route domain that `permits` already validated; a caller-supplied domain never selects a bucket (test); a denied-permission request is not charged to the target domain.
+- [ ] Compose mounts a dev quota file and sets the settings; Helm has a documented value and mount for an operator-supplied file; `helm template` renders the mount only when set.
+- [ ] A peer cell registered through `NS_FEDERATION_PEERS_FILE` is reached through `HttpCellClient` (MockTransport test); a peer whose host is not in its boundary allowlist, or whose scheme is not https, fails registry load at startup; a Government peer in a Commercial serving cloud (or the reverse) is refused at load.
+- [ ] One peer answering for a different cell, cloud, boundary or customer yields that cell `unavailable` and the other cells still merge; no row from the mismatched response appears in the result (test).
+- [ ] Merged window is min start / max end across answering cells; when every cell answers `denied` the route returns 403, not an empty 200; `cache.put` evicts without rebuilding the dict; the cache TTL ceiling is a setting.
+- [ ] FinOps forecast bands use a t-quantile for small samples (documented table, no new dependency) and the committed evidence is regenerated; `unknown` stays `unknown`, never 0.
+- [ ] ADR-0002 has a locust row (2.47.0, MIT, outside `uv.lock`, isolated subprocess); `[tool.pyright] extraPaths` includes `infra/dr` and the DR test pyright ignores are gone; `/otlp/metrics` is exercised by a load scenario.
+- [ ] The pilot profile runs against the composed API with admission on and the result (including noisy-neighbor behaviour under the skew scenario) is written to `docs/evidence/G07/pilot/`, labelled "compose, bounded feasibility"; thresholds that fail are reported as failed.
+- [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, G07 row text updated to say what was measured and what stays OPEN (#108).
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|---|---|---|
-| 1 | Model and review | sonnet/none; sonnet/required; opus | sonnet, review none (D6, master index). Reviewer attention goes to items 3 (scope leak) only if the author flags it |
-| 2 | Load tool | k6; locust | locust (Python, MIT, managed with the existing toolchain). k6 is AGPL-3.0 and would need ADR-0002 approval under the non-permissive rule. Pins live in `tests/load/profiles/requirements.txt`; record the licence in the profile README and raise a follow-up for ADR-0002 |
-| 3 | Where profiles run | CI; operator | Pilot against compose (CI-capable, no paid calls). Enterprise and stress need sized environments and quota/cost approval: operator-run, never CI (D7); recorded OPEN until run |
-| 4 | Emulator limits | treat emulator numbers as capacity | Event Hubs emulator (one namespace, ten hubs, no persistence, SAS only) and Cosmos vNext (no RU accounting) mean compose results are "bounded feasibility" only (G12) |
-| 5 | Admission wiring | edit ingest edge and query service now; library first | Item 2 delivers `neurosphere_core.admission` (limiter, quota config, ASGI middleware factory). Wiring into `services/api/neurosphere_api/ingest/` (PRP-07) and the query services is outside this PRP's ownership; it is recorded as a follow-up needing approval from those owners |
-| 6 | Quota source | hard-coded; config | Per-domain quota config loaded from a policy document; absent config means a conservative default limit and a logged warning, never unlimited |
-| 7 | Federation boundary | cross-cloud allowed; same cloud only | A summary is composed only from cells in the same cloud and the same approved boundary. Government cells never contribute to Commercial summaries or the reverse |
-| 8 | Federation mechanism | raw data pull; scoped aggregate summary | Each cell computes a scope-filtered aggregate locally; only aggregates travel. The requester's `IdentityScope` is derived server-side in each cell, not passed as a trusted caller field |
-| 9 | Forecast model | ML; simple trend | A simple, explainable trend model over ledger aggregates with an uncertainty band and price version citation. Not a savings claim; unknown inputs stay unknown |
-| 10 | RTO/RPO publication | publish targets; publish measurements | Publish measurements with method, date and environment. Targets (RTO 4h, RPO 15min) appear only as "provisional target" next to the measured value |
-| 11 | Event data RPO | metadata geo-DR; data geo-replication; replay | Metadata geo-DR copies neither payloads nor RBAC and is insufficient for event-data RPO. Data geo-replication is GA on Premium and Dedicated only, Government support unverified. The runbook documents replay from the redacted archive and source producers as the compose-testable path, and lists geo-replication as an option requiring a live test |
-| 12 | Evidence paths | single; split | Item 1: `docs/evidence/G07/load/`; item 4: `docs/evidence/G07/finops/`; item 5: `docs/evidence/G07/dr/`. Item 5 also owns the G07 row of `docs/RESEARCH-AND-GATES.md` |
+| 1 | Admission mechanism | ASGI middleware; auth-first middleware; FastAPI dependency | Dependency step inside `require()`. ASGI middleware cannot see the scope (Why bullet 2), and an auth-first middleware would validate tokens twice |
+| 2 | Charge point | Before permission check; after | After the permission check passes, with the validated target domain as the route domain, so a denied caller cannot drain another domain's bucket |
+| 3 | Coverage | Every route; routes with `require()`; ingest too | Routes that use `require()`. The ingest edge authenticates producers separately and keeps its own per-producer limiter (`ingest/limits.py:75`, 429 `rate_limited`); health and public paths are not charged |
+| 4 | Default state | On; off | ASSUMPTION: `NS_ADMISSION_ENABLED` defaults to false; compose and Helm examples turn it on. Absent policy with enabled true uses the conservative default (10 req/s, burst 20) with a warning, per round-1 clarification 6 |
+| 5 | Where state lives | `AuthzState`; `app.state.admission` | `app.state.admission`, read in `require_permission`; `authz/state.py` is PRP-48's file and is not edited |
+| 6 | Peer cell config | Inline env; file | `NS_FEDERATION_PEERS_FILE` (JSON: cells plus per-boundary `allowed_hosts`). No credentials in the file: the caller's bearer is forwarded as today (A7 principle) |
+| 7 | Ingest latency target (#107) | Invent a number; keep the placeholder | ASSUMPTION: no new target is invented. The 2 s p95 threshold stays labelled provisional in `tests/load/profiles/definitions.py` with a pointer to the open owner decision; the owner sets the real figure |
+| 8 | Pilot re-run | Live sized; compose | Compose, composed API, admission on; no live gate. Sized profiles stay OPEN (#108, PRP-64) |
+| 9 | Model and review | sonnet/none; sonnet/required | sonnet, review required: admission touches the authz dependency every route uses |
 
 ## Context manifest
 
-### Files that matter
-- `PRP.md` - sections 1-3.
-- `docs/PRD.md` - section 3 (scale, federation, retention, DR) and NS-07/NS-08 text.
-- `docs/ARCHITECTURE.md` - ingestion, projection and deployment diagrams.
-- `docs/RESEARCH-AND-GATES.md` - G07, G12; Event Hubs geo-DR and geo-replication findings (2026-07-11 and 2026-10-06).
-- `docs/adr/0002-stack-pins.md` - azure-eventhub 5.15, azure-cosmos 4.17, Helm 4.3.
-- `docs/DECISIONS-LOG.md` - D6, D7, D8, D9.
-- `pyproject.toml`, `docker-compose.yml`, `infra/compose/eventhubs.config.json`, `.claude/hooks/config.ps1`, `.env.example`, `scripts/validate_planning.py`.
-- Created by PRP-03: compose stack, sandbox generator (`sandbox/`), `scripts/sandbox/` seed and replay CLI.
-- Created by PRP-05: `neurosphere_core.errors`, `.../scope/`, `.../paging/`, `.../clients/`, SLO doc `docs/ops/slo.md`.
-- Created by PRP-07: ingest edge, normalizer, quarantine and replay CLI (`scripts/replay/`), redacted archive, cost ledger and outbox.
-- Created by PRP-11: analytics adapter protocols and fixture adapter.
-- Created by PRP-13: Dockerfiles, migration tooling (`packages/core/neurosphere_core/migrations/`).
-- Created by PRP-14: hot aggregates worker and dashboards API; PRP-18 owns `tests/load/map_freshness/` and `docs/evidence/G07/map/` (do not write there).
+### Files to read first
+- `packages/core/neurosphere_core/admission/{middleware.py,limiter.py,config.py}` - limiter, `derive_limiter_key`, `load_quota_policy`.
+- `services/api/neurosphere_api/authz/dependencies.py` - `require`, `current_scope` (the Tier-1 edit).
+- `services/api/neurosphere_api/runtime/builders/__init__.py` - `default_builders`, `BuilderSpec`; `runtime/builders/edge.py` as a small builder example.
+- `services/api/neurosphere_api/runtime/builders/data.py:147-155,251-290` - `FederationSettings`, `_federation`.
+- `services/api/neurosphere_api/federation/{service,client,cache,router}.py` - merge, clients, cache.
+- `services/workers/neurosphere_workers/federation/models.py` - `CellRef`, `CellRegistry` (endpoint validation lives here).
+- `services/api/neurosphere_api/finops/service.py` - band at `Z_95` (line 51).
+- `tests/load/profiles/{definitions,compose_pilot,scenarios}.py` and `docs/evidence/G07/load/README.md`.
+- `docker-compose.yml:118-175` (api service env and volumes) and `infra/helm/values.yaml:40-55`, `infra/helm/templates/deployment.yaml:44-100`.
+- `docs/runbooks/ingest.md` - runbook style to copy for the new admission page.
+
+### Interfaces consumed
+- `IdentityScope`, `permits`, `Permission` (PRP-06, shipped); `RateLimitedError` taxonomy (PRP-05).
+- `AggregateReader` and `AUTHENTICATOR`, `SCOPE_SOURCE` shared keys (PRP-14, PRP-06 builders).
+- Ingest producers file wiring in compose (PRP-35) so the composed API accepts pilot traffic.
+
+### Interfaces provided
+- Settings: `NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`, `NS_FEDERATION_PEERS_FILE`, `NS_FEDERATION_CACHE_MAX_TTL_SECONDS`.
+- `app.state.admission` (a `TokenBucketLimiter` or absent); builder module `runtime/builders/admission.py` (new). PRP-44 can later feed the policy from the admin store through the same limiter constructor.
+- Evidence directory `docs/evidence/G07/pilot/` for PRP-64's comparison.
 
 ### Patterns to match
-- Pydantic v2 models with `model_config = ConfigDict(extra="forbid")`; FastAPI routers per module under `services/api/neurosphere_api/<module>/router.py`; async Azure SDK clients from `packages/core/neurosphere_core/clients`; error taxonomy exceptions from `neurosphere_core.errors` (`rate_limited` for throttling).
-- Every federated and finops query takes an `IdentityScope`; no caller-supplied `domain_id` is trusted.
-- Tests beside packages plus cross-package suites in `tests/`; `pytest.mark.integration` for compose, `pytest.mark.live` for real Azure; load profiles under `tests/load/`.
-- Evidence JSON plus markdown, labelled with environment and method.
-
-### Conventions
-- ruff line 100, py312, S rules on; pyright standard; conventional commits; owned-file discipline.
-- Evidence under `docs/evidence/G07/<area>/`; no live script is added by this PRP, enterprise and stress runs use the profile definitions directly at a target the operator names.
-- Forward slashes only in commands.
+- Opt-in settings and a no-op when unset: `ingest/bootstrap.py:44-63`; builder shape `runtime/builders/edge.py:17-29`.
+- Fail-fast on a bad settings file: `data.py:251-258` (`ComponentUnavailableError`).
+- Mounted read-only dev file in compose: `docker-compose.yml:163,171` (`ingest-producers.dev.json`); Helm mount: `deployment.yaml:68-97`.
+- Federation scope tests: `services/api/tests/federation_api/test_federation_scope.py`.
 
 ### Gotchas
-- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
-- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
-- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
-- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
-- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
-- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
-- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
-- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
-- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
-- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
-- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
-- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
-- Hidden navigation is not authorization; the API must deny.
-- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
-- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
-- PRP-specific: scale numbers are targets. The enterprise and stress rows say "subject to partition/cost validation"; a green pilot run on compose must not be reported as evidence for 10k or 50k events per second.
-- PRP-specific: Event Hubs emulator is one namespace with ten hubs and no persistence; partition and consumer-group scale cannot be inferred from it.
-- PRP-specific: noisy-neighbor and hot-key tests must include skew (one domain at a large multiple of the median) and permission-heavy multi-domain users, per PRD section 3 load test scope.
-- PRP-specific: a restore drill proves a restore, not a failover. Failover/failback of Event Hubs requires checkpoint store, key and DNS checks on both sides and, for private endpoints, configuration on both sides.
-- PRP-specific: Foundry does not provide automatic application disaster recovery or failover; the runbook must not imply the model endpoint fails over with the platform.
-- PRP-specific: a forecast that cannot cite its price version, or mixes estimated with invoiced, is rejected by schema.
+- Real test directories are `services/api/tests/{federation_api,finops_api}`, `services/workers/tests/federation_worker` and `packages/core/tests/admission`; the round-1 gate line named directories that do not exist. A new `services/api/tests/admission_api/` must stay uniquely named.
+- `require()` is used by every protected route; the route-inventory tests (`services/api/tests/authz/test_route_inventory.py`) must keep passing with no new route. No `openapi.json` change is expected (a 429 response is not declared per route).
+- The limiter holds a `threading.Lock` (`limiter.py:96-118`); the dependency calls `admit` synchronously, which is fine, but never `await` inside the lock.
+- The compose project is shared across worktrees: this PRP holds the compose stack in W13; item 4 is the only item that runs `docker compose`.
+- ASSUMPTION conflict check: PRP-39 (also W13) must not edit `authz/dependencies.py`; it is this PRP's file in W13.
+- Locust must stay out of `uv.lock` and run as an isolated subprocess (gevent monkeypatching).
 
-### External references
-- Event Hubs data geo-replication (GA on Premium and Dedicated): https://learn.microsoft.com/azure/event-hubs/geo-replication (2026-07-11).
-- Event Hubs metadata geo-DR (no payloads, no Entra RBAC; private endpoints both sides): https://learn.microsoft.com/azure/event-hubs/event-hubs-geo-dr (retrieved 2026-10-06).
-- Foundry high availability (no automatic application DR): https://learn.microsoft.com/azure/foundry/how-to/high-availability-resiliency (retrieved 2026-10-06).
-- Event Hubs emulator limits: https://learn.microsoft.com/azure/event-hubs/overview-emulator (2026-08-26).
-- Cosmos DB vNext Linux emulator limits: https://learn.microsoft.com/azure/cosmos-db/emulator-linux (GA June 2026).
-- Version pins: docs/adr/0002-stack-pins.md (observed 2026-10-08).
+Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
+
+## Ownership
+
+```ownership
+owns:
+  - packages/core/neurosphere_core/admission/**
+  - packages/core/tests/admission/**
+  - services/api/neurosphere_api/federation/**
+  - services/workers/neurosphere_workers/federation/**
+  - services/api/neurosphere_api/finops/**
+  - services/api/neurosphere_api/runtime/builders/admission.py
+  - services/api/tests/admission_api/**
+  - services/api/tests/federation_api/**
+  - services/api/tests/finops_api/**
+  - services/workers/tests/federation_worker/**
+  - tests/load/profiles/**
+  - tests/integration/dr/**
+  - infra/dr/**
+  - infra/dev/admission-quotas.dev.json
+  - docs/runbooks/admission-and-federation.md
+  - docs/evidence/G07/pilot/**
+  - docs/evidence/G07/finops/**
+tier1:
+  - services/api/neurosphere_api/authz/dependencies.py
+  - services/api/neurosphere_api/app.py
+  - services/api/neurosphere_api/runtime/builders/data.py
+  - docker-compose.yml
+  - infra/helm/**
+  - docs/adr/0002-stack-pins.md
+  - pyproject.toml
+tier2_appends:
+  - services/api/neurosphere_api/runtime/builders/__init__.py
+  - services/api/neurosphere_api/runtime/settings.py
+  - services/api/tests/authz/test_route_inventory.py
+must_not_touch:
+  - services/api/neurosphere_api/authz/state.py
+  - services/api/neurosphere_api/ingest/**
+  - packages/contracts/**
+  - uv.lock
+```
 
 ## Implementation blueprint
 
-### Item 1 - load-suites  [P]
-- Deliverable: locust suites for pilot, enterprise and stress profiles with hot keys, noisy neighbor and fan-out scenarios, evidence JSON writer.
-- Owned files (may edit): `tests/load/profiles/`, `docs/evidence/G07/load/`.
-- Must NOT touch: `tests/load/graph_benchmark/` (PRP-02), `tests/load/catalog_latency/` (PRP-10), `tests/load/map_freshness/` (PRP-18), `docs/evidence/G07/map/`, `docs/evidence/G07/finops/`, `docs/evidence/G07/dr/`, `packages/core/neurosphere_core/admission/`, root `pyproject.toml`, `docker-compose.yml`.
+Items 1, 2 and 3 are independent [P] (disjoint files; `pyproject.toml` is edited only by item 3, `docker-compose.yml` only by item 1, `data.py` only by item 2). Item 4 waits for 1 and 3. Item 5 closes out.
+
+### Item 1 - Admission wiring through the authz dependency  [P]
+- Deliverable: `AdmissionSettings` (`NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`) and new builder `runtime/builders/admission.py` that loads `load_quota_policy`, builds a `TokenBucketLimiter` and sets `app.state.admission` only when enabled; `require_permission` in `authz/dependencies.py` charges the limiter after the permission check passes, using `derive_limiter_key(scope, target.domain_id)`, and raises the limiter's `RateLimitedError`; the unused ASGI factory stays in core but its docstring states it requires an upstream scope setter and is not used by the API; compose mounts `infra/dev/admission-quotas.dev.json` and sets the settings; Helm value `admission.policyFile` (and ConfigMap alternative) mirroring the ingest mount; runbook page.
+- Owned files: `packages/core/neurosphere_core/admission/**`, `services/api/neurosphere_api/runtime/builders/admission.py`, `services/api/neurosphere_api/authz/dependencies.py`, `services/api/tests/admission_api/**`, `packages/core/tests/admission/**`, `infra/dev/admission-quotas.dev.json`, `docker-compose.yml` (api env and volumes only), `infra/helm/**` (values and the api deployment mount only), `docs/runbooks/admission-and-federation.md`, Tier-2 append in `builders/__init__.py` (`default_builders`) and `runtime/settings.py`.
+- Must NOT touch: `authz/state.py`, `ingest/**`, `routers.py`, other compose services.
 - Depends on: none.
-- Acceptance criteria:
-  - Pilot profile (1k events per second, 1k agents) completes against compose and writes evidence JSON with measured rate, p95, error count, environment label.
-  - Enterprise and stress profiles are defined from the PRD numbers, parametrized by target host and duration, and refuse to start without an explicit target (no default to any cloud).
-  - Skew scenario drives one domain at a configurable multiple of the median; permission-heavy multi-domain users included.
-- Pattern references: sandbox generator from PRP-03; ingest edge contract from PRP-07.
-- Tests to write: `tests/load/profiles/test_profiles_definition.py` (profile parameters match PRD numbers; no default target), `tests/load/profiles/test_pilot_compose.py` (`pytest.mark.integration`).
+- Acceptance criteria: the first four criteria above; a test asserts no `identity_scope` state is required; existing authz and route-inventory tests unchanged.
+- Tests: `services/api/tests/admission_api/test_admission_dependency.py` (new), `services/api/tests/admission_api/test_admission_builder.py` (new), `packages/core/tests/admission/test_noisy_neighbor.py`, `services/api/tests/authz/test_route_inventory.py`; `helm template` check in the gates.
+- Pattern references: `authz/dependencies.py:165-210`, `limiter.py:57-118`, `edge.py:17-29`, `ingest/bootstrap.py:44-63`.
 
-### Item 2 - admission-control  [P]
-- Deliverable: `neurosphere_core.admission` with per-domain quota config, token-bucket limiter, backpressure signals, and an ASGI middleware factory usable by the ingest edge and query service.
-- Owned files (may edit): `packages/core/neurosphere_core/admission/`.
-- Must NOT touch: `services/api/neurosphere_api/ingest/` (PRP-07), `services/api/neurosphere_api/dashboards/` (PRP-14), `tests/load/profiles/`, `packages/core/neurosphere_core/errors/`, root `pyproject.toml`.
+### Item 2 - Federation hardening and peer cells  [P]
+- Deliverable: `FederationSettings` gains `peers_file` and `cache_max_ttl_seconds`; `_federation` loads peers, builds one `HttpCellClient` over a shared `httpx.AsyncClient` (no redirects, closed on shutdown) and registers each peer; `CellRegistry` loading validates per-boundary `allowed_hosts`, https only and serving-cloud equality; `Federator` marks a mismatched response `unavailable`, takes min/max window, returns 403 when every cell is `denied`; `SummaryCache.put` evicts lazily; TTL ceiling configurable.
+- Owned files: `services/api/neurosphere_api/federation/**`, `services/workers/neurosphere_workers/federation/**`, `services/api/neurosphere_api/runtime/builders/data.py` (the `_federation` function and `FederationSettings` only), `services/api/tests/federation_api/**`, `services/workers/tests/federation_worker/**`, `docs/runbooks/admission-and-federation.md` (federation section; coordinate with item 1 by appending a section, not editing its text).
+- Must NOT touch: other builders in `data.py`, `authz/**`, contracts.
 - Depends on: none.
-- Acceptance criteria:
-  - Noisy domain gets `rate_limited` with a retry hint; other domains remain within limits in a simulated-load test.
-  - Missing quota config yields a conservative default and a logged warning, never unlimited.
-  - Limiter keys include the derived domain from `IdentityScope`, not a caller field (test with a spoofed header).
-- Pattern references: error taxonomy `rate_limited` (retryable flag); `IdentityScope` from PRP-05/PRP-06.
-- Tests to write: `packages/core/tests/admission/test_limiter.py`, `packages/core/tests/admission/test_noisy_neighbor.py`.
+- Acceptance criteria: the federation criteria above; the scope-leak tests still pass (no out-of-scope row, no cross-cloud contribution).
+- Tests: `services/api/tests/federation_api/test_federation_scope.py`, `services/api/tests/federation_api/test_peers_http.py` (new), `services/api/tests/federation_api/test_federation_resilience.py` (new), `services/workers/tests/federation_worker/test_cell_summary.py`.
+- Pattern references: `federation/service.py:120-180`, `federation/client.py:80-125`, `data.py:262-285`.
 
-### Item 3 - federation-summaries  [P]
-- Deliverable: worker that computes scope-filtered per-cell aggregates and an API that merges authorized summaries across cells within one cloud boundary.
-- Owned files (may edit): `services/workers/neurosphere_workers/federation/`, `services/api/neurosphere_api/federation/`.
-- Must NOT touch: `services/workers/neurosphere_workers/aggregates/` (PRP-14), `services/api/neurosphere_api/dashboards/` (PRP-14), `packages/core/neurosphere_core/admission/`, `packages/core/neurosphere_core/auth/`, root `pyproject.toml`.
+### Item 3 - Minor follow-ups (#107)  [P]
+- Deliverable: ADR-0002 locust row; t-quantile table in `finops/service.py` replacing `Z_95` for small samples (documented, deterministic) and regenerated `docs/evidence/G07/finops/` via the existing evidence entry point (`finops/__main__.py`); `[tool.pyright] extraPaths = ["infra/dr"]` and removal of the DR pyright ignores (`tests/integration/dr/test_restore_compose.py:11-12`, `test_target_refusal.py:5`); `/otlp/metrics` scenario in `tests/load/profiles/scenarios.py`; corrected rationale text in `compose_pilot.py`; provisional wording on the ingest p95 threshold.
+- Owned files: `docs/adr/0002-stack-pins.md`, `pyproject.toml` (`[tool.pyright]` only), `services/api/neurosphere_api/finops/**`, `services/api/tests/finops_api/**`, `tests/load/profiles/**`, `tests/integration/dr/**`, `infra/dr/**`, `docs/evidence/G07/finops/**`.
+- Must NOT touch: `uv.lock`, `[project]` or dependency tables in `pyproject.toml`, `federation/**`.
 - Depends on: none.
-- Acceptance criteria:
-  - Summary excludes unauthorized identities, counts and costs (negative test with two domains and a restricted principal).
-  - A cell outside the caller's cloud boundary is refused with `capability_unavailable`; no cross-cloud merge path exists (test).
-  - Cache keys include a hash of the scope; revoked principals get 403 within the configured TTL.
-- Pattern references: `require(permission)` from `neurosphere_api.authz`; worker runtime base from PRP-05.
-- Tests to write: `services/workers/tests/federation/test_cell_summary.py`, `services/api/tests/federation/test_federation_scope.py`.
+- Acceptance criteria: the FinOps, ADR, pyright and `/otlp/metrics` criteria; repo-wide `uv run pyright` stays clean (it covers `infra/dr` only through `extraPaths`).
+- Tests: `services/api/tests/finops_api/test_forecast.py`, `services/api/tests/finops_api/test_finops_unknown_not_zero.py`, `services/api/tests/finops_api/test_t_quantile.py` (new), `tests/load/profiles/test_profiles_definition.py`.
+- Pattern references: `finops/service.py:1-60`, `tests/load/profiles/scenarios.py`.
 
-### Item 4 - finops-forecast  [P]
-- Deliverable: forecast service over ledger aggregates and the evidence hooks that record forecast versus actual cost.
-- Owned files (may edit): `services/api/neurosphere_api/finops/`, `docs/evidence/G07/finops/`.
-- Must NOT touch: `packages/core/neurosphere_core/ledger/` (PRP-07), `packages/core/neurosphere_core/pricing/` (PRP-15), `services/api/neurosphere_api/dashboards/`, `docs/evidence/G07/load/`, `docs/evidence/G07/dr/`.
-- Depends on: none.
-- Acceptance criteria:
-  - Forecast response carries price version id, estimated and invoiced as separate series, and an uncertainty band.
-  - Unknown inputs return `unknown`, never 0; a forecast missing a price version is rejected by the response model.
-  - Evidence hook writes forecast-versus-actual rows to `docs/evidence/G07/finops/` with environment label and no savings claim.
-- Pattern references: cost record schema from PRP-01; pricing snapshot usage from PRP-15 (read-only).
-- Tests to write: `services/api/tests/finops/test_forecast.py`, `services/api/tests/finops/test_unknown_not_zero.py`.
+### Item 4 - Pilot re-run on the composed API
+- Deliverable: `compose_pilot` targets the compose `api` service (profile `app`) with admission enabled and the dev ingest producers; run the pilot and the skew scenario; write evidence JSON and a README (environment, method, admitted/throttled counts per domain) to `docs/evidence/G07/pilot/`; failed thresholds are reported as failed.
+- Owned files: `tests/load/profiles/compose_pilot.py`, `tests/load/profiles/test_pilot_compose.py`, `docs/evidence/G07/pilot/**`.
+- Must NOT touch: product code, `docker-compose.yml` (item 1 owns it), `docs/evidence/G07/load/**` (round-1 evidence stays).
+- Depends on: items 1 and 3.
+- Acceptance criteria: the pilot criterion above; run once, output pasted into the Execution state; only this item uses the compose stack.
+- Tests: `tests/load/profiles/test_pilot_compose.py` (integration marker, skips cleanly with the stack down).
+- Pattern references: `docs/evidence/G07/load/README.md`.
 
-### Item 5 - backup-restore-and-failover  [P]
-- Deliverable: per-store backup and restore scripts (Cosmos documents, blob archive, quarantine container, search index rebuild, checkpoint store), failover/failback runbook with checkpoint, key and DNS checks, and a restore drill harness that records measurements.
-- Owned files (may edit): `infra/dr/`, `docs/ops/dr-runbook.md`, `docs/evidence/G07/dr/`, `tests/integration/dr/`, `docs/RESEARCH-AND-GATES.md` (G07 row only).
-- Must NOT touch: `infra/bicep/`, `infra/helm/`, `infra/compose/` (PRP-03), `docker-compose.yml`, `scripts/replay/` (PRP-07), other rows of `docs/RESEARCH-AND-GATES.md`.
-- Depends on: none.
-- Acceptance criteria:
-  - Restore drill on compose restores every store and verification queries match; measured restore time and recovery point gap are written to `docs/evidence/G07/dr/` with method and the label "compose, not representative of production".
-  - Runbook states the Event Hubs metadata-DR caveat (no payloads, no RBAC), covers data geo-replication as a Premium/Dedicated-only option with Government unverified, and includes encryption-key retention and checkpoint-store checks.
-  - RTO 4h and RPO 15min appear only as "provisional target" beside measured values.
-- Pattern references: replay CLI and quarantine design from PRP-07; migrations runner from PRP-13.
-- Tests to write: `tests/integration/dr/test_restore_compose.py` (`pytest.mark.integration`), `tests/integration/dr/test_runbook_caveats.py` (asserts required caveat strings exist).
-
-### Item 6 - wiring  (added at plan approval, 2026-10-22)
-- Deliverable: register the item 3 federation router and the item 4 finops router in the API router registry and regenerate the OpenAPI document, so neither router ships unattached.
-- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json`.
-- Must NOT touch: anything owned by items 1-5.
-- Depends on: items 3 and 4 merged.
-- Acceptance criteria: both routers attached through `REGISTERED` hooks; every new route declares a permission (`verify_route_permissions` passes); `services/api/tests/test_openapi_drift.py` passes after `python -m neurosphere_api.openapi_export`.
-
-### Execution plan deltas (approved 2026-10-22)
-- Item 6 added (above): no blueprint item owned `routers.py`/`openapi.json`; earlier PRPs used a sequenced wiring item.
-- Test directories renamed to avoid pytest top-level package clashes: `services/api/tests/federation_api/`, `services/workers/tests/federation_worker/`, `services/api/tests/finops_api/` (the finops unknown-not-zero test is `test_finops_unknown_not_zero.py`, because `test_unknown_not_zero.py` already exists under dashboards).
-- Locust stays out of `uv.lock`: pinned in `tests/load/profiles/requirements.txt` and run as an isolated subprocess (`uv run --isolated --no-project --with-requirements ...`), because importing locust gevent-monkeypatches the process. Profile definitions and the evidence writer are plain Python; the CI-collected definition test never imports locust.
-- Item 5 runs after item 1 (both use the single compose stack; concurrent drills collide on host ports and data).
+### Item 5 - Integration and close-out
+- Deliverable: Tier-2 inventories if a route changed (none expected), update the G07 row in `docs/RESEARCH-AND-GATES.md` (the one row) in the close-out commit, regenerate Tier 3 files, tick round-1 boxes confirmed in code, completion note with "Env vars for the operator" (the four new settings), `python scripts/prp_status.py --write`, CHANGELOG entry.
+- Owned files: this PRP file; `docs/RESEARCH-AND-GATES.md` (G07 row only).
+- Must NOT touch: items 1-4 source except an integration defect (record it).
+- Depends on: items 1-4.
+- Acceptance criteria: completion note filled; #105 and #106 closed by the PR if fully fixed, #107 closed or its residue listed; #108 left open.
 
 ## Validation gates
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -q packages/core/tests/admission services/api/tests/admission_api services/api/tests/federation_api services/api/tests/finops_api services/workers/tests/federation_worker services/api/tests/authz tests/load/profiles services/api/tests/test_openapi_drift.py
+helm template infra/helm --set admission.policyFile=/etc/neurosphere/admission/quotas.json
+docker compose --profile app up -d --wait
+uv run pytest -q -m integration tests/load/profiles/test_pilot_compose.py tests/integration/dr
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 python scripts/validate_planning.py
 ```
-Feature-specific:
-```
-python -m pytest packages/core/tests/admission services/api/tests/federation services/api/tests/finops services/workers/tests/federation
-python -m pytest tests/load/profiles/test_profiles_definition.py
-docker compose up -d --wait
-python -m pytest -m integration tests/load/profiles/test_pilot_compose.py tests/integration/dr
-```
-Enterprise and stress profile runs are operator-run against a sized environment the operator names; they are not CI steps and no script in this PRP starts them implicitly.
+
+## Migration and rollback
+No data migration. New settings default to off or unset, so existing deployments behave as before. Rollback: set `NS_ADMISSION_ENABLED=false` (and drop the peers file) to disable at runtime, or revert the PRP branch. The `require()` change is a no-op when `app.state.admission` is absent.
 
 ## Live and open gates
-- G07 (workload/SLO/DR): stays OPEN. This PRP supplies pilot evidence on compose (bounded feasibility, G12) and measured restore on compose; enterprise and stress profiles, real Event Hubs failover/failback and data geo-replication remain OPEN until an operator runs them in a sized environment.
-- G12 (emulator parity): record rate ceilings and persistence limits of the emulators observed during the pilot run.
-- G01: Event Hubs data geo-replication availability in Government is unverified; no evidence closes it here.
-- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+- #108 (enterprise/stress profiles, failover, geo-replication, production restore, AI Search rebuild, invoiced cost) needs `NS_LIVE_APPROVED=1` and an operator; handed to PRP-64. G07 stays OPEN.
+- Compose pilot numbers are bounded feasibility (emulators), not a sizing result.
+- No paid call is made by this PRP.
 
 ## NOT building
-- Production-sized load runs, capacity guarantees, SLA or SLO commitments.
-- Wiring admission control into the ingest edge and query service (follow-up with the PRP-07 and PRP-14 owners).
-- Automatic model-endpoint failover (Foundry does not provide it).
-- Multi-customer SaaS federation; cross-cloud federation of any kind.
-- Savings claims or ML cost forecasting; recommendations (PRP-15).
-- Government DR profiles (PRP-20 evidence applies).
+- Sized or stress load runs, DR on real services, invoiced FinOps evidence (PRP-64).
+- Admission for the ingest edge, UI for quotas, quota storage in the admin store (PRP-44, PRP-57).
+- A new ingest latency target number (owner decision pending, Clarification 7).
+- A new auth-first middleware.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [x] All clarification questions are decided, not guessed
+- [x] All clarification questions are decided, not guessed (rows 4 and 7 are labelled assumptions)
 
 ## Execution state
 
-| Item | Status | Branch | Model | Evidence | Updated |
-|------|--------|--------|-------|----------|---------|
-| 1 | merged | worktree-agent-af6fe6b9811307cdd | sonnet | 4337d5b + 06f95f9 (evidence), merge bf74d84; verify ruff/format/pyright clean, profiles 31/31, orchestrator re-ran integration pilot on compose 1/1 (local only), snyk 0, locust not in uv.lock; pilot FAILS 1k eps target: ~240 accepted eps, p95 30s at 100 users (compose, bounded feasibility) | 2026-10-22 |
-| 2 | merged | worktree-agent-a286d67fb3c859ccd | sonnet | 7b92eac, merge 13929dd; verify ruff/format/pyright clean, admission 31/31, snyk 0; post-merge admission+import-boundaries 32/32 | 2026-10-22 |
-| 3 | merged | worktree-agent-ab063dfdc8eb03e12 | sonnet | efec383; verify ruff/format/pyright clean, federation 31/31, snyk 0 new; author flagged scope-leak points; review APPROVED (5 follow-ups), merge c517691; post-merge admission+federation 62/62 | 2026-10-22 |
-| 4 | merged | worktree-agent-a1329db321d7733e7 | sonnet | c3d6962, merge 1a115d8; verify ruff/format/pyright clean, finops 32/32, snyk 0, evidence rerun byte-identical; post-merge touched suites green | 2026-10-22 |
-| 5 | merged | worktree-agent-a599e0179246ae9c9 | sonnet | 66a5c41 + 80324a2 (runbook, evidence, G07 row), merge 1f25d38; verify ruff/format/pyright clean, dr 56/56, orchestrator re-ran restore drill on compose 1/1 (local only), RESEARCH-AND-GATES diff = G07 row only, snyk 0; post-merge touched suites 198/198, gitleaks main..HEAD no leaks | 2026-10-22 |
-| 6 | merged | worktree-agent-a077ee7635c89fb38 | sonnet | 13df179, merge 530f804; verify ruff/pyright clean, openapi drift+app+authz+federation+finops 223/223, no component renames; routes 503 until app.state is populated (follow-up) | 2026-10-22 |
+| Item | Status | Branch/worktree | Notes |
+|------|--------|-----------------|-------|
+| 1 | todo | | |
+| 2 | todo | | |
+| 3 | todo | | |
+| 4 | todo | | |
+| 5 | todo | | |
 
 ## Completion note (filled at ship)
-- Date: 2026-10-22
-- Merged commits: PR #103 (merge 6b43d63). Item 2: 7b92eac (merge 13929dd). Item 3: efec383 (merge c517691). Item 4: c3d6962 (merge 1a115d8). Item 6: 13df179 (merge 530f804). Item 1: 4337d5b + 06f95f9 (merge bf74d84). Item 5: 66a5c41 + 80324a2 (merge 1f25d38). Local `verify-gates -Mode full` PASS (lint, typecheck, 6890 tests, build); CI on PR #103 all 21 checks green.
-- Deviations from blueprint and why:
-  - Item 6 (wiring of `routers.py` and `openapi.json`) was added at plan approval, because no blueprint item owned the router registry. The `openapi.json` regeneration was additive, with no component renames.
-  - Test dirs were renamed to `services/api/tests/federation_api/`, `services/workers/tests/federation_worker/` and `services/api/tests/finops_api/` (`test_finops_unknown_not_zero.py`). This avoids pytest top-level package clashes.
-  - Locust is kept out of `uv.lock`. It is pinned in `tests/load/profiles/requirements.txt` and run as an isolated `uv run` subprocess, because importing it gevent-monkeypatches the pytest process. `locustfile.py` carries a file-level pyright `reportMissingImports=false`.
-  - Item 5 ran after item 1 because both share the single compose stack, whose project name is fixed.
-  - Item 1:
-    - The pilot drives a local single-worker uvicorn with the ingest edge, because the compose `api` container has no ingest producers configured.
-    - The 2 s ingest p95 threshold is a placeholder borrowed from the dashboard target, because the PRD has no ingest figure.
-    - `/otlp/metrics` and the read side of permission-heavy users are not driven; the latter is modelled as a producer with 8 sources.
-  - Item 2: the core library mirrors the problem+json rendering, because core may not import services (import-boundary test).
-  - Item 3:
-    - The federation summary is a plain async function, not a `Worker` subclass, because the runtime base is a checkpointed batch loop.
-    - The author flagged scope-leak points, so it got one focused review (Clarification 1): APPROVED.
-  - Item 5:
-    - Search "restore" is a rebuild into the in-process `FixtureSearchIndex`, because compose has no search emulator.
-    - Archive blobs are synthetic gzip, not written through the archive sink.
-    - The event-data path is documented as archive replay; the drill does not replay through a live pipeline.
-- Descoped items: none.
-- Measured values (environment-labelled, never guarantees):
-  - Pilot load, compose (emulators), bounded feasibility only (G12). It FAILED the 1k events/s planning target:
-    - 100 users: ~240 accepted events/s, 7.1% errors (timeouts), request p95 ~30 s.
-    - 20 users: ~185 events/s, 0% errors, p95 ~11 s.
-    - The hot domain ran at ~38.5x the median (`docs/evidence/G07/load/`).
-  - Restore drill, "compose, not representative of production": all 8 stores restored with counts and hashes matching (`docs/evidence/G07/dr/`, `docs/ops/dr-runbook.md`).
-    - Total restore time ~5.0 s. Per store: cost-ledger 1.81 s, outbox 1.67 s, catalog 0.28 s, aggregates 0.32 s, archive 0.49 s, quarantine 0.35 s, checkpoints 0.07 s, search rebuild 0.01 s.
-    - Recovery point gap 2.2 s. This follows from the drill's chosen interval, not a backup cadence.
-    - RTO 4 h and RPO 15 min appear only as provisional targets.
-  - FinOps backtest: sandbox in-memory ledger, synthetic seed 7. OLS trend with a 95% band, price version cited, estimated and invoiced kept separate (`docs/evidence/G07/finops/`).
-- Enterprise/stress/failover runs: OPEN. No operator approval and no sized environment (`NS_LIVE_APPROVED=1` not set).
-  - Also OPEN: real Event Hubs failover/failback, data geo-replication (Government unverified, G01), production-sized restore, Azure AI Search rebuild, live-pipeline replay, and real invoiced-cost evidence.
-  - The `integration`-marked pilot and drill suites ran locally only; that marker does not run in CI. G07 status unchanged (OPEN).
-  - The G12 emulator ceilings observed in the pilot are recorded in the load evidence JSON. The G12 row itself was not edited, because it was outside ownership.
-- Follow-ups: #104, #105, #106, #107, #108.
-  - #104: populate `app.state` so the federation, finops and dashboards routes serve rather than 503 in the real app.
-  - #105: admission wiring into the ingest edge and query services, plus a policy source.
-  - #106: federation review follow-ups.
-  - #107: ADR-0002 locust row, ingest latency target, load coverage, forecast band, DR packaging.
-  - #108: G07 operator-run evidence.
+- Date, PR, merge commit:
+- Deviations from the blueprint and why:
+- Descoped items:
+- OPEN gates (#108 items, G07):
+- Env vars for the operator (`NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`, `NS_FEDERATION_PEERS_FILE`, `NS_FEDERATION_CACHE_MAX_TTL_SECONDS`):
+- Follow-up issue numbers:
+- Product check (can an operator set quotas and add a cell without editing code?):
 
-## Audit 2026-11-04
-
-Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
-
-- The pilot load run FAILED every threshold: `docs/evidence/G07/load/pilot-2026-10-22.json:93` has `thresholds_all_passed: false` (240 events/s vs 1000 target, 7.1% errors, p95 30 s); the 2 s ingest p95 threshold is a self-declared placeholder; it ran against local uvicorn, not the compose api.
-- Admission control is not composed: nothing outside tests imports `neurosphere_core.admission` (descoped, Clarification 5, follow-up #105), so no running endpoint throttles a noisy domain.
-- Federation is a single in-process cell (`runtime/builders/data.py:244-280`); `HttpCellClient` never composed. FinOps forecast reads a sandbox in-memory ledger with no invoiced evidence. DR drill used synthetic archive blobs and a fixture search index; real failover OPEN. No federation or finops UI.
+## History
+- Round 1 (PR #103, merged 2026-10-22, merge `6b43d63`) shipped the load profiles, the admission library, federation summaries, the FinOps forecast, the DR drill and the router wiring (items 1-6). The pilot failed its 1k events/s target on compose and was recorded as bounded feasibility.
+- The 2026-11-04 audit reopened it: admission not composed, federation single cell, FinOps on a sandbox ledger, DR synthetic.
+- The 2026-11-14 re-audit (lane-c) found the PRP-11 dependency not real (no import of `neurosphere_core.analytics` in admission, federation, finops, load or DR), the FinOps "sandbox ledger" half stale (the route reads `CosmosLedgerStore`), the UI-missing gap stale, and a design blocker: ASGI middleware cannot see the scope. That is why admission is a dependency step here.
+- This rewrite removed the round-1 blueprint, wiring-delta and audit sections, dropped `depends_on`, fixed the gate paths to `federation_api`, `finops_api` and `federation_worker`, and split operator-only #108 out to PRP-64.
+- The original text is in git history (`git log --follow PRPs/backlog/PRP-21-scale-federation-finops-and-dr.md`).

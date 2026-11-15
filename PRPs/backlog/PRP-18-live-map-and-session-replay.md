@@ -2,317 +2,236 @@
 name: PRP-18-live-map-and-session-replay
 status: backlog
 priority: P2
-order: 16
+order: 27
 review: required
 created: 2026-10-08
-started: 2026-10-21
-pr: 85
-branch: prp-18-live-map-and-session-replay
 model: sonnet
-phase: 3
-ns: NS-05
-depends_on: [PRP-04-frontend-shell-design-system-auth, PRP-10-catalog-and-relationship-governance, PRP-14-dashboards-cost-latency-coverage]
-wave: W7
-absorbs: P3.1
 orchestrator_model: sonnet
 implementer_model: sonnet
+phase: 3
+ns: NS-05
+depends_on: []
+wave: W13
+branch: prp-18-round2-map-edge-batching
+allow_parallel: true
+issues: [233]
+absorbs: P3.1
 ---
 
-# PRP-18: Live map and session replay
+# PRP-18: Live map and session replay (round 2)
 
 ## Goal
-Ship the live agent map and run replay: a scoped WebSocket gateway fed by hot aggregates, a bounded viewport API, a sigma.js 4 and graphology WebGL renderer, an accessible table alternative, a read-only trace replay viewer, and a freshness load test. It is for analysts, stewards and auditors who need to see agent topology and inspect past runs without exposing the whole enterprise graph to a browser. It lands in W7 after the UI shell (PRP-04), catalog (PRP-10) and hot aggregates (PRP-14).
+Close the round-1 gaps that need no decision and no operator hardware: replace the per-node edge walk of the map viewport with one bulk "edges among these ids" call so a 2000-node page is usable, harden the replay read-only guard so it also catches relative imports and dynamic imports, fix the gateway pump cadence, and clear the replay, table and mock-API nits the round-1 reviewers filed. It is for analysts and auditors using `/map`, `/map/table` and `/replay/traces`, and for the reviewer who must trust that replay can never invoke an action. It runs in W13 because the viewport fix extends the PRP-10 graph package and the mock API server is a W13 Tier-1 file held by this PRP.
 
-> Distinct node shapes/icons for people, agents, sub-agents, models and sources; configurable size/color legends for tokens, context size, frequency, latency and health. Animate observed edges only and label partial/delayed coverage. Aggregate into domain clusters; never download the full enterprise graph to a browser. Drill down to lineage, metrics, costs, evidence and recommendations.
+Out of scope: per-node metrics from a per-agent aggregate series (PRP-49); the 30 fps p5 criterion reword and the headed re-measure on operator hardware (PRP-64); reveal-people-with-audit, an `ArchiveTraceReader` index and the cross-replica revocation end-to-end test (not built, filed as issues in the close-out); catalog hardening in `catalog/**` outside `catalog/graph/` (PRP-43).
 
-> WebGL viewport with bounded node/edge budgets, aggregation and paginated expansion; text/table alternative, reduced motion, keyboard navigation and non-color status indicators. Restrict identity display; pseudonymize people by default. Live updates via scoped WebSocket gateway; permission revocation closes sessions and invalidates caches.
-
-> Replay stored/redacted run traces with parent-child calls, timings, errors and tool interactions; label gaps, sampling and late spans. Replay is visual inspection, not re-execution of side-effectful tools. Payload access, retention, export and legal hold follow policy.
-
-PRD planning targets (to be measured, not guaranteed): map freshness p95 <=10s after normalized ingestion; browser <=2k visible nodes at >=30fps on documented hardware.
+## Why
+- `services/api/neurosphere_api/map/service.py:227-263` (`edges_among`) calls `GraphQuery.neighbors` once per node in chunks of 16 (`_EDGE_CHUNK`, line 56); a 2000-node page took about 15 s in memory (PRP-18 round-1 follow-up, lane-b 18-R2-A).
+- `services/api/tests/replay/test_replay_readonly.py:21-30` (`_imports`) ignores `ImportFrom.level` and never inspects `importlib` or `__import__` calls, so a relative import of an executor would pass the guard.
+- `services/api/neurosphere_api/realtime/gateway.py:376-381` (`_pump_loop`) sleeps `poll_interval_seconds` only, so scope refresh cadence (`effective_refresh_seconds`, `realtime/settings.py:43-51`) holds only when poll is at most half the revocation TTL; the slow-consumer close (`gateway.py:447`, reason `slow_consumer`) and close codes 1009/1011/1013 have no test.
+- `frontend/src/features/map/hooks.ts:58-79` forwards every delta with no guard after a 4403 revoke, so a delta racing the close can re-add nodes that `mapGraph.ts:353` just cleared.
+- `services/api/neurosphere_api/replay/assemble.py:122-127` writes the missing-parent gap detail as "parent span is outside this domain and was withheld", which tells a caller another domain has spans; `frontend/src/features/replay/TraceTree.tsx:69` keys gap badges by reason only (duplicates); `frontend/tests/mock-api/server.ts:1344` answers an unknown trace with a bare `{ error }` 404, not problem+json.
 
 ## Acceptance criteria
-- [ ] Item 1: A revoked principal's WebSocket session is closed within the configured TTL; a delta for another domain is never pushed to a scoped session; per-session budgets are enforced.
-- [ ] Item 2: Viewport responses never exceed 2k nodes and the configured edge budget; expansion is paginated; truncation is flagged.
-- [ ] Item 3: At 2k visible nodes the renderer meets the >=30fps target on the documented hardware (perf test records the measured value and hardware); reduced-motion preference disables edge animation; only observed edges animate; coverage labels show partial or delayed data.
-- [ ] Item 4: The table alternative is axe clean, fully keyboard traversable (e2e), and status never relies on color alone.
-- [ ] Item 5: The replay endpoint exposes no action capability (static analysis plus test); gaps, sampling and late spans are labeled.
-- [ ] Item 6: Event-to-view freshness p95 is measured under sandbox load and evidence JSON is written to `docs/evidence/G07/map/`; the 10s figure is reported as a measured result against a target.
-- [ ] PRP exit: items 1-6 green under `verify-gates -Mode full`; documented hardware spec recorded beside the perf result.
+- [ ] Given a catalog of 2000 in-scope nodes and 4000 edges, When the viewport service builds a page, Then edges come from one bulk call (call count asserted, not per node) and the in-memory page completes in under 3 s (test with a recorded wall time; the threshold is ASSUMPTION A-1 below).
+- [ ] The bulk call returns exactly the edge set the per-node walk returned for the same ids (parity test over locks, overrides, hidden edges and an out-of-scope other endpoint), never includes an edge with an endpoint outside the caller's scope, and reports truncation when an edge or time budget is hit.
+- [ ] `RepositoryGraphQuery` still satisfies `GraphQuery`; a graph that lacks the bulk method falls back to the per-node walk (test with a stub graph).
+- [ ] `test_replay_readonly.py` fails on a fixture module that uses `from . import actions_x`, `from .. import executor`, `importlib.import_module("neurosphere_api.actions")` or `__import__("neurosphere_core.actions")` (negative-fixture tests), and still passes on the real replay package.
+- [ ] The gateway pump sleeps `min(poll_interval_seconds, effective refresh)`; tests cover the slow-consumer close (code 4429 reason `slow_consumer`) and close codes 1009, 1011 and 1013.
+- [ ] After a 4403 revoke the map client ignores later deltas and the graph stays empty (vitest).
+- [ ] Replay gap detail for a withheld parent is generic ("parent span is not available in this trace") and the foreign-domain reason is not distinguishable from an absent parent (test); gap badges have unique keys; the map-table `Load more` does not steal focus after the user tabbed away, and a stale `activeKey` leaves a tabbable row (vitest plus Playwright spec).
+- [ ] The mock API answers an unknown replay trace with `application/problem+json` (status 404, code `not_found`).
+- [ ] The Playwright command in the gates uses the correct cwd-relative spec paths.
+- [ ] PRP exit: the touched pytest and vitest suites pass, `verify-gates.ps1 -Mode full` is green, the PRP-18 close-out lists the follow-up issues filed for the deferred items.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|---|---|---|
-| 1 | Model and review | sonnet/none; sonnet/required; opus | sonnet, review required (D6) |
-| 2 | Renderer | sigma + graphology; cosmograph; deck.gl | sigma.js 4 with graphology 0.26 (ADR-0002). Never `@cosmograph`: it is CC-BY-NC |
-| 3 | Live gates | live required; emulator/sandbox | Sandbox load on Docker Compose emulators (D8). Freshness evidence is labelled emulator/sandbox; a live Commercial run is optional, operator-approved with `NS_LIVE_APPROVED=1`, else G07 map evidence stays OPEN |
-| 4 | Node budget | unlimited; 2k visible | At most 2k visible nodes server-enforced; the browser never receives the full graph; aggregation into domain clusters beyond the budget |
-| 5 | Frame rate and hardware | claim universally; document | The >=30fps figure is a target on documented hardware; the perf test writes the hardware description and measured fps; no universal claim |
-| 6 | Freshness | guarantee; target | p95 <=10s after normalized ingestion is a PRD planning target to be measured; provider billing freshness is connector-dependent and excluded |
-| 7 | Push transport | SSE; WebSocket | Scoped WebSocket gateway fed from PRP-14 hot aggregates, not from raw events or batch analytics |
-| 8 | Revocation | poll; interface | Use the revocation interface from PRP-06 (`neurosphere_core.auth.revocation`): revocation closes sessions and invalidates caches within TTL |
-| 9 | Replay semantics | re-execute; inspect | Visual inspection of stored, redacted traces only. No re-execution, no tool invocation, no write route in the replay module |
-| 10 | Identity display | real names; pseudonyms | People pseudonymized by default; reveal only with explicit scoped permission and audit |
-| 11 | Accessibility | later (PRP-24); now | Table alternative, keyboard navigation, reduced motion and non-color status ship here; the full WCAG audit is PRP-24 |
-| 12 | Edge animation | all edges; observed only | Observed edges only; declared or inferred edges are static and visually distinct |
+| 1 | Where the bulk call lives | Add to the `GraphQuery` protocol; new optional protocol in `catalog/graph/` | New runtime-checkable `EdgesAmongQuery` protocol and `RepositoryGraphQuery.edges_among` inside `catalog/graph/` only. `catalog/protocol.py` belongs to PRP-43, so the base `GraphQuery` is not changed; the map service falls back when the method is absent |
+| 2 | Per-node metrics | Compute from ledger; per-agent aggregate series | Owner decision 2026-11-14: per-agent aggregate series, PRP-49. Not here |
+| 3 | fps criterion and perf re-measure | Reword now; wait for hardware | PRP-64 (operator hardware); round-1 evidence in `docs/evidence/G07/map/fps-run{1,2,3}.json` stands |
+| 4 | Deferred items | Build now; file issues | Reveal-people-with-audit, `ArchiveTraceReader` index and cross-replica revocation e2e are filed as issues at close-out, not built |
+| 5 | Model and review | sonnet/none; sonnet/required | sonnet, review required (round 1 decision D6 stands: a replay import guard and scope-bearing graph code) |
+| 6 | ASSUMPTION A-1 | n/a | ASSUMPTION: the 3 s in-memory bound for a 2000-node page is a regression guard chosen here (round 1 measured about 15 s); the real figure is recorded in the test output and evidence, not promised |
 
 ## Context manifest
 
-### Files that matter
-- `PRP.md` - sections 1-3 (scope; IdentityScope on WebSocket paths).
-- `docs/PRD.md` - NS-05 text; planning targets and scale profiles (2k nodes, 30fps).
-- `docs/ARCHITECTURE.md` - realtime and hot-aggregate diagrams.
-- `docs/RESEARCH-AND-GATES.md` - G07, G12 rows.
-- `docs/adr/0002-stack-pins.md` - sigma 4.0, graphology 0.26, React 19.3, Fluent UI 9.74.
-- `docs/DECISIONS-LOG.md` - D6, D7, D8, D11.
-- `pyproject.toml`, `docker-compose.yml`, `infra/compose/eventhubs.config.json`, `.env.example`, `.claude/hooks/config.ps1`, `scripts/validate_planning.py`.
-- Created by PRP-01: `packages/contracts/schemas/scope/`, `.../query/`, `.../catalog/`.
-- Created by PRP-04: `frontend/src/design-system/` (node-type icon set, themes), `frontend/src/api/`, `frontend/src/features/workspaces/`, `frontend/tests/`.
-- Created by PRP-05: `neurosphere_core.errors`, `.../paging/`, observability, API app factory.
-- Created by PRP-06: `neurosphere_core.auth.scope`, `neurosphere_api.authz`, `neurosphere_core.auth.revocation`.
-- Created by PRP-10: `neurosphere_core.catalog.graph` (bounded `GraphQuery`).
-- Created by PRP-14: `services/workers/neurosphere_workers/aggregates/` (hot aggregates with lag and coverage metadata).
+### Files to read first
+- `services/api/neurosphere_api/map/service.py` - `_Builder.edges_among`, `_neighbors`, `node_for` (lines 227-263, 200-216).
+- `packages/core/neurosphere_core/catalog/graph/query.py` - `RepositoryGraphQuery._walk`, `_expand`, `_in_scope` (presented-edge rules: locks, overrides, hidden edges).
+- `packages/core/neurosphere_core/catalog/protocol.py:446-470` - the `GraphQuery` protocol (read only; PRP-43 owns it).
+- `packages/core/tests/catalog/graph_helpers.py` and `test_graph_budgets.py` - fixtures for scope and budgets.
+- `services/api/neurosphere_api/realtime/gateway.py:376-460` and `realtime/settings.py:20-51` - pump loop, slow consumer, refresh.
+- `services/api/tests/replay/test_replay_readonly.py` and `replay/assemble.py:100-185` - guard and gap text.
+- `frontend/src/features/map/{hooks.ts,realtime.ts,mapGraph.ts}` - delta path and revoke.
+- `frontend/src/features/map-table/MapGrid.tsx:215-300` - pending focus and `loadMore`.
+- `frontend/tests/mock-api/server.ts:1323-1350` - `mapReplayHandler` (W13 Tier-1, owned here).
+- `docs/evidence/G07/map/README.md` - evidence format for any re-measure note.
+
+### Interfaces consumed
+- `CatalogRepository.list_edges_by_node`, `get_entity`, `list_overrides_for_edges` (PRP-10, shipped).
+- `AggregateReader.status` coverage and lag (PRP-14, shipped); not changed.
+- `RevocationHookRegistry.register_push_registry("websocket", ...)` wired in `runtime/builders/data.py:437-448` (not edited).
+
+### Interfaces provided
+- `neurosphere_core.catalog.graph.EdgesAmongQuery` (runtime-checkable protocol) and `RepositoryGraphQuery.edges_among(scope, node_ids, budget, view="presented") -> GraphResult`; PRP-49 and PRP-43 build against it unchanged.
+- Mock API: problem+json 404 for replay; no other contract change; `openapi.json` is not expected to change.
 
 ### Patterns to match
-- Pydantic v2 models with `model_config = ConfigDict(extra="forbid")`, generated from `packages/contracts`.
-- FastAPI routers per module under `services/api/neurosphere_api/<module>/router.py` (`realtime/`, `map/`, `replay/`).
-- Async Azure SDK clients from `packages/core/neurosphere_core/clients`; error taxonomy exceptions from `neurosphere_core.errors` (`rate_limited` for budget breach).
-- Same `IdentityScope` object for WebSocket subscription, viewport queries and cache keys; cache key includes a hash of the scope.
-- Tests beside packages plus cross-package suites in `tests/`; `pytest.mark.live` and `pytest.mark.integration` markers (declared in root `pyproject.toml`).
-- TypeScript strict with `@fluentui/react-components`; Vitest + Testing Library; Playwright under `frontend/tests/e2e`.
-
-### Conventions
-- ruff config in root `pyproject.toml` (line 100, py312, S rules on); pyright standard; conventional commits; owned-file discipline.
-- Evidence under `docs/evidence/<gate>/`; live scripts under `scripts/gates/` refuse without `NS_LIVE_APPROVED=1`.
-- Forward slashes only in commands.
+- Bounded, scope-first traversal: `catalog/graph/query.py:304-360` (`_expand`).
+- Negative-fixture style tests for an AST guard: `services/api/tests/replay/test_replay_readonly.py:34-60`.
+- problem+json in the mock: `frontend/tests/mock-api/server.ts:54-60` (`problem`) and `:417` use.
+- Fake clock and sleeper in gateway tests: `services/api/tests/realtime/rt_helpers.py`.
 
 ### Gotchas
-- Event Hubs has no DLQ: quarantine is an explicit container + replay CLI; checkpoints advance only after durable accept or quarantine. Metadata geo-DR copies neither payloads nor RBAC.
-- `IdentityScope` is derived server-side; caller- or model-supplied `domain_id`/`customer_id` is ignored. Same scope object on REST, search, cache keys, exports, WebSocket, copilot tools, MCP.
-- No LLM-generated SQL/Cypher/KQL/JS. Charts are a Vega-Lite subset (no `expr`, signals, external `url` data) rendered with `vega-interpreter` in a sandboxed iframe.
-- Government is gated, not banned: disabled-with-reason from the capability matrix; separate endpoints (`login.microsoftonline.us`, `*.documents.azure.us`, `*.servicebus.usgovcloudapi.net`, `*.search.azure.us`). Never route Government data to Commercial.
-- Fail closed: policy store outage returns 503. Privileged roles are scoped; no bypass.
-- One action executor for button/chat/REST/MCP; same intent hash; permission and target version rechecked at execution; read-only connectors are advisory; no catalog-only pretend swaps.
-- Costs: null/unknown never 0; estimated vs invoiced always distinct; projections cite price version. Provider billing freshness is not sub-10s.
-- Catalog: raw events outside the graph; locks affect presented lineage not observations; traversals budgeted; ETag mismatch returns `stale_version`. Outbox is the projection baseline, not emulator change feed.
-- Emulators: Event Hubs emulator lacks Entra, so producer identity is enforced at the ingest edge; Cosmos vNext emulator has no RU accounting, no sprocs/triggers/UDF, no range/composite/spatial indexes, so G03 emulator evidence is "bounded feasibility" only.
-- `scripts/gates/*` refuse without `NS_LIVE_APPROVED=1`; missing live evidence is an open gate, never a skipped green test. No paid model calls in CI.
-- No FedRAMP/ATO/parity claims. Availability, GA and authorization are separate matrix columns.
-- Secrets via vault references; dev issuer only when `NS_ENV=local`; never read `.env`. Pseudonymize people; prompt/response bodies off by default; redact before archive and before any external transmission (judges, connectors).
-- Hidden navigation is not authorization; the API must deny.
-- Versions: Python 3.12, Node 24, TypeScript 6.0.x (not 7), Helm 4, MkDocs Material 9.7 (EOL 2026-11-05, evaluate Zensical), sigma 4 + graphology (never @cosmograph, CC-BY-NC), MCP SDK 2.x (spec 2026-07-28). See docs/adr/0002-stack-pins.md.
-- CI contains no `|| true`; `scripts/validate_planning.py` fails if it does. Python is `python`, not `python3`.
-- PRP-specific: `@cosmograph` packages are CC-BY-NC and must never appear in `package.json` or the lockfile; PRP-00's licence check should fail on it. Use sigma 4 and graphology only.
-- PRP-specific: the 2k-node cap and the fps target are enforced and measured, but the fps result is hardware-specific. Record the exact hardware beside the number; headless CI numbers are not the documented-hardware result.
-- PRP-specific: a delta pushed to a WebSocket must be filtered by the session's scope at send time, not at subscribe time; permissions change during a session. Revocation closes the socket, and cached viewport responses are invalidated by scope-hash keys.
-- PRP-specific: a map that animates stale data as live is misleading. Show lag and coverage labels from the aggregate metadata; a gap is labelled, never smoothed over.
-- PRP-specific: the replay module must contain no route or import that can invoke a tool, connector or action executor. Enforce with a static import check in tests.
-- PRP-specific: WebGL rendering is not accessible by itself. The table view is the accessible equivalent, not an afterthought; both read the same viewport API.
-- PRP-specific: reduced motion means no edge animation or transitions beyond essential state change; read `prefers-reduced-motion` and also offer an in-app toggle.
+- Same-named test directories shadow each other: the new core test goes in `packages/core/tests/catalog/test_graph_edges_among.py` (a new file in the existing `catalog` test package, importing `graph_helpers` as `test_indexer.py` does); the API test goes in the existing `services/api/tests/map/`.
+- `map-table` must import only `paths.ts` from `map` (round-1 fix `5a0622c`); do not re-import the `map` index from `map-table`.
+- The map e2e specs are not in this PRP's `frontend/src` globs; the three map specs under `frontend/tests/e2e/` are listed in Owned files because items need them. PRP-47 owns the rest of `frontend/tests/**` in W15.
+- Headless fps is SwiftShader; never record a headless number as a hardware result.
+- `pnpm` runs inside `frontend/`, so Playwright spec paths are `tests/e2e/...`, not `frontend/tests/e2e/...`; `MSYS_NO_PATHCONV` breaks the pnpm shim.
 
-### External references
-- sigma 4.0 and graphology 0.26, MIT, plus the @cosmograph CC-BY-NC prohibition: docs/adr/0002-stack-pins.md (observed 2026-10-08).
-- WCAG 2.2 and reduced-motion guidance: https://www.w3.org/TR/WCAG22/ (W3C Recommendation; confirm the observed date when the WCAG audit in PRP-24 runs).
-- Cosmos DB vNext Linux emulator limits (sandbox freshness numbers are bounded feasibility): https://learn.microsoft.com/azure/cosmos-db/emulator-linux (GA June 2026).
-- Event Hubs emulator constraints (SAS only, no persistence): docs/RESEARCH-AND-GATES.md "Infrastructure and tooling" (observed 2026-10-08 per the register).
+Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
+
+## Ownership
+
+```ownership
+owns:
+  - services/api/neurosphere_api/map/**
+  - services/api/neurosphere_api/realtime/**
+  - services/api/neurosphere_api/replay/**
+  - packages/core/neurosphere_core/catalog/graph/**
+  - packages/core/tests/catalog/test_graph_edges_among.py
+  - services/api/tests/map/**
+  - services/api/tests/realtime/**
+  - services/api/tests/replay/**
+  - frontend/src/features/map/**
+  - frontend/src/features/map-table/**
+  - frontend/src/features/replay/**
+  - frontend/tests/e2e/map-table-keyboard.spec.ts
+  - frontend/tests/e2e/map-reduced-motion.spec.ts
+  - frontend/tests/e2e/map-perf.spec.ts
+  - tests/load/map_freshness/**
+tier1:
+  - frontend/tests/mock-api/server.ts
+tier2_appends: []
+must_not_touch:
+  - packages/core/neurosphere_core/aggregates/**
+  - packages/core/neurosphere_core/catalog/protocol.py
+  - packages/core/neurosphere_core/catalog/repo/**
+  - services/api/neurosphere_api/runtime/builders/data.py
+  - services/api/neurosphere_api/routers.py
+  - packages/contracts/**
+  - pyproject.toml
+  - uv.lock
+  - frontend/package.json
+```
 
 ## Implementation blueprint
 
-### Item 1 - websocket-gateway  [P]
-- Deliverable: scoped WebSocket gateway fed from hot aggregates with per-session budgets and revocation-driven closure.
-- Owned files (may edit): `services/api/neurosphere_api/realtime/`.
-- Must NOT touch: `services/api/neurosphere_api/map/`, `services/api/neurosphere_api/replay/`, `services/workers/neurosphere_workers/aggregates/` (PRP-14), `neurosphere_core/auth/revocation/` (PRP-06), `frontend/`, root `pyproject.toml`, `docker-compose.yml`.
+Items 1, 2 and 3 are independent [P] (disjoint files). Item 4 waits for 1 (the viewport service calls the new method). Item 5 is the close-out.
+
+### Item 1 - Bulk edges-among in the graph package  [P]
+- Deliverable: new `packages/core/neurosphere_core/catalog/graph/bulk.py` with a runtime-checkable `EdgesAmongQuery` protocol and the request budget type; `RepositoryGraphQuery.edges_among` in `query.py` that reads the edges of all given ids with a shared scope cache (each node read once), applies the same presented-view rules as `_expand`, keeps only edges whose both endpoints are in the id set and in scope, bounds by `Budget` (edges, timeout) and reports `truncated`/`truncated_reason`; export from `graph/__init__.py`.
+- Owned files: `packages/core/neurosphere_core/catalog/graph/**`, `packages/core/tests/catalog/test_graph_edges_among.py`.
+- Must NOT touch: `catalog/protocol.py`, `catalog/repo/**`, `catalog/graph/latest.py` semantics.
 - Depends on: none.
-- Acceptance criteria:
-  - Revoked principal is disconnected within the configured TTL.
-  - A cross-domain delta is never pushed, including after the session's permissions are narrowed mid-session.
-  - Per-session message-rate and subscription budgets enforced with `rate_limited`.
-- Pattern references: `IdentityScope` derivation; revocation interface; correlation ID middleware.
-- Tests to write: `services/api/tests/realtime/test_revocation_closes_session.py`, `services/api/tests/realtime/test_scope_filter.py`, `services/api/tests/realtime/test_budgets.py`.
+- Acceptance criteria: parity with per-node `neighbors` over the same ids (locks, overrides, hidden edges, out-of-scope other endpoint); raw view still refused for non-auditors; budget truncation flagged; no unbounded read.
+- Tests: `packages/core/tests/catalog/test_graph_edges_among.py`.
+- Pattern references: `query.py:233-360`, `packages/core/tests/catalog/test_graph_scope.py`.
 
-### Item 2 - viewport-api  [P]
-- Deliverable: viewport API with domain clustering, drill-down and paginated expansion under node and edge budgets.
-- Owned files (may edit): `services/api/neurosphere_api/map/`.
-- Must NOT touch: `services/api/neurosphere_api/realtime/`, `services/api/neurosphere_api/replay/`, `packages/core/neurosphere_core/catalog/`, `frontend/`, root `pyproject.toml`.
+### Item 2 - Replay guard hardening and replay nits  [P]
+- Deliverable: `_imports()` in `test_replay_readonly.py` resolves `ImportFrom.level` against the package and flags `importlib.import_module`, `importlib.__import__` and `__import__` calls; negative fixtures written to `tmp_path` prove each form is caught; generic missing-parent gap text in `assemble.py`; frontend unique gap-badge keys in `TraceTree.tsx`.
+- Owned files: `services/api/neurosphere_api/replay/**`, `services/api/tests/replay/**`, `frontend/src/features/replay/**`.
+- Must NOT touch: `services/api/neurosphere_api/actions/**`, `connectors/**`, `frontend/tests/mock-api/server.ts`.
 - Depends on: none.
-- Acceptance criteria:
-  - Response never exceeds 2k nodes or the configured edge budget; overflow returns clusters plus a `truncated` flag.
-  - Nodes outside scope never appear, including as intermediates; people are pseudonymized by default.
-  - Response carries coverage and lag metadata from aggregates.
-- Pattern references: `GraphQuery` budgets (PRP-10); pagination models (PRP-05).
-- Tests to write: `services/api/tests/map/test_node_budget.py`, `services/api/tests/map/test_scope_and_pseudonyms.py`.
+- Acceptance criteria: the five forbidden forms fail the guard; real package passes; a withheld parent and an absent parent yield identical gap detail; replay vitest green.
+- Tests: `services/api/tests/replay/test_replay_readonly.py`, `services/api/tests/replay/test_replay_labels.py`, `frontend/src/features/replay/replay.test.tsx`.
+- Pattern references: `replay/assemble.py:117-148`, `TraceTree.tsx:60-75`.
 
-### Item 3 - map-renderer
-- Deliverable: sigma.js and graphology WebGL view with node shapes per type, legends for tokens, context size, frequency, latency and health, observed-edge animation, and coverage labels.
-- Owned files (may edit): `frontend/src/features/map/`.
-- Must NOT touch: `frontend/src/features/map-table/`, `frontend/src/features/replay/`, `frontend/src/design-system/`, `frontend/src/api/`, `services/api/`, root `pyproject.toml`.
-- Depends on: Item 2.
-- Acceptance criteria:
-  - Performance test at 2k nodes records measured fps and hardware; target is >=30fps on the documented hardware.
-  - Reduced motion disables edge animation; only observed edges animate; inferred edges are static.
-  - Partial or delayed coverage is labelled on the map; no `@cosmograph` dependency.
-- Pattern references: Fluent UI v9 tokens; typed API client; node-type icon set from PRP-04.
-- Tests to write: `frontend/src/features/map/map.test.tsx`, `frontend/tests/e2e/map-perf.spec.ts`, `frontend/tests/e2e/map-reduced-motion.spec.ts`.
-
-### Item 4 - accessible-table-view  [P]
-- Deliverable: table alternative to the map with keyboard navigation and non-color status indicators.
-- Owned files (may edit): `frontend/src/features/map-table/`.
-- Must NOT touch: `frontend/src/features/map/`, `frontend/src/features/replay/`, `frontend/src/design-system/`, `services/api/`.
-- Depends on: Item 2.
-- Acceptance criteria:
-  - axe reports no serious or critical issues on the table route.
-  - Full keyboard traversal including drill-down and expansion (e2e).
-  - Health status conveyed by text or icon shape in addition to color.
-- Pattern references: Fluent UI v9 DataGrid; viewport API client.
-- Tests to write: `frontend/src/features/map-table/map-table.test.tsx`, `frontend/tests/e2e/map-table-keyboard.spec.ts`.
-
-### Item 5 - replay-viewer  [P]
-- Deliverable: trace tree viewer and API with timings, errors, tool interactions, and labels for gaps, sampling and late spans.
-- Owned files (may edit): `frontend/src/features/replay/`, `services/api/neurosphere_api/replay/`.
-- Must NOT touch: `frontend/src/features/map/`, `frontend/src/features/map-table/`, `services/api/neurosphere_api/actions/`, `connectors/`, root `pyproject.toml`.
+### Item 3 - Gateway pump cadence and tests  [P]
+- Deliverable: `_pump_loop` sleeps `min(poll_interval_seconds, effective refresh seconds)`; docstring says "TTL plus one interval" for cross-replica revocation; tests for the slow-consumer close and for close codes 1009, 1011, 1013; vetted WebSocket error reasons contain no token text (assertion on `Sec-WebSocket-Protocol` value).
+- Owned files: `services/api/neurosphere_api/realtime/**`, `services/api/tests/realtime/**`.
+- Must NOT touch: `neurosphere_core/auth/revocation/**`, `aggregates/**`, `runtime/builders/data.py`.
 - Depends on: none.
-- Acceptance criteria:
-  - Replay endpoint has no action capability: no write routes and no import of the action executor or connectors (static analysis plus test).
-  - Gaps, sampling and late spans are labelled; payloads shown only if policy and opt-in allow.
-  - Cross-domain traces are never returned; routes use `require(permission)`.
-- Pattern references: router per module; redacted archive access via scope-checked reader.
-- Tests to write: `services/api/tests/replay/test_replay_readonly.py`, `services/api/tests/replay/test_replay_scope.py`, `frontend/src/features/replay/replay.test.tsx`.
+- Acceptance criteria: with poll 10 s and TTL 4 s the refresh still fires at 2 s (fake sleeper); slow consumer closes with `rate_limited`/4429 and reason `slow_consumer`; the three close codes are asserted.
+- Tests: `services/api/tests/realtime/test_budgets.py`, `services/api/tests/realtime/test_disconnect_lifecycle.py`, `services/api/tests/realtime/test_pump_cadence.py` (new).
+- Pattern references: `realtime/gateway.py:376-460`, `rt_helpers.py`.
 
-### Item 6 - freshness-test
-- Deliverable: load test measuring event-to-view freshness under sandbox load and writing evidence.
-- Owned files (may edit): `tests/load/map_freshness/`, `docs/evidence/G07/map/`.
-- Must NOT touch: `tests/load/profiles/` (PRP-21), `services/`, `frontend/`, `docs/RESEARCH-AND-GATES.md`.
-- Depends on: Items 1, 3.
-- Acceptance criteria:
-  - Measured event-to-view p95 recorded as evidence JSON plus markdown; target p95 <=10s is shown as a target beside the measurement.
-  - Evidence labels the environment (compose emulators, sandbox load, hardware).
-  - Test fails loudly, not skips, if the stack is unreachable.
-- Pattern references: PRP-02 evidence format; sandbox generator load mode.
-- Tests to write: `tests/load/map_freshness/test_freshness_p95.py`.
+### Item 4 - Map service uses the bulk call; frontend and mock nits
+- Deliverable: `_Builder.edges_among` calls `edges_among` when the graph supports `EdgesAmongQuery`, else the existing walk; a 2000-node perf test; map `onDelta` guard after revoke; map-table focus fixes (`loadMore` does not move focus if focus left the grid; a stale `activeKey` falls back to the first row) with e2e additions for ArrowRight/Left, End, 401 and 503; mock API replay 404 as problem+json (new `notFoundProblem` helper beside `problem`, status 404, `application/problem+json`); fix the Playwright paths in the PRP gates.
+- Owned files: `services/api/neurosphere_api/map/**`, `services/api/tests/map/**`, `frontend/src/features/map/**`, `frontend/src/features/map-table/**`, the three `frontend/tests/e2e/map-*.spec.ts` files, `frontend/tests/mock-api/server.ts`, `tests/load/map_freshness/**`.
+- Must NOT touch: `map/service.py` metrics logic (`node_for`, PRP-49), `aggregates/**`, `frontend/package.json`.
+- Depends on: item 1.
+- Acceptance criteria: one bulk call per viewport page (spy), fallback path covered, edge budget flag unchanged, the page under the A-1 bound; vitest and Playwright specs pass on the mock API.
+- Tests: `services/api/tests/map/test_node_budget.py`, `services/api/tests/map/test_edge_batching.py` (new), `frontend/src/features/map/map.test.tsx`, `frontend/src/features/map-table/map-table.test.tsx`, `frontend/tests/e2e/map-table-keyboard.spec.ts`.
+- Pattern references: `map/service.py:227-263`, `MapGrid.tsx:215-300`, `server.ts:54-60`.
 
-### Item 7 - wiring  (added at approval, delta D1)
-- Deliverable: attach items 1, 2 and 5 to the app and the frontend shell; nothing else touches these shared files.
-- Owned files (may edit): `services/api/neurosphere_api/routers.py`, `services/api/openapi.json` (regenerate only), API app-state wiring that registers the gateway with `RevocationHookRegistry.register_push_registry("websocket", ...)`, `frontend/package.json` + `pnpm-lock.yaml` (sigma 4, graphology 0.26 only), `frontend/src/app/main.tsx`, `frontend/src/app/workspaceNav.ts`, map/replay fixtures in `frontend/tests/mock-api/server.ts`, `tests/integration/map/`.
-- Must NOT touch: any item 1-6 owned directory.
-- Depends on: Items 1, 2, 5. Items 3 and 4 depend on it.
-- Acceptance criteria: routes reachable in-process and in OpenAPI (drift test green); revocation fan-out closes gateway sessions in an in-process integration test; frontend build green; no `@cosmograph` in package.json or lockfile; licence gate green.
+### Item 5 - Integration and close-out
+- Deliverable: regenerate Tier 3 files (only if models changed: `uv run python -m neurosphere_api.openapi_export`; not expected), tick the round-1 acceptance boxes that the code confirms, fill the completion note, file issues for the three deferred items (reveal-people-with-audit, `ArchiveTraceReader` index, cross-replica revocation e2e), `python scripts/prp_status.py --write`, CHANGELOG entry per reference section 6.
+- Owned files: this PRP file only.
+- Must NOT touch: any item 1-4 source except to fix an integration defect (record the deviation).
+- Depends on: items 1-4.
+- Acceptance criteria: completion note filled; issues numbered in it.
 
 ## Validation gates
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode fast    # per item
-powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full    # before merge
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest -q packages/core/tests/catalog services/api/tests/map services/api/tests/realtime services/api/tests/replay services/api/tests/test_openapi_drift.py tests/load/map_freshness
+pnpm --filter @neurosphere/frontend typecheck
+pnpm --filter @neurosphere/frontend lint
+pnpm --filter @neurosphere/frontend test
+cd frontend && pnpm exec playwright test tests/e2e/map-table-keyboard.spec.ts tests/e2e/map-reduced-motion.spec.ts
+powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 python scripts/validate_planning.py
 ```
-Feature-specific:
-```
-docker compose --profile app up -d --wait
-python -m pytest services/api/tests/realtime services/api/tests/map services/api/tests/replay
-python -m pytest -m integration tests/integration/map
-python -m pytest tests/load/map_freshness
-pnpm --filter frontend test
-pnpm --filter frontend exec playwright test frontend/tests/e2e/map-perf.spec.ts frontend/tests/e2e/map-table-keyboard.spec.ts frontend/tests/e2e/map-reduced-motion.spec.ts
-```
-A live Commercial freshness run is optional: operator-approved, requires NS_LIVE_APPROVED=1, using the PRP-21 load profile scripts once they exist.
+
+Use unique `NS_E2E_APP_PORT` and `NS_MOCK_API_PORT` for Playwright in this worktree.
+
+## Migration and rollback
+No data or schema migration: the bulk call is additive and read-only. Rollback is a revert of the PRP branch; the map service falls back to the per-node walk if `edges_among` is removed from the graph, so a partial revert is safe.
 
 ## Live and open gates
-- G07 (workload/SLO/DR): item 6 supplies map freshness evidence from sandbox load only; G07 stays OPEN until PRP-21 measures sized profiles and a live run.
-- G12 (emulator parity): record where emulator timing differs from a live account.
-- Browser fps on documented hardware is recorded as evidence in item 3; it is a target, not a guarantee.
-- If a live item did not run, record it OPEN in the completion note and in docs/RESEARCH-AND-GATES.md; never report it as a skipped green test.
+- G07 map evidence stays OPEN: the fps p5 criterion reword and the enforced headed re-measure are handed to PRP-64 (`NS_LIVE_APPROVED=1` is not needed, operator hardware is).
+- The optional live freshness run (`NS_LIVE_APPROVED=1`) is not run here.
+- No paid call; nothing in this PRP needs one.
 
 ## NOT building
-- Full WCAG audit across all routes and theming (PRP-24).
-- Enterprise-scale or stress load profiles (PRP-21).
-- Copilot map interaction (PRP-19) and any action launched from the map beyond a link to PRP-17 dialogs.
-- Re-execution of traces or any side-effectful replay.
-- Rendering the full enterprise graph, or any `@cosmograph` renderer.
-- Changes to the revocation interface (PRP-06) or hot aggregates (PRP-14); request them from the owning PRP.
+- Per-node metrics and per-agent aggregates (PRP-49).
+- Reveal-people-with-audit, `ArchiveTraceReader` index, cross-replica revocation e2e (issues only).
+- Renderer optimisation for the p5 tail (PRP-64 decides after re-measure).
+- Any change to `catalog/protocol.py`, repositories, contracts or `openapi.json` shapes.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [x] All clarification questions are decided, not guessed
+- [x] All clarification questions are decided, not guessed (row 6 is a labelled assumption)
 
 ## Execution state
 
-Plan approved 2026-10-21 with three deltas signed off by the operator.
+| Item | Status | Branch/worktree | Notes |
+|------|--------|-----------------|-------|
+| 1 | todo | | |
+| 2 | todo | | |
+| 3 | todo | | |
+| 4 | todo | | |
+| 5 | todo | | |
 
-- D1: no item owned the shared hookup files (router registry, OpenAPI export, app-state revocation wiring, frontend deps/lockfile, `main.tsx`, `workspaceNav.ts`, mock API, `tests/integration/map`). New item 7 owns them and runs alone, after items 1, 2, 5 and before items 3, 4. Items 1, 2, 5 ship a `register(registry)` hook and are not added to `routers.py` themselves.
-- D2: map, table and replay routes require the existing `data.read` permission in the target domain. No new permission constant (PRP-06 owns that file).
-- D4 (2026-10-21, orchestrator, within D1 scope): item 7 also creates placeholder `frontend/src/features/map/index.ts` (`mapRoutes`, `mapNavItems`) and `frontend/src/features/map-table/index.ts` (`mapTableRoutes`, `mapTableNavItems`) and wires them, so items 3 and 4 never edit `main.tsx`/`workspaceNav.ts`; they replace the placeholder contents and keep the export names. Item 7's composition-root test is in-process and unmarked (CI runs it) plus a Cosmos-emulator variant marked `integration`, because no production composition root wires authz/aggregates yet (`main.py` wires ingest and scan only, as in PRP-14).
-- D3: people are always pseudonymized in this PRP. The "reveal with explicit scoped permission and audit" path needs a permission PRP-06 never defined, so it is a follow-up, not built here.
-
-Waves: A = items 1, 2, 5 in parallel; B = item 7; C = items 3, 4 in parallel; D = item 6. Models: all implementers sonnet; every item gets one reviewer pass (PRP is `review: required`); rework confirmation passes haiku.
-
-### Wire contract (decided at approval; items 3, 4, 6, 7 code against it)
-- Viewport: `GET /api/v1/map/domains/{domain_id}/viewport?cluster_id=&cursor=&node_budget=&edge_budget=`. `node_budget` <= 2000 server-clamped. Response: `nodes[]` (`id`, `kind` in person|agent|sub_agent|model|source|cluster, `label` (pseudonym for person), `cluster_id`, `member_count` for clusters, `metrics` {`tokens`, `context_size`, `frequency`, `latency_p95_ms`, `health` in ok|degraded|failing|unknown}; unknown metrics are null, never 0), `edges[]` (`id`, `source`, `target`, `provenance` in observed|declared|inferred, `last_observed_at`), `truncated` bool + `truncation_reason`, `next_cursor`, `coverage` {`state` in complete|partial|delayed|unknown, `lag_seconds`, `as_of`}.
-- WebSocket: `/api/v1/realtime/ws`. Browser auth via `Sec-WebSocket-Protocol: ns.bearer, <token>`. Client `{"type":"subscribe","domain_id":...}` / `unsubscribe`; server `{"type":"delta","domain_id","seq","nodes":[],"edges":[],"coverage":{},"emitted_at"}`, `{"type":"error","code":"rate_limited"|...}`. Close codes: 4401 unauthenticated, 4403 forbidden or revoked, 4429 budget exceeded.
-- Replay: `GET /api/v1/replay/domains/{domain_id}/traces?cursor=` and `GET /api/v1/replay/domains/{domain_id}/traces/{trace_id}`. Trace: `trace_id`, `spans[]` (`span_id`, `parent_span_id`, `name`, `kind` in agent|model|tool|retrieval|other, `started_at`, `ended_at`, `duration_ms`, `status` in ok|error|unknown, `error`, `tool` {name, outcome}, `late` bool, `payload` only when policy and opt-in allow, else `payload_state`), `gaps[]` (`parent_span_id`, `reason` in missing_parent|sampled_out|late_arrival|unknown), `sampling` {`rate`, `reason`}, `completeness`. GET only.
-
-| Item | Status | Branch | Model | Evidence | Updated |
-|------|--------|--------|-------|----------|---------|
-| 1 | merged | worktree-agent-ae0b2d0e25b7acbe4 | sonnet | ee2540e; orchestrator re-run: only realtime/ + tests/realtime/ touched, ruff + format clean, pyright 0 errors, realtime + authz + test_app + openapi drift 205 passed; deviations: extra close codes 1013/1009/1011, domain-level cluster deltas with empty edges, subscribed/unsubscribed/pong messages; open: cross-replica revocation bound TTL + one poll, slow-consumer path untested; reviewer APPROVED (cross-replica TTL+interval bound matches the PRP-06 model; follow-ups: pump loop sleeps poll_interval not min(poll, refresh) so refresh cadence only holds when poll <= TTL/2, docstring should say TTL plus one interval, send-time scope can be up to refresh_seconds stale, slow-consumer test, vet error reasons never carry token text; items 3/6/7 must ignore unknown message types and not assume edges); merge 5ed083b; post-merge realtime + map + authz + test_app + openapi drift 222 passed; later found flaky (CancelledError on WS teardown, ~1 in 3) -> fix-forward 65140f8 (child tasks reaped under shield; regression test 80 abrupt disconnects), 8/8 orchestrator reruns of realtime 41 passed, merge e673459, post-merge 252 passed | 2026-10-21 |
-| 2 | merged | worktree-agent-a607026f270842696 | sonnet | 7584988; orchestrator re-run: only map/ + tests/map/ touched, ruff + format clean, pyright 0 errors, map + test_app + openapi drift 33 passed; deviations: per-node metrics null (aggregates are domain-level), list_entities for listing, person id = pseudonym; open: one neighbors walk per node (~15s per 2000-node page in-memory); reviewer APPROVED (follow-ups: batch edge lookups via bulk edges-among-ids or one list_edges scan, document scan_limit approximate cluster counts, test oversized node_budget on cluster page, configurable delayed threshold); merge c248fd7; post-merge map + test_app + openapi drift 33 passed | 2026-10-21 |
-| 3 | merged | worktree-agent-acc6a8dfd7a9b2195 | sonnet | c940730; orchestrator re-run: only map/ + two e2e specs, deps unchanged, cosmograph 0, tsc + eslint clean, vitest map + app 55 passed, Playwright reduced-motion + smoke x3 21 passed; headless fps 4.4 (SwiftShader software GL, not a hardware result); headed enforced on documented hardware (AMD Ryzen 9 5950X 16C/32T, 128 GB, NVIDIA GeForce RTX 5090 via ANGLE D3D11, Chromium 156, Windows 10.0.26300), 2000 nodes / 4000 edges / 1334 animated, 5 s window, 3 runs: fps mean 37.2 / 30.5 / 32.2 (target >= 30 met on mean each run), p5 29.9 / 24.0 / 24.0 (below target); reviewer CHANGES REQUIRED (blocker: edge animation gated only by reduced motion, keeps animating when socket down, revoked or coverage delayed) -> rework round bb9040c (animationGate: animate only when not reduced AND live status live AND coverage complete|partial; revoked clears the graph; e2e drives a fake gateway WebSocket via addInitScript through the real client; observed-edge ids cached; `!import.meta.env.PROD` hook guard; deviation: perf fix pulled into the rework because the fps margin was thin); orchestrator re-run: tsc + eslint clean, vitest map + app 68 passed, Playwright reduced-motion + smoke x3 30 passed, build ok; haiku confirmation CONFIRMED FIXED (note: onDelta has no revoked guard, a delta racing the 4403 close could re-add nodes); headed enforced re-measure, same hardware, 3 runs: fps mean 41.8 / 41.0 / 38.6, p5 29.9 / 30.0 / 24.0; merge cc75028; post-merge full vitest found map-table.test.tsx failing (map-table imported MAP_PATH from the map index, which now loads sigma/WebGL in jsdom; also a map <-> map-table index import cycle) -> orchestrator fix 5a0622c (path-only `paths.ts` per feature); post-fix tsc clean, full vitest 32 files 309 passed, Playwright reduced-motion + map-table-keyboard + smoke 11 passed, build ok; follow-ups: guard onDelta after revoke, canvas health is colour only (table/legend/panel give words), no lineage route to link, 1009/1011/1013 untested, `import.meta.env.PROD` vs custom build modes, fade edges with old last_observed_at | 2026-10-21 |
-| 4 | merged | worktree-agent-ae76125e4a89599dd | sonnet | 499ebd2; orchestrator re-run: only map-table/ + spec touched, tsc + eslint clean, vitest map-table + app 27 passed; Playwright keyboard spec FAIL 1 of 8 (focus lost to body after last Load more: single rAF focus races row render, real a11y bug) -> fix round 1: 2baf340 (pending-focus key applied in useLayoutEffect once the row exists, falls back to the cluster row); orchestrator re-run on fixed branch: tsc clean, vitest 27 passed, Playwright keyboard + smoke --repeat-each=10 40 passed; reviewer APPROVED (follow-ups: loadMore can steal focus if the user tabbed away during the fetch, stale activeKey leaves no tabbable row, status/Load more rows unreachable by arrows, per-cluster error not retryable, no e2e for ArrowRight/Left, End, 401/503); merge 5bdd395; post-merge tsc clean, vitest map-table + replay + app 36 passed, Playwright keyboard + smoke 4 passed | 2026-10-21 |
-| 5 | merged | worktree-agent-a71966c3e37cd8b6a | sonnet | 42b68b7; orchestrator re-run: only replay/ (api, tests, frontend feature) touched, ruff + format clean, pyright 0 errors, replay + test_app + openapi drift 44 passed, vitest replay 9 passed, tsc + eslint clean; deviations (additive): list shape {items, next_cursor} + page_size, extra Gap/Span/Completeness fields, tool.name null (no tool name in telemetry contract), error is outcome code only; open: ArchiveTraceReader bounded 7-day/2000-blob scan, never run against real storage; reviewer APPROVED (follow-ups: import-ban test ignores relative imports and importlib/__import__, missing_parent detail text reveals another domain has spans, duplicate React keys for same-reason gap badges, archive reader full scan per call needs an index later); merge ef8543f; post-merge replay vitest 9 passed, replay suites green; realtime suite flaky (CancelledError on WS teardown, ~1 in 3, pre-existing from item 1) -> fix-forward dispatched | 2026-10-21 |
-| 6 | merged | worktree-agent-a67cd6d6950fe6991 | sonnet | 58285e8 (dispatched early, in parallel with the item 3 rework: it measures event to WS delta receipt, so it depends on item 1 in practice); orchestrator re-run: only tests/load/map_freshness/ + docs/evidence/G07/map/, ruff + format clean, pyright 0 errors, unmarked 1 passed (9.8 s), `-m integration` on the compose Cosmos emulator 1 passed; emulator-unreachable `pytest.fail` path verified by reading only (emulator_env() pins the endpoint; shared emulator not stopped); measured p95 in-memory 2.003 s, emulator 2.028 s, 60 samples each, target p95 <= 10 s shown beside, dominated by the 2 s poll interval; zero cross-domain deltas asserted; reviewer APPROVED (follow-ups: drain briefly before close to catch late foreign deltas, hour-bucket boundary can reset frequency and flake, weak p50 >= 0 assertion, note p95 of 60 samples is near max); merge 1954c5b; post-merge unmarked 1 passed, `-m integration` map_freshness + integration/map 4 passed; orchestrator added fps-run1..3.json + README frame-rate section and PRP-18 notes on the G07/G12 rows in docs/RESEARCH-AND-GATES.md | 2026-10-21 |
-| 7 | merged | worktree-agent-ad351e401d67bfedf | sonnet | 0b9a0a7; orchestrator re-run: only item 7 owned files, ruff + pyright 0 errors, test_app + openapi drift + tests/integration/map 22 passed, licences PASS (540), cosmograph 0 in package.json and lockfile, tsc clean, vitest app + replay 24 passed; implementer: Cosmos emulator `-m integration tests/integration/map` 3 passed, Playwright smoke + dashboards 13 passed; openapi +3 paths, NOT purely additive (Coverage, Sampling components renamed module-qualified); mock API: viewport on DOMAIN_OK (cluster:agents, cursor page-2/page-3), 2000-node perf on DOMAIN_MAP_PERF or fixture=perf, replay traces trace-e2e-complete/-gap/-sampled/-late; reviewer APPROVED (follow-ups: mock 404 body not problem+json, graphology-types if item 3 needs it, production bootstrap of app.state still OPEN); merge c6bb582; post-merge 258 passed, licences PASS, tsc clean, vitest 24 passed | 2026-10-21 |
 ## Completion note (filled at ship)
-- Date: 2026-10-21
-- Merged commits: PR #85, merge `3d14d00` into main. Item merges on `prp-18-live-map-and-session-replay`: item 2 `c248fd7`, item 1 `5ed083b` (fix-forward `e673459`), item 5 `ef8543f`, item 7 `c6bb582`, item 4 `5bdd395`, item 3 `cc75028`, orchestrator seam fix `5a0622c`, item 6 `1954c5b`, evidence `12c163a`. CI on PR #85: 21 checks passed (2 licence-register regeneration jobs skipped, nothing to regenerate). Local `verify-gates -Mode full`: PASS (6173 passed, 95 deselected).
-- Deviations from blueprint and why:
-  - D1: new item 7 owns the shared hookup files (router registry, OpenAPI export, app-state revocation wiring, frontend deps and lockfile, `main.tsx`, `workspaceNav.ts`, mock API, `tests/integration/map`), because no item owned them.
-  - D2: map, table and replay require the existing `data.read`; no new permission constant (PRP-06 owns that file).
-  - D3: people are always pseudonymized; there is no reveal path (see Follow-ups).
-  - D4: item 7 created placeholder map and map-table route exports, so items 3 and 4 never edited the shared app files. The composition-root test is in-process and unmarked, with a Cosmos twin marked `integration`, because no production composition root wires authz or aggregates (`main.py` wires ingest and scan only, as in PRP-14).
-  - Item 6 was dispatched in parallel with the item 3 rework: it measures event to WebSocket receipt, so in practice it depends only on item 1.
-  - Item 3's rework also took a non-blocking perf follow-up (cached observed-edge ids), because the fps margin was thin.
-  - Orchestrator fix `5a0622c` added path-only `paths.ts` modules after the post-merge run found the map-table tests loading sigma (WebGL) through the map index, plus a map/map-table import cycle.
-  - Fix rounds: item 1 (WebSocket teardown race, ~1 in 3 runs), item 4 (focus lost after the last "Load more"), item 3 (one review rework: stale data animated as live).
-  - Shipped wire shapes are additive to the wire contract: extra WebSocket messages (`subscribed`/`unsubscribed`/`pong`) and close codes 1009/1011/1013; deltas are one domain-level cluster node with empty edges; per-node metrics are mostly null with health `unknown`, because aggregates are domain-level; replay list `{items, next_cursor}`; extra gap/span/completeness fields; `tool.name` null.
-  - `openapi.json` is not purely additive: `Coverage` and `Sampling` were renamed to module-qualified names.
-- Descoped items: none. Not built, per D3 and "NOT building": identity reveal with scoped permission and audit; a production `app.state` bootstrap for authz, aggregates, catalog and the trace reader.
-- Measured fps and hardware: headed Chromium 156 (Playwright) on AMD Ryzen 9 5950X 16C/32T, 128 GB, NVIDIA GeForce RTX 5090 via ANGLE D3D11 (WebGL 2), Windows 10.0.26300. Scene: 2000 nodes, 4000 edges, 1334 animated, 5 s window, camera moving. Three runs on `bb9040c`: fps mean 41.84 / 41.03 / 38.57; p5 29.94 / 30.03 / 24.04. The >= 30 fps target is met on the mean and not at the p5 tail. Headless SwiftShader gives ~5 fps, which is not a hardware result. Evidence: `docs/evidence/G07/map/fps-run{1,2,3}.json` and `README.md`.
-- Measured freshness p95 and environment (or OPEN): event-to-view p95 is 2.003 s in-memory and 2.028 s on the compose Cosmos vNext emulator. Each run took 60 samples across 3 domains and 6 scoped subscribers at 5 events/s, with the 2 s poll interval dominating. The target is p95 <= 10 s, a PRD planning target. Event Hubs transport and billing freshness are excluded. Bounded feasibility only (`docs/evidence/G07/map/p95*.json`). G07 is OPEN: no live Commercial run (`NS_LIVE_APPROVED=1` not set), and sized profiles are PRP-21. G12 is OPEN, with emulator-vs-live deltas recorded on its row.
-- Follow-ups (non-blocking, from reviews):
-  - Viewport and gateway:
-    - Batch viewport edge lookups (a 2000-node page takes ~15 s in-memory).
-    - Make the gateway pump sleep `min(poll, refresh)`.
-    - Add a slow-consumer test.
-    - Vet WebSocket error reasons for token text.
-    - Document send-time scope staleness (up to `refresh_seconds`).
-  - Map renderer:
-    - Guard `onDelta` after a revoke.
-    - Add tests for close codes 1009/1011/1013.
-    - Fade edges with an old `last_observed_at`.
-    - Add a lineage route to link from the panel.
-  - Table:
-    - Fix focus theft during `loadMore`.
-    - Fix a stale `activeKey` leaving no tabbable row.
-    - Make per-cluster errors retryable.
-    - Add e2e for ArrowRight/Left, End, 401 and 503.
-  - Replay:
-    - Make the import ban cover relative imports and `importlib`.
-    - Use generic `missing_parent` text.
-    - Fix duplicate gap-badge React keys.
-    - Index the archive instead of a full scan.
-  - Mock API: return a problem+json 404.
-  - Freshness test:
-    - Drain before close.
-    - Fix the hour-bucket boundary flake risk.
-    - Strengthen the p50 assertion.
-  - Production composition root for `app.state`.
-  - Reveal-with-audit for people.
-  - Cross-replica revocation is bounded by TTL plus one interval; it is not exercised end to end.
-  - The emulator-unreachable fail path was verified by reading only.
+- Date, PR, merge commit:
+- Deviations from the blueprint and why:
+- Descoped items:
+- OPEN gates (G07 map fps and live freshness):
+- Env vars for the operator (none expected):
+- Follow-up issue numbers (reveal-people-with-audit, archive index, revocation e2e):
+- Product check (can an operator use the map and replay without editing files?):
 
-## Audit 2026-11-04
-
-Reopened after a deep audit (static read by a read-only agent; no tests were run). Gaps, with evidence:
-
-- Per-node metrics are mostly null on the shipped map: `services/api/neurosphere_api/map/service.py:202-210` sets metrics from the catalog only, so only `context_size` can be non-null; tokens/frequency/latency/health legends have no real data.
-- Viewport page of 2000 nodes takes about 15 s in memory (N+1 neighbour walks), an open follow-up.
-- 30 fps is not met in practice: mean 38-42 fps but 5th-percentile 24-30; enforcement is opt-in (`NS_MAP_PERF_ENFORCE=1`, `map-perf.spec.ts:285`); all frontend e2e runs against the mock API.
-- Replay has never run against real storage (`ArchiveTraceReader` bounded scan); cross-replica revocation not tested end to end; `test_replay_readonly.py:21-30` misses relative imports and `importlib`.
+## History
+- Round 1 (PR #85, merged 2026-10-21, merge `3d14d00`) shipped the WebSocket gateway, viewport API, sigma renderer, accessible table, replay viewer, freshness test and wiring (items 1-7).
+- The 2026-11-04 audit reopened it: per-node metrics null, a 2000-node page about 15 s, 30 fps p5 not met with opt-in enforcement, replay never run on real storage, import guard gaps.
+- The 2026-11-14 re-audit (lane-b unit 18-R2-A) found the real-stack data-plane test now covers replay on Azurite (`tests/integration/real_stack/test_data_plane.py:257-275`), so that gap is mostly closed, and four references were stale (Playwright path, composition now in `runtime/builders/data.py`, PRP-30 frontend refold, status labels).
+- This rewrite removed the round-1 blueprint, the wire-contract and execution-state narrative, the pre-PRP-35 composition caveats and the audit section; per-node metrics moved to PRP-49 and the perf re-measure to PRP-64.
+- The original text is in git history (`git log --follow PRPs/backlog/PRP-18-live-map-and-session-replay.md`).

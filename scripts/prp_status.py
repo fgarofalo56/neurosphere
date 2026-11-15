@@ -67,11 +67,13 @@ def frontmatter(text: str) -> dict[str, str]:
 
 def parse_depends(raw: str) -> tuple[list[str], list[str]]:
     ids = PRP_REF_RE.findall(raw)
-    rest = PRP_REF_RE.sub("", raw)
+    # A dependency is written as the full file stem (PRP-01-contracts-and-schemas);
+    # drop the slug with the id so it is not mistaken for a manual gate.
+    rest = re.sub(r"\bPRP-\d{2}(?:-[a-z0-9-]+)?", "", raw)
     manual = [
-        token.strip(" +")
+        token.strip(" +[]")
         for token in re.split(r"[,+;]", rest)
-        if token.strip(" +") and token.strip(" +").lower() != "none"
+        if token.strip(" +[]") and token.strip(" +[]").lower() != "none"
     ]
     return ids, manual
 
