@@ -221,12 +221,12 @@ Console page; per-producer rate-limit or quota editing; secret overlap window; E
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | verifying | prp-41-producer-registry | core ProducerAdmin, secret hygiene (9 tests) |
+| 2 | verifying | prp-41-producer-registry | StoreProducerRegistry, LayeredProducerRegistry, bootstrap switch |
+| 3 | verifying | prp-41-producer-registry | six routes, audited, show-once |
+| 4 | verifying | prp-41-producer-registry | edge builder, admin_producers component, startup refresher |
+| 5 | verifying | prp-41-producer-registry | ABAC + secrecy suites |
+| 6 | in-progress | prp-41-producer-registry | routers hook, inventory, runbook done; Tier-3 regeneration, changelog fragment and close-out left for the merge step |
 
 ## Completion note (filled at ship)
 - Date and PR:

@@ -166,7 +166,7 @@ def test_every_route_in_the_inventory_has_a_case() -> None:
         (BASE + (r.path if r.path != "/" else ""), m)
         for r in build_router().routes
         if isinstance(r, APIRoute)
-        for m in r.methods
+        for m in sorted(r.methods or ())
     }
     cases = {(r.path.replace("poller-1", "{producer_id}"), r.method) for r in ROUTES}
     assert served == cases
