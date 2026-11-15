@@ -61,6 +61,8 @@ class ArchiveSeriesSource(SeriesAccumulator):
         self.archive_stats = ArchiveLoadStats()
         self.truncated = False
         self.window: tuple[date, date] | None = None
+        #: Estimated cost documents with a token breakdown (right-sizing input), in read order.
+        self.usage_docs: list[dict[str, Any]] = []
 
     @classmethod
     async def load(
@@ -153,7 +155,12 @@ class ArchiveSeriesSource(SeriesAccumulator):
         if kind == "telemetry":
             self.add_telemetry(contract)  # skips and duplicates are counted in ``stats``
         elif kind == "cost":
-            self.add_cost(contract)
+            if (
+                self.add_cost(contract)
+                and contract.get("kind") == "estimated"
+                and "token_breakdown" in contract
+            ):
+                self.usage_docs.append(contract)
         else:
             stats.other_kind += 1
             return

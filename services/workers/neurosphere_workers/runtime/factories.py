@@ -64,6 +64,7 @@ from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.repository import AuditRepository
 from neurosphere_core.capabilities import load_matrix
+from neurosphere_core.catalog.graph import RepositoryGraphQuery
 from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
 from neurosphere_core.catalog.review_queue_cosmos import CosmosReviewQueue
 from neurosphere_core.clients import (
@@ -121,6 +122,7 @@ from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
 from neurosphere_core.pricing.models import PriceSnapshot
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
 from neurosphere_core.scope import IdentityScope
+from neurosphere_core.search.fixture import FixtureSearchIndex
 from neurosphere_core.stores import ensure_local_containers
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -194,7 +196,7 @@ from neurosphere_workers.projections.outbox import (
     SinkHandler,
 )
 from neurosphere_workers.publication import CatalogPublicationRecorder, CosmosApplyRecordLookup
-from neurosphere_workers.recommendations.pipeline import run_pipeline
+from neurosphere_workers.recommendations.pipeline import run_pipeline, run_pipeline_archive
 from neurosphere_workers.recommendations.projection.models import CandidatePairConfig
 from neurosphere_workers.runtime.adapters import (
     IdleRole,
@@ -786,10 +788,12 @@ def _pairs(path: Path | None) -> CandidatePairConfig:
 
 async def build_recommendations(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     rec = RecommendationSettings()
-    if rec.data_dir is None:
-        raise RoleConfigError("recommendations_data_dir_missing")
-    if not rec.data_dir.is_dir():
-        raise RoleConfigError("recommendations_data_dir_invalid")
+    archive_mode = rec.source == "archive"
+    if not archive_mode:
+        if rec.data_dir is None:
+            raise RoleConfigError("recommendations_data_dir_missing")
+        if not rec.data_dir.is_dir():
+            raise RoleConfigError("recommendations_data_dir_invalid")
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     stack = build_policy_stack(
@@ -799,21 +803,50 @@ async def build_recommendations(cfg: RuntimeConfig, lifetime: ClientLifetime) ->
     store = CosmosRecommendationStore.from_client(cosmos, database=cfg.store.database)
     pairs = _pairs(rec.pairs_file)
     data_dir = rec.data_dir
+    container: ContainerClient | None = None
+    catalog: CosmosCatalogRepository | None = None
+    if archive_mode:
+        # Read-only inputs: the redacted archive and the live catalog. The duplicate detector
+        # never searches, so the graph gets an empty in-scope index.
+        container = _archive_container(cfg, lifetime)
+        catalog = CosmosCatalogRepository(
+            _database(cfg, cosmos).get_container_client(_CATALOG_CONTAINER)
+        )
 
     async def job() -> None:
         scope = await identity.scope_provider.get()
         prices = await _price_snapshots(cfg)
-        summary = await run_pipeline(
-            data_dir,
-            scope=scope,
-            store=store,
-            prices=prices,
-            pairs=pairs,
-            created_at=datetime.now(UTC),
-        )
+        if container is not None and catalog is not None:
+            summary = await run_pipeline_archive(
+                ArchiveReader(container),  # fresh per run: no stale index, no sticky truncation
+                graph=RepositoryGraphQuery(catalog, FixtureSearchIndex([])),
+                lister=catalog,
+                scope=scope,
+                store=store,
+                prices=prices,
+                pairs=pairs,
+                created_at=datetime.now(UTC),
+                lookback_days=rec.lookback_days,
+            )
+        else:
+            assert data_dir is not None
+            summary = await run_pipeline(
+                data_dir,
+                scope=scope,
+                store=store,
+                prices=prices,
+                pairs=pairs,
+                created_at=datetime.now(UTC),
+            )
         logger.info(
             "recommendations pipeline finished",
-            extra={"event": "worker.recommendations", "stored": summary.stored},
+            extra={
+                "event": "worker.recommendations",
+                "stored": summary.stored,
+                "source": rec.source,
+                "archive_truncated": summary.archive_truncated,
+                "archive_skipped": summary.archive_skipped,
+            },
         )
 
     tick = PeriodicTick(job, rec.interval_seconds)

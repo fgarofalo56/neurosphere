@@ -216,8 +216,8 @@ No schema change and no new container. `NS_WORKER_REC_SOURCE` defaults to `sandb
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | merged | prp-15-round2-production-series | ArchiveSeriesSource + SeriesAccumulator shared with sandbox; parity, scope, coverage tests |
+| 2 | merged | prp-15-round2-production-series | run_pipeline_archive, NS_WORKER_REC_SOURCE and NS_WORKER_REC_LOOKBACK_DAYS, build_recommendations branch; compose-only checks not run |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
