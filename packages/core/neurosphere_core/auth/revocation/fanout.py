@@ -107,6 +107,21 @@ class RevocationHookRegistry:
     def push_registry_names(self) -> tuple[str, ...]:
         return tuple(self._registries)
 
+    async def invalidate_caches(self, principal_id: str) -> FanoutReport:
+        """Call every cache invalidator but no push registry (a lift re-admits a principal; there
+        is no session to close). Never raises, like :meth:`fan_out`."""
+        inv_failed: list[str] = []
+        for name, invalidator in self._invalidators.items():
+            if not await self._run("cache_invalidator", name, invalidator, principal_id):
+                inv_failed.append(name)
+        return FanoutReport(
+            invalidators_called=len(self._invalidators),
+            invalidators_failed=tuple(inv_failed),
+            push_registries_called=0,
+            push_registries_failed=(),
+            sessions_closed=0,
+        )
+
     async def fan_out(self, principal_id: str) -> FanoutReport:
         inv_failed: list[str] = []
         for name, invalidator in self._invalidators.items():

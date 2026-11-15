@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `077cf1a2a3bd7d718526b42e5df022d399106958`. Generated: 2026-11-15.
+> Source commit: `4757206648142933698326bdd853257ada4bb138`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 150 operations on 132 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 161 operations on 138 paths.
 
 ## Status and verification
 
@@ -43,6 +43,17 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | actions | POST | `/api/v1/actions/domains/{domain}/intents/{intent_id}/validate` | Validate Intent |
 | actions | GET | `/api/v1/actions/emergency-disable` | Read Emergency Disable |
 | actions | PUT | `/api/v1/actions/emergency-disable` | Set Emergency Disable |
+| admin-identity | GET | `/api/v1/admin/identity/principals` | List Principals |
+| admin-identity | GET | `/api/v1/admin/identity/principals/{principal_id}` | Get Principal |
+| admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}` | Put Domain Membership |
+| admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}` | Delete Domain Membership |
+| admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/grants/{grant_id}` | Put Grant |
+| admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/grants/{grant_id}` | Delete Grant |
+| admin-identity | GET | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Get Revocation |
+| admin-identity | POST | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Revoke Principal |
+| admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Lift Revocation |
+| admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Put Role Assignment |
+| admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Delete Role Assignment |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/verify` | Verify Audit Chain |
 | audit | GET | `/audit/chains/{chain_id}/records` | List Audit Records |
@@ -253,6 +264,89 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Set Emergency Disable
 - Request body: application/json: `EmergencyDisableBody` (required)
 - Responses: `200` `EmergencyDisableView`; `422` `HTTPValidationError`
+
+### Tag: admin-identity
+
+#### GET `/api/v1/admin/identity/principals`
+
+- Operation id: `list_principals_api_v1_admin_identity_principals_get`
+- Summary: List Principals
+- Parameters: `cursor` (query), `limit` (query)
+- Responses: `200` `PrincipalPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/identity/principals/{principal_id}`
+
+- Operation id: `get_principal_api_v1_admin_identity_principals__principal_id__get`
+- Summary: Get Principal
+- Parameters: `principal_id` (path, required)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}`
+
+- Operation id: `put_domain_membership_api_v1_admin_identity_principals__principal_id__domain_memberships__domain_id__put`
+- Summary: Put Domain Membership
+- Parameters: `principal_id` (path, required), `domain_id` (path, required), `If-Match` (header)
+- Request body: application/json: `DomainMembershipChange` (required)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}`
+
+- Operation id: `delete_domain_membership_api_v1_admin_identity_principals__principal_id__domain_memberships__domain_id__delete`
+- Summary: Delete Domain Membership
+- Parameters: `principal_id` (path, required), `domain_id` (path, required), `reason` (query), `If-Match` (header)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/identity/principals/{principal_id}/grants/{grant_id}`
+
+- Operation id: `put_grant_api_v1_admin_identity_principals__principal_id__grants__grant_id__put`
+- Summary: Put Grant
+- Parameters: `principal_id` (path, required), `grant_id` (path, required), `If-Match` (header)
+- Request body: application/json: `ResourceGrantChange` (required)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/identity/principals/{principal_id}/grants/{grant_id}`
+
+- Operation id: `delete_grant_api_v1_admin_identity_principals__principal_id__grants__grant_id__delete`
+- Summary: Delete Grant
+- Parameters: `principal_id` (path, required), `grant_id` (path, required), `If-Match` (header)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/identity/principals/{principal_id}/revocation`
+
+- Operation id: `get_revocation_api_v1_admin_identity_principals__principal_id__revocation_get`
+- Summary: Get Revocation
+- Parameters: `principal_id` (path, required)
+- Responses: `200` `RevocationStatus`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/identity/principals/{principal_id}/revocation`
+
+- Operation id: `revoke_principal_api_v1_admin_identity_principals__principal_id__revocation_post`
+- Summary: Revoke Principal
+- Parameters: `principal_id` (path, required)
+- Request body: application/json: `RevocationRequest` (required)
+- Responses: `200` `RevocationStatus`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/identity/principals/{principal_id}/revocation`
+
+- Operation id: `lift_revocation_api_v1_admin_identity_principals__principal_id__revocation_delete`
+- Summary: Lift Revocation
+- Parameters: `principal_id` (path, required), `reason` (query)
+- Responses: `200` `RevocationStatus`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}`
+
+- Operation id: `put_role_assignment_api_v1_admin_identity_principals__principal_id__role_assignments__assignment_id__put`
+- Summary: Put Role Assignment
+- Parameters: `principal_id` (path, required), `assignment_id` (path, required), `If-Match` (header)
+- Request body: application/json: `RoleAssignmentChange` (required)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}`
+
+- Operation id: `delete_role_assignment_api_v1_admin_identity_principals__principal_id__role_assignments__assignment_id__delete`
+- Summary: Delete Role Assignment
+- Parameters: `principal_id` (path, required), `assignment_id` (path, required), `reason` (query), `If-Match` (header)
+- Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
 
 ### Tag: audit
 

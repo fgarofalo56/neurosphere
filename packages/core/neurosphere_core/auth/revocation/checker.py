@@ -12,6 +12,9 @@ answer is cached for at most ``ttl_seconds``, measured from the moment the store
 * on a store error nothing is cached and the error is raised as ``dependency_transient``: an
   outage is never "not revoked". An unexpired entry may still serve during an outage; expiry is
   never extended on error (same rule as the policy cache, C14).
+* an unlifted ``until_lifted`` entry (PRP-39) refuses every token, whatever its ``iat``; after a
+  lift the entry reads ``issued_before`` and a token issued after ``revoked_at`` (+ skew) is
+  accepted again once this replica's cached answer is invalidated or expires.
 
 ``ScopeDeriver`` maps ``True`` to ``forbidden`` (reason ``principal_revoked``, HTTP 403).
 """
@@ -30,7 +33,7 @@ from neurosphere_core.auth.revocation.model import (
     RevocationEntry,
     RevocationSettings,
 )
-from neurosphere_core.auth.revocation.store import RevocationStore
+from neurosphere_core.auth.revocation.store import RevocationReader
 from neurosphere_core.errors import DependencyTransientError
 
 __all__ = ["DEFAULT_CHECKER_MAX_ENTRIES", "CachedRevocationChecker"]
@@ -42,6 +45,8 @@ DEFAULT_CHECKER_MAX_ENTRIES: Final = 10_000
 class _Cached:
     revoked_at: datetime | None
     read_started_at: float
+    #: An unlifted ``until_lifted`` entry: every token is refused, whatever its ``iat``.
+    blocking: bool = False
 
 
 class CachedRevocationChecker:
@@ -49,7 +54,7 @@ class CachedRevocationChecker:
 
     def __init__(
         self,
-        store: RevocationStore,
+        store: RevocationReader,
         *,
         ttl_seconds: float = DEFAULT_REVOCATION_TTL_SECONDS,
         clock_skew_seconds: float = DEFAULT_CLOCK_SKEW_SECONDS,
@@ -71,7 +76,7 @@ class CachedRevocationChecker:
 
     @classmethod
     def from_settings(
-        cls, store: RevocationStore, settings: RevocationSettings, *, clock: Clock = time.time
+        cls, store: RevocationReader, settings: RevocationSettings, *, clock: Clock = time.time
     ) -> CachedRevocationChecker:
         return cls(
             store,
@@ -88,7 +93,10 @@ class CachedRevocationChecker:
         """True when ``principal_id`` was revoked at or after ``issued_at`` (minus skew)."""
         if issued_at.tzinfo is None or issued_at.utcoffset() is None:
             raise ValueError("issued_at must be timezone-aware")
-        revoked_at = await self._revoked_at(principal_id)
+        cached = await self._lookup(principal_id)
+        if cached.blocking:
+            return True
+        revoked_at = cached.revoked_at
         return revoked_at is not None and issued_at <= revoked_at + self._skew
 
     def invalidate_principal(self, principal_id: str) -> int:
@@ -98,13 +106,13 @@ class CachedRevocationChecker:
     def invalidate_all(self) -> None:
         self._cache.clear()
 
-    async def _revoked_at(self, principal_id: str) -> datetime | None:
+    async def _lookup(self, principal_id: str) -> _Cached:
         started = self._clock()
         cached = self._cache.get(principal_id)
         if cached is not None and cached.read_started_at <= started < (
             cached.read_started_at + self._ttl
         ):
-            return cached.revoked_at
+            return cached
         try:
             entry: RevocationEntry | None = await self._store.get(principal_id)
         except DependencyTransientError:
@@ -121,9 +129,13 @@ class CachedRevocationChecker:
                 reason="revocation_entry_invalid",
                 upstream_invalid=True,
             )
-        revoked_at = None if entry is None else entry.revoked_at
+        fresh = (
+            _Cached(None, started)
+            if entry is None
+            else _Cached(entry.revoked_at, started, blocking=entry.blocking)
+        )
         self._cache.pop(principal_id, None)
-        self._cache[principal_id] = _Cached(revoked_at, started)
+        self._cache[principal_id] = fresh
         while len(self._cache) > self._max:
             del self._cache[next(iter(self._cache))]
-        return revoked_at
+        return fresh
