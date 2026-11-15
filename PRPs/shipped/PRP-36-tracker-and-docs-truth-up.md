@@ -1,10 +1,12 @@
 ---
 name: PRP-36-tracker-and-docs-truth-up
-status: backlog
+status: shipped
 priority: P0
 order: 19
 review: none
 created: 2026-11-14
+shipped: 2026-11-14
+pr: 271
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -34,14 +36,14 @@ Out of scope: any code under `packages/`, `services/`, `frontend/` or `infra/`; 
 - `.githooks/pre-commit:66-73` regenerates the master status table but not `PRPs/INDEX.md`; `python scripts/prp_status.py --check` passes while `prp_index check` can fail on a stale index (lane-g point 5).
 
 ## Acceptance criteria
-- [ ] README: the Status section describes the real state (what ships, that the repository is public, no FedRAMP/ATO/parity claim kept); no line says the members are stubs or that the repository is private. `git grep -n "is private\|stub with a smoke" README.md` is empty.
-- [ ] Decisions: `docs/DECISIONS-LOG.md` D1 and master D1 (`:205`) and prerequisite 4 (`:84`) say the repository is public by operator decision with the date, keep "a push is publication; secrets are rotated, never just removed", and point to `SECURITY.md`. The master text no longer instructs agents to check "Repo is private".
-- [ ] Master index: intro says it sequences PRP-00 to PRP-64; the wave table gains rows W11 to W21 listing PRP ids per wave and linking to `PRPs/EXECUTION-PLAN.md` for the full plan (no duplicated per-PRP detail); the Mermaid graph gains nodes and edges for every PRP-36 to PRP-64 `depends_on` edge and the round-2 PRPs; `python scripts/validate_planning.py` passes and `python scripts/prp_status.py --check` passes.
-- [ ] Gate register: G16, G06 and the PRP-32 note no longer list shipped work as OPEN or "no live evidence"; each edited row cites the shipped PRP or evidence file that justifies the change; no gate changes status to CLOSED or NARROWED unless the cited evidence already says so. Issue #41: the AI Search capacity failure and the Key Vault 90-day name reservation are recorded under the G01 or G12 rows with the evidence file.
-- [ ] Threat model: the two wrong test paths are corrected and marked "In repo"; the denial recorder and consent-audit rows say "In repo" with the file paths; the allowed-read-audit and APIM rate-limit rows stay "Gap" and name PRP-48 and PRP-52 as owners.
-- [ ] `docs/dev/env-example-process.md` (new) documents how `.env.example` additions are made (agents list names in the completion note; the operator applies them with one batched script `temp/add-env-example.sh`, whose template is in the doc and never contains a value that looks like a secret).
-- [ ] `.githooks/pre-commit` regenerates `PRPs/INDEX.md` next to the status table when a `PRPs/` file is staged, stages it, and degrades to a printed warning (not a block) when the kit script is absent. A hook test or a recorded manual run proves both paths.
-- [ ] No file outside the Ownership block changed (`git diff --name-only` shown).
+- [x] README: the Status section describes the real state (what ships, that the repository is public, no FedRAMP/ATO/parity claim kept); no line says the members are stubs or that the repository is private. `git grep -n "is private\|stub with a smoke" README.md` is empty.
+- [x] Decisions: `docs/DECISIONS-LOG.md` D1 and master D1 (`:205`) and prerequisite 4 (`:84`) say the repository is public by operator decision with the date, keep "a push is publication; secrets are rotated, never just removed", and point to `SECURITY.md`. The master text no longer instructs agents to check "Repo is private".
+- [x] Master index: intro says it sequences PRP-00 to PRP-64; the wave table gains rows W11 to W21 listing PRP ids per wave and linking to `PRPs/EXECUTION-PLAN.md` for the full plan (no duplicated per-PRP detail); the Mermaid graph gains nodes and edges for every PRP-36 to PRP-64 `depends_on` edge and the round-2 PRPs; `python scripts/validate_planning.py` passes and `python scripts/prp_status.py --check` passes.
+- [x] Gate register: G16, G06 and the PRP-32 note no longer list shipped work as OPEN or "no live evidence"; each edited row cites the shipped PRP or evidence file that justifies the change; no gate changes status to CLOSED or NARROWED unless the cited evidence already says so. Issue #41: the AI Search capacity failure and the Key Vault 90-day name reservation are recorded under the G01 or G12 rows with the evidence file.
+- [x] Threat model: the two wrong test paths are corrected and marked "In repo"; the denial recorder and consent-audit rows say "In repo" with the file paths; the allowed-read-audit and APIM rate-limit rows stay "Gap" and name PRP-48 and PRP-52 as owners.
+- [x] `docs/dev/env-example-process.md` (new) documents how `.env.example` additions are made (agents list names in the completion note; the operator applies them with one batched script `temp/add-env-example.sh`, whose template is in the doc and never contains a value that looks like a secret).
+- [x] `.githooks/pre-commit` regenerates `PRPs/INDEX.md` next to the status table when a `PRPs/` file is staged, stages it, and degrades to a printed warning (not a block) when the kit script is absent. A hook test or a recorded manual run proves both paths.
+- [x] No file outside the Ownership block changed (`git diff --name-only` shown).
 
 PRP exit: every box above ticked, `python scripts/validate_planning.py`, `python scripts/prp_status.py --check` and the `verify-gates.ps1` full run green, PR open, CI green.
 
@@ -217,10 +219,10 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. Nothing here changes a gate 
 | 7 | verifying | prp-36-docs-truth-up | gates run locally; CHANGELOG, INDEX, status table, close-out are merge-step Tier 3 |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: 2026-11-14, PR #271.
+- Deviations: PRP-36 had no `[serial-after]` items. The agent-run close-out used a local branch `prp-36-closeout` pushed to `prp-36-docs-truth-up`, because the original branch was checked out in another worktree. `mkdocs.yml` gained one nav line for the new env-example process page (Tier 2 additive); the strict build needs the page listed.
+- Descoped items: none. Issue #148 items 1, 2 and 4 belong to other PRPs.
+- OPEN gates: none touched; no live run, no `NS_LIVE_APPROVED`. Every OPEN gate in `docs/RESEARCH-AND-GATES.md` stays OPEN (live evidence is PRP-64).
+- Env vars for the operator: none. The process for future additions is `docs/dev/env-example-process.md`.
+- Follow-up issues: #148 items 1, 2, 4 (other PRPs); issue #41 is recorded in the gate register; the allowed-read audit gap goes to PRP-48 and the APIM rate-limit gap to PRP-52.
+- Product check: docs, tracker and a hook only; no operator-facing capability changed.
