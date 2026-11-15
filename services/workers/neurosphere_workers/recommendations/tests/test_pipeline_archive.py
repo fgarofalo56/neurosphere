@@ -11,10 +11,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from neurosphere_contracts.scope.v1.identity_scope import IdentityScope as SearchScope
+from neurosphere_core.catalog.graph.query import RepositoryGraphQuery
 from neurosphere_core.catalog.protocol import EntityFilter
 from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.recommendations import InMemoryRecommendationStore
 from neurosphere_core.scope import IdentityScope
+from neurosphere_core.search.protocol import SearchRequest, SearchResult
 
 from neurosphere_workers.recommendations.pipeline import (
     PipelineSummary,
@@ -129,3 +132,38 @@ async def test_empty_archive_is_unknown_not_unused(sandbox_dir: Path) -> None:
     summary, _store, _lister = await _archive_run(sandbox_dir, FakeContainer())
     assert summary.counts_by_kind.get("unused_agent", 0) == 0
     assert summary.usage_summaries == 0
+
+
+class CountingSearch:
+    """Stands in for the search index; ``run_pipeline_archive`` must never call it."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def search(self, scope: SearchScope, request: SearchRequest) -> SearchResult:
+        self.calls += 1
+        raise AssertionError("the archive pipeline must not search")
+
+
+async def test_duplicate_detection_never_searches(
+    sandbox_dir: Path, container: FakeContainer
+) -> None:
+    # PRP-15 reviewer follow-up: ``run_pipeline_archive`` hands the repository over as graph and
+    # lister (production wiring builds the graph over an empty index). Duplicate candidates come
+    # from catalog reads only; this pins that, so a future detector change that searches fails here.
+    scope = _scope(sandbox_dir)
+    _graph, repo = await load_sandbox_catalog(sandbox_dir, scope=scope)
+    search = CountingSearch()
+    summary = await run_pipeline_archive(
+        ArchiveReader(container),
+        graph=RepositoryGraphQuery(repo, search),
+        lister=ReadOnlyLister(repo),
+        scope=scope,
+        store=InMemoryRecommendationStore(),
+        prices=synthetic_prices(),
+        pairs=PAIRS,
+        created_at=RUN_AT,
+        lookback_days=7,
+    )
+    assert summary.stored > 0
+    assert search.calls == 0

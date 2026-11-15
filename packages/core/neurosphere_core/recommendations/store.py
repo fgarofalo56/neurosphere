@@ -5,6 +5,12 @@ and the domain (which must be in the scope's allowed domains) are mandatory pred
 recommendation of another customer, cloud or domain is simply absent (``get`` returns ``None``,
 ``list`` omits it). ``q`` is a bounded plain-text, case-insensitive substring match over the kind
 and the subject ids; it is not a query language. A Cosmos implementation is OPEN (not built here).
+
+One copy per ``recommendation_id``: when a copy already exists in a smaller ``[customer, domain]``
+partition, a later ``put`` of the same id into a larger partition is silently discarded, including
+an update to that recommendation. The rule is deterministic and identical in the in-memory and the
+Cosmos store (the latter also deletes the larger-partition copies it sees); callers that need to
+change a recommendation must write it to the partition that already holds it.
 """
 
 from __future__ import annotations

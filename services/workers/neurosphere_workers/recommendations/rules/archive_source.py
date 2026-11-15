@@ -155,6 +155,9 @@ class ArchiveSeriesSource(SeriesAccumulator):
         if kind == "telemetry":
             self.add_telemetry(contract)  # skips and duplicates are counted in ``stats``
         elif kind == "cost":
+            # ``add_cost`` also returns True for a lower-priority duplicate, so such a document
+            # lands in ``usage_docs`` too; harmless, because ``summarize_usage_docs`` dedupes by
+            # ``dedupe_key``.
             if (
                 self.add_cost(contract)
                 and contract.get("kind") == "estimated"
