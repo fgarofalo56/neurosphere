@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-38-real-stack-ci-and-dev-stack](backlog/PRP-38-real-stack-ci-and-dev-stack.md) | P0 | 21 | - | - | sonnet / sonnet | required |
 | [PRP-39-identity-admin-api-and-revocation](backlog/PRP-39-identity-admin-api-and-revocation.md) | P0 | 24 | PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store | PRP-65-admin-permissions-policy-repository-and-config-store (backlog) | opus / sonnet | required |
 | [PRP-40-audit-search-export-and-siem-sink](backlog/PRP-40-audit-search-export-and-siem-sink.md) | P0 | 28 | PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store | PRP-65-admin-permissions-policy-repository-and-config-store (backlog) | opus / sonnet | required |
 | [PRP-41-producer-registry](backlog/PRP-41-producer-registry.md) | P0 | 29 | PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store, PRP-39-identity-admin-api-and-revocation | PRP-65-admin-permissions-policy-repository-and-config-store (backlog); PRP-39-identity-admin-api-and-revocation (backlog) | sonnet / sonnet | required |
@@ -30,7 +29,7 @@ _none_
 | [PRP-54-write-targets-from-configuration](backlog/PRP-54-write-targets-from-configuration.md) | P1 | 41 | PRP-45-system-status-first-run-and-feature-settings | PRP-45-system-status-first-run-and-feature-settings (backlog) | sonnet / sonnet | required |
 | [PRP-55-real-deploy-apply](backlog/PRP-55-real-deploy-apply.md) | P1 | 45 | PRP-54-write-targets-from-configuration | PRP-54-write-targets-from-configuration (backlog) | opus / sonnet | required |
 | [PRP-58-hosted-data-path-and-environment-hardening](backlog/PRP-58-hosted-data-path-and-environment-hardening.md) | P1 | 46 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-15-recommendations-engine, PRP-54-write-targets-from-configuration | PRP-41-producer-registry (backlog); PRP-42-connector-configuration-and-credential-references (backlog); PRP-44-platform-configuration (backlog); PRP-15-recommendations-engine (backlog); PRP-54-write-targets-from-configuration (backlog) | sonnet / sonnet | required |
-| [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | PRP-38-real-stack-ci-and-dev-stack (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog) | sonnet / sonnet | required |
+| [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | PRP-58-hosted-data-path-and-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-11-analytics-adapters (backlog); PRP-40-audit-search-export-and-siem-sink (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
 | [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-21-scale-federation-finops-and-dr (backlog); PRP-49-per-agent-aggregates-and-map-metrics (backlog); PRP-55-real-deploy-apply (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-18-live-map-and-session-replay](backlog/PRP-18-live-map-and-session-replay.md) | P2 | 27 | - | - | sonnet / sonnet | required |
@@ -56,6 +55,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [PRP-37-contracts-revision-admin-cost-and-permissions](shipped/PRP-37-contracts-revision-admin-cost-and-permissions.md) | 2026-11-15 | #273 |
+| [PRP-38-real-stack-ci-and-dev-stack](shipped/PRP-38-real-stack-ci-and-dev-stack.md) | 2026-11-15 | #278 |
 | [PRP-68-changelog-fragments-and-index-freshness](shipped/PRP-68-changelog-fragments-and-index-freshness.md) | 2026-11-15 | #270 |
 | [PRP-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-11-14 | #221 |
 | [PRP-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-14 | #223 |

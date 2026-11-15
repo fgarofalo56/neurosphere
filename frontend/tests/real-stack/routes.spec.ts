@@ -126,6 +126,13 @@ const ENTRIES: readonly Entry[] = [
   {
     route: "/gateways/detail",
     via: { list: "/gateways", link: "a[href^='/gateways/detail']" },
+    expected: [
+      {
+        status: 404,
+        pathPrefix: "/api/v1/gateways/domains/",
+        why: "the seed registers one gateway but no inventory snapshot for it; the page shows its empty inventory state (PRP-38 #209)",
+      },
+    ],
   },
   { route: "/map" },
   { route: "/map/table" },
@@ -173,11 +180,7 @@ const ENTRIES: readonly Entry[] = [
  * Routes whose seeded data is known to be absent for the operator: the reason, as reported.
  * The review queue needs a reviewer role: grant the operator `domain_steward` as well as `admin`.
  */
-const NO_DATA: Readonly<Record<string, string>> = {
-  "/gateways/detail":
-    "no gateway is seeded in the stack (services/api/tests/runtime_routes/manifest_calls.py); " +
-    "the detail page is covered by services/api/tests/gateway_api and the mock e2e",
-};
+const NO_DATA: Readonly<Record<string, string>> = {};
 
 const manifest = JSON.parse(
   readFileSync(resolve(process.cwd(), "src/app/route-manifest.json"), "utf8"),
