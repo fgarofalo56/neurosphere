@@ -71,6 +71,24 @@ def test_cross_domain_span_is_dropped_and_reported_as_gap() -> None:
     assert body["completeness"]["state"] == "partial"
 
 
+def test_withheld_parent_gap_is_indistinguishable_from_absent_parent() -> None:
+    withheld = make_api(
+        span(1, None),
+        span(3, 2, offset_ms=20, domain=OPERATIONS),
+        span(4, 3, offset_ms=30),
+    ).trace(ALICE, FINANCE)
+    absent = make_api(span(1, None), span(4, 3, offset_ms=30)).trace(ALICE, FINANCE)
+
+    def parent_gap(response: object) -> dict[str, object]:
+        gaps = response.json()["gaps"]  # type: ignore[attr-defined]
+        return next(g for g in gaps if g["span_id"] == sid(4))
+
+    first, second = parent_gap(withheld), parent_gap(absent)
+    assert first["reason"] == second["reason"] == "missing_parent"
+    assert first["detail"] == second["detail"] == "parent span is not available in this trace"
+    assert "domain" not in str(first["detail"]) and "withheld" not in str(first["detail"])
+
+
 def test_caller_supplied_scope_params_do_not_widen_scope() -> None:
     api = make_api(span(1, None, domain=OPERATIONS))
     response = api.trace(ALICE, FINANCE, domain_id=OPERATIONS, customer_id="fabrikam")

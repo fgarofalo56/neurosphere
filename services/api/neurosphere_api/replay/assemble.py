@@ -94,7 +94,6 @@ def assemble_trace(records: TraceRecords, domain_id: str, trace_id: str) -> Trac
     truncated = records.truncated or len(ordered) > MAX_SPANS
     ordered = ordered[:MAX_SPANS]
     present = {r.span_id for r in ordered}
-    withheld_ids = {r.span_id for r in wanted if r.domain_id != domain_id}
 
     root_ends = [e for r in ordered if r.parent_span_id is None and (e := _end(r)) is not None]
     completed_at = max(root_ends) if root_ends else None
@@ -120,10 +119,10 @@ def assemble_trace(records: TraceRecords, domain_id: str, trace_id: str) -> Trac
         rate = rec.sampling_rate
         if rec.parent_span_id is not None and rec.parent_span_id not in present:
             reason: GapReason = "missing_parent"
-            detail = "parent span is not in this trace"
-            if rec.parent_span_id in withheld_ids:
-                detail = "parent span is outside this domain and was withheld"
-            elif late_reason is not None:
+            # A withheld (foreign-domain) parent is treated exactly like an absent one so a
+            # caller cannot tell the two apart.
+            detail = "parent span is not available in this trace"
+            if late_reason is not None:
                 reason, detail = "late_arrival", "parent may not have arrived yet"
             elif rate is not None and rate < 1 and rec.sampling_method in _SAMPLED_METHODS:
                 reason, detail = "sampled_out", "parent was plausibly dropped by sampling"

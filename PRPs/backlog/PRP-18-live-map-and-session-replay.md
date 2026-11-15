@@ -215,7 +215,7 @@ No data or schema migration: the bulk call is additive and read-only. Rollback i
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
 | 1 | merged | prp-18-round2-map-edge-batching | EdgesAmongQuery + RepositoryGraphQuery.edges_among, 7 tests |
-| 2 | todo | | |
+| 2 | merged | prp-18-round2-map-edge-batching | guard + generic gap text + unique badge keys |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

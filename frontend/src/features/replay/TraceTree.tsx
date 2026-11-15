@@ -65,8 +65,11 @@ function SpanBadges({
           <StatusPill label={samplingText(span.sampling_rate)} tone="neutral" />
         </span>
       ) : null}
-      {gaps.map((g) => (
-        <span key={g.reason} data-testid="gap-badge">
+      {gaps.map((g, index) => (
+        <span
+          key={`${g.reason}:${g.span_id ?? ""}:${g.parent_span_id ?? ""}:${index}`}
+          data-testid="gap-badge"
+        >
           <StatusPill label={STRINGS.gapReason[g.reason]} tone="danger" />
         </span>
       ))}
