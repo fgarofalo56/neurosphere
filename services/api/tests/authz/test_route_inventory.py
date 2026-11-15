@@ -416,3 +416,36 @@ def test_audit_search_export_routes_declare_their_permissions() -> None:
         ("/api/v1/audit/denials", "GET"): ("audit.read",),
         ("/api/v1/audit/siem/status", "GET"): ("audit.read",),
     }
+
+
+def test_platform_admin_routes_declare_config_manage() -> None:
+    """PRP-44: every platform admin route needs config.manage (customer-level on top)."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/platform"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    perm = ("config.manage",)
+    domain = f"{base}/domains/{{domain_id}}"
+    budget = f"{base}/budgets/{{budget_id}}"
+    sheet = f"{base}/price-sheets/{{snapshot_id}}"
+    assert found == {
+        (f"{base}/domains", "POST"): perm,
+        (f"{base}/domains", "GET"): perm,
+        (domain, "GET"): perm,
+        (f"{domain}/retire", "POST"): perm,
+        (f"{base}/budgets", "POST"): perm,
+        (f"{base}/budgets", "GET"): perm,
+        (budget, "GET"): perm,
+        (budget, "PUT"): perm,
+        (budget, "DELETE"): perm,
+        (f"{base}/price-sheets", "POST"): perm,
+        (f"{base}/price-sheets", "GET"): perm,
+        (sheet, "GET"): perm,
+        (f"{sheet}/coverage", "GET"): perm,
+        (f"{base}/review-policy", "GET"): perm,
+        (f"{base}/review-policy", "PUT"): perm,
+    }
