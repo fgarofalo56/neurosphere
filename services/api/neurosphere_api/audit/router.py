@@ -108,10 +108,18 @@ def build_router(*, require_permission: RequirePermission = deny_all_until_authz
 def register(
     registry: RouterRegistry, *, require_permission: RequirePermission = deny_all_until_authz
 ) -> None:
-    """Router-registry hook (see ``neurosphere_api/routers.py``)."""
+    """Router-registry hook (see ``neurosphere_api/routers.py``).
+
+    Also mounts the PRP-40 routes (search, export, denials, SIEM status), each on its own
+    prefix. They use ``neurosphere_api.authz.require`` directly, so they are imported here
+    lazily (this module stays free of an authz import at load time).
+    """
     register_with_alias(
         registry,
         build_router(require_permission=require_permission),
         prefix=ROUTE_PREFIX,
         alias_prefix=ALIAS_PREFIX,
     )
+    from neurosphere_api.audit import search
+
+    registry.register(search.PREFIX, search.build_router())

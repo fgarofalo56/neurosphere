@@ -13,7 +13,8 @@ Component                 ``app.state`` keys
 ``evaluation``            ``evaluation_store``, ``evaluation_pilot_dataset_ids``
 ``recommendations``       ``recommendation_store``
 ``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink when
-                          ``audit_siem`` is ok; never blocked by the sink)
+                          ``audit_siem`` is ok; never blocked by the sink) and
+                          ``audit_search_store`` (PRP-40)
 ``audit_siem``            ``siem_sink_health`` (optional, PRP-40): ``disabled`` for sink
                           ``none``, ``failed`` ``audit_siem_settings_invalid`` on a bad setting
 ``review_router``         ``review_router`` (HITL-backed; also builds and publishes the
@@ -89,6 +90,11 @@ from neurosphere_workers.projections.outbox.reader import SINK_AGGREGATES, SINK_
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from neurosphere_api.audit.search_store import (
+    AuditSearchStore,
+    CosmosAuditSearchStore,
+    RepositoryAuditSearchStore,
+)
 from neurosphere_api.federation.cache import SummaryCache
 from neurosphere_api.federation.client import CellClient, HttpCellClient, InProcessCellClient
 from neurosphere_api.federation.service import FederationState, Federator
@@ -102,6 +108,7 @@ from neurosphere_api.replay.reader import ArchiveTraceReader, TraceReader
 from neurosphere_api.runtime.builders import (
     AGGREGATE_READER,
     AUDIT_REPOSITORY,
+    AUDIT_SEARCH_STORE,
     AUTH_SETTINGS,
     AUTHENTICATOR,
     CATALOG_REPOSITORY,
@@ -447,6 +454,7 @@ def _publish_siem_health(ctx: BuildContext, health: SiemSinkHealth) -> None:
 
 def _audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
     repository = _backend(ctx, "audit_repository", AuditRepository)
+    search: AuditSearchStore
     if repository is None:
         repository = AuditRepository(
             CosmosAuditStore.from_client(
@@ -457,8 +465,20 @@ def _audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
             ),
             exporter=exporter,
         )
+        # PRP-40: search reads the same container with its own parameterized queries.
+        search = CosmosAuditSearchStore.from_client(
+            ctx.cosmos_client(),
+            database=ctx.store_settings().database,
+            container=AUDIT_CHAIN_CONTAINER,
+        )
+    else:
+        search = _backend(ctx, "audit_search_store", AuditSearchStore) or (
+            RepositoryAuditSearchStore(repository)
+        )
     ctx.app.state.audit_repository = repository
     ctx.publish(AUDIT_REPOSITORY, repository)
+    ctx.app.state.audit_search_store = search
+    ctx.publish(AUDIT_SEARCH_STORE, search)
 
 
 def _hitl_service(ctx: BuildContext) -> HitlService:
