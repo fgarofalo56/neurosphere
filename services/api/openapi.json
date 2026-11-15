@@ -10677,6 +10677,209 @@
         "title": "PrincipalPage",
         "type": "object"
       },
+      "ProducerCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "customer_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "producer_id": {
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "sources": {
+            "additionalProperties": {
+              "enum": [
+                "gateway",
+                "application",
+                "billing"
+              ],
+              "type": "string"
+            },
+            "maxProperties": 64,
+            "minProperties": 1,
+            "title": "Sources",
+            "type": "object"
+          }
+        },
+        "required": [
+          "producer_id",
+          "cloud",
+          "sources"
+        ],
+        "title": "ProducerCreateRequest",
+        "type": "object"
+      },
+      "ProducerPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProducerView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ],
+        "title": "ProducerPage",
+        "type": "object"
+      },
+      "ProducerSecretIssued": {
+        "additionalProperties": false,
+        "description": "OUTPUT-ONLY, SHOWN ONCE. Response to registering a producer or rotating its secret (PRP-41). secret is the only place in admin v1 where a credential value appears: it is generated server-side, returned once in this response, never stored (only secret_sha256 is) and can never be read back. It must not be logged, audited, cached or placed in a prompt; the audit record carries secret_sha256 only. No request schema may reference this schema.",
+        "properties": {
+          "issued_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__Timestamp"
+          },
+          "producer_id": {
+            "pattern": "^[A-Za-z0-9_-]{1,128}$",
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "secret": {
+            "pattern": "^[A-Za-z0-9_-]{43,128}$",
+            "title": "Secret",
+            "type": "string"
+          },
+          "secret_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Secret Sha256",
+            "type": "string"
+          },
+          "shown_once": {
+            "const": true,
+            "title": "Shown Once",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "producer_id",
+          "secret",
+          "secret_sha256",
+          "issued_at",
+          "shown_once"
+        ],
+        "title": "ProducerSecretIssued",
+        "type": "object"
+      },
+      "ProducerSourceView": {
+        "properties": {
+          "observation_kind": {
+            "enum": [
+              "gateway",
+              "application",
+              "billing"
+            ],
+            "title": "Observation Kind",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "observation_kind"
+        ],
+        "title": "ProducerSourceView",
+        "type": "object"
+      },
+      "ProducerView": {
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "customer_id": {
+            "title": "Customer Id",
+            "type": "string"
+          },
+          "producer_id": {
+            "title": "Producer Id",
+            "type": "string"
+          },
+          "rotated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotated At"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ProducerSourceView"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "producer_id",
+          "customer_id",
+          "cloud",
+          "sources",
+          "status",
+          "rotated_at",
+          "version",
+          "updated_at"
+        ],
+        "title": "ProducerView",
+        "type": "object"
+      },
       "ProductApiLink": {
         "additionalProperties": false,
         "properties": {
@@ -18250,6 +18453,316 @@
         "summary": "Put Role Assignment",
         "tags": [
           "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/producers": {
+      "get": {
+        "operationId": "list_producers_api_v1_admin_sources_producers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Producers",
+        "tags": [
+          "admin-producers"
+        ]
+      },
+      "post": {
+        "operationId": "create_producer_api_v1_admin_sources_producers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProducerCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerSecretIssued"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Producer",
+        "tags": [
+          "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/producers/{producer_id}": {
+      "get": {
+        "operationId": "get_producer_api_v1_admin_sources_producers__producer_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "producer_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "title": "Producer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Producer",
+        "tags": [
+          "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/producers/{producer_id}/disable": {
+      "post": {
+        "operationId": "disable_producer_api_v1_admin_sources_producers__producer_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "producer_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "title": "Producer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Producer",
+        "tags": [
+          "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/producers/{producer_id}/enable": {
+      "post": {
+        "operationId": "enable_producer_api_v1_admin_sources_producers__producer_id__enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "producer_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "title": "Producer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enable Producer",
+        "tags": [
+          "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/producers/{producer_id}/rotate": {
+      "post": {
+        "operationId": "rotate_producer_api_v1_admin_sources_producers__producer_id__rotate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "producer_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "title": "Producer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProducerSecretIssued"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate Producer",
+        "tags": [
+          "admin-producers"
         ]
       }
     },
