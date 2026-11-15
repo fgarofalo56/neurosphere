@@ -416,3 +416,28 @@ def test_audit_search_export_routes_declare_their_permissions() -> None:
         ("/api/v1/audit/denials", "GET"): ("audit.read",),
         ("/api/v1/audit/siem/status", "GET"): ("audit.read",),
     }
+
+
+def test_role_gated_routes_are_exactly_the_declared_set() -> None:
+    """PRP-48 item 1 (#91): the workspace route is role-gated and claims no permission."""
+    from neurosphere_api.authz import ROLE_GATED_PATHS
+
+    app = create_app(Settings(env="local"))
+    gated = {(e.path, e.methods, e.permissions) for e in route_inventory(app) if e.role_gated}
+    assert gated == {("/api/v1/workspaces/{role}", ("GET",), ())}
+    assert ROLE_GATED_PATHS == {"/api/v1/workspaces/{role}"}
+    assert not ROLE_GATED_PATHS & PUBLIC_PATHS
+
+
+def test_role_gated_path_without_the_role_marker_is_flagged() -> None:
+    """PRP-48 item 1: the path alone is not enough; the route must carry ``require_role``."""
+    router = APIRouter()
+
+    @router.get("/{role}")
+    async def unguarded(role: str) -> dict[str, str]:
+        return {}
+
+    app = FastAPI(openapi_url=None)
+    app.include_router(router, prefix="/api/v1/workspaces")
+    flagged = undeclared_routes(app, public_paths=frozenset())
+    assert [(e.path, e.role_gated) for e in flagged] == [("/api/v1/workspaces/{role}", False)]

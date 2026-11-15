@@ -4,10 +4,14 @@ The list is derived from the server-side ``IdentityScope`` only: exactly the dom
 unexpired role confers ``data.read`` (``domains_with_permission``), further restricted to the
 scope's own cloud and customer. The route takes no query parameters or body, so a caller-supplied
 ``domain_id``/``customer_id`` cannot influence it. A caller who holds ``data.read`` nowhere gets
-403 from ``require``.
+403 from ``require``. A caller whose only ``data.read`` comes from a resource-scoped grant passes
+``require`` (a grant is ``data.read`` on one resource) but reads no domain: 200 with an empty
+list, documented in the OpenAPI description (PRP-48 item 2, #91).
 
 Display names come from the catalog repository, read in-process under the caller's scope; with no
-repository or no entry the label is derived from the id and flagged ``derived``.
+repository or no entry the label is derived from the id and flagged ``derived``. The catalog
+lookup reads at most ``_MAX_CATALOG_PAGES`` pages; hitting that cap logs one warning carrying the
+domain count only (never a domain id) and the remaining labels fall back to ``derived``.
 
 This module deliberately has no ``from __future__ import annotations``: FastAPI must see real
 annotation objects on the route function.
@@ -21,6 +25,7 @@ from fastapi import APIRouter, Depends, Request
 from neurosphere_core.auth.scope import Permission, domains_with_permission, role_permissions
 from neurosphere_core.catalog import CatalogRepository, EntityFilter
 from neurosphere_core.errors import DependencyTransientError
+from neurosphere_core.observability import get_logger
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
 
@@ -34,6 +39,14 @@ PREFIX: Final = "/api/v1/me"
 _MAX_CATALOG_PAGES: Final = 4
 _MAX_FILTER_DOMAINS: Final = 100
 _SEPARATORS: Final = re.compile(r"[-_./=]+")
+_LOG = get_logger("neurosphere_api.me")
+
+_DOMAINS_DESCRIPTION: Final = (
+    "The domains the caller may read (an unexpired role conferring `data.read`, in the caller's "
+    "own cloud and customer), with display names from the catalog. A caller whose only "
+    "`data.read` comes from a resource-scoped grant gets **200 with an empty `items` list**: the "
+    "grant covers one resource, never a domain. A caller holding `data.read` nowhere gets 403."
+)
 
 _read_anywhere = require(Permission.DATA_READ)
 
@@ -90,6 +103,12 @@ async def _catalog_names(
             cursor = page.next_cursor
             if cursor is None:
                 break
+        else:
+            # Cap reached with pages left: the rest keep derived labels. Count only, no ids.
+            _LOG.warning(
+                "me/domains catalog lookup hit the page cap; remaining labels are derived",
+                extra={"domain_count": len(domain_ids), "page_cap": _MAX_CATALOG_PAGES},
+            )
     except DependencyTransientError:
         return names
     return names
@@ -98,7 +117,7 @@ async def _catalog_names(
 def build_router() -> APIRouter:
     router = APIRouter(tags=["me"])
 
-    @router.get("/domains", response_model=MeDomains)
+    @router.get("/domains", response_model=MeDomains, description=_DOMAINS_DESCRIPTION)
     async def my_domains(
         request: Request,
         scope: Annotated[IdentityScope, Depends(_read_anywhere)],

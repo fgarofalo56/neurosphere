@@ -227,8 +227,8 @@ None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | verifying | prp-48-authz-audit-hardening | `require_role` + `ROLE_GATED_PATHS`; workspaces role-gated, tenancy-bound, denial-audited |
+| 2 | verifying | prp-48-authz-audit-hardening | page-cap warning (count only); OpenAPI description of the empty 200 |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
