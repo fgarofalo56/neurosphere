@@ -90,6 +90,25 @@ def _unreadable(status: int) -> CapabilityUnavailableError:
     )
 
 
+class _OptionalListForbiddenError(CapabilityUnavailableError):
+    """A 403 on an optional list (backends, policy fragments): degrade, do not fail the sync."""
+
+
+async def _optional_list(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    profile: CloudProfile | None,
+    name: str,
+    unreadable: list[str],
+) -> list[dict[str, Any]]:
+    try:
+        return await _list(client, url, profile=profile, optional=True)
+    except _OptionalListForbiddenError:
+        unreadable.append(name)
+        return []
+
+
 def _retry_after(response: httpx.Response) -> float:
     raw = response.headers.get("Retry-After", "")
     try:
@@ -141,6 +160,10 @@ async def _get(
             continue
         if status == 404 and optional:
             return None
+        if status == 403 and optional:
+            raise _OptionalListForbiddenError(
+                "gateway_not_readable", "ARM refused an optional inventory list (HTTP 403)"
+            )
         if status in (401, 403, 404):
             raise _unreadable(status)
         if status >= 500:
@@ -341,14 +364,24 @@ async def read_inventory(
         links.extend(
             ProductApiLink(product_id=product.id, api_id=str(a.get("name", ""))) for a in linked
         )
+    unreadable: list[str] = []
     backends = [
-        _backend(b) for b in await _list(client, url("/backends"), profile=profile, optional=True)
+        _backend(b)
+        for b in await _optional_list(
+            client, url("/backends"), profile=profile, name="backends", unreadable=unreadable
+        )
     ]
     fragments = [
         PolicyFragmentEntry(
             name=str(f.get("name", "")), description=_str(_props(f).get("description"))
         )
-        for f in await _list(client, url("/policyFragments"), profile=profile, optional=True)
+        for f in await _optional_list(
+            client,
+            url("/policyFragments"),
+            profile=profile,
+            name="policy_fragments",
+            unreadable=unreadable,
+        )
     ]
     subscriptions = [
         SubscriptionEntry(
@@ -369,6 +402,7 @@ async def read_inventory(
         backends=backends,
         policy_fragments=fragments,
         subscriptions=subscriptions,
+        unreadable_lists=unreadable,
     )
 
 

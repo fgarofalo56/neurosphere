@@ -39,6 +39,7 @@ __all__ = [
     "ModePreflight",
     "OperationEntry",
     "PolicyFragmentEntry",
+    "PollAttribution",
     "PoolMember",
     "ProductApiLink",
     "ProductEntry",
@@ -94,6 +95,10 @@ def normalize_arm_id(arm_resource_id: str) -> str:
     """Validated ARM id (shape only); ARM ids compare case-insensitively, so identity uses lower."""
     if not _ARM_ID_RE.fullmatch(arm_resource_id):
         raise ValueError("arm_resource_id is not an API Management service resource id")
+    group = arm_resource_id.split("/")[4]
+    if group.strip(".") == "" or group.endswith("."):
+        # Dot-only or trailing-dot groups are traversal shaped and not valid group names.
+        raise ValueError("arm_resource_id has an invalid resource group")
     return arm_resource_id
 
 
@@ -135,6 +140,16 @@ class ModePreflight(_Model):
         return self
 
 
+class PollAttribution(_Model):
+    """Cost-center attribution counts of the latest gateway poll (PRP-46, #179)."""
+
+    attributed_row: int = Field(default=0, ge=0)  # the gateway row carried the dimension
+    attributed_exact: int = Field(default=0, ge=0)  # (ApiId, subscription) metric key
+    attributed_subscription_only: int = Field(default=0, ge=0)  # subscription-only fallback
+    unattributed: int = Field(default=0, ge=0)
+    metrics_query_failed: bool = False
+
+
 class GatewayRegistration(_Model):
     id: Annotated[str, StringConstraints(pattern=GATEWAY_ID_PATTERN)]
     customer_id: Annotated[str, StringConstraints(min_length=1, max_length=128)]
@@ -161,6 +176,7 @@ class GatewayRegistration(_Model):
     # answered log slice, and a short machine code for the outcome of the latest poll.
     poll_watermark: AwareDatetime | None = None
     poll_status: str | None = Field(default=None, max_length=64)
+    poll_attribution: PollAttribution | None = None
     etag: str | None = None
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -277,6 +293,8 @@ class GatewayInventory(_Model):
     backends: list[BackendEntry] = Field(default_factory=list)
     policy_fragments: list[PolicyFragmentEntry] = Field(default_factory=list)
     subscriptions: list[SubscriptionEntry] = Field(default_factory=list)
+    # Optional lists ARM refused with 403; they are empty here and marked unreadable (#148).
+    unreadable_lists: list[str] = Field(default_factory=list)
 
     def counts(self) -> dict[str, int]:
         return {

@@ -9,6 +9,7 @@ actor pseudonym, the gateway id and short codes; the ARM id is only hashed into 
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Final
 
@@ -37,6 +38,8 @@ from neurosphere_api.gateway.dependencies import GatewayPlane
 from neurosphere_api.gateway.models import GatewayDetail, GatewayList, RegisterGatewayBody
 
 __all__ = ["CHAIN_SUFFIX", "ENTITY_TYPE", "GatewayApi", "audit_chain_id"]
+
+logger = logging.getLogger("neurosphere.api.gateway")
 
 CHAIN_SUFFIX: Final = "gateway"
 ENTITY_TYPE: Final = "apim_gateway"
@@ -211,6 +214,8 @@ class GatewayApi:
                 await self._record_failure(current)
                 raise
             capabilities = capabilities_for(pre.tier, scope.cloud)
+            for name in inventory.unreadable_lists:
+                capabilities[name] = "unreadable"
             # Replace, never merge: the snapshot is stored whole, then the registration moves.
             await plane.store.put_inventory(scope.customer_id, domain, inventory)
             counts.update(inventory.counts())
@@ -259,8 +264,15 @@ class GatewayApi:
                 current.model_copy(update={"last_sync_status": "failed", "updated_at": at}),
                 if_match=_etag(current),
             )
-        except Exception:
-            return
+        except Exception as exc:
+            logger.warning(
+                "could not mark gateway sync failed",
+                extra={
+                    "event": "gateway.record_failure_failed",
+                    "gateway_id": current.id,
+                    "error": type(exc).__name__,
+                },
+            )
 
 
 def _chain(scope: IdentityScope) -> str:

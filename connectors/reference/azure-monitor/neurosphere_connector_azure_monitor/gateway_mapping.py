@@ -162,16 +162,25 @@ class CostCenterIndex:
 
     def lookup(self, row: Mapping[str, Any]) -> dict[str, str] | None:
         """``{"cost_center": value}`` for a joined gateway row, else None."""
+        return self.lookup_with_source(row)[0]
+
+    def lookup_with_source(
+        self, row: Mapping[str, Any]
+    ) -> tuple[dict[str, str] | None, str | None]:
+        """Like ``lookup`` plus how it was derived: ``exact`` (ApiId and subscription) or
+        ``subscription_only`` (the fallback); ``None`` when nothing was attributed."""
         subscription = _text(row, "ApimSubscriptionId")
         if subscription is None:
-            return None
+            return None, None
         api = _text(row, "ApiId")
         candidates = self._by_pair.get((api, subscription)) if api is not None else None
+        how = "exact"
         if not candidates:
             candidates = self._by_subscription.get(subscription)
+            how = "subscription_only"
         if candidates is None or len(candidates) != 1:
-            return None
-        return {"cost_center": next(iter(candidates))}
+            return None, None
+        return {"cost_center": next(iter(candidates))}, how
 
 
 def _text(row: Mapping[str, Any], name: str) -> str | None:

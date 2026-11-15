@@ -32,13 +32,14 @@ from neurosphere_connector_azure_monitor import (
     PollBounds,
     PollResult,
     SourceKind,
+    cost_center_tags,
     map_gateway_row,
     map_mcp_row,
 )
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.cloud.profile import CloudName
 from neurosphere_core.errors import NeuroSphereError, RateLimitedError, StaleVersionError
-from neurosphere_core.gateway.models import GatewayRegistration
+from neurosphere_core.gateway.models import GatewayRegistration, PollAttribution
 from neurosphere_core.gateway.store import GatewayStore
 from neurosphere_core.payload import CLOUDEVENT_TYPE_TELEMETRY
 
@@ -173,6 +174,7 @@ class _Outcome:
     watermark: datetime | None = None
     freshness_seconds: int | None = None
     coverage: float | None = None
+    attribution: PollAttribution | None = None
 
 
 def _cloud_event(event: TelemetryEvent, cost_center: str | None = None) -> dict[str, Any]:
@@ -279,7 +281,7 @@ class GatewayPoller:
                 ],
                 watermark=watermark,
             )
-            cost_centers = await self._cost_centers(connector, gateway, watermark)
+            cost_centers, metrics_failed = await self._cost_centers(connector, gateway, watermark)
         except RateLimitedError:
             return _Outcome(status=STATUS_RATE_LIMITED)
         except NeuroSphereError as exc:
@@ -287,7 +289,8 @@ class GatewayPoller:
         finally:
             await connector.close()
 
-        events = self._events(gateway, result, cost_centers)
+        tally: dict[str, int] = {}
+        events = self._events(gateway, result, cost_centers, tally)
         try:
             for start in range(0, len(events), cfg.batch_size):
                 await self._ingest.post(events[start : start + cfg.batch_size])
@@ -322,18 +325,19 @@ class GatewayPoller:
             watermark=result.next_watermark,
             freshness_seconds=None if lag_ms is None else lag_ms // 1000,
             coverage=fraction,
+            attribution=PollAttribution(metrics_query_failed=metrics_failed, **tally),
         )
 
     async def _cost_centers(
         self, connector: MonitorPort, gateway: GatewayRegistration, watermark: datetime
-    ) -> CostCenterIndex | None:
+    ) -> tuple[CostCenterIndex | None, bool]:
         """Token-metric cost centers for the same window; best effort, never fails the poll.
 
         Kept as its own query so a missing or throttled Application Insights app only costs the
         cost-center tag: the gateway watermark and coverage are unaffected.
         """
         if self._metrics_app_id is None:
-            return None
+            return None, False
         try:
             metrics = await connector.poll(
                 [MonitorSource(SourceKind.APIM_USAGE_METRICS, self._metrics_app_id)],
@@ -348,19 +352,22 @@ class GatewayPoller:
                     "error": type(exc).__name__,
                 },
             )
-            return None
-        return CostCenterIndex(
+            return None, True
+        index = CostCenterIndex(
             row
             for row in metrics.records
             if row.get("source_kind") == SourceKind.APIM_USAGE_METRICS.value
         )
+        return index, False
 
     def _events(
         self,
         gateway: GatewayRegistration,
         result: PollResult,
         cost_centers: CostCenterIndex | None = None,
+        tally: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
+        counts = tally if tally is not None else {}
         events: list[dict[str, Any]] = []
         skipped = 0
         for row in result.records:
@@ -378,6 +385,11 @@ class GatewayPoller:
                     )
                     telemetry = mapped.telemetry  # the unpriced cost side is not posted (D2)
                     cost_center = (mapped.cost.tags or {}).get("cost_center")
+                    how = "row" if cost_center_tags(row) else None
+                    if how is None and cost_centers is not None:
+                        how = cost_centers.lookup_with_source(row)[1]
+                    key = "unattributed" if cost_center is None else f"attributed_{how}"
+                    counts[key] = counts.get(key, 0) + 1
                 elif kind == SourceKind.APIM_MCP.value:
                     telemetry = map_mcp_row(
                         row,
@@ -424,6 +436,8 @@ class GatewayPoller:
 
 def _apply(gateway: GatewayRegistration, outcome: _Outcome, now: datetime) -> GatewayRegistration:
     changes: dict[str, Any] = {"poll_status": outcome.status, "updated_at": now}
+    if outcome.attribution is not None:
+        changes["poll_attribution"] = outcome.attribution
     watermark = outcome.watermark
     if watermark is not None and (
         gateway.poll_watermark is None or watermark > gateway.poll_watermark
