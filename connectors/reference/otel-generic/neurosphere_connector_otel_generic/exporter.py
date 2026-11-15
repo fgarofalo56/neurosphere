@@ -41,8 +41,12 @@ class ConnectorSpanExporter(SpanExporter):
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if self._closed:
             return SpanExportResult.FAILURE
-        future = asyncio.run_coroutine_threadsafe(self._connector.export_spans(spans), self._loop)
+        # Submit and register under one lock: the loop thread can start the coroutine at once,
+        # and a force_flush between the two steps would see nothing pending and report flushed.
         with self._lock:
+            future = asyncio.run_coroutine_threadsafe(
+                self._connector.export_spans(spans), self._loop
+            )
             self._pending.add(future)
         future.add_done_callback(self._discard)
         try:
