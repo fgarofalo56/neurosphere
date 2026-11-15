@@ -22,7 +22,6 @@ _none_
 | [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | PRP-58-hosted-data-path-and-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
 | [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-49-per-agent-aggregates-and-map-metrics (backlog); PRP-55-real-deploy-apply (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
-| [PRP-47-frontend-shell-and-test-infrastructure](backlog/PRP-47-frontend-shell-and-test-infrastructure.md) | P2 | 34 | - | - | sonnet / sonnet | none |
 | [PRP-49-per-agent-aggregates-and-map-metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | P2 | 37 | PRP-18-live-map-and-session-replay | - | sonnet / sonnet | required |
 | [PRP-50-connector-sdk-and-data-path-follow-ups](backlog/PRP-50-connector-sdk-and-data-path-follow-ups.md) | P2 | 38 | - | - | sonnet / sonnet | required |
 | [PRP-52-ci-and-infrastructure-hardening](backlog/PRP-52-ci-and-infrastructure-hardening.md) | P2 | 39 | - | - | sonnet / sonnet | required |
@@ -55,6 +54,7 @@ _none_
 | [PRP-41-producer-registry](shipped/PRP-41-producer-registry.md) | 2026-11-15 | #290 |
 | [PRP-42-connector-configuration-and-credential-references](shipped/PRP-42-connector-configuration-and-credential-references.md) | 2026-11-15 | #293 |
 | [PRP-43-catalog-hardening-and-review-queue](shipped/PRP-43-catalog-hardening-and-review-queue.md) | 2026-11-15 | #292 |
+| [PRP-47-frontend-shell-and-test-infrastructure](shipped/PRP-47-frontend-shell-and-test-infrastructure.md) | 2026-11-15 | #298 |
 | [PRP-65-admin-permissions-policy-repository-and-config-store](shipped/PRP-65-admin-permissions-policy-repository-and-config-store.md) | 2026-11-15 | #277 |
 | [PRP-68-changelog-fragments-and-index-freshness](shipped/PRP-68-changelog-fragments-and-index-freshness.md) | 2026-11-15 | #270 |
 | [PRP-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-11-14 | #221 |
