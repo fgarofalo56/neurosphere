@@ -64,6 +64,9 @@ from neurosphere_core.scope import IdentityScope
 
 AUDITOR_ROLE = "security_auditor"
 
+ENTITY_ID_TAKEN_REASON: Final = "entity_id_taken"
+"""Stable ``reason`` on both create_entity clashes (own or foreign domain look the same)."""
+
 #: One message per kind of "ID is already used". Used for a clash in the caller's own domain AND
 #: for one in another domain, so the answer never reveals which it was.
 _TAKEN: Final = {
@@ -241,12 +244,12 @@ class CatalogEngine:
         self._check_write(scope, str(body["cloud"]), str(body["customer_id"]), domain)
         ref = str(body["id"])
         if await self._find(scope, "entity", ref, scoped=False) is not None:
-            raise InvalidSchemaError(_TAKEN["entity"])
+            raise InvalidSchemaError(_TAKEN["entity"], reason=ENTITY_ID_TAKEN_REASON)
         body["version"] = 1
         body["etag"] = new_etag()
         saved = docs.parse_entity(body)
         if not await self._insert(self._entity_doc(body, domain)):
-            raise InvalidSchemaError(_TAKEN["entity"])
+            raise InvalidSchemaError(_TAKEN["entity"], reason=ENTITY_ID_TAKEN_REASON)
         return saved
 
     async def update_entity(

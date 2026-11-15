@@ -14,6 +14,7 @@ from typing import Final, Protocol, runtime_checkable
 from pydantic import BaseModel, ConfigDict
 
 REASON_OUT_OF_SCOPE: Final = "out_of_scope"
+REASON_ENTITY_COLLISION: Final = "entity_id_collision"
 
 
 class CandidateQuarantineRecord(BaseModel):
