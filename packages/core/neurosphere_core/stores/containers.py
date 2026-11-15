@@ -180,6 +180,13 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
     ContainerSpec("lifecycle_mappings", _CUSTOMER, "neurosphere_core.lifecycle.cosmos"),
     # --- gateway registry (PRP-33) -----------------------------------------------------------
     ContainerSpec("gateways", _CUSTOMER_DOMAIN, "neurosphere_core.gateway.cosmos_store"),
+    # --- operator control plane (PRP-65) ------------------------------------------------------
+    ContainerSpec(
+        "admin_config",
+        _CUSTOMER,
+        "neurosphere_core.admin.cosmos_store",
+        notes="one row per (kind, id); Cosmos id is '<kind>:<id>' (ids are unique per partition)",
+    ),
 )
 
 
