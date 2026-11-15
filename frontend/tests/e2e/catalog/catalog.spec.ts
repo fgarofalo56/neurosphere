@@ -50,7 +50,7 @@ test("search leads to the entity, a recertify hits a 409, reloads and then succe
 
   await page.getByTestId("recertify-open").click();
   await expect(page.getByTestId("change-target")).toHaveText(CONTESTED);
-  await page.getByRole("textbox", { name: /Reason/ }).fill("annual review");
+  // The dialog is in code mode (PRP-43): the reason is the optional code picker, no free text.
   await page.getByRole("button", { name: "Confirm change" }).click();
 
   await expect(page.getByTestId("change-error")).toContainText("changed since you opened it");

@@ -372,10 +372,6 @@ describe("CatalogEntityPage", () => {
     // No reason code picked: the dialog adds no caveat about what is stored.
     expect(screen.queryByTestId("change-reason-note")).toBeNull();
     // hidden: Tabster can mark the dialog subtree aria-hidden mid-animation under load.
-    await user.type(
-      await screen.findByRole("textbox", { name: /Reason/, hidden: true }),
-      "replaced by v2",
-    );
     await user.click(screen.getByRole("button", { name: "Confirm change" }));
     expect(await screen.findByTestId("change-done")).toHaveTextContent("etag-4");
     const post = api.calls.find(
@@ -416,7 +412,6 @@ describe("CatalogEntityPage", () => {
     });
     mount(<CatalogEntityPage />, entityUrl(OWNER), api.fetchImpl);
     await user.click(await screen.findByTestId("recertify-open"));
-    await user.type(await screen.findByRole("textbox", { name: /Reason/ }), "annual review");
     await user.click(screen.getByRole("button", { name: "Confirm change" }));
     expect(await screen.findByTestId("change-error")).toHaveTextContent(
       "changed since you opened it",
@@ -442,7 +437,6 @@ describe("CatalogEntityPage", () => {
     });
     mount(<CatalogEntityPage />, entityUrl(AGENT), api.fetchImpl);
     await user.click(await screen.findByTestId("deprecate-open"));
-    await user.type(await screen.findByRole("textbox", { name: /Reason/ }), "cleanup");
     await user.click(screen.getByRole("button", { name: "Confirm change" }));
     expect(await screen.findByTestId("change-error")).toHaveTextContent("declined");
   });

@@ -370,6 +370,8 @@ class PresentedEdge(BaseModel):
     security_evidence_ids: list[EvidenceIdStr]
     first_observed: common.Timestamp
     last_observed: common.Timestamp
+    provenance: common.Provenance
+    """How the stored edge was established (method, source); copied from the stored edge."""
     pinned: bool
     """True when an active lock pins confidence, validity and status."""
     override_ids: list[str]

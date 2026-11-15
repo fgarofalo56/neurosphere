@@ -35,6 +35,7 @@ from typing import Any, Final
 from neurosphere_contracts.catalog.v1.alias import Alias
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
 
+from neurosphere_core.catalog.auditor import AUDITOR_ROLE, auditor_domains
 from neurosphere_core.catalog.partitioning import DEFAULT_SHARD_COUNT, PartitionKeyShape
 from neurosphere_core.catalog.protocol import (
     MAX_EDGES_PER_OVERRIDE_BATCH,
@@ -62,7 +63,17 @@ from neurosphere_core.errors.taxonomy import ForbiddenError, InvalidSchemaError,
 from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.scope import IdentityScope
 
-AUDITOR_ROLE = "security_auditor"
+__all__ = [
+    "AUDITOR_ROLE",
+    "ENTITY_ID_TAKEN_REASON",
+    "CatalogEngine",
+    "auditor_domains",
+    "new_etag",
+    "require_scope",
+]
+
+ENTITY_ID_TAKEN_REASON: Final = "entity_id_taken"
+"""Stable ``reason`` on both create_entity clashes (own or foreign domain look the same)."""
 
 #: One message per kind of "ID is already used". Used for a clash in the caller's own domain AND
 #: for one in another domain, so the answer never reveals which it was.
@@ -92,23 +103,6 @@ def _alias_eq(key: AliasKey) -> tuple[tuple[Field, str], ...]:
         ("alias_value", key.alias_value),
         ("alias_status", "active"),
     )
-
-
-def auditor_domains(scope: IdentityScope, now: datetime) -> tuple[str, ...]:
-    """Domains where ``scope`` holds an unexpired ``security_auditor`` role (and can read).
-
-    The one definition of "may read raw observations": ``list_observations`` enforces it and
-    ``GraphQuery``'s raw view asks it explicitly instead of probing with an unknown edge ID.
-    """
-    granted: dict[str, None] = {}
-    for assignment in require_scope(scope).to_contract().roles:
-        if assignment.role != AUDITOR_ROLE:
-            continue
-        if docs.is_expired(assignment.expires_at.root if assignment.expires_at else None, now):
-            continue
-        for domain in assignment.domain_ids:
-            granted.setdefault(domain.root)
-    return tuple(d for d in scope.allowed_domains if d in granted)
 
 
 def new_etag() -> str:
@@ -241,12 +235,12 @@ class CatalogEngine:
         self._check_write(scope, str(body["cloud"]), str(body["customer_id"]), domain)
         ref = str(body["id"])
         if await self._find(scope, "entity", ref, scoped=False) is not None:
-            raise InvalidSchemaError(_TAKEN["entity"])
+            raise InvalidSchemaError(_TAKEN["entity"], reason=ENTITY_ID_TAKEN_REASON)
         body["version"] = 1
         body["etag"] = new_etag()
         saved = docs.parse_entity(body)
         if not await self._insert(self._entity_doc(body, domain)):
-            raise InvalidSchemaError(_TAKEN["entity"])
+            raise InvalidSchemaError(_TAKEN["entity"], reason=ENTITY_ID_TAKEN_REASON)
         return saved
 
     async def update_entity(

@@ -21,7 +21,7 @@ export interface ChangeDiffRow {
 }
 
 export interface ChangeConfirmSubmit {
-  /** Trimmed, non-empty. */
+  /** Trimmed, non-empty in text mode; always empty in code mode (the slot carries the reason). */
   readonly reason: string;
   /** Value of the expiry control, or null when it is hidden or left empty. */
   readonly expiry: string | null;
@@ -41,6 +41,16 @@ export interface ChangeConfirmDialogProps {
   /** Make the expiry mandatory when it is shown. */
   readonly expiryRequired?: boolean;
   readonly submitting?: boolean;
+  /**
+   * `text` (default) asks for a free-text reason. `code` hides it: the reason is whatever the
+   * `controls` slot collects (for example a reason-code picker), and the submit control is
+   * enabled when `controlsValid` is true.
+   */
+  readonly reasonMode?: "text" | "code";
+  /** Extra controls rendered under the diff (replaces the reason field in code mode). */
+  readonly controls?: ReactNode;
+  /** Whether the `controls` slot is valid. Only read in code mode; defaults to true. */
+  readonly controlsValid?: boolean;
   /** Static caveat shown under the reason field, e.g. when the endpoint does not store it. */
   readonly reasonNote?: ReactNode;
   /** Server error to show inside the dialog (409 stale, 403, 422). */
@@ -66,6 +76,9 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
     showExpiry = false,
     expiryRequired = false,
     submitting = false,
+    reasonMode = "text",
+    controls,
+    controlsValid = true,
     reasonNote,
     error,
     triggerRef,
@@ -84,7 +97,8 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
 
   const trimmed = reason.trim();
   const expiryOk = !(showExpiry && expiryRequired) || expiry !== "";
-  const canSubmit = trimmed !== "" && expiryOk && !submitting;
+  const reasonOk = reasonMode === "code" ? controlsValid : trimmed !== "";
+  const canSubmit = reasonOk && expiryOk && !submitting;
 
   const close = (): void => {
     onClose();
@@ -128,13 +142,18 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
                 )}
               </dd>
             </dl>
-            <Field label={STRINGS.reason} hint={STRINGS.reasonHint} required>
-              <Textarea
-                value={reason}
-                onChange={(_event, data) => setReason(data.value)}
-                disabled={submitting}
-              />
-            </Field>
+            {controls === undefined || controls === null ? null : (
+              <div data-testid="change-controls">{controls}</div>
+            )}
+            {reasonMode === "text" ? (
+              <Field label={STRINGS.reason} hint={STRINGS.reasonHint} required>
+                <Textarea
+                  value={reason}
+                  onChange={(_event, data) => setReason(data.value)}
+                  disabled={submitting}
+                />
+              </Field>
+            ) : null}
             {reasonNote === undefined || reasonNote === null ? null : (
               <p data-testid="change-reason-note">{reasonNote}</p>
             )}
@@ -165,7 +184,10 @@ export function ChangeConfirmDialog(props: ChangeConfirmDialogProps): ReactEleme
               appearance="primary"
               disabled={!canSubmit}
               onClick={() =>
-                onSubmit({ reason: trimmed, expiry: showExpiry && expiry !== "" ? expiry : null })
+                onSubmit({
+                  reason: reasonMode === "code" ? "" : trimmed,
+                  expiry: showExpiry && expiry !== "" ? expiry : null,
+                })
               }
             >
               {submitting ? STRINGS.submitting : STRINGS.submit}

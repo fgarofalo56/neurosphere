@@ -58,6 +58,89 @@ interface MockEdge {
 }
 
 const edges = new Map<string, MockEdge>();
+const REVIEW_PATH = "/api/v1/catalog/curation/review-queue";
+
+interface MockReviewItem {
+  id: string;
+  edge_id: string;
+  relation_type: string;
+  domain_id: string;
+  reason: string;
+  observed_confidence: number;
+  presented_confidence: number;
+  created_at: string;
+  status: "open" | "resolved";
+  resolution: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+}
+
+function reviewItem(n: number, reason: string): MockReviewItem {
+  return {
+    id: `review:mock-${n}`,
+    edge_id: `commercial:e2e:sandbox:uses_model:review-${n}`,
+    relation_type: "uses_model",
+    domain_id: DOMAIN_OK,
+    reason,
+    observed_confidence: 0.41,
+    presented_confidence: 0.93,
+    created_at: `2026-10-2${n}T08:00:00Z`,
+    status: "open",
+    resolution: null,
+    resolved_by: null,
+    resolved_at: null,
+  };
+}
+
+const reviewItems = new Map<string, MockReviewItem>();
+for (const item of [reviewItem(1, "conflicts_with_lock"), reviewItem(2, "conflicts_with_reject")]) {
+  reviewItems.set(item.id, item);
+}
+
+async function reviewQueue(ctx: FeatureMockContext, path: string): Promise<void> {
+  if (!ctx.authorized) {
+    json(ctx, 401, { error: "missing or unrecognised token" });
+    return;
+  }
+  if (ctx.role === undefined || !CURATE_ROLES.has(ctx.role)) {
+    ctx.forbidden();
+    return;
+  }
+  if (path === REVIEW_PATH) {
+    const open = [...reviewItems.values()].filter((i) => i.status === "open");
+    json(ctx, 200, { items: open });
+    return;
+  }
+  const id = decodeURIComponent(path.slice(REVIEW_PATH.length + 1, -"/resolve".length));
+  const item = reviewItems.get(id);
+  if (item === undefined) {
+    ctx.problem(404, "not_found", "not_found", "review item not found");
+    return;
+  }
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(await ctx.readBody()) as Record<string, unknown>;
+  } catch {
+    ctx.problem(422, "invalid_schema", "invalid_body", "The body is not a JSON object.");
+    return;
+  }
+  const resolution = body["resolution"];
+  if (
+    Object.keys(body).length !== 1 ||
+    (resolution !== "kept_curation" && resolution !== "accepted_inference")
+  ) {
+    ctx.problem(422, "invalid_schema", "extra_forbidden", "The resolve body is not valid.");
+    return;
+  }
+  if (item.status === "open") {
+    item.status = "resolved";
+    item.resolution = resolution;
+    item.resolved_by = MOCK_ACTOR;
+    item.resolved_at = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+  json(ctx, 200, item);
+}
+
 const MOCK_ACTOR = "commercial:e2e:entra:person:psn_mock_steward";
 
 function edgeFor(edgeId: string): MockEdge {
@@ -238,6 +321,13 @@ export const handle: FeatureMockHandler = (ctx) => {
   const url = (ctx as Partial<FeatureMockContext>).url;
   if (url === undefined) return false;
   const path = url.pathname;
+  const isReview =
+    (path === REVIEW_PATH && ctx.req.method === "GET") ||
+    (path.startsWith(`${REVIEW_PATH}/`) && path.endsWith("/resolve") && ctx.req.method === "POST");
+  if (isReview) {
+    void reviewQueue(ctx, path);
+    return true;
+  }
   const isEdgeRead = path.startsWith(EDGES_PREFIX) && ctx.req.method === "GET";
   const isDecision =
     path.startsWith(DOMAINS_PREFIX) &&

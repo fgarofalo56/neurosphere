@@ -414,6 +414,9 @@ def test_all_curation_routes_declare_permissions() -> None:
         (f"{PREFIX}/edges/{{edge_id:path}}/overrides", ("GET",)): ("data.read",),
         (f"{PREFIX}/edges/{{edge_id:path}}/observations", ("GET",)): ("evidence.read",),
         (f"{PREFIX}/edges/{{edge_id:path}}", ("GET",)): ("data.read",),
+        # PRP-43 item 6: the steward review queue.
+        (f"{PREFIX}/review-queue", ("GET",)): ("catalog.curate",),
+        (f"{PREFIX}/review-queue/{{item_id}}/resolve", ("POST",)): ("catalog.curate",),
     }
 
 

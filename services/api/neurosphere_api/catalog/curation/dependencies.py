@@ -25,10 +25,10 @@ from typing import Annotated, Final
 
 from fastapi import Depends, Path, Request
 from neurosphere_core.audit import AuditRepository
-from neurosphere_core.auth.scope import Permission
+from neurosphere_core.auth.scope import Permission, permits
 from neurosphere_core.catalog.protocol import CatalogEdge, CatalogRepository
-from neurosphere_core.catalog.review_queue import ReviewQueue
-from neurosphere_core.errors import DependencyTransientError
+from neurosphere_core.catalog.review_queue import ReviewItem, ReviewQueue
+from neurosphere_core.errors import DependencyTransientError, NotFoundError
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.audit.router import get_audit_repository
@@ -37,15 +37,18 @@ from neurosphere_api.catalog.curation.service import Clock, CurationService
 
 __all__ = [
     "EdgeAccess",
+    "ReviewAccess",
     "edge_access",
     "get_clock",
     "get_repository",
     "get_review_queue",
     "get_service",
+    "review_queue_guard",
 ]
 
 _STATE_KEY: Final = "curation_edge"
 _MAX_EDGE_ID_LENGTH: Final = 512
+_MAX_ITEM_ID_LENGTH: Final = 256
 
 
 def get_repository(request: Request) -> CatalogRepository:
@@ -109,6 +112,40 @@ def _stored_edge_target(request: Request, scope: IdentityScope) -> AuthzTarget |
     if edge is None:
         return None
     return AuthzTarget(domain_id=edge.domain_id.root)
+
+
+@dataclass(frozen=True, slots=True)
+class ReviewAccess:
+    """An authorized review-queue request: the caller's scope and the item it may resolve."""
+
+    scope: IdentityScope
+    item: ReviewItem
+
+
+def review_queue_guard() -> Callable[..., object]:
+    """Dependency factory for ``/review-queue/{item_id}/...`` (scope first, 404 otherwise).
+
+    The caller needs ``catalog.curate`` somewhere (``require``, 403). The item is then loaded
+    with the caller's scope, and ``catalog.curate`` is checked on the ITEM's own domain. A
+    missing item, an item outside the scope and an item in a domain the caller may read but not
+    curate all answer the same 404, so the route never reveals which of them it was.
+    """
+    anywhere = require(Permission.CATALOG_CURATE)
+
+    async def authorize(
+        item_id: Annotated[str, Path(max_length=_MAX_ITEM_ID_LENGTH)],
+        scope: Annotated[IdentityScope, Depends(anywhere)],
+        queue: Annotated[ReviewQueue, Depends(get_review_queue)],
+        clock: Annotated[Clock, Depends(get_clock)],
+    ) -> ReviewAccess:
+        item = await queue.get(scope, item_id)
+        if item is None or not permits(
+            scope, Permission.CATALOG_CURATE, now=clock(), domain_id=item.domain_id
+        ):
+            raise NotFoundError("review item not found")
+        return ReviewAccess(scope=scope, item=item)
+
+    return authorize
 
 
 def edge_access(permission: Permission) -> Callable[..., object]:

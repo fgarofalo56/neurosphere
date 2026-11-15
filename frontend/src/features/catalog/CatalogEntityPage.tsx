@@ -344,9 +344,6 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
             {S.edit}
           </Button>
         ) : null}
-        {canDeprecate || isOwner ? (
-          <ReasonCodePicker value={reasonCode} onChange={setReasonCode} />
-        ) : null}
         {canDeprecate ? (
           <Button
             data-testid="deprecate-open"
@@ -412,6 +409,8 @@ function Actions({ entity }: { readonly entity: CatalogEntityView }): ReactEleme
         version={entity.etag}
         diff={diff}
         submitting={mutation.isPending}
+        reasonMode="code"
+        controls={<ReasonCodePicker value={reasonCode} onChange={setReasonCode} />}
         reasonNote={reasonCode === "" ? undefined : S.reasonCodeNote(S.reasonCodes[reasonCode])}
         error={changeError(mutation.error)}
         triggerRef={triggerRef}

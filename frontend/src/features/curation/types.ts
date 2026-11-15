@@ -97,3 +97,26 @@ export interface DecisionResult {
   readonly override: EdgeOverrideRecord;
   readonly presented: PresentedEdge;
 }
+
+export type ReviewResolution = "kept_curation" | "accepted_inference";
+export type ReviewReason = "conflicts_with_lock" | "conflicts_with_reject";
+
+/** One open inference-vs-curation conflict (`ReviewItem`); evidence ids are pointers only. */
+export interface ReviewItemView {
+  readonly id: string;
+  readonly edge_id: string;
+  readonly relation_type: string;
+  readonly domain_id: string;
+  readonly reason: ReviewReason;
+  readonly observed_confidence: number;
+  readonly presented_confidence: number;
+  readonly created_at: string;
+  readonly status: "open" | "resolved";
+  readonly resolution?: ReviewResolution | null;
+  readonly resolved_by?: string | null;
+  readonly resolved_at?: string | null;
+}
+
+export interface ReviewQueuePageView {
+  readonly items: readonly ReviewItemView[];
+}

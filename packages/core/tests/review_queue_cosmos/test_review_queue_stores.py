@@ -51,7 +51,7 @@ def test_container_constants_match_the_wire_contract() -> None:
 async def test_items_are_partitioned_by_customer_and_domain() -> None:
     queue, container = cosmos_queue()
     await queue.enqueue(make_scope([FINANCE]), make_item())
-    ((partition, doc_id),) = container.docs
+    ((partition, doc_id),) = (k for k in container.docs if not k[1].startswith("open-"))
     assert partition == ("contoso", FINANCE)
     assert "domain" not in container.docs[(partition, doc_id)]
     assert doc_id == "review:one"

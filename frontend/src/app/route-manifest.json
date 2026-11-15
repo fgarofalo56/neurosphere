@@ -11,6 +11,7 @@
     "/catalog/entity",
     "/catalog/publication",
     "/catalog/recertifications",
+    "/catalog/review-queue",
     "/catalog/stale-agents",
     "/dashboards/cost",
     "/dashboards/coverage",

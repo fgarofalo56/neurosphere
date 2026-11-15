@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `196e331236dfe208454692aaeb7bf1b766f10315`. Generated: 2026-11-15.
+> Source commit: `b45b14330095452614c93a24e60feb99b39269f1`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 178 operations on 151 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 182 operations on 155 paths.
 
 ## Status and verification
 
@@ -121,10 +121,14 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | catalog-curation | POST | `/api/v1/catalog/curation/edges/{edge_id}/decisions` | Decide |
 | catalog-curation | GET | `/api/v1/catalog/curation/edges/{edge_id}/observations` | Observations |
 | catalog-curation | GET | `/api/v1/catalog/curation/edges/{edge_id}/overrides` | Overrides |
+| catalog-curation | GET | `/api/v1/catalog/curation/review-queue` | Review Queue |
+| catalog-curation | POST | `/api/v1/catalog/curation/review-queue/{item_id}/resolve` | Resolve Review Item |
 | catalog-curation | GET | `/catalog/curation/edges/{edge_id}` | Presented |
 | catalog-curation | POST | `/catalog/curation/edges/{edge_id}/decisions` | Decide |
 | catalog-curation | GET | `/catalog/curation/edges/{edge_id}/observations` | Observations |
 | catalog-curation | GET | `/catalog/curation/edges/{edge_id}/overrides` | Overrides |
+| catalog-curation | GET | `/catalog/curation/review-queue` | Review Queue |
+| catalog-curation | POST | `/catalog/curation/review-queue/{item_id}/resolve` | Resolve Review Item |
 | copilot | GET | `/api/v1/copilot/conversations` | List Conversations |
 | copilot | POST | `/api/v1/copilot/conversations` | Create Conversation |
 | copilot | GET | `/api/v1/copilot/conversations/{conversation_id}` | Get Conversation |
@@ -917,6 +921,22 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Parameters: `edge_id` (path, required)
 - Responses: `200` `OverrideHistory`; `422` `HTTPValidationError`
 
+#### GET `/api/v1/catalog/curation/review-queue`
+
+- Operation id: `review_queue_api_v1_catalog_curation_review_queue_get`
+- Summary: Review Queue
+- Description: Open conflicts in the caller's scope, oldest first, in domains they may curate.
+- Parameters: `limit` (query)
+- Responses: `200` `ReviewQueuePage`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/catalog/curation/review-queue/{item_id}/resolve`
+
+- Operation id: `resolve_review_item_api_v1_catalog_curation_review_queue__item_id__resolve_post`
+- Summary: Resolve Review Item
+- Parameters: `item_id` (path, required)
+- Request body: application/json: `ReviewResolveBody` (required)
+- Responses: `200` `ReviewItem`; `422` `HTTPValidationError`
+
 #### GET `/catalog/curation/edges/{edge_id}`
 
 **Deprecated**
@@ -953,6 +973,26 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Overrides
 - Parameters: `edge_id` (path, required)
 - Responses: `200` `OverrideHistory`; `422` `HTTPValidationError`
+
+#### GET `/catalog/curation/review-queue`
+
+**Deprecated**
+
+- Operation id: `review_queue_catalog_curation_review_queue_get`
+- Summary: Review Queue
+- Description: Open conflicts in the caller's scope, oldest first, in domains they may curate.
+- Parameters: `limit` (query)
+- Responses: `200` `ReviewQueuePage`; `422` `HTTPValidationError`
+
+#### POST `/catalog/curation/review-queue/{item_id}/resolve`
+
+**Deprecated**
+
+- Operation id: `resolve_review_item_catalog_curation_review_queue__item_id__resolve_post`
+- Summary: Resolve Review Item
+- Parameters: `item_id` (path, required)
+- Request body: application/json: `ReviewResolveBody` (required)
+- Responses: `200` `ReviewItem`; `422` `HTTPValidationError`
 
 ### Tag: copilot
 

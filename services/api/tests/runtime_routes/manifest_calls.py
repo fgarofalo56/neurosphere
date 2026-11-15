@@ -245,6 +245,10 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         *_SHELL,
         ApiCall("/api/v1/catalog/recertifications", q(within_days=30, page_size=50)),
     ),
+    "/catalog/review-queue": (
+        *_SHELL,
+        ApiCall("/api/v1/catalog/curation/review-queue", q(limit=50)),
+    ),
     "/catalog/stale-agents": _SHELL,
     "/deploy": _SHELL,
     "/deploy/capabilities": (

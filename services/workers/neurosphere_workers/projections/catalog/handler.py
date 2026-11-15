@@ -29,6 +29,7 @@ DESIGN: a mis-routed entry is a configuration fault to surface, never to skip si
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -36,6 +37,7 @@ from typing import Final, Protocol, runtime_checkable
 
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.catalog.protocol import AliasKey, CatalogRepository
+from neurosphere_core.catalog.repo.engine import ENTITY_ID_TAKEN_REASON
 from neurosphere_core.catalog.review_queue import ReviewQueue
 from neurosphere_core.catalog.rules import MergeOutcome, format_timestamp, merge_observation
 from neurosphere_core.errors import (
@@ -58,6 +60,7 @@ from neurosphere_workers.projections.catalog.mapping import (
     tool_call_candidates,
 )
 from neurosphere_workers.projections.catalog.quarantine import (
+    REASON_ENTITY_COLLISION,
     REASON_OUT_OF_SCOPE,
     CandidateQuarantine,
     CandidateQuarantineRecord,
@@ -66,6 +69,10 @@ from neurosphere_workers.projections.catalog.quarantine import (
 from neurosphere_workers.projections.catalog.scope import ScopeProvider
 from neurosphere_workers.projections.catalog.source import LoadedEvent, TraceEventSource
 from neurosphere_workers.projections.outbox import OutboxEntry
+
+_LOG = logging.getLogger(__name__)
+DEFAULT_QUARANTINE_WARN: Final = 100
+"""Skipped candidates per process lifetime before one WARNING (counts only, never ids)."""
 
 MAX_STALE_RETRIES: Final = 3
 """Attempts per edge when ``put_edge`` loses an ETag race (re-read and re-merge each time)."""
@@ -118,6 +125,8 @@ class ProjectionStats:
     observations_replayed: int = 0
     review_items: int = 0
     skipped_out_of_scope: int = 0
+    skipped_collision: int = 0
+    entities_undiscoverable: int = 0
     entities_created: int = 0
     entities_existing: int = 0
     stale_retries: int = 0
@@ -142,6 +151,7 @@ class CatalogProjection:
         quarantine: CandidateQuarantine | None = None,
         clock: Callable[[], datetime] = _utcnow,
         max_stale_retries: int = MAX_STALE_RETRIES,
+        quarantine_warn: int = DEFAULT_QUARANTINE_WARN,
     ) -> None:
         if max_stale_retries < 1:
             raise ValueError("max_stale_retries must be >= 1")
@@ -153,6 +163,8 @@ class CatalogProjection:
         self.quarantine: CandidateQuarantine = quarantine or InMemoryCandidateQuarantine()
         self._clock = clock
         self._max_attempts = max_stale_retries
+        self._warn_at = quarantine_warn
+        self._warned = False
         self.stats = ProjectionStats()
 
     async def handle(self, entry: OutboxEntry) -> None:
@@ -211,25 +223,16 @@ class CatalogProjection:
             or candidate.customer_id != scope.customer_id
             or candidate.domain_id not in scope.allowed_domains
         ):
-            await self.quarantine.write(
-                CandidateQuarantineRecord(
-                    id=candidate.edge_id,
-                    reason=REASON_OUT_OF_SCOPE,
-                    relation_type=candidate.relation_type,
-                    source_id=candidate.source_id,
-                    target_id=candidate.target_id,
-                    cloud=candidate.cloud,
-                    customer_id=candidate.customer_id,
-                    domain_id=candidate.domain_id,
-                    rule=candidate.rule,
-                    outbox_entry_id=entry_id,
-                    quarantined_at=self._clock(),
-                )
-            )
+            await self._quarantine(candidate, REASON_OUT_OF_SCOPE, entry_id)
             self.stats.skipped_out_of_scope += 1
+            self._maybe_warn()
             return
         now = self._clock()
-        await self._ensure_entities(scope, candidate, format_timestamp(now))
+        if not await self._ensure_entities(scope, candidate, format_timestamp(now)):
+            await self._quarantine(candidate, REASON_ENTITY_COLLISION, entry_id)
+            self.stats.skipped_collision += 1
+            self._maybe_warn()
+            return
         outcome = await self._store_edge(scope, candidate, now)
         if await self._repo.record_observation(scope, outcome.observation):
             self.stats.observations_recorded += 1
@@ -241,26 +244,61 @@ class CatalogProjection:
             self.stats.review_items += 1
         self.stats.by_rule[candidate.rule] = self.stats.by_rule.get(candidate.rule, 0) + 1
 
+    async def _quarantine(self, candidate: EdgeCandidate, reason: str, entry_id: str) -> None:
+        await self.quarantine.write(
+            CandidateQuarantineRecord(
+                id=candidate.edge_id,
+                reason=reason,
+                relation_type=candidate.relation_type,
+                source_id=candidate.source_id,
+                target_id=candidate.target_id,
+                cloud=candidate.cloud,
+                customer_id=candidate.customer_id,
+                domain_id=candidate.domain_id,
+                rule=candidate.rule,
+                outbox_entry_id=entry_id,
+                quarantined_at=self._clock(),
+            )
+        )
+
+    def _maybe_warn(self) -> None:
+        skipped = self.stats.skipped_out_of_scope + self.stats.skipped_collision
+        if not self._warned and skipped >= self._warn_at:
+            self._warned = True
+            _LOG.warning(
+                "catalog projection quarantined %d candidates (out_of_scope=%d, collision=%d)",
+                skipped,
+                self.stats.skipped_out_of_scope,
+                self.stats.skipped_collision,
+            )
+
     async def _ensure_entities(
         self, scope: IdentityScope, candidate: EdgeCandidate, now_text: str
-    ) -> None:
-        """Create-if-absent the endpoints of ``candidate``; never updates an existing entity."""
+    ) -> bool:
+        """Create-if-absent the endpoints of ``candidate``; never updates an existing entity.
+
+        False when an endpoint id is taken by an entity this scope cannot read (an id collision
+        with another domain): the caller quarantines the candidate. Any other failure raises.
+        """
         for entity_id in dict.fromkeys(referenced_entity_ids(candidate)):
             if await self._repo.get_entity(scope, entity_id) is not None:
                 self.stats.entities_existing += 1
                 continue
             entity = build_entity(entity_id, candidate, now_text)
             if entity is None:
+                self.stats.entities_undiscoverable += 1
+                _LOG.debug("entity type is not discoverable: %s", entity_id.split(":", 4)[3])
                 continue
             try:
                 await self._repo.create_entity(scope, entity)
                 self.stats.entities_created += 1
-            except InvalidSchemaError:
-                # "already exists" (a concurrent or earlier create) is success; anything else
-                # leaves the entity absent and must fail the entry so the checkpoint holds.
-                if await self._repo.get_entity(scope, entity_id) is None:
+            except InvalidSchemaError as exc:
+                if exc.reason != ENTITY_ID_TAKEN_REASON:
                     raise
-                self.stats.entities_existing += 1
+                if await self._repo.get_entity(scope, entity_id) is None:
+                    return False  # taken outside this scope
+                self.stats.entities_existing += 1  # concurrent or earlier create: success
+        return True
 
     async def _store_edge(
         self, scope: IdentityScope, candidate: EdgeCandidate, now: datetime

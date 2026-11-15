@@ -42,3 +42,15 @@ export function edgeHref(edgeId: string): string {
   const p = new URLSearchParams({ edge_id: edgeId });
   return `/${CURATION_EDGE_ROUTE}?${p.toString()}`;
 }
+
+export const CURATION_REVIEW_QUEUE_ROUTE = "catalog/review-queue";
+
+/** Open relationship-conflict items the caller may resolve (oldest first). */
+export function reviewQueuePath(): string {
+  return `${CURATION_API_PREFIX}/curation/review-queue`;
+}
+
+/** Item ids are opaque (`review:<hash>`); always encoded. */
+export function reviewResolvePath(itemId: string): string {
+  return `${reviewQueuePath()}/${encodeURIComponent(itemId)}/resolve`;
+}

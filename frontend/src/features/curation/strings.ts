@@ -116,4 +116,43 @@ export const STRINGS = {
     unverified:
       "The decision could not be verified after it was stored. Reload and check the history.",
   } as Readonly<Record<string, string>>,
+  reviewQueue: {
+    title: "Relationship review queue",
+    description:
+      "Conflicts between new inference and a steward lock or rejection. The curated state is kept until a steward decides.",
+    loading: "Loading review items",
+    failed: "Could not load the review queue",
+    empty: "No open relationship conflicts",
+    table: {
+      age: "Age",
+      edge: "Edge",
+      relation: "Relation",
+      domain: "Domain",
+      reason: "Conflict",
+      confidence: "Observed / presented",
+      action: "Action",
+    },
+    reasons: {
+      conflicts_with_lock: "Inference conflicts with a lock",
+      conflicts_with_reject: "Inference conflicts with a rejection",
+    },
+    resolve: "Resolve",
+    resolveTitle: "Resolve review item",
+    resolutionLabel: "Outcome",
+    resolutionHint:
+      "Recording an outcome closes the item. It does not change the edge; use the edge page to record a decision.",
+    resolutions: {
+      kept_curation: "Keep the curated state",
+      accepted_inference: "Accept the new inference",
+    },
+    fieldStatus: "status",
+    fieldOutcome: "outcome",
+    done: "Review item resolved.",
+    forbidden: "The service declined this resolution. You may not hold curation access here.",
+    notFound: "This item is no longer open or is not in your scope. The list was reloaded.",
+    generic: "The item could not be resolved. Nothing was recorded.",
+    ageMinutes: (n: number): string => `${n} min`,
+    ageHours: (n: number): string => `${n} h`,
+    ageDays: (n: number): string => `${n} d`,
+  },
 } as const;

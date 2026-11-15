@@ -190,6 +190,7 @@ from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
 from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
 from neurosphere_workers.projections.catalog import CatalogProjection
+from neurosphere_workers.projections.catalog.quarantine_cosmos import CosmosCandidateQuarantine
 from neurosphere_workers.projections.outbox import (
     SINK_AGGREGATES,
     SINK_CATALOG,
@@ -221,6 +222,7 @@ from neurosphere_workers.runtime.roles import RoleConfigError
 from neurosphere_workers.runtime.settings import (
     ApimWriteSettings,
     AuthSettings,
+    CatalogProjectionSettings,
     EvalSettings,
     FoundryWriteSettings,
     RecommendationSettings,
@@ -446,6 +448,8 @@ async def build_projections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
         review_queue=CosmosReviewQueue.from_client(cosmos, database=cfg.store.database),
         source=source,
         scope_provider=identity.scope_provider,
+        quarantine=CosmosCandidateQuarantine.from_client(cosmos, database=cfg.store.database),
+        quarantine_warn=CatalogProjectionSettings().quarantine_warn,
     )
     tick = _drain_tick(_outbox_reader(db), SINK_CATALOG, customer, projection.handle)
     return _tick_role("projections", tick, cfg)

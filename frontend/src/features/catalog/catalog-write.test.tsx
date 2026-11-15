@@ -182,8 +182,8 @@ function expectNoServerOwned(body: unknown): void {
 }
 
 async function pickReasonCode(user: ReturnType<typeof userEvent.setup>, label: string) {
-  await user.click(await screen.findByRole("combobox", { name: /Reason code/ }));
-  await user.click(await screen.findByRole("option", { name: label }));
+  await user.click(await screen.findByRole("combobox", { name: /Reason code/, hidden: true }));
+  await user.click(await screen.findByRole("option", { name: label, hidden: true }));
 }
 
 describe("reason-code picker", () => {
@@ -195,16 +195,13 @@ describe("reason-code picker", () => {
       ...lineage,
     });
     mount(<CatalogEntityPage />, entityUrl(AGENT), api.fetchImpl);
-    await screen.findByTestId("deprecate-open");
+    await user.click(await screen.findByTestId("deprecate-open"));
     await pickReasonCode(user, "Superseded by another entity");
-    await user.click(screen.getByTestId("deprecate-open"));
     const note = await screen.findByTestId("change-reason-note");
     expect(note).toHaveTextContent("Superseded by another entity");
     expect(note).not.toHaveTextContent("not stored");
-    await user.type(
-      await screen.findByRole("textbox", { name: /Reason/, hidden: true }),
-      "replaced by v2",
-    );
+    // code mode: no free-text reason field in the dialog
+    expect(screen.queryByRole("textbox", { name: /Reason/, hidden: true })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Confirm change", hidden: true }));
     await screen.findByTestId("change-done");
     const post = api.calls.find((c) => c.url.pathname.endsWith("/deprecate"));
@@ -226,10 +223,8 @@ describe("reason-code picker", () => {
       ...lineage,
     });
     mount(<CatalogEntityPage />, entityUrl(OWNER), api.fetchImpl);
-    await screen.findByTestId("recertify-open");
+    await user.click(await screen.findByTestId("recertify-open"));
     await pickReasonCode(user, "Periodic review");
-    await user.click(screen.getByTestId("recertify-open"));
-    await user.type(await screen.findByRole("textbox", { name: /Reason/, hidden: true }), "annual");
     await user.click(screen.getByRole("button", { name: "Confirm change", hidden: true }));
     await screen.findByTestId("change-done");
     const post = api.calls.find((c) => c.url.pathname.endsWith("/recertify"));
@@ -245,8 +240,7 @@ describe("reason-code picker", () => {
     });
     mount(<CatalogEntityPage />, entityUrl(AGENT), api.fetchImpl);
     await user.click(await screen.findByTestId("deprecate-open"));
-    await user.type(await screen.findByRole("textbox", { name: /Reason/, hidden: true }), "x");
-    await user.click(screen.getByRole("button", { name: "Confirm change", hidden: true }));
+    await user.click(await screen.findByRole("button", { name: "Confirm change", hidden: true }));
     await screen.findByTestId("change-done");
     const post = api.calls.find((c) => c.url.pathname.endsWith("/deprecate"));
     expect(post?.body).toBeUndefined();

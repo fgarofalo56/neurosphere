@@ -1,6 +1,8 @@
 ---
 name: PRP-43-catalog-hardening-and-review-queue
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 292
 priority: P1
 order: 31
 review: required
@@ -35,20 +37,20 @@ Out of scope: `CostRecord` and structured-query contract changes and the contrac
 
 ## Acceptance criteria
 - [ ] Given an out-of-scope candidate, when the projection handles it, then a `CandidateQuarantineRecord` is written to a durable `catalog_quarantine` Cosmos container (idempotent by candidate edge id) and survives a worker restart; a store failure fails the entry and holds the checkpoint (#193 bullet 1).
-- [ ] Given an entity id that exists in a domain outside the worker scope, when a candidate references it, then the candidate is quarantined with reason `entity_id_collision`, `stats.skipped_collision` increments, and the checkpoint advances; given any other create failure (for example `ForbiddenError`) the exception propagates and the checkpoint holds (#193 bullets 2 and 4).
-- [ ] `build_entity` returning `None` is an explicit counted outcome (`stats.entities_undiscoverable`) with a debug log of the entity type only, not a silent `continue` (#193 bullet 3).
-- [ ] When `skipped_out_of_scope + skipped_collision` crosses `NS_WORKER_CATALOG_QUARANTINE_WARN` (default 100 per process lifetime) the worker logs one WARNING with counts only, never ids (#193 alert threshold).
-- [ ] Given a 3-depth neighbors query over an emulator-sized fixture, when endpoints are resolved, then reads run with bounded concurrency (16) and a repeated endpoint is read once; the fake-repository test asserts at most one `get_entity` call per distinct id and a lower wall time than the sequential baseline (#194 bullet 1).
-- [ ] Given a node with more than 500 edges of which fewer than `fan_out` are in scope, then `max_edges` is not reported; given more than `fan_out` in-scope edges it is (#194 bullet 2).
-- [ ] `graph/query.py` no longer imports from `repo/engine.py`; `auditor_domains` lives in a neutral module and `engine.py` re-exports it (#194 bullet 3).
-- [ ] `PresentedEdge.provenance` is populated by `present_edge` from the stored edge, and the curation and map responses carry it; `frontend/src/features/curation/types.ts` shows the method on the edge page (#195 provenance bullet).
-- [ ] Two concurrent `enqueue` calls for the same open conflict leave exactly one open item on the Cosmos emulator; after `resolve`, a later conflict enqueues under its own id (#195 open-duplicate race).
+- [x] Given an entity id that exists in a domain outside the worker scope, when a candidate references it, then the candidate is quarantined with reason `entity_id_collision`, `stats.skipped_collision` increments, and the checkpoint advances; given any other create failure (for example `ForbiddenError`) the exception propagates and the checkpoint holds (#193 bullets 2 and 4).
+- [x] `build_entity` returning `None` is an explicit counted outcome (`stats.entities_undiscoverable`) with a debug log of the entity type only, not a silent `continue` (#193 bullet 3).
+- [x] When `skipped_out_of_scope + skipped_collision` crosses `NS_WORKER_CATALOG_QUARANTINE_WARN` (default 100 per process lifetime) the worker logs one WARNING with counts only, never ids (#193 alert threshold).
+- [x] Given a 3-depth neighbors query over an emulator-sized fixture, when endpoints are resolved, then reads run with bounded concurrency (16) and a repeated endpoint is read once; the fake-repository test asserts at most one `get_entity` call per distinct id and a lower wall time than the sequential baseline (#194 bullet 1).
+- [x] Given a node with more than 500 edges of which fewer than `fan_out` are in scope, then `max_edges` is not reported; given more than `fan_out` in-scope edges it is (#194 bullet 2).
+- [x] `graph/query.py` no longer imports from `repo/engine.py`; `auditor_domains` lives in a neutral module and `engine.py` re-exports it (#194 bullet 3).
+- [x] `PresentedEdge.provenance` is populated by `present_edge` from the stored edge, and the curation and map responses carry it; `frontend/src/features/curation/types.ts` shows the method on the edge page (#195 provenance bullet).
+- [x] Two concurrent `enqueue` calls for the same open conflict leave exactly one open item on the Cosmos emulator; after `resolve`, a later conflict enqueues under its own id (#195 open-duplicate race).
 - [ ] `tests/integration/catalog/` covers `list_edges_by_domain` and the review-queue open-duplicate query on the emulator (#195 coverage bullet).
 - [ ] The id-backfill decision is recorded (see Clarifications 4) in the completion note and `docs/` catalog reference (#195 id bullet).
-- [ ] `ChangeConfirmDialog` accepts an optional `controls` slot and a `reasonMode: "text" | "code"`; in code mode the free-text reason is hidden, submit is enabled when the slot reports valid, and `CatalogEntityPage` moves its reason-code picker into the dialog (#207).
-- [ ] A PUT that targets domain X's own Domain entity needs `catalog.curate` on X (test); creating a `grant` catalog entity changes no principal's computed permissions (test over scope derivation); a body whose declared `Content-Length` exceeds 64 KiB is refused before parsing with `request_too_large`; non-user principals are accepted exactly as the PRP-10 create route (pinned by test) (#208).
-- [ ] `GET /api/v1/catalog/curation/review-queue` lists open items in the caller's scope; `POST /api/v1/catalog/curation/review-queue/{item_id}/resolve` resolves one with `catalog.curate` on the item's domain, stamps `resolved_by` server-side, writes an audit record, and answers an out-of-scope or missing item with the same 404 (#210 API).
-- [ ] `/catalog/review-queue` renders the open items with age, edge link and a resolve control (kept curation or accepted inference), handles empty, 403 and 503 states, passes the axe a11y spec, and appears in Governance navigation (#210 UI).
+- [x] `ChangeConfirmDialog` accepts an optional `controls` slot and a `reasonMode: "text" | "code"`; in code mode the free-text reason is hidden, submit is enabled when the slot reports valid, and `CatalogEntityPage` moves its reason-code picker into the dialog (#207).
+- [x] A PUT that targets domain X's own Domain entity needs `catalog.curate` on X (test); creating a `grant` catalog entity changes no principal's computed permissions (test over scope derivation); a body whose declared `Content-Length` exceeds 64 KiB is refused before parsing with `request_too_large`; non-user principals are accepted exactly as the PRP-10 create route (pinned by test) (#208).
+- [x] `GET /api/v1/catalog/curation/review-queue` lists open items in the caller's scope; `POST /api/v1/catalog/curation/review-queue/{item_id}/resolve` resolves one with `catalog.curate` on the item's domain, stamps `resolved_by` server-side, writes an audit record, and answers an out-of-scope or missing item with the same 404 (#210 API).
+- [x] `/catalog/review-queue` renders the open items with age, edge link and a resolve control (kept curation or accepted inference), handles empty, 403 and 503 states, passes the axe a11y spec, and appears in Governance navigation (#210 UI).
 - [ ] PRP exit: targeted suites, repo-wide `ruff`, `pyright`, frontend lint/typecheck/test and `verify-gates.ps1 -Mode full` pass; the live Cosmos re-measure is reported OPEN.
 
 ## Clarifications (decided)
@@ -259,20 +261,20 @@ Keyed stale-agent digest; moving the search `cache_key` helper (PRP-60); connect
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | needs PRP-37 and PRP-42 merged |
-| 3 | todo | | rebase on PRP-18 |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | after 4 |
-| 7 | todo | | after 6 |
-| 8 | todo | | |
+| 1 | done | prp-43-catalog-hardening | quarantine collision + Cosmos sink + threshold warning done, tests green |
+| 2 | done | prp-43-catalog-hardening | container spec, regenerated cosmos-containers.json (Bicep reads it), worker setting `CatalogProjectionSettings.quarantine_warn`, emulator test written (not run). `build_projections` now passes `CosmosCandidateQuarantine` and `quarantine_warn` (PRP-42 shipped). Emulator test not run. |
+| 3 | done | prp-43-catalog-hardening | bounded concurrency 16, scope-filtered fan-out, `catalog/auditor.py`; rebased on PRP-18 main |
+| 4 | done | prp-43-catalog-hardening | provenance on PresentedEdge, Cosmos open marker, emulator tests written (not run: no compose) |
+| 5 | done | prp-43-catalog-hardening | per-route pre-parse Content-Length guard via route class, pinned tests |
+| 6 | done | prp-43-catalog-hardening | list + resolve routes, `ReviewQueueGuard` (`review_queue_guard`), audit, tests |
+| 7 | done | prp-43-catalog-hardening | dialog `controls`/`reasonMode`, ReviewQueuePage, nav, mock, vitest, e2e + a11y green |
+| 8 | done | prp-43-catalog-hardening | runbook + mkdocs nav + Tier-2 lines done; Tier-3 regeneration, factories wiring and close-out done at merge |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint:
-- Descoped items:
-- OPEN gates (live Cosmos re-measure, #57):
-- Env vars for the operator (`NS_WORKER_CATALOG_QUARANTINE_WARN`):
-- Follow-up issue numbers (non-user principal refusal, connector enrichment):
-- Issue state (#193, #194, #195, #207, #208, #210):
+- Date, PR, merge commit: 2026-11-15, PR #292, merge commit set by the squash merge.
+- Deviations from the blueprint: none in behaviour. `infra/bicep/modules/cosmos.bicep` defines no containers, so it needed no edit; `infra/demo/modules/cosmos-data.bicep` loads `infra/compose/cosmos-containers.json`, which carries `catalog_quarantine`. `az bicep build` was not run.
+- Descoped items: keyed stale-agent plan digest (Clarification 5, accepted); connector enrichment of discovered entities (#193 last bullet).
+- OPEN gates: live Cosmos re-measure (#57, PRP-64); emulator integration tests under `tests/integration/catalog/` (quarantine restart durability, open-duplicate race, `list_edges_by_domain`) written but NOT run; `az bicep build`; `verify-gates.ps1 -Mode full` not run locally (CI runs the suites). Acceptance boxes for restart survival, the race and emulator coverage are left unticked for that reason.
+- Env vars for the operator: `NS_WORKER_CATALOG_QUARANTINE_WARN` (default 100; `.env.example` not edited by the agent).
+- Follow-up issue numbers: non-user principal refusal and connector enrichment (not yet filed). Reviewer follow-ups: (1) `GET /catalog/curation/review-queue` in `services/api/neurosphere_api/catalog/curation/router.py` applies `limit` in `queue.list_open` before filtering to curatable domains, so a steward with curate rights on only some domains can get a short or empty page; filter in the query or over-fetch. (2) Restart durability is now wired (`build_projections` passes `CosmosCandidateQuarantine` after PRP-42 shipped) but needs the emulator run to close the criterion.
+- Issue state: #237 (tracking), #193, #194, #195, #207, #208, #210 closed after merge, except #193 and #195 keep a comment on the remaining OPEN emulator evidence.

@@ -30,9 +30,11 @@ No ``from __future__ import annotations``: FastAPI inspects these signatures.
 """
 
 import uuid
-from typing import Annotated, Final
+from collections.abc import Callable, Coroutine
+from typing import Annotated, Any, Final
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Response, status
+from fastapi.routing import APIRoute
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.catalog import CatalogEntity, CatalogRepository
 from neurosphere_core.catalog.repo.documents import dump, entity_domain
@@ -47,6 +49,7 @@ from neurosphere_api.catalog.service import CatalogService
 from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.ui_adapters.catalog import DomainPath
 from neurosphere_api.ui_adapters.models import (
+    MAX_ENTITY_BYTES,
     CatalogEntityCreateRequest,
     CatalogEntityUpdateRequest,
 )
@@ -82,8 +85,30 @@ def _not_found() -> HTTPException:
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
 
 
-def add_routes(router: APIRouter) -> None:
+class _BoundedBodyRoute(APIRoute):
+    """Refuse a declared ``Content-Length`` over the entity cap BEFORE the body is parsed.
+
+    Chunked bodies carry no length; they stay bounded by the global ``RequestSizeLimitMiddleware``
+    and by the post-parse ``MAX_ENTITY_BYTES`` check on the request model (PRP-43 item 5).
+    """
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        inner = super().get_route_handler()
+
+        async def handler(request: Request) -> Response:
+            declared = request.headers.get("content-length")
+            if declared is not None and declared.isdigit() and int(declared) > MAX_ENTITY_BYTES:
+                raise InvalidSchemaError(
+                    f"Request body exceeds {MAX_ENTITY_BYTES} bytes.", reason="request_too_large"
+                )
+            return await inner(request)
+
+        return handler
+
+
+def add_routes(parent: APIRouter) -> None:
     """Add the entity create and update routes to the ``/api/v1/catalog/domains`` router."""
+    router = APIRouter(route_class=_BoundedBodyRoute)
 
     @router.post(
         "/{domain}/entities",
@@ -138,3 +163,5 @@ def add_routes(router: APIRouter) -> None:
         )
         response.headers["ETag"] = _quoted(entity.etag.root)
         return entity
+
+    parent.include_router(router)

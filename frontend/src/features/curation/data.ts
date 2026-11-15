@@ -14,6 +14,8 @@ import {
   edgeDecisionsPath,
   edgeObservationsPath,
   edgeOverridesPath,
+  reviewQueuePath,
+  reviewResolvePath,
 } from "./paths";
 import { STRINGS } from "./strings";
 import type {
@@ -24,6 +26,9 @@ import type {
   ObservationPage,
   OverrideHistory,
   PresentedEdge,
+  ReviewItemView,
+  ReviewQueuePageView,
+  ReviewResolution,
 } from "./types";
 
 /** Observations are cursor paged; no total is ever shown. */
@@ -153,3 +158,21 @@ export function decisionErrorMessage(error: unknown): string {
 export function isStale(error: unknown): boolean {
   return error instanceof StaleVersionError;
 }
+
+/** Open review items in the caller's curated domains. */
+export const useReviewQueue = createQueryHook<{ limit: number }, ReviewQueuePageView>({
+  key: "curation-review-queue",
+  fetcher: (client, p, signal) =>
+    client.get<ReviewQueuePageView>(reviewQueuePath(), { limit: p.limit }, signal),
+});
+
+export interface ResolveVars {
+  readonly itemId: string;
+  readonly resolution: ReviewResolution;
+}
+
+/** The body names the outcome only; the server stamps who resolved it and when. */
+export const useResolveReviewItem = createMutationHook<ResolveVars, ReviewItemView>({
+  mutate: (client, v) =>
+    client.post<ReviewItemView>(reviewResolvePath(v.itemId), { resolution: v.resolution }),
+});

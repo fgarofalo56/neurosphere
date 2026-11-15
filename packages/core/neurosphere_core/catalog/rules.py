@@ -211,6 +211,7 @@ def present_edge(
         security_evidence_ids=security,
         first_observed=observed.first_observed,
         last_observed=observed.last_observed,
+        provenance=observed.provenance.model_copy(deep=True),
         pinned=pinned,
         override_ids=_union(override_ids),
     )
