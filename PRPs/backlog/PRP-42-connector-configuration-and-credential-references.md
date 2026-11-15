@@ -219,7 +219,7 @@ A Key Vault client library dependency; secret creation or rotation in Key Vault;
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-42-connector-config | core connectors package + tests (34 pass); null credential refused: PRP-65 Cosmos twin cannot round-trip null members |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
