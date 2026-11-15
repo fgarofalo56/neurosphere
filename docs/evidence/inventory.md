@@ -10,11 +10,11 @@ Rows: 156 (collected 156). The package archive and manifest are written to `temp
 
 | path | sha256 | source date | status |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | 73d41bac53b49ea54b9b0d5414a0ca7a48ad117f5ea83b947265ae937b90fb7f | undated | collected |
+| `.github/workflows/ci.yml` | 044b8cd9f8a5eef308ac911cb8f1e6e7a4782a2b35e43c2c6fda857abe3141ba | undated | collected |
 | `.github/workflows/codeql.yml` | 18f80fd32e210be0985dd0fd270f589a26989ed533c2c262b3e2571ebb68ac64 | undated | collected |
 | `.github/workflows/contracts.yml` | 9fd885d3b3aa73d722b8eacf343af3b953864862bacf43999642efb8f3b7c795 | undated | collected |
 | `.github/workflows/dependabot-licences.yml` | 662ba35cd92b944558340b9e7618c1fbf3008b343d9e70c94b6d0ed8e1f9e544 | undated | collected |
-| `.github/workflows/docs.yml` | 3567184e6fcbbbdd7f6d73033922e62d25530c09addfdbd5c740c5de5b03ee64 | undated | collected |
+| `.github/workflows/docs.yml` | 74845d5a99c59bfeac02a8640b36d4c439d96b0e662d815e1140841ccbfd325a | undated | collected |
 | `.github/workflows/release.yml` | 404305317cc5be07db991eaad6863a296c04389ac5245ce48223338ca7821b38 | undated | collected |
 | `.github/workflows/secret-scan.yml` | d62cce4b0e0f6136fe260a31c09e03775ac330aadb55fa040871b9c192afc4c8 | undated | collected |
 | `.github/workflows/security.yml` | e3a1b13b2e2b60c082d727bbb6839a8c899046acb542484afaf612080bbe6617 | undated | collected |
@@ -24,15 +24,15 @@ Rows: 156 (collected 156). The package archive and manifest are written to `temp
 | `docs/adr/0001-record-architecture-decisions.md` | 183128677471045a9512ce4cdbdb519740f5ab466dda96c7b2fa270c27b86ad1 | 2026-10-08 | collected |
 | `docs/adr/0002-stack-pins.md` | e0379b61afaf49449467322b057c410212173ab9f4b6fa8a691798ed44c0f281 | 2026-10-08 | collected |
 | `docs/adr/0003-harness-orchestrated-prp-kit.md` | db93edc5fa86cc62c82d26af8ca9394e31188e9abafcb740c64bc710b9d6a995 | 2026-10-08 | collected |
-| `docs/adr/0004-contract-versioning.md` | 8432e2b432db42f4af4c912603e080d7f60687f228205e6aa6b00304635e338c | 2026-10-10 | collected |
+| `docs/adr/0004-contract-versioning.md` | f8f34f63a4672d3766c5be05b9ed500cfdacd8ce124d99c2da065cf35afec2ff | 2026-10-10 | collected |
 | `docs/adr/0005-catalog-store.md` | 89cd394d00652f8dc32d6f8240ae739950f66dee5e0a86e24a63536820f40d46 | 2026-10-11 | collected |
 | `docs/adr/0006-eventhubs-quarantine.md` | 78f723f60580a4ac228fa10290fea71d299efae2506bc142e9adbc652f88527c | 2026-10-11 | collected |
 | `docs/adr/0007-analytics-adapter-contract.md` | 38308f79ceaf073dbb90e7310ed8e86f85e393f100422205b2ed93496c4a4d81 | 2026-10-11 | collected |
 | `docs/adr/0008-docs-site-tool.md` | 4db75d8ea8e8a32b14e95c5a50c2043018b2b244c403ea8ff99c072bd8dfa171 | 2026-10-30 | collected |
 | `docs/compliance/plans/README.md` | c99ba35816d626e5877d09d1fdfb59616311912a1fd0ae5556ba3a2d987a61d1 | undated | collected |
-| `docs/compliance/plans/boundary-and-data-flow.md` | b089078367ad10933c67753015b59c8313409b01a4acaa719783024542b70f44 | undated | collected |
+| `docs/compliance/plans/boundary-and-data-flow.md` | 1b663015b5142744124ee28bbc1380fcb4651097e2d05eec8bcd67caffef9562 | undated | collected |
 | `docs/compliance/plans/change-management-plan.md` | a1589740b1205ba13bdae9a313cd35931eff9157d7cb8a97e1fea6deae5f7c5b | undated | collected |
-| `docs/compliance/plans/contingency-plan.md` | a11604e6dafa0840bae363ea73eeebe2bb0d775df8bbef51f945c6ffb544cee3 | undated | collected |
+| `docs/compliance/plans/contingency-plan.md` | 61792b0a9924bdf11966c5d82609ba0a8529bf11910cc339eef91014888f634f | undated | collected |
 | `docs/compliance/plans/continuous-monitoring-plan.md` | e563c24f2bd8a5d57433296597294b4ab1f64e0e0ec094c16bfad73d4781f7b4 | undated | collected |
 | `docs/compliance/plans/incident-response-plan.md` | aaf06c386d8eba17a7312a4154fdb009f2076846eb81444984581d9bf95ece3a | undated | collected |
 | `docs/compliance/poam.md` | e9e0d656728f8d83e5273181ba0b42fcf485bbc79f63d5f6b13790a30508fdb4 | undated | collected |
@@ -149,7 +149,7 @@ Rows: 156 (collected 156). The package archive and manifest are written to `temp
 | `docs/ops/dr-runbook.md` | 6b3c6b6509d94711fa0e028b30ad7853d458ef1dd55fd2209a13c2d7ee5fee2a | undated | collected |
 | `docs/ops/slo.md` | 64ae734156d313430196575d363f6c1fc153851e2b1f34c05d840162ec02a558 | undated | collected |
 | `docs/release/dod-checklist.md` | 9c9a0b64c69bf89bb415486b9ce882d94b08433470f00388d6a691a633cade3f | undated | collected |
-| `docs/release/release-process.md` | 70be4f5facb6e724d8907dc78e3451de8a37b9bb39d101ef2ac9b4488763ba95 | undated | collected |
+| `docs/release/release-process.md` | 1cff921c737c7c5b43f6922af943e0b6610785223db6c037ca2a327c546786e4 | undated | collected |
 | `docs/release/verify.md` | 9718548c731a00893d3e3ee045d2e279ca8d332d5602622a954ef2c30675e270 | undated | collected |
 | `docs/release/versioning.md` | 8b7eebeedad32502d503d7e41af5558d1e6ded261ed6142ceee65e011286c8c9 | undated | collected |
 | `docs/security/dfd/confused-deputy.md` | d1c5c0ef4faee53b5c08c581209c3c4c20ea223893476e3df126932e5039ff9d | undated | collected |
@@ -161,7 +161,7 @@ Rows: 156 (collected 156). The package archive and manifest are written to `temp
 | `docs/security/runbooks/key-vault-references.md` | 76e383b2549d5c6260f69f567bba99431c3ec84d17e6b6d1d81851bad9818127 | undated | collected |
 | `docs/security/runbooks/pre-push-checklist.md` | 7344707eae2608c55b362e3541bac02fa7f7c36741629c6a4fab56412f8711ca | undated | collected |
 | `docs/security/runbooks/secret-rotation.md` | ca1ee5716753000fb08cac432e2a69e1cbda57cb9e4718e9cebba94d01bc03c0 | undated | collected |
-| `docs/security/threat-model.md` | b6058e43acd750f402ee2b486c9a965f898791b62eba98e23b74fcf0a7edcd76 | undated | collected |
+| `docs/security/threat-model.md` | 8f4c09c4deff4df1dec30a4424873b5e860ef86108fc82c5d1d17e516aa6882e | undated | collected |
 | `infra/compose/cosmos-containers.json` | 3b4aaeac2b852069a4d208f2a82c47fc506aeca76c14442754efb72b4eb67029 | undated | collected |
 | `infra/compose/eventhubs.config.json` | 6909b28b19ceb8c9c5036d0fa49617b193e4f4bd18664f28b68ea803535979aa | undated | collected |
 | `pyproject.toml` | 486a4d754b19bdc16d9e6a5a2c030bb1c114db006c778beb96d7967253b5533f | undated | collected |

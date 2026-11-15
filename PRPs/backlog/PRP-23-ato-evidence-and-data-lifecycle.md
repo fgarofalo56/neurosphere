@@ -236,7 +236,7 @@ Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md`
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| A | todo | | |
+| A | merged | prp-23-round2-lifecycle-runtime | #120 polish done, CA-7/CP-2/PM-5 designed |
 | 1 | todo | | |
 | 2 | todo | | |
 | 3 | todo | | |
