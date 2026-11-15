@@ -10,7 +10,7 @@ import hashlib
 import json
 import logging
 from collections.abc import AsyncIterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +32,7 @@ from neurosphere_core.audit import (
     find_sensitive_content,
     make_subject,
 )
+from neurosphere_core.audit.siem_health import SiemSinkHealth
 from neurosphere_core.scope import IdentityScope
 from runtime_api.runtime_helpers import (  # pyright: ignore[reportMissingImports]
     Composed,
@@ -263,11 +264,160 @@ async def test_default_is_no_export(monkeypatch: pytest.MonkeyPatch, tmp_path: P
 @pytest.mark.parametrize(
     "siem", [{"SINK": "file"}, {"SINK": "syslog"}], ids=["file_without_path", "unknown_sink"]
 )
-def test_invalid_siem_settings_name_the_audit_component(
+def test_invalid_siem_settings_fail_audit_siem_not_audit(
     monkeypatch: pytest.MonkeyPatch, siem: dict[str, str]
 ) -> None:
+    """PRP-40: a bad sink setting is ``audit_siem`` failed; the audit store still composes."""
     monkeypatch.delenv("NS_AUDIT_SIEM_FILE_PATH", raising=False)
     composed, _client = _compose(monkeypatch, **siem)
-    audit = composed.registry.get("audit")
-    assert audit.state == "failed"
-    assert audit.reason == "audit_siem_settings_invalid"
+    status = composed.registry.get("audit_siem")
+    assert status.state == "failed"
+    assert status.reason == "audit_siem_settings_invalid"
+    repository = _repository(composed)
+    assert repository._exporter is None  # pyright: ignore[reportPrivateUsage]
+    assert not composed.registry.ready  # an optional component that FAILED blocks readiness
+    health = composed.app.state.siem_sink_health
+    assert isinstance(health, SiemSinkHealth)
+    assert health.snapshot().state == "failed"
+
+
+def test_sink_none_reports_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NS_AUDIT_SIEM_SINK", raising=False)
+    composed, _client = _compose(monkeypatch)
+    assert composed.registry.get("audit_siem").state == "disabled"
+    snap = composed.app.state.siem_sink_health.snapshot()
+    assert (snap.sink, snap.state) == ("none", "disabled")
+
+
+# -- Event Hubs (PRP-40 item 2) ----------------------------------------------------------------
+
+
+class _Batch:
+    def __init__(self) -> None:
+        self.events: list[Any] = []
+
+    def add(self, event_data: Any) -> None:
+        self.events.append(event_data)
+
+
+@dataclass
+class _FakeProducer:
+    sent: list[str] = field(default_factory=list[str])
+    fail: bool = False
+
+    async def create_batch(self) -> _Batch:
+        return _Batch()
+
+    async def send_batch(self, event_data_batch: _Batch) -> None:
+        if self.fail:
+            raise ConnectionError("amqp link detached")
+        self.sent.extend(e.body_as_str() for e in event_data_batch.events)
+
+    async def close(self) -> None:
+        return None
+
+
+def _compose_eventhubs(
+    monkeypatch: pytest.MonkeyPatch, producer: _FakeProducer | None, **env: str
+) -> Composed:
+    configure_auth_env(monkeypatch)
+    monkeypatch.setenv("NS_AUDIT_SIEM_SINK", "eventhubs")
+    for name, value in env.items():
+        monkeypatch.setenv(f"NS_AUDIT_SIEM_{name}", value)
+    client = _ItemCosmosClient()
+    clock = FakeClock()
+    overrides = data_overrides(clock, without=("audit",), cosmos_client_factory=lambda: client)
+    if producer is not None:
+        overrides = replace(
+            overrides, backends={**overrides.backends, "audit_siem_producer": producer}
+        )
+    return compose(overrides, builders=builders_with_real_data(), clock=clock)
+
+
+async def test_eventhubs_sink_emits_one_redacted_event_per_append(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    producer = _FakeProducer()
+    composed = _compose_eventhubs(
+        monkeypatch, producer, EVENTHUBS_NAMESPACE="ns-audit", EVENTHUBS_NAME="audit"
+    )
+    assert composed.registry.get("audit_siem").state == "ok"
+    repository = _repository(composed)
+    for draft in _drafts():
+        await repository.append(CHAIN, draft)
+    assert len(producer.sent) == 2
+    _assert_redacted(producer.sent)
+    snap = composed.app.state.siem_sink_health.snapshot()
+    assert (snap.sink, snap.state, snap.total_sent) == ("eventhubs", "ok", 2)
+
+
+async def test_eventhubs_failure_never_fails_the_append(monkeypatch: pytest.MonkeyPatch) -> None:
+    producer = _FakeProducer(fail=True)
+    composed = _compose_eventhubs(
+        monkeypatch, producer, EVENTHUBS_NAMESPACE="ns-audit", EVENTHUBS_NAME="audit"
+    )
+    repository = _repository(composed)
+    records = [await repository.append(CHAIN, draft) for draft in _drafts()]
+    assert [r.sequence for r in records] == [0, 1]
+    snap = composed.app.state.siem_sink_health.snapshot()
+    assert snap.consecutive_failures == 2
+    assert snap.last_failure_reason == "sink_unavailable"
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},
+        {"EVENTHUBS_NAME": "bad hub!"},
+        {"EVENTHUBS_NAME": "audit", "EVENTHUBS_CLIENT_ID": "not-a-guid"},
+    ],
+    ids=["missing_hub", "invalid_hub", "invalid_client_id"],
+)
+def test_invalid_eventhubs_settings_fail_audit_siem(
+    monkeypatch: pytest.MonkeyPatch, env: dict[str, str]
+) -> None:
+    composed = _compose_eventhubs(monkeypatch, _FakeProducer(), **env)
+    status = composed.registry.get("audit_siem")
+    assert (status.state, status.reason) == ("failed", "audit_siem_settings_invalid")
+    assert composed.registry.get("audit").state == "ok"
+
+
+def _non_local(monkeypatch: pytest.MonkeyPatch, cloud: str) -> None:
+    """Compose the REAL producer path outside local (no network: the client is lazy)."""
+    monkeypatch.setenv("NS_ENV", "dev")
+    monkeypatch.setenv("NS_CLOUD", cloud)
+
+
+def test_government_profile_refuses_a_commercial_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    _non_local(monkeypatch, "government")
+    composed = _compose_eventhubs(
+        monkeypatch,
+        None,
+        EVENTHUBS_NAMESPACE="ns-audit.servicebus.windows.net",
+        EVENTHUBS_NAME="audit",
+    )
+    status = composed.registry.get("audit_siem")
+    assert (status.state, status.reason) == ("failed", "audit_siem_settings_invalid")
+
+
+def test_government_profile_builds_an_identity_producer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Outside local the real producer is built with managed identity (lazy: no connection)."""
+    _non_local(monkeypatch, "government")
+    monkeypatch.delenv("NS_EVENTHUBS_CONNECTION_STRING", raising=False)
+    composed = _compose_eventhubs(
+        monkeypatch,
+        None,
+        EVENTHUBS_NAMESPACE="ns-audit.servicebus.usgovcloudapi.net",
+        EVENTHUBS_NAME="audit",
+        EVENTHUBS_CLIENT_ID="00000000-0000-4000-8000-000000000001",
+    )
+    assert composed.registry.get("audit_siem").state == "ok"
+    exporter = _repository(composed)._exporter  # pyright: ignore[reportPrivateUsage]
+    assert exporter is not None
+
+
+def test_non_local_needs_a_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    _non_local(monkeypatch, "commercial")
+    composed = _compose_eventhubs(monkeypatch, None, EVENTHUBS_NAME="audit")
+    status = composed.registry.get("audit_siem")
+    assert (status.state, status.reason) == ("failed", "audit_siem_settings_invalid")

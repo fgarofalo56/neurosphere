@@ -30,7 +30,8 @@ def create() -> FastAPI:
         azure_monitor_connection_string=azure_monitor_connection_string(),
     )
     app = create_app(settings, telemetry=telemetry)
-    configure_ingest_from_settings(app, settings)  # opt-in: NS_INGEST_PRODUCERS_FILE
+    # opt-in: NS_INGEST_PRODUCERS_FILE and/or NS_INGEST_PRODUCER_STORE (PRP-41)
+    configure_ingest_from_settings(app, settings)
     configure_scan_from_settings(app, settings)  # opt-in: NS_SCAN_ENABLED
     configure_apply_from_settings(app, settings)  # opt-in: NS_DEPLOY_APPLY_ENABLED
     compose_app(app, settings)  # readiness names every component that could not be built

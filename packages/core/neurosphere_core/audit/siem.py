@@ -24,6 +24,11 @@ from typing import IO, Any, Final, Protocol
 from neurosphere_contracts.audit.v1.audit_record import AuditRecord
 
 from neurosphere_core.audit.content_guard import GUID
+from neurosphere_core.audit.siem_health import (
+    REASON_EVENT_BUILD_FAILED,
+    SiemSinkHealth,
+    failure_reason,
+)
 from neurosphere_core.observability import REDACTED, redact_value
 
 SIEM_EVENT_TYPE: Final = "neurosphere.audit.v1"
@@ -71,24 +76,70 @@ class SiemSink(Protocol):
         ...
 
 
-class SiemExporter:
-    """Fans each record out to every sink. Never raises."""
+def to_siem_signal(event_type: str, fields: Mapping[str, Any]) -> dict[str, Any]:
+    """A redacted non-record SIEM event (for example an unauthenticated request, PRP-40 item 5).
 
-    def __init__(self, sinks: Sequence[SiemSink], *, logger: logging.Logger | None = None) -> None:
+    ``fields`` is metadata only; it is redacted and scrubbed exactly like a record.
+    """
+    document = redact_value(dict(fields))
+    return {"event_type": event_type, "signal": _scrub(document)}
+
+
+class SiemExporter:
+    """Fans each record out to every sink. Never raises.
+
+    Building the event happens inside the guarded block too (PRP-06 review): a record the
+    redactor cannot serialise is a counted export failure, never a failed append. Every outcome
+    is reported to the optional :class:`~neurosphere_core.audit.siem_health.SiemSinkHealth`.
+    """
+
+    def __init__(
+        self,
+        sinks: Sequence[SiemSink],
+        *,
+        logger: logging.Logger | None = None,
+        health: SiemSinkHealth | None = None,
+    ) -> None:
         self._sinks = tuple(sinks)
         self._log = logger or _log
+        self.health = health
         self.failures = 0
 
+    def _failed(self, sink: str, reason: str, audit_id: str | None) -> None:
+        self.failures += 1
+        if self.health is not None:
+            self.health.record_failure(reason)
+        self._log.warning(
+            "siem sink failed", extra={"sink": sink, "audit_id": audit_id, "siem_reason": reason}
+        )
+
     async def export(self, record: AuditRecord) -> None:
-        event = to_siem_event(record)
+        audit_id = record.audit_id.root
+        try:
+            event = to_siem_event(record)
+        except Exception:  # never fail the append: count it and move on
+            self._failed("*", REASON_EVENT_BUILD_FAILED, audit_id)
+            return
+        await self._fan_out(event, audit_id)
+
+    async def export_signal(self, event_type: str, fields: Mapping[str, Any]) -> None:
+        """Send a redacted non-record event (see :func:`to_siem_signal`). Never raises."""
+        try:
+            event = to_siem_signal(event_type, fields)
+        except Exception:
+            self._failed("*", REASON_EVENT_BUILD_FAILED, None)
+            return
+        await self._fan_out(event, None)
+
+    async def _fan_out(self, event: Mapping[str, Any], audit_id: str | None) -> None:
         for sink in self._sinks:
             try:
                 await sink.emit(event)
-            except Exception:  # a sink must never block or fail the audit append
-                self.failures += 1
-                self._log.warning(
-                    "siem sink failed", extra={"sink": sink.name, "audit_id": record.audit_id.root}
-                )
+            except Exception as exc:  # a sink must never block or fail the audit append
+                self._failed(sink.name, failure_reason(exc), audit_id)
+            else:
+                if self.health is not None:
+                    self.health.record_success()
 
 
 def _line(event: Mapping[str, Any]) -> str:

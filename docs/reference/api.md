@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `4757206648142933698326bdd853257ada4bb138`. Generated: 2026-11-15.
+> Source commit: `b200a8f9585c7955ed45216abfdfe083ddd51063`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 161 operations on 138 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 171 operations on 147 paths.
 
 ## Status and verification
 
@@ -54,8 +54,18 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Lift Revocation |
 | admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Put Role Assignment |
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Delete Role Assignment |
+| admin-producers | GET | `/api/v1/admin/sources/producers` | List Producers |
+| admin-producers | POST | `/api/v1/admin/sources/producers` | Create Producer |
+| admin-producers | GET | `/api/v1/admin/sources/producers/{producer_id}` | Get Producer |
+| admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/disable` | Disable Producer |
+| admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/enable` | Enable Producer |
+| admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/rotate` | Rotate Producer |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/verify` | Verify Audit Chain |
+| audit | GET | `/api/v1/audit/denials` | List Audit Denials |
+| audit | GET | `/api/v1/audit/export` | Export Audit Records |
+| audit | GET | `/api/v1/audit/search` | Search Audit Records |
+| audit | GET | `/api/v1/audit/siem/status` | Audit Siem Status |
 | audit | GET | `/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/audit/chains/{chain_id}/verify` | Verify Audit Chain |
 | catalog | GET | `/api/v1/catalog/entities` | List Entities |
@@ -348,6 +358,50 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Parameters: `principal_id` (path, required), `assignment_id` (path, required), `reason` (query), `If-Match` (header)
 - Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
 
+### Tag: admin-producers
+
+#### GET `/api/v1/admin/sources/producers`
+
+- Operation id: `list_producers_api_v1_admin_sources_producers_get`
+- Summary: List Producers
+- Parameters: `limit` (query)
+- Responses: `200` `ProducerPage`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/producers`
+
+- Operation id: `create_producer_api_v1_admin_sources_producers_post`
+- Summary: Create Producer
+- Request body: application/json: `ProducerCreateRequest` (required)
+- Responses: `201` `ProducerSecretIssued`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/sources/producers/{producer_id}`
+
+- Operation id: `get_producer_api_v1_admin_sources_producers__producer_id__get`
+- Summary: Get Producer
+- Parameters: `producer_id` (path, required)
+- Responses: `200` `ProducerView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/producers/{producer_id}/disable`
+
+- Operation id: `disable_producer_api_v1_admin_sources_producers__producer_id__disable_post`
+- Summary: Disable Producer
+- Parameters: `producer_id` (path, required), `If-Match` (header)
+- Responses: `200` `ProducerView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/producers/{producer_id}/enable`
+
+- Operation id: `enable_producer_api_v1_admin_sources_producers__producer_id__enable_post`
+- Summary: Enable Producer
+- Parameters: `producer_id` (path, required), `If-Match` (header)
+- Responses: `200` `ProducerView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/producers/{producer_id}/rotate`
+
+- Operation id: `rotate_producer_api_v1_admin_sources_producers__producer_id__rotate_post`
+- Summary: Rotate Producer
+- Parameters: `producer_id` (path, required), `If-Match` (header)
+- Responses: `200` `ProducerSecretIssued`; `422` `HTTPValidationError`
+
 ### Tag: audit
 
 #### GET `/api/v1/audit/chains/{chain_id}/records`
@@ -363,6 +417,33 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Verify Audit Chain
 - Parameters: `chain_id` (path, required)
 - Responses: `200` `ChainVerification`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/denials`
+
+- Operation id: `list_audit_denials_api_v1_audit_denials_get`
+- Summary: List Audit Denials
+- Parameters: `cursor` (query), `page_size` (query)
+- Responses: `200` `Page_AuditRecord_`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/export`
+
+- Operation id: `export_audit_records_api_v1_audit_export_get`
+- Summary: Export Audit Records
+- Parameters: `format` (query), `since` (query, required), `until` (query, required), `domain` (query), `operation` (query), `kind` (query), `outcome` (query), `actor` (query), `correlation_id` (query)
+- Responses: `200` no body; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/search`
+
+- Operation id: `search_audit_records_api_v1_audit_search_get`
+- Summary: Search Audit Records
+- Parameters: `cursor` (query), `page_size` (query), `since` (query, required), `until` (query, required), `domain` (query), `operation` (query), `kind` (query), `outcome` (query), `actor` (query), `correlation_id` (query)
+- Responses: `200` `AuditSearchPage`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/audit/siem/status`
+
+- Operation id: `audit_siem_status_api_v1_audit_siem_status_get`
+- Summary: Audit Siem Status
+- Responses: `200` `AuditSiemStatus`
 
 #### GET `/audit/chains/{chain_id}/records`
 

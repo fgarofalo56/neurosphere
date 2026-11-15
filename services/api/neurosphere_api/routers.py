@@ -67,6 +67,12 @@ def _register_audit(registry: RouterRegistry) -> None:
     )
 
 
+def _register_audit_views(registry: RouterRegistry) -> None:
+    from neurosphere_api.audit.router import register_views
+
+    register_views(registry)
+
+
 def _register_ingest(registry: RouterRegistry) -> None:
     from neurosphere_api.ingest import register
 
@@ -241,9 +247,16 @@ def _register_admin_connectors(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_admin_producers(registry: RouterRegistry) -> None:
+    from neurosphere_api.admin.sources.producers import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
+    _register_audit_views,
     _register_ingest,
     _register_deploy_scan,
     _register_deploy_plan,
@@ -273,6 +286,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_ui_adapters,
     _register_admin,
     _register_admin_connectors,
+    _register_admin_producers,
 )
 
 

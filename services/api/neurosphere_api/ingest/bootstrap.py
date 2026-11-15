@@ -18,7 +18,12 @@ from fastapi import FastAPI
 from neurosphere_core.clients import ClientLifetime, create_eventhub_producer
 from neurosphere_core.cloud import Settings
 
-from neurosphere_api.ingest.auth import StaticProducerRegistry
+from neurosphere_api.ingest.auth import ProducerRegistry, StaticProducerRegistry
+from neurosphere_api.ingest.producer_store import (
+    LayeredProducerRegistry,
+    ProducerStoreSettings,
+    StoreProducerRegistry,
+)
 from neurosphere_api.ingest.publisher import EventHubsPublisher
 from neurosphere_api.ingest.router import build_service, configure_ingest
 from neurosphere_api.ingest.settings import IngestSettings
@@ -39,13 +44,27 @@ def _close_on_shutdown(app: FastAPI, lifetime: ClientLifetime) -> None:
 
 
 def configure_ingest_from_settings(
-    app: FastAPI, settings: Settings, ingest_settings: IngestSettings | None = None
+    app: FastAPI,
+    settings: Settings,
+    ingest_settings: IngestSettings | None = None,
+    store_settings: ProducerStoreSettings | None = None,
 ) -> bool:
-    """Wire the ingest edge when a producers file is configured. True when configured."""
+    """Wire the ingest edge when a producers file or the producer store is configured."""
     conf = ingest_settings or IngestSettings()
-    if conf.producers_file is None:
+    store_conf = store_settings or ProducerStoreSettings()
+    if conf.producers_file is None and not store_conf.store:
         return False
-    registry = StaticProducerRegistry.from_file(conf.producers_file)  # fail fast on a bad file
+    fallback = (
+        StaticProducerRegistry.from_file(conf.producers_file)  # fail fast on a bad file
+        if conf.producers_file is not None
+        else StaticProducerRegistry([])
+    )
+    registry: ProducerRegistry = fallback
+    if store_conf.store:
+        store = StoreProducerRegistry()
+        registry = LayeredProducerRegistry(store, fallback)
+        app.state.ingest_producer_store = store
+        app.state.ingest_producer_refresh_seconds = store_conf.refresh_seconds
     lifetime = ClientLifetime()
     producer = create_eventhub_producer(
         settings,
