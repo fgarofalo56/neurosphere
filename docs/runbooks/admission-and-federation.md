@@ -15,7 +15,8 @@ runs before authentication and cannot see the server-derived scope.
   validated. A caller-supplied header, query or body value never selects a bucket. A principal
   with several domains and no route domain shares one per-scope bucket (no multiplier).
 - **Coverage:** every route that uses `require(...)`, once per request. Health and public paths
-  are not charged. The ingest edge keeps its own per-producer limiter.
+  are not charged. The ingest edge keeps its own per-producer limiter. A route that does not
+  use `require(...)` is not rate limited at all, so check new routes against this rule.
 - **Answer when over quota:** `429` problem body with `code: rate_limited` and a `Retry-After`
   header (seconds).
 
