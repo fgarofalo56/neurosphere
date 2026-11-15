@@ -115,6 +115,7 @@ nav:
   - Get started:
       - runbooks/install.md
       - dev/local-setup.md
+      - dev/env-example-process.md
       - runbooks/seeding.md
       - deploy/hosted-demo.md
   - Runbooks:
