@@ -13,6 +13,7 @@ from neurosphere_core.analytics.databricks.executor import (
     DatabricksStatementExecutor,
     ExecutorError,
     build_statement_body,
+    create_databricks_executor,
     open_databricks_executor,
 )
 from neurosphere_core.analytics.databricks.migrations import (
@@ -34,6 +35,7 @@ __all__ = [
     "apply_migrations",
     "build_statement_body",
     "create_adapter",
+    "create_databricks_executor",
     "open_databricks_executor",
     "sqlite_shims",
 ]

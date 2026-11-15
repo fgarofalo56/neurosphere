@@ -165,27 +165,42 @@ class DatabricksStatementExecutor:
         return ExecutionOutcome(rows=rows, rows_scanned=scanned, cost_units=Decimal(0))
 
 
-@asynccontextmanager
-async def open_databricks_executor(
-    *, host: str, warehouse_id: str, scope: str = DATABRICKS_SCOPE
-) -> AsyncIterator[DatabricksStatementExecutor]:
-    """The real client: httpx plus an Entra token from DefaultAzureCredential (lazy imports).
+def create_databricks_executor(
+    *, host: str, warehouse_id: str, scope: str = DATABRICKS_SCOPE, authority: str | None = None
+) -> tuple[DatabricksStatementExecutor, Callable[[], Awaitable[None]]]:
+    """Build the real client without any network access (the token and the first request
+    happen on ``execute``). Returns the executor and an async ``close`` for shutdown.
 
-    No network at open time: the token and the first request happen on ``execute``."""
+    ``authority`` is the Entra login host of the deployment cloud (never the other cloud's)."""
     import httpx
     from azure.identity.aio import DefaultAzureCredential
 
-    credential = DefaultAzureCredential()
+    credential = (
+        DefaultAzureCredential(authority=authority) if authority else DefaultAzureCredential()
+    )
+    client = httpx.AsyncClient(
+        base_url=f"https://{host}", timeout=httpx.Timeout(60.0), follow_redirects=False
+    )
 
     async def token() -> str:
         return (await credential.get_token(scope)).token
 
+    async def close() -> None:
+        try:
+            await client.aclose()
+        finally:
+            await credential.close()
+
+    return DatabricksStatementExecutor(client, token, warehouse_id=warehouse_id), close
+
+
+@asynccontextmanager
+async def open_databricks_executor(
+    *, host: str, warehouse_id: str, scope: str = DATABRICKS_SCOPE
+) -> AsyncIterator[DatabricksStatementExecutor]:
+    """The real client as an async context manager (closed on exit)."""
+    executor, close = create_databricks_executor(host=host, warehouse_id=warehouse_id, scope=scope)
     try:
-        async with httpx.AsyncClient(
-            base_url=f"https://{host}",
-            timeout=httpx.Timeout(60.0),
-            follow_redirects=False,
-        ) as client:
-            yield DatabricksStatementExecutor(client, token, warehouse_id=warehouse_id)
+        yield executor
     finally:
-        await credential.close()
+        await close()
