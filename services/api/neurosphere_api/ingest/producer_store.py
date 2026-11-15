@@ -88,7 +88,7 @@ class StoreProducerRegistry:
     def get(self, producer_id: str) -> ProducerRegistration | None:
         return self._snapshot.get(producer_id)
 
-    def apply(self, document: AdminConfigDocument) -> None:
+    def record_change(self, document: AdminConfigDocument) -> None:
         """Immediate local update after an admin write (copy-on-write)."""
         entry = _registration(document)
         if entry is None:

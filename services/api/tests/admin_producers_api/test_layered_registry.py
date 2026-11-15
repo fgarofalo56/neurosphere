@@ -69,7 +69,7 @@ async def test_local_apply_is_immediate_and_disable_hides_file_entry() -> None:
         CUSTOMER, "p1", cloud="commercial", sources=SOURCES, updated_by=ACTOR
     )
     assert created.issued is not None
-    store.apply(created.document)
+    store.record_change(created.document)
     # Store wins: the file secret no longer works, the issued one does.
     with pytest.raises(UnauthorizedError):
         auth.authenticate("Bearer p1.file-secret-value")
@@ -77,7 +77,7 @@ async def test_local_apply_is_immediate_and_disable_hides_file_entry() -> None:
     off = await admin.set_status(
         CUSTOMER, "p1", "disabled", if_match=created.document.etag.root, updated_by=ACTOR
     )
-    store.apply(off.document)
+    store.record_change(off.document)
     for presented in ("file-secret-value", created.issued.secret):
         with pytest.raises(UnauthorizedError) as exc:
             auth.authenticate(f"Bearer p1.{presented}")

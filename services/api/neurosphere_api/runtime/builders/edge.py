@@ -94,7 +94,7 @@ def _build_producers(ctx: BuildContext, store: StoreProducerRegistry) -> None:
     cloud = ctx.settings.cloud_profile.cloud.value
     admin = ProducerAdmin(repository, cloud=cloud)  # type: ignore[arg-type]
     configure_producer_admin(
-        ctx.app, ProducerAdminPlane(admin=admin, audit=audit, on_change=store.apply)
+        ctx.app, ProducerAdminPlane(admin=admin, audit=audit, on_change=store.record_change)
     )
     interval = float(getattr(ctx.app.state, "ingest_producer_refresh_seconds", 30.0))
     tasks: list[asyncio.Task[None]] = []
