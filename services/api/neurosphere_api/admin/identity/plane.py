@@ -28,7 +28,11 @@ from neurosphere_core.audit import (
     build_denied,
     make_subject,
 )
-from neurosphere_core.auth.revocation import RevocationAuditEvent, RevocationService
+from neurosphere_core.auth.revocation import (
+    RevocationAuditEvent,
+    RevocationHookRegistry,
+    RevocationService,
+)
 from neurosphere_core.auth.scope import PolicyRepository
 from neurosphere_core.auth.scope.policy_admin import PolicyAdminRepository
 from neurosphere_core.errors import DependencyTransientError
@@ -168,6 +172,8 @@ class IdentityAdminPlane:
     audit: AuditRepository | None
     resource_domains: ResourceDomainResolver | None
     clock: Callable[[], float]
+    #: ``REVOCATION_HOOKS``: a policy write calls its cache invalidators for the target.
+    cache_hooks: RevocationHookRegistry | None = None
 
 
 def configure_identity_admin(app: FastAPI, plane: IdentityAdminPlane) -> None:

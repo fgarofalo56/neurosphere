@@ -150,6 +150,7 @@ def build(ctx: BuildContext) -> None:
             audit=ctx.maybe_shared(AUDIT_REPOSITORY),
             resource_domains=_resource_domains(ctx),
             clock=ctx.overrides.clock or time.time,
+            cache_hooks=ctx.maybe_shared(REVOCATION_HOOKS),
         ),
     )
 
