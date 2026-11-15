@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { test as base, expect, type Page, type Response } from "@playwright/test";
+import { CI_MODE } from "../../playwright.real-stack.config";
 import { SESSION_FILE } from "./global-setup.ts";
+import { standInConfig } from "./stand-in.ts";
 
 /** One API answer seen by the page while a route was open. */
 export interface ApiAnswer {
@@ -27,6 +29,9 @@ async function restoreSession(page: Page): Promise<void> {
 
 export const test = base.extend<{ visit: RouteVisit }>({
   visit: async ({ page }, use) => {
+    if (CI_MODE) {
+      await page.route("**/config.json", (route) => route.fulfill({ json: standInConfig() }));
+    }
     await restoreSession(page);
     const answers: ApiAnswer[] = [];
     page.on("response", (response: Response) => {

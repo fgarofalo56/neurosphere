@@ -32,6 +32,7 @@ from neurosphere_core.auth.scope import (
 from neurosphere_core.catalog.repo.memory import InMemoryCatalogRepository
 from neurosphere_core.cloud import CloudName
 from neurosphere_core.evaluation.store import InMemoryEvaluationStore
+from neurosphere_core.gateway import InMemoryGatewayStore
 from neurosphere_core.hitl.decisions import InMemoryDecisionStore
 from neurosphere_core.hitl.store import InMemoryHitlStore
 from neurosphere_core.mcp.store import InMemoryMcpServerStore
@@ -128,6 +129,7 @@ class Stack:
         self.evaluations = InMemoryEvaluationStore()
         self.intents = InMemoryIntentStore()
         self.mcp = InMemoryMcpServerStore()
+        self.gateways = InMemoryGatewayStore()
         audit = AuditRepository(InMemoryAuditStore())
         key = resolve_pseudonym_key(AuthSettings(), env="local")
         self.reports = InMemoryReportStore()
@@ -154,6 +156,7 @@ class Stack:
             ),
             reports=self.reports,
             mcp=self.mcp,
+            gateways=self.gateways,
         )
 
 
@@ -295,6 +298,63 @@ def test_seeding_refuses_to_go_past_awaiting_confirmation(tmp_path: Path) -> Non
 
 
 # -- idempotency ---------------------------------------------------------------------------
+
+
+def test_entities_written_by_the_projection_during_the_run_are_not_pre_existing(
+    tmp_path: Path,
+) -> None:
+    """#211: skipped_existing must mean 'there before this run', not 'a worker got there first'."""
+    stack = Stack()
+    _run(stack, tmp_path / "one")  # leaves every entity in the catalog
+    scope = asyncio.run(seed.worker_scope(stack.backends, _config()))
+    before = asyncio.run(seed.existing_entity_ids(stack.backends, scope, tmp_path / "one"))
+    assert before, "the first run wrote entities"
+
+    projected = {next(iter(sorted(before)))}  # one entity a projection worker 'created' mid-run
+    tally = seed.Tally()
+    asyncio.run(
+        seed.seed_entities(
+            stack.backends, scope, tmp_path / "one", tally, preexisting=before - projected
+        )
+    )
+    assert tally.seeded["entities"] == 1
+    assert tally.skipped == len(before) - 1
+
+
+def test_one_synthetic_gateway_is_registered_once(tmp_path: Path) -> None:
+    """#209 item 3: /gateways/detail needs a registration; the seed makes exactly one."""
+    stack = Stack()
+    first = _run(stack, tmp_path / "one")
+    second = _run(stack, tmp_path / "two")
+    assert first["seeded"]["gateways"] == 1
+    assert second["seeded"]["gateways"] == 0
+    domain = seed.World(seed.generate_config(_config())).domain_id(0)
+    page = asyncio.run(stack.gateways.list("synthco", domain))
+    assert [g.name for g in page.items] == ["apim-synthetic-sandbox"]
+    assert page.items[0].mode == "observe"
+
+
+def test_grants_only_publishes_nothing_and_waits_for_nothing(tmp_path: Path) -> None:
+    """PRP-38 item 1 (#205): grants land before the app profile starts, with no worker running."""
+    stack = Stack(lands=False)  # a worker-less stack: any wait would time out
+
+    summary = asyncio.run(seed.run_grants_only(_config(), stack.backends, tmp_path, environ={}))
+
+    assert summary["seeded"]["grants"] > 0
+    assert summary["seeded"]["prices"] == 1  # workers must load it at start (#209)
+    assert sum(v for k, v in summary["seeded"].items() if k not in ("grants", "prices")) == 0
+    assert stack.hub.published == []
+
+
+def test_grants_only_is_idempotent_and_the_full_seed_finds_the_grants(tmp_path: Path) -> None:
+    stack = Stack()
+    asyncio.run(seed.run_grants_only(_config(), stack.backends, tmp_path / "g", environ={}))
+    again = asyncio.run(
+        seed.run_grants_only(_config(), stack.backends, tmp_path / "g2", environ={})
+    )
+    assert again["seeded"]["grants"] == 0
+    full = _run(stack, tmp_path / "full")
+    assert full["seeded"]["grants"] == 0
 
 
 def test_second_run_creates_nothing_and_reports_skipped_existing(tmp_path: Path) -> None:
