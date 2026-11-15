@@ -1,0 +1,2 @@
+### Added
+- PRP-41: store-backed ingest producer registry. Admins create, rotate, disable and enable producers through audited routes under `/api/v1/admin/sources/producers` (secret returned once, only a SHA-256 digest stored, `If-Match` on mutations, customer-level `config.manage`). The ingest edge authenticates against the store layered over the producers file, which remains as a fallback; enable with `NS_INGEST_PRODUCER_STORE` and tune with `NS_INGEST_PRODUCER_REFRESH_SECONDS`. New optional readiness component `admin_producers` (PR #290).

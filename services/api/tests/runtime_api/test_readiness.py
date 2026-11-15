@@ -80,6 +80,7 @@ def test_fully_configured_app_is_ready(monkeypatch: pytest.MonkeyPatch) -> None:
         "composition.mcp_server.disabled": "ok",
         "composition.ingest.disabled": "ok",
         "composition.scan.disabled": "ok",
+        "composition.admin_producers.disabled": "ok",
         "composition.analytics_adapter.disabled": "ok",
     }
     assert composed.registry.ready
@@ -189,6 +190,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "edge",
         "lifecycle",
         "admission",
+        "admin_connectors",
         "admin",
         "analytics",
     ]
@@ -223,6 +225,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "edge",
         "lifecycle",
         "admission",
+        "admin_connectors",
         "admin",
         "analytics",
     ]

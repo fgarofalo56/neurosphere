@@ -115,3 +115,17 @@ def register(
         prefix=ROUTE_PREFIX,
         alias_prefix=ALIAS_PREFIX,
     )
+
+
+def register_views(registry: RouterRegistry) -> None:
+    """Router-registry hook for the PRP-40 routes (search, export, denials, SIEM status).
+
+    Each has its own prefix. They use ``neurosphere_api.authz.require`` directly, so they are
+    imported here lazily (this module stays free of an authz import at load time).
+    """
+    from neurosphere_api.audit import denials, export, search, siem_status
+
+    registry.register(search.PREFIX, search.build_router())
+    registry.register(export.PREFIX, export.build_router())
+    registry.register(denials.PREFIX, denials.build_router())
+    registry.register(siem_status.PREFIX, siem_status.build_router())
