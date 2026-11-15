@@ -1,7 +1,7 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `67597e4b1151427218b932f0756138556fecd1d4`. Generated: 2026-11-14.
+> Source commit: `3e52431d80da7db195cae76c1ee4b9596056c1c4`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
 NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 143 operations on 127 paths.
@@ -23,6 +23,10 @@ Errors are RFC 9457 problem details (`ProblemDetails`, `application/problem+json
 | `rate_limited` | 429 | yes | optional | required | A rate limit or bounded budget was exceeded. Retry after retry_after_seconds. |
 | `invalid_schema` | 422 | no | optional | forbidden | The request body failed contract validation. The optional errors array carries JSON Pointers to the offending members. |
 | `dependency_transient` | 503 | yes | optional | optional | A downstream dependency failed transiently. 503 by default (including fail-closed policy-store outage); 502 when an upstream returned an invalid response. Retry with backoff. |
+| `not_found` | 404 | no | optional | forbidden | No route matches, or the named resource does not exist in the caller's scope. Added in 1.1.0 (PRP-37). A resource outside the caller's IdentityScope is reported as not_found or forbidden per route policy, never with details of the other tenant or domain. |
+| `method_not_allowed` | 405 | no | optional | forbidden | The route exists but does not accept this HTTP method. Added in 1.1.0 (PRP-37). |
+| `payload_too_large` | 413 | no | optional | forbidden | The request body exceeds the route's size limit. Shrink the payload; never retried automatically. Added in 1.1.0 (PRP-37). |
+| `internal_error` | 500 | no | optional | forbidden | An unexpected server fault. The body carries only the correlation_id; no stack trace, exception text, query or secret. Not retried automatically. Added in 1.1.0 (PRP-37). |
 
 Framework-level validation failures on some routes surface as the OpenAPI `HTTPValidationError` (HTTP 422) shape listed per operation below.
 

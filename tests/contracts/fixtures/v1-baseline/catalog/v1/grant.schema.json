@@ -1,0 +1,599 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/grant.schema.json",
+  "title": "Grant",
+  "x-ns-name": "Grant",
+  "description": "Access grant of one Entra principal (user, application, agent or Entra group) to one target (a model API, a model deployment or an MCP server) with optional usage limits and a cost center. It is the unit a gateway enforces (PRP-34); this document is desired state only and records no enforcement. Cross-field rules enforced in this schema: target.ref carries the type segment of target.kind (model_api is a 'service' entity, model_deployment a 'model_deployment', mcp_server an 'mcp_server'); MCP grants are call-limited only (tokens_per_minute, token_quota, quota_period and requests_per_minute must be null) and model grants carry no mcp_calls_per_minute; token_quota and quota_period are set together; a user principal carries no display label (person names are never stored). The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_grant_window (valid_from < valid_until when both are set).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:grant:[a-z0-9._/=-]+$",
+      "description": "Stable canonical ID of this entity. Canonical ID (canonical_id.schema.json) whose type segment is 'grant'. The owning domain is domain_id, as for every catalog entity."
+    },
+    "entity_type": {
+      "type": "string",
+      "const": "grant"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "lifecycle_status": {
+      "$ref": "common.schema.json#/$defs/lifecycle_status"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "common.schema.json#/$defs/domain_id"
+    },
+    "classification": {
+      "$ref": "common.schema.json#/$defs/classification"
+    },
+    "residency_region": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/token"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Azure region holding the authoritative copy; null when unknown."
+    },
+    "attributes": {
+      "$ref": "common.schema.json#/$defs/attributes"
+    },
+    "principal": {
+      "type": "object",
+      "description": "The Entra principal the grant applies to. Gateways match object_id against the token 'oid' claim (user, application, agent) or the 'groups' claim (entra_group).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "user",
+            "application",
+            "agent",
+            "entra_group"
+          ]
+        },
+        "object_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "description": "Entra object ID (GUID) of the principal, lowercase hyphenated form (claims are compared as exact strings). A pattern rather than format uuid keeps the generated models wire-exact strings."
+        },
+        "display": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/display_name"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Label of an application, agent or group. Must be null for a user principal: person names are never stored in the catalog."
+        }
+      },
+      "required": [
+        "kind",
+        "object_id"
+      ],
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "description": "What the principal may call. ref is the canonical ID of the target catalog entity; its type segment follows kind (model_api -> service, model_deployment -> model_deployment, mcp_server -> mcp_server).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "model_api",
+            "model_deployment",
+            "mcp_server"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:(service|model_deployment|mcp_server):[a-z0-9._/=-]+$",
+          "description": "Target entity. Canonical ID (canonical_id.schema.json) whose type segment is 'service' or 'model_deployment' or 'mcp_server'."
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "description": "Usage limits; null means no limit of that kind is declared. Token limits apply to model targets only; MCP grants are call-limited only.",
+      "properties": {
+        "tokens_per_minute": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Token rate limit (model targets only)."
+        },
+        "token_quota": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Token quota per quota_period (model targets only); set together with quota_period."
+        },
+        "quota_period": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "minute",
+                "hour",
+                "day",
+                "week",
+                "month",
+                "year"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Period of token_quota; set together with token_quota."
+        },
+        "requests_per_minute": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Request rate limit (model targets only)."
+        },
+        "mcp_calls_per_minute": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MCP call rate limit (mcp_server targets only)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost_center": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Cost center usage under this grant is attributed to; null when not assigned. Restricted to characters safe in an HTTP header and a metric dimension."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "false suspends the grant without deleting it."
+    },
+    "valid_from": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Start of the grant; null means effective immediately."
+    },
+    "valid_until": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "End of the grant (exclusive); null means open-ended."
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/provenance"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "entity_type",
+    "version",
+    "etag",
+    "lifecycle_status",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "principal",
+    "target",
+    "limits",
+    "enabled",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "properties": {
+              "ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^commercial:"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "properties": {
+              "ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^government:"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "model_api target: the ref is a service entity; no MCP call limit.",
+      "if": {
+        "properties": {
+          "target": {
+            "properties": {
+              "kind": {
+                "const": "model_api"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "ref": {
+                "pattern": "^[^:]+:[^:]+:[^:]+:service:"
+              }
+            }
+          },
+          "limits": {
+            "properties": {
+              "mcp_calls_per_minute": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "model_deployment target: the ref is a model_deployment entity; no MCP call limit.",
+      "if": {
+        "properties": {
+          "target": {
+            "properties": {
+              "kind": {
+                "const": "model_deployment"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "ref": {
+                "pattern": "^[^:]+:[^:]+:[^:]+:model_deployment:"
+              }
+            }
+          },
+          "limits": {
+            "properties": {
+              "mcp_calls_per_minute": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "mcp_server target: the ref is an mcp_server entity; MCP grants are call-limited only.",
+      "if": {
+        "properties": {
+          "target": {
+            "properties": {
+              "kind": {
+                "const": "mcp_server"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "target"
+        ]
+      },
+      "then": {
+        "properties": {
+          "target": {
+            "properties": {
+              "ref": {
+                "pattern": "^[^:]+:[^:]+:[^:]+:mcp_server:"
+              }
+            }
+          },
+          "limits": {
+            "properties": {
+              "tokens_per_minute": {
+                "type": "null"
+              },
+              "token_quota": {
+                "type": "null"
+              },
+              "quota_period": {
+                "type": "null"
+              },
+              "requests_per_minute": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "A token quota needs its period.",
+      "if": {
+        "properties": {
+          "limits": {
+            "properties": {
+              "token_quota": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "token_quota"
+            ]
+          }
+        },
+        "required": [
+          "limits"
+        ]
+      },
+      "then": {
+        "properties": {
+          "limits": {
+            "properties": {
+              "quota_period": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "quota_period"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "$comment": "A quota period without a token quota is meaningless.",
+      "if": {
+        "properties": {
+          "limits": {
+            "properties": {
+              "quota_period": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "quota_period"
+            ]
+          }
+        },
+        "required": [
+          "limits"
+        ]
+      },
+      "then": {
+        "properties": {
+          "limits": {
+            "properties": {
+              "token_quota": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "token_quota"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "$comment": "Person names are never stored: a user principal has no display label.",
+      "if": {
+        "properties": {
+          "principal": {
+            "properties": {
+              "kind": {
+                "const": "user"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        },
+        "required": [
+          "principal"
+        ]
+      },
+      "then": {
+        "properties": {
+          "principal": {
+            "properties": {
+              "display": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

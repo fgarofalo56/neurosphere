@@ -1,6 +1,6 @@
 {
   "$comment": "Error taxonomy table (data). PRP.md section 3 and PRP-01 Clarification 14. problem-details.schema.json enforces the same code -> http_status / retryable / reason / retry_after_seconds rules through allOf if/then; tests/contracts/test_error_taxonomy.py (PRP-01 item 7) asserts this table and the schema agree. PRP-05 implements neurosphere_core.errors from this file. Within v1 rows may be added, never changed or removed.",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "problem_schema": "problem-details.schema.json",
   "codes": [
     {
@@ -72,6 +72,46 @@
       "retry_after_seconds": "optional",
       "title": "Dependency temporarily unavailable",
       "description": "A downstream dependency failed transiently. 503 by default (including fail-closed policy-store outage); 502 when an upstream returned an invalid response. Retry with backoff."
+    },
+    {
+      "code": "not_found",
+      "http_status": 404,
+      "allowed_http_statuses": [404],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Not found",
+      "description": "No route matches, or the named resource does not exist in the caller's scope. Added in 1.1.0 (PRP-37). A resource outside the caller's IdentityScope is reported as not_found or forbidden per route policy, never with details of the other tenant or domain."
+    },
+    {
+      "code": "method_not_allowed",
+      "http_status": 405,
+      "allowed_http_statuses": [405],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Method not allowed",
+      "description": "The route exists but does not accept this HTTP method. Added in 1.1.0 (PRP-37)."
+    },
+    {
+      "code": "payload_too_large",
+      "http_status": 413,
+      "allowed_http_statuses": [413],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Payload too large",
+      "description": "The request body exceeds the route's size limit. Shrink the payload; never retried automatically. Added in 1.1.0 (PRP-37)."
+    },
+    {
+      "code": "internal_error",
+      "http_status": 500,
+      "allowed_http_statuses": [500],
+      "retryable": false,
+      "reason": "optional",
+      "retry_after_seconds": "forbidden",
+      "title": "Internal error",
+      "description": "An unexpected server fault. The body carries only the correlation_id; no stack trace, exception text, query or secret. Not retried automatically. Added in 1.1.0 (PRP-37)."
     }
   ]
 }

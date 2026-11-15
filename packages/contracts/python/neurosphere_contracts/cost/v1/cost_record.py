@@ -16,9 +16,34 @@ from pydantic import (
     StrictFloat,
     StrictInt,
     StrictStr,
+    StringConstraints,
 )
 
 from ...telemetry.v1 import telemetry_event
+
+
+class Tags(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(max_length=128, min_length=1)]
+
+
+class CostTags(
+    RootModel[
+        dict[
+            Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_.-]{0,62}$", strict=True)],
+            Tags,
+        ]
+    ]
+):
+    root: Annotated[
+        dict[
+            Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_.-]{0,62}$", strict=True)],
+            Tags,
+        ],
+        Field(title="CostTags"),
+    ]
+    """
+    At most 16 entries; keys lowercase ^[a-z][a-z0-9_.-]{0,62}$; values 1 to 128 characters. The reserved key cost_center follows the catalog/v1 Grant cost_center pattern. Same grammar as admin/v1 common cost_tags. The generated Pydantic model keeps the key and value bounds but not the entry count or the cost_center rule; both are checked by tests/contracts/validators.py::validate_cost_tags.
+    """
 
 
 class Identifier(RootModel[StrictStr]):
@@ -246,4 +271,8 @@ class CostRecord(BaseModel):
     recorded_at: Timestamp
     """
     When the ledger recorded this cost (RFC 3339 UTC).
+    """
+    tags: CostTags | None = None
+    """
+    Cost allocation tags carried from the source (for example the nscostcenter resource tag mapped to cost_center, #190). Null or absent when the source reports none. Added in schema_version 1.1.0; records without tags stay valid.
     """

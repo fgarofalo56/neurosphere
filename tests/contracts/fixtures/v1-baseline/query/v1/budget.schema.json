@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/query/v1/budget.schema.json",
+  "title": "Budget",
+  "description": "Shared bounded-execution budget for every query, traversal, search, export and viewport expansion (PRP-01 clarification 15; NS-05, NS-06). timeout_ms, limit and max_depth are mandatory. The maxima here are contract ceilings; the server may clamp to lower policy values and reports the effective values and any truncation in Page. Not a standalone document, so it carries no schema_version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["timeout_ms", "limit", "max_depth"],
+  "properties": {
+    "timeout_ms": {
+      "description": "Wall-clock budget in integer milliseconds.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 30000
+    },
+    "limit": {
+      "description": "Maximum rows (or root items) per page.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "max_depth": {
+      "description": "Maximum traversal depth. 0 for non-graph queries.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "max_nodes": {
+      "description": "Maximum graph nodes returned (viewport budget). Absent means the server policy default, never unbounded.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+    },
+    "max_edges": {
+      "description": "Maximum graph edges returned (viewport budget). Absent means the server policy default, never unbounded.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20000
+    }
+  }
+}

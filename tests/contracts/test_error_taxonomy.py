@@ -1,7 +1,9 @@
 """Error taxonomy (PRP.md section 3, Clarification 14, PRP-01 item 5).
 
-Seven codes with fixed HTTP statuses and retryable flags; capability_unavailable requires a
-machine-readable reason; rate_limited requires retry_after_seconds. The data table
+Eleven codes (seven from PRP-01; not_found, method_not_allowed, payload_too_large and
+internal_error added by PRP-37) with fixed HTTP statuses and retryable flags;
+capability_unavailable requires a machine-readable reason; rate_limited requires
+retry_after_seconds. The data table
 (errors/v1/error-codes.json) and the problem-details schema must agree, and the audit
 record's denial codes mirror the taxonomy (``validate_denial_codes_match_error_taxonomy``).
 """
@@ -25,6 +27,11 @@ EXPECTED = {
     "rate_limited": ([429], True, "optional", "required"),
     "invalid_schema": ([422], False, "optional", "forbidden"),
     "dependency_transient": ([503, 502], True, "optional", "optional"),
+    # Added in errors/v1 1.1.0 (PRP-37; PRP-05 leftover).
+    "not_found": ([404], False, "optional", "forbidden"),
+    "method_not_allowed": ([405], False, "optional", "forbidden"),
+    "payload_too_large": ([413], False, "optional", "forbidden"),
+    "internal_error": ([500], False, "optional", "forbidden"),
 }
 
 
@@ -51,7 +58,7 @@ def _minimal_valid(code: str) -> dict[str, Any]:
     return _problem(code, statuses[0], retryable, **extra)
 
 
-def test_table_has_exactly_seven_codes(error_codes: dict[str, Any]) -> None:
+def test_table_has_exactly_eleven_codes(error_codes: dict[str, Any]) -> None:
     codes = [row["code"] for row in error_codes["codes"]]
     assert codes == list(EXPECTED)
     assert load_schema(PROBLEM)["properties"]["code"]["enum"] == codes
@@ -74,7 +81,7 @@ def test_schema_enforces_status_and_retryable(code: str) -> None:
     assert schema_errors(PROBLEM, _minimal_valid(code)) == []
     for status in statuses:
         assert schema_errors(PROBLEM, {**_minimal_valid(code), "status": status}) == []
-    for status in {401, 403, 409, 422, 429, 502, 503} - set(statuses):
+    for status in {401, 403, 404, 405, 409, 413, 422, 429, 500, 502, 503} - set(statuses):
         assert schema_errors(PROBLEM, {**_minimal_valid(code), "status": status}), status
     flipped = {**_minimal_valid(code), "retryable": not retryable}
     flipped.pop("retry_after_seconds", None)

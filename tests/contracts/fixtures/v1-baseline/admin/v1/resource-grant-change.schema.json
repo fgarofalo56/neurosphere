@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/resource-grant-change.schema.json",
+  "title": "ResourceGrantChange",
+  "description": "Request to create or replace one custom resource-scoped grant for one pseudonymous principal (PRP-39 identity API). Maps onto PRP-06 PolicyGrant: one named resource, time-bound (expires_at always required) and reason-bearing. Removing a grant is a delete of grant_id on the route, not a body. Rules JSON Schema cannot express (expires_at is in the future) are enforced by the PRP-39 handler.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "principal_id",
+    "grant_id",
+    "resource_id",
+    "permissions",
+    "expires_at",
+    "reason"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "principal_id": { "$ref": "common.schema.json#/$defs/principal_id" },
+    "grant_id": { "$ref": "common.schema.json#/$defs/record_id" },
+    "resource_id": { "$ref": "common.schema.json#/$defs/canonical_id" },
+    "permissions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/grant_permission" }
+    },
+    "expires_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "reason": { "$ref": "common.schema.json#/$defs/reason_code" }
+  }
+}

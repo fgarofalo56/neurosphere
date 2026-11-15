@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "producer_id": "apim-gateway-east",
+  "customer_id": "contoso",
+  "cloud": "commercial",
+  "sources": [
+    {
+      "source_id": "apim-east",
+      "observation_kind": "gateway"
+    },
+    {
+      "source_id": "billing-export",
+      "observation_kind": "billing"
+    }
+  ],
+  "secret_sha256": "9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c9f2c",
+  "status": "active",
+  "rotated_at": "2026-11-14T09:30:00Z"
+}

@@ -199,7 +199,7 @@
         "keyword": "enum",
         "instance_path": "/code"
       },
-      "why": "only the seven taxonomy codes"
+      "why": "only the taxonomy codes (internal_error became a code in 1.1.0, PRP-37)"
     },
     {
       "schema": "../problem-details.schema.json",
@@ -220,6 +220,46 @@
         "instance_path": ""
       },
       "why": "no unprofiled members"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/not-found.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/method-not-allowed.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/payload-too-large.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/valid/internal-error.json",
+      "valid": true
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/not-found-wrong-status.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "enum",
+        "instance_path": "/status"
+      },
+      "why": "not_found is 404"
+    },
+    {
+      "schema": "../problem-details.schema.json",
+      "file": "problem-details/invalid/internal-error-retry-after.json",
+      "valid": false,
+      "expected_error": {
+        "keyword": "not",
+        "instance_path": ""
+      },
+      "why": "internal_error is not retryable, so no retry_after_seconds"
     }
   ]
 }

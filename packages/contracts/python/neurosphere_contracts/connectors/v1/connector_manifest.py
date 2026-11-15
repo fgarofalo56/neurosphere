@@ -20,7 +20,10 @@ from pydantic import (
 
 
 class Scope(RootModel[StrictStr]):
-    root: Annotated[StrictStr, Field(pattern="^[A-Za-z][A-Za-z0-9._:/-]{0,255}$")]
+    root: Annotated[StrictStr, Field(pattern="^[A-Za-z][A-Za-z0-9._:/-]{0,127}$")]
+    """
+    At most 128 characters (PRP-37 cap; ADR-0004 exception).
+    """
 
 
 class Granularity(BaseModel):
@@ -131,12 +134,12 @@ class ConnectorManifest(BaseModel):
     documentation_url: Annotated[
         StrictStr | None,
         Field(
-            max_length=2048,
-            pattern="^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$",
+            max_length=512,
+            pattern="^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%-]{0,128})*$",
         ),
     ] = None
     """
-    HTTPS documentation URL. No query string, fragment or userinfo.
+    HTTPS documentation URL. No query string, fragment or userinfo. At most 512 characters and 128 characters per path segment (PRP-37: the single ADR-0004 v1 tightening, so a long opaque path cannot carry a secret).
     """
     supported_clouds: Annotated[list[Literal["commercial", "government"]], Field(min_length=1)]
     """

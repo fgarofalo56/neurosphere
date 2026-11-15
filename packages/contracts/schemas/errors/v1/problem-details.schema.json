@@ -28,7 +28,7 @@
     "status": {
       "description": "RFC 9457 HTTP status code. Fixed per code by the allOf below; must equal the HTTP response status.",
       "type": "integer",
-      "enum": [401, 403, 409, 422, 429, 502, 503]
+      "enum": [401, 403, 404, 405, 409, 413, 422, 429, 500, 502, 503]
     },
     "detail": {
       "description": "RFC 9457 occurrence-specific human-readable explanation. No secrets, stack traces or query text.",
@@ -51,7 +51,11 @@
         "stale_version",
         "rate_limited",
         "invalid_schema",
-        "dependency_transient"
+        "dependency_transient",
+        "not_found",
+        "method_not_allowed",
+        "payload_too_large",
+        "internal_error"
       ]
     },
     "retryable": {
@@ -129,6 +133,22 @@
         "required": ["code"]
       },
       "then": { "not": { "required": ["errors"] } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "not_found" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 404 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "method_not_allowed" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 405 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "payload_too_large" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 413 }, "retryable": { "const": false } } }
+    },
+    {
+      "if": { "properties": { "code": { "const": "internal_error" } }, "required": ["code"] },
+      "then": { "properties": { "status": { "const": 500 }, "retryable": { "const": false } } }
     }
   ],
   "$defs": {

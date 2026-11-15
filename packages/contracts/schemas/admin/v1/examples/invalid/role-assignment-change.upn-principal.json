@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "op": "assign",
+  "principal_id": "alice@contoso.com",
+  "assignment_id": "ra-finance-viewer",
+  "role": "viewer",
+  "domain_ids": [
+    "commercial:contoso:neurosphere:domain:finance"
+  ],
+  "reason": "joined_finance_team"
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0.0",
+  "op": "remove",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "assignment_id": "ra-finance-viewer",
+  "reason": "left_team"
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0.0",
+  "op": "add",
+  "principal_id": "commercial:contoso:entra:principal:p-a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "domain_id": "commercial:contoso:foundry:agent:invoice-bot",
+  "reason": "service_onboarding"
+}

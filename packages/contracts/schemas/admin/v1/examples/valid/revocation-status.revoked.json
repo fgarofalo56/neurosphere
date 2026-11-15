@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "revoked": true,
+  "mode": "until_lifted",
+  "revoked_at": "2026-11-14T09:30:00Z",
+  "reason": "compromised_device",
+  "revoked_by": "commercial:contoso:entra:person:p-0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+  "propagation_bound_seconds": 60
+}

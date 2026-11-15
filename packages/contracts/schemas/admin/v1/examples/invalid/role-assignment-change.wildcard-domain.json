@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "op": "assign",
+  "principal_id": "commercial:contoso:entra:person:p-3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "assignment_id": "ra-finance-viewer",
+  "role": "viewer",
+  "domain_ids": [
+    "*"
+  ],
+  "reason": "joined_finance_team"
+}

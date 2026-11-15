@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "finance",
+  "customer_id": "contoso",
+  "kind": "feature_flag",
+  "version": 3,
+  "etag": "\"0x8DD2A1B3C4D5E6F\"",
+  "status": "active",
+  "updated_at": "2026-11-14T09:30:00Z",
+  "updated_by": "commercial:contoso:entra:person:p-0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+  "body": {
+    "schema_version": "1.0.0",
+    "domain_id": "commercial:contoso:neurosphere:domain:finance",
+    "display_name": "Finance",
+    "classification": "confidential",
+    "residency_region": "eastus2",
+    "status": "active",
+    "is_control_domain": false
+  }
+}

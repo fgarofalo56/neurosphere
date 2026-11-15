@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/principal-access-summary.schema.json",
+  "title": "PrincipalAccessSummary",
+  "description": "OUTPUT-ONLY. Everything one pseudonymous principal can do, as stored in the PRP-06 policy store, for the PRP-39 identity console: domain memberships, role assignments with expiry, resource-scoped grants and the current revocation state. It is a view of stored policy, not a derived IdentityScope, and is never accepted as input. No name, email, UPN or raw directory object id appears; re-identification is a policy-store concern.",
+  "readOnly": true,
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "principal",
+    "customer_id",
+    "cloud",
+    "policy_version",
+    "memberships",
+    "assignments",
+    "grants",
+    "revocation",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "principal": { "$ref": "#/$defs/principal" },
+    "customer_id": { "$ref": "common.schema.json#/$defs/customer_id" },
+    "cloud": { "$ref": "common.schema.json#/$defs/cloud" },
+    "policy_version": {
+      "description": "Policy store version the summary was read at.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._+-]{1,64}$"
+    },
+    "memberships": {
+      "type": "array",
+      "maxItems": 1024,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/canonical_id" }
+    },
+    "assignments": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/assignment" }
+    },
+    "grants": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/grant" }
+    },
+    "revocation": { "$ref": "revocation-status.schema.json" },
+    "generated_at": { "$ref": "common.schema.json#/$defs/timestamp" }
+  },
+  "$defs": {
+    "principal": {
+      "title": "AccessSummaryPrincipal",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "principal_kind"],
+      "properties": {
+        "principal_id": { "$ref": "common.schema.json#/$defs/principal_id" },
+        "principal_kind": { "type": "string", "enum": ["user", "service_principal"] }
+      }
+    },
+    "assignment": {
+      "title": "AccessSummaryAssignment",
+      "description": "A stored role assignment. expires_at is null only for non-privileged roles.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assignment_id", "role", "domain_ids", "expires_at", "reason"],
+      "properties": {
+        "assignment_id": { "$ref": "common.schema.json#/$defs/record_id" },
+        "role": { "$ref": "common.schema.json#/$defs/role" },
+        "domain_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/canonical_id" }
+        },
+        "expires_at": {
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/timestamp" }, { "type": "null" }]
+        },
+        "reason": {
+          "anyOf": [{ "$ref": "#/$defs/stored_reason" }, { "type": "null" }]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "role": { "enum": ["admin", "security_auditor"] } },
+            "required": ["role"]
+          },
+          "then": { "properties": { "expires_at": { "type": "string" } } }
+        }
+      ]
+    },
+    "grant": {
+      "title": "AccessSummaryGrant",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grant_id", "resource_id", "permissions", "expires_at", "reason"],
+      "properties": {
+        "grant_id": { "$ref": "common.schema.json#/$defs/record_id" },
+        "resource_id": { "$ref": "common.schema.json#/$defs/canonical_id" },
+        "permissions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/grant_permission" }
+        },
+        "expires_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+        "reason": { "$ref": "#/$defs/stored_reason" }
+      }
+    },
+    "stored_reason": {
+      "description": "Reason as stored by PRP-06 (PolicyRoleAssignment.reason, PolicyGrant.reason: 1 to 512 characters). Writes made through admin v1 store reason codes.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    }
+  }
+}

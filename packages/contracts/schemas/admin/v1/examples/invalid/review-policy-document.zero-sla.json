@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "policy_version": "review-2026-11",
+  "kind_defaults": [
+    {
+      "review_kind": "maker_checker",
+      "policy": {
+        "self_approval_forbidden": true,
+        "approver_permission": "action.approve",
+        "assignment_timeout_seconds": 14400,
+        "sla_seconds": 0,
+        "escalation_step_seconds": 28800,
+        "max_escalations": 2,
+        "expiry_seconds": 604800
+      }
+    },
+    {
+      "review_kind": "relationship",
+      "policy": {
+        "self_approval_forbidden": true,
+        "approver_permission": "catalog.curate",
+        "assignment_timeout_seconds": 14400,
+        "sla_seconds": 86400,
+        "escalation_step_seconds": 28800,
+        "max_escalations": 2,
+        "expiry_seconds": 604800
+      }
+    },
+    {
+      "review_kind": "recommendation",
+      "policy": {
+        "self_approval_forbidden": true,
+        "approver_permission": "catalog.curate",
+        "assignment_timeout_seconds": 14400,
+        "sla_seconds": 86400,
+        "escalation_step_seconds": 28800,
+        "max_escalations": 2,
+        "expiry_seconds": 604800
+      }
+    }
+  ],
+  "action_overrides": [
+    {
+      "review_kind": "maker_checker",
+      "action_kind": "budget_cap_change",
+      "policy": {
+        "self_approval_forbidden": true,
+        "approver_permission": "action.approve",
+        "assignment_timeout_seconds": 14400,
+        "sla_seconds": 3600,
+        "escalation_step_seconds": 28800,
+        "max_escalations": 4,
+        "expiry_seconds": 604800
+      }
+    }
+  ]
+}

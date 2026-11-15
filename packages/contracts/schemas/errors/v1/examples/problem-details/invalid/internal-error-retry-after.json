@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.1.0",
+  "type": "https://neurosphere.invalid/problems/internal_error",
+  "title": "Internal error",
+  "status": 500,
+  "code": "internal_error",
+  "retryable": false,
+  "correlation_id": "corr-7f3a9c03",
+  "retry_after_seconds": 5
+}

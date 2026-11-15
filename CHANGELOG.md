@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Contracts revision for the control plane (PRP-37, PR #273): new `admin/v1` schema family (credential reference, admin config documents, role, domain and grant change requests, revocation, producer, connector, domain, spend budget, price sheet, review policy, system setting, first-run checklist) with generated bindings and a no-credential-values walker; `CostRecord.tags`; structured query entities `grant`, `mcp_server` and relation `grants_access_to`; error taxonomy 1.1.0 (`not_found`, `method_not_allowed`, `payload_too_large`, `internal_error`) with core error classes; connector manifest caps; additive-only baseline test. API emission of the new codes is tracked in #272.
 - Tracker and docs truth-up (PRP-36, PR #271): README, decision D1 and the master index now say the repository is public and cover waves W11 to W21; gate register, threat-model rows and test paths corrected; new `docs/dev/env-example-process.md`; the pre-commit hook regenerates `PRPs/INDEX.md`.
 - Connector runners and SDK hardening (PRP-09 round 2, PR #221):
   - New worker roles, both part of `all` and idle until configured:

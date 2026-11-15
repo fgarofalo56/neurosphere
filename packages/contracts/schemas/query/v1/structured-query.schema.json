@@ -149,7 +149,9 @@
         "owner",
         "policy",
         "recommendation",
-        "run_reference"
+        "run_reference",
+        "grant",
+        "mcp_server"
       ]
     },
     "entity": {
@@ -455,7 +457,7 @@
           "description": "NS-02 relation names in lowercase snake_case.",
           "type": "array",
           "minItems": 1,
-          "maxItems": 9,
+          "maxItems": 10,
           "uniqueItems": true,
           "items": {
             "enum": [
@@ -467,7 +469,8 @@
               "grounded_by",
               "owned_by",
               "depends_on",
-              "supersedes"
+              "supersedes",
+              "grants_access_to"
             ]
           }
         },
