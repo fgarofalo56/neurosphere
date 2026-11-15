@@ -375,7 +375,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         gateway.BUILDER,
         edge.BUILDER,
         lifecycle.BUILDER,
+        admission.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
-        admission.BUILDER,
     )

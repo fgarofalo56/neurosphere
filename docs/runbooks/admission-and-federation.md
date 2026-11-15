@@ -60,15 +60,15 @@ Set `NS_ADMISSION_ENABLED=false` (or clear the Helm values). The dependency is a
 
 ## Federation
 
-`GET /api/v1/federation/summary` merges aggregate summaries from the cells registered in this
-deployment's cloud and boundary. This deployment is always a cell (its own, served in process);
+`GET /api/v1/federation/summary` merges aggregate summaries from the cells registered in
+the same cloud and boundary as this deployment. This deployment is always a cell (its own, served in process);
 peers are optional.
 
 ### Settings
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `NS_FEDERATION_CELL_ID` | `local` | This deployment's cell id. |
+| `NS_FEDERATION_CELL_ID` | `local` | Cell id of this deployment. |
 | `NS_FEDERATION_BOUNDARY_ID` | `<cloud>-local` | The boundary this deployment belongs to. Cells of other boundaries are never contacted. |
 | `NS_FEDERATION_CACHE_TTL_SECONDS` | `30` | Merged-summary cache TTL. |
 | `NS_FEDERATION_CACHE_MAX_TTL_SECONDS` | `300` | Ceiling for the TTL (hard cap 3600). |
