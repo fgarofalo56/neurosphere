@@ -73,6 +73,19 @@ if printf '%s\n' "$all_staged" | grep -qE '^PRPs/'; then
   else
     note "scripts/prp_status.py --write failed; run it by hand to see why"
   fi
+  # Also regenerate PRPs/INDEX.md with the kit script. It lives outside the repo,
+  # so a missing script (CI, a fresh machine) is a printed warning, never a block.
+  # NS_PRP_INDEX_SCRIPT overrides the path (used to test the missing-script path).
+  prp_index_script="${NS_PRP_INDEX_SCRIPT:-$HOME/.claude/kits/orchestrated-prp/prp_index.py}"
+  if [ -f "$prp_index_script" ]; then
+    if python -S -E "$prp_index_script" build >/dev/null 2>&1; then
+      git add PRPs/INDEX.md
+    else
+      printf 'WARNING: prp_index.py build failed; PRPs/INDEX.md may be stale (run it by hand)\n' >&2
+    fi
+  else
+    printf 'WARNING: %s not found; PRPs/INDEX.md was not regenerated\n' "$prp_index_script" >&2
+  fi
 fi
 
 # 5) Ruff on staged Python, when the toolchain is present. Lint-only, no fix.

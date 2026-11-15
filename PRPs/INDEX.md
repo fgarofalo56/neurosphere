@@ -10,7 +10,6 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-36-tracker-and-docs-truth-up](backlog/PRP-36-tracker-and-docs-truth-up.md) | P0 | 19 | - | - | sonnet / sonnet | none |
 | [PRP-37-contracts-revision-admin-cost-and-permissions](backlog/PRP-37-contracts-revision-admin-cost-and-permissions.md) | P0 | 20 | - | - | opus / sonnet | required |
 | [PRP-38-real-stack-ci-and-dev-stack](backlog/PRP-38-real-stack-ci-and-dev-stack.md) | P0 | 21 | - | - | sonnet / sonnet | required |
 | [PRP-39-identity-admin-api-and-revocation](backlog/PRP-39-identity-admin-api-and-revocation.md) | P0 | 24 | PRP-37-contracts-revision-admin-cost-and-permissions, PRP-65-admin-permissions-policy-repository-and-config-store | PRP-37-contracts-revision-admin-cost-and-permissions (backlog); PRP-65-admin-permissions-policy-repository-and-config-store (backlog) | opus / sonnet | required |
@@ -60,6 +59,7 @@ _none_
 |---|---|---|
 | [PRP-09-connector-sdk-and-reference-connectors](shipped/PRP-09-connector-sdk-and-reference-connectors.md) | 2026-11-14 | #221 |
 | [PRP-25-docs-site-and-public-assistant](shipped/PRP-25-docs-site-and-public-assistant.md) | 2026-11-14 | #223 |
+| [PRP-36-tracker-and-docs-truth-up](shipped/PRP-36-tracker-and-docs-truth-up.md) | 2026-11-14 | #271 |
 | [PRP-20-government-verification-and-sovereign-deployment](shipped/PRP-20-government-verification-and-sovereign-deployment.md) | 2026-11-13 | #216 |
 | [PRP-16-agent-evaluation-and-quality](shipped/PRP-16-agent-evaluation-and-quality.md) | 2026-11-11 | #200 |
 | [PRP-19-copilot-and-report-creation](shipped/PRP-19-copilot-and-report-creation.md) | 2026-11-11 | #202 |
