@@ -35,8 +35,9 @@ An edge whose lock has expired is presented with its newest observation (``graph
 
 from __future__ import annotations
 
+import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Literal
@@ -44,8 +45,10 @@ from typing import Literal
 from neurosphere_contracts.query.v1.budget import Budget
 
 from neurosphere_core.catalog import rules
+from neurosphere_core.catalog.graph.bulk import NODE_READ_CHUNK
 from neurosphere_core.catalog.graph.latest import LatestObservationReader, wants_latest
 from neurosphere_core.catalog.protocol import (
+    MAX_EDGES_PER_OVERRIDE_BATCH,
     CatalogEdge,
     CatalogEntity,
     CatalogRepository,
@@ -200,6 +203,113 @@ class RepositoryGraphQuery:
         except _OutOfTimeError:
             return _TIMED_OUT.model_copy(deep=True)
         return self._result(walk, with_paths=True)
+
+    async def edges_among(
+        self,
+        scope: IdentityScope,
+        node_ids: Collection[str],
+        budget: Budget,
+        view: GraphView = "presented",
+    ) -> GraphResult:
+        """Edges with both endpoints in ``node_ids`` (``EdgesAmongQuery``), each node read once.
+
+        Same presented-view rules as ``_expand`` (hidden edges dropped, locks, overrides,
+        expired-lock latest observation) and the same scope rule: ids that do not resolve
+        through ``get_entity`` are dropped, so no edge to or from them is returned.
+        """
+        deadline = self._clock() + budget.timeout_ms / 1000.0
+        if view == "raw" and not auditor_domains(scope, self._now()):
+            raise ForbiddenError(_RAW_DENIED)
+        audited = frozenset(auditor_domains(scope, self._now())) if view == "raw" else frozenset()
+        max_nodes = budget.max_nodes or self._default_nodes
+        max_edges = budget.max_edges or self._default_edges
+        reason: TruncatedReason | None = None
+
+        wanted = sorted(set(node_ids))
+        if len(wanted) > max_nodes:
+            wanted = wanted[:max_nodes]
+            reason = "max_nodes"
+
+        nodes: dict[str, CatalogEntity] = {}
+        for start in range(0, len(wanted), NODE_READ_CHUNK):
+            if self._clock() >= deadline:
+                return self._bulk_result(nodes, {}, reason or "timeout_ms")
+            chunk = wanted[start : start + NODE_READ_CHUNK]
+            found = await asyncio.gather(*(self._repo.get_entity(scope, i) for i in chunk))
+            for entity_id, entity in zip(chunk, found, strict=True):
+                if entity is not None:
+                    nodes[entity_id] = entity
+
+        candidates: dict[str, CatalogEdge] = {}
+        ids = sorted(nodes)
+        for start in range(0, len(ids), NODE_READ_CHUNK):
+            if self._clock() >= deadline:
+                return self._bulk_result(nodes, {}, reason or "timeout_ms")
+            chunk = ids[start : start + NODE_READ_CHUNK]
+            pages = await asyncio.gather(
+                *(
+                    self._repo.list_edges_by_node(
+                        scope, i, "out", EdgeFilter(), PageRequest(page_size=MAX_PAGE_SIZE)
+                    )
+                    for i in chunk
+                )
+            )
+            for page in pages:
+                if page.next_cursor is not None and page.items:
+                    reason = reason or "max_edges"  # page not exhausted: cannot prove complete
+                for edge in page.items:
+                    if edge.source_id not in nodes or edge.target_id not in nodes:
+                        continue  # other endpoint outside the id set or the scope
+                    if view == "raw" and edge.domain_id.root not in audited:
+                        raise ForbiddenError(_RAW_DENIED)
+                    candidates.setdefault(edge.id, edge)
+
+        ordered = [candidates[k] for k in sorted(candidates)]
+        presented: dict[str, PresentedEdge] = {}
+        now = self._now()
+        batch = MAX_EDGES_PER_OVERRIDE_BATCH
+        for start in range(0, len(ordered), batch):
+            if self._clock() >= deadline:
+                return self._bulk_result(nodes, presented, reason or "timeout_ms")
+            group = ordered[start : start + batch]
+            overrides = (
+                await self._repo.list_overrides_for_edges(scope, [e.id for e in group])
+                if view == "presented"
+                else {}
+            )
+            for edge in group:
+                held = overrides.get(edge.id, ())
+                latest = None
+                if (
+                    view == "presented"
+                    and isinstance(self._repo, LatestObservationReader)
+                    and wants_latest(edge, held, now)
+                ):
+                    if self._clock() >= deadline:
+                        return self._bulk_result(nodes, presented, reason or "timeout_ms")
+                    latest = await self._repo.latest_observation(scope, edge.id)
+                item = rules.present_edge(edge, held, now, latest)
+                if item.hidden:
+                    continue
+                if len(presented) >= max_edges:
+                    return self._bulk_result(nodes, presented, "max_edges")
+                presented[edge.id] = item
+        return self._bulk_result(nodes, presented, reason)
+
+    @staticmethod
+    def _bulk_result(
+        nodes: dict[str, CatalogEntity],
+        edges: dict[str, PresentedEdge],
+        reason: TruncatedReason | None,
+    ) -> GraphResult:
+        return GraphResult(
+            nodes=list(nodes.values()),
+            edges=list(edges.values()),
+            truncated=reason is not None,
+            truncated_reason=reason,
+            visited_nodes=len(nodes),
+            visited_edges=len(edges),
+        )
 
     # ------------------------------------------------------------------ internals
 
