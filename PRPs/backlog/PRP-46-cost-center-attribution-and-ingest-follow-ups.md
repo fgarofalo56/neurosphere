@@ -246,7 +246,7 @@ Unpriced `CostRecord` posting (D2 reversal); dashboards or finops grouping by co
 | 2 | merged | prp-46-cost-center | done (ledger, outbox counter, pipeline counter) |
 | 3 | merged | prp-46-cost-center | done |
 | 4 | merged | prp-46-cost-center | done |
-| 5 | todo | | |
+| 5 | merged | prp-46-cost-center | done |
 | 6 | todo | | |
 
 ## Completion note (filled at ship)

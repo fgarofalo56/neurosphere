@@ -44,6 +44,7 @@ from neurosphere_workers.publication.grant import (
     GRANT_ENTITY_TYPE,
     GRANT_KINDS,
     check_grant_intent,
+    check_grant_not_superseded,
     grant_publication_update,
     grant_recorded,
 )
@@ -134,6 +135,7 @@ class CatalogPublicationRecorder:
             check_grant_intent(stored, entity.id)
             if grant_recorded(doc, intent_id):
                 return entity
+            check_grant_not_superseded(doc, stored)
             reader = reader_for(self._records, stored.customer_id, stored.domain_id)
             updated = await grant_publication_update(doc, stored, reader, format_timestamp(now))
         else:

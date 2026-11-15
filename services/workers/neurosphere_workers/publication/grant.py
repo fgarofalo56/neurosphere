@@ -19,7 +19,8 @@ from collections.abc import Mapping
 from typing import Any, Final, cast
 
 from neurosphere_core.actions import StoredIntent
-from neurosphere_core.errors import InvalidSchemaError
+from neurosphere_core.catalog.rules import parse_timestamp
+from neurosphere_core.errors import InvalidSchemaError, StaleVersionError
 
 from neurosphere_workers.publication.records import ApplyRecordReader
 
@@ -30,6 +31,7 @@ __all__ = [
     "PUBLISH_KIND",
     "UNPUBLISH_KIND",
     "check_grant_intent",
+    "check_grant_not_superseded",
     "created_names",
     "grant_attributes",
     "grant_publication_update",
@@ -86,6 +88,31 @@ def check_grant_intent(stored: StoredIntent, grant_id: str) -> None:
     if _shape_kind(stored) != intent.action_kind:
         raise InvalidSchemaError(
             "the intent's diff does not belong to its action kind", reason="action_kind_mismatch"
+        )
+
+
+def check_grant_not_superseded(doc: Mapping[str, Any], stored: StoredIntent) -> None:
+    """Refuse replaying an intent applied before the grant's last publication record.
+
+    Same rule as the MCP guard: that intent's effect was superseded, so recording it would
+    state a publication the gateway no longer has. An idempotent replay of the recorded intent
+    is handled by :func:`grant_recorded` before this runs.
+    """
+    if grant_attributes(doc).get("apim_intent_id") is None:
+        return  # never recorded by the connector: nothing to supersede
+    execution = stored.execution
+    applied_at = execution.apply_finished_at if execution else None
+    provenance = cast(Mapping[str, Any], doc.get("provenance") or {})
+    recorded_at = provenance.get("recorded_at")
+    if (
+        applied_at is not None
+        and provenance.get("method") == "declared"
+        and isinstance(recorded_at, str)
+        and applied_at < parse_timestamp(recorded_at)
+    ):
+        raise StaleVersionError(
+            "the intent was applied before the last recorded publication",
+            reason="stale_intent",
         )
 
 
