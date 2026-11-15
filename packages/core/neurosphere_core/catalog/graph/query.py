@@ -86,6 +86,14 @@ class _OutOfTimeError(Exception):
     """The time budget ran out before the walk had a root."""
 
 
+def _domain_of(entity: CatalogEntity) -> str | None:
+    """The domain an entity lives in (a Domain entity is its own domain)."""
+    if entity.entity_type == "domain":
+        return entity.id
+    domain = getattr(entity, "domain_id", None)
+    return None if domain is None else str(domain.root)
+
+
 _RAW_DENIED = "raw observations require a security auditor scope"
 _TIMED_OUT = GraphResult(nodes=[], edges=[], truncated=True, truncated_reason="timeout_ms")
 
@@ -342,7 +350,7 @@ class RepositoryGraphQuery:
                 raise ForbiddenError(_RAW_DENIED)
             candidates.setdefault(edge.id, edge)
 
-        domains = sorted({entity.domain_id.root for entity in nodes.values()})
+        domains = sorted({d for d in map(_domain_of, nodes.values()) if d is not None})
         for domain_id in domains:
             cursor: str | None = None
             done = False
@@ -363,7 +371,7 @@ class RepositoryGraphQuery:
                     break
             if done:
                 continue
-            members = sorted(i for i, e in nodes.items() if e.domain_id.root == domain_id)
+            members = sorted(i for i, e in nodes.items() if _domain_of(e) == domain_id)
             for start in range(0, len(members), NODE_READ_CHUNK):
                 if self._clock() >= deadline:
                     return candidates, reason or "timeout_ms", True
