@@ -285,7 +285,12 @@ class CosmosRequestQueue:
             self._customer,
         )
         try:
-            return [QueuedRequest.model_validate(_document(row)) for row in rows]
+            # Requested-job documents (``job_state``, see jobs.py) share this container.
+            return [
+                QueuedRequest.model_validate(_document(row))
+                for row in rows
+                if "job_state" not in row
+            ]
         except ValidationError as exc:
             raise _invalid(exc) from exc
 

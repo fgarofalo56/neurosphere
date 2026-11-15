@@ -84,6 +84,10 @@ class QueuedRequest(BaseModel):
     reason: str
     queued_at: datetime
     not_before: datetime | None = None
+    #: Failed execution attempts so far (retry with backoff, bounded by the engine).
+    attempts: int = 0
+    #: A job may ask for dry-run; it is kept across deferral so a queued run stays safe.
+    dry_run: bool = False
 
 
 @runtime_checkable
