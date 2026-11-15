@@ -167,7 +167,7 @@ class PlanApplier:
                     "a resource the plan expected to create already exists",
                     reason="resource_appeared",
                 )
-            await self._arm.put(step.name, spec.payload or {}, if_match=None)
+            await self._arm.put(step.name, spec.payload or {}, if_match=None, if_none_match=True)
             after = await self._read_back(step.name)
             rec = _record(step, StepOwnership.CREATED, wrote=True, etag_after=after.etag)
         else:

@@ -97,8 +97,19 @@ class ApimArm(Protocol):
         """The resource, or None when ARM answers 404."""
         ...
 
-    async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
-        """Create (``if_match`` None) or update (``if_match`` = ETag of the preceding read)."""
+    async def put(
+        self,
+        path: str,
+        properties: Mapping[str, Any],
+        *,
+        if_match: str | None,
+        if_none_match: bool = False,
+    ) -> None:
+        """Create (``if_match`` None) or update (``if_match`` = ETag of the preceding read).
+
+        ``if_none_match`` makes a create refuse to overwrite: a resource that appeared since the
+        plan answers ``StaleVersionError(reason="resource_appeared")``.
+        """
         ...
 
     async def delete(self, path: str, *, if_match: str) -> bool:
@@ -290,17 +301,31 @@ class HttpApimArm:
             etag=self._etag(response, doc),
         )
 
-    async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
+    async def put(
+        self,
+        path: str,
+        properties: Mapping[str, Any],
+        *,
+        if_match: str | None,
+        if_none_match: bool = False,
+    ) -> None:
         rtype = check_path(path)
         if _secret_in_body(rtype, properties):
             raise InvalidSchemaError("secret material is never written", reason="secret_in_payload")
         headers = {"If-Match": if_match} if if_match else {}
+        if if_none_match:
+            headers["If-None-Match"] = "*"
         response = await self._send(
             "PUT",
             self._url(path, rtype, read=False),
             headers=headers,
             body={"properties": dict(properties)},
         )
+        if response.status_code == 412 and if_none_match:
+            raise StaleVersionError(
+                "a resource the plan expected to create already exists",
+                reason="resource_appeared",
+            )
         if response.status_code >= 300:
             raise map_status(response.status_code)
 

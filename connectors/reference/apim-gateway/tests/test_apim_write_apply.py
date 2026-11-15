@@ -78,6 +78,26 @@ async def test_apply_refuses_when_gateway_changed_since_review() -> None:
     assert apim.writes() == []
 
 
+async def test_create_race_after_the_pre_write_read_is_refused_by_if_none_match() -> None:
+    conn, apim, _ = make()
+    req = await reviewed(conn, request(*publication_ops()))
+    foreign = {"displayName": "owned by someone else"}
+
+    def appear(method: str, path: str) -> None:
+        # After the applier's pre-write read, just before the create PUT lands.
+        if method == "PUT" and path == "products/ns-grant-g1":
+            apim.seed(path, foreign)
+
+    apim.before = appear
+    with pytest.raises(StaleVersionError) as err:
+        await conn.apply(req)
+    assert err.value.reason == "resource_appeared"
+    # The foreign resource is untouched and nothing this run did not create was deleted.
+    assert apim.snapshot()["products/ns-grant-g1"] == foreign
+    deleted = {c.path for c in apim.writes() if c.method == "DELETE"}
+    assert "products/ns-grant-g1" not in deleted
+
+
 async def test_refuses_to_overwrite_a_resource_it_expected_to_create() -> None:
     conn, apim, records = make()
     req = await reviewed(conn, request(*publication_ops()))
@@ -188,11 +208,18 @@ class _LostResponseApim(InMemoryApim):
             self._landed = True
             raise DependencyTransientError(reason="arm_unreachable")
 
-    async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
+    async def put(
+        self,
+        path: str,
+        properties: Mapping[str, Any],
+        *,
+        if_match: str | None,
+        if_none_match: bool = False,
+    ) -> None:
         if self.fail_restore and self._landed and path == self.lost[1]:
             self.calls.append(ArmCall("PUT", path, if_match))
             raise DependencyTransientError(reason="arm_unreachable")
-        await super().put(path, properties, if_match=if_match)
+        await super().put(path, properties, if_match=if_match, if_none_match=if_none_match)
         self._after_write("PUT", path)
 
     async def delete(self, path: str, *, if_match: str) -> bool:
