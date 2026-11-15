@@ -1112,13 +1112,8 @@ async def seed_gateways(
 # -- catalog entities ------------------------------------------------------------------------
 
 
-async def seed_entities(
-    backends: Backends, scope: IdentityScope, directory: Path, tally: Tally
-) -> None:
-    """Write the generated entities (domains, owners, models, grounding sources, tools, agents,
-    people) through ``CatalogRepository.create_entity`` under the workers' own scope. The ingestion
-    projection only ever writes edges, so without this the map has no nodes. Entity ids are
-    canonical and independent of the time rebase, so a re-run finds them and creates nothing."""
+def _entity_docs(scope: IdentityScope, directory: Path) -> Iterator[tuple[str, Doc]]:
+    """Generated entity documents inside the workers' scope: (kind, document)."""
     allowed = frozenset(scope.allowed_domains)
     for name in ENTITY_FILES:
         path = directory / name
@@ -1135,12 +1130,46 @@ async def seed_entities(
                 or domain not in allowed
             ):
                 continue  # outside the workers' scope: fail closed, never widen
-            if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            yield kind, doc
+
+
+async def existing_entity_ids(
+    backends: Backends, scope: IdentityScope, directory: Path
+) -> frozenset[str]:
+    """Ids of generated entities the catalog already holds (call before publishing events)."""
+    found: set[str] = set()
+    for _, doc in _entity_docs(scope, directory):
+        if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            found.add(doc["id"])
+    return frozenset(found)
+
+
+async def seed_entities(
+    backends: Backends,
+    scope: IdentityScope,
+    directory: Path,
+    tally: Tally,
+    preexisting: frozenset[str] | None = None,
+) -> None:
+    """Write the generated entities (domains, owners, models, grounding sources, tools, agents,
+    people) through ``CatalogRepository.create_entity`` under the workers' own scope. The ingestion
+    projection only ever writes edges and, for entities it has seen telemetry for, the same
+    entity ids, so without this the map has no nodes. Entity ids are canonical and independent of
+    the time rebase, so a re-run finds them and creates nothing.
+
+    An entity found now that was not there before the events were pushed was created by the
+    projection workers during this run: it is seeded data, not "skipped existing" (#211), so
+    only ``preexisting`` ids are tallied as existing."""
+    for kind, doc in _entity_docs(scope, directory):
+        if await backends.catalog.get_entity(scope, doc["id"]) is not None:
+            if preexisting is None or doc["id"] in preexisting:
                 tally.record("entities", created=0, existing=1)
-                continue
-            entity = ENTITY_MODELS[kind].model_validate(doc)
-            await backends.catalog.create_entity(scope, cast(Any, entity))
-            tally.record("entities", created=1, existing=0)
+            else:
+                tally.record("entities", created=1, existing=0)
+            continue
+        entity = ENTITY_MODELS[kind].model_validate(doc)
+        await backends.catalog.create_entity(scope, cast(Any, entity))
+        tally.record("entities", created=1, existing=0)
 
 
 # -- time rebase -----------------------------------------------------------------------------
@@ -1304,6 +1333,16 @@ async def run_seed(
     principals = await seed_grants(backends, config, world, tally, env)
     await seed_prices(backends, tally)
 
+    scope = await worker_scope(backends, config)
+    missing = sorted(set(world_domains(world)) - set(scope.allowed_domains))
+    if missing:
+        raise SeedError(
+            f"the worker scope lacks {len(missing)} seeded domains; grants did not apply"
+        )
+    # Entities that exist BEFORE the events are pushed are the only genuinely pre-existing ones;
+    # any that show up later were written by the projection workers during this run (#211).
+    preexisting = await existing_entity_ids(backends, scope, workdir)
+
     if publishing:
         lines = await asyncio.to_thread(hub_lines, workdir, now() - NEWEST_AGE)
         sent = await asyncio.to_thread(backends.hub.publish, iter(lines))
@@ -1311,12 +1350,6 @@ async def run_seed(
     else:
         log("the ledger already holds events; not publishing again")
 
-    scope = await worker_scope(backends, config)
-    missing = sorted(set(world_domains(world)) - set(scope.allowed_domains))
-    if missing:
-        raise SeedError(
-            f"the worker scope lacks {len(missing)} seeded domains; grants did not apply"
-        )
     await seed_recommendations(backends, scope, workdir, spec["review_limit"], tally)
     await seed_evaluations(backends, scope, world, spec["evaluation_subjects"], tally)
     await seed_intents(backends, world, principals, tally)
@@ -1334,7 +1367,7 @@ async def run_seed(
     )
     # After the wait: the entities would otherwise make the catalog look landed before the
     # projection's edges are there.
-    await seed_entities(backends, scope, workdir, tally)
+    await seed_entities(backends, scope, workdir, tally, preexisting)
     # The aggregates role drains in event order, so the newest (today) buckets land last and are
     # the ones the 1-day cost window reads. Wait for them, but never fail on it.
     _, newest_rebased = observed_bounds(workdir)

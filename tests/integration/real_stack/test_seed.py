@@ -177,6 +177,8 @@ async def test_seed_fills_every_category_and_a_rerun_is_idempotent(
     assert set(first["seeded"]) == set(seed.CATEGORIES)
     empty = sorted(name for name, count in first["seeded"].items() if count <= 0)
     assert not empty, f"categories with nothing seeded: {empty}; first={first}; roles={states}"
+    # Fresh database: nothing pre-existed. Entities the projection workers wrote while the seed
+    # waited are counted as seeded (PRP-38 #211), so this no longer varies with worker timing.
     assert first["skipped_existing"] == 0, first
 
     assert set(second["seeded"]) == set(seed.CATEGORIES)

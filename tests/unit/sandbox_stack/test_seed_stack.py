@@ -300,6 +300,27 @@ def test_seeding_refuses_to_go_past_awaiting_confirmation(tmp_path: Path) -> Non
 # -- idempotency ---------------------------------------------------------------------------
 
 
+def test_entities_written_by_the_projection_during_the_run_are_not_pre_existing(
+    tmp_path: Path,
+) -> None:
+    """#211: skipped_existing must mean 'there before this run', not 'a worker got there first'."""
+    stack = Stack()
+    _run(stack, tmp_path / "one")  # leaves every entity in the catalog
+    scope = asyncio.run(seed.worker_scope(stack.backends, _config()))
+    before = asyncio.run(seed.existing_entity_ids(stack.backends, scope, tmp_path / "one"))
+    assert before, "the first run wrote entities"
+
+    projected = {next(iter(sorted(before)))}  # one entity a projection worker 'created' mid-run
+    tally = seed.Tally()
+    asyncio.run(
+        seed.seed_entities(
+            stack.backends, scope, tmp_path / "one", tally, preexisting=before - projected
+        )
+    )
+    assert tally.seeded["entities"] == 1
+    assert tally.skipped == len(before) - 1
+
+
 def test_one_synthetic_gateway_is_registered_once(tmp_path: Path) -> None:
     """#209 item 3: /gateways/detail needs a registration; the seed makes exactly one."""
     stack = Stack()
