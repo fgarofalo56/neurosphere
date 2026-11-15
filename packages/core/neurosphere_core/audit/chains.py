@@ -38,6 +38,24 @@ The cloud is not in the chain id: a deployment serves one cloud and has its own 
 the reader takes the cloud from the caller's scope. Customer-level chains (``<customer>.gateway``,
 ``<customer>.execution-control`` and so on) are named elsewhere and keep the catalog-shaped form.
 
+Reserved names (PRP-48 item 5, #206)
+------------------------------------
+
+A customer-level chain ``<customer>.<name>`` has the same shape as the chain of the CATALOG domain
+``<name>``, so a catalog domain named ``gateway`` would share the gateway's chain. The names in
+:data:`RESERVED_CHAIN_NAMES` are therefore reserved: :func:`domain_audit_chain_id` refuses a
+catalog domain with one of them (``invalid_chain_id``), and domain creation (PRP-44's registry)
+calls :func:`is_reserved_chain_name` to refuse it up front. Source-qualified chains start with the
+``_`` marker and can never collide. No data is migrated: a test asserts no seed domain uses a
+reserved name, and the operator checks a hosted catalog once (PRP-48 migration note).
+
+Customer ids
+------------
+
+:func:`is_chain_customer_id` is the customer-id rule above (no ``.``). The API refuses to start
+``authz`` with a customer id that fails it (``customer_id_invalid``), so a dotted customer is
+caught at boot instead of on every audited write.
+
 Fail closed: :func:`domain_audit_chain_id` raises ``InvalidSchemaError(reason="invalid_chain_id")``
 (the same refusal ``AuditRepository.append`` gives an invalid chain) for any domain id it cannot
 encode: wrong shape, another customer, a name outside the pattern (``/`` and ``=`` are legal in a
@@ -59,12 +77,32 @@ from neurosphere_core.errors import InvalidSchemaError
 
 __all__ = [
     "CATALOG_SOURCE",
+    "RESERVED_CHAIN_NAMES",
     "SOURCE_MARKER",
     "domain_audit_chain_id",
     "domain_from_audit_chain",
+    "is_chain_customer_id",
+    "is_reserved_chain_name",
 ]
 
 CATALOG_SOURCE: Final = "catalog"
+#: ``<name>`` segments of the customer-level chains ``<customer>.<name>``. A catalog domain may
+#: not use one (its chain would be the customer-level chain). Pinned by tests against the
+#: constants that name each chain: the denial recorder (``authz-denials``), the APIM gateway
+#: registry (``gateway``), the execution kill switch (``execution-control``), deploy scan/plan
+#: (``deploy``), MCP administration (``mcp-admin``), admin configuration (``admin-config``) and
+#: identity administration (``identity-admin``).
+RESERVED_CHAIN_NAMES: Final = frozenset(
+    {
+        "authz-denials",
+        "gateway",
+        "execution-control",
+        "deploy",
+        "mcp-admin",
+        "admin-config",
+        "identity-admin",
+    }
+)
 #: First character of the source-qualified remainder; never the first character of a catalog name.
 SOURCE_MARKER: Final = "_"
 
@@ -77,6 +115,16 @@ _QUALIFIED: Final = re.compile(r"^_([1-9][0-9]{0,2})\.(.*)$", re.DOTALL)
 
 def _refuse(message: str) -> InvalidSchemaError:
     return InvalidSchemaError(message, reason="invalid_chain_id")
+
+
+def is_reserved_chain_name(name: str) -> bool:
+    """True when a catalog domain named ``name`` would share a customer-level chain."""
+    return name in RESERVED_CHAIN_NAMES
+
+
+def is_chain_customer_id(customer_id: str) -> bool:
+    """True when ``customer_id`` can name audit chains (``^[a-z0-9][a-z0-9_-]*$``, no ``.``)."""
+    return _CUSTOMER.fullmatch(customer_id) is not None
 
 
 def domain_audit_chain_id(customer_id: str, domain_id: str) -> str:
@@ -98,6 +146,8 @@ def domain_audit_chain_id(customer_id: str, domain_id: str) -> str:
     if not _SEGMENT.fullmatch(source) or not _SEGMENT.fullmatch(name):
         raise _refuse("domain id segment cannot name an audit chain")
     if source == CATALOG_SOURCE:
+        if is_reserved_chain_name(name):
+            raise _refuse("domain name is reserved for a customer-level audit chain")
         chain = f"{customer_id}.{name}"
     else:
         chain = f"{customer_id}.{SOURCE_MARKER}{len(source)}.{source}.{name}"

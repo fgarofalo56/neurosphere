@@ -229,9 +229,9 @@ None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted
 |---|---|---|---|
 | 1 | verifying | prp-48-authz-audit-hardening | `require_role` + `ROLE_GATED_PATHS`; workspaces role-gated, tenancy-bound, denial-audited |
 | 2 | verifying | prp-48-authz-audit-hardening | page-cap warning (count only); OpenAPI description of the empty 200 |
-| 3 | todo | | |
+| 3 | verifying | prp-48-authz-audit-hardening | `authz/deployment_scope.py` `require_deployment_admin` (reason kept `customer_scope_required`); MCP admin (all routes), deploy scan/plan, kill switch; `require_customer_control` delegates; fixtures in mcp_api, deployment, runtime_routes and integration/deploy grant the control domain |
 | 4 | todo | | |
-| 5 | todo | | |
+| 5 | verifying | prp-48-authz-audit-hardening | `RESERVED_CHAIN_NAMES` (7 names, pinned), `is_reserved_chain_name`, `is_chain_customer_id`; boot `customer_id_invalid`; `_chain` falls back to `<customer>.authz-denials` |
 | 6 | todo | | |
 | 7 | todo | | |
 
