@@ -42,6 +42,11 @@ DenialCode = Literal[
     "rate_limited",
     "invalid_schema",
     "dependency_transient",
+    # errors/v1 1.1.0 (PRP-37): mirrors the AuditRecord denial.code enum.
+    "not_found",
+    "method_not_allowed",
+    "payload_too_large",
+    "internal_error",
 ]
 OutcomeResult = Literal["succeeded", "failed", "rolled_back"]
 
