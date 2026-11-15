@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import itertools
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -20,6 +21,7 @@ from neurosphere_core.lifecycle import (
     TargetRegistry,
     load_policy,
 )
+from neurosphere_core.lifecycle.engine import Mode
 from neurosphere_core.lifecycle.memory import (
     InMemoryHoldRegistry,
     InMemoryMappingStore,
@@ -44,6 +46,17 @@ POLICY_RAW = {
 
 def policy() -> PolicyState:
     return load_policy(POLICY_RAW)
+
+
+def policy_for(*data_classes: str) -> dict[str, object]:
+    """A raw policy with a 0..90 day rule for each class (min retention 0: deletable at once)."""
+    return {
+        **POLICY_RAW,
+        "rules": [
+            {"data_class": c, "min_retention_days": 0, "max_retention_days": 90}
+            for c in data_classes
+        ],
+    }
 
 
 def make_scope(
@@ -121,7 +134,14 @@ class Rig:
 
 
 def make_rig(
-    *, state: PolicyState | None = None, ignore_deletes: bool = False, container: str = "records"
+    *,
+    state: PolicyState | None = None,
+    ignore_deletes: bool = False,
+    container: str = "records",
+    mode: Mode = "execute",
+    max_attempts: int = 5,
+    target: InMemoryTarget | None = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> Rig:
     counter = itertools.count(1)
     audit = AuditRepository(
@@ -129,7 +149,7 @@ def make_rig(
         clock=lambda: NOW,
         id_factory=lambda: f"00000000-0000-4000-8000-{next(counter):012d}",
     )
-    target = InMemoryTarget("catalog", container, ignore_deletes=ignore_deletes)
+    target = target or InMemoryTarget("catalog", container, ignore_deletes=ignore_deletes)
     registry = TargetRegistry()
     registry.register(target)
     holds = InMemoryHoldRegistry()
@@ -145,6 +165,8 @@ def make_rig(
         cloud="commercial",
         customer_id="contoso",
         mappings=mappings,
-        clock=lambda: NOW,
+        clock=clock or (lambda: NOW),
+        mode=mode,
+        max_attempts=max_attempts,
     )
     return Rig(engine, audit, target, holds, queue, mappings, registry)

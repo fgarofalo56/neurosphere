@@ -1,6 +1,8 @@
 ---
 name: PRP-23-ato-evidence-and-data-lifecycle
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 276
 priority: P1
 order: 23
 review: required
@@ -34,15 +36,15 @@ Out of scope: contracts and permission restructuring (PRP-37/PRP-65 owns `packag
 - #120 review findings are authored from review and still open: negation exemption over the whole sentence in `scripts/compliance/check_statements.py`, leaf-only symlink check in `collect_evidence.py`, missing AC-5 and SC-18 evidence entries, no mermaid-diff test.
 
 ## Acceptance criteria
-- [ ] Given dry-run mode (the default) and a due DELETE request, When the worker processes it, Then the target record still exists, the audit chain holds a before and after record whose detail is `dry_run:would_delete`, and the outcome carries `dry_run=true`, `effect=none` (test per action kind).
-- [ ] Given execute mode, a DELETE on a catalog, ledger or archive record, When processed, Then the record is gone, a read-back confirms it, and the outcome is `completed/deleted`; a held record is still refused and audited; the audit container is still refused (backend tests per store plus the existing engine tests).
-- [ ] Given a queued request whose first execution FAILED, When `process_queue` runs, Then it stays queued with an attempt count and `not_before` backoff and is retried until a configured maximum, after which it is audited as `failed_final` and removed (test with a flaky target).
-- [ ] Given `POST /api/v1/lifecycle/requests`, When the caller lacks the lifecycle permission, Then 403; when it holds it, a job is persisted and 202 returns the request id, and `GET .../requests/{id}` shows pending, then the outcome after the worker ran (API test with in-memory stores).
-- [ ] Given hold placement and release routes, Then both are audited with the server-derived identity, a caller-supplied customer or domain is ignored, and a held target blocks deletion end to end (API plus engine test).
-- [ ] Given no retention policy file, Then the engine reports `policy_status=unset` and expiry deletes nothing; given a valid file, the policy is loaded; an invalid file fails closed to unset and is reported on the lifecycle status route.
+- [x] Given dry-run mode (the default) and a due DELETE request, When the worker processes it, Then the target record still exists, the audit chain holds a before and after record whose detail is `dry_run:would_delete`, and the outcome carries `dry_run=true`, `effect=none` (test per action kind).
+- [x] Given execute mode, a DELETE on a catalog, ledger or archive record, When processed, Then the record is gone, a read-back confirms it, and the outcome is `completed/deleted`; a held record is still refused and audited; the audit container is still refused (backend tests per store plus the existing engine tests).
+- [x] Given a queued request whose first execution FAILED, When `process_queue` runs, Then it stays queued with an attempt count and `not_before` backoff and is retried until a configured maximum, after which it is audited as `failed_final` and removed (test with a flaky target).
+- [x] Given `POST /api/v1/lifecycle/requests`, When the caller lacks the lifecycle permission, Then 403; when it holds it, a job is persisted and 202 returns the request id, and `GET .../requests/{id}` shows pending, then the outcome after the worker ran (API test with in-memory stores).
+- [x] Given hold placement and release routes, Then both are audited with the server-derived identity, a caller-supplied customer or domain is ignored, and a held target blocks deletion end to end (API plus engine test).
+- [x] Given no retention policy file, Then the engine reports `policy_status=unset` and expiry deletes nothing; given a valid file, the policy is loaded; an invalid file fails closed to unset and is reported on the lifecycle status route.
 - [ ] Given execute mode is not set, the status route and `/readyz` detail say the role is in dry-run; setting `NS_LIFECYCLE_MODE=execute` is the only way mutation happens (test).
-- [ ] The #120 items pass: negation limited to the same clause with a regression test, resolved-path containment in `collect_evidence.py`, AC-5 and SC-18 evidence entries, a mermaid-vs-`diagrams/*.mmd` diff test, DR drill size wording aligned, the Chrome `executablePath` note moved to a contributor note.
-- [ ] CA-7, CP-2 and PM-5 are `designed` or `implemented_tested` with evidence paths that exist; AU-11 and SI-12 change status only if the compose integration test passes (otherwise they stay `planned` with updated text); no entry says "compliant" or "authorized".
+- [x] The #120 items pass: negation limited to the same clause with a regression test, resolved-path containment in `collect_evidence.py`, AC-5 and SC-18 evidence entries, a mermaid-vs-`diagrams/*.mmd` diff test, DR drill size wording aligned, the Chrome `executablePath` note moved to a contributor note.
+- [x] CA-7, CP-2 and PM-5 are `designed` or `implemented_tested` with evidence paths that exist; AU-11 and SI-12 change status only if the compose integration test passes (otherwise they stay `planned` with updated text); no entry says "compliant" or "authorized".
 - [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, the one independent review pass is approved, G06 and G02 recorded OPEN.
 
 ## Clarifications (decided)
@@ -236,21 +238,21 @@ Run the collector twice and confirm `git diff --stat docs/evidence/inventory.md`
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| A | todo | | |
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| A | merged | prp-23-round2-lifecycle-runtime | #120 polish done, CA-7/CP-2/PM-5 designed |
+| 1 | merged | prp-23-round2-lifecycle-runtime | dry-run, retry, policy file, job store |
+| 2 | merged | prp-23-round2-lifecycle-runtime | backends done; emulator test written, NOT RUN (PRP-38 holds compose) |
+| 3 | merged | prp-23-round2-lifecycle-runtime | API + builder done; openapi.json NOT regenerated (Tier 3, merge step) |
+| 4 | merged | prp-23-round2-lifecycle-runtime | worker wiring, runbook; worker /readyz detail of mode NOT done (supervisor has no detail field) |
+| 5 | in-progress | prp-23-round2-lifecycle-runtime | AU-11/SI-12 text updated; Tier 3 regen, review, completion note left for merge step |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (G06, G02):
-- Env vars for the operator (`NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`):
-- Follow-up issue numbers:
-- Product check (can an operator place a hold and request a dry-run deletion without raw API calls?):
+- Date, PR, merge commit: 2026-11-15, PR #276 (squash merge commit is the PR's merge commit on main).
+- Deviations from the blueprint and why: jobs reuse the `lifecycle_requests` container (Clarification 2 assumption); policy comes from a JSON file (Clarification 3 assumption); permission `lifecycle.manage` appended in `permissions.py` (Tier 2). The worker /readyz detail of the mode is not done because the supervisor has no detail field, so the "status route and /readyz say dry-run" criterion is only met on the status route and is left unticked. Tier 3 files (`openapi.json`, `docs/reference/**`) were regenerated at merge; the PRP status table and index were regenerated.
+- Descoped items: conversation target shim, scheduled expiry sweeps from policy, lifecycle UI; worker /readyz mode detail. `verify-gates.ps1 -Mode full` was not run in this unattended close-out; the targeted suites (1631 tests), ruff check, ruff format --check and repo-wide pyright were run and passed.
+- OPEN gates (G06, G02): both OPEN (customer inputs). The compose emulator integration test (`tests/integration/lifecycle`) did not run locally; it is left to the CI egress-compose job. No live or `NS_LIVE_APPROVED` run.
+- Env vars for the operator (`NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`): `NS_LIFECYCLE_MODE` (`dry_run` default, `execute` to mutate), `NS_LIFECYCLE_POLICY_FILE` (JSON retention policy path; unset or invalid means nothing expires), `NS_LIFECYCLE_MAX_ATTEMPTS` (default 5). `.env.example` was not edited.
+- Follow-up issue numbers: none filed in this unattended run. Reviewer follow-ups: (1) the dedupe key in `services/api/neurosphere_api/lifecycle/router.py` and `packages/core/neurosphere_core/lifecycle/jobs.py` does not include `dry_run`, so a real delete submitted while an identical dry-run job is pending returns `deduplicated=True` and runs as a dry run (safe direction, but the caller is not told); include `dry_run` in the key or surface it in the accepted response. (2) Confirm the Tier-2 route inventory tests and the openapi drift check pass in CI (openapi.json regenerated here). (3) Cosmos job-store submit dedupe and claim ordering are only exercised on in-memory stores and the compose integration test; a concurrent double-submit could create two pending jobs because select and upsert are not atomic. (4) The review covered the API router and models, permission change, job store, settings and worker wiring; the engine, backends, compliance scripts and docs were skimmed, not reviewed line by line. Also: conversation shim, policy expiry sweeps, Helm role wiring check (PRP-58).
+- Product check (can an operator place a hold and request a dry-run deletion without raw API calls?): No. There is API only (holds, requests, status) and no UI or CLI; an operator needs raw API calls. Not planned in this PRP.
 
 ## History
 - Round 1 (PR #118, merged 2026-10-23) shipped the lifecycle engine with Cosmos hold, queue and mapping stores, the 64-control NIST mapping, the evidence inventory scripts, the compliance plans and rendered diagrams (items 1-4).

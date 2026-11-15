@@ -56,8 +56,7 @@ on a red `main`.
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-23: ATO evidence and data lifecycle (round 2)](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | sonnet | required | none | - | - | `prp-23-round2-lifecycle-runtime` |
-| 2 | [PRP-65: Admin permissions, policy write repository and audited config store](backlog/PRP-65-admin-permissions-policy-repository-and-config-store.md) | opus | required | none | - | - | `prp-65-admin-store` |
+| 1 | [PRP-65: Admin permissions, policy write repository and audited config store](backlog/PRP-65-admin-permissions-policy-repository-and-config-store.md) | opus | required | none | - | - | `prp-65-admin-store` |
 
 Gate before the next wave: Permissions and the admin store reviewed (Opus). `make stack-up` completes on a fresh machine and the real-stack job is green in CI.
 
@@ -161,7 +160,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 ```mermaid
 flowchart LR
   subgraph W12
-    P23["PRP-23"]
     P65["PRP-65"]
   end
   subgraph W13
@@ -267,7 +265,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W12 | PRP-23 | `services/workers/neurosphere_workers/runtime/factories.py` |
 | W12 | PRP-65 | `packages/core/neurosphere_core/stores/containers.py`<br>`infra/compose/cosmos-containers.json`<br>`infra/demo/modules/cosmos-data.bicep`<br>`infra/bicep/modules/cosmos.bicep`<br>`packages/core/neurosphere_core/auth/scope/permissions.py` |
 | W13 | PRP-15 | `services/workers/neurosphere_workers/runtime/factories.py` |
 | W13 | PRP-21 | `services/api/neurosphere_api/authz/dependencies.py`<br>`services/api/neurosphere_api/app.py`<br>`services/api/neurosphere_api/runtime/builders/data.py`<br>`docker-compose.yml`<br>`infra/helm/**`<br>`docs/adr/0002-stack-pins.md`<br>`pyproject.toml` |
@@ -296,20 +293,12 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 Paste one into a fresh Claude Code session started at the repo root.
 
-### PRP-23 (W12)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-23-ato-evidence-and-data-lifecycle.md
-
-Context for this run: wave W12 of PRPs/EXECUTION-PLAN.md, branch prp-23-round2-lifecycle-runtime cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
 ### PRP-65 (W12)
 
 ```text
 /prp:prp-execute PRPs/backlog/PRP-65-admin-permissions-policy-repository-and-config-store.md
 
-Context for this run: wave W12 of PRPs/EXECUTION-PLAN.md, branch prp-65-admin-store cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W12 of PRPs/EXECUTION-PLAN.md, branch prp-65-admin-store cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-39 (W13)

@@ -90,6 +90,7 @@ def _build(*, ignore_deletes: bool = False):
         cloud="commercial",
         customer_id="contoso",
         clock=lambda: NOW,
+        mode="execute",
     )
     return engine, audit, target, holds
 

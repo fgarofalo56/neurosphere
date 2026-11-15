@@ -25,7 +25,11 @@ from neurosphere_core.audit.builders import (
 )
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.audit.repository import AuditRepository, run_audited_mutation
-from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
+from neurosphere_core.errors import (
+    CapabilityUnavailableError,
+    DependencyTransientError,
+    InvalidSchemaError,
+)
 from neurosphere_core.lifecycle.holds import matching_holds
 from neurosphere_core.lifecycle.models import (
     ActionKind,
@@ -55,7 +59,9 @@ from neurosphere_core.scope import IdentityScope
 
 Clock = Callable[[], datetime]
 Cloud = Literal["commercial", "government"]
+Mode = Literal["dry_run", "execute"]
 _PAGE: Final = 200
+_BACKOFF_CAP_SECONDS: Final = 3600
 _SLUG: Final = re.compile(r"[^a-z0-9._-]+")
 
 
@@ -79,6 +85,20 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
 
 
+def lifecycle_canonical_id(
+    cloud: str, customer_id: str, entity: str, ident: str, container: str = "-"
+) -> str:
+    """Audit subject id for a lifecycle object: a digest of ``ident``, never the id itself.
+
+    Shared by the engine and the lifecycle API so both write the same subject for the same hold,
+    request or record.
+    """
+    return (
+        f"{cloud}:{_slug(customer_id)}:lifecycle:{_slug(entity)}:"
+        f"{_slug(container)}/{_digest(ident)}"
+    )
+
+
 class LifecycleEngine:
     def __init__(
         self,
@@ -93,6 +113,9 @@ class LifecycleEngine:
         customer_id: str,
         mappings: PseudonymMappingStore | None = None,
         clock: Clock = _utc_now,
+        mode: Mode = "dry_run",
+        max_attempts: int = 5,
+        retry_base_seconds: int = 60,
     ) -> None:
         self._policy = policy
         self._targets = targets
@@ -104,6 +127,22 @@ class LifecycleEngine:
         self._customer = _slug(customer_id)
         self._mappings = mappings
         self._clock = clock
+        self._mode: Mode = mode
+        self._max_attempts = max(1, max_attempts)
+        self._retry_base = max(1, retry_base_seconds)
+
+    @property
+    def mode(self) -> Mode:
+        """``dry_run`` (default) mutates nothing; only ``execute`` calls mutating target methods."""
+        return self._mode
+
+    @property
+    def max_attempts(self) -> int:
+        return self._max_attempts
+
+    def _is_dry(self, requested: bool) -> bool:
+        # A job can only make a run safer, never override the engine's dry-run mode.
+        return requested or self._mode != "execute"
 
     # -- policy ------------------------------------------------------------------------------
 
@@ -124,10 +163,7 @@ class LifecycleEngine:
         return ctx.model_copy(update={"operation": operation})
 
     def _canonical(self, entity: str, ident: str, container: str = "-") -> str:
-        return (
-            f"{self._cloud}:{self._customer}:lifecycle:{_slug(entity)}:"
-            f"{_slug(container)}/{_digest(ident)}"
-        )
+        return lifecycle_canonical_id(self._cloud, self._customer, entity, ident, container)
 
     def _subject(
         self, request: LifecycleRequest, record: TargetRecord | None, *, after: bool
@@ -184,8 +220,10 @@ class LifecycleEngine:
 
     # -- submit / evaluate -------------------------------------------------------------------
 
-    async def submit(self, request: LifecycleRequest, ctx: AuditContext) -> LifecycleOutcome:
-        return await self._decide(request, ctx, initial=True)
+    async def submit(
+        self, request: LifecycleRequest, ctx: AuditContext, *, dry_run: bool = False
+    ) -> LifecycleOutcome:
+        return await self._decide(request, ctx, initial=True, dry_run=dry_run)
 
     async def _defer(
         self,
@@ -198,6 +236,8 @@ class LifecycleEngine:
         initial: bool,
         not_before: datetime | None = None,
         hold_ids: list[str] | None = None,
+        dry_run: bool = False,
+        attempts: int = 0,
     ) -> LifecycleOutcome:
         item = QueuedRequest(
             request=request,
@@ -206,6 +246,8 @@ class LifecycleEngine:
             reason=reason,
             queued_at=self._clock(),
             not_before=not_before,
+            attempts=attempts,
+            dry_run=dry_run,
         )
         if initial and await self._queue.enqueue(item):
             await self._denied(ctx, request, record, reason)
@@ -235,7 +277,7 @@ class LifecycleEngine:
         )
 
     async def _decide(
-        self, request: LifecycleRequest, ctx: AuditContext, *, initial: bool
+        self, request: LifecycleRequest, ctx: AuditContext, *, initial: bool, dry_run: bool = False
     ) -> LifecycleOutcome:
         ref = request.target
         target: LifecycleTarget | None = None
@@ -271,6 +313,7 @@ class LifecycleEngine:
                     reason="legal_hold",
                     initial=initial,
                     hold_ids=ids,
+                    dry_run=dry_run,
                 )
             if unenumerable:
                 return await self._defer(
@@ -280,20 +323,33 @@ class LifecycleEngine:
                     rule=Rule.LEGAL_HOLD,
                     reason="subject_records_unenumerable",
                     initial=initial,
+                    dry_run=dry_run,
                 )
         elif direct:
             return await self._defer(
-                request, ctx, record, rule=Rule.LEGAL_HOLD, reason="legal_hold", initial=initial
+                request,
+                ctx,
+                record,
+                rule=Rule.LEGAL_HOLD,
+                reason="legal_hold",
+                initial=initial,
+                dry_run=dry_run,
             )
         # Missing policy fails closed.
         policy = self._policy.policy
         if policy is None:
             return await self._defer(
-                request, ctx, record, rule=None, reason="policy_unset", initial=initial
+                request,
+                ctx,
+                record,
+                rule=None,
+                reason="policy_unset",
+                initial=initial,
+                dry_run=dry_run,
             )
         now = self._clock()
         if request.action is ActionKind.ERASE_SUBJECT:
-            return await self._execute_erase(request, ctx)
+            return await self._execute_erase(request, ctx, dry_run=dry_run)
         if record is None or target is None or ref is None:
             raise InvalidSchemaError(
                 "lifecycle request has no resolvable target", reason="no_target"
@@ -301,7 +357,13 @@ class LifecycleEngine:
         rule = policy.rule_for(record.data_class)
         if rule is None:
             return await self._defer(
-                request, ctx, record, rule=None, reason="no_rule_for_data_class", initial=initial
+                request,
+                ctx,
+                record,
+                rule=None,
+                reason="no_rule_for_data_class",
+                initial=initial,
+                dry_run=dry_run,
             )
         # Rule 3: minimum retention.
         earliest = record.created_at + timedelta(days=rule.min_retention_days)
@@ -314,18 +376,23 @@ class LifecycleEngine:
                 reason="min_retention",
                 initial=initial,
                 not_before=earliest,
+                dry_run=dry_run,
             )
         if request.action is ActionKind.EXPIRE:
             # Rule 5: maximum retention expiry.
             if now < record.created_at + timedelta(days=rule.max_retention_days):
                 return self._outcome(request, JobStatus.NOT_DUE, "not_expired")
             return await self._execute_delete(
-                request, ctx, target, ref, record, Rule.MAX_RETENTION_EXPIRY
+                request, ctx, target, ref, record, Rule.MAX_RETENTION_EXPIRY, dry_run=dry_run
             )
         # Rule 4: subject request.
         if request.action is ActionKind.PSEUDONYMIZE:
-            return await self._execute_pseudonymize(request, ctx, target, ref, record)
-        return await self._execute_delete(request, ctx, target, ref, record, Rule.SUBJECT_REQUEST)
+            return await self._execute_pseudonymize(
+                request, ctx, target, ref, record, dry_run=dry_run
+            )
+        return await self._execute_delete(
+            request, ctx, target, ref, record, Rule.SUBJECT_REQUEST, dry_run=dry_run
+        )
 
     async def _erase_blockers(
         self, subject_id: str, holds: list[LegalHold]
@@ -379,13 +446,20 @@ class LifecycleEngine:
         success_detail: str,
         *,
         governing: Rule,
+        dry_effect: str | None = None,
     ) -> tuple[bool, str]:
-        """Before record, mutate (which reads back), after record. Returns (ok, detail)."""
+        """Before record, mutate (which reads back), after record. Returns (ok, detail).
+
+        With ``dry_effect`` set, ``mutate`` is not called: the before and after records are
+        written with detail ``dry_run:would_<effect>`` and nothing in any store changes.
+        """
         op = self._ctx(ctx, f"lifecycle.{request.action.value}")
         before_subject = self._subject(request, record, after=False)
         after_subject = self._subject(request, record, after=True)
 
         async def go() -> str:
+            if dry_effect is not None:
+                return f"dry_run:would_{dry_effect}"
             await mutate()
             return success_detail
 
@@ -406,7 +480,7 @@ class LifecycleEngine:
             )
         except _ReadBackFailedError as exc:
             return False, exc.code
-        except CapabilityUnavailableError as exc:
+        except (CapabilityUnavailableError, DependencyTransientError) as exc:
             return False, exc.reason or "capability_unavailable"
         del governing
         return True, detail
@@ -419,15 +493,31 @@ class LifecycleEngine:
         ref: TargetRef,
         record: TargetRecord,
         governing: Rule,
+        *,
+        dry_run: bool = False,
     ) -> LifecycleOutcome:
+        dry = self._is_dry(dry_run)
+
         async def mutate() -> None:
             await target.delete(ref.record_id)
             if await target.get(ref.record_id) is not None:
                 raise _ReadBackFailedError("readback_found_target")
 
-        ok, detail = await self._run(request, ctx, record, mutate, "deleted", governing=governing)
+        ok, detail = await self._run(
+            request,
+            ctx,
+            record,
+            mutate,
+            "deleted",
+            governing=governing,
+            dry_effect="delete" if dry else None,
+        )
         if not ok:
             return self._outcome(request, JobStatus.FAILED, detail, governing_rule=governing)
+        if dry:
+            return self._outcome(
+                request, JobStatus.COMPLETED, detail, governing_rule=governing, dry_run=True
+            )
         return self._outcome(
             request,
             JobStatus.COMPLETED,
@@ -444,8 +534,11 @@ class LifecycleEngine:
         target: LifecycleTarget,
         ref: TargetRef,
         record: TargetRecord,
+        *,
+        dry_run: bool = False,
     ) -> LifecycleOutcome:
         original = record.subject_id
+        dry = self._is_dry(dry_run)
 
         async def mutate() -> None:
             await target.pseudonymize(ref.record_id)
@@ -458,11 +551,25 @@ class LifecycleEngine:
                 raise _ReadBackFailedError("readback_not_pseudonymized")
 
         ok, detail = await self._run(
-            request, ctx, record, mutate, "pseudonymized", governing=Rule.SUBJECT_REQUEST
+            request,
+            ctx,
+            record,
+            mutate,
+            "pseudonymized",
+            governing=Rule.SUBJECT_REQUEST,
+            dry_effect="pseudonymize" if dry else None,
         )
         if not ok:
             return self._outcome(
                 request, JobStatus.FAILED, detail, governing_rule=Rule.SUBJECT_REQUEST
+            )
+        if dry:
+            return self._outcome(
+                request,
+                JobStatus.COMPLETED,
+                detail,
+                governing_rule=Rule.SUBJECT_REQUEST,
+                dry_run=True,
             )
         reidentifiable: bool | None = None
         if self._mappings is not None and original is not None:
@@ -478,8 +585,9 @@ class LifecycleEngine:
         )
 
     async def _execute_erase(
-        self, request: LifecycleRequest, ctx: AuditContext
+        self, request: LifecycleRequest, ctx: AuditContext, *, dry_run: bool = False
     ) -> LifecycleOutcome:
+        dry = self._is_dry(dry_run)
         subject = request.subject_id or ""
         mappings = self._mappings
         if mappings is None:
@@ -491,11 +599,25 @@ class LifecycleEngine:
                 raise _ReadBackFailedError("readback_found_mapping")
 
         ok, detail = await self._run(
-            request, ctx, None, mutate, "mapping_destroyed", governing=Rule.SUBJECT_REQUEST
+            request,
+            ctx,
+            None,
+            mutate,
+            "mapping_destroyed",
+            governing=Rule.SUBJECT_REQUEST,
+            dry_effect="erase" if dry else None,
         )
         if not ok:
             return self._outcome(
                 request, JobStatus.FAILED, detail, governing_rule=Rule.SUBJECT_REQUEST
+            )
+        if dry:
+            return self._outcome(
+                request,
+                JobStatus.COMPLETED,
+                detail,
+                governing_rule=Rule.SUBJECT_REQUEST,
+                dry_run=True,
             )
         return self._outcome(
             request,
@@ -513,11 +635,51 @@ class LifecycleEngine:
         """Re-evaluate queued requests; those whose blocking rule lifted run and leave the queue."""
         results: list[LifecycleOutcome] = []
         for item in await self._queue.pending():
-            outcome = await self._decide(item.request, item.ctx, initial=False)
-            if outcome.status is not JobStatus.QUEUED:
+            if item.attempts > 0 and item.not_before and self._clock() < item.not_before:
+                continue  # backing off after a failed attempt
+            outcome = await self._decide(
+                item.request, item.ctx, initial=False, dry_run=item.dry_run
+            )
+            if outcome.status is JobStatus.FAILED:
+                final = await self._retry_or_finish(item, outcome)
+                if final is not None:
+                    results.append(final)
+            elif outcome.status is not JobStatus.QUEUED:
                 await self._queue.remove(item.request.request_id)
                 results.append(outcome)
         return results
+
+    async def _retry_or_finish(
+        self, item: QueuedRequest, outcome: LifecycleOutcome
+    ) -> LifecycleOutcome | None:
+        """Keep a FAILED queued request with backoff; after the maximum, audit and drop it."""
+        attempts = item.attempts + 1
+        await self._queue.remove(item.request.request_id)
+        if attempts >= self._max_attempts:
+            request = item.request
+            op = self._ctx(item.ctx, f"lifecycle.{request.action.value}")
+            await self._audit.append(
+                self._chain,
+                build_after(
+                    op,
+                    self._subject(request, None, after=True),
+                    result="failed",
+                    verified=False,
+                    detail="failed_final",
+                ),
+            )
+            return outcome.model_copy(update={"reason": "failed_final"})
+        delay = min(self._retry_base * 2 ** (attempts - 1), _BACKOFF_CAP_SECONDS)
+        await self._queue.enqueue(
+            item.model_copy(
+                update={
+                    "attempts": attempts,
+                    "not_before": self._clock() + timedelta(seconds=delay),
+                    "reason": outcome.reason,
+                }
+            )
+        )
+        return None
 
     async def sweep_expiry(
         self, ctx: AuditContext, *, target: LifecycleTarget, data_class: str, limit: int = 100

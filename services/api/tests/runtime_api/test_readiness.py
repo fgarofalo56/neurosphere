@@ -187,6 +187,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "mcp",
         "gateway",
         "edge",
+        "lifecycle",
         "analytics",
     ]
     assert copilot_builder.BUILDER in default_builders()
@@ -218,6 +219,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "mcp",
         "stub-gateway",
         "edge",
+        "lifecycle",
         "analytics",
     ]
     assert {spec.components for spec in builders_with_stubs()} == {

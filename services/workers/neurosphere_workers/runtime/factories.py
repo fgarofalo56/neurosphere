@@ -108,12 +108,14 @@ from neurosphere_core.hitl.decisions import DecisionLog
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
 from neurosphere_core.ledger import PriceTable
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
-from neurosphere_core.lifecycle import LifecycleEngine, TargetRegistry
+from neurosphere_core.lifecycle import TargetRegistry
 from neurosphere_core.lifecycle.cosmos import (
     CosmosHoldRegistry,
     CosmosMappingStore,
     CosmosRequestQueue,
 )
+from neurosphere_core.lifecycle.jobs import CosmosJobStore
+from neurosphere_core.lifecycle.settings import LifecycleSettings
 from neurosphere_core.pricing import InMemoryPriceSnapshotStore
 from neurosphere_core.pricing.cosmos_store import CosmosPriceSnapshotStore
 from neurosphere_core.pricing.models import PriceSnapshot
@@ -181,7 +183,7 @@ from neurosphere_workers.ingestion.gateway_poll import (
 )
 from neurosphere_workers.ingestion.settings import IngestionSettings
 from neurosphere_workers.ingestion.wiring import build_pipeline_deps
-from neurosphere_workers.lifecycle.worker import JobSource, LifecycleWorker
+from neurosphere_workers.lifecycle.assembly import LifecycleParts, assemble, build_targets
 from neurosphere_workers.projections.catalog import CatalogProjection
 from neurosphere_workers.projections.outbox import (
     SINK_AGGREGATES,
@@ -695,47 +697,75 @@ async def build_hitl_timers(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
     )
 
 
-def _lifecycle_job_source() -> JobSource | None:
-    """Where requested lifecycle jobs come from; ``None`` when no store holds them.
+def _lifecycle_storage_configured(cfg: RuntimeConfig | None) -> bool:
+    """Cosmos is reachable by configuration: the emulator locally, else an account name."""
+    if cfg is None:
+        return False
+    return cfg.settings.env == "local" or bool(cfg.store.cosmos_account)
 
-    The Cosmos request queue only holds requests the engine already blocked (it is drained by
-    ``process_queue``); nothing persists a freshly *requested* job for a worker to pick up, and
-    inventing that contract is out of scope. Until one exists the role cannot do any work.
+
+def _lifecycle_targets(
+    cfg: RuntimeConfig, cosmos: CosmosClient, lifetime: ClientLifetime
+) -> TargetRegistry:
+    """Catalog, ledger and archive targets over the real stores.
+
+    The archive target is registered only when blob storage is configured (a missing archive
+    setting leaves it out, so a request for it fails closed as ``unknown_target``). The
+    conversation target is not built here (follow-up: it needs the API-hosted store).
     """
-    return None
-
-
-def _lifecycle_targets() -> TargetRegistry:
-    """Lifecycle targets (catalog, archive, ledger, conversations) bound by the owning deployment;
-    none are bound by the runtime today, so every request would fail closed."""
-    return TargetRegistry()
+    db = _database(cfg, cosmos)
+    archive: ContainerClient | None
+    try:
+        archive = _archive_container(cfg, lifetime)
+    except RoleConfigError as exc:
+        logger.warning(
+            "lifecycle archive target not registered",
+            extra={"event": "worker.lifecycle_archive_off", "reason": exc.reason},
+        )
+        archive = None
+    return build_targets(
+        cloud=cfg.cloud,
+        customer_id=cfg.customer_id,
+        catalog_container=db.get_container_client(_CATALOG_CONTAINER),
+        ledger_container=db.get_container_client(_LEDGER_CONTAINER),
+        archive_container=archive,
+        archive_name=ArchiveSettings().container,
+    )
 
 
 async def build_lifecycle(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
-    source = _lifecycle_job_source()
-    if source is None:
+    if not _lifecycle_storage_configured(cfg):
         # Explicitly idle by configuration: reported `idle` with this reason on /healthz and
         # /readyz, never polling, and not counted against readiness.
         logger.warning(
-            "lifecycle role is idle: no source of requested jobs is wired",
+            "lifecycle role is idle: no store of requested jobs is configured",
             extra={"event": "worker.lifecycle_inert", "reason": _LIFECYCLE_NO_SOURCE},
         )
         return IdleRole(_LIFECYCLE_NO_SOURCE)
+    try:
+        settings = LifecycleSettings()
+    except ValidationError:
+        raise RoleConfigError("lifecycle_settings_invalid") from None
     customer = cfg.customer_id
     cosmos = await _cosmos(cfg, lifetime)
     database = cfg.store.database
-    engine = LifecycleEngine(
-        targets=_lifecycle_targets(),
+    jobs = CosmosJobStore.from_client(cosmos, database=database, customer_id=customer)
+    parts = LifecycleParts(
+        jobs=jobs,
         holds=CosmosHoldRegistry.from_client(cosmos, database=database, customer_id=customer),
         queue=CosmosRequestQueue.from_client(cosmos, database=database, customer_id=customer),
-        audit=_audit(cfg, cosmos),
-        audit_chain_id=f"lifecycle.{customer}",
-        cloud=cfg.cloud,  # type: ignore[arg-type]
-        customer_id=customer,
         mappings=CosmosMappingStore.from_client(cosmos, database=database, customer_id=customer),
+        audit=_audit(cfg, cosmos),
+        targets=_lifecycle_targets(cfg, cosmos, lifetime),
+    )
+    _engine, worker = assemble(
+        parts,
+        settings,
+        customer_id=customer,
+        cloud=cfg.cloud,  # type: ignore[arg-type]
     )
     return WorkerRole(
-        LifecycleWorker(engine, source),
+        worker,
         idle_seconds=cfg.worker.poll_seconds,
         checkpoints=_runtime_checkpoints(cfg, cosmos),
     )

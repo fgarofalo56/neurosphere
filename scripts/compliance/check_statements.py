@@ -8,8 +8,10 @@ Fails (exit 1, files named) when:
 2. a sentence affirmatively claims FedRAMP/DoD authorization or certification, a granted ATO,
    compliance parity, a certification or authorization date, or a compliance percentage.
 
-A sentence containing a negation or condition word (not, no, never, cannot, without, whether,
-unless, until, if, before) is not an affirmative claim. ``authorizing official`` and
+A clause (a sentence split at dashes and contrastive words) containing a
+negation or condition word (not, no, never, cannot, without, whether, unless, until, if,
+before) is not an affirmative claim; the negation does not reach other clauses.
+``authorizing official`` and
 ``authorized custodians/users/connectors`` are not claims about NeuroSphere.
 
 Usage:
@@ -91,6 +93,13 @@ CLAIM_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 
 BLOCK_START_RE = re.compile(r"^\s*(?:[|#>*+-]|\d+\.)")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|;\s*|\|")
+# A negation only exempts the clause it appears in, so "authorized, unlike X which is not"
+# still fails. Clauses split on dashes and contrastive words; plain commas do not
+# split, so "makes no ATO, parity or certification claim" stays one negated clause.
+CLAUSE_SPLIT_RE = re.compile(
+    r"\s[-]+\s|,?\s+(?:but|while|whereas|although|though|unlike|however|yet|which)\s+",
+    re.IGNORECASE,
+)
 
 
 def has_statement(text: str) -> bool:
@@ -128,11 +137,14 @@ def find_claims(text: str) -> list[tuple[int, str, str]]:
     for line_no, unit in _units(text):
         for sentence in SENTENCE_SPLIT_RE.split(unit):
             sentence = sentence.strip()
-            if not sentence or NEGATION_RE.search(sentence):
+            if not sentence:
                 continue
-            for name, rx in CLAIM_RULES:
-                if rx.search(sentence):
-                    found.append((line_no, name, sentence[:120]))
+            for clause in CLAUSE_SPLIT_RE.split(sentence):
+                if not clause or NEGATION_RE.search(clause):
+                    continue
+                for name, rx in CLAIM_RULES:
+                    if rx.search(clause):
+                        found.append((line_no, name, sentence[:120]))
     return found
 
 

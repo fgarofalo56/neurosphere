@@ -57,6 +57,7 @@ EXPECTED = {
         P.REVOCATION_MANAGE,
         P.GRANT_READ,
         P.GRANT_WRITE,
+        P.LIFECYCLE_MANAGE,
     },
     Role.SECURITY_AUDITOR: {P.AUDIT_READ, P.EVIDENCE_READ},
 }
@@ -83,7 +84,12 @@ def test_role_set_is_closed_and_matches_contract() -> None:
 
 def test_analyst_pro_never_implies_admin() -> None:
     admin_only = EXPECTED[Role.ADMIN] - EXPECTED[Role.VIEWER] - SHARED_ADMIN_STEWARD
-    assert admin_only == {P.CONFIG_MANAGE, P.POLICY_MANAGE, P.REVOCATION_MANAGE}
+    assert admin_only == {
+        P.CONFIG_MANAGE,
+        P.POLICY_MANAGE,
+        P.REVOCATION_MANAGE,
+        P.LIFECYCLE_MANAGE,
+    }
     assert not role_permissions(Role.ANALYST) & admin_only
     assert not role_permissions(Role.ANALYST) & SHARED_ADMIN_STEWARD
     assert not role_permissions(Role.DOMAIN_STEWARD) & admin_only

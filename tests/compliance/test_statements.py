@@ -56,6 +56,9 @@ def test_wrong_case_sentence_fails(checker: ModuleType, tmp_path: Path) -> None:
         "Authorization expected in Q3.",
         "Compliance is at 87% of controls.",
         "Controls implemented: 92%.",
+        # Negation in a later clause must not exempt the affirmative clause (#120).
+        "NeuroSphere is FedRAMP authorized, unlike the sandbox which is not.",
+        "NeuroSphere is FedRAMP authorized but the sandbox is not.",
     ],
 )
 def test_affirmative_claims_fail(

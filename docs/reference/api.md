@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `3e52431d80da7db195cae76c1ee4b9596056c1c4`. Generated: 2026-11-15.
+> Source commit: `077cf1a2a3bd7d718526b42e5df022d399106958`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 143 operations on 127 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 150 operations on 132 paths.
 
 ## Status and verification
 
@@ -131,6 +131,13 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | ingest | POST | `/v1/ingest/events` | Events |
 | ingest | POST | `/v1/ingest/otlp/metrics` | Metrics |
 | ingest | POST | `/v1/ingest/otlp/traces` | Traces |
+| lifecycle | GET | `/api/v1/lifecycle/holds` | List Holds |
+| lifecycle | POST | `/api/v1/lifecycle/holds` | Place Hold |
+| lifecycle | DELETE | `/api/v1/lifecycle/holds/{hold_id}` | Release Hold |
+| lifecycle | GET | `/api/v1/lifecycle/requests` | List Requests |
+| lifecycle | POST | `/api/v1/lifecycle/requests` | Submit Request |
+| lifecycle | GET | `/api/v1/lifecycle/requests/{request_id}` | Get Request |
+| lifecycle | GET | `/api/v1/lifecycle/status` | Status |
 | map | GET | `/api/v1/map/domains/{domain_id}/viewport` | Get Viewport |
 | mcp-admin | GET | `/api/v1/mcp/admin/servers` | List Servers |
 | mcp-admin | POST | `/api/v1/mcp/admin/servers` | Register Server |
@@ -977,6 +984,55 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Operation id: `traces_v1_ingest_otlp_traces_post`
 - Summary: Traces
 - Responses: `202` `IngestResult`
+
+### Tag: lifecycle
+
+#### GET `/api/v1/lifecycle/holds`
+
+- Operation id: `list_holds_api_v1_lifecycle_holds_get`
+- Summary: List Holds
+- Responses: `200` array of `HoldView`
+
+#### POST `/api/v1/lifecycle/holds`
+
+- Operation id: `place_hold_api_v1_lifecycle_holds_post`
+- Summary: Place Hold
+- Request body: application/json: `HoldCreate` (required)
+- Responses: `201` `HoldView`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/lifecycle/holds/{hold_id}`
+
+- Operation id: `release_hold_api_v1_lifecycle_holds__hold_id__delete`
+- Summary: Release Hold
+- Parameters: `hold_id` (path, required)
+- Responses: `204` no body; `422` `HTTPValidationError`
+
+#### GET `/api/v1/lifecycle/requests`
+
+- Operation id: `list_requests_api_v1_lifecycle_requests_get`
+- Summary: List Requests
+- Parameters: `limit` (query)
+- Responses: `200` array of `RequestView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/lifecycle/requests`
+
+- Operation id: `submit_request_api_v1_lifecycle_requests_post`
+- Summary: Submit Request
+- Request body: application/json: `RequestCreate` (required)
+- Responses: `202` `RequestAccepted`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/lifecycle/requests/{request_id}`
+
+- Operation id: `get_request_api_v1_lifecycle_requests__request_id__get`
+- Summary: Get Request
+- Parameters: `request_id` (path, required)
+- Responses: `200` `RequestView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/lifecycle/status`
+
+- Operation id: `status_api_v1_lifecycle_status_get`
+- Summary: Status
+- Responses: `200` `StatusView`
 
 ### Tag: map
 

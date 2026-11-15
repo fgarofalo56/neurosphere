@@ -19,7 +19,6 @@ _none_
 | [PRP-53-admin-console-identity-status-and-audit](backlog/PRP-53-admin-console-identity-status-and-audit.md) | P0 | 40 | PRP-39-identity-admin-api-and-revocation, PRP-40-audit-search-export-and-siem-sink, PRP-44-platform-configuration, PRP-45-system-status-first-run-and-feature-settings | PRP-39-identity-admin-api-and-revocation (backlog); PRP-40-audit-search-export-and-siem-sink (backlog); PRP-44-platform-configuration (backlog); PRP-45-system-status-first-run-and-feature-settings (backlog) | sonnet / sonnet | required |
 | [PRP-57-admin-console-sources-pricing-and-features](backlog/PRP-57-admin-console-sources-pricing-and-features.md) | P0 | 44 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-45-system-status-first-run-and-feature-settings, PRP-53-admin-console-identity-status-and-audit | PRP-41-producer-registry (backlog); PRP-42-connector-configuration-and-credential-references (backlog); PRP-44-platform-configuration (backlog); PRP-45-system-status-first-run-and-feature-settings (backlog); PRP-53-admin-console-identity-status-and-audit (backlog) | sonnet / sonnet | required |
 | [PRP-65-admin-permissions-policy-repository-and-config-store](backlog/PRP-65-admin-permissions-policy-repository-and-config-store.md) | P0 | 53 | PRP-37-contracts-revision-admin-cost-and-permissions | - | opus / sonnet | required |
-| [PRP-23-ato-evidence-and-data-lifecycle](backlog/PRP-23-ato-evidence-and-data-lifecycle.md) | P1 | 23 | - | - | sonnet / sonnet | required |
 | [PRP-15-recommendations-engine](backlog/PRP-15-recommendations-engine.md) | P1 | 25 | - | - | sonnet / sonnet | required |
 | [PRP-21-scale-federation-finops-and-dr](backlog/PRP-21-scale-federation-finops-and-dr.md) | P1 | 26 | - | - | sonnet / sonnet | required |
 | [PRP-43-catalog-hardening-and-review-queue](backlog/PRP-43-catalog-hardening-and-review-queue.md) | P1 | 31 | PRP-37-contracts-revision-admin-cost-and-permissions | - | sonnet / sonnet | required |
@@ -54,6 +53,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [PRP-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-11-15 | #275 |
+| [PRP-23-ato-evidence-and-data-lifecycle](shipped/PRP-23-ato-evidence-and-data-lifecycle.md) | 2026-11-15 | #276 |
 | [PRP-37-contracts-revision-admin-cost-and-permissions](shipped/PRP-37-contracts-revision-admin-cost-and-permissions.md) | 2026-11-15 | #273 |
 | [PRP-38-real-stack-ci-and-dev-stack](shipped/PRP-38-real-stack-ci-and-dev-stack.md) | 2026-11-15 | #278 |
 | [PRP-68-changelog-fragments-and-index-freshness](shipped/PRP-68-changelog-fragments-and-index-freshness.md) | 2026-11-15 | #270 |

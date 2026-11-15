@@ -116,12 +116,14 @@ nav:
       - runbooks/install.md
       - dev/local-setup.md
       - dev/env-example-process.md
+      - dev/diagram-rendering.md
       - runbooks/seeding.md
       - deploy/hosted-demo.md
   - Runbooks:
       - runbooks/operations.md
       - runbooks/ingest.md
       - runbooks/ingest-cost-attribution.md
+      - runbooks/lifecycle.md
       - runbooks/runtime-composition.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
