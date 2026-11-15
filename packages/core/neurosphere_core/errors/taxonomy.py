@@ -27,7 +27,7 @@ ErrorCode = Literal[
 ]
 HttpStatus = Literal[401, 403, 404, 405, 409, 413, 422, 429, 500, 502, 503]
 
-_SCHEMA_VERSION = "1.0.0"
+_SCHEMA_VERSION = "1.1.0"
 _PROBLEM_TYPE_BASE = "https://neurosphere.invalid/problems/"
 
 
