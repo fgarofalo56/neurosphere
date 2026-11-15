@@ -171,6 +171,11 @@ class RevocationService:
     def propagation_bound_seconds(self) -> float:
         return self._ttl
 
+    @property
+    def store(self) -> RevocationStore:
+        """The store this service writes (read-only use by admin summaries)."""
+        return self._store
+
     def _base_event(
         self,
         actor: IdentityScope,

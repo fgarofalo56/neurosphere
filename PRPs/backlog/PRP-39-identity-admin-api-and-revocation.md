@@ -208,7 +208,7 @@ Console UI, Entra group sync, Graph lookups of display names, bulk import of ass
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | verifying | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
-| 2 | todo | | |
+| 2 | verifying | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
