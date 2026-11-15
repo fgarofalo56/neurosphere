@@ -190,6 +190,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "edge",
         "lifecycle",
         "admission",
+        "admin_connectors",
         "admin",
         "analytics",
     ]
@@ -224,6 +225,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "edge",
         "lifecycle",
         "admission",
+        "admin_connectors",
         "admin",
         "analytics",
     ]

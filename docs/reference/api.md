@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `b200a8f9585c7955ed45216abfdfe083ddd51063`. Generated: 2026-11-15.
+> Source commit: `196e331236dfe208454692aaeb7bf1b766f10315`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 171 operations on 147 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 178 operations on 151 paths.
 
 ## Status and verification
 
@@ -43,6 +43,13 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | actions | POST | `/api/v1/actions/domains/{domain}/intents/{intent_id}/validate` | Validate Intent |
 | actions | GET | `/api/v1/actions/emergency-disable` | Read Emergency Disable |
 | actions | PUT | `/api/v1/actions/emergency-disable` | Set Emergency Disable |
+| admin-connectors | GET | `/api/v1/admin/sources/connectors` | List Connectors |
+| admin-connectors | POST | `/api/v1/admin/sources/connectors` | Create Connector |
+| admin-connectors | GET | `/api/v1/admin/sources/connectors/{config_id}` | Get Connector |
+| admin-connectors | PUT | `/api/v1/admin/sources/connectors/{config_id}` | Replace Connector |
+| admin-connectors | DELETE | `/api/v1/admin/sources/connectors/{config_id}` | Retire Connector |
+| admin-connectors | POST | `/api/v1/admin/sources/connectors/{config_id}/disable` | Disable Connector |
+| admin-connectors | POST | `/api/v1/admin/sources/connectors/{config_id}/enable` | Enable Connector |
 | admin-identity | GET | `/api/v1/admin/identity/principals` | List Principals |
 | admin-identity | GET | `/api/v1/admin/identity/principals/{principal_id}` | Get Principal |
 | admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/domain-memberships/{domain_id}` | Put Domain Membership |
@@ -274,6 +281,58 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Set Emergency Disable
 - Request body: application/json: `EmergencyDisableBody` (required)
 - Responses: `200` `EmergencyDisableView`; `422` `HTTPValidationError`
+
+### Tag: admin-connectors
+
+#### GET `/api/v1/admin/sources/connectors`
+
+- Operation id: `list_connectors_api_v1_admin_sources_connectors_get`
+- Summary: List Connectors
+- Parameters: `connector_kind` (query), `include_retired` (query), `limit` (query)
+- Responses: `200` `ConnectorPage`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/connectors`
+
+- Operation id: `create_connector_api_v1_admin_sources_connectors_post`
+- Summary: Create Connector
+- Request body: application/json: `ConnectorConfig` (required)
+- Responses: `201` `ConnectorView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/sources/connectors/{config_id}`
+
+- Operation id: `get_connector_api_v1_admin_sources_connectors__config_id__get`
+- Summary: Get Connector
+- Parameters: `config_id` (path, required)
+- Responses: `200` `ConnectorView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/sources/connectors/{config_id}`
+
+- Operation id: `replace_connector_api_v1_admin_sources_connectors__config_id__put`
+- Summary: Replace Connector
+- Parameters: `config_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `ConnectorConfig` (required)
+- Responses: `200` `ConnectorView`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/sources/connectors/{config_id}`
+
+- Operation id: `retire_connector_api_v1_admin_sources_connectors__config_id__delete`
+- Summary: Retire Connector
+- Parameters: `config_id` (path, required), `If-Match` (header, required)
+- Responses: `200` `ConnectorView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/connectors/{config_id}/disable`
+
+- Operation id: `disable_connector_api_v1_admin_sources_connectors__config_id__disable_post`
+- Summary: Disable Connector
+- Parameters: `config_id` (path, required), `If-Match` (header, required)
+- Responses: `200` `ConnectorView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/sources/connectors/{config_id}/enable`
+
+- Operation id: `enable_connector_api_v1_admin_sources_connectors__config_id__enable_post`
+- Summary: Enable Connector
+- Parameters: `config_id` (path, required), `If-Match` (header, required)
+- Responses: `200` `ConnectorView`; `422` `HTTPValidationError`
 
 ### Tag: admin-identity
 

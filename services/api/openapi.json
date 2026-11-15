@@ -2722,10 +2722,190 @@
         "title": "ConfirmBody",
         "type": "object"
       },
+      "ConnectorConfig": {
+        "additionalProperties": false,
+        "description": "Operator configuration of one connector instance (PRP-42): which connector, which domains it reports into, its bounded scalar settings and the credential it uses, by reference only. settings refuses nested objects, arrays and secret-like keys (secret, password, token, key, sas, signature, credential, connection); a credential is never a setting. Rules JSON Schema cannot express are checked by tests/contracts/validators.py::check_connector_config_cloud: every domain_id is on one cloud and a key_vault_secret credential names a vault on that cloud (check_credential_reference_cloud).",
+        "properties": {
+          "connector_id": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "connector_kind": {
+            "enum": [
+              "gateway_poll",
+              "foundry_discovery",
+              "billing_export",
+              "otel"
+            ],
+            "title": "Connector Kind",
+            "type": "string"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_ids": {
+            "items": {
+              "$ref": "#/components/schemas/DomainId"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "settings": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,63}$": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Settings"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              }
+            },
+            "title": "Settings",
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema_version",
+          "connector_id",
+          "connector_kind",
+          "domain_ids",
+          "settings",
+          "credential",
+          "enabled"
+        ],
+        "title": "ConnectorConfig",
+        "type": "object"
+      },
+      "ConnectorPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ConnectorPage",
+        "type": "object"
+      },
       "ConnectorVersion": {
         "maxLength": 64,
         "title": "ConnectorVersion",
         "type": "string"
+      },
+      "ConnectorView": {
+        "additionalProperties": false,
+        "properties": {
+          "connector_id": {
+            "title": "Connector Id",
+            "type": "string"
+          },
+          "connector_kind": {
+            "title": "Connector Kind",
+            "type": "string"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CredentialView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Settings",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "connector_id",
+          "connector_kind",
+          "domain_ids",
+          "settings",
+          "credential",
+          "enabled",
+          "status",
+          "version",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "ConnectorView",
+        "type": "object"
       },
       "ConsentRecord": {
         "additionalProperties": false,
@@ -3100,6 +3280,86 @@
           "coverage_fraction"
         ],
         "title": "CoveragePoint",
+        "type": "object"
+      },
+      "CredentialReference": {
+        "additionalProperties": false,
+        "description": "A reference to a credential, never the credential (A7). Either an Azure Key Vault secret identifier on the deployment's own cloud (vault.azure.net for Commercial, vault.usgovcloudapi.net for Government), resolved at runtime by managed identity, or the client id of a user-assigned managed identity. There is deliberately no member that can hold a secret value, connection string, SAS token or key. Rules JSON Schema cannot express (the vault host matches the cloud of the owning document) are checked by tests/contracts/validators.py::check_credential_reference_cloud.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "key_vault_secret",
+              "managed_identity"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "managed_identity_client_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed Identity Client Id"
+          },
+          "secret_uri": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "pattern": "^https://[a-z][a-z0-9-]{1,22}[a-z0-9]\\.vault\\.(azure\\.net|usgovcloudapi\\.net)/secrets/[A-Za-z0-9-]{1,127}(/[0-9a-f]{32})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Uri"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "CredentialReference",
+        "type": "object"
+      },
+      "CredentialView": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "managed_identity_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed Identity Client Id"
+          },
+          "secret_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Uri"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "CredentialView",
         "type": "object"
       },
       "Curation": {
@@ -14040,6 +14300,11 @@
         "title": "SetConfidence",
         "type": "number"
       },
+      "Settings": {
+        "maxLength": 512,
+        "title": "Settings",
+        "type": "string"
+      },
       "Sha256Hash": {
         "pattern": "^sha256:[0-9a-f]{64}$",
         "title": "Sha256Hash",
@@ -14066,6 +14331,11 @@
         "maxLength": 128,
         "minLength": 1,
         "title": "Sku",
+        "type": "string"
+      },
+      "Slug": {
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+        "title": "Slug",
         "type": "string"
       },
       "SortKey": {
@@ -18604,6 +18874,382 @@
         "summary": "Put Role Assignment",
         "tags": [
           "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/connectors": {
+      "get": {
+        "operationId": "list_connectors_api_v1_admin_sources_connectors_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "connector_kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(gateway_poll|foundry_discovery|billing_export|otel)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connector Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Connectors",
+        "tags": [
+          "admin-connectors"
+        ]
+      },
+      "post": {
+        "operationId": "create_connector_api_v1_admin_sources_connectors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectorConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Connector",
+        "tags": [
+          "admin-connectors"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/connectors/{config_id}": {
+      "delete": {
+        "operationId": "retire_connector_api_v1_admin_sources_connectors__config_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Config Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retire Connector",
+        "tags": [
+          "admin-connectors"
+        ]
+      },
+      "get": {
+        "operationId": "get_connector_api_v1_admin_sources_connectors__config_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Config Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Connector",
+        "tags": [
+          "admin-connectors"
+        ]
+      },
+      "put": {
+        "operationId": "replace_connector_api_v1_admin_sources_connectors__config_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Config Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectorConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Connector",
+        "tags": [
+          "admin-connectors"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/connectors/{config_id}/disable": {
+      "post": {
+        "operationId": "disable_connector_api_v1_admin_sources_connectors__config_id__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Config Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Connector",
+        "tags": [
+          "admin-connectors"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/connectors/{config_id}/enable": {
+      "post": {
+        "operationId": "enable_connector_api_v1_admin_sources_connectors__config_id__enable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Config Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enable Connector",
+        "tags": [
+          "admin-connectors"
         ]
       }
     },

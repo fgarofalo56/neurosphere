@@ -355,6 +355,29 @@ def test_identity_admin_routes_declare_their_permissions() -> None:
     }
 
 
+def test_connector_admin_routes_declare_config_manage() -> None:
+    """PRP-42: every connector admin route needs config.manage (customer-level in the route)."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/sources/connectors"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    config = ("config.manage",)
+    item = f"{base}/{{config_id}}"
+    assert found == {
+        (base, "POST"): config,
+        (base, "GET"): config,
+        (item, "GET"): config,
+        (item, "PUT"): config,
+        (item, "DELETE"): config,
+        (f"{item}/enable", "POST"): config,
+        (f"{item}/disable", "POST"): config,
+    }
+
+
 def test_producer_admin_routes_declare_config_manage() -> None:
     """PRP-41: every producer admin route needs config.manage (customer-level on top)."""
     app = create_app(Settings(env="local"))

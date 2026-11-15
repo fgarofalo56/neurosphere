@@ -61,6 +61,7 @@ OPTIONAL_COMPONENTS: Final = (
     "analytics_adapter",
     "policy_admin",
     "revocation_service",
+    "admin_connectors",
     "admin_producers",
     "audit_siem",
 )
