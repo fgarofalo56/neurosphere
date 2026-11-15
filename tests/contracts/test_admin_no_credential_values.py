@@ -55,6 +55,10 @@ ALLOWED: dict[tuple[str, str], str] = {
         "admin/v1/producer-secret-issued.schema.json",
         "/properties/secret",
     ): "response-only, shown once at issue or rotation (PRP-41); never stored or re-read",
+    (
+        "admin/v1/price-sheet-upload.schema.json",
+        "/$defs/price_row/properties/token_meter",
+    ): "a price meter for model tokens (provider, model, kind), not an auth token",
 }
 IDENTIFIER_NAMES = frozenset({"setting_key"})
 
@@ -127,7 +131,7 @@ def _enum_constrained(body: dict[str, Any]) -> bool:
 
 def test_admin_family_exists() -> None:
     assert "admin/v1/credential-reference.schema.json" in ADMIN
-    assert len(ADMIN) >= 8
+    assert len(ADMIN) == 18
 
 
 @pytest.mark.parametrize("rel", ADMIN)
@@ -143,10 +147,7 @@ def test_allowlist_entries_exist() -> None:
         for pointer, _, _ in _declared_properties(rel)
         if (rel, pointer) in ALLOWED
     }
-    missing = set(ALLOWED) - present
-    if missing and not any(rel == "admin/v1/producer-secret-issued.schema.json" for rel in ADMIN):
-        pytest.skip("producer-secret-issued lands in item 2")
-    assert not missing, missing
+    assert set(ALLOWED) == present
 
 
 @pytest.mark.parametrize(
@@ -194,7 +195,7 @@ def test_every_admin_object_is_closed(rel: str) -> None:
     open_objects = [
         sub.pointer or "/"
         for sub in iter_subschemas(load_schema(rel))
-        if "properties" in sub.node
+        if sub.node.get("type") == "object"
         and not sub.under_conditional
         and sub.node.get("additionalProperties") is not False
     ]

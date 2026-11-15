@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "retail-2026-11-01",
+  "source": "azure_retail_prices",
+  "source_url": "https://prices.azure.com/api/retail/prices",
+  "retrieval_date": "2026-11-01",
+  "effective_date": "2026-11-01",
+  "currency": "USD",
+  "clouds": [
+    "commercial"
+  ],
+  "synthetic": false,
+  "notes": "",
+  "rows": [
+    {
+      "service_name": "Foundry Models",
+      "sku_name": "Standard",
+      "unit_of_measure": "1 Hour",
+      "retail_price": "0.75"
+    }
+  ]
+}

@@ -126,6 +126,25 @@
       "maxLength": 1024,
       "pattern": "^/subscriptions/[0-9a-fA-F-]{36}/resourceGroups/[A-Za-z0-9._()-]{1,90}/providers/[A-Za-z0-9.]+(/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+)+$"
     },
+    "cost_tags": {
+      "description": "Cost allocation tags, the same grammar as cost/v1 CostRecord.tags (#190): at most 16 entries, keys lowercase ^[a-z][a-z0-9_.-]{0,62}$, values 1 to 128 characters. The reserved key cost_center uses the catalog/v1 Grant cost_center pattern. The generated Pydantic model keeps the key and value bounds but not the entry count or the cost_center rule (ADR-0004 projection); both are checked by tests/contracts/validators.py::validate_cost_tags.",
+      "type": "object",
+      "maxProperties": 16,
+      "patternProperties": {
+        "^[a-z][a-z0-9_.-]{0,62}$": {
+          "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }]
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "required": ["cost_center"] },
+          "then": {
+            "properties": { "cost_center": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$" } }
+          }
+        }
+      ]
+    },
     "doc_path": {
       "description": "Repository-relative documentation path (docs/...md), optionally with an anchor.",
       "type": "string",

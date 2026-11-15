@@ -1173,6 +1173,99 @@ def check_credential_reference_cloud(reference: Doc, cloud: str) -> Problems:
     return []
 
 
+COST_TAG_KEY = re.compile(r"[a-z][a-z0-9_.-]{0,62}")
+COST_CENTER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}")
+MAX_COST_TAGS = 16
+
+
+def validate_cost_tags(tags: Any, *, path: str = "/tags") -> Problems:
+    """CostRecord.tags / SpendBudget.tags_filter: at most 16 entries, lowercase keys, string
+    values of 1 to 128 characters, cost_center in the Grant cost_center grammar (#190)."""
+    if tags is None:
+        return []
+    if not isinstance(tags, Mapping):
+        return [f"{path} is not an object"]
+    problems: Problems = []
+    if len(tags) > MAX_COST_TAGS:
+        problems.append(f"{path} has {len(tags)} entries (max {MAX_COST_TAGS})")
+    for key, value in tags.items():
+        if not isinstance(key, str) or COST_TAG_KEY.fullmatch(key) is None:
+            problems.append(f"{path} key {key!r} is not a lowercase tag key")
+        if not isinstance(value, str) or not 1 <= len(value) <= 128:
+            problems.append(f"{path}/{key} must be a string of 1 to 128 characters")
+        elif key == "cost_center" and COST_CENTER.fullmatch(value) is None:
+            problems.append(f"{path}/cost_center does not match the Grant cost_center pattern")
+    return problems
+
+
+def check_connector_config_cloud(config: Doc) -> Problems:
+    """ConnectorConfig: every domain_id is on one cloud, and a Key Vault credential is too."""
+    clouds = {str(d).split(":", 1)[0] for d in config.get("domain_ids") or ()}
+    if len(clouds) != 1:
+        return [f"domain_ids span clouds {sorted(clouds)}"]
+    credential = config.get("credential")
+    if isinstance(credential, Mapping):
+        return check_credential_reference_cloud(credential, clouds.pop())
+    return []
+
+
+def check_producer_sources_unique(producer: Doc) -> Problems:
+    """ProducerRecord.sources: each source_id appears once (it is a map in ProducerRegistration)."""
+    ids = [str(s.get("source_id")) for s in producer.get("sources") or () if isinstance(s, Mapping)]
+    duplicates = sorted({i for i in ids if ids.count(i) > 1})
+    return [f"duplicate source_id {d!r}" for d in duplicates]
+
+
+def check_budget_thresholds_ascending(budget: Doc) -> Problems:
+    """SpendBudget: thresholds_percent strictly ascending; tags_filter obeys validate_cost_tags."""
+    problems: Problems = []
+    thresholds = list(budget.get("thresholds_percent") or ())
+    if any(b <= a for a, b in itertools.pairwise(thresholds)):
+        problems.append(f"thresholds_percent {thresholds} is not strictly ascending")
+    return problems + validate_cost_tags(budget.get("tags_filter"), path="/tags_filter")
+
+
+_TOKEN_UNITS = frozenset({"1K", "1M"})
+
+
+def check_price_sheet_upload(sheet: Doc) -> Problems:
+    """PriceSheetUpload: token rows are unique per meter and priced per 1K or 1M tokens."""
+    problems: Problems = []
+    seen: set[tuple[Any, ...]] = set()
+    for i, row in enumerate(sheet.get("rows") or ()):
+        meter = row.get("token_meter") if isinstance(row, Mapping) else None
+        if not isinstance(meter, Mapping):
+            continue
+        if row.get("unit_of_measure") not in _TOKEN_UNITS:
+            problems.append(f"/rows/{i}/unit_of_measure must be 1K or 1M for a token row")
+        key = (
+            meter.get("provider"),
+            meter.get("model"),
+            meter.get("model_version"),
+            meter.get("kind"),
+        )
+        if key in seen:
+            problems.append(f"/rows/{i} duplicates token price {key}")
+        seen.add(key)
+    return problems
+
+
+def check_review_policy_document(document: Doc) -> Problems:
+    """ReviewPolicyDocument: one default per review kind, one override per (kind, action)."""
+    problems: Problems = []
+    kinds = [d.get("review_kind") for d in document.get("kind_defaults") or ()]
+    problems += [
+        f"duplicate kind default {k!r}" for k in sorted({k for k in kinds if kinds.count(k) > 1})
+    ]
+    pairs = [
+        (o.get("review_kind"), o.get("action_kind")) for o in document.get("action_overrides") or ()
+    ]
+    problems += [
+        f"duplicate override {p}" for p in sorted({p for p in pairs if pairs.count(p) > 1})
+    ]
+    return problems
+
+
 def single_document_validators(
     context: Mapping[str, Any],
 ) -> dict[str, tuple[SingleDocValidator, ...]]:
@@ -1230,6 +1323,11 @@ def single_document_validators(
             "audit/v1/audit-record.schema.json": (
                 lambda doc: validate_audit_chain([doc], require_head=False),
             ),
+            "admin/v1/connector-config.schema.json": (check_connector_config_cloud,),
+            "admin/v1/producer-record.schema.json": (check_producer_sources_unique,),
+            "admin/v1/budget.schema.json": (check_budget_thresholds_ascending,),
+            "admin/v1/price-sheet-upload.schema.json": (check_price_sheet_upload,),
+            "admin/v1/review-policy-document.schema.json": (check_review_policy_document,),
             "scope/v1/identity-scope.schema.json": (
                 check_identity_scope_hash,
                 check_identity_scope_times,

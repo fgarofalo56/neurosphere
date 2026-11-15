@@ -288,6 +288,382 @@
         "keyword": "additionalProperties"
       },
       "reason": "no direct identifier on the principal"
+    },
+    {
+      "file": "valid/admin-config-document.domain.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/admin-config-document.version-zero.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/version",
+        "keyword": "minimum"
+      },
+      "reason": "versions start at 1"
+    },
+    {
+      "file": "invalid/admin-config-document.unknown-kind.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/kind",
+        "keyword": "enum"
+      },
+      "reason": "closed admin kind set"
+    },
+    {
+      "file": "invalid/admin-config-document.upn-updated-by.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/updated_by",
+        "keyword": "pattern"
+      },
+      "reason": "writers are pseudonymous principals"
+    },
+    {
+      "file": "valid/producer-record.active.json",
+      "schema": "producer-record.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/producer-record.plaintext-secret.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/secret_sha256",
+        "keyword": "pattern"
+      },
+      "reason": "only the SHA-256 digest is stored"
+    },
+    {
+      "file": "invalid/producer-record.unknown-observation-kind.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/sources/0/observation_kind",
+        "keyword": "enum"
+      },
+      "reason": "closed observation kinds"
+    },
+    {
+      "file": "invalid/producer-record.no-sources.json",
+      "schema": "producer-record.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-record.active.json",
+      "expected_error": {
+        "instance_path": "/sources",
+        "keyword": "minItems"
+      },
+      "reason": "a producer publishes for at least one source"
+    },
+    {
+      "file": "valid/producer-secret-issued.rotation.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/producer-secret-issued.retrievable.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-secret-issued.rotation.json",
+      "expected_error": {
+        "instance_path": "/shown_once",
+        "keyword": "const"
+      },
+      "reason": "a producer secret is shown once only"
+    },
+    {
+      "file": "invalid/producer-secret-issued.weak-secret.json",
+      "schema": "producer-secret-issued.schema.json",
+      "valid": false,
+      "derived_from": "valid/producer-secret-issued.rotation.json",
+      "expected_error": {
+        "instance_path": "/secret",
+        "keyword": "pattern"
+      },
+      "reason": "at least 256 bits"
+    },
+    {
+      "file": "valid/connector-config.gateway-poll.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/connector-config.government-billing-export.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/connector-config.otel-no-credential.json",
+      "schema": "connector-config.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/connector-config.nested-setting.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/settings/include_mcp",
+        "keyword": "anyOf"
+      },
+      "reason": "settings are scalars only"
+    },
+    {
+      "file": "invalid/connector-config.secret-like-setting-key.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/settings",
+        "keyword": "not"
+      },
+      "reason": "a credential is never a setting"
+    },
+    {
+      "file": "invalid/connector-config.wildcard-domain.json",
+      "schema": "connector-config.schema.json",
+      "valid": false,
+      "derived_from": "valid/connector-config.gateway-poll.json",
+      "expected_error": {
+        "instance_path": "/domain_ids/0",
+        "keyword": "pattern"
+      },
+      "reason": "explicit domains only"
+    },
+    {
+      "file": "valid/domain-definition.finance.json",
+      "schema": "domain-definition.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/domain-definition.government-control.json",
+      "schema": "domain-definition.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/domain-definition.region-display-name.json",
+      "schema": "domain-definition.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-definition.finance.json",
+      "expected_error": {
+        "instance_path": "/residency_region",
+        "keyword": "pattern"
+      },
+      "reason": "ARM region names"
+    },
+    {
+      "file": "invalid/domain-definition.unknown-classification.json",
+      "schema": "domain-definition.schema.json",
+      "valid": false,
+      "derived_from": "valid/domain-definition.finance.json",
+      "expected_error": {
+        "instance_path": "/classification",
+        "keyword": "enum"
+      },
+      "reason": "catalog classification vocabulary"
+    },
+    {
+      "file": "valid/budget.monthly-cost-center.json",
+      "schema": "budget.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/budget.annual-unfiltered.json",
+      "schema": "budget.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/budget.float-amount.json",
+      "schema": "budget.schema.json",
+      "valid": false,
+      "derived_from": "valid/budget.monthly-cost-center.json",
+      "expected_error": {
+        "instance_path": "/amount",
+        "keyword": "type"
+      },
+      "reason": "money is a decimal string"
+    },
+    {
+      "file": "invalid/budget.cost-center-with-space.json",
+      "schema": "budget.schema.json",
+      "valid": false,
+      "derived_from": "valid/budget.monthly-cost-center.json",
+      "expected_error": {
+        "instance_path": "/tags_filter/cost_center",
+        "keyword": "pattern"
+      },
+      "reason": "Grant cost_center pattern"
+    },
+    {
+      "file": "valid/price-sheet-upload.provider-sheet-government.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/price-sheet-upload.retail-prices.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/price-sheet-upload.retail-prices-for-government.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "/clouds",
+        "keyword": "const"
+      },
+      "reason": "Retail Prices API covers Commercial only"
+    },
+    {
+      "file": "invalid/price-sheet-upload.float-price.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "/rows/0/retail_price",
+        "keyword": "type"
+      },
+      "reason": "money is a decimal string"
+    },
+    {
+      "file": "invalid/price-sheet-upload.asserted-content-hash.json",
+      "schema": "price-sheet-upload.schema.json",
+      "valid": false,
+      "derived_from": "valid/price-sheet-upload.retail-prices.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "the server stamps the hash"
+    },
+    {
+      "file": "valid/review-policy-document.defaults-with-override.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/review-policy-document.no-maker-checker.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/review-policy-document.defaults-with-override.json",
+      "expected_error": {
+        "instance_path": "/kind_defaults",
+        "keyword": "contains"
+      },
+      "reason": "maker_checker must have a policy (fail closed otherwise)"
+    },
+    {
+      "file": "invalid/review-policy-document.zero-sla.json",
+      "schema": "review-policy-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/review-policy-document.defaults-with-override.json",
+      "expected_error": {
+        "instance_path": "/kind_defaults/0/policy/sla_seconds",
+        "keyword": "minimum"
+      },
+      "reason": "durations are positive"
+    },
+    {
+      "file": "valid/system-setting.copilot.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/system-setting.government-write-target.json",
+      "schema": "system-setting.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/system-setting.api-key-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "/copilot",
+        "keyword": "additionalProperties"
+      },
+      "reason": "endpoints and references only, never a key"
+    },
+    {
+      "file": "invalid/system-setting.second-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "enum"
+      },
+      "reason": "exactly the member named by setting_key"
+    },
+    {
+      "file": "invalid/system-setting.missing-member.json",
+      "schema": "system-setting.schema.json",
+      "valid": false,
+      "derived_from": "valid/system-setting.copilot.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "required"
+      },
+      "reason": "the member named by setting_key is present"
+    },
+    {
+      "file": "valid/first-run-checklist-item.complete.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/first-run-checklist-item.copilot-missing.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/first-run-checklist-item.missing-without-reason.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": false,
+      "derived_from": "valid/first-run-checklist-item.copilot-missing.json",
+      "expected_error": {
+        "instance_path": "/reason",
+        "keyword": "type"
+      },
+      "reason": "every incomplete item says why"
+    },
+    {
+      "file": "invalid/first-run-checklist-item.external-doc-link.json",
+      "schema": "first-run-checklist-item.schema.json",
+      "valid": false,
+      "derived_from": "valid/first-run-checklist-item.copilot-missing.json",
+      "expected_error": {
+        "instance_path": "/doc_path",
+        "keyword": "pattern"
+      },
+      "reason": "repository documentation paths only"
+    },
+    {
+      "file": "valid/admin-config-document.producer.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/admin-config-document.kind-body-mismatch.json",
+      "schema": "admin-config-document.schema.json",
+      "valid": false,
+      "derived_from": "valid/admin-config-document.domain.json",
+      "expected_error": {
+        "instance_path": "/body",
+        "keyword": "required"
+      },
+      "reason": "the body is the document of the named kind"
     }
   ]
 }

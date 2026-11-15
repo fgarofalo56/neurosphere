@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "budget_id": "hr-annual",
+  "domain_id": "commercial:contoso:neurosphere:domain:hr",
+  "period": "annual",
+  "amount": "90000",
+  "currency": "EUR",
+  "thresholds_percent": [
+    100
+  ]
+}

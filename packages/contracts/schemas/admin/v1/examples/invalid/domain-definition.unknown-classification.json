@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "domain_id": "commercial:contoso:neurosphere:domain:finance",
+  "display_name": "Finance",
+  "classification": "secret",
+  "residency_region": "eastus2",
+  "status": "active",
+  "is_control_domain": false
+}

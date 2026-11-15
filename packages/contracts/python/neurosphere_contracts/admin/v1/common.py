@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, RootModel, StrictInt, StrictStr
+from pydantic import Field, RootModel, StrictInt, StrictStr, StringConstraints
 
 
 class AdminCommon(RootModel[Any]):
@@ -217,6 +217,27 @@ class AzureResourceId(RootModel[StrictStr]):
     ]
     """
     Azure Resource Manager resource id (/subscriptions/<guid>/resourceGroups/<name>/providers/<namespace>/<type>/<name>...).
+    """
+
+
+class CostTags1(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(max_length=128, min_length=1)]
+
+
+class CostTags(
+    RootModel[
+        dict[
+            Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_.-]{0,62}$", strict=True)],
+            CostTags1,
+        ]
+    ]
+):
+    root: dict[
+        Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_.-]{0,62}$", strict=True)],
+        CostTags1,
+    ]
+    """
+    Cost allocation tags, the same grammar as cost/v1 CostRecord.tags (#190): at most 16 entries, keys lowercase ^[a-z][a-z0-9_.-]{0,62}$, values 1 to 128 characters. The reserved key cost_center uses the catalog/v1 Grant cost_center pattern. The generated Pydantic model keeps the key and value bounds but not the entry count or the cost_center rule (ADR-0004 projection); both are checked by tests/contracts/validators.py::validate_cost_tags.
     """
 
 
