@@ -57,9 +57,13 @@ EXPECTED = {
         P.REVOCATION_MANAGE,
         P.GRANT_READ,
         P.GRANT_WRITE,
-        P.LIFECYCLE_MANAGE,
+        P.LIFECYCLE_MANAGE,  # PRP-65 clarification 9
     },
-    Role.SECURITY_AUDITOR: {P.AUDIT_READ, P.EVIDENCE_READ},
+    Role.SECURITY_AUDITOR: {
+        P.AUDIT_READ,
+        P.AUDIT_EXPORT,  # PRP-65 clarification 8: auditor only, Admin never reads audit
+        P.EVIDENCE_READ,
+    },
 }
 # Held by Admin and Domain Steward alike (PRP-33 item 5), so not an admin-only permission.
 SHARED_ADMIN_STEWARD = {P.GRANT_WRITE}
@@ -135,6 +139,7 @@ def test_no_bypass_permission_or_all_powerful_role_exists() -> None:
     for role_ in Role:
         assert role_permissions(role_) != every
     assert not {P.AUDIT_READ, P.EVIDENCE_READ} & role_permissions(Role.ADMIN)
+    assert P.AUDIT_EXPORT not in role_permissions(Role.ADMIN)
     assert not {P.ACTION_APPROVE, P.ACTION_EXECUTE} & role_permissions(Role.ADMIN)
 
 
@@ -236,3 +241,12 @@ async def test_permits_requires_a_target() -> None:
 def test_permits_refuses_non_scope_objects() -> None:
     with pytest.raises(TypeError):
         permits({"allowed_domains": [FINANCE]}, P.DATA_READ, domain_id=FINANCE, now=at(0))  # type: ignore[arg-type]
+
+
+def test_prp65_permissions_have_exactly_one_holder() -> None:
+    """lifecycle.manage is Admin only; audit.export is Security Auditor only (PRP-65 C8, C9)."""
+    assert (P.LIFECYCLE_MANAGE.value, P.AUDIT_EXPORT.value) == ("lifecycle.manage", "audit.export")
+    assert {r for r in Role if P.LIFECYCLE_MANAGE in role_permissions(r)} == {Role.ADMIN}
+    assert {r for r in Role if P.AUDIT_EXPORT in role_permissions(r)} == {Role.SECURITY_AUDITOR}
+    # Neither is a grant permission: a resource-scoped grant can never confer them.
+    assert not {P.LIFECYCLE_MANAGE, P.AUDIT_EXPORT} & set(GRANT_PERMISSIONS.values())

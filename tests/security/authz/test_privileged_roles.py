@@ -130,3 +130,13 @@ def test_a_grant_naming_a_domain_does_not_open_the_domain() -> None:
     response = dep.client.get(f"/d/domains/{ops}/items", headers=dep.bearer(ADMIN_C_FIN))
     assert response.status_code == 403
     assert response.json()["reason"] == "target_out_of_scope"
+
+
+def test_prp65_permissions_stay_on_their_one_privileged_role() -> None:
+    """audit.export is Auditor only and lifecycle.manage Admin only (PRP-65); no role gains more."""
+    admin, auditor = ROLE_PERMISSIONS[Role.ADMIN], ROLE_PERMISSIONS[Role.SECURITY_AUDITOR]
+    assert Permission.AUDIT_EXPORT in auditor and Permission.AUDIT_EXPORT not in admin
+    assert Permission.LIFECYCLE_MANAGE in admin and Permission.LIFECYCLE_MANAGE not in auditor
+    for role, permissions in ROLE_PERMISSIONS.items():
+        if role not in (Role.ADMIN, Role.SECURITY_AUDITOR):
+            assert not {Permission.AUDIT_EXPORT, Permission.LIFECYCLE_MANAGE} & permissions

@@ -25,6 +25,17 @@
     },
     {
       "default_ttl": null,
+      "name": "admin_config",
+      "owner": "neurosphere_core.admin.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
       "name": "aggregates",
       "owner": "neurosphere_core.aggregates.cosmos",
       "partition_key": {

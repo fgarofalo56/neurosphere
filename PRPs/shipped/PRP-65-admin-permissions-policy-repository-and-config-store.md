@@ -1,6 +1,6 @@
 ---
 name: PRP-65-admin-permissions-policy-repository-and-config-store
-status: backlog
+status: shipped
 priority: P0
 order: 53
 review: required
@@ -15,6 +15,8 @@ wave: W12
 branch: prp-65-admin-store
 allow_parallel: true
 issues: [265]
+shipped: 2026-11-15
+pr: 277
 ---
 
 # PRP-65: Admin permissions, policy write repository and audited config store
@@ -30,8 +32,8 @@ Out of scope: every schema and contract revision, including `AdminConfigDocument
 - `CONTAINERS` (`packages/core/neurosphere_core/stores/containers.py:96-183`) has no container for operator configuration; every later control-plane PRP needs one.
 
 ## Acceptance criteria
-- [ ] `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`, Admin) and `Permission.AUDIT_EXPORT` (`audit.export`, Security Auditor) exist; role sets are pinned by `test_roles.py` and `test_privileged_roles.py`; no role gains anything else.
-- [ ] `customer_control_domain_id(cloud, customer_id)` and `permits_customer_wide(scope, permission, *, now)` live in core and return True only for an unexpired assignment on `<cloud>:<customer>:neurosphere:domain:customer-control` (#114 schema half); `actions/customer_control.py` behaviour is unchanged.
+- [x] `Permission.LIFECYCLE_MANAGE` (`lifecycle.manage`, Admin) and `Permission.AUDIT_EXPORT` (`audit.export`, Security Auditor) exist; role sets are pinned by `test_roles.py` and `test_privileged_roles.py`; no role gains anything else.
+- [x] `customer_control_domain_id(cloud, customer_id)` and `permits_customer_wide(scope, permission, *, now)` live in core and return True only for an unexpired assignment on `<cloud>:<customer>:neurosphere:domain:customer-control` (#114 schema half); `actions/customer_control.py` behaviour is unchanged.
 - [ ] `PolicyAdminRepository` (in-memory and Cosmos) writes `PrincipalPolicy` with an ETag precondition and bumps `PolicyHead.policy_version` in the same partition; a stale ETag raises `stale_version`; the read protocol is unchanged.
 - [ ] `admin_config` is declared in `CONTAINERS`, exported to `infra/compose/cosmos-containers.json`, and `AdminConfigRepository` (in-memory and Cosmos) supports create, get, list by kind, replace with `If-Match` and retire, with a monotonic `version`; tested on the in-memory twin and, marked `integration`, on the emulator.
 - [ ] PRP exit: the touched suites, `python -m neurosphere_core.stores --check`, ruff, pyright and `validate_planning.py` pass; PR open with CI green; Tier-3 files regenerated at merge.
@@ -175,16 +177,20 @@ Routes, UI, mock handlers, worker pickup, any secret value storage; schema chang
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
+| 1 | verifying | prp-65-admin-store | permissions, control-domain helpers, role pins; tests pass locally |
+| 2 | verifying | prp-65-admin-store | policy_admin.py twins + pure changes; emulator suite written, not run (PRP-38 holds compose) |
+| 3 | verifying | prp-65-admin-store | neurosphere_core.admin + admin_config container + export; emulator suite written, not run (PRP-38 holds compose) |
+| 4 | done | prp-65-admin-store | close-out 2026-11-15 |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-15, PR #277 (squash-merged after green CI)
+- Deviations (draft, items 1-3): `tests/unit/hosted_demo/test_cosmos_container_drift.py` container count 28 -> 29 (outside the Ownership block; forced by the new container, one line). `test_roles.py` pins were edited in place, not only appended (item 1 requires the role pins to change). `policy_admin` adds `remove_grant` and `empty_principal_policy` beyond the listed names. Role changes do not touch memberships (callers pair them with `apply_membership_change`). `validate_admin_body` also enforces the JSON Schema if/then rules Pydantic drops (credential members and vault cloud, system-setting member, secret-like connector keys, budget thresholds/tags, retail price sheet cloud/host, maker_checker default) and the customer/cloud of every canonical id in a body. Cosmos `admin_config` rows use the composite id `<kind>:<id>` with the contract document nested under `document`.
+- Descoped items: none.
+- OPEN gates: emulator suites `test_policy_admin_cosmos.py` and `test_config_store_cosmos.py` (marked `integration`) not run: PRP-38 held the compose stack in W12. Hosted `admin_config` container creation waits for the next operator deploy (PRP-58/64).
+- Env vars for the operator: none.
+- Follow-up issues: customer-level audit chains (`<customer>.admin-config`, like `.gateway`) share the catalog-shaped form, so a catalog domain literally named `admin-config` would decode to the same chain; PRP-44's domain write path must reserve that name (file an issue at merge).
+- Product check (can an operator use it without editing files): no, by design: storage and authority layer only; routes and console arrive in PRP-39..57.
+- Close-out additions (2026-11-15): merged origin/main; the permissions.py and test_roles.py conflicts with PRP-23 were resolved keeping a single LIFECYCLE_MANAGE line plus AUDIT_EXPORT. No serial-after items exist in this PRP. Hardened admin/models.py _check_credential to take the vault host from urllib.parse.urlsplit().hostname. Documented on InMemoryPolicyAdminRepository that a replace of a seeded document is refused as stale until get_with_etag has assigned an ETag (for PRP-38 sandbox and PRP-39 tests). Filed #279 (PRP-44 must reserve the domain name admin-config). openapi.json and docs/reference needed no regeneration (no API or SDK change).
+- Acceptance boxes left unticked: criteria 3 and 4 (Cosmos halves OPEN, emulator suites not run) and criterion 5 (CI at merge). Criteria 1 and 2 have passing tests.
+- Reviewer follow-up (OPEN, before PRP-39 depends on this code): run packages/core/tests/admin/test_policy_admin_cosmos.py and test_config_store_cosmos.py on the emulator and confirm CosmosBatchOperationError carries the failed operation status_code and error_index, and that each batch result row has an eTag key. The unit FakeContainer assumes both, as does the 0/1 index mapping in CosmosPolicyAdminRepository.put_principal_policy (packages/core/neurosphere_core/auth/scope/policy_admin.py).
+- Deviation: tests/unit/hosted_demo/test_cosmos_container_drift.py is outside the Ownership block; container count 28 -> 29, forced by the new container.

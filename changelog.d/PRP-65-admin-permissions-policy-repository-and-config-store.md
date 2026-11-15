@@ -1,0 +1,2 @@
+### Added
+- PRP-65: `lifecycle.manage` (Admin) and `audit.export` (Security Auditor) permissions, `customer_control_domain_id` / `permits_customer_wide` for deployment-scoped authority, `PolicyAdminRepository` (in-memory and Cosmos, ETag preconditions, transactional `PolicyHead` bump) and the audited `admin_config` store (`neurosphere_core.admin`, new `admin_config` Cosmos container, monotonic version, If-Match replace, retire). Storage and authority layer only; routes and console arrive in PRP-39..57.

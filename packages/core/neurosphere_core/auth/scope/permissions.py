@@ -12,7 +12,8 @@ analyst            viewer + data.export, report.create, action.propose
 domain_steward     analyst + catalog.curate, action.approve, action.execute, grant.write
 admin              data.read, config.manage, policy.manage, revocation.manage, grant.read,
                    grant.write, lifecycle.manage
-security_auditor   audit.read, evidence.read  (no data.read: auditors read evidence, not data)
+security_auditor   audit.read, audit.export, evidence.read  (no data.read: auditors read
+                   evidence, not data)
 =================  ====================================================================
 
 "Pro" is an Analyst capability tier (C6), not a role: it confers nothing from the Admin row.
@@ -24,6 +25,17 @@ hold (PRP-33 item 5): it is not admin-only, and Analyst and Viewer never hold it
 principal to a model API, deployment or MCP server; catalog/v1/grant.schema.json). They are
 unrelated to resource-scoped grants (``GRANT_PERMISSIONS``), which add a contract permission
 on exactly one named resource and never add a role or a domain.
+
+``lifecycle.manage`` (Admin; PRP-65, used by PRP-23) governs data-lifecycle requests, holds and
+mappings. ``audit.export`` (Security Auditor only; PRP-65 clarification 8) governs bulk audit
+export and SIEM forwarding; Admin never reads audit.
+
+Customer-wide (deployment-scoped) authority (#114): there is still no customer-wide role and no
+wildcard. A change that applies to the whole customer requires the permission on ONE reserved
+control domain per customer, ``<cloud>:<customer>:neurosphere:domain:customer-control``
+(:func:`customer_control_domain_id`), checked with :func:`permits_customer_wide`. It is granted
+like any other domain role (membership plus a time-bound assignment), so it is explicit, audited,
+expiring and revocable, and derivation clips another cloud's or customer's control domain.
 """
 
 from __future__ import annotations
@@ -40,14 +52,18 @@ from neurosphere_contracts.scope.v1.identity_scope import RoleAssignment
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
+    "CUSTOMER_CONTROL_DOMAIN_NAME",
+    "CUSTOMER_CONTROL_SOURCE",
     "GRANT_PERMISSIONS",
     "PRIVILEGED_ROLES",
     "ROLE_PERMISSIONS",
     "GrantPermission",
     "Permission",
     "Role",
+    "customer_control_domain_id",
     "domains_with_permission",
     "permits",
+    "permits_customer_wide",
     "role_permissions",
 ]
 
@@ -78,6 +94,7 @@ class Permission(StrEnum):
     GRANT_READ = "grant.read"
     GRANT_WRITE = "grant.write"
     LIFECYCLE_MANAGE = "lifecycle.manage"
+    AUDIT_EXPORT = "audit.export"
 
 
 _VIEWER = frozenset({Permission.DATA_READ, Permission.GRANT_READ})
@@ -99,7 +116,7 @@ _ADMIN = frozenset(
         Permission.LIFECYCLE_MANAGE,
     }
 )
-_AUDITOR = frozenset({Permission.AUDIT_READ, Permission.EVIDENCE_READ})
+_AUDITOR = frozenset({Permission.AUDIT_READ, Permission.AUDIT_EXPORT, Permission.EVIDENCE_READ})
 
 ROLE_PERMISSIONS: Final[Mapping[Role, frozenset[Permission]]] = MappingProxyType(
     {
@@ -124,6 +141,13 @@ GRANT_PERMISSIONS: Final[Mapping[GrantPermission, Permission]] = MappingProxyTyp
 
 #: Roles whose assignments must be time-bound (contract RoleAssignment rule; C7).
 PRIVILEGED_ROLES: Final = frozenset({Role.ADMIN, Role.SECURITY_AUDITOR})
+
+#: Source and id segments of the reserved per-customer control domain (#114). Same values as
+#: ``neurosphere_api.actions.customer_control`` (kill switch), which keeps its own copy until
+#: PRP-48 moves it onto these names.
+CUSTOMER_CONTROL_SOURCE: Final = "neurosphere"
+CUSTOMER_CONTROL_DOMAIN_NAME: Final = "customer-control"
+_CLOUDS: Final = frozenset({"commercial", "government"})
 
 
 def role_permissions(role: Role | str) -> frozenset[Permission]:
@@ -190,3 +214,25 @@ def permits(
         if any(GRANT_PERMISSIONS[p] is permission for p in grant.permissions):
             return True
     return False
+
+
+def customer_control_domain_id(cloud: str, customer_id: str) -> str:
+    """Canonical id of the reserved control domain of ``customer_id`` in ``cloud``."""
+    if cloud not in _CLOUDS:
+        raise ValueError("cloud must be 'commercial' or 'government'")
+    if not customer_id or ":" in customer_id:
+        raise ValueError("customer_id must be one canonical id segment")
+    return f"{cloud}:{customer_id}:{CUSTOMER_CONTROL_SOURCE}:domain:{CUSTOMER_CONTROL_DOMAIN_NAME}"
+
+
+def permits_customer_wide(scope: IdentityScope, permission: Permission, *, now: datetime) -> bool:
+    """True when ``scope`` holds ``permission`` on its OWN customer's control domain at ``now``.
+
+    The target is built from the server-derived scope's cloud and customer, never from caller
+    input, so an assignment naming another cloud's or customer's control domain cannot match.
+    Only an unexpired role assignment counts: resource-scoped grants never confer customer-wide
+    authority, and holding ``permission`` in ordinary domains is never enough.
+    """
+    _contract(scope)  # TypeError on anything but a server-derived IdentityScope
+    target = customer_control_domain_id(str(scope.cloud), scope.customer_id)
+    return target in domains_with_permission(scope, permission, now=now)
