@@ -255,6 +255,6 @@ test.describe("accessibility", () => {
 test("navigation lists the actions and review entries", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Primary" });
-  await expect(nav.getByRole("link", { name: "Actions" })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Review" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Actions", exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Review", exact: true })).toBeVisible();
 });
