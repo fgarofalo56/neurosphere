@@ -176,8 +176,8 @@ Routes, UI, mock handlers, worker pickup, any secret value storage; schema chang
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | verifying | prp-65-admin-store | permissions, control-domain helpers, role pins; tests pass locally |
-| 2 | in-progress | prp-65-admin-store | |
-| 3 | todo | | |
+| 2 | verifying | prp-65-admin-store | policy_admin.py twins + pure changes; emulator suite written, not run (PRP-38 holds compose) |
+| 3 | in-progress | prp-65-admin-store | |
 | 4 | todo | | |
 
 ## Completion note (filled at ship)
