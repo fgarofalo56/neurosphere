@@ -1552,6 +1552,157 @@
         "title": "AuditRecord",
         "type": "object"
       },
+      "AuditSearchHit": {
+        "additionalProperties": false,
+        "description": "One matching record and the domain whose chain holds it.",
+        "properties": {
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/AuditRecord"
+          }
+        },
+        "required": [
+          "domain_id",
+          "record"
+        ],
+        "title": "AuditSearchHit",
+        "type": "object"
+      },
+      "AuditSearchPage": {
+        "additionalProperties": false,
+        "description": "Newest first; ``next_cursor`` is opaque and only valid with the same domains.",
+        "properties": {
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditSearchHit"
+            },
+            "maxItems": 500,
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "domains"
+        ],
+        "title": "AuditSearchPage",
+        "type": "object"
+      },
+      "AuditSiemStatus": {
+        "additionalProperties": false,
+        "description": "Configured SIEM sink and its runtime delivery health. Reason codes only: never a host,\nhub name, key or exception text.",
+        "properties": {
+          "consecutive_failures": {
+            "default": 0,
+            "title": "Consecutive Failures",
+            "type": "integer"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
+          "last_failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure Reason"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sink": {
+            "enum": [
+              "none",
+              "stdout",
+              "file",
+              "eventhubs",
+              "unknown"
+            ],
+            "title": "Sink",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "disabled",
+              "failed",
+              "not_built"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "total_failures": {
+            "default": 0,
+            "title": "Total Failures",
+            "type": "integer"
+          },
+          "total_sent": {
+            "default": 0,
+            "title": "Total Sent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sink",
+          "state"
+        ],
+        "title": "AuditSiemStatus",
+        "type": "object"
+      },
       "Auth": {
         "additionalProperties": false,
         "description": "How a caller (or a gateway in front of it) authenticates to the upstream server. No credential is ever stored here.",
@@ -18370,6 +18521,68 @@
         ]
       }
     },
+    "/api/v1/audit/denials": {
+      "get": {
+        "operationId": "list_audit_denials_api_v1_audit_denials_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[0-9]{1,18}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_AuditRecord_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit Denials",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
     "/api/v1/audit/domains": {
       "get": {
         "operationId": "audit_domains_api_v1_audit_domains_get",
@@ -18505,6 +18718,413 @@
         "summary": "Audit Domain Verify",
         "tags": [
           "ui-adapters"
+        ]
+      }
+    },
+    "/api/v1/audit/export": {
+      "get": {
+        "operationId": "export_audit_records_api_v1_audit_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "ndjson",
+              "enum": [
+                "ndjson",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Inclusive start (RFC 3339, with zone)",
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "description": "Inclusive start (RFC 3339, with zone)",
+              "format": "date-time",
+              "title": "Since",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive end (RFC 3339, with zone)",
+            "in": "query",
+            "name": "until",
+            "required": true,
+            "schema": {
+              "description": "Exclusive end (RFC 3339, with zone)",
+              "format": "date-time",
+              "title": "Until",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Domain ids; default: all",
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Domain ids; default: all",
+              "title": "Domain"
+            }
+          },
+          {
+            "in": "query",
+            "name": "operation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){0,7}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Operation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "before",
+                    "after",
+                    "denied"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "succeeded",
+                    "failed",
+                    "rolled_back"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^p-[A-Za-z0-9_-]{1,96}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "correlation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z0-9._-]{1,128}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/x-ndjson": {},
+              "text/csv": {}
+            },
+            "description": "NDJSON (one record per line) or CSV with a header row"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Audit Records",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/search": {
+      "get": {
+        "operationId": "search_audit_records_api_v1_audit_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z0-9_-]{1,512}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Inclusive start (RFC 3339, with zone)",
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "description": "Inclusive start (RFC 3339, with zone)",
+              "format": "date-time",
+              "title": "Since",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive end (RFC 3339, with zone)",
+            "in": "query",
+            "name": "until",
+            "required": true,
+            "schema": {
+              "description": "Exclusive end (RFC 3339, with zone)",
+              "format": "date-time",
+              "title": "Until",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Domain ids; default: all",
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 50,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Domain ids; default: all",
+              "title": "Domain"
+            }
+          },
+          {
+            "in": "query",
+            "name": "operation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){0,7}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Operation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "before",
+                    "after",
+                    "denied"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "succeeded",
+                    "failed",
+                    "rolled_back"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^p-[A-Za-z0-9_-]{1,96}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "correlation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Za-z0-9._-]{1,128}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditSearchPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Audit Records",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit/siem/status": {
+      "get": {
+        "operationId": "audit_siem_status_api_v1_audit_siem_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditSiemStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Siem Status",
+        "tags": [
+          "audit"
         ]
       }
     },

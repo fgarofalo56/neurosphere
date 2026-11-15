@@ -1,6 +1,8 @@
 ---
 name: PRP-40-audit-search-export-and-siem-sink
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 291
 priority: P0
 order: 28
 review: required
@@ -32,16 +34,16 @@ Out of scope: audit chain internals and #206 chain follow-ups (PRP-48 owns `pack
 - Pre-scope failures (401, 503, revoked) are not audited; PRP-06 left it as an open decision (`PRP-06-*.md:285,293`).
 
 ## Acceptance criteria
-- [ ] With `NS_AUDIT_SIEM_SINK=eventhubs` plus namespace and hub settings, each audit append emits one redacted event to Event Hubs through `DefaultAzureCredential` (no key, no connection string outside `NS_ENV=local`); tested with a fake producer.
-- [ ] Missing or invalid Event Hubs settings make component `audit_siem` `failed` with reason `audit_siem_settings_invalid`; sink `none` reports `disabled`; the audit append path never fails because a sink fails.
-- [ ] A Government profile builds the namespace host with `.servicebus.usgovcloudapi.net` from `CloudProfile`; a Commercial host on a Government profile is refused (no cross-cloud send).
-- [ ] `GET /api/v1/audit/siem/status` (needs `audit.read` on the customer-control domain) reports sink kind, last success time, consecutive failures and last failure reason code; never a host, key or exception text.
-- [ ] Given an auditor with `audit.read` on domains D1 and D2, `GET /api/v1/audit/search` with filters returns only matching records from D1 and D2 chains, newest first, page size at most 500, with an opaque cursor; a filter naming D3 returns 403; time range is required and capped (constant documented in the runbook).
-- [ ] `GET /api/v1/audit/export?format=ndjson|csv` streams at most the documented row cap, needs `audit.export` on every domain it reads, appends an `audit.export` record (filters, row count, no record bodies) to each domain chain before streaming, and refuses with 403 when `audit.export` is missing; CSV cells are escaped against formula injection.
-- [ ] `GET /api/v1/audit/denials` returns `<customer>.authz-denials` records only when `permits_customer_wide(scope, AUDIT_READ)`; a domain-only auditor gets 403 `customer_scope_required`.
-- [ ] The pre-scope decision (Clarification 3) is recorded in the completion note and `docs/security/` is not edited here; its implementation is the `[serial-after: PRP-21]` item and is tested: revoked principals and policy-store 503s produce denial records with a reason code, and unauthenticated 401s produce a SIEM event and a counter but no chain record.
-- [ ] No search or export path accepts query text, SQL or a raw chain id from the caller; every Cosmos query is parameterized and single-partition per chain.
-- [ ] PRP exit: touched suites, ruff, pyright, `validate_planning.py` pass; `openapi.json` regenerated; PR open with CI green; runbook `docs/runbooks/audit-siem.md` lists every new env var.
+- [x] With `NS_AUDIT_SIEM_SINK=eventhubs` plus namespace and hub settings, each audit append emits one redacted event to Event Hubs through `DefaultAzureCredential` (no key, no connection string outside `NS_ENV=local`); tested with a fake producer.
+- [x] Missing or invalid Event Hubs settings make component `audit_siem` `failed` with reason `audit_siem_settings_invalid`; sink `none` reports `disabled`; the audit append path never fails because a sink fails.
+- [x] A Government profile builds the namespace host with `.servicebus.usgovcloudapi.net` from `CloudProfile`; a Commercial host on a Government profile is refused (no cross-cloud send).
+- [x] `GET /api/v1/audit/siem/status` (needs `audit.read` on the customer-control domain) reports sink kind, last success time, consecutive failures and last failure reason code; never a host, key or exception text.
+- [x] Given an auditor with `audit.read` on domains D1 and D2, `GET /api/v1/audit/search` with filters returns only matching records from D1 and D2 chains, newest first, page size at most 500, with an opaque cursor; a filter naming D3 returns 403; time range is required and capped (constant documented in the runbook).
+- [x] `GET /api/v1/audit/export?format=ndjson|csv` streams at most the documented row cap, needs `audit.export` on every domain it reads, appends an `audit.export` record (filters, row count, no record bodies) to each domain chain before streaming, and refuses with 403 when `audit.export` is missing; CSV cells are escaped against formula injection.
+- [x] `GET /api/v1/audit/denials` returns `<customer>.authz-denials` records only when `permits_customer_wide(scope, AUDIT_READ)`; a domain-only auditor gets 403 `customer_scope_required`.
+- [x] The pre-scope decision (Clarification 3) is recorded in the completion note and `docs/security/` is not edited here; its implementation is the `[serial-after: PRP-21]` item and is tested: revoked principals and policy-store 503s produce denial records with a reason code, and unauthenticated 401s produce a SIEM event and a counter but no chain record.
+- [x] No search or export path accepts query text, SQL or a raw chain id from the caller; every Cosmos query is parameterized and single-partition per chain.
+- [x] PRP exit: touched suites, ruff, pyright, `validate_planning.py` pass; `openapi.json` regenerated; PR open with CI green; runbook `docs/runbooks/audit-siem.md` lists every new env var.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -215,10 +217,15 @@ Logs Ingestion, Splunk HEC or syslog sinks; async export jobs; audit retention o
 | 6 | in-progress | prp-40-audit-siem | Done on branch: runbook `docs/runbooks/audit-siem.md` + mkdocs nav, route inventory test, env var list (below). Left for merge: rebase, Tier-3 regen (`openapi.json` drift test fails until regenerated, docs/reference), changelog fragment, completion note, CI |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-15, PR #291 (issue #234).
+- Deviations: one-line allowance in `runtime_data/test_data_builder.py` for the `audit_siem` disabled component; views registered through a new `audit.router.register_views` hook appended to `routers.py` REGISTERED (Tier-2 line). Item 5 ran after PRP-21 shipped (no W14 PRP held `authz/dependencies.py`). Pre-scope decision (Clarification 3, assumption accepted): identity-known failures (revoked principal, policy or revocation store outage, timeout, invalid derived scope) write a `denied` record with reason code on `<customer>.authz-denials` using a fixed no-scope `scope_hash`; unauthenticated 401s write no chain record, only a redacted SIEM signal and an in-process counter. Behaviour change: an invalid `NS_AUDIT_SIEM_*` setting used to fail `audit`; it now leaves `audit` ok and marks only the optional `audit_siem` component failed, so a misconfigured SIEM export no longer blocks readiness (operators should be told).
+- Descoped items: none of the PRP items; the Cosmos-emulator test `test_search_cosmos_integration.py` is written but not run (marked integration, no compose in this session).
+- OPEN gates: live Event Hubs send, Commercial (needs `NS_LIVE_APPROVED=1` and an approved namespace) and Government (no subscription); both handed to PRP-64 as a new item. Cosmos-emulator search test not run.
+- Env vars for the operator: `NS_AUDIT_SIEM_SINK`, `NS_AUDIT_SIEM_FILE_PATH`, `NS_AUDIT_SIEM_EVENTHUBS_NAMESPACE`, `NS_AUDIT_SIEM_EVENTHUBS_NAME`, `NS_AUDIT_SIEM_EVENTHUBS_CLIENT_ID` (see `docs/runbooks/audit-siem.md`; `.env.example` not edited).
+- Follow-up issues (reviewer follow-ups, not yet filed as issues):
+  1. `authz/dependencies.py` `_audit_prescope`: the hook is awaited inline with no timeout, so a slow or hung append on `<customer>.authz-denials` (for example during the Cosmos outage that caused the policy-store 503) delays every failing auth response. Wrap in `asyncio.timeout(state.timeout_seconds)` or a small fixed bound.
+  2. Clarification 3 accepts one chain record per identity-known failure, so a revoked principal with a still-valid token can keep appending to `<customer>.authz-denials`. Consider a per-principal rate limit or dedupe window for `authz.derive` denials.
+  3. `runtime/builders/data.py` `build`: `_siem_exporter(ctx)` runs outside `ctx.attempt` and handles only `ComponentUnavailableError` and `ValidationError`; an unexpected exception from `DefaultAzureCredential(...)` or `EventHubProducerClient(...)` would abort the data builder instead of marking `audit_siem` failed. Catch `Exception` and map to `audit_siem_settings_invalid` (or a distinct code).
+  4. `audit/export.py`: if the `audit.export` append succeeds on domain 1 and fails on domain 2, the export is refused with 503 but domain 1 still records an export that never happened. Accepted (fail closed); say so in the runbook.
+  5. PRP-64: live Event Hubs send gate (Commercial and Government).
+- Product check (can an operator use it without editing files): partial. Search, export, denials and SIEM status are API only (no UI, per NOT building); the sink is configured by env vars and the runbook, with no admin-console setting. Gap noted.
