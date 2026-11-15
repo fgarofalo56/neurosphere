@@ -1,6 +1,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import type { NavItem } from "./navigation";
 import { accountWith, domainEntry, renderShell, stubResizeObserver } from "./test-support";
 
 /** #94: arrow keys move focus between the navigation links (no Tabster Mover in the nav). */
@@ -11,7 +12,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const NAV_ITEMS = [
+const NAV_ITEMS: readonly NavItem[] = [
   { to: "/", label: "Home", group: "Overview" },
   { to: "/page", label: "Some page", group: "Quality" },
   { to: "/other", label: "Other page", group: "Quality" },

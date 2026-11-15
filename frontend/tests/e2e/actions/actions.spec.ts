@@ -166,9 +166,16 @@ test.describe("review", () => {
     await expect(change.getByTestId("review-version")).toHaveText("etag-7");
     await expect(page.getByTestId("review-diff").locator("li")).toHaveCount(2);
 
-    await page.getByLabel("Reason for your decision").fill("Diff matches the change request");
-    const decision = page.waitForResponse((r) => r.url().endsWith("/decisions"));
-    await page.getByRole("button", { name: "Approve" }).click();
+    const reason = page.getByLabel("Reason for your decision");
+    await reason.fill("Diff matches the change request");
+    // Wait on the form's own signals (the value stuck, the button is enabled) before clicking.
+    await expect(reason).toHaveValue("Diff matches the change request");
+    const approve = page.getByRole("button", { name: "Approve" });
+    await expect(approve).toBeEnabled();
+    const decision = page.waitForResponse(
+      (r) => r.url().endsWith("/decisions") && r.request().method() === "POST",
+    );
+    await approve.click();
     expect((await decision).status()).toBe(200);
     await expect(page.getByTestId("item-final")).toBeVisible();
     await expect(page.getByTestId("decision")).toHaveCount(1);

@@ -242,8 +242,8 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. The human accessibility sign
 |---|---|---|---|
 | 1 | merged | prp-47-shell-test-infra | nav arrows, last-domain cleanup, theme in Providers; badge overflow not reproducible, Playwright check added |
 | 2 | merged | prp-47-shell-test-infra | comment + tests |
-| 3 | todo | | |
-| 4 | todo | | |
+| 3 | merged | prp-47-shell-test-infra | onUnhandledFrame + afterEach rethrow, CI retry 1; flakes not reproducible locally (20x30 pass), hardened map-table focus polls and approve click |
+| 4 | merged | prp-47-shell-test-infra | demo positive control, real config, import.meta.dirname |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |

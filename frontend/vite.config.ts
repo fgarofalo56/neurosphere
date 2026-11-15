@@ -128,5 +128,8 @@ export default defineConfig(({ command, mode }) => ({
     environment: "jsdom",
     setupFiles: ["./tests/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
+    // One retry in CI only, so a real failure still fails and a flake shows up as "flaky" in the
+    // report; locally a failure is never retried. asyncUtilTimeout (5 s) lives in tests/setup.ts.
+    retry: process.env["CI"] !== undefined && process.env["CI"] !== "" ? 1 : 0,
   },
 }));
