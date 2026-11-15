@@ -24,7 +24,7 @@ export interface ProblemDetails {
   /**
    * RFC 9457 HTTP status code. Fixed per code by the allOf below; must equal the HTTP response status.
    */
-  status: 401 | 403 | 409 | 422 | 429 | 502 | 503;
+  status: 401 | 403 | 404 | 405 | 409 | 413 | 422 | 429 | 500 | 502 | 503;
   /**
    * RFC 9457 occurrence-specific human-readable explanation. No secrets, stack traces or query text.
    */
@@ -43,7 +43,11 @@ export interface ProblemDetails {
     | "stale_version"
     | "rate_limited"
     | "invalid_schema"
-    | "dependency_transient";
+    | "dependency_transient"
+    | "not_found"
+    | "method_not_allowed"
+    | "payload_too_large"
+    | "internal_error";
   /**
    * Whether a client may retry the identical request automatically. Fixed per code.
    */

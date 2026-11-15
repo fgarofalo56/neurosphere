@@ -11,6 +11,9 @@
     },
     "cost-record.invoiced-credit.json": {
       "schema": "cost-record.schema.json"
+    },
+    "cost-record.invoiced-tagged.json": {
+      "schema": "cost-record.schema.json"
     }
   },
   "invalid": {
@@ -114,6 +117,17 @@
       "schema": "cost-record.schema.json",
       "keyword": "type",
       "instance_path": "/token_breakdown/cached"
+    },
+    "cost-record.tags-uppercase-key.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "additionalProperties",
+      "instance_path": "/tags",
+      "message_contains": "CostCenter"
+    },
+    "cost-record.tags-value-too-long.json": {
+      "schema": "cost-record.schema.json",
+      "keyword": "maxLength",
+      "instance_path": "/tags/team"
     }
   }
 }

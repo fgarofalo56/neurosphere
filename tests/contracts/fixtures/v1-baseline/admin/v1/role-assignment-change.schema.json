@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/role-assignment-change.schema.json",
+  "title": "RoleAssignmentChange",
+  "description": "Request to assign or remove one domain-scoped role for one pseudonymous principal (PRP-39 identity API). Maps onto PRP-06 PolicyRoleAssignment: assign upserts the assignment with assignment_id, remove deletes it. Privileged roles (admin, security_auditor) must carry expires_at, as PolicyRoleAssignment requires; there is no tenant-wide, wildcard or permanent privileged form. The caller's identity and permission come from the server-derived IdentityScope, never from this body. Rules JSON Schema cannot express (expires_at is in the future) are enforced by the PRP-39 handler.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "op", "principal_id", "assignment_id", "reason"],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "op": {
+      "description": "assign: create or replace the assignment (role and domain_ids required). remove: delete it (role and domain_ids optional, echoed for audit).",
+      "type": "string",
+      "enum": ["assign", "remove"]
+    },
+    "principal_id": { "$ref": "common.schema.json#/$defs/principal_id" },
+    "assignment_id": { "$ref": "common.schema.json#/$defs/record_id" },
+    "role": { "$ref": "common.schema.json#/$defs/role" },
+    "domain_ids": {
+      "description": "Domains the role applies to. At least one; there is no tenant-wide form.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/domain_id" }
+    },
+    "expires_at": {
+      "description": "When the assignment lapses. Required for admin and security_auditor.",
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "reason": { "$ref": "common.schema.json#/$defs/reason_code" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "op": { "const": "assign" } }, "required": ["op"] },
+      "then": { "required": ["role", "domain_ids"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "op": { "const": "assign" },
+          "role": { "enum": ["admin", "security_auditor"] }
+        },
+        "required": ["op", "role"]
+      },
+      "then": { "required": ["expires_at"] }
+    }
+  ]
+}

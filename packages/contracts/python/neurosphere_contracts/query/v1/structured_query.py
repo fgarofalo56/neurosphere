@@ -83,6 +83,8 @@ class CatalogEntity(
             "policy",
             "recommendation",
             "run_reference",
+            "grant",
+            "mcp_server",
         ]
     ]
 ):
@@ -99,6 +101,8 @@ class CatalogEntity(
         "policy",
         "recommendation",
         "run_reference",
+        "grant",
+        "mcp_server",
     ]
 
 
@@ -363,9 +367,10 @@ class Traversal(BaseModel):
                 "owned_by",
                 "depends_on",
                 "supersedes",
+                "grants_access_to",
             ]
         ],
-        Field(max_length=9, min_length=1),
+        Field(max_length=10, min_length=1),
     ]
     """
     NS-02 relation names in lowercase snake_case.

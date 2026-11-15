@@ -9,9 +9,12 @@ never see a literal credential pattern in this file.
 from __future__ import annotations
 
 import copy
+import json
+from pathlib import Path
 
 import pytest
-from contract_support import load_schema, schema_errors, valid_cases
+from contract_support import REPO_ROOT, load_schema, model_for, schema_errors, valid_cases
+from pydantic import ValidationError
 from validators import check_connector_manifest, looks_like_secret
 
 SCHEMA = "connectors/v1/connector-manifest.schema.json"
@@ -78,3 +81,61 @@ def test_no_member_can_hold_a_secret_value() -> None:
     ref = load_schema(SCHEMA)["$defs"]["credential_ref"]
     assert set(ref["properties"]) == {"name", "vault_ref"}
     assert ref["additionalProperties"] is False
+
+
+# --------------------------------------------------------------------------- PRP-37 caps
+
+REPO_CONNECTORS = REPO_ROOT / "connectors"
+
+
+def _repo_manifests() -> list[Path]:
+    """Every JSON manifest under connectors/** that is meant to be valid."""
+    found = []
+    for path in sorted(REPO_CONNECTORS.rglob("*.json")):
+        parts = set(path.relative_to(REPO_CONNECTORS).parts)
+        if "node_modules" in parts or "invalid" in parts:
+            continue
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if isinstance(document, dict) and "auth_mode" in document and "scopes" in document:
+            found.append(path)
+    return found
+
+
+def test_repo_manifests_are_found() -> None:
+    assert len(_repo_manifests()) >= 4
+
+
+@pytest.mark.parametrize(
+    "path", _repo_manifests(), ids=lambda p: p.relative_to(REPO_CONNECTORS).as_posix()
+)
+def test_repo_manifest_still_validates_under_the_caps(path: Path) -> None:
+    document = json.loads(path.read_text(encoding="utf-8"))
+    assert schema_errors(SCHEMA, document) == []
+
+
+def test_scope_items_capped_at_128() -> None:
+    doc = copy.deepcopy(VAULT)
+    doc["scopes"] = ["S" + "a" * 127]
+    assert schema_errors(SCHEMA, doc) == []
+    doc["scopes"] = ["S" + "a" * 128]
+    assert any(e.validator == "pattern" for e in schema_errors(SCHEMA, doc))
+
+
+def test_documentation_url_capped() -> None:
+    doc = copy.deepcopy(VAULT)
+    doc["documentation_url"] = "https://learn.microsoft.com/" + "a" * 128 + "/x"
+    assert schema_errors(SCHEMA, doc) == []
+    doc["documentation_url"] = "https://learn.microsoft.com/" + "a" * 129
+    assert any(e.validator == "pattern" for e in schema_errors(SCHEMA, doc))
+    doc["documentation_url"] = "https://learn.microsoft.com" + "/abcdefgh" * 60
+    assert any(e.validator == "maxLength" for e in schema_errors(SCHEMA, doc))
+    with pytest.raises(ValidationError):
+        model_for(SCHEMA).model_validate(doc)
+
+
+def test_credential_ref_name_unchanged() -> None:
+    name = load_schema(SCHEMA)["$defs"]["credential_ref"]["properties"]["name"]
+    assert name["pattern"] == "^[a-z][a-z0-9_]{0,63}$"

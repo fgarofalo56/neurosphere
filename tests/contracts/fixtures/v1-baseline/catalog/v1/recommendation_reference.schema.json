@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/recommendation_reference.schema.json",
+  "title": "RecommendationReference",
+  "x-ns-name": "Recommendation",
+  "description": "Recommendation in reference form for the catalog graph. The full document is the recommendations/v1 contract; this node only points at it and its subjects. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:recommendation:[a-z0-9._/=-]+$",
+      "description": "Stable canonical ID of this entity. Canonical ID (canonical_id.schema.json) whose type segment is 'recommendation'."
+    },
+    "entity_type": {
+      "type": "string",
+      "const": "recommendation"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "lifecycle_status": {
+      "$ref": "common.schema.json#/$defs/lifecycle_status"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "common.schema.json#/$defs/domain_id"
+    },
+    "classification": {
+      "$ref": "common.schema.json#/$defs/classification"
+    },
+    "residency_region": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/token"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Azure region holding the authoritative copy; null when unknown."
+    },
+    "attributes": {
+      "$ref": "common.schema.json#/$defs/attributes"
+    },
+    "recommendation_kind": {
+      "$ref": "common.schema.json#/$defs/token",
+      "description": "Kind token; the enumerated list is owned by recommendations/v1."
+    },
+    "recommendation_document_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Identifier of the full recommendations/v1 document."
+    },
+    "subject_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "entity_type",
+    "version",
+    "etag",
+    "lifecycle_status",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "recommendation_kind",
+    "recommendation_document_id",
+    "subject_ids"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_ids": {
+            "items": {
+              "type": "string",
+              "pattern": "^commercial:"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subject_ids": {
+            "items": {
+              "type": "string",
+              "pattern": "^government:"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

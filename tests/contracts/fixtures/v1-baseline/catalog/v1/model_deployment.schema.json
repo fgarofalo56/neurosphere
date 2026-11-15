@@ -1,0 +1,292 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/model_deployment.schema.json",
+  "title": "ModelDeployment",
+  "x-ns-name": "ModelDeployment",
+  "description": "Deployed model endpoint with version, modality, context, tool capability and price reference. Unknown capabilities are null, never 0. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$ref": "common.schema.json#/$defs/schema_version"
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:model_deployment:[a-z0-9._/=-]+$",
+      "description": "Stable canonical ID of this entity. Canonical ID (canonical_id.schema.json) whose type segment is 'model_deployment'."
+    },
+    "entity_type": {
+      "type": "string",
+      "const": "model_deployment"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "etag": {
+      "$ref": "common.schema.json#/$defs/etag"
+    },
+    "lifecycle_status": {
+      "$ref": "common.schema.json#/$defs/lifecycle_status"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "cloud": {
+      "$ref": "common.schema.json#/$defs/cloud"
+    },
+    "customer_id": {
+      "$ref": "common.schema.json#/$defs/customer_id"
+    },
+    "domain_id": {
+      "$ref": "common.schema.json#/$defs/domain_id"
+    },
+    "classification": {
+      "$ref": "common.schema.json#/$defs/classification"
+    },
+    "residency_region": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/token"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Azure region holding the authoritative copy; null when unknown."
+    },
+    "attributes": {
+      "$ref": "common.schema.json#/$defs/attributes"
+    },
+    "provider": {
+      "$ref": "common.schema.json#/$defs/token",
+      "description": "Model provider token."
+    },
+    "model_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "model_version": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "deployment_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "modalities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "text",
+          "image",
+          "audio",
+          "video",
+          "embedding",
+          "unknown"
+        ]
+      },
+      "default": []
+    },
+    "context_window_tokens": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Maximum context window; null when unknown."
+    },
+    "max_output_tokens": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Maximum output tokens; null when unknown."
+    },
+    "supports_tool_calling": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "null when unknown."
+    },
+    "region": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/token"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "sku": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "price_reference": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "price_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "price_effective_date": {
+              "$ref": "common.schema.json#/$defs/date"
+            }
+          },
+          "required": [
+            "price_version",
+            "price_effective_date"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Price sheet reference used for estimates; null when unpriced."
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "entity_type",
+    "version",
+    "etag",
+    "lifecycle_status",
+    "created_at",
+    "updated_at",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "provider",
+    "model_name",
+    "deployment_name"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "commercial"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^commercial:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cloud": {
+            "const": "government"
+          }
+        },
+        "required": [
+          "cloud"
+        ]
+      },
+      "then": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^government:"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

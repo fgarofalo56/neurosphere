@@ -22,7 +22,7 @@ export interface ConnectorManifest {
    */
   version: string;
   /**
-   * HTTPS documentation URL. No query string, fragment or userinfo.
+   * HTTPS documentation URL. No query string, fragment or userinfo. At most 512 characters and 128 characters per path segment (PRP-37: the single ADR-0004 v1 tightening, so a long opaque path cannot carry a secret).
    */
   documentation_url?: string;
   /**
@@ -62,6 +62,8 @@ export interface ConnectorManifest {
    * Permission scopes or roles the connector requests (for example Reports.Read.All or https://management.azure.com/.default). Names only, never values.
    *
    * @maxItems 64
+   *
+   * Items: At most 128 characters (PRP-37 cap; ADR-0004 exception).
    */
   scopes: string[];
   /**

@@ -12,8 +12,12 @@ from neurosphere_core.errors import (
     CapabilityUnavailableError,
     DependencyTransientError,
     ForbiddenError,
+    InternalError,
     InvalidSchemaError,
+    MethodNotAllowedError,
     NeuroSphereError,
+    NotFoundError,
+    PayloadTooLargeError,
     RateLimitedError,
     StaleVersionError,
     UnauthorizedError,
@@ -31,6 +35,10 @@ _CLASSES: dict[str, type[NeuroSphereError]] = {
     "rate_limited": RateLimitedError,
     "invalid_schema": InvalidSchemaError,
     "dependency_transient": DependencyTransientError,
+    "not_found": NotFoundError,
+    "method_not_allowed": MethodNotAllowedError,
+    "payload_too_large": PayloadTooLargeError,
+    "internal_error": InternalError,
 }
 
 
@@ -40,6 +48,34 @@ def _rows() -> list[dict[str, object]]:
 
 def test_every_contract_code_has_exactly_one_class() -> None:
     assert {r["code"] for r in _rows()} == set(_CLASSES)
+    import neurosphere_core.errors as errors
+
+    exported = [
+        obj
+        for obj in vars(errors).values()
+        if isinstance(obj, type)
+        and issubclass(obj, NeuroSphereError)
+        and obj is not NeuroSphereError
+    ]
+    codes = [cls.code for cls in exported]
+    assert sorted(codes) == sorted(_CLASSES), "one exported class per contract code"
+
+
+@pytest.mark.parametrize(
+    ("cls", "status"),
+    [
+        (NotFoundError, 404),
+        (MethodNotAllowedError, 405),
+        (PayloadTooLargeError, 413),
+        (InternalError, 500),
+    ],
+)
+def test_prp37_codes_render_without_retry_after(cls: type[NeuroSphereError], status: int) -> None:
+    body = cls("detail").to_problem_details("corr-1")
+    assert body.status == status
+    assert body.retryable is False and body.retry_after_seconds is None
+    with pytest.raises(ValueError, match="retry_after_seconds"):
+        cls(retry_after_seconds=3)
 
 
 @pytest.mark.parametrize("row", _rows(), ids=lambda r: str(r["code"]))

@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/scope/v1/identity-scope.schema.json",
+  "title": "IdentityScope",
+  "description": "OUTPUT-ONLY. The server-derived authorization scope of one principal, computed from a validated identity token and the current policy store. It is never accepted from a caller or a model: no request schema may $ref this schema (asserted by tests/contracts/test_scope_isolation.py), and caller- or model-supplied domain_id/customer_id values are ignored for authorization. The same object is passed to REST, graph, analytics, search, cache keys, exports, WebSocket, copilot tools and MCP. There is deliberately no wildcard, all-domains or bypass field: privileged roles are scoped to explicit domains and time-bound. scope_hash correctness (sha256 over the canonical JSON of cloud, customer_id, principal.principal_id, roles, allowed_domains, allowed_resources and policy_version, keys sorted, no whitespace) cannot be expressed in JSON Schema and is checked by tests/contracts/validators.py::check_identity_scope_hash. expires_at > derived_at is checked by tests/contracts/validators.py::check_identity_scope_times.",
+  "readOnly": true,
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "cloud",
+    "customer_id",
+    "principal",
+    "roles",
+    "allowed_domains",
+    "allowed_resources",
+    "policy_version",
+    "derived_at",
+    "scope_hash"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "#/$defs/schema_version" },
+    "cloud": {
+      "description": "The single cloud this scope is valid in. A scope never spans commercial and government.",
+      "enum": ["commercial", "government"]
+    },
+    "customer_id": {
+      "description": "Customer segment of the canonical ID grammar, taken from the validated token's tenant mapping, never from request input.",
+      "type": "string",
+      "pattern": "^[a-z0-9._-]{1,128}$"
+    },
+    "principal": { "$ref": "#/$defs/principal" },
+    "roles": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/role_assignment" }
+    },
+    "allowed_domains": {
+      "description": "Explicit canonical Domain IDs the principal may read. Empty means no domain access. No wildcard form exists.",
+      "type": "array",
+      "maxItems": 1024,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/canonical_id" }
+    },
+    "allowed_resources": {
+      "description": "Resource-scoped grants (custom resource-scoped permissions, NS-08) outside or narrower than domain grants.",
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/resource_grant" }
+    },
+    "policy_version": {
+      "description": "Version of the policy store snapshot the scope was derived from; a newer policy version invalidates cached scopes.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._+-]{1,64}$"
+    },
+    "derived_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": {
+      "description": "Optional cache expiry for this derived scope. Absent means the server's default scope TTL applies.",
+      "$ref": "#/$defs/timestamp"
+    },
+    "scope_hash": {
+      "description": "sha256 over the canonical JSON of the scope-defining fields (see schema description). Used in cache keys and audit records.",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "schema_version": {
+      "description": "Semantic version of this document within major 1. Within v1 only additive, optional changes are allowed (ADR-0004).",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "timestamp": {
+      "description": "RFC 3339 timestamp in UTC (Z suffix required).",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,9})?Z$"
+    },
+    "canonical_id": {
+      "description": "Canonical ID cloud:customer:source:type:id (PRP-01 clarification 7). Grammar owned by schemas/catalog/v1; duplicated here as a pattern so this schema has no cross-area dependency.",
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$"
+    },
+    "principal": {
+      "description": "Pseudonymous principal (PRP-01 clarification 8). No name, email or other direct identifier.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "principal_pseudonym", "principal_kind"],
+      "properties": {
+        "principal_id": { "$ref": "#/$defs/canonical_id" },
+        "principal_pseudonym": {
+          "description": "Stable pseudonym; re-identification is a policy-store concern, not a contract field.",
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+        },
+        "principal_kind": {
+          "enum": ["user", "service_principal", "managed_identity", "agent"]
+        }
+      }
+    },
+    "role_assignment": {
+      "description": "One role bound to explicit domains (NS-08 roles). Privileged roles (admin, security_auditor) must carry expires_at: privileged access is scoped and time-bound. expires_at > derived_at is checked by tests/contracts/validators.py::check_identity_scope_times.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "domain_ids"],
+      "properties": {
+        "role": {
+          "enum": ["viewer", "analyst", "domain_steward", "admin", "security_auditor"]
+        },
+        "domain_ids": {
+          "description": "Domains this role applies to. At least one; there is no tenant-wide form.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/canonical_id" }
+        },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "role": { "enum": ["admin", "security_auditor"] } },
+            "required": ["role"]
+          },
+          "then": { "required": ["expires_at"] }
+        }
+      ]
+    },
+    "resource_grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource_id", "permissions"],
+      "properties": {
+        "resource_id": { "$ref": "#/$defs/canonical_id" },
+        "permissions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["read", "export", "propose_action", "approve", "execute"]
+          }
+        },
+        "expires_at": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  }
+}

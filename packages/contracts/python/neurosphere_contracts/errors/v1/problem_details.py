@@ -45,7 +45,7 @@ class ProblemDetails(BaseModel):
     """
     RFC 9457 short, human-readable summary of the problem type; does not vary between occurrences.
     """
-    status: Literal[401, 403, 409, 422, 429, 502, 503]
+    status: Literal[401, 403, 404, 405, 409, 413, 422, 429, 500, 502, 503]
     """
     RFC 9457 HTTP status code. Fixed per code by the allOf below; must equal the HTTP response status.
     """
@@ -65,6 +65,10 @@ class ProblemDetails(BaseModel):
         "rate_limited",
         "invalid_schema",
         "dependency_transient",
+        "not_found",
+        "method_not_allowed",
+        "payload_too_large",
+        "internal_error",
     ]
     """
     NeuroSphere error taxonomy code (PRP.md section 3).

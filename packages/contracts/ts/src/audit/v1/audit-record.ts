@@ -163,7 +163,11 @@ export interface Denial {
     | "stale_version"
     | "rate_limited"
     | "invalid_schema"
-    | "dependency_transient";
+    | "dependency_transient"
+    | "not_found"
+    | "method_not_allowed"
+    | "payload_too_large"
+    | "internal_error";
   /**
    * Machine-readable reason, lowercase snake_case (for example `domain_out_of_scope`, `self_approval_prohibited`).
    */

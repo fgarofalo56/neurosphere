@@ -184,7 +184,7 @@ Ingest tag mapping, ledger tag queries, API error handler changes, catalog prove
 |---|---|---|---|
 | 1 | verifying | prp-37-contracts-admin | admin/v1 common, credential-reference and identity schemas, examples, bindings, credential walker; admin-config-document moved to item 2 (its body is the item-2 kind schemas) |
 | 2 | verifying | prp-37-contracts-admin | producer, connector, domain, SpendBudget (title renamed: query/v1 owns Budget), price sheet, review policy, system setting, checklist item and AdminConfigDocument (body pinned per kind); mapping tests to PriceSnapshot, ReviewPolicyRegistry, ProducerRegistration |
-| 3 | in-progress | prp-37-contracts-admin | |
+| 3 | verifying | prp-37-contracts-admin | CostRecord.tags, query grant/mcp_server/grants_access_to, 4 error codes + core classes (audit denial enum mirrored), manifest caps, provenance test, additive-only baseline + test, ADR-0004 amendment; follow-up #272 for API handlers |
 | 4 | todo | | |
 
 ## Completion note (filled at ship)

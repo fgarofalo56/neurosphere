@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.1.0",
+  "type": "https://neurosphere.invalid/problems/not_found",
+  "title": "Not found",
+  "status": 404,
+  "code": "not_found",
+  "retryable": false,
+  "correlation_id": "corr-7f3a9c01"
+}

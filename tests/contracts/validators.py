@@ -674,6 +674,9 @@ FIELD_APPLICABILITY: Mapping[str, frozenset[str]] = {
             "owner",
             "policy",
             "run_reference",
+            # PRP-37 (#148 item 1): grants and MCP servers are queryable catalog entities.
+            "grant",
+            "mcp_server",
         )
     },
     "recommendation": frozenset(_CATALOG_FIELDS | _RECOMMENDATION_EXTRA),
@@ -1313,6 +1316,7 @@ def single_document_validators(
                 validate_usage_window_order,
                 validate_allocation_within_amount,
                 validate_retry_amount_within_amount,
+                lambda doc: validate_cost_tags(doc.get("tags")),
             ),
             "actions/v1/action-intent.schema.json": (
                 lambda doc: validate_confirmation_hash(doc, definition),

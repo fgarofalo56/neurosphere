@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/admin/v1/domain-definition.schema.json",
+  "title": "DomainDefinition",
+  "description": "Operator definition of one domain (PRP-44): the authorization scope anchor every role, grant, connector and budget names. residency_region is the ARM region the domain's data is held in (Government domains use usgov*/usdod* regions; data is never bridged across clouds). The control domain is the reserved per-customer domain that holds platform configuration actions; at most one exists per customer (checked by the PRP-44 handler). A retired domain keeps its id for audit and accepts no new data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "domain_id",
+    "display_name",
+    "classification",
+    "residency_region",
+    "status",
+    "is_control_domain"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "domain_id": { "$ref": "common.schema.json#/$defs/domain_id" },
+    "display_name": { "$ref": "common.schema.json#/$defs/display_name" },
+    "classification": {
+      "description": "Data classification label (catalog/v1 classification vocabulary).",
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "restricted", "unknown"]
+    },
+    "residency_region": {
+      "description": "Lowercase ARM region name (eastus2, usgovvirginia).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]{1,31}$"
+    },
+    "status": { "type": "string", "enum": ["active", "retired"] },
+    "is_control_domain": { "type": "boolean" }
+  }
+}
