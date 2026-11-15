@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Tracker and docs truth-up (PRP-36, PR #271): README, decision D1 and the master index now say the repository is public and cover waves W11 to W21; gate register, threat-model rows and test paths corrected; new `docs/dev/env-example-process.md`; the pre-commit hook regenerates `PRPs/INDEX.md`.
 - Connector runners and SDK hardening (PRP-09 round 2, PR #221):
   - New worker roles, both part of `all` and idle until configured:
     - `foundry_discovery`: creates draft catalog entities if they are absent, and never overwrites curated ones.

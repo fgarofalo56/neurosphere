@@ -9,12 +9,20 @@ evidence accelerator.
 
 ## Status
 
-Planning baseline v1.2 plus the PRP-00 toolchain: a uv workspace (`packages/core`,
-`packages/contracts/python`, `services/api`, `services/workers`), a pnpm
-workspace (`frontend`, `packages/contracts/ts`) and the verification gates. Each
-member is a stub with a smoke test; no product features, cloud adapters,
-deployments or media exist yet. NeuroSphere is **not** FedRAMP authorized and
-makes no ATO or Commercial/Government parity claim. This repository is private.
+Planning baseline v1.2 with 31 of 70 PRPs shipped (status table in
+`PRPs/PRP-MASTER-neurosphere.md`). What ships today: the uv and pnpm workspaces
+and verification gates, versioned contracts, the telemetry ingest edge and cost
+ledger, catalog and relationship governance, identity, authorization and the
+audit chain, the connector SDK and reference connectors, the action executor
+with human-in-the-loop review, evaluation, the copilot and MCP server and
+client, deployment intelligence and IaC, the redesigned UI, the docs site, a
+hosted Azure demo path and the APIM gateway observe and manage connectors.
+Partial or open: the admin console, platform configuration and several live
+gates (recorded OPEN in `docs/RESEARCH-AND-GATES.md`); the remaining PRPs are
+sequenced in `PRPs/EXECUTION-PLAN.md`. NeuroSphere is **not** FedRAMP
+authorized and makes no ATO or Commercial/Government parity claim. This
+repository is public by operator decision (D1 in `docs/DECISIONS-LOG.md`): a
+push is publication, so never commit secrets or PII (see `SECURITY.md`).
 
 ## Start here
 
