@@ -31,7 +31,7 @@ import logging
 import os
 from collections.abc import Mapping
 from decimal import Decimal
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 from neurosphere_core.analytics.base import (
     ExecutionLimits,
@@ -44,6 +44,7 @@ from neurosphere_core.analytics.databricks import (
     DatabricksStatementExecutor,
     create_databricks_executor,
 )
+from neurosphere_core.analytics.databricks.executor import TokenProvider
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -144,7 +145,10 @@ def _executor(ctx: BuildContext, config: DatabricksConfig) -> DatabricksStatemen
     if client is not None and callable(token):
         ctx.on_shutdown(client.aclose)  # type: ignore[attr-defined]
         return DatabricksStatementExecutor(
-            client, token, warehouse_id=config.warehouse_id, poll_interval_s=0.05
+            client,
+            cast("TokenProvider", token),
+            warehouse_id=config.warehouse_id,
+            poll_interval_s=0.05,
         )
     executor, close = create_databricks_executor(
         host=config.workspace_host,

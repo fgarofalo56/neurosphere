@@ -214,11 +214,11 @@ No data or schema migration: the builder only reads settings and the adapter rea
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-11-round2-analytics-runtime | registry reason, fixture workload, #61 assertions, #62 nits (see PR) |
+| 2 | merged | prp-11-round2-analytics-runtime | executor moved, script hardened |
+| 3 | merged | prp-11-round2-analytics-runtime | builder + pinned test updates |
+| 4 | merged | prp-11-round2-analytics-runtime | windowed quantile; stub interpolation differs from nearest-rank on small groups |
+| 5 | in-progress | prp-11-round2-analytics-runtime | README done; Tier-3 regen and completion note at merge step |
 
 ## Completion note (filled at ship)
 - Date, PR, merged commits:

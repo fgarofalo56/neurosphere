@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import Any, Protocol, cast
 
 from neurosphere_core.analytics.base.models import Aggregation, FilterOp, Granularity
 from neurosphere_core.analytics.base.plan import (
@@ -166,8 +166,8 @@ def _windowed_hook(plan: QueryPlan, dialect: Dialect) -> Callable[[str, Decimal,
         return None
     if METRIC_COLUMN[plan.metric] is None:
         return None
-    hook = getattr(dialect, "windowed_quantile", None)
-    return hook if callable(hook) else None
+    hook: Any = getattr(dialect, "windowed_quantile", None)
+    return cast("Callable[[str, Decimal, str], str]", hook) if callable(hook) else None
 
 
 def _render_windowed(
