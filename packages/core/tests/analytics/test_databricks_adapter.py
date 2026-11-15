@@ -391,3 +391,8 @@ def test_g12_gaps_documented() -> None:
     text = " ".join(G12_PARITY_GAPS).lower()
     for needle in ("limit", "percentile_approx", "photon", "cold start", "polling", "entra"):
         assert needle in text
+
+
+async def test_migration_identifiers_reject_a_trailing_newline() -> None:
+    with pytest.raises(ValueError):
+        await apply_migrations(object(), catalog="neurosphere\n", schema="analytics")  # type: ignore[arg-type]

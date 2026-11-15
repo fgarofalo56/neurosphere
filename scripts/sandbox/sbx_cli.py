@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from sbx_guard import GuardError
 from sbx_seam import DATABASE, CosmosSeam, HubSeam, SeedStats
+from sbx_wire import received_stamp, wrap_telemetry_line
 
 ENTITY_FILES = (
     "domains.ndjson",
@@ -92,7 +93,10 @@ def publish_events(
             f"hub holds {present} events, expected 0 or {expected}; the emulator keeps no "
             "persistence control here, run `make dev-reset` or `make seed-reset`"
         )
-    sent = hub.publish(iter(order_lines(lines, order)), rate=rate)
+    # Wrap parseable lines in the ingestion envelope (#162); malformed ones stay raw.
+    received = received_stamp()
+    wrapped = [wrap_telemetry_line(line, received) for line in order_lines(lines, order)]
+    sent = hub.publish(iter(wrapped), rate=rate)
     return {"expected": expected, "present_before": present, "sent": sent}
 
 

@@ -90,3 +90,24 @@ operator, per-case tolerance result, live-versus-stub delta, stub shims, teardow
 through a scrubber that fails the run on anything credential-shaped. Hosts and warehouse ids are
 never written. Review a file before committing it. Nothing here is an authorization, ATO or
 FedRAMP claim.
+
+## Round 2 changes (PRP-11)
+
+- The Databricks executor now lives in the product:
+  `neurosphere_core.analytics.databricks.executor` (`DatabricksStatementExecutor`,
+  `open_databricks_executor`). The script imports it; the request set comes from
+  `neurosphere_core.analytics.fixture.equivalence_cases`.
+- Setup and teardown statements run under `asyncio.timeout` (a timeout cancels the server
+  statement) and the run schema is created with plain `CREATE SCHEMA`, so a reused run id fails
+  instead of dropping a pre-existing schema. The 256-parameter and INLINE-size limits stay
+  unverified until the live run.
+- The API selects an adapter from `NS_ANALYTICS_BACKEND` (`none`, `fixture`, `fabric`,
+  `synapse`, `databricks`), `NS_ANALYTICS_REGION` and `NS_ANALYTICS_DATABRICKS_{HOST,WAREHOUSE_ID,
+  CATALOG,SCHEMA}`. Fabric and Synapse report `analytics_executor_unavailable`; Government
+  Databricks reports `analytics_government_unverified`.
+- Synapse `approx_quantile` is the exact windowed `PERCENTILE_CONT ... OVER`. The stub emulates it
+  with linear interpolation; the fixture oracle is nearest-rank, so small groups (for example one
+  day bucket per model) differ by more than the 2 percent tolerance. Real semantics stay OPEN.
+
+Every live run (Fabric, Synapse, Databricks, Government) is still OPEN and handed to PRP-64.
+

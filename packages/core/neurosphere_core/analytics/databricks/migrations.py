@@ -21,12 +21,12 @@ from neurosphere_core.analytics.base.records import ANALYTICS_TABLE
 from neurosphere_core.analytics.base.stub import RewriteRule
 
 LEDGER_TABLE: Final = "ns_schema_version"
-_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+_IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}")
 _LIMITS: Final = ExecutionLimits(max_rows_scanned=1_000_000, max_cost_units=Decimal(1_000_000))
 
 
 def _q(name: str) -> str:
-    if not _IDENT.match(name):
+    if not _IDENT.fullmatch(name):
         raise ValueError("identifier must be a plain name")
     return f"`{name}`"
 

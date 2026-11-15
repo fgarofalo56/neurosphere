@@ -166,10 +166,24 @@ def test_makefile_stack_targets_match_compose_worker_identity() -> None:
     # The precheck names the variable it needs, and the seed runs after `up --wait`.
     assert "export NS_ENTRA_TENANT_ID first" in makefile
     assert "export NS_ENTRA_CLIENT_ID first" in makefile
-    up = makefile.index("docker compose --profile app up -d --wait")
-    sandbox_seed = makefile.index("$(SANDBOX_CLI) seed", up)
-    stack_seed = makefile.index("seed-stack", sandbox_seed)
-    assert makefile.index("sandbox-generate") < up < sandbox_seed < stack_seed
+    # PRP-38 item 1 (#205): generate, emulators, sandbox seed, grants only, app profile, full seed.
+    target = makefile[makefile.index("stack-up: ") : makefile.index("stack-down: ")]
+    generate = target.index("sandbox-generate")
+    emulators = target.index("docker compose up -d --wait")
+    sandbox_seed = target.index("$(SANDBOX_CLI) seed")
+    grants = target.index("seed-stack SEED_ARGS=--grants-only")
+    app = target.index("docker compose --profile app up -d --wait")
+    full_seed = target.index("$(MAKE) seed-stack\n", app)
+    assert generate < emulators < sandbox_seed < grants < app < full_seed
+
+
+def test_makefile_grants_the_worker_before_the_app_profile_starts() -> None:
+    """Regression guard for #205: an app profile started before the grants never goes healthy,
+    because the evaluation role raises ``evaluation_pilot_domain_out_of_scope``."""
+    makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    target = makefile[makefile.index("stack-up: ") : makefile.index("stack-down: ")]
+    assert target.count("docker compose --profile app up") == 1
+    assert target.index("--grants-only") < target.index("docker compose --profile app up")
 
 
 # --- Docker ----------------------------------------------------------------------------------

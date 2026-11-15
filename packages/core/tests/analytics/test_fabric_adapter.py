@@ -389,3 +389,15 @@ def test_g12_gaps_are_declared() -> None:
     text = " ".join(G12_PARITY_GAPS).lower()
     for needle in ("top", "quantile", "throttl", "entra", "capacity", "inferred, unverified"):
         assert needle in text
+
+
+async def test_concurrent_migration_runners_insert_one_ledger_row_per_version() -> None:
+    import asyncio
+
+    cfg = FabricConfig.model_validate(commercial_config())
+    ex = _SqliteMigrations()
+    await asyncio.gather(*(apply_migrations(ex, config=cfg) for _ in range(4)))
+    rows = ex.conn.execute(
+        f"SELECT version FROM dbo.{LEDGER_TABLE} ORDER BY version"  # noqa: S608
+    ).fetchall()
+    assert [int(r[0]) for r in rows] == [1, 2]

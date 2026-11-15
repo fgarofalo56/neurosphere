@@ -9,7 +9,13 @@ only then do the base ``decimal-cost`` rules run (they match double-quoted ident
 from __future__ import annotations
 
 from neurosphere_core.analytics.base import RewriteRule, Shim
-from neurosphere_core.analytics.base.stub import decimal_cost_shim
+from neurosphere_core.analytics.base.stub import (
+    ContinuousPercentileWindow,
+    WindowShim,
+    decimal_cost_shim,
+)
+
+WINDOW_QUANTILE_FUNCTION = "NS_SYN_PERCENTILE_CONT"
 
 _HOUR = r"DATEADD\(hour, DATEDIFF\(hour, 0, (\[event_time\])\), 0\)"
 _DAY = r"DATEADD\(day, DATEDIFF\(day, 0, (\[event_time\])\), 0\)"
@@ -21,15 +27,25 @@ def tsql_query_shim() -> Shim:
         description=(
             "T-SQL SELECT TOP n -> trailing LIMIT n; OPTION (LABEL = ...) stripped; "
             "DATEADD/DATEDIFF bucketing -> SUBSTR on the fixed-width ISO text column; "
-            "[bracket] quoting -> ANSI double quotes (must precede the scan counter)"
+            "[bracket] quoting -> ANSI double quotes (must precede the scan counter); "
+            "PERCENTILE_CONT ... WITHIN GROUP ... OVER -> an exact continuous-percentile "
+            "SQLite window function"
         ),
         rules=(
-            RewriteRule("tsql-top", r"^SELECT TOP (\d+) (.*)$", r"SELECT \2 LIMIT \1"),
+            RewriteRule(
+                "tsql-top", r"^SELECT (DISTINCT )?TOP (\d+) (.*)$", r"SELECT \1\3 LIMIT \2"
+            ),
             RewriteRule("tsql-label", r" OPTION \(LABEL = '[^']*'\)", ""),
             RewriteRule("tsql-hour", _HOUR, r"(SUBSTR(\1, 1, 13) || ':00:00.000000Z')"),
             RewriteRule("tsql-day", _DAY, r"(SUBSTR(\1, 1, 10) || 'T00:00:00.000000Z')"),
+            RewriteRule(
+                "tsql-percentile-cont",
+                r"PERCENTILE_CONT\(([0-9.]+)\) WITHIN GROUP \(ORDER BY (\[[a-z_]+\])\) OVER",
+                rf"{WINDOW_QUANTILE_FUNCTION}(\2, \1) OVER",
+            ),
             RewriteRule("tsql-brackets", r"\[([A-Za-z0-9_]+)\]", r'"\1"'),
         ),
+        windows=(WindowShim(WINDOW_QUANTILE_FUNCTION, 2, ContinuousPercentileWindow),),
     )
 
 
@@ -74,5 +90,5 @@ def tsql_ddl_shim() -> Shim:
 
 
 def synapse_stub_shims() -> tuple[Shim, ...]:
-    """Shims for ``StubSqlEndpoint`` (query path). No quantile shim: both modes refuse it."""
+    """Shims for ``StubSqlEndpoint`` (query path). The quantile is an exact windowed emulation."""
     return (tsql_query_shim(), decimal_cost_shim())

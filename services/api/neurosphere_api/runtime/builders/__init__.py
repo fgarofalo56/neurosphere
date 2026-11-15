@@ -56,9 +56,7 @@ Shared objects
 it or raises ``ComponentUnavailableError("<key>_unavailable")``; ``ctx.maybe_shared(KEY)`` returns
 ``None`` instead. Keys are typed :class:`SharedKey` constants. Declared here:
 
-=========================  =========================================================  ========
 Key                        Object                                                     By
-=========================  =========================================================  ========
 ``AUTH_SETTINGS``          ``AuthSettings`` (tenant, audiences, customer binding)     authz
 ``AUTHENTICATOR``          the installed ``TokenAuthenticator`` (``JwtValidator``)    authz
 ``SCOPE_SOURCE``           the installed ``ScopeSource`` (the composed deriver)       authz
@@ -73,7 +71,6 @@ Key                        Object                                               
 ``AGGREGATE_READER``       the aggregate reader installed on ``app.state``            data
 ``CATALOG_REPOSITORY``     the catalog repository installed on ``app.state``          data
 ``ACTION_SERVICE``         the ONE ``ActionService`` (buttons, chat and MCP share it)  planes
-=========================  =========================================================  ========
 
 A builder may declare further keys in its own module; later builders import them from there.
 
@@ -356,6 +353,7 @@ class BuildContext:
 def default_builders() -> tuple[BuilderSpec, ...]:
     """The production order. Local imports keep builder modules out of import time."""
     from neurosphere_api.runtime.builders import (
+        analytics,
         authz,
         copilot,
         data,
@@ -375,4 +373,5 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         gateway.BUILDER,
         edge.BUILDER,
         lifecycle.BUILDER,
+        analytics.BUILDER,
     )
