@@ -71,6 +71,8 @@ Key                        Object                                               
 ``AGGREGATE_READER``       the aggregate reader installed on ``app.state``            data
 ``CATALOG_REPOSITORY``     the catalog repository installed on ``app.state``          data
 ``ACTION_SERVICE``         the ONE ``ActionService`` (buttons, chat and MCP share it)  planes
+``SIEM_SINK_HEALTH``       ``SiemSinkHealth`` of the audit SIEM sink (PRP-40)          data
+``AUDIT_SEARCH_STORE``     ``AuditSearchStore`` over the ``audit`` container (PRP-40)  data
 
 A builder may declare further keys in its own module; later builders import them from there.
 
@@ -102,6 +104,7 @@ from neurosphere_api.runtime.status import ComponentRegistry
 if TYPE_CHECKING:
     from neurosphere_core.actions import ActionService
     from neurosphere_core.audit import AuditRepository
+    from neurosphere_core.audit.siem_health import SiemSinkHealth
     from neurosphere_core.auth.revocation import (
         CachedRevocationChecker,
         RevocationHookRegistry,
@@ -111,6 +114,7 @@ if TYPE_CHECKING:
     from neurosphere_core.clients import ClientLifetime
     from neurosphere_core.hitl import HitlService
 
+    from neurosphere_api.audit.search_store import AuditSearchStore
     from neurosphere_api.authz import ScopeSource, TokenAuthenticator
 
 #: Module-level type variable: CodeQL reads a PEP 695 ``[T]`` used inside ``cast(T, ...)`` as
@@ -121,6 +125,7 @@ __all__ = [
     "ACTION_SERVICE",
     "AGGREGATE_READER",
     "AUDIT_REPOSITORY",
+    "AUDIT_SEARCH_STORE",
     "AUTHENTICATOR",
     "AUTH_SETTINGS",
     "CATALOG_REPOSITORY",
@@ -132,6 +137,7 @@ __all__ = [
     "REVOCATION_STORE",
     "SCOPE_DERIVER",
     "SCOPE_SOURCE",
+    "SIEM_SINK_HEALTH",
     "BuildContext",
     "BuilderSpec",
     "ComponentUnavailableError",
@@ -175,6 +181,8 @@ HITL_SERVICE: Final[SharedKey[HitlService]] = SharedKey("hitl_service")
 AGGREGATE_READER: Final[SharedKey[object]] = SharedKey("aggregate_reader")
 CATALOG_REPOSITORY: Final[SharedKey[object]] = SharedKey("catalog_repository")
 ACTION_SERVICE: Final[SharedKey[ActionService]] = SharedKey("action_service")
+SIEM_SINK_HEALTH: Final[SharedKey[SiemSinkHealth]] = SharedKey("siem_sink_health")
+AUDIT_SEARCH_STORE: Final[SharedKey[AuditSearchStore]] = SharedKey("audit_search_store")
 
 
 @dataclass(frozen=True, slots=True)

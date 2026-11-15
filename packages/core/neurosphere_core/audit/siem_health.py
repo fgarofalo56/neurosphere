@@ -59,6 +59,8 @@ class SiemHealthSnapshot:
     """A consistent copy of the counters (what the status route serialises)."""
 
     sink: str
+    state: str
+    reason: str | None
     last_success_at: datetime | None
     last_failure_at: datetime | None
     consecutive_failures: int
@@ -68,10 +70,23 @@ class SiemHealthSnapshot:
 
 
 class SiemSinkHealth:
-    """Counters for one configured sink kind (``none``, ``stdout``, ``file``, ``eventhubs``)."""
+    """Counters for one configured sink kind (``none``, ``stdout``, ``file``, ``eventhubs``).
 
-    def __init__(self, sink: str, *, clock: Callable[[], datetime] | None = None) -> None:
+    ``state`` and ``reason`` are the composition outcome (``ok``, ``disabled`` or ``failed`` with
+    a reason code such as ``audit_siem_settings_invalid``); the counters are runtime delivery.
+    """
+
+    def __init__(
+        self,
+        sink: str,
+        *,
+        state: str = "ok",
+        reason: str | None = None,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self._sink = sink
+        self._state = state
+        self._config_reason = reason
         self._clock = clock or (lambda: datetime.now(UTC))
         self._lock = threading.Lock()
         self._last_success_at: datetime | None = None
@@ -102,6 +117,8 @@ class SiemSinkHealth:
         with self._lock:
             return SiemHealthSnapshot(
                 sink=self._sink,
+                state=self._state,
+                reason=self._config_reason,
                 last_success_at=self._last_success_at,
                 last_failure_at=self._last_failure_at,
                 consecutive_failures=self._consecutive,

@@ -208,7 +208,7 @@ Logs Ingestion, Splunk HEC or syslog sinks; async export jobs; audit retention o
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | verifying | prp-40-audit-siem | `siem_eventhubs.py`, `siem_health.py`, exporter guarded + `export_signal`; `packages/core/tests/audit_siem` |
-| 2 | todo | | |
+| 2 | verifying | prp-40-audit-siem | `audit_siem` optional component, `SIEM_SINK_HEALTH`; deviation: one-line allowance in `runtime_data/test_data_builder.py` for `audit_siem` disabled |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

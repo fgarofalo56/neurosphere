@@ -148,8 +148,29 @@ class AuditSiemSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="NS_AUDIT_SIEM_", frozen=True, extra="forbid")
 
-    sink: Literal["none", "stdout", "file"] = "none"
+    sink: Literal["none", "stdout", "file", "eventhubs"] = "none"
     file_path: Path | None = None
+    #: PRP-40: Event Hubs namespace (bare name or a host in this deployment's cloud), hub name
+    #: and optional user-assigned managed identity client id. Identity only, never a key.
+    eventhubs_namespace: str | None = Field(default=None, max_length=256)
+    eventhubs_name: str | None = Field(default=None, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$")
+    eventhubs_client_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+    )
+
+    @field_validator("eventhubs_namespace", "eventhubs_name", "eventhubs_client_id", mode="before")
+    @classmethod
+    def _blank_eventhubs_is_unset(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def _eventhubs_needs_hub(self) -> Self:
+        if self.sink == "eventhubs" and self.eventhubs_name is None:
+            raise ValueError("NS_AUDIT_SIEM_SINK=eventhubs requires NS_AUDIT_SIEM_EVENTHUBS_NAME")
+        return self
 
     @field_validator("sink", mode="before")
     @classmethod

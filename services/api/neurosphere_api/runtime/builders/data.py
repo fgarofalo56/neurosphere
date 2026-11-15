@@ -12,8 +12,10 @@ Component                 ``app.state`` keys
 ``federation``            ``federation`` (this deployment's cell, served in-process)
 ``evaluation``            ``evaluation_store``, ``evaluation_pilot_dataset_ids``
 ``recommendations``       ``recommendation_store``
-``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink; an
-                          invalid setting is ``audit_siem_settings_invalid``)
+``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink when
+                          ``audit_siem`` is ok; never blocked by the sink)
+``audit_siem``            ``siem_sink_health`` (optional, PRP-40): ``disabled`` for sink
+                          ``none``, ``failed`` ``audit_siem_settings_invalid`` on a bad setting
 ``review_router``         ``review_router`` (HITL-backed; also builds and publishes the
                           ``HitlService``)
 ``replay``                ``trace_reader``, ``replay_payload_policy``
@@ -49,12 +51,15 @@ from pathlib import Path
 from typing import Annotated, Any, Final
 
 import httpx
+from azure.identity.aio import DefaultAzureCredential
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.siem import JsonLinesFileSink, SiemExporter, SiemSink, StdoutSink
+from neurosphere_core.audit.siem_eventhubs import EventHubsSiemSink, resolve_namespace
+from neurosphere_core.audit.siem_health import SiemSinkHealth
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogRepository, GraphQuery
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
@@ -64,7 +69,9 @@ from neurosphere_core.catalog.review_queue_cosmos import (
     DEFAULT_REVIEW_QUEUE_CONTAINER,
     CosmosReviewQueue,
 )
+from neurosphere_core.clients import create_eventhub_producer
 from neurosphere_core.errors import (
+    CapabilityUnavailableError,
     DependencyTransientError,
     InvalidSchemaError,
 )
@@ -104,6 +111,7 @@ from neurosphere_api.runtime.builders import (
     REVOCATION_CHECKER,
     REVOCATION_HOOKS,
     SCOPE_SOURCE,
+    SIEM_SINK_HEALTH,
     BuildContext,
     BuilderSpec,
     ComponentUnavailableError,
@@ -136,6 +144,7 @@ COMPONENTS: Final = (
     "map",
     "audit",
     "realtime",
+    "audit_siem",
 )
 
 AUDIT_CHAIN_CONTAINER: Final = "audit"
@@ -348,26 +357,97 @@ def _recommendations(ctx: BuildContext) -> None:
 # -- audit, HITL review router --------------------------------------------------------------
 
 
-def _siem_exporter() -> SiemExporter | None:
-    """``NS_AUDIT_SIEM_*``: the reference sink, or ``None`` (the default, no export)."""
+_SIEM_INVALID: Final = "audit_siem_settings_invalid"
+
+
+def _eventhubs_sink(ctx: BuildContext, conf: AuditSiemSettings) -> EventHubsSiemSink:
+    """The Event Hubs sink (PRP-40): managed identity outside ``NS_ENV=local``, never a key.
+
+    ``ctx.overrides.backend("audit_siem_producer")`` supplies a fake producer in tests. The
+    namespace is resolved against this deployment's ``CloudProfile`` only, so a host from the
+    other cloud is refused (``audit_siem_settings_invalid``), never sent to.
+    """
+    producer: Any = ctx.overrides.backend("audit_siem_producer")
+    if producer is not None:
+        return EventHubsSiemSink(producer)
+    local = ctx.settings.env == "local"
+    namespace: str | None = None
+    if conf.eventhubs_namespace is not None:
+        try:
+            namespace = resolve_namespace(ctx.settings.cloud_profile, conf.eventhubs_namespace)
+        except ValueError:
+            raise ComponentUnavailableError(_SIEM_INVALID) from None
+    elif not local:
+        raise ComponentUnavailableError(_SIEM_INVALID)
+    hub = conf.eventhubs_name
+    if hub is None:  # pragma: no cover - the settings validator requires it
+        raise ComponentUnavailableError(_SIEM_INVALID)
+    credential = None
+    if not local and conf.eventhubs_client_id is not None:
+        credential = ctx.lifetime.register(
+            DefaultAzureCredential(
+                authority=ctx.settings.cloud_profile.login_host,
+                managed_identity_client_id=conf.eventhubs_client_id,
+            )
+        )
+    try:
+        # Registered with the composition lifetime: closed at app shutdown.
+        client = create_eventhub_producer(
+            ctx.settings,
+            lifetime=ctx.lifetime,
+            eventhub_name=hub,
+            namespace=namespace,
+            credential=credential,
+        )
+    except (InvalidSchemaError, CapabilityUnavailableError):
+        raise ComponentUnavailableError(_SIEM_INVALID) from None
+    return EventHubsSiemSink(client)
+
+
+def _siem_exporter(ctx: BuildContext) -> SiemExporter | None:
+    """``NS_AUDIT_SIEM_*``: the configured sink, or ``None`` (the default, no export).
+
+    Reports ``audit_siem`` and publishes ``SIEM_SINK_HEALTH`` in every outcome, so the status
+    route can always say what is configured. A failure here never fails the ``audit`` component.
+    """
     try:
         conf = AuditSiemSettings()
     except ValidationError:
-        raise ComponentUnavailableError("audit_siem_settings_invalid") from None
-    sink: SiemSink
-    if conf.sink == "stdout":
-        sink = StdoutSink()
-    elif conf.sink == "file" and conf.file_path is not None:
-        sink = JsonLinesFileSink(conf.file_path)
-    else:
+        _publish_siem_health(ctx, SiemSinkHealth("unknown", state="failed", reason=_SIEM_INVALID))
+        ctx.failed("audit_siem", _SIEM_INVALID)
         return None
-    return SiemExporter([sink])
+    if conf.sink == "none":
+        _publish_siem_health(ctx, SiemSinkHealth("none", state="disabled"))
+        ctx.disabled("audit_siem")
+        return None
+    sink: SiemSink
+    try:
+        if conf.sink == "stdout":
+            sink = StdoutSink()
+        elif conf.sink == "file" and conf.file_path is not None:
+            sink = JsonLinesFileSink(conf.file_path)
+        elif conf.sink == "eventhubs":
+            sink = _eventhubs_sink(ctx, conf)
+        else:  # pragma: no cover - the settings validators refuse every other combination
+            raise ComponentUnavailableError(_SIEM_INVALID)
+    except ComponentUnavailableError as exc:
+        _publish_siem_health(ctx, SiemSinkHealth(conf.sink, state="failed", reason=exc.reason))
+        ctx.failed("audit_siem", exc.reason)
+        return None
+    health = SiemSinkHealth(conf.sink)
+    _publish_siem_health(ctx, health)
+    ctx.ok("audit_siem")
+    return SiemExporter([sink], health=health)
 
 
-def _audit(ctx: BuildContext) -> None:
+def _publish_siem_health(ctx: BuildContext, health: SiemSinkHealth) -> None:
+    ctx.app.state.siem_sink_health = health
+    ctx.publish(SIEM_SINK_HEALTH, health)
+
+
+def _audit(ctx: BuildContext, exporter: SiemExporter | None) -> None:
     repository = _backend(ctx, "audit_repository", AuditRepository)
     if repository is None:
-        exporter = _siem_exporter()
         repository = AuditRepository(
             CosmosAuditStore.from_client(
                 ctx.cosmos_client(),
@@ -503,7 +583,8 @@ def build(ctx: BuildContext) -> None:
     ctx.attempt("ledger", lambda: _ledger(ctx))
     ctx.attempt("evaluation", lambda: _evaluation(ctx))
     ctx.attempt("recommendations", lambda: _recommendations(ctx))
-    ctx.attempt("audit", lambda: _audit(ctx))
+    exporter = _siem_exporter(ctx)
+    ctx.attempt("audit", lambda: _audit(ctx, exporter))
     ctx.attempt("replay", lambda: _replay(ctx))
     ctx.attempt("federation", lambda: _federation(ctx))
     ctx.attempt("review_router", lambda: _review_router(ctx))
