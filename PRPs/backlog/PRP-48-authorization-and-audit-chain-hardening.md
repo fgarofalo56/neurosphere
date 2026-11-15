@@ -232,7 +232,7 @@ None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted
 | 3 | verifying | prp-48-authz-audit-hardening | `authz/deployment_scope.py` `require_deployment_admin` (reason kept `customer_scope_required`); MCP admin (all routes), deploy scan/plan, kill switch; `require_customer_control` delegates; fixtures in mcp_api, deployment, runtime_routes and integration/deploy grant the control domain |
 | 4 | verifying | prp-48-authz-audit-hardening | `authz/read_audit.py` `audited_read`; catalog search (both routes) and dashboards; multi-domain reads on reserved `<customer>.read-audit`; count bound by subject digest (contract has no count field); threat-model rows updated |
 | 5 | verifying | prp-48-authz-audit-hardening | `RESERVED_CHAIN_NAMES` (7 names, pinned), `is_reserved_chain_name`, `is_chain_customer_id`; boot `customer_id_invalid`; `_chain` falls back to `<customer>.authz-denials` |
-| 6 | todo | | |
+| 6 | verifying | prp-48-authz-audit-hardening | README: consumer-suite locations and vacuous `follow_instruction` abstains; stub comment on `Escalate` of a held permission; `test_readme_claims.py` keeps both true |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
