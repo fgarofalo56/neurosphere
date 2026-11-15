@@ -80,6 +80,11 @@ def _matches(rec: Recommendation, needle: str) -> bool:
     return any(needle in part.lower() for part in haystack)
 
 
+def _partition(recommendation: Recommendation) -> tuple[str, str]:
+    customer, domain = recommendation.customer_id, recommendation.domain_id
+    return str(getattr(customer, "root", customer)), str(getattr(domain, "root", domain))
+
+
 class InMemoryRecommendationStore:
     def __init__(self, recommendations: Sequence[Recommendation] = ()) -> None:
         self._items: dict[str, Recommendation] = {}
@@ -87,7 +92,13 @@ class InMemoryRecommendationStore:
             self._items[rec.recommendation_id.root] = rec.model_copy(deep=True)
 
     async def put(self, recommendation: Recommendation) -> None:
-        self._items[recommendation.recommendation_id.root] = recommendation.model_copy(deep=True)
+        # Same rule as the Cosmos store: one copy per id, and a copy in a smaller
+        # ``[customer, domain]`` partition is never displaced by one in a larger partition.
+        key = recommendation.recommendation_id.root
+        existing = self._items.get(key)
+        if existing is not None and _partition(existing) < _partition(recommendation):
+            return
+        self._items[key] = recommendation.model_copy(deep=True)
 
     async def list(
         self,

@@ -69,18 +69,20 @@ async def test_a_domain_outside_the_scope_never_reaches_cosmos() -> None:
     assert container.queries == []
 
 
-async def test_same_id_under_another_customer_replaces_and_leaves_one_document() -> None:
-    # Matches the in-memory store (keyed by id alone): the stale partition copy is deleted.
+async def test_same_id_under_another_customer_keeps_the_smallest_partition() -> None:
+    # Same rule as the in-memory store: one document per id, in the smallest partition
+    # ("contoso" < "fabrikam"), whichever customer put last.
     container = new_container()
     store = CosmosRecommendationStore(container)  # type: ignore[arg-type]
+    await store.put(rec(1, customer="fabrikam"))
     await store.put(rec(1, customer="contoso"))
     await store.put(rec(1, customer="fabrikam"))
     rid = rec(1).recommendation_id.root
-    assert [key for key, _ in container.items] == [("fabrikam", FINANCE)]
-    assert await store.get(make_scope([FINANCE], customer="contoso"), FINANCE, rid) is None
-    fabrikam = await store.get(make_scope([FINANCE], customer="fabrikam"), FINANCE, rid)
-    assert fabrikam is not None
-    assert fabrikam.customer_id == "fabrikam"
+    assert [key for key, _ in container.items] == [("contoso", FINANCE)]
+    assert await store.get(make_scope([FINANCE], customer="fabrikam"), FINANCE, rid) is None
+    contoso = await store.get(make_scope([FINANCE], customer="contoso"), FINANCE, rid)
+    assert contoso is not None
+    assert contoso.customer_id == "contoso"
 
 
 async def test_a_tampered_document_fails_closed_as_upstream_invalid() -> None:

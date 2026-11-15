@@ -219,7 +219,7 @@ No schema change and no new container. `NS_WORKER_REC_SOURCE` defaults to `sandb
 | 1 | merged | prp-15-round2-production-series | ArchiveSeriesSource + SeriesAccumulator shared with sandbox; parity, scope, coverage tests |
 | 2 | merged | prp-15-round2-production-series | run_pipeline_archive, NS_WORKER_REC_SOURCE and NS_WORKER_REC_LOOKBACK_DAYS, build_recommendations branch; compose-only checks not run |
 | 3 | todo | | |
-| 4 | todo | | |
+| 4 | merged | prp-15-round2-production-series | deterministic UUIDv5 review item id via HitlService.open_item(item_id) (outside Ownership listing in assignment, allowed by PRP Ownership); smallest-partition-wins put in Cosmos and in-memory stores; winner also deletes larger copies (deviation from Clarification 8 text, needed to converge) |
 | 5 | todo | | |
 
 ## Completion note (filled at ship)
