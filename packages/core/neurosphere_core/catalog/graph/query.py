@@ -45,7 +45,7 @@ from typing import Literal
 from neurosphere_contracts.query.v1.budget import Budget
 
 from neurosphere_core.catalog import rules
-from neurosphere_core.catalog.graph.bulk import NODE_READ_CHUNK
+from neurosphere_core.catalog.graph.bulk import BULK_EDGE_PAGES, BULK_SCAN_PAGES, NODE_READ_CHUNK
 from neurosphere_core.catalog.graph.latest import LatestObservationReader, wants_latest
 from neurosphere_core.catalog.protocol import (
     MAX_EDGES_PER_OVERRIDE_BATCH,
@@ -54,6 +54,7 @@ from neurosphere_core.catalog.protocol import (
     CatalogRepository,
     Direction,
     EdgeFilter,
+    EntityFilter,
     GraphPath,
     GraphResult,
     GraphSearchRequest,
@@ -230,39 +231,14 @@ class RepositoryGraphQuery:
             wanted = wanted[:max_nodes]
             reason = "max_nodes"
 
-        nodes: dict[str, CatalogEntity] = {}
-        for start in range(0, len(wanted), NODE_READ_CHUNK):
-            if self._clock() >= deadline:
-                return self._bulk_result(nodes, {}, reason or "timeout_ms")
-            chunk = wanted[start : start + NODE_READ_CHUNK]
-            found = await asyncio.gather(*(self._repo.get_entity(scope, i) for i in chunk))
-            for entity_id, entity in zip(chunk, found, strict=True):
-                if entity is not None:
-                    nodes[entity_id] = entity
-
-        candidates: dict[str, CatalogEdge] = {}
-        ids = sorted(nodes)
-        for start in range(0, len(ids), NODE_READ_CHUNK):
-            if self._clock() >= deadline:
-                return self._bulk_result(nodes, {}, reason or "timeout_ms")
-            chunk = ids[start : start + NODE_READ_CHUNK]
-            pages = await asyncio.gather(
-                *(
-                    self._repo.list_edges_by_node(
-                        scope, i, "out", EdgeFilter(), PageRequest(page_size=MAX_PAGE_SIZE)
-                    )
-                    for i in chunk
-                )
-            )
-            for page in pages:
-                if page.next_cursor is not None and page.items:
-                    reason = reason or "max_edges"  # page not exhausted: cannot prove complete
-                for edge in page.items:
-                    if edge.source_id not in nodes or edge.target_id not in nodes:
-                        continue  # other endpoint outside the id set or the scope
-                    if view == "raw" and edge.domain_id.root not in audited:
-                        raise ForbiddenError(_RAW_DENIED)
-                    candidates.setdefault(edge.id, edge)
+        nodes, reason, timed_out = await self._bulk_nodes(scope, wanted, deadline, reason)
+        if timed_out:
+            return self._bulk_result(nodes, {}, reason)
+        candidates, reason, timed_out = await self._bulk_candidates(
+            scope, nodes, view, audited, deadline, reason
+        )
+        if timed_out:
+            return self._bulk_result(nodes, {}, reason)
 
         ordered = [candidates[k] for k in sorted(candidates)]
         presented: dict[str, PresentedEdge] = {}
@@ -295,6 +271,117 @@ class RepositoryGraphQuery:
                     return self._bulk_result(nodes, presented, "max_edges")
                 presented[edge.id] = item
         return self._bulk_result(nodes, presented, reason)
+
+    async def _bulk_nodes(
+        self,
+        scope: IdentityScope,
+        wanted: list[str],
+        deadline: float,
+        reason: TruncatedReason | None,
+    ) -> tuple[dict[str, CatalogEntity], TruncatedReason | None, bool]:
+        """Resolve ``wanted`` through the scoped repository (never trusting the caller).
+
+        Entities come back ordered by id in pages, so the listing stops once it has passed the
+        largest wanted id; ids still unresolved after the page cap are read one by one (bounded
+        by ``max_nodes``). Returns (nodes, reason, timed_out).
+        """
+        nodes: dict[str, CatalogEntity] = {}
+        if not wanted:
+            return nodes, reason, False
+        want = set(wanted)
+        last = wanted[-1]
+        cursor: str | None = None
+        exhausted = False
+        for _ in range(BULK_SCAN_PAGES):
+            if self._clock() >= deadline:
+                return nodes, reason or "timeout_ms", True
+            page = await self._repo.list_entities(
+                scope, EntityFilter(), PageRequest(page_size=MAX_PAGE_SIZE, cursor=cursor)
+            )
+            for entity in page.items:
+                if entity.id in want:
+                    nodes[entity.id] = entity
+            cursor = page.next_cursor
+            if cursor is None or (page.items and page.items[-1].id >= last):
+                exhausted = True
+                break
+        if exhausted:
+            return nodes, reason, False
+        missing = [i for i in wanted if i not in nodes]
+        for start in range(0, len(missing), NODE_READ_CHUNK):
+            if self._clock() >= deadline:
+                return nodes, reason or "timeout_ms", True
+            chunk = missing[start : start + NODE_READ_CHUNK]
+            found = await asyncio.gather(*(self._repo.get_entity(scope, i) for i in chunk))
+            for entity_id, entity in zip(chunk, found, strict=True):
+                if entity is not None:
+                    nodes[entity_id] = entity
+        return nodes, reason, False
+
+    async def _bulk_candidates(
+        self,
+        scope: IdentityScope,
+        nodes: dict[str, CatalogEntity],
+        view: GraphView,
+        audited: frozenset[str],
+        deadline: float,
+        reason: TruncatedReason | None,
+    ) -> tuple[dict[str, CatalogEdge], TruncatedReason | None, bool]:
+        """Stored edges with both endpoints in ``nodes``.
+
+        First choice: page the edges of the nodes' domains (a handful of ordered pages). When a
+        domain has more edges than the page cap allows, that domain is read node by node
+        instead, so the result is complete either way. Returns (candidates, reason, timed_out).
+        """
+        candidates: dict[str, CatalogEdge] = {}
+
+        def keep(edge: CatalogEdge) -> None:
+            if edge.source_id not in nodes or edge.target_id not in nodes:
+                return  # other endpoint outside the id set or the scope
+            if view == "raw" and edge.domain_id.root not in audited:
+                raise ForbiddenError(_RAW_DENIED)
+            candidates.setdefault(edge.id, edge)
+
+        domains = sorted({entity.domain_id.root for entity in nodes.values()})
+        for domain_id in domains:
+            cursor: str | None = None
+            done = False
+            for _ in range(BULK_EDGE_PAGES):
+                if self._clock() >= deadline:
+                    return candidates, reason or "timeout_ms", True
+                page = await self._repo.list_edges_by_domain(
+                    scope,
+                    domain_id,
+                    EdgeFilter(),
+                    PageRequest(page_size=MAX_PAGE_SIZE, cursor=cursor),
+                )
+                for edge in page.items:
+                    keep(edge)
+                cursor = page.next_cursor
+                if cursor is None:
+                    done = True
+                    break
+            if done:
+                continue
+            members = sorted(i for i, e in nodes.items() if e.domain_id.root == domain_id)
+            for start in range(0, len(members), NODE_READ_CHUNK):
+                if self._clock() >= deadline:
+                    return candidates, reason or "timeout_ms", True
+                chunk = members[start : start + NODE_READ_CHUNK]
+                pages = await asyncio.gather(
+                    *(
+                        self._repo.list_edges_by_node(
+                            scope, i, "out", EdgeFilter(), PageRequest(page_size=MAX_PAGE_SIZE)
+                        )
+                        for i in chunk
+                    )
+                )
+                for node_page in pages:
+                    if node_page.next_cursor is not None and node_page.items:
+                        reason = reason or "max_edges"  # not exhausted: cannot prove complete
+                    for edge in node_page.items:
+                        keep(edge)
+        return candidates, reason, False
 
     @staticmethod
     def _bulk_result(

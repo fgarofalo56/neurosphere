@@ -17,6 +17,10 @@ from neurosphere_core.scope import IdentityScope
 
 NODE_READ_CHUNK = 32
 """Concurrent repository reads per round (bounded fan-out; the clock is checked per round)."""
+BULK_EDGE_PAGES = 40
+"""Edge pages (of 500) read per domain before that domain is read node by node."""
+BULK_SCAN_PAGES = 20
+"""Entity pages (of 500) read to resolve an id set before falling back to per-id reads."""
 
 
 @runtime_checkable

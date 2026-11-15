@@ -1,7 +1,8 @@
 """Viewport assembly (PRP-18 item 2): bounded, scope-filtered, clustered when over budget.
 
 Reads, in order: the catalog repository (bounded keyset pages of the addressed domain's entities),
-the bounded ``GraphQuery.neighbors`` walk (one hop, per node) for edges, and the hot-aggregate
+one bulk ``EdgesAmongQuery.edges_among`` call for edges (falling back to the bounded
+``GraphQuery.neighbors`` walk, one hop per node, for a graph without it), and the hot-aggregate
 status for coverage and lag. Nothing loads the whole enterprise graph:
 
 * the entity scan is capped at :data:`SCAN_PAGE_CAP` pages and says so (``scan_limit``);
@@ -31,6 +32,7 @@ from neurosphere_contracts.query.v1.budget import Budget
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogEntity, CatalogRepository, EntityFilter, GraphQuery
+from neurosphere_core.catalog.graph import EdgesAmongQuery
 from neurosphere_core.catalog.protocol import NeighborsRequest, PresentedEdge
 from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError, NeuroSphereError
 from neurosphere_core.paging import PageRequest
@@ -55,6 +57,9 @@ SCAN_PAGE_CAP: Final = 20
 _PAGE: Final = 500
 _EDGE_CHUNK: Final = 16
 _NEIGHBOR_TIMEOUT_MS: Final = 5000
+_BULK_TIMEOUT_MS: Final = 10_000
+_BULK_MAX_NODES: Final = 5000  # Budget contract ceiling
+_BULK_MAX_EDGES: Final = 20_000  # Budget contract ceiling
 _CLUSTER_PREFIX: Final = "kind:"
 
 VIEWPORT_ENTITY_TYPES: Final = ("agent", "grounding_source", "model_deployment", "person")
@@ -225,6 +230,34 @@ class _Builder:
     # ------------------------------------------------------------------ edges
 
     async def edges_among(self, ids: set[str], edge_budget: int) -> _Edges:
+        """One bulk call when the graph supports it, else the per-node walk."""
+        graph = self.graph
+        if isinstance(graph, EdgesAmongQuery):
+            return await self._bulk_edges(graph, ids, edge_budget)
+        return await self._walked_edges(ids, edge_budget)
+
+    async def _bulk_edges(self, graph: EdgesAmongQuery, ids: set[str], edge_budget: int) -> _Edges:
+        budget = Budget(
+            timeout_ms=_BULK_TIMEOUT_MS,
+            limit=500,
+            max_depth=1,
+            max_nodes=max(1, min(len(ids), _BULK_MAX_NODES)),
+            max_edges=min(edge_budget + 1, _BULK_MAX_EDGES),
+        )
+        found = await graph.edges_among(self.scope, ids, budget)
+        result = _Edges()
+        for edge in found.edges:
+            if edge.source_id in ids and edge.target_id in ids:
+                result.items[edge.edge_id] = edge
+        if len(result.items) > edge_budget:
+            keep = sorted(result.items)[:edge_budget]
+            result.items = {k: result.items[k] for k in keep}
+            result.reason = "edge_budget"
+        elif found.truncated:
+            result.incomplete = True
+        return result
+
+    async def _walked_edges(self, ids: set[str], edge_budget: int) -> _Edges:
         result = _Edges()
         ordered = sorted(ids)
         for start in range(0, len(ordered), _EDGE_CHUNK):

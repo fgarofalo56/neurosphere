@@ -109,6 +109,21 @@ async def test_time_budget_truncates() -> None:
     assert res.truncated is True and res.truncated_reason == "timeout_ms"
 
 
+async def test_page_caps_fall_back_to_per_node_reads_with_the_same_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, names = await _seed()
+    ids = [nid(n) for n in names]
+    expected = await _bulk(make_query(repo)).edges_among(SCOPE_A, ids, budget(max_nodes=100))
+    monkeypatch.setattr("neurosphere_core.catalog.graph.query.MAX_PAGE_SIZE", 3)
+    monkeypatch.setattr("neurosphere_core.catalog.graph.query.BULK_SCAN_PAGES", 1)
+    monkeypatch.setattr("neurosphere_core.catalog.graph.query.BULK_EDGE_PAGES", 1)
+    capped = await _bulk(make_query(repo)).edges_among(SCOPE_A, ids, budget(max_nodes=100))
+    assert {e.edge_id for e in capped.edges} == {e.edge_id for e in expected.edges}
+    assert {n.id for n in capped.nodes} == {n.id for n in expected.nodes}
+    assert len(expected.edges) == 4
+
+
 async def test_raw_view_refused_for_non_auditor() -> None:
     repo, names = await _seed()
     with pytest.raises(ForbiddenError):
