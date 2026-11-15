@@ -19,7 +19,8 @@ or failed), the dependent component reports ``disabled`` and the reason code is 
 (``policy_repository_unavailable``, ``revocation_unavailable``). The plane is installed on
 ``app.state.identity_admin`` either way, so the routes fail closed with a 503 reason.
 
-Runs LAST in ``default_builders``: it needs authz (policy, revocation) and data (audit).
+Runs after authz and data (it needs policy, revocation and audit) and before analytics
+in ``default_builders``.
 """
 
 from __future__ import annotations

@@ -1,6 +1,8 @@
 ---
 name: PRP-39-identity-admin-api-and-revocation
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 283
 priority: P0
 order: 24
 review: required
@@ -32,17 +34,17 @@ Out of scope: the console page (PRP-53); route-category and `/workspaces/{role}`
 - Hosted users "can sign in but see nothing" and only an operator with Cosmos access can fix it (lane4 4.1, `lane4-identity-docs-operator-setup.md:191-197`).
 
 ## Acceptance criteria
-- [ ] Given an admin holding `policy.manage` in domain D, when they `PUT` a role assignment for principal P in D with `expires_at` and `reason`, then P's policy document changes, `PolicyHead.policy_version` advances, P's next request derives the new scope, and before/after audit records land on D's chain.
-- [ ] A change naming any domain where the actor lacks `policy.manage` returns 403 `target_out_of_scope` and writes a denial record; nothing is written to the policy store.
-- [ ] An actor changing their own policy document gets 403 `self_modification_forbidden` (ASSUMPTION row 3).
-- [ ] Assigning `security_auditor` or `admin`, or any change on the customer-control domain, requires `permits_customer_wide(actor, POLICY_MANAGE)` (PRP-37/PRP-65); privileged assignments without `expires_at` are 422 (contract rule, C7).
-- [ ] Resource-scoped grants require `policy.manage` on the domain that owns the resource and always carry `expires_at` and `reason`; `grant.write` is not accepted for them (Clarification 2).
-- [ ] Concurrent edits: a stale `If-Match` returns 409 `stale_version`; a missing `If-Match` on update returns 428-equivalent `invalid_schema` reason `precondition_required` (no lost update).
-- [ ] `GET /api/v1/admin/identity/principals` lists only principals that have a membership or assignment in a domain the actor manages, and shows only those domains' entries; page size bounded; no UPN, email or raw object id in any response or log.
-- [ ] `POST /api/v1/admin/identity/principals/{principal_id}/revocation` with `mode: issued_before` behaves as PRP-06 (403 within `NS_REVOCATION_TTL_SECONDS`, cache invalidators and push closers called, intent and outcome audited); with `mode: until_lifted` every token is refused, including ones issued after revocation, until `DELETE .../revocation` lifts it (audited); proven with a fake clock.
-- [ ] Revocation of a principal in another cloud or customer is 403 `cross_scope_target`; a revocation store outage is 503 and never an allow.
-- [ ] Every new route is in the route inventories and boots under `verify_route_permissions`; `services/api/openapi.json` regenerated.
-- [ ] PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green; runbook `docs/runbooks/identity-admin.md` explains bootstrap (grant script) then the API.
+- [x] Given an admin holding `policy.manage` in domain D, when they `PUT` a role assignment for principal P in D with `expires_at` and `reason`, then P's policy document changes, `PolicyHead.policy_version` advances, P's next request derives the new scope, and before/after audit records land on D's chain.
+- [x] A change naming any domain where the actor lacks `policy.manage` returns 403 `target_out_of_scope` and writes a denial record; nothing is written to the policy store.
+- [x] An actor changing their own policy document gets 403 `self_modification_forbidden` (ASSUMPTION row 3).
+- [x] Assigning `security_auditor` or `admin`, or any change on the customer-control domain, requires `permits_customer_wide(actor, POLICY_MANAGE)` (PRP-37/PRP-65); privileged assignments without `expires_at` are 422 (contract rule, C7).
+- [x] Resource-scoped grants require `policy.manage` on the domain that owns the resource and always carry `expires_at` and `reason`; `grant.write` is not accepted for them (Clarification 2).
+- [x] Concurrent edits: a stale `If-Match` returns 409 `stale_version`; a missing `If-Match` on update returns 428-equivalent `invalid_schema` reason `precondition_required` (no lost update).
+- [x] `GET /api/v1/admin/identity/principals` lists only principals that have a membership or assignment in a domain the actor manages, and shows only those domains' entries; page size bounded; no UPN, email or raw object id in any response or log.
+- [x] `POST /api/v1/admin/identity/principals/{principal_id}/revocation` with `mode: issued_before` behaves as PRP-06 (403 within `NS_REVOCATION_TTL_SECONDS`, cache invalidators and push closers called, intent and outcome audited); with `mode: until_lifted` every token is refused, including ones issued after revocation, until `DELETE .../revocation` lifts it (audited); proven with a fake clock.
+- [x] Revocation of a principal in another cloud or customer is 403 `cross_scope_target`; a revocation store outage is 503 and never an allow.
+- [x] Every new route is in the route inventories and boots under `verify_route_permissions`; `services/api/openapi.json` regenerated.
+- [x] PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green; runbook `docs/runbooks/identity-admin.md` explains bootstrap (grant script) then the API.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -207,18 +209,18 @@ Console UI, Entra group sync, Graph lookups of display names, bulk import of ass
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | verifying | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
-| 2 | verifying | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
-| 3 | verifying | prp-39-identity-admin | list/detail + role/membership/grant PUT/DELETE with If-Match; scope, self, customer-wide checks; multi-chain audit; replica cache invalidation via REVOCATION_HOOKS.invalidate_caches; route inventory pin added |
-| 4 | verifying | prp-39-identity-admin | POST/GET/DELETE revocation through the composed RevocationService; issued_before and until_lifted proven on the composed app with a fake clock; push closer called once per revoke |
-| 5 | verifying | prp-39-identity-admin | tests/security/authz/test_admin_identity{,_revocation}.py: 76 cases over the 11 routes (cross-customer, cross-cloud, cross-domain, self, privileged, expired, revoked); harness files untouched |
-| 6 | in-progress | prp-39-identity-admin | done on branch: routers.py hook, route inventory pin, runbook docs/runbooks/identity-admin.md, mkdocs nav. Left for the merge step: rebase, regenerate openapi.json (drift test fails until then), docs/reference, status table, INDEX, changelog fragment, completion note, CI green |
+| 1 | done | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
+| 2 | done | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
+| 3 | done | prp-39-identity-admin | list/detail + role/membership/grant PUT/DELETE with If-Match; scope, self, customer-wide checks; multi-chain audit; replica cache invalidation via REVOCATION_HOOKS.invalidate_caches; route inventory pin added |
+| 4 | done | prp-39-identity-admin | POST/GET/DELETE revocation through the composed RevocationService; issued_before and until_lifted proven on the composed app with a fake clock; push closer called once per revoke |
+| 5 | done | prp-39-identity-admin | tests/security/authz/test_admin_identity{,_revocation}.py: 76 cases over the 11 routes (cross-customer, cross-cloud, cross-domain, self, privileged, expired, revoked); harness files untouched |
+| 6 | done | prp-39-identity-admin | done on branch: routers.py hook, route inventory pin, runbook docs/runbooks/identity-admin.md, mkdocs nav. Left for the merge step: rebase, regenerate openapi.json (drift test fails until then), docs/reference, status table, INDEX, changelog fragment, completion note, CI green |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-15, PR #283
 - Deviations (draft from the implementation session): `RevocationStore.lift` takes `lifted_at` as a required keyword (the service supplies its clock) and a lift turns the entry into `issued_before` with `lifted_at`/`lifted_by` (old tokens stay refused). `CachedRevocationChecker` now takes the narrower `RevocationReader` (get only) so existing get-only fakes still type-check. Added `RevocationService.status`, `.store`, `.propagation_bound_seconds` and `RevocationHookRegistry.invalidate_caches` (cache invalidators only; used after a lift and after every policy write so the writing replica applies the new scope at once). The registry cannot carry a reason on `disabled`, so "disabled with a reason" is `disabled` plus a logged reason code. `POLICY_ADMIN_REPOSITORY` / `REVOCATION_SERVICE` keys are declared in `builders/admin.py` (the documented "further keys in its own module" route), not in `builders/__init__.py`. The admin builder sits before `analytics` (so the analytics "registered last" pin holds); `services/api/tests/runtime_api/test_readiness.py` (outside Ownership) gained the "admin" line in its two order pins. Resource ownership for grants comes from a `ResourceDomainResolver` (default: catalog `get_entity` under the actor's scope; backend override `resource_domains`); a resource the actor cannot see is refused as `target_out_of_scope`. GET routes of revocation use the same authorizer as revoke. The plain `issued_before` Cosmos body omits `mode` so pre-PRP-39 code still reads it. `RevocationRequest.mode` is required by the PRP-37 contract, so the "default issued_before" of Clarification 4 applies to the core service only.
-- Descoped items:
+- Descoped items: none. Reviewer follow-ups not fixed in this PR: (a) `admin/identity/service.py` `list_principals` fetches at most MAX_LIST_LIMIT documents then applies the cursor in memory, so principals beyond the cap are unreachable by paging (sets truncated=true only); push cursor and ordering into `PolicyAdminRepository.list_principals`. (b) `_write` puts the full PrincipalPolicy dump in before/after audit subjects on every named domain chain, so domain D readers see entries for domains they do not manage; filter to named domains or store a digest. (c) `cosmos_store.py` keeps `lifted_at`/`lifted_by` on a lifted entry; pre-PRP-39 `RevocationEntry` is extra=forbid, so after a rollback old code returns 503 (revocation_entry_invalid) for that principal until retention expires; the runbook step "lift blocks before reverting" does not cover this (drop the lift fields from the stored body or document it). (d) `_write` reimplements `run_audited_mutation` for several chains; a multi-chain helper in core audit would keep one implementation. (e) `remove_role`/`remove_grant` on a principal with no policy document return 409 stale (with If-Match) instead of 404. The `builders/admin.py` docstring ("runs LAST") was fixed in the close-out commit.
 - OPEN gates: optional live Entra token run of the new routes (PRP-64, needs `NS_LIVE_APPROVED=1`), not run. Compose/emulator checks not run (PRP-21 holds the stack in W13); Cosmos behaviour of `lift` and of a body without `ttl` is covered by fakes only.
 - Env vars for the operator: none new.
-- Follow-up issues (to file at merge): (1) problem responses echo `request.url.path` in `instance`, so an invalid principal id sent in the path (possibly a UPN) is reflected to the same caller; fix in `middleware/problem.py` / `app.py` (Tier 1). (2) The customer chain `<customer>.identity-admin` shares the catalog-shaped form, so a catalog domain literally named `identity-admin` would decode to it; PRP-44's domain write path should reserve the name (same as #279). (3) PRP-53 console page.
+- Follow-up issues: #284 (problem.py echoes the path in `instance`), #285 (reserve the `identity-admin` domain name), PRP-53 console page; reviewer follow-ups (a) to (e) above are not yet filed as issues.
 - Product check (can an operator use it without editing files): partly. After the one-time `make grant-operator`, an admin can grant a second user, change roles, memberships and grants and revoke or block a user through the API with no Cosmos access; there is no console page until PRP-53.
