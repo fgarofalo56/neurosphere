@@ -87,6 +87,7 @@ function renderUi(ui: React.ReactElement, entry = "/") {
 const SCAN = {
   visibility_limited: true,
   visibility_note: NOTE,
+  scan_id: "scan-0123456789abcdef0123456789abcdef",
   consent_id: "consent-1",
   scanned_at: "2026-10-15T12:00:00Z",
   subscriptions: [
@@ -272,6 +273,8 @@ describe("DeployPage", () => {
       },
     });
     expect(JSON.stringify(seen.bodies)).not.toMatch(/domain_id|customer_id/);
+    expect((planBody as { scan_id?: string }).scan_id).toBe(SCAN.scan_id);
+    expect(planBody).not.toHaveProperty("scan");
 
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     fireEvent.click(screen.getByTestId("manifest-download"));
@@ -283,6 +286,20 @@ describe("DeployPage", () => {
     for (const b of screen.getAllByRole("button")) {
       expect(b.textContent ?? "").not.toMatch(forbidden);
     }
+  });
+
+  it("does not post a plan when the scan response has no scan_id", async () => {
+    const withoutId = { ...SCAN, scan_id: undefined };
+    const seen = useApi({ [deployScanPath()]: () => json(withoutId) });
+    renderUi(<DeployPage />);
+    fillScanForm();
+    fireEvent.click(screen.getByTestId("scan-run"));
+    await screen.findByTestId("visibility-note");
+    fireEvent.click(screen.getByTestId("step-next"));
+    fireEvent.click(screen.getByTestId("step-next"));
+    expect(screen.getByTestId("plan-scan-unavailable")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("plan-build"));
+    expect(seen.urls.some((u) => u.pathname === deployPlanPath())).toBe(false);
   });
 
   it("switching to Government replaces the regions; no Commercial region stays selectable", async () => {

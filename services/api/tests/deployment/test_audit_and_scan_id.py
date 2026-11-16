@@ -11,7 +11,6 @@ import pytest
 from authz.authz_helpers import Harness  # pyright: ignore[reportMissingImports]
 from neurosphere_api.deploy.plan import PlanRequest, build_plan
 from neurosphere_api.deploy.plan import build_router as plan_router
-from neurosphere_api.deploy.plan.router import validate_body_scan
 from neurosphere_api.deploy.scan import (
     ScanService,
     ScanSettings,
@@ -22,7 +21,6 @@ from neurosphere_api.deploy.scan import (
 )
 from neurosphere_api.deploy.scan.audit import audit_chain
 from neurosphere_core.audit import AuditRepository
-from neurosphere_core.errors import InvalidSchemaError
 
 from .conftest import ADMIN, VIEWER
 from .test_plan import COMMERCIAL, KV, _matrix, _res, _scan  # pyright: ignore[reportPrivateUsage]
@@ -117,20 +115,6 @@ def test_scan_returns_scan_id_and_plan_consumes_it(
     assert kv["status"] == "needs_consent"  # discovered via the stored scan, no consent recorded
 
 
-def test_scan_id_wins_over_body_scan(mount: Callable[[dict[str, Any]], Harness]) -> None:
-    h, _ = _mounted(mount)
-    scan = _post_scan(h)
-    body = {
-        "profile": PROFILE.model_dump(mode="json"),
-        "scan_id": scan["scan_id"],
-        "scan": _scan(KV).model_dump(mode="json"),  # different content, must be ignored
-    }
-    r = h.client.post("/v1/deploy/plan", json=body, headers=h.auth(ADMIN))
-    assert r.status_code == 200, r.text
-    kv = next(i for i in r.json()["plan"]["items"] if i["service"] == "key_vault")
-    assert kv["existing_resource_id"].endswith("/kv-a")
-
-
 def test_foreign_scan_id_is_forbidden(mount: Callable[[dict[str, Any]], Harness]) -> None:
     h, _ = _mounted(mount)
     scan = _post_scan(h, ADMIN)
@@ -188,30 +172,6 @@ def test_unknown_and_expired_scan_ids_are_typed(
         headers=h.auth(ADMIN),
     )
     assert (expired.status_code, expired.json()["reason"]) == (422, "scan_expired")
-
-
-def test_body_scan_fallback_works_and_is_validated(
-    mount: Callable[[dict[str, Any]], Harness],
-) -> None:
-    h, _ = _mounted(mount)
-    profile = PROFILE.model_dump(mode="json")
-    ok = h.client.post(
-        "/v1/deploy/plan",
-        json={"profile": profile, "scan": _scan(KV).model_dump(mode="json")},
-        headers=h.auth(ADMIN),
-    )
-    assert ok.status_code == 200, ok.text
-    # Inconsistent: resource listed under a different subscription entry.
-    bad_scan = _scan(KV).model_dump(mode="json")
-    bad_scan["subscriptions"][0]["subscription_id"] = SUB_B
-    bad = h.client.post(
-        "/v1/deploy/plan", json={"profile": profile, "scan": bad_scan}, headers=h.auth(ADMIN)
-    )
-    assert (bad.status_code, bad.json()["reason"]) == (422, "scan_inconsistent")
-    not_visible = _scan(KV).model_dump(mode="json")
-    not_visible["subscriptions"][0]["status"] = "not_visible"
-    with pytest.raises(InvalidSchemaError):
-        validate_body_scan(_scan(KV).model_copy(deep=True).__class__.model_validate(not_visible))
 
 
 # ------------------------------------------------------------------ #37 audit events

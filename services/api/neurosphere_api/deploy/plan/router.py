@@ -2,9 +2,10 @@
 
 ``POST /api/v1/deploy/plan`` (deprecated alias ``/v1/deploy/plan``) is gated by the
 deployment-scoped ``config.manage`` (``require_deployment_admin``, PRP-48 item 3, #114). The
-scan input is a server-side ``scan_id`` issued to the same caller by the scan service
-(preferred), or a scan result in the request body (validated fallback). The planner itself
-makes no ARM or HTTP call. Scan-id misuse fails closed: another caller's id is
+scan input is a server-side ``scan_id`` issued to the same caller by the scan service. A scan
+result in the request body is refused (422 ``invalid_schema`` / ``scan_body_not_accepted``, #36)
+before any planning. The planner itself makes no ARM or HTTP call. Scan-id misuse fails closed:
+another caller's id is
 ``forbidden``, an unknown or expired id is a typed ``invalid_schema`` (``scan_not_found`` /
 ``scan_expired``). Every plan, and every consent decision it evaluates, is audited.
 """
@@ -33,35 +34,20 @@ ROUTE_PREFIX = "/api/v1/deploy/plan"
 ALIAS_PREFIX = "/v1/deploy/plan"
 
 
-def validate_body_scan(scan: ScanResponse) -> None:
-    """The body fallback must be internally consistent: resources only under visible entries,
-    each resource under its own subscription, no duplicate subscription entries."""
-    seen: set[str] = set()
-    for entry in scan.subscriptions:
-        if entry.subscription_id in seen:
-            raise InvalidSchemaError("duplicate subscription in scan", reason="scan_inconsistent")
-        seen.add(entry.subscription_id)
-        if entry.status != "visible" and entry.resources:
-            raise InvalidSchemaError(
-                "a not_visible subscription cannot carry resources", reason="scan_inconsistent"
-            )
-        if any(r.subscription_id != entry.subscription_id for r in entry.resources):
-            raise InvalidSchemaError(
-                "resource listed under another subscription", reason="scan_inconsistent"
-            )
-
-
 def _resolve_scan(
     body: PlanRequest, request: Request, scope: IdentityScope
 ) -> tuple[ScanResponse | None, str]:
+    if body.scan is not None:
+        # A caller-supplied scan result is never trusted: it could be forged (#36).
+        raise InvalidSchemaError(
+            "a scan result cannot be supplied in the body; send the scan_id from the scan",
+            reason="scan_body_not_accepted",
+        )
     if body.scan_id is not None:
         service = getattr(request.app.state, "scan_service", None)
         if not isinstance(service, ScanService):
             raise DependencyTransientError("Scan is not configured.", reason="scan_not_configured")
         return service.stored_scan(scope, body.scan_id), "store"
-    if body.scan is not None:
-        validate_body_scan(body.scan)
-        return body.scan, "body"
     return None, "none"
 
 

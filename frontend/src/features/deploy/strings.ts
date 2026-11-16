@@ -69,6 +69,7 @@ export const STRINGS = {
   // Step 3
   planButton: "Build plan",
   planFailed: "The plan could not be built",
+  scanUnavailable: "The scan result is unavailable, so a plan cannot be built. Run the scan again.",
   planTitle: "Plan",
   planTable: "Plan items",
   planNotApplied: "This plan is advisory. Nothing has been provisioned, applied or deleted.",

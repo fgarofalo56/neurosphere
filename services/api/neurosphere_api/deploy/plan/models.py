@@ -104,9 +104,10 @@ class PlanRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     profile: DeploymentProfile
-    #: Preferred: id of a scan this caller ran (server-side result). Wins over ``scan``.
+    #: Id of a scan this caller ran (server-side result); the only accepted scan input.
     scan_id: Annotated[str, StringConstraints(pattern=SCAN_ID_PATTERN)] | None = None
-    #: Fallback: a scan result supplied in the body; validated for internal consistency.
+    #: Internal: set by the route from the stored scan. A body-supplied scan is refused by the
+    #: plan route (``scan_body_not_accepted``); direct ``build_plan`` callers may still set it.
     scan: ScanResponse | None = None
     choices: dict[ManifestService, ServiceChoice] = Field(default_factory=dict)
     consents: list[OwnerConsentRecord] = Field(default_factory=list, max_length=1000)
