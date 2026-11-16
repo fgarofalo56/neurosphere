@@ -1,0 +1,2 @@
+### Added
+- PRP-63: `deploy-hosted.yml` delivery pipeline to the hosted environment (OIDC login, plan, approval in the protected `hosted-demo` environment, deploy of the release tag, smoke via `scripts/gates/hosted_smoke.py`, then publish of the draft release); a tag release stays a draft until the hosted smoke is green. Inert until the operator creates the federated credential, environments and their values. See `docs/deploy/delivery.md` (PR #316).
