@@ -6,6 +6,9 @@ No network and no Cosmos: the register store is the in-memory seam.
 from __future__ import annotations
 
 import logging
+import subprocess
+import sys
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,6 +23,7 @@ from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_core.cloud import CloudName, Settings
 from neurosphere_core.deploy.approvals import InMemoryPlanApprovalRepository
 from neurosphere_core.deploy.register import CustomerScopedRegister, InMemoryRegisterStore
+from neurosphere_workers.actions.deploy import PlanOnlyArmProvisioner
 
 LOCAL = Settings(env="local", cloud=CloudName.COMMERCIAL)
 
@@ -148,6 +152,36 @@ def test_a_register_seam_alone_keeps_a_per_process_repository() -> None:
         app, LOCAL, DeployApplySettings(enabled=True), register=InMemoryRegisterStore()
     )
     assert isinstance(app.state.deploy_plan_approvals.repository, InMemoryPlanApprovalRepository)
+
+
+def test_the_api_bootstrap_never_loads_the_arm_transport() -> None:
+    """PRP-55: the API stays on the dry-run path; the ARM/Fabric transport is worker-only."""
+    code = (
+        "import sys\n"
+        "import neurosphere_api.deploy.apply.bootstrap\n"
+        "bad = [m for m in ('neurosphere_workers.actions.deploy_arm',"
+        " 'neurosphere_workers.actions.deploy_http',"
+        " 'neurosphere_workers.actions.deploy_wiring') if m in sys.modules]\n"
+        "print(','.join(bad))\n"
+    )
+    result = subprocess.run(  # noqa: S603 - fixed interpreter and fixed probe text
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=120, check=True
+    )
+    assert result.stdout.strip() == ""
+
+
+def test_the_api_connector_mirrors_the_worker_allowlist_without_a_transport() -> None:
+    app = create_app(LOCAL)
+    registry = WriteTargetRegistry()
+    app.state.write_targets = registry
+    assert configure_apply_from_settings(
+        app, LOCAL, DeployApplySettings(enabled=True), register=InMemoryRegisterStore()
+    )
+    with TestClient(app):
+        connector: Any = registry.get("deploy-orchestrator")
+        assert isinstance(connector._arm, PlanOnlyArmProvisioner)
+        assert connector._fabric is not None and connector._observer is not None
+        assert connector._customer_id == "synthco"
 
 
 def test_no_secret_bearing_setting_exists() -> None:

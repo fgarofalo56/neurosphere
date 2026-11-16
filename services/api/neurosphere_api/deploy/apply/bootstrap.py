@@ -33,6 +33,7 @@ from neurosphere_core.deploy.approvals import InMemoryPlanApprovalRepository, Pl
 from neurosphere_core.deploy.approvals.cosmos_store import CosmosPlanApprovalRepository
 from neurosphere_core.deploy.register import RegisterStore
 from neurosphere_core.deploy.register.cosmos_store import CosmosRegisterStore
+from neurosphere_workers.actions.deploy import PlanOnlyArmProvisioner, plan_only_fabric
 from neurosphere_workers.runtime.factories import (
     DeploySources,
     DeployWriteSettings,
@@ -71,6 +72,21 @@ def _customer(settings: Settings) -> str | None:
         return None
 
 
+def _plan_only_sources(
+    settings: Settings, approvals: PlanApprovalStore, register: RegisterStore
+) -> DeploySources:
+    """The API drafts and dry-runs only: its connector gets plan-only provisioners that mirror
+    the worker's allowlist and Fabric gate but hold no transport (every call refuses)."""
+    fabric = plan_only_fabric(settings.cloud_profile.cloud)
+    return DeploySources(
+        approvals=approvals,
+        register=register,
+        arm=PlanOnlyArmProvisioner(),
+        fabric=fabric[0] if fabric else None,
+        observer=fabric[1] if fabric else None,
+    )
+
+
 def _register_on_startup(
     app: FastAPI, settings: Settings, approvals: PlanApprovalStore, register: RegisterStore
 ) -> None:
@@ -86,7 +102,7 @@ def _register_on_startup(
                     settings=settings,
                     customer_id=_customer(settings),
                     deploy=DeployWriteSettings(enabled=True),
-                    sources=DeploySources(approvals=approvals, register=register),
+                    sources=_plan_only_sources(settings, approvals, register),
                 )
                 _log.info("deploy write target registered: %s", registered)
             else:

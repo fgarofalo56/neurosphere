@@ -65,8 +65,14 @@ from neurosphere_contracts.deployment.v1.deploy_action_plan import DeployActionP
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.capabilities import CapabilityMatrix, DeploymentProfile, validate_profile
 from neurosphere_core.cloud import CloudName
-from neurosphere_core.deploy.arm import creation_tags
-from neurosphere_core.deploy.fabric import FabricEndpoints, FabricHttp, FabricProvisioner
+from neurosphere_core.deploy.arm import arm_service, creation_tags
+from neurosphere_core.deploy.fabric import (
+    FabricEndpoints,
+    FabricHttp,
+    FabricProvisioner,
+    FabricResponse,
+    fabric_endpoints_for,
+)
 from neurosphere_core.deploy.fabric.provisioner import ARM_API_VERSION
 from neurosphere_core.deploy.register import (
     LiveInventory,
@@ -102,10 +108,12 @@ __all__ = [
     "FabricHttpObserver",
     "FabricObserver",
     "PlanApprovals",
+    "PlanOnlyArmProvisioner",
     "ProvisionedResource",
     "apply_diff",
     "deployment_target",
     "fabric_unavailable_reason",
+    "plan_only_fabric",
     "plan_target",
     "register_digest",
     "resource_key",
@@ -716,3 +724,47 @@ def _removable_ids(entries: Collection[Any]) -> list[str]:
 
 def _unavailable(detail: str) -> CapabilityUnavailableError:
     return CapabilityUnavailableError(CAPABILITY_UNAVAILABLE, detail)
+
+
+# -- plan-only collaborators (a process that drafts but never executes, e.g. the API) -----------
+
+_PLAN_ONLY: Final = "this process only plans; the executor worker provisions"
+
+
+class PlanOnlyArmProvisioner:
+    """:class:`AllowlistArmProvisioner` that answers ``supports`` from the same allowlist as the
+    worker's ARM provisioner (``neurosphere_core.deploy.arm``) and never makes a call: every
+    write or read refuses ``capability_unavailable``. It lets a drafting process dry-run exactly
+    what the executor worker can provision, with no transport and no credential."""
+
+    def supports(self, spec: ResourceSpec) -> bool:
+        return spec.kind == "arm_resource" and arm_service(spec.service) is not None
+
+    async def ensure(self, spec: ResourceSpec) -> ProvisionedResource:
+        raise _unavailable(_PLAN_ONLY)
+
+    async def ensure_tagged(
+        self, spec: ResourceSpec, tags: Mapping[str, str]
+    ) -> ProvisionedResource:
+        raise _unavailable(_PLAN_ONLY)
+
+    async def exists(self, spec: ResourceSpec) -> bool:
+        raise _unavailable(_PLAN_ONLY)
+
+
+class _PlanOnlyHttp:
+    async def request(
+        self, method: str, url: str, json: Mapping[str, Any] | None = None
+    ) -> FabricResponse:
+        raise _unavailable(_PLAN_ONLY)
+
+
+def plan_only_fabric(cloud: CloudName) -> tuple[FabricProvisioner, FabricHttpObserver] | None:
+    """Fabric collaborators that refuse every call, or ``None`` where the Fabric endpoint set
+    cannot be built (Government without a verified token scope: fail closed, decision 5)."""
+    try:
+        endpoints = fabric_endpoints_for(cloud)
+    except InvalidSchemaError:
+        return None
+    http = _PlanOnlyHttp()
+    return FabricProvisioner(http, endpoints), FabricHttpObserver(http, endpoints)
