@@ -120,7 +120,9 @@ def revision_of(key: SettingKey, documents: list[AdminConfigDocument]) -> int | 
     return sum(versions) if key == WRITE_TARGETS else versions[0]
 
 
-def _entry(document: AdminConfigDocument, customer_id: str, cloud: CloudName) -> StoredSetting:
+def _entry(
+    document: AdminConfigDocument, customer_id: str, cloud: CloudName | None
+) -> StoredSetting:
     key = key_of_document(document.id.root)
     if key is None:
         raise InvalidSchemaError("unknown stored setting", reason="unknown_setting_key")
@@ -132,7 +134,7 @@ def _entry(document: AdminConfigDocument, customer_id: str, cloud: CloudName) ->
 
 
 def snapshot_from_documents(
-    documents: list[AdminConfigDocument], *, customer_id: str, cloud: CloudName
+    documents: list[AdminConfigDocument], *, customer_id: str, cloud: CloudName | None
 ) -> StoredSettingsSnapshot:
     entries: dict[str, StoredSetting] = {}
     targets: list[StoredSetting] = []
@@ -163,10 +165,13 @@ async def load_stored_settings(
     repository: AdminConfigRepository,
     customer_id: str,
     *,
-    cloud: CloudName,
+    cloud: CloudName | None,
     limit_seconds: float = DEFAULT_LOAD_TIMEOUT_SECONDS,
 ) -> StoredSettingsSnapshot:
-    """One bounded read of every stored runtime setting; never raises (see module doc)."""
+    """One bounded read of every stored runtime setting; never raises (see module doc).
+
+    ``cloud`` ``None`` skips only the cloud rules (the caller applies its own, as the worker
+    judge does through ``endpoint_problem``, so its refusal keeps the existing reason code)."""
     try:
         async with asyncio.timeout(limit_seconds):
             documents = await repository.list_by_kind(

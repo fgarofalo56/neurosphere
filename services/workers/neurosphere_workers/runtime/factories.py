@@ -60,6 +60,8 @@ from neurosphere_core.actions.audit import AuditRepositoryActionAuditor
 from neurosphere_core.actions.cosmos_store import CosmosExecutionControl, CosmosIntentStore
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.actions.targets import ACTION_CONNECTORS, APIM_GATEWAY_CONNECTOR
+from neurosphere_core.admin import CosmosAdminConfigRepository
+from neurosphere_core.admin.runtime import judge_init_args, load_stored_settings
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.repository import AuditRepository
@@ -1097,7 +1099,25 @@ async def build_evaluation(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     evaluation = EvalSettings()
     if evaluation.data_dir is None:
         raise RoleConfigError("evaluation_data_dir_missing")
+    # PRP-45: a stored ``judge`` setting beats NS_WORKER_EVAL_JUDGE* (init arguments, A2). One
+    # bounded read at role start; no store or a failed read keeps env (A5). The cloud rule is
+    # NOT applied here: ``_evaluation_judge`` refuses a cross-cloud endpoint with its existing
+    # ``evaluation_judge_*`` reason, so the role fails and no call is ever made.
+    try:
+        admin_config: Any = CosmosAdminConfigRepository.from_client(
+            create_cosmos_client(cfg.settings, lifetime=lifetime, account=cfg.store.cosmos_account),
+            database=cfg.store.database,
+        )
+    except Exception:
+        admin_config = None
+    if admin_config is not None:
+        stored = await load_stored_settings(admin_config, cfg.customer_id, cloud=None)
+        judge_setting = stored.setting("judge")
+        if judge_setting is not None:
+            evaluation = EvalSettings(**judge_init_args(judge_setting))
     directory = evaluation.data_dir
+    if directory is None:  # same env as above; kept for the type checker
+        raise RoleConfigError("evaluation_data_dir_missing")
     registry, rubric, judge_config = _evaluation_registry(directory, evaluation)
     judge = _evaluation_judge(
         cfg, evaluation, directory, _LazyCredential(cfg.settings, lifetime).get

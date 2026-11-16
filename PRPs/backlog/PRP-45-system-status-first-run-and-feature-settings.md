@@ -222,7 +222,7 @@ None run here. A stored copilot or judge endpoint pointing at a real model is on
 | 2 | verifying | prp-45-system-status-settings | status + checklist routes; contract checklist statuses |
 | 3 | verifying | prp-45-system-status-settings | settings GET/PUT, If-Match, diff, audit |
 | 4 | verifying | prp-45-system-status-settings | snapshot before builders; copilot, search, mcp, scan read it |
-| 5 | todo | | |
+| 5 | verifying | prp-45-system-status-settings | build_evaluation reads stored judge; cross-cloud keeps evaluation_judge_* reason |
 | 6 | todo | | |
 
 ## Completion note (filled at ship)
