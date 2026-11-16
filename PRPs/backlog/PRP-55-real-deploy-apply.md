@@ -225,7 +225,7 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 |---|---|---|---|
 | 1 | verifying | prp-55-real-deploy-apply | core approvals store + container; tests green |
 | 2 | todo | | |
-| 3 | todo | | |
+| 3 | verifying | prp-55-real-deploy-apply | core ARM allowlist table; worker BearerDeployHttp + HttpArmProvisioner; MockTransport tests green |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
