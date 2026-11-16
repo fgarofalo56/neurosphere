@@ -3,10 +3,12 @@
 Every route checks the deployment-scoped admin permission (``config.manage`` on the customer's
 control domain, PRP-48) before anything here runs. A settings write is NOT an executor intent: it
 changes NeuroSphere's own configuration, not an external system (clarification 4). It is an
-audited, ``If-Match``-guarded ``admin_config`` write: a ``before`` record, the write (validation
-included, so a refused write is audited ``failed`` with its reason code), then an ``after`` record
-on ``<customer>.admin-config``; a failed audit write aborts the change. Audit state carries the
-key, document id, version and changed pointers, never a stored value.
+audited, ``If-Match``-guarded ``admin_config`` write: a ``before`` record, the write, then an
+``after`` record on ``<customer>.admin-config``; a failed audit write aborts the change. Body
+validation (``validate_setting``) and ``check_runtime_settings`` run in the settings router before
+the auditor, so a 422 refusal is not audited; only a write that passed validation and then failed
+is audited ``failed`` with its reason code. Audit state carries the key, document id, version and
+changed pointers, never a stored value.
 """
 
 from __future__ import annotations

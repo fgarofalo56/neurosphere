@@ -78,6 +78,9 @@ The stored settings live in the `admin_config` Cosmos container (kind `system_se
 store cannot be read at startup (bounded timeout), every builder uses env and the item reports
 `stored_settings_unavailable`: env is operator controlled, so a store outage cannot widen access.
 
+The unavailable snapshot is cached for the process lifetime: after a transient store outage at
+startup, stored values apply only after another restart once the store is reachable.
+
 ### Customer binding
 
 Outside `NS_ENV=local` the API needs `NS_AUTH_CUSTOMER_ID`; local runs fall back to the synthetic
@@ -128,6 +131,11 @@ ignored).
   endpoints are called with the workload identity;
 - a value the builder's own settings class refuses (`<key>_settings_invalid`, for example an MCP
   endpoint whose path is not `/mcp`).
+
+Copilot prerequisites: an enabled stored `copilot` setting on an env mode of `disabled` is coerced
+to `approved_endpoint`, which still needs the region, model feature and SKU env fields
+(`NS_COPILOT_*`). On a bare deployment the PUT is refused with `copilot_settings_invalid` until
+those env fields are set.
 
 ## Environment variables
 
