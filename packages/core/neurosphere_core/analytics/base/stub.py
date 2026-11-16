@@ -24,7 +24,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
-import sqlite3
 import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -274,6 +273,10 @@ class StubSqlEndpoint:
         self._breach: BreachReason | None = None
         self.last_sql: str | None = None
         self.last_rows_processed = 0
+        # Lazy: importing the analytics package must not load sqlite3, so the runtime images
+        # can drop the sqlite-libs apk (PRP-52, #171). Only the stub executor needs it.
+        import sqlite3
+
         self._conn = sqlite3.connect(":memory:", check_same_thread=False)
         qualified = f'"{ANALYTICS_TABLE}"'
         if schema is not None:
@@ -353,6 +356,8 @@ class StubSqlEndpoint:
     # --- in-thread callbacks ---------------------------------------------------------------
 
     def _tick(self) -> int:
+        import sqlite3
+
         if self._cancel.is_set():
             raise sqlite3.OperationalError("cancelled")
         self._ticks += 1
@@ -383,6 +388,8 @@ class StubSqlEndpoint:
             self._breach = None
             self._limits = limits
             self.last_sql = self.rewrite(sql)
+            import sqlite3
+
             try:
                 rows = self._conn.execute(self.last_sql, statement.params).fetchall()
             except sqlite3.OperationalError:

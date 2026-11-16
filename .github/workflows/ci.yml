@@ -222,8 +222,11 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Licence register is current, no UNKNOWN or unapproved non-permissive licence
+        # CI is set on the runner, so --check also fails on a carried-forward row that is not on
+        # the cited allowlist (PRP-52). The sync selection matches dependabot-licences.yml.
         run: |
-          uv sync --frozen
+          uv sync --frozen --group dev
+          uv sync --frozen --inexact --package neurosphere-contracts --group dev
           pnpm install --frozen-lockfile
           python scripts/licenses_report.py --check
       - name: Workflows contain no suppressed failures
@@ -291,6 +294,11 @@ jobs:
         run: uv sync --frozen --group dev
       - name: Egress probe tests
         run: uv run pytest -q -m integration tests/security/egress
+      # PRP-52 (#215): bounded compose log dump on failure only. The egress stack carries no
+      # credentials (probe and Azurite emulator); output is capped at 300 lines per service.
+      - name: Dump compose logs (failure only)
+        if: failure()
+        run: docker compose logs --no-color --tail 300 egress-probe azurite
 
   mermaid:
     name: mermaid diagrams render
@@ -315,3 +323,9 @@ jobs:
         env:
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: python scripts/render_mermaid.py --no-sandbox
+      # PRP-52 (#68): the threat-model DFD sources are rendered too; the ARCHITECTURE
+      # five-block rule above is unchanged. SVGs go to a temp dir and are not committed.
+      - name: Render docs/security/dfd diagrams (fails on parser error)
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: python scripts/render_mermaid.py --source-dir docs/security/dfd --no-sandbox

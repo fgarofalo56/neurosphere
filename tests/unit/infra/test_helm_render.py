@@ -6,15 +6,15 @@ CI job runs Helm 4.
 
 from __future__ import annotations
 
+import importlib.util
 import json
-import os
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, NoReturn
 
-import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -35,11 +35,20 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, capture_output=True, text=True, check=False, cwd=ROOT, timeout=120)
 
 
-def _skip_or_fail(reason: str) -> NoReturn:
-    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
-    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
-        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
-    pytest.skip(reason)
+def _load_skip_or_fail() -> Callable[[str], NoReturn]:
+    """Load the single, unit-tested ``skip_or_fail`` (tests/security/egress/ci_gate.py, #215).
+
+    These test directories are not packages, so the helper is loaded by path instead of copied.
+    """
+    path = Path(__file__).resolve().parents[2] / "security" / "egress" / "ci_gate.py"
+    spec = importlib.util.spec_from_file_location("_ns_ci_gate", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.skip_or_fail  # type: ignore[no-any-return]
+
+
+_skip_or_fail = _load_skip_or_fail()
 
 
 def _helm() -> str:
@@ -260,7 +269,18 @@ def test_bicep_sets_the_search_provider_on_the_api_site_only() -> None:
 def test_registry_is_required() -> None:
     helm = _helm()
     client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"
-    proc = _run([helm, "template", "neurosphere", str(CHART), "--set", client])
+    proc = _run(
+        [
+            helm,
+            "template",
+            "neurosphere",
+            str(CHART),
+            "--set",
+            client,
+            "--set",
+            "env.NS_CLOUD=commercial",
+        ]
+    )
     assert proc.returncode != 0
     assert "image.registry is required" in proc.stderr
 
@@ -318,3 +338,19 @@ def test_extension_points_left_to_later_prps() -> None:
     assert (CHART / "templates" / "networkpolicy.yaml").exists()
     values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
     assert values["networkPolicy"]["enabled"] is True
+
+
+def test_chart_requires_ns_cloud() -> None:
+    """PRP-52: no NS_CLOUD means no render; a value outside the allowed set fails too."""
+    helm = _helm()
+    base = [helm, "template", "neurosphere", str(CHART)]
+    client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"
+    no_cloud = _run([*base, "--set", "image.registry=registry.example.invalid", "--set", client])
+    assert no_cloud.returncode != 0
+    assert "env.NS_CLOUD is required" in no_cloud.stderr
+    bad = _run([*base, "-f", str(CI_VALUES), "--set", "env.NS_CLOUD=moon"])
+    assert bad.returncode != 0
+    assert "commercial or government" in bad.stderr
+    for cloud in ("commercial", "government"):
+        ok = _run([*base, "-f", str(CI_VALUES), "--set", f"env.NS_CLOUD={cloud}"])
+        assert ok.returncode == 0, ok.stderr

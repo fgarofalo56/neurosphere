@@ -233,4 +233,66 @@ def test_splice_requires_markers() -> None:
 
 def test_real_repo_register_is_current() -> None:
     """The committed docs/licenses.md and ADR-0002 appendix match the committed lockfiles."""
-    assert main(["--check"]) == 0
+    # --allow-carried: the sharded pytest jobs have no node_modules; the planning job enforces
+    # the carried-forward rule with both dependency trees installed (PRP-52).
+    assert main(["--check", "--allow-carried"]) == 0
+
+
+def _rolldown_lock(tmp: Path, version: str, names: tuple[str, ...]) -> Path:
+    lines = ["lockfileVersion: '9.0'", "", "packages:", ""]
+    for name in names:
+        lines += [f"  '{name}@{version}':", "    resolution: {integrity: sha512-x}", ""]
+    lock = tmp / "pnpm-lock.yaml"
+    lock.write_text("\n".join(lines), encoding="utf-8")
+    return lock
+
+
+def test_platform_family_resolves_from_installed_sibling_of_same_version(tmp_path: Path) -> None:
+    """#197: a bumped @rolldown/binding-* family is read from the installed sibling."""
+    lock = _rolldown_lock(
+        tmp_path,
+        "1.2.16",
+        ("@rolldown/binding-win32-x64-msvc", "@rolldown/binding-linux-x64-gnu"),
+    )
+    add_npm(tmp_path, "@rolldown/binding-win32-x64-msvc", "1.2.16", "MIT")
+    deps = NS["read_pnpm_lock"](lock, tmp_path / "node_modules" / ".pnpm", {})
+    assert {d.name: d.licence for d in deps} == {
+        "@rolldown/binding-win32-x64-msvc": "MIT",
+        "@rolldown/binding-linux-x64-gnu": "MIT",
+    }
+    assert not any(d.carried for d in deps)
+
+
+def test_platform_family_does_not_anchor_on_another_version(tmp_path: Path) -> None:
+    lock = _rolldown_lock(tmp_path, "1.2.16", ("@rolldown/binding-linux-x64-gnu",))
+    add_npm(tmp_path, "@rolldown/binding-win32-x64-msvc", "1.2.15", "MIT")
+    deps = NS["read_pnpm_lock"](lock, tmp_path / "node_modules" / ".pnpm", {})
+    assert deps[0].licence == "UNKNOWN"
+    assert NS["violation"](deps[0]) is not None
+
+
+def test_unanchored_package_outside_a_family_stays_unknown(tmp_path: Path) -> None:
+    lock = _rolldown_lock(tmp_path, "2.0.0", ("some-native-thing-linux-x64",))
+    add_npm(tmp_path, "some-native-thing-win32-x64", "2.0.0", "MIT")
+    deps = NS["read_pnpm_lock"](lock, tmp_path / "node_modules" / ".pnpm", {})
+    assert deps[0].licence == "UNKNOWN"
+
+
+def test_carried_row_fails_under_ci_and_passes_with_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    good_tree(tmp_path)
+    assert run(tmp_path, "good") == 0  # writes the register
+    # Remove the installed npm package so left-pad is carried forward from the register.
+    import shutil
+
+    shutil.rmtree(tmp_path / "node_modules")
+    monkeypatch.delenv("CI", raising=False)
+    assert run(tmp_path, "good", "--check") == 0
+    monkeypatch.setenv("CI", "true")
+    capsys.readouterr()
+    rc = run(tmp_path, "good", "--check")
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "npm:left-pad@1.3.0: licence was carried forward" in out
+    assert run(tmp_path, "good", "--check", "--allow-carried") == 0

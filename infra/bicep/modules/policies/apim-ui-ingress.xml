@@ -1,0 +1,14 @@
+<policies>
+    <inbound>
+        <!-- UI-to-API ingress rate limit (PRP-52, #69). Service-level, applied only to a service this
+             deployment created (never a reused gateway). __UI_API_RATE_LIMIT_CALLS__ is replaced by
+             apim.bicep with the uiApiRateLimitCalls parameter; calls are per caller IP per 60 seconds.
+             Bodies are never read. -->
+        <rate-limit-by-key calls="__UI_API_RATE_LIMIT_CALLS__" renewal-period="60" counter-key="@(context.Request.IpAddress)" />
+    </inbound>
+    <backend>
+        <forward-request />
+    </backend>
+    <outbound />
+    <on-error />
+</policies>

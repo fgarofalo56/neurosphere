@@ -7,14 +7,13 @@ Item 3 (``tests/security/egress``) keeps its own, separate deny corpus.
 
 from __future__ import annotations
 
-import os
+import importlib.util
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 GOV_PARAMS = ROOT / "infra" / "bicep" / "params" / "government"
@@ -64,11 +63,20 @@ def _run(args: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(args, capture_output=True, text=True, check=False, cwd=ROOT, timeout=180)
 
 
-def _skip_or_fail(reason: str) -> NoReturn:
-    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
-    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
-        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
-    pytest.skip(reason)
+def _load_skip_or_fail() -> Callable[[str], NoReturn]:
+    """Load the single, unit-tested ``skip_or_fail`` (tests/security/egress/ci_gate.py, #215).
+
+    These test directories are not packages, so the helper is loaded by path instead of copied.
+    """
+    path = Path(__file__).resolve().parents[2] / "security" / "egress" / "ci_gate.py"
+    spec = importlib.util.spec_from_file_location("_ns_ci_gate", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.skip_or_fail  # type: ignore[no-any-return]
+
+
+_skip_or_fail = _load_skip_or_fail()
 
 
 def _helm() -> str:

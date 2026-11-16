@@ -79,6 +79,20 @@ var securityRules = [
     }
   }
   {
+    // Load balancer health probes must reach the subnet before the deny-all rule (#67).
+    name: 'AllowAzureLoadBalancerInbound'
+    properties: {
+      priority: 200
+      direction: 'Inbound'
+      access: 'Allow'
+      protocol: '*'
+      sourceAddressPrefix: 'AzureLoadBalancer'
+      sourcePortRange: '*'
+      destinationAddressPrefix: '*'
+      destinationPortRange: '*'
+    }
+  }
+  {
     name: 'DenyAllInbound'
     properties: {
       priority: 4096

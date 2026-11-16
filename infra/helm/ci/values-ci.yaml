@@ -3,6 +3,8 @@
 image:
   registry: registry.example.invalid
   tag: 0.1.0
+env:
+  NS_CLOUD: commercial
 serviceAccount:
   workloadIdentity:
     clientId: 00000000-0000-0000-0000-000000000000

@@ -140,3 +140,22 @@ def test_outputs_carry_no_secret_material(main_arm: dict[str, Any]) -> None:
         assert not SECRET_MARKERS.search(name), name
         assert not SECRET_MARKERS.search(json.dumps(spec.get("value", ""))), name
         assert spec["type"] != "securestring", name
+
+
+@requires_az
+def test_ui_ingress_policy_is_created_service_only_and_off_by_default(
+    main_arm: dict[str, Any],
+) -> None:
+    """#69: the UI ingress rate limit never reaches a reused gateway and defaults to off."""
+    assert main_arm["parameters"]["uiApiRateLimitCalls"]["defaultValue"] == 0
+    template = _nested(main_arm)["ns-apim"]["template"]
+    resources = template["resources"]
+    resources = list(resources.values()) if isinstance(resources, dict) else resources
+    policies = [r for r in resources if r["type"] == "Microsoft.ApiManagement/service/policies"]
+    assert len(policies) == 1
+    condition = policies[0]["condition"]
+    assert "empty(parameters('reuse'))" in condition
+    assert "greater(parameters('uiApiRateLimitCalls'), 0)" in condition
+    assert "rate-limit-by-key" in (MODULES / "policies" / "apim-ui-ingress.xml").read_text(
+        encoding="utf-8"
+    )

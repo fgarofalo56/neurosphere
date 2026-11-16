@@ -31,6 +31,10 @@ param skuName string = 'Developer'
 @maxValue(12)
 param skuCapacity int = 1
 
+@description('UI-to-API ingress rate limit: calls per caller IP per minute. 0 (default) applies no policy. Only a service created by this module is ever given the policy; a reused gateway is never touched.')
+@minValue(0)
+param uiApiRateLimitCalls int = 0
+
 var capacityCeiling = {
   Developer: 1
   Standard: 4
@@ -60,6 +64,16 @@ resource service 'Microsoft.ApiManagement/service@2024-05-01' = if (empty(reuse)
       'Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11': 'False'
       'Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30': 'False'
     }
+  }
+}
+
+// Created services only (never reuse mode), and only when a limit is requested.
+resource uiIngressPolicy 'Microsoft.ApiManagement/service/policies@2024-05-01' = if (empty(reuse) && uiApiRateLimitCalls > 0) {
+  parent: service
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: replace(loadTextContent('policies/apim-ui-ingress.xml'), '__UI_API_RATE_LIMIT_CALLS__', string(uiApiRateLimitCalls))
   }
 }
 

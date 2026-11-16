@@ -273,7 +273,8 @@ def test_nsg_outbound_denies_internet_with_service_tag_allowlist(
     # Inbound is VNet-only with a final deny.
     inbound = [r["properties"] for r in rules if r["properties"]["direction"] == "Inbound"]
     assert {r["sourceAddressPrefix"] for r in inbound if r["access"] == "Allow"} == {
-        "VirtualNetwork"
+        "VirtualNetwork",
+        "AzureLoadBalancer",
     }
     assert any(
         r["access"] == "Deny" and r["sourceAddressPrefix"] == "*" and r["priority"] == 4096
@@ -354,3 +355,25 @@ def test_reuse_default_leaves_no_public_literal_in_source() -> None:
             continue
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"publicNetworkAccess\w*\s*:\s*'(?i:enabled)'", text), path
+
+
+def test_nsg_allows_azure_load_balancer_before_the_deny(network_arm: dict[str, Any]) -> None:
+    """#67: health probes need an allow ahead of DenyAllInbound (priority 4096)."""
+    rules = network_arm["variables"]["securityRules"]
+    lb = [r for r in rules if r["name"] == "AllowAzureLoadBalancerInbound"]
+    assert len(lb) == 1
+    props = lb[0]["properties"]
+    assert props["direction"] == "Inbound"
+    assert props["access"] == "Allow"
+    assert props["sourceAddressPrefix"] == "AzureLoadBalancer"
+    assert props["priority"] < 4096
+
+
+def test_vnet_address_prefix_is_a_root_parameter(main_arm: dict[str, Any]) -> None:
+    """#67: the root template exposes the prefix, default unchanged, and passes it down."""
+    param = main_arm["parameters"]["vnetAddressPrefix"]
+    assert param["defaultValue"] == "10.40.0.0/16"
+    network = _deployments(main_arm)["ns-network"]
+    assert (
+        network["parameters"]["vnetAddressPrefix"]["value"] == "[parameters('vnetAddressPrefix')]"
+    )

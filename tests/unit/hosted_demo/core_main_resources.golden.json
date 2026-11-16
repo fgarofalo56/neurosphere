@@ -50,6 +50,11 @@
     "[format('{0}/{1}', parameters('apimName'), items(variables('namedValues'))[copyIndex()].key)]"
   ],
   [
+    "Microsoft.ApiManagement/service/policies",
+    "2024-05-01",
+    "[format('{0}/{1}', parameters('name'), 'policy')]"
+  ],
+  [
     "Microsoft.DocumentDB/databaseAccounts",
     "2024-11-15",
     "[parameters('name')]"
