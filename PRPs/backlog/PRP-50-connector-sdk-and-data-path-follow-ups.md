@@ -232,9 +232,9 @@ No data or schema migration. `poll_status` gains one more string value (`stalled
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-50-connector-followups | commit 8bb3ec50 |
 | 2 | todo | | blocked on PRP-46 merge |
-| 3 | todo | | |
+| 3 | merged | prp-50-connector-followups | restated counter |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
