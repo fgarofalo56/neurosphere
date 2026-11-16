@@ -34,7 +34,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, NamedTuple, Protocol
+from typing import Any, NamedTuple, Protocol, cast
 
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT_VERSION = "1.0.0"
@@ -192,6 +192,7 @@ def render_evidence(ev: dict[str, Any], subscription_id: str = "") -> str:
         f"- Uninstall dry-run removable: {ev['dryrun_removable']}; protected: "
         f"{ev['dryrun_protected']}",
         f"- Teardown: {ev['teardown']}",
+        f"- Interrupted: {str(bool(ev.get('interrupted'))).lower()}",
         "",
         "## Checks",
         "",
@@ -453,13 +454,23 @@ def _run(
     except RefusedError as exc:
         failed = True
         ctx.checks.append(Check("tool-missing", "FAIL", safe_text(str(exc))))
+    except KeyboardInterrupt:
+        # Tear down (finally), write the FAIL evidence, then re-raise below (#213 item 1).
+        failed = True
+        ctx.facts["interrupted"] = True
+        ctx.checks.append(Check("interrupted", "FAIL", "KeyboardInterrupt during the run"))
     finally:
         teardown = _teardown(profile, ctx, created_rg, plan)
-    if teardown.startswith("FAILED"):
+    if (
+        teardown.startswith("FAILED")
+        or ctx.facts.get("interrupted")
+        or "unexpected_error" in ctx.facts
+    ):
         failed = True
     ev: dict[str, Any] = {
         "profile": profile.name,
         "result": "FAIL" if failed else "PASS",
+        "interrupted": bool(ctx.facts.get("interrupted")),
         "script_version": SCRIPT_VERSION,
         "started_utc": started.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "finished_utc": utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -484,6 +495,9 @@ def _run(
         print(f"INTERRUPTED: G02 profile-{profile.name}; evidence {path.name}")
         raise KeyboardInterrupt
     print(f"{'FAIL' if failed else 'PASS'}: G02 profile-{profile.name}; evidence {path.name}")
+    unexpected = ctx.facts.get("unexpected_error")
+    if isinstance(unexpected, BaseException):
+        raise unexpected  # an unrecoverable cleanup error surfaces only after the evidence write
     return 1 if failed else 0
 
 
@@ -500,12 +514,38 @@ def _tag_group_resources(ctx: RunContext) -> None:
 
 
 _RECOVERABLE = (StepError, RefusedError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError)
+RECOVERABLE = _RECOVERABLE  # public alias for the profile scripts
 
 
 def _describe(exc: BaseException) -> str:
     if isinstance(exc, subprocess.TimeoutExpired):
         return f"{type(exc).__name__}: command timed out"
     return f"{type(exc).__name__}: {safe_text(str(exc), 120)}"
+
+
+def _untagged_resources(ctx: RunContext) -> int:
+    """How many resources now in the group lack this run's tag.
+
+    A listing that cannot be read is recorded as a check and counts as 0: the group's own run-id
+    tag was already verified and the earlier dry-run plan still applies (#213 item 2).
+    """
+    try:
+        listing = ctx.az(
+            "resource", "list", "--resource-group", ctx.resource_group,
+            "--query", "[].{id:id,tags:tags}", "--output", "json", parse_json=True,
+        )  # fmt: skip
+    except _RECOVERABLE as exc:
+        ctx.checks.append(Check("pre-delete-relist", "WARN", _describe(exc)))
+        return 0
+    if not isinstance(listing, list):
+        ctx.checks.append(Check("pre-delete-relist", "WARN", "listing was not a JSON list"))
+        return 0
+    count = 0
+    for item in cast("list[Any]", listing):
+        tags = item.get("tags") if isinstance(item, dict) else None
+        if not isinstance(tags, dict) or tags.get(TAG_RUN) != ctx.run_id:  # pyright: ignore[reportUnknownMemberType]
+            count += 1
+    return count
 
 
 def _delete_group(ctx: RunContext, plan: DryRunPlan, problems: list[str]) -> None:
@@ -517,6 +557,9 @@ def _delete_group(ctx: RunContext, plan: DryRunPlan, problems: list[str]) -> Non
             problems.append("resource group run-id tag mismatch; not deleted")
         elif plan.protected:
             problems.append("foreign resources found in the group; not deleted")
+        elif (foreign := _untagged_resources(ctx)) > 0:
+            # The dry-run plan is the empty default after an early failure, so re-list now.
+            problems.append(f"{foreign} resource(s) without this run's tag; group not deleted")
         else:
             ctx.az("group", "delete", "--name", ctx.resource_group, "--yes")
     except _RECOVERABLE as exc:
@@ -537,6 +580,9 @@ def _teardown(profile: Profile, ctx: RunContext, created_rg: bool, plan: DryRunP
         except KeyboardInterrupt:
             ctx.facts["interrupted"] = True
             problems.append("workload cleanup: interrupted")
+        except Exception as exc:
+            ctx.facts["unexpected_error"] = exc
+            problems.append(f"workload cleanup: unexpected {type(exc).__name__}")
     finally:
         # The group delete never depends on cleanup: it runs even if cleanup raised anything.
         if created_rg:

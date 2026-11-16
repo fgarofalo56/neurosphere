@@ -172,7 +172,7 @@ class AksProfile:
         try:
             if ctx.facts.get("release_installed"):
                 ctx.run("helm", "uninstall", ctx.facts["release"], "--wait", *base)
-        except Exception as exc:
+        except self._c.RECOVERABLE as exc:
             uninstall_error = exc
         if ctx.facts.get("namespace_created"):
             ctx.run(
