@@ -1,6 +1,8 @@
 ---
 name: PRP-50-connector-sdk-and-data-path-follow-ups
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 300
 priority: P2
 order: 38
 review: required
@@ -33,19 +35,19 @@ Out of scope: hosted wiring of the `foundry_discovery` and `billing_export` role
 - SDK write verify: `_strict_equal` makes `1` and `1.0` a mismatch (`connectors/sdk-python/neurosphere_connector/write/write_models.py:121-131`), `move` and `copy` without `from_` return plain `matched=False` (`:178-179`), `contract_kit.py:20,89-94` imports the private `_check_capable` and catches `AttributeError` without naming the member; `_tracked` is duplicated in `apim-gateway/.../connector.py:166` and `foundry-actions/.../connector.py:131` (#219 items 1-3, 9-11).
 
 ## Acceptance criteria
-- [ ] Given a vault reference whose host is `evilvault.azure.net`, `x.vault.azure.net.evil.test` or `vault.azure.net`, When the OTel connector builds its manifest, Then it raises `unrecognized_vault_host`; `ns.vault.azure.net` and `ns.vault.usgovcloudapi.net` map to commercial and government (#218 item 1).
-- [ ] Given an export racing `shutdown`, When both run on separate threads in a stress test, Then no export is enqueued after the flush and none fails by timeout; the closed check and the pending registration happen under one lock (#218 item 5).
-- [ ] Given an export with an empty producer credential, When it reaches the in-process ingest edge, Then the edge answers 401 and the connector reports a failure, not a success (#218 item 7); the collector configuration test asserts that the config drops request and response bodies (config parse test, #218 item 6).
-- [ ] Given a gateway poll whose source reports `stalled_slice_start`, When the poller records the outcome, Then `poll_status` is a distinct `stalled` value with the stalled slice start in the log fields and the watermark still held (#218 item 2).
-- [ ] Given a final slice clipped by the window end, When the connector retries after truncation, Then it halves from the actual clipped span and does not spend page budget on a retry that cannot shrink it (#218 item 3, reproduced by a test before the fix; if it is not reproducible the finding is recorded as such). The meaning of `truncated_pages` (truncated source queries) is stated in the connector README and in the poller log field name (#218 item 4).
-- [ ] Given a closed billing day posted earlier, When a later export reports a different amount for the same day, resource and meter, Then the poller counts it in `last_status.restated`, logs `billing_export.restated` with the counts only, still posts nothing for it (first amount wins, unchanged), and the docstring points to the ledger supersede follow-up (#218 item 8).
-- [ ] Given two Foundry projects with a deployment of the same name, When discovery ticks, Then the second is counted in `TickStats.collisions` and logged once per tick with the project names, and no existing entity is modified (#219 item 6; the id scheme is not changed).
-- [ ] Given a `domain_id` that does not start with the poller's `cloud:customer:` prefix, When `FoundryDiscoveryPoller` is constructed, Then it raises `InvalidSchemaError` (fails closed at build, #219 item 7); discovered names are logged at debug level only and remaining attribute lengths are capped like the others (#219 item 8).
-- [ ] Given `check_diff_against_state` with an observed `1.0` for an expected `1`, Then the result is a documented, tested outcome (decision in Clarification 4); `move` and `copy` without `from_` return `verifiable=False` with reason `missing_from`; `MappingProxyType` observed states and `remove` on a missing parent path have tests (#219 items 1-3).
-- [ ] `check_capable` is a public name exported from `neurosphere_connector.write`; the contract kit imports it and names the missing member in `write_protocol_missing` (#219 items 9-10); the private alias keeps working until no caller uses it.
-- [ ] `tracked` (health recording decorator) lives in the SDK; both reference connectors import it and their local copies are gone with their tests unchanged (#219 item 11).
-- [ ] A test pins that a health success arriving while the rate-limit window is open keeps `remaining=0` until the next success (#219 item 4); the claim that hosts call `drain_rotation_hooks` is checked and the result recorded: if no host calls it, the completion note says so and a follow-up issue is filed (#219 item 5), no host code is invented.
-- [ ] Hosted wiring and the G04 live run are written OPEN (PRP-58, PRP-64).
+- [x] Given a vault reference whose host is `evilvault.azure.net`, `x.vault.azure.net.evil.test` or `vault.azure.net`, When the OTel connector builds its manifest, Then it raises `unrecognized_vault_host`; `ns.vault.azure.net` and `ns.vault.usgovcloudapi.net` map to commercial and government (#218 item 1).
+- [x] Given an export racing `shutdown`, When both run on separate threads in a stress test, Then no export is enqueued after the flush and none fails by timeout; the closed check and the pending registration happen under one lock (#218 item 5).
+- [x] Given an export with an empty producer credential, When it reaches the in-process ingest edge, Then the edge answers 401 and the connector reports a failure, not a success (#218 item 7); the collector configuration test asserts that the config drops request and response bodies (config parse test, #218 item 6).
+- [x] Given a gateway poll whose source reports `stalled_slice_start`, When the poller records the outcome, Then `poll_status` is a distinct `stalled` value with the stalled slice start in the log fields and the watermark still held (#218 item 2).
+- [x] Given a final slice clipped by the window end, When the connector retries after truncation, Then it halves from the actual clipped span and does not spend page budget on a retry that cannot shrink it (#218 item 3, reproduced by a test before the fix; if it is not reproducible the finding is recorded as such). The meaning of `truncated_pages` (truncated source queries) is stated in the connector README and in the poller log field name (#218 item 4).
+- [x] Given a closed billing day posted earlier, When a later export reports a different amount for the same day, resource and meter, Then the poller counts it in `last_status.restated`, logs `billing_export.restated` with the counts only, still posts nothing for it (first amount wins, unchanged), and the docstring points to the ledger supersede follow-up (#218 item 8).
+- [x] Given two Foundry projects with a deployment of the same name, When discovery ticks, Then the second is counted in `TickStats.collisions` and logged once per tick with the project names, and no existing entity is modified (#219 item 6; the id scheme is not changed).
+- [x] Given a `domain_id` that does not start with the poller's `cloud:customer:` prefix, When `FoundryDiscoveryPoller` is constructed, Then it raises `InvalidSchemaError` (fails closed at build, #219 item 7); discovered names are logged at debug level only and remaining attribute lengths are capped like the others (#219 item 8).
+- [x] Given `check_diff_against_state` with an observed `1.0` for an expected `1`, Then the result is a documented, tested outcome (decision in Clarification 4); `move` and `copy` without `from_` return `verifiable=False` with reason `missing_from`; `MappingProxyType` observed states and `remove` on a missing parent path have tests (#219 items 1-3).
+- [x] `check_capable` is a public name exported from `neurosphere_connector.write`; the contract kit imports it and names the missing member in `write_protocol_missing` (#219 items 9-10); the private alias keeps working until no caller uses it.
+- [x] `tracked` (health recording decorator) lives in the SDK; both reference connectors import it and their local copies are gone with their tests unchanged (#219 item 11).
+- [x] A test pins that a health success arriving while the rate-limit window is open keeps `remaining=0` until the next success (#219 item 4); the claim that hosts call `drain_rotation_hooks` is checked and the result recorded: if no host calls it, the completion note says so and a follow-up issue is filed (#219 item 5), no host code is invented.
+- [x] Hosted wiring and the G04 live run are written OPEN (PRP-58, PRP-64).
 - [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, `python scripts/validate_planning.py` passes; #218 and #219 are closed only if every bullet is fixed or recorded as justified.
 
 ## Clarifications (decided)
@@ -238,13 +240,15 @@ No data or schema migration. `poll_status` gains one more string value (`stalled
 | 4 | merged | prp-50-connector-followups | collisions, domain check |
 | 5 | merged | prp-50-connector-followups | |
 | 6 | merged | prp-50-connector-followups | drain_rotation_hooks: no host calls it (tests only); follow-up needed |
-| 7 | todo | | merge step: Tier-3 regen, completion note, close #218 and #219 |
+| 7 | merged | prp-50-connector-followups | close-out: completion note, changelog fragment, status regen |
 
 ## Completion note (filled at ship)
-- Date, PR, merged commits:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (G04 live, hosted wiring):
-- Env vars for the operator (none expected):
-- Follow-up issue numbers (ledger supersede, deployment id scheme, reconciliation label, checkpoint persistence, drain-hook host):
-- Product check (are stalled polls, restated billing days and discovery collisions visible without reading logs?):
+- Date, PR, merged commits: 2026-11-16, PR #300 (squash merge).
+- Deviations from the blueprint and why: none in behaviour. Item 2 started after PRP-46 shipped (already on main).
+- Descoped items: ledger supersede concept, new Foundry deployment id scheme, reconciliation granularity label, billing checkpoint persistence (#218 item 9), per the Out of scope block.
+- OPEN gates (G04 live, hosted wiring): G04 live run (PRP-64) and hosted wiring of `foundry_discovery`, `billing_export` and the OTel profile (PRP-58, issue #220) are OPEN, not run. The compose-backed `test_otel_collector_compose.py` and a local `verify-gates.ps1 -Mode full` were not run in this merge step; CI is the full-suite evidence. The PRP-exit box stays unticked for that reason.
+- Env vars for the operator (none expected): none new.
+- Follow-up issue numbers (ledger supersede, deployment id scheme, reconciliation label, checkpoint persistence, drain-hook host): drain-hook host #304 (confirmed: no host calls `drain_rotation_hooks`, only tests). The others are not filed yet.
+- Reviewer follow-ups: (1) `drain_rotation_hooks` has no caller, filed as #304. (2) The billing restatement tracker `_posted_amounts` is in memory only: a restart forgets it and the first amount after the restart wins again; documented as per-process, a durable ledger belongs to PRP-07 (noted on #304). (3) Foundry collision detection depends on the owner's `discovered_from` and `foundry_project` attributes, so entities curated or created elsewhere are never reported as collisions; acceptable, a test for that case would help (noted on #304).
+- Issue state: #244 (tracking), #218 and #219 closed by this PR after merge.
+- Product check (are stalled polls, restated billing days and discovery collisions visible without reading logs?): partly. `poll_status=stalled` is recorded on the gateway registration; restated and collisions are tick-status counters and log lines only, no admin page shows them (gap).
