@@ -96,7 +96,15 @@ class ScanService:
         await auditor.consent_decision(
             result.consent_id,
             granted=True,
-            state={"subscriptions": sorted(request.subscription_ids)},
+            state={
+                "subscriptions": sorted(request.subscription_ids),
+                # Server-side stamp (#133): the authenticated principal consented; the client
+                # text is only an attestation reference and is stored hashed, never raw.
+                "consented_by": scope.to_contract().principal.principal_pseudonym,
+                "attestation": opaque_id(
+                    "attest", request.consent.consented_by if request.consent else ""
+                ),
+            },
         )
         await auditor.scan_completed(
             scan_id,

@@ -35,6 +35,8 @@ class ConsentRecord(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     consent_id: Annotated[str, StringConstraints(min_length=1, max_length=200)]
+    #: Client attestation reference (for example a ticket or approver name). Never trusted as
+    #: identity: the audit record stamps the authenticated principal and stores only a hash.
     consented_by: Annotated[str, StringConstraints(min_length=1, max_length=320)]
     consented_subscriptions: list[SubscriptionId] = Field(max_length=1000)
 
