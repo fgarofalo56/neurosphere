@@ -257,7 +257,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call. OPEN and operator-only: a live Bi
 | 1 | merged | prp-52-ci-infra-hardening | security.yml env-passed matrix, install-scanners.sh, --include-dev-deps, aggregator; actionlint clean |
 | 2 | merged | prp-52-ci-infra-hardening | LB allow rule, vnetAddressPrefix, APIM uiApiRateLimitCalls + policy, Helm NS_CLOUD required + egress docs; App Service NS_CLOUD handed to PRP-58 |
 | 3 | merged | prp-52-ci-infra-hardening | --source-dir mode, ci.yml DFD step + egress log step; real render not run locally (no Chrome) |
-| 4 | todo | | |
+| 4 | merged | prp-52-ci-infra-hardening | shared skip_or_fail loaded by path from ci_gate.py (no pyproject change); exact exec-failure markers; nslookup text fallback; compose-only probe run not run |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import ipaddress
-import os
 import re
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, NoReturn
 from urllib.parse import urlsplit
@@ -301,11 +302,20 @@ def test_egress_cidr_matches_private_endpoint_subnet(values: dict[str, Any]) -> 
     assert ipaddress.ip_network(entries["private-endpoints"]["cidr"]) == deployed
 
 
-def _skip_or_fail(reason: str) -> NoReturn:
-    """Skip locally; fail when CI is set so a missing tool cannot hide a skipped scan (#100)."""
-    if os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no"):
-        pytest.fail(f"{reason} (CI is set: a missing tool must not skip the check)")
-    pytest.skip(reason)
+def _load_skip_or_fail() -> Callable[[str], NoReturn]:
+    """Load the single, unit-tested ``skip_or_fail`` (tests/security/egress/ci_gate.py, #215).
+
+    These test directories are not packages, so the helper is loaded by path instead of copied.
+    """
+    path = Path(__file__).resolve().parents[2] / "security" / "egress" / "ci_gate.py"
+    spec = importlib.util.spec_from_file_location("_ns_ci_gate", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.skip_or_fail  # type: ignore[no-any-return]
+
+
+_skip_or_fail = _load_skip_or_fail()
 
 
 def test_helm_lint_with_government_values() -> None:

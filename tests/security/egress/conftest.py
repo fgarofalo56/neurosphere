@@ -54,7 +54,14 @@ def stack() -> Iterator[None]:
 
 # Exit codes that mean the exec itself failed, not that the probed command did.
 EXEC_FAILURE_CODES = frozenset({125, 126, 127})
-EXEC_FAILURE_MARKERS = ("no such container", "is not running", "no service")
+# Exact docker / docker compose messages for a failed exec. The old bare "no service" marker
+# could match legitimate probe output (#215); these are the full phrases compose prints.
+EXEC_FAILURE_MARKERS = (
+    "no such container",
+    "no such service:",
+    'service "egress-probe" is not running',
+    "is not running",
+)
 
 
 def probe(*cmd: str) -> subprocess.CompletedProcess[str]:

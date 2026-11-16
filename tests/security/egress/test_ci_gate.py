@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from _pytest.outcomes import Failed, Skipped
 
@@ -35,3 +37,17 @@ def test_present_tool_is_returned(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CI", "true")
     monkeypatch.setattr(ci_gate.shutil, "which", lambda name: f"/bin/{name}")
     assert ci_gate.require_tool("helm", "unused") == "/bin/helm"
+
+
+def test_no_copy_of_skip_or_fail_remains() -> None:
+    """#215: the four former copies load ci_gate.skip_or_fail instead of defining their own."""
+    root = Path(__file__).resolve().parents[2]
+    for rel in (
+        "unit/government_profile/test_no_commercial_endpoints.py",
+        "unit/government_profile/test_sovereign_hosts.py",
+        "unit/infra/test_apim_v2_diagnostics_mcp_front.py",
+        "unit/infra/test_helm_render.py",
+    ):
+        text = (root / rel).read_text(encoding="utf-8")
+        assert "def _skip_or_fail" not in text, rel
+        assert "_load_skip_or_fail()" in text, rel
