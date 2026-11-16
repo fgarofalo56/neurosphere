@@ -203,9 +203,9 @@ OPEN until PRP-64: the first OIDC login, the first approved plan and apply, and 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-63-delivery-pipeline | hosted_smoke.py + 9 tests |
-| 2 | todo | | |
+| 2 | merged | prp-63-delivery-pipeline | deploy-hosted.yml; actionlint clean |
 | 3 | todo | | |
-| 4 | todo | | |
+| 4 | merged | prp-63-delivery-pipeline | static tests + release.yml header comment |
 | 5 | todo | | |
 
 ## Completion note (filled at ship)
