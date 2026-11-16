@@ -149,7 +149,7 @@ def _resolve_named[T](
     if target_key is None:
         # Call shape unchanged for sources that predate the key (PRP-54).
         return source.get(name) if source.supports(name, action_kind) else None
-    keyed = cast(KeyedWriteTargetSource[T], source)
+    keyed = cast("KeyedWriteTargetSource[T]", source)
     if not keyed.supports(name, action_kind, target_key=target_key):
         return None
     return keyed.get(name, target_key=target_key)
