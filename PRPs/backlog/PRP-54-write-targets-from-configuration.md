@@ -231,7 +231,7 @@ The settings API or UI for entries; the deploy connector and apply (PRP-55); rol
 | 1 | merged | prp-54-write-targets | keyed registry + resolve helpers (PRP-50 shipped) |
 | 2 | merged | prp-54-write-targets | worker registration + domain-keyed resolve; Foundry entries carry no domain (key None) and need NS_FOUNDRY_LOCATION |
 | 3 | merged | prp-54-write-targets | configure_write_targets reads stored snapshot; connector_for(kind, domain) at 9 sites (deploy router unkeyed by design) |
-| 4 | todo | | |
+| 4 | merged | prp-54-write-targets | compose, Helm, demo Bicep opt-in; runbook; profile tests pass (helm+az present) |
 | 5 | todo | | |
 | 6 | todo | | |
 
