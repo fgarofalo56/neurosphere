@@ -233,7 +233,9 @@ async def test_write_profile_fails_an_advisory_write_connector() -> None:
 
 
 def test_all_six_reference_connectors_are_covered() -> None:
-    ids = {p.id for p in _CASES}
+    # PRP-62: aws-bedrock needs no shared fakes and is run through the kit in its own file,
+    # test_aws_bedrock_conformance.py.
+    ids = {p.id for p in _CASES} | {"aws-bedrock"}
     on_disk = {p.name for p in REF.iterdir() if (p / "pyproject.toml").is_file()}
     assert ids == on_disk
 

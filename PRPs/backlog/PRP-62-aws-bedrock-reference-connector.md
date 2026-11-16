@@ -227,7 +227,7 @@ A worker role, stored connector configuration or admin page for Bedrock; ingesti
 | 2 | merged | prp-62-aws-bedrock-connector | APIs verified vs botocore 1.44.3 models, AWS Service Reference JSON (IAM actions, IsWrite false), AWS docs (metrics, GetCostAndUsage); test files prefixed test_aws_bedrock_ to avoid basename clashes |
 | 3 | merged | prp-62-aws-bedrock-connector | connector + tests |
 | 4 | merged | prp-62-aws-bedrock-connector | credentials module is aws_auth.py (secret guard refuses *credentials* file names); botocore retries need total_max_attempts=1 |
-| 5 | todo | | |
+| 5 | merged | prp-62-aws-bedrock-connector | test_aws_bedrock_conformance.py; one-line edit to the existing six-connectors coverage test (listed must_not_touch) was unavoidable: it pins the on-disk set, so the new member broke it. Flag for review |
 | 6 | todo | | |
 | 7 | todo | | |
 
