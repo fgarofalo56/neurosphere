@@ -91,7 +91,7 @@ param frontendAppSettings object = {}
 @description('Opt in to the deployment resource scan route (NS_SCAN_ENABLED on the API site). Off by default: POST /v1/deploy/scan stays 503 scan_not_configured. Same meaning as scan.enabled in the Helm chart.')
 param scanEnabled bool = false
 
-@description('Opt in to deploy apply and uninstall preview (NS_DEPLOY_APPLY_ENABLED on the API site only). Off by default: /api/v1/deploy/apply stays 503 apply_not_configured. Same meaning as deployApply.enabled in the Helm chart. Name the register container with the NS_DEPLOY_APPLY_REGISTER_CONTAINER key in apiAppSettings.')
+@description('Opt in to deploy apply and uninstall preview (NS_DEPLOY_APPLY_ENABLED on the API and workers sites). Off by default: /api/v1/deploy/apply stays 503 apply_not_configured. Same meaning as deployApply.enabled in the Helm chart. Name the register container with the NS_DEPLOY_APPLY_REGISTER_CONTAINER key in apiAppSettings and in the workers app settings (PRP-55).')
 param deployApplyEnabled bool = false
 
 @description('Catalog search provider on the API site (NS_SEARCH_PROVIDER). fixture: in-process index; azure: Azure AI Search via managed identity (needs searchService and searchRegion; the host comes from the cloud profile in code). Same meaning as search.provider in the Helm chart.')
@@ -258,6 +258,7 @@ resource workers 'Microsoft.Web/sites@2023-12-01' = {
         ],
         plainSettings,
         kvSettings,
+        deployApplySettings,
         workerDataPathSettings,
         workersExtraSettings
       )

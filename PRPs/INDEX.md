@@ -10,10 +10,9 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-55-real-deploy-apply](backlog/PRP-55-real-deploy-apply.md) | P1 | 45 | PRP-54-write-targets-from-configuration | - | opus / sonnet | required |
 | [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | - | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
-| [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-55-real-deploy-apply (backlog); PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
+| [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-60-search-indexing-hardening](backlog/PRP-60-search-indexing-hardening.md) | P2 | 47 | - | - | sonnet / sonnet | required |
 | [PRP-51-composition-and-api-hygiene](backlog/PRP-51-composition-and-api-hygiene.md) | P2 | 48 | - | - | sonnet / sonnet | required |
 | [PRP-61-configuration-detections-and-shadow-ai-discovery](backlog/PRP-61-configuration-detections-and-shadow-ai-discovery.md) | P2 | 49 | PRP-56-compliance-control-library-and-evidence-bundles, PRP-15-recommendations-engine | - | sonnet / sonnet | required |
@@ -33,6 +32,7 @@ _none_
 | [PRP-52-ci-and-infrastructure-hardening](shipped/PRP-52-ci-and-infrastructure-hardening.md) | 2026-11-16 | #302 |
 | [PRP-53-admin-console-identity-status-and-audit](shipped/PRP-53-admin-console-identity-status-and-audit.md) | 2026-11-16 | #309 |
 | [PRP-54-write-targets-from-configuration](shipped/PRP-54-write-targets-from-configuration.md) | 2026-11-16 | #310 |
+| [PRP-55-real-deploy-apply](shipped/PRP-55-real-deploy-apply.md) | 2026-11-16 | #314 |
 | [PRP-56-compliance-control-library-and-evidence-bundles](shipped/PRP-56-compliance-control-library-and-evidence-bundles.md) | 2026-11-16 | #308 |
 | [PRP-57-admin-console-sources-pricing-and-features](shipped/PRP-57-admin-console-sources-pricing-and-features.md) | 2026-11-16 | #313 |
 | [PRP-58-hosted-data-path-and-environment-hardening](shipped/PRP-58-hosted-data-path-and-environment-hardening.md) | 2026-11-16 | #312 |
