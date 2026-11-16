@@ -203,10 +203,15 @@ def _publish_value(doc: dict[str, Any], body: GrantPublishBody) -> dict[str, Any
 
 
 async def _planned(
-    plane: ActionPlane, kind: str, target: TargetRef, version: str, ops: list[PatchOperation]
+    plane: ActionPlane,
+    kind: str,
+    target: TargetRef,
+    version: str,
+    ops: list[PatchOperation],
+    domain: str,
 ) -> ProposedDiff:
     """The connector ``dry_run`` diff (live plan, digest bound); the API never applies."""
-    connector = plane.connector_for(kind)
+    connector = plane.connector_for(kind, domain)
     if connector is None:
         raise CapabilityUnavailableError(
             "write_connector_unsupported_target", "no write connector is registered for this kind"
@@ -234,7 +239,7 @@ async def _draft(
     correlation_id: str,
 ) -> tuple[ActionView, bool]:
     target = TargetRef(canonical_id=access.entity.id, entity_type=GRANT_TARGET_TYPE)
-    diff = await _planned(plane, kind, target, version, ops)
+    diff = await _planned(plane, kind, target, version, ops, domain)
     draft = DraftIntentBody(
         action_kind=kind,
         target=target,

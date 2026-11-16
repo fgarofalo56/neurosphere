@@ -257,15 +257,20 @@ class ActionPlane:
             )
         return at.astimezone(UTC)
 
-    def connector_for(self, action_kind: str) -> WriteConnector | None:
-        """The write connector for ``action_kind``; ``None`` means the intent is advisory.
+    def connector_for(
+        self, action_kind: str, domain_id: str | None = None
+    ) -> WriteConnector | None:
+        """The write connector for ``action_kind`` in ``domain_id``; ``None`` means advisory.
+
+        ``domain_id`` is the registry's target key (PRP-54): a registry holding one gateway per
+        domain answers with the intent's own. ``None`` keeps the single-target behaviour.
 
         A single non-APIM candidate is returned as is. When the APIM gateway connector is a
         candidate, or several connectors share the kind (``model_deployment_swap`` on Foundry
         and on an ``apim_backend``), a planning-only view routes ``dry_run`` by target kind and
         refuses plans against a gateway in observe mode (``gateway_observe_mode``).
         """
-        connectors = resolve_write_targets(self.write_targets, action_kind)
+        connectors = resolve_write_targets(self.write_targets, action_kind, target_key=domain_id)
         if not connectors:
             return None
         if len(connectors) == 1 and APIM_GATEWAY_CONNECTOR not in connectors:

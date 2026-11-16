@@ -87,7 +87,7 @@ class ActionApi:
         """
         if stored.state != "awaiting_confirmation" or stored.advisory:
             return view
-        connector = self._plane.connector_for(stored.intent.action_kind)
+        connector = self._plane.connector_for(stored.intent.action_kind, stored.domain_id)
         plan_steps: Any = getattr(connector, "plan_steps", None)
         if plan_steps is None:
             return view
@@ -149,7 +149,7 @@ class ActionApi:
         if caller.principal_id != stored.principal_id:
             raise ForbiddenError("only the maker may validate this intent", reason=NOT_MAKER)
         at = plane.now()
-        connector = plane.connector_for(stored.intent.action_kind)
+        connector = plane.connector_for(stored.intent.action_kind, stored.domain_id)
         advisory = connector is None
         results = [
             await self._permission_check(stored, advisory, at),
@@ -245,7 +245,11 @@ class ActionApi:
         caller = self._caller(scope, correlation_id, stored)
         current: str | None = None
         if stored.state == "validated" and caller.principal_id == stored.principal_id:
-            connector = None if stored.advisory else plane.connector_for(stored.intent.action_kind)
+            connector = (
+                None
+                if stored.advisory
+                else plane.connector_for(stored.intent.action_kind, stored.domain_id)
+            )
             if connector is not None:
                 current = await probe_target_version(connector, stored)
         saved = await plane.actions.present_confirmation(
@@ -278,7 +282,7 @@ class ActionApi:
                 )
             return action_view(plane, await self._open_review(stored, caller))
         requires_approval = plane.requires_approval(kind)
-        connector = plane.connector_for(kind)
+        connector = plane.connector_for(kind, stored.domain_id)
         advisory = stored.advisory or connector is None
         if not advisory and requires_approval and stored.intent.actor.on_behalf_of is not None:
             # Self-approval separation needs the REAL principal behind an on-behalf-of maker;

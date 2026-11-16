@@ -2,6 +2,7 @@ import { useMemo } from "react";
 // The shell and nav import ONLY light route modules (`paths.ts` / `routes.tsx`), never a feature
 // `index.ts`: those pull in the WebGL map renderer and the chart sandbox, which crash jsdom.
 import { actionsNavItems } from "../features/actions/routes";
+import { adminCoreNavItems } from "../features/admin/routes";
 import { auditNavItems } from "../features/audit/routes";
 import {
   catalogExplorerNavItems,
@@ -78,6 +79,7 @@ export function buildAppNavItems(): readonly NavItem[] {
       ...complianceNavItems(),
       ...deployNavItems(),
       ...executionControlNavItems(),
+      ...adminCoreNavItems(),
       // Cosmetic: the API requires config.manage on every MCP admin route.
       ...mcpAdminNavItems(),
     ]),

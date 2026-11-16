@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Final, Protocol, runtime_checkable
+from typing import Final, Protocol, cast, runtime_checkable
 
 __all__ = [
     "ACTION_CONNECTORS",
@@ -31,6 +31,7 @@ __all__ = [
     "DEPLOY_CONNECTOR",
     "FOUNDRY_SWAP_CONNECTOR",
     "TARGET_KIND_CONNECTORS",
+    "KeyedWriteTargetSource",
     "WriteTargetSource",
     "connector_name_for",
     "connector_names_for",
@@ -92,6 +93,16 @@ class WriteTargetSource[T](Protocol):
         ...
 
 
+@runtime_checkable
+class KeyedWriteTargetSource[T](Protocol):
+    """A :class:`WriteTargetSource` that also selects by ``target_key`` (the intent's domain id,
+    PRP-54); ``WriteTargetRegistry`` is one. Only consulted when a key is given."""
+
+    def supports(self, name: str, action: str, *, target_key: str | None = None) -> bool: ...
+
+    def get(self, name: str, *, target_key: str | None = None) -> T: ...
+
+
 def connector_name_for(action_kind: str, target_kind: str | None = None) -> str | None:
     """Manifest name of the connector for ``action_kind`` on ``target_kind``, or ``None``.
 
@@ -115,7 +126,11 @@ def connector_names_for(action_kind: str) -> tuple[str, ...]:
 
 
 def resolve_write_target[T](
-    source: WriteTargetSource[T], action_kind: str, target_kind: str | None = None
+    source: WriteTargetSource[T],
+    action_kind: str,
+    target_kind: str | None = None,
+    *,
+    target_key: str | None = None,
 ) -> T | None:
     """The write connector for ``action_kind`` (on ``target_kind``), or ``None`` (advisory).
 
@@ -123,15 +138,30 @@ def resolve_write_target[T](
     declares the action; an unexpected ``get`` failure propagates (it is not "advisory").
     """
     name = connector_name_for(action_kind, target_kind)
-    if name is None or not source.supports(name, action_kind):
+    if name is None:
         return None
-    return source.get(name)
+    return _resolve_named(source, name, action_kind, target_key)
 
 
-def resolve_write_targets[T](source: WriteTargetSource[T], action_kind: str) -> dict[str, T]:
+def _resolve_named[T](
+    source: WriteTargetSource[T], name: str, action_kind: str, target_key: str | None
+) -> T | None:
+    if target_key is None:
+        # Call shape unchanged for sources that predate the key (PRP-54).
+        return source.get(name) if source.supports(name, action_kind) else None
+    keyed = cast("KeyedWriteTargetSource[T]", source)
+    if not keyed.supports(name, action_kind, target_key=target_key):
+        return None
+    return keyed.get(name, target_key=target_key)
+
+
+def resolve_write_targets[T](
+    source: WriteTargetSource[T], action_kind: str, *, target_key: str | None = None
+) -> dict[str, T]:
     """Every registered connector that declares ``action_kind``, by manifest name."""
-    return {
-        name: source.get(name)
-        for name in connector_names_for(action_kind)
-        if source.supports(name, action_kind)
-    }
+    found: dict[str, T] = {}
+    for name in connector_names_for(action_kind):
+        target = _resolve_named(source, name, action_kind, target_key)
+        if target is not None:
+            found[name] = target
+    return found

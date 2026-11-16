@@ -338,7 +338,7 @@ async def _draft(
             "operations": [{"op": "replace", "path": "/publication", "value": publication}],
         }
     )
-    connector = actions.connector_for(kind)
+    connector = actions.connector_for(kind, domain)
     if connector is None:
         raise CapabilityUnavailableError(
             "write_connector_unsupported_target", "no write connector is registered for this kind"

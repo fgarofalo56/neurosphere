@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -53,7 +54,8 @@ from neurosphere_core.actions.audit import action_audit_chain_id
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 from neurosphere_core.auth.scope import PrincipalPolicy, Role
-from neurosphere_core.cloud import CloudName
+from neurosphere_core.clients import ClientLifetime
+from neurosphere_core.cloud import CloudName, Settings
 from neurosphere_core.hitl import (
     DecisionLog,
     HitlService,
@@ -62,6 +64,12 @@ from neurosphere_core.hitl import (
     ReviewPolicyRegistry,
 )
 from neurosphere_workers.actions import ActionExecutor, ExecutionReport, ReviewItemCompletion
+from neurosphere_workers.runtime.factories import (
+    WriteTargetEntry,
+    WriteTargetSeams,
+    register_write_targets,
+)
+from neurosphere_workers.runtime.settings import ApimWriteSettings, FoundryWriteSettings
 
 ALICE: Final[str] = helpers.ALICE
 BOB: Final[str] = helpers.BOB
@@ -278,6 +286,7 @@ def make_slice(
     arm: Any = None,
     account: AccountRef | None = None,
     settings: ActionApiSettings | None = None,
+    stored_entries: Sequence[WriteTargetEntry] | None = None,
 ) -> Slice:
     """Build the whole stack. ``permissions``: ARM permissions answer (READ_PERMS = advisory)."""
     fake_arm: Any = arm if arm is not None else MismatchingArm(put_state="Succeeded")
@@ -337,7 +346,12 @@ def make_slice(
     )
     registry = WriteTargetRegistry()
     advisory = connector.advisory
-    if not advisory:
+    if stored_entries is not None:
+        # PRP-54: the SAME registration code the API and the worker run, fed stored entries.
+        run(_register_stored(registry, stored_entries, fake_arm))
+        advisory = not registry.supports("foundry-model-swap", KIND)
+        connector = registry.get("foundry-model-swap") if not advisory else connector
+    elif not advisory:
         assert isinstance(connector, FoundryModelSwapConnector)
         registry.register(connector)
 
@@ -379,6 +393,23 @@ def make_slice(
         policies=policies,
         advisory=advisory,
     )
+
+
+async def _register_stored(
+    registry: WriteTargetRegistry, entries: Sequence[WriteTargetEntry], arm: Any
+) -> None:
+    seams = WriteTargetSeams(credential=FAKES.FakeCredential(), foundry_http=arm.client())
+    async with ClientLifetime() as lifetime:
+        await register_write_targets(
+            registry,
+            settings=Settings(env="local", cloud=CloudName.COMMERCIAL),
+            customer_id=CUSTOMER,
+            lifetime=lifetime,
+            foundry=FoundryWriteSettings(),
+            apim=ApimWriteSettings(),
+            seams=seams,
+            entries=entries,
+        )
 
 
 async def _no_sleep(seconds: float) -> None:

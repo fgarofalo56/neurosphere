@@ -10,11 +10,9 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-53-admin-console-identity-status-and-audit](backlog/PRP-53-admin-console-identity-status-and-audit.md) | P0 | 40 | PRP-39-identity-admin-api-and-revocation, PRP-40-audit-search-export-and-siem-sink, PRP-44-platform-configuration, PRP-45-system-status-first-run-and-feature-settings | - | sonnet / sonnet | required |
-| [PRP-57-admin-console-sources-pricing-and-features](backlog/PRP-57-admin-console-sources-pricing-and-features.md) | P0 | 44 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-45-system-status-first-run-and-feature-settings, PRP-53-admin-console-identity-status-and-audit | PRP-53-admin-console-identity-status-and-audit (backlog) | sonnet / sonnet | required |
-| [PRP-54-write-targets-from-configuration](backlog/PRP-54-write-targets-from-configuration.md) | P1 | 41 | PRP-45-system-status-first-run-and-feature-settings | - | sonnet / sonnet | required |
-| [PRP-55-real-deploy-apply](backlog/PRP-55-real-deploy-apply.md) | P1 | 45 | PRP-54-write-targets-from-configuration | PRP-54-write-targets-from-configuration (backlog) | opus / sonnet | required |
-| [PRP-58-hosted-data-path-and-environment-hardening](backlog/PRP-58-hosted-data-path-and-environment-hardening.md) | P1 | 46 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-15-recommendations-engine, PRP-54-write-targets-from-configuration | PRP-54-write-targets-from-configuration (backlog) | sonnet / sonnet | required |
+| [PRP-57-admin-console-sources-pricing-and-features](backlog/PRP-57-admin-console-sources-pricing-and-features.md) | P0 | 44 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-45-system-status-first-run-and-feature-settings, PRP-53-admin-console-identity-status-and-audit | - | sonnet / sonnet | required |
+| [PRP-55-real-deploy-apply](backlog/PRP-55-real-deploy-apply.md) | P1 | 45 | PRP-54-write-targets-from-configuration | - | opus / sonnet | required |
+| [PRP-58-hosted-data-path-and-environment-hardening](backlog/PRP-58-hosted-data-path-and-environment-hardening.md) | P1 | 46 | PRP-41-producer-registry, PRP-42-connector-configuration-and-credential-references, PRP-44-platform-configuration, PRP-15-recommendations-engine, PRP-54-write-targets-from-configuration | - | sonnet / sonnet | required |
 | [PRP-63-delivery-pipeline-to-hosted](backlog/PRP-63-delivery-pipeline-to-hosted.md) | P1 | 51 | PRP-38-real-stack-ci-and-dev-stack, PRP-58-hosted-data-path-and-environment-hardening | PRP-58-hosted-data-path-and-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
 | [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-55-real-deploy-apply (backlog); PRP-58-hosted-data-path-and-environment-hardening (backlog); PRP-63-delivery-pipeline-to-hosted (backlog); PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
@@ -37,6 +35,8 @@ _none_
 |---|---|---|
 | [PRP-50-connector-sdk-and-data-path-follow-ups](shipped/PRP-50-connector-sdk-and-data-path-follow-ups.md) | 2026-11-16 | #300 |
 | [PRP-52-ci-and-infrastructure-hardening](shipped/PRP-52-ci-and-infrastructure-hardening.md) | 2026-11-16 | #302 |
+| [PRP-53-admin-console-identity-status-and-audit](shipped/PRP-53-admin-console-identity-status-and-audit.md) | 2026-11-16 | #309 |
+| [PRP-54-write-targets-from-configuration](shipped/PRP-54-write-targets-from-configuration.md) | 2026-11-16 | #310 |
 | [PRP-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-11-15 | #275 |
 | [PRP-15-recommendations-engine](shipped/PRP-15-recommendations-engine.md) | 2026-11-15 | #281 |
 | [PRP-18-live-map-and-session-replay](shipped/PRP-18-live-map-and-session-replay.md) | 2026-11-15 | #280 |

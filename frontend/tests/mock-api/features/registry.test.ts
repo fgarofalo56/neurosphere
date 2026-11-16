@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { handle as adminCore } from "./admin-core.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
@@ -26,6 +27,7 @@ describe("feature mock registry", () => {
       evaluations,
       executionControl,
       compliance,
+      adminCore,
     ]);
     expect(new Set(FEATURE_HANDLERS).size).toBe(FEATURE_HANDLERS.length);
     expect(FEATURE_HANDLERS.indexOf(curation)).toBeLessThan(FEATURE_HANDLERS.indexOf(catalog));

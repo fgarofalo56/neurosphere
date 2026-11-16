@@ -27,8 +27,12 @@ registration's and must equal the deployment's. Government accounts/gateways, a 
 ``deployments/write`` permission and anything else that yields the ADVISORY connector are
 skipped with a logged reason code and never registered.
 
-Limit: one connector per manifest name, so one Foundry account and one APIM gateway per
-deployment (a second is skipped, ``write_target_duplicate``; first wins).
+Limit: with env settings, one Foundry account and one APIM gateway per deployment (a second is
+skipped, ``write_target_duplicate``; first wins). PRP-54: with ``NS_WRITE_TARGETS_FROM_STORE=true``
+and at least one stored ``write_targets`` entry, the stored entries define the targets instead
+(env ignored); each APIM entry is registered under its gateway's domain, so one registry holds
+several gateways and an intent reaches the one in its own domain. A second entry in one domain
+is refused (``write_target_duplicate_domain``).
 
 Timing: the Foundry factory reads ARM permissions and the APIM one reads the gateway registry, so
 both run in a STARTUP hook (builders do no network I/O). The registry object installed on
@@ -57,10 +61,13 @@ from neurosphere_core.gateway import (
 from neurosphere_workers.actions.apim import ApplyRecord, ApplyRecords, apim_record_store
 from neurosphere_workers.runtime.factories import (
     SUPPORTED_WRITE_CONNECTORS,
+    WriteTargetEntry,
     WriteTargetSeams,
     WriteTargetSources,
     load_write_target_settings,
+    load_write_targets_from_store_settings,
     register_write_targets,
+    write_target_entries,
 )
 from neurosphere_workers.runtime.settings import ApimWriteSettings, FoundryWriteSettings
 
@@ -127,16 +134,29 @@ def configure_write_targets(ctx: BuildContext, registry: WriteTargetRegistry) ->
     """
     try:
         foundry, apim = load_write_target_settings()
+        from_store = load_write_targets_from_store_settings().from_store
     except ValueError:
         raise ComponentUnavailableError("write_target_settings_invalid") from None
-    if not (foundry.enabled or apim.enabled):
+    # PRP-54: behind NS_WRITE_TARGETS_FROM_STORE the stored entries (the snapshot loaded once
+    # before the builders ran) define the targets when there is at least one; else env.
+    entries: tuple[WriteTargetEntry, ...] = ()
+    if from_store:
+        # Imported here: ``admin.system.stored`` imports ``runtime.builders`` (import cycle).
+        from neurosphere_api.admin.system.stored import STORED_SETTINGS
+
+        snapshot = ctx.maybe_shared(STORED_SETTINGS)
+        entries = write_target_entries(snapshot) if snapshot is not None else ()
+        if not entries:
+            _log.warning("write targets: no stored entries, using env (write_targets_store_empty)")
+    if not entries and not (foundry.enabled or apim.enabled):
         return
     seams = _seams(ctx)
     settings = ctx.settings
     lifetime = ctx.lifetime
 
     async def register() -> None:
-        store = _gateway_store(ctx) if apim.enabled else None
+        wants_gateway = apim.enabled or any(e.target_kind == "apim" for e in entries)
+        store = _gateway_store(ctx) if wants_gateway else None
         sources = WriteTargetSources(gateway_store=store, records_for=_records_for(ctx, store))
         try:
             customer = ctx.auth_settings().resolved_customer_id(settings.env)
@@ -152,6 +172,7 @@ def configure_write_targets(ctx: BuildContext, registry: WriteTargetRegistry) ->
                 apim=apim,
                 sources=sources,
                 seams=seams,
+                entries=entries,
             )
         except Exception as exc:
             # Fail closed: the target stays out (intents advisory), the action plane still serves.
