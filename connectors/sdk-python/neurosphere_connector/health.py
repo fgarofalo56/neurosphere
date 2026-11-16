@@ -7,9 +7,11 @@ copied into a report (it could hold provider response bodies).
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import functools
+from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from typing import Any, TypeVar, cast
 
 from neurosphere_core.errors import NeuroSphereError, RateLimitedError
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -22,6 +24,7 @@ __all__ = [
     "HealthState",
     "HealthTracker",
     "RateLimitStatus",
+    "tracked",
     "utc_now",
 ]
 
@@ -183,3 +186,28 @@ class HealthTracker:
             consecutive_failures=self._failures,
             last_error_code=self._last_code,
         )
+
+
+_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
+
+
+def tracked(fn: _F) -> _F:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
+    """Feed the outcome of an async method into ``self._tracker`` (a ``HealthTracker``).
+
+    Success records a success; any exception records an error and re-raises. Typed ``_F -> _F``
+    so the decorated method keeps its exact ``async def`` type and still satisfies the
+    ``WriteConnector`` protocol. The host class must hold a ``HealthTracker`` in ``_tracker``.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        tracker: HealthTracker = cast(Any, args[0])._tracker
+        try:
+            result = await fn(*args, **kwargs)
+        except Exception as exc:
+            tracker.record_error(exc)
+            raise
+        tracker.record_success()
+        return result
+
+    return cast(_F, wrapper)

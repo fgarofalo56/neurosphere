@@ -118,19 +118,29 @@ def _unescape(token: str) -> str:
     return token.replace("~1", "/").replace("~0", "~")
 
 
-def _strict_equal(a: Any, b: Any) -> bool:
+def _strict_equal(a: Any, b: Any, *, numeric: bool = False) -> bool:
     """Equality without type coercion: ``True != 1`` and ``1 != 1.0`` (documented choice).
 
     Python's ``==`` treats ``True == 1 == 1.0``; for a write-verify that would let a wrong-typed
     observed value pass. Containers are compared recursively; mappings need identical key sets.
+    With ``numeric=True`` (opt-in) a non-bool ``int`` and ``float`` compare by value, so ``1``
+    and ``1.0`` match; ``bool`` is never a number here.
     """
     if isinstance(a, Mapping) and isinstance(b, Mapping):
-        return a.keys() == b.keys() and all(_strict_equal(a[k], b[k]) for k in a)
+        return a.keys() == b.keys() and all(_strict_equal(a[k], b[k], numeric=numeric) for k in a)
     if isinstance(a, (list, tuple)) and isinstance(b, (list, tuple)):
-        return len(a) == len(b) and all(_strict_equal(x, y) for x, y in zip(a, b, strict=True))
+        return len(a) == len(b) and all(
+            _strict_equal(x, y, numeric=numeric) for x, y in zip(a, b, strict=True)
+        )
+    if numeric and _is_number(a) and _is_number(b):
+        return bool(a == b)
     if type(a) is not type(b):
         return False
     return bool(a == b)
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _lookup(state: Any, pointer: str) -> Any:
@@ -163,30 +173,33 @@ def _unverifiable(op: PatchOperation, reason: str, observed: Any = None) -> Oper
 
 
 def _check(
-    op: PatchOperation, state: Mapping[str, Any], prior_state: Mapping[str, Any] | None
+    op: PatchOperation,
+    state: Mapping[str, Any],
+    prior_state: Mapping[str, Any] | None,
+    numeric: bool = False,
 ) -> OperationCheck:
     found = _lookup(state, op.path)
     present = found is not _MISSING
     observed = found if present else None
     if op.op in ("add", "replace", "test"):
-        ok = present and _strict_equal(found, op.value)
+        ok = present and _strict_equal(found, op.value, numeric=numeric)
     elif op.op == "remove":
         if not state:
             return _unverifiable(op, "empty_observed_state")
         ok = not present
     else:  # move / copy: the destination must equal the value that was moved or copied
         if op.from_ is None:
-            return OperationCheck(op=op.op, path=op.path, matched=False, observed=observed)
+            return _unverifiable(op, "missing_from", observed)
         if prior_state is None:
             return _unverifiable(op, "prior_value_unknown", observed)
         prior = _lookup(prior_state, op.from_)
         if prior is _MISSING:
             return _unverifiable(op, "prior_value_absent", observed)
-        ok = present and _strict_equal(found, prior)
+        ok = present and _strict_equal(found, prior, numeric=numeric)
         if op.op == "move":
             ok = ok and _lookup(state, op.from_) is _MISSING
         else:
-            ok = ok and _strict_equal(_lookup(state, op.from_), prior)
+            ok = ok and _strict_equal(_lookup(state, op.from_), prior, numeric=numeric)
     return OperationCheck(op=op.op, path=op.path, matched=ok, observed=observed)
 
 
@@ -195,6 +208,7 @@ def check_diff_against_state(
     observed_state: Mapping[str, Any],
     *,
     prior_state: Mapping[str, Any] | None = None,
+    numeric_equivalence: bool = False,
 ) -> tuple[OperationCheck, ...]:
     """Compare each requested operation with the state actually read back from the target.
 
@@ -202,6 +216,13 @@ def check_diff_against_state(
     target's state BEFORE the change: ``move``/``copy`` need it to prove the destination holds the
     moved/copied value rather than a stale pre-existing one; without it they are reported
     unverifiable (``verifiable=False``, ``matched=False``). ``remove`` against an empty observed
-    state is also unverifiable, since absence is then not evidence of removal.
+    state is also unverifiable, since absence is then not evidence of removal, and
+    ``move``/``copy`` without ``from`` are unverifiable with reason ``missing_from``.
+
+    ``numeric_equivalence=True`` is a per-connector opt-in that lets ``1`` and ``1.0`` match
+    (for targets whose API normalises JSON numbers). The default stays strict: a false
+    negative is the safe direction for a write-verify.
     """
-    return tuple(_check(op, observed_state, prior_state) for op in diff.operations)
+    return tuple(
+        _check(op, observed_state, prior_state, numeric_equivalence) for op in diff.operations
+    )

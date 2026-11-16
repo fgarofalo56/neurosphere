@@ -18,16 +18,15 @@ the documented PUT has no traffic split, so there is no connector-level canary (
 from __future__ import annotations
 
 import asyncio
-import functools
 import json
 import time
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime
-from typing import Any, TypeVar, cast
+from typing import Any
 
 import httpx
 from azure.core.credentials_async import AsyncTokenCredential
-from neurosphere_connector import HealthReport, HealthTracker, build_manifest
+from neurosphere_connector import HealthReport, HealthTracker, build_manifest, tracked
 from neurosphere_connector.write import (
     AdvisoryWriteMixin,
     ApplyResult,
@@ -123,30 +122,6 @@ class FoundryModelSwapAdvisoryConnector(AdvisoryWriteMixin):
     @property
     def manifest(self) -> ConnectorManifest:
         return _manifest(advisory=True)
-
-
-_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
-
-
-def _tracked(fn: _F) -> _F:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
-    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise.
-
-    Typed ``_F -> _F`` so the decorated method keeps its exact ``async def`` type and still
-    satisfies the ``WriteConnector`` protocol.
-    """
-
-    @functools.wraps(fn)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        tracker: HealthTracker = cast(Any, args[0])._tracker
-        try:
-            result = await fn(*args, **kwargs)
-        except Exception as exc:
-            tracker.record_error(exc)
-            raise
-        tracker.record_success()
-        return result
-
-    return cast(_F, wrapper)
 
 
 class FoundryModelSwapConnector:
@@ -263,7 +238,7 @@ class FoundryModelSwapConnector:
             would_change=model_of(patched) != model_of(current),
         )
 
-    @_tracked
+    @tracked
     async def apply(self, request: WriteRequest) -> ApplyResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(request.target)
@@ -304,7 +279,7 @@ class FoundryModelSwapConnector:
             return False
         return True
 
-    @_tracked
+    @tracked
     async def verify(self, request: WriteRequest) -> VerifyResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(request.target)
@@ -324,7 +299,7 @@ class FoundryModelSwapConnector:
         )
         return result.model_copy(update={"checks": (*result.checks, failed)})
 
-    @_tracked
+    @tracked
     async def rollback(self, applied: ApplyResult) -> RollbackResult:
         _refuse_cloud(self.account)
         name = self._deployment_name(applied.target)

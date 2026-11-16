@@ -53,6 +53,7 @@ __all__ = [
     "STATUS_PARTIAL",
     "STATUS_RATE_LIMITED",
     "STATUS_REFUSED_GOVERNMENT",
+    "STATUS_STALLED",
     "ConnectorFactory",
     "GatewayPoller",
     "IngestClient",
@@ -65,6 +66,9 @@ logger = logging.getLogger("neurosphere.workers.gateway_poll")
 STATUS_OK: Final = "ok"
 STATUS_PARTIAL: Final = "partial"
 STATUS_RATE_LIMITED: Final = "rate_limited"
+#: A slice is still truncated at the connector's minimum slice length: the watermark is held at
+#: its start and no retry can pass it without a source-side change (a partial that never heals).
+STATUS_STALLED: Final = "stalled"
 STATUS_REFUSED_GOVERNMENT: Final = "refused_government_unverified"
 STATUS_CLOUD_MISMATCH: Final = "cloud_mismatch"
 STATUS_INGEST_FAILED: Final = "ingest_failed"
@@ -316,7 +320,19 @@ class GatewayPoller:
             )
         lag_ms = result.freshness.lag_ms
         status = STATUS_OK
-        if result.rate_limited:
+        if result.stalled_slice_start is not None:
+            logger.warning(
+                "gateway poll stalled: a slice is truncated at the minimum slice length",
+                extra={
+                    "event": "gateway_poll.stalled",
+                    "gateway_id": gateway.id,
+                    "stalled_slice_start": result.stalled_slice_start.isoformat(),
+                    # Truncated source queries (not slices): one slice can add one per source.
+                    "truncated_source_queries": result.truncated_pages,
+                },
+            )
+            status = STATUS_STALLED
+        elif result.rate_limited:
             status = STATUS_RATE_LIMITED  # completed slices are ingested, the rest is re-polled
         elif not full:
             status = STATUS_PARTIAL

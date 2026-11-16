@@ -149,3 +149,32 @@ async def test_sandbox_traces_land_as_telemetry_events(tmp_path: Path) -> None:
     assert len(sdk_events) == 2
     assert all(m.producer_id == producer.producer_id for m in messages)
     assert b"INTEGRATION-PROMPT-CANARY" not in b"".join(m.to_bytes() for m in messages)
+
+
+async def test_empty_producer_credential_is_rejected_by_the_edge(tmp_path: Path) -> None:
+    """#218 item 7: an empty bearer token gets 401 from the in-process edge, never a success."""
+    from neurosphere_core.errors import UnauthorizedError
+
+    producer = Producer(
+        producer_id="it-otel-empty",
+        customer_id=CUSTOMER,
+        cloud="commercial",
+        sources={SOURCE: "gateway"},
+    )
+    resolver = StaticCredentialResolver({DEFAULT_CREDENTIAL_REF.vault_ref: ""})
+    broker = CredentialBroker(resolver, [DEFAULT_CREDENTIAL_REF])
+    memory = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(memory))
+    with provider.get_tracer("it").start_as_current_span("chat"):
+        pass
+    async with edge_client(Settings(), [producer], tmp_path) as client:
+        connector = OtelGenericConnector(
+            ingest_url="http://edge.invalid/v1/ingest",
+            credentials=broker,
+            client=client,
+            source_id=SOURCE,
+        )
+        with pytest.raises(UnauthorizedError):
+            await connector.export_spans(memory.get_finished_spans())
+        await connector.close()

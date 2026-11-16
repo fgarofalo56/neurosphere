@@ -13,6 +13,11 @@ and kept in ``last_status``; no catalog entity is ever created for a capability.
 An upstream failure (429, 5xx, auth) never raises out of :meth:`tick`: it is logged, recorded in
 ``last_status`` and the next tick retries. A store outage propagates so the supervisor restarts
 the role, the same as ``gateway_poll``.
+
+Collisions: a deployment id carries no project, so two projects with a deployment of the same
+name map to one entity. The first created wins and nothing is modified; the second is counted
+in ``TickStats.collisions`` and logged once per tick (project names only). The id scheme is
+unchanged on purpose (PRP-17 swap targets use it; a project-qualified id is a follow-up).
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Final, Protocol
+from typing import Any, Final, Protocol, cast
 
 from neurosphere_connector_foundry import (
     CapabilityStatus,
@@ -73,6 +78,12 @@ class TickStats:
     existing: int = 0
     skipped_invalid: int = 0
     projects_failed: int = 0
+    #: Deployments whose id already belongs to an entity discovered from another project.
+    collisions: int = 0
+    #: ``(this project, project that owns the entity)`` pairs for the tick log.
+    collision_projects: list[tuple[str, str]] = field(
+        default_factory=lambda: list[tuple[str, str]]()
+    )
     #: Per project: ``ok`` / ``partial`` / ``failed:<ErrorClass>``.
     status: dict[str, str] = field(default_factory=lambda: dict[str, str]())
     #: Per project: capabilities documented as unavailable in this cloud (never empty-as-none).
@@ -110,6 +121,13 @@ class FoundryDiscoveryPoller:
         cloud: str,
         clock: Callable[[], datetime] = _utcnow,
     ) -> None:
+        if not domain_id.startswith(f"{cloud}:{customer_id}:"):
+            # Fails closed at build: a domain outside the runtime cloud and customer would be a
+            # cross-boundary write target.
+            raise InvalidSchemaError(
+                "The discovery domain id must start with the runtime cloud and customer.",
+                reason="foundry_discovery_domain_mismatch",
+            )
         self._targets = tuple(targets)
         self._repo = repository
         self._scopes = scope_provider
@@ -134,8 +152,18 @@ class FoundryDiscoveryPoller:
                 "entities_existing": stats.existing,
                 "skipped_invalid": stats.skipped_invalid,
                 "projects_failed": stats.projects_failed,
+                "collisions": stats.collisions,
             },
         )
+        if stats.collisions:
+            logger.warning(
+                "foundry deployment name collisions across projects (first created kept)",
+                extra={
+                    "event": "worker.foundry_discovery_collisions",
+                    "collisions": stats.collisions,
+                    "projects": sorted({f"{a}<-{b}" for a, b in stats.collision_projects}),
+                },
+            )
 
     async def _one(
         self, scope: Any, target: ProjectTarget, now_text: str, stats: TickStats
@@ -162,7 +190,8 @@ class FoundryDiscoveryPoller:
             result.failed_sources or result.agents_truncated or result.deployments_truncated
         )
         stats.status[target.project] = "partial" if partial else "ok"
-        logger.info(
+        # Debug only: capability and source names come from the service, not from us.
+        logger.debug(
             "foundry capabilities",
             extra={
                 "event": "worker.foundry_discovery_capabilities",
@@ -172,9 +201,14 @@ class FoundryDiscoveryPoller:
             },
         )
         for agent in result.agents or []:  # None = unknown (call failed): nothing to create
-            await self._ensure(scope, self._agent(target.project, agent, now_text), stats)
+            await self._ensure(scope, self._agent(target.project, agent, now_text), stats, None)
         for deployment in result.deployments or []:
-            await self._ensure(scope, self._deployment(target.project, deployment, now_text), stats)
+            await self._ensure(
+                scope,
+                self._deployment(target.project, deployment, now_text),
+                stats,
+                target.project,
+            )
 
     def _base(
         self, entity_id: str, entity_type: str, now_text: str, project: str
@@ -232,14 +266,30 @@ class FoundryDiscoveryPoller:
             doc["sku"] = sku[:128]
         return _validated(ModelDeployment, doc)
 
-    async def _ensure(self, scope: Any, entity: CatalogEntity | None, stats: TickStats) -> None:
-        """Create-if-absent. Never updates; a create race counts as existing."""
+    async def _ensure(
+        self,
+        scope: Any,
+        entity: CatalogEntity | None,
+        stats: TickStats,
+        collision_project: str | None,
+    ) -> None:
+        """Create-if-absent. Never updates; a create race counts as existing.
+
+        With ``collision_project`` set, an existing entity discovered from a different project is
+        also counted as a collision (it is never modified).
+        """
         if entity is None:
             stats.skipped_invalid += 1
             return
         entity_id: str = entity.id
-        if await self._repo.get_entity(scope, entity_id) is not None:
+        found = await self._repo.get_entity(scope, entity_id)
+        if found is not None:
             stats.existing += 1
+            if collision_project is not None:
+                owner = _owner_project(found)
+                if owner is not None and owner != collision_project[:256]:
+                    stats.collisions += 1
+                    stats.collision_projects.append((collision_project, owner))
             return
         try:
             await self._repo.create_entity(scope, entity)
@@ -248,6 +298,18 @@ class FoundryDiscoveryPoller:
             if await self._repo.get_entity(scope, entity_id) is None:
                 raise
             stats.existing += 1
+
+
+def _owner_project(entity: Any) -> str | None:
+    """The project an existing entity was discovered from; None for curated or foreign ones."""
+    root = getattr(getattr(entity, "attributes", None), "root", None)
+    if not isinstance(root, dict):
+        return None
+    attrs = cast("dict[str, Any]", root)
+    if attrs.get("discovered_from") != DISCOVERED_FROM:
+        return None
+    project = attrs.get("foundry_project")
+    return project if isinstance(project, str) else None
 
 
 def _validated(model: Any, doc: Mapping[str, Any]) -> CatalogEntity | None:

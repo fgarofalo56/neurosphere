@@ -142,3 +142,41 @@ def test_rate_limit_zero_remaining_cleared_after_reset_time() -> None:
 def test_coverage_rejects_answered_over_expected() -> None:
     with pytest.raises(ValueError, match="exceeds"):
         CoverageReport(expected_sources=1, answered_sources=2)
+
+
+def test_success_inside_open_window_keeps_zero_until_the_next_success() -> None:
+    clock = _Clock()
+    tracker = HealthTracker(clock=clock)
+    tracker.record_error(RateLimitedError(30))
+    clock.now = T0 + timedelta(seconds=5)  # window still open
+    tracker.record_success()
+    report = tracker.snapshot()
+    assert report.rate_limit.remaining == 0
+    assert report.rate_limit.limited is False  # the success cleared the limited flag
+    tracker.record_success()  # the window marker is gone: the stale zero is dropped
+    assert tracker.snapshot().rate_limit.remaining is None
+
+
+async def test_tracked_records_success_and_error_and_reraises() -> None:
+    from neurosphere_connector import tracked
+
+    class Host:
+        def __init__(self) -> None:
+            self._tracker = HealthTracker()
+
+        @tracked
+        async def ok(self) -> int:
+            return 7
+
+        @tracked
+        async def boom(self) -> None:
+            raise DependencyTransientError()
+
+    host = Host()
+    assert host._tracker.snapshot().state is HealthState.UNKNOWN
+    assert await host.ok() == 7
+    assert host._tracker.snapshot().state is HealthState.HEALTHY
+    with pytest.raises(DependencyTransientError):
+        await host.boom()
+    assert host._tracker.snapshot().state is HealthState.DEGRADED
+    assert Host.ok.__name__ == "ok"

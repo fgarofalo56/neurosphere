@@ -6,6 +6,15 @@ Query text is fixed (templates in `queries.py`); the time window is passed throu
 slice, because the query APIs have no cursor paging) and a watermark. Every result carries
 `freshness` (lag, `None` when unknown) and `coverage` (answered / expected sources).
 
+## Truncation, halving and stalls
+
+`truncated_pages` counts truncated source queries (a query that hit the row cap or came back
+with `PartialError`), not time slices: one slice read from three sources can add up to three.
+A truncated slice is discarded and retried at half of the span actually read (a final slice
+clipped by the window end is halved from its clipped length, not from `slice_length`), down to a
+30 second floor. A slice still truncated at the floor sets `stalled_slice_start`; the watermark
+stays at that instant and the gateway poller records `poll_status = "stalled"`.
+
 ## APIs used (observed 2026-10-17)
 
 - Log Analytics query, request format (`POST https://api.loganalytics.azure.com/v1/workspaces/{id}/query`, JSON body `query` + `timespan` as `start/end`, bearer token): https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/request-format

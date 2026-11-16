@@ -8,14 +8,28 @@ from neurosphere_core.errors import CapabilityUnavailableError
 
 from neurosphere_connector.write.write_protocol import WriteConnector
 
-__all__ = ["WriteTargetRegistry", "register_write_target"]
+__all__ = ["WriteTargetRegistry", "check_capable", "register_write_target"]
 
 
 def _reject(reason: str, detail: str) -> CapabilityUnavailableError:
     return CapabilityUnavailableError(reason, detail)
 
 
-def _check_capable(connector: object) -> WriteConnector:
+def check_capable(connector: object) -> WriteConnector:
+    """Return ``connector`` as a ``WriteConnector`` or raise ``CapabilityUnavailableError``.
+
+    A connector missing a protocol member is refused with the member named in the detail.
+    """
+    try:
+        return _check_members(connector)
+    except AttributeError as exc:
+        raise _reject(
+            "write_protocol_not_implemented",
+            f"connector lacks WriteConnector member {exc.name or 'unknown'}",
+        ) from exc
+
+
+def _check_members(connector: object) -> WriteConnector:
     if not isinstance(connector, WriteConnector):
         raise _reject(
             "write_protocol_not_implemented", "connector does not implement WriteConnector"
@@ -33,6 +47,10 @@ def _check_capable(connector: object) -> WriteConnector:
     return connector
 
 
+# Kept until no caller uses the private name.
+_check_capable = check_capable
+
+
 class WriteTargetRegistry:
     """Connectors accepted as action targets, keyed by manifest name."""
 
@@ -41,7 +59,7 @@ class WriteTargetRegistry:
 
     def register(self, connector: object) -> WriteConnector:
         """Validate and add ``connector``; raises ``CapabilityUnavailableError`` if not writable."""
-        capable = _check_capable(connector)
+        capable = check_capable(connector)
         self._targets[capable.manifest.name] = capable
         return capable
 

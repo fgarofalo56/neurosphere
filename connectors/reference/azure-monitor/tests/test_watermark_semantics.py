@@ -155,3 +155,18 @@ async def test_empty_sources_do_not_advance_the_watermark() -> None:
 async def test_empty_sources_without_watermark_return_start_not_horizon() -> None:
     result = await _connector(PollBounds()).poll([])
     assert result.next_watermark == NOW - timedelta(minutes=5) - timedelta(hours=1)
+
+
+@respx.mock
+async def test_clipped_final_slice_halves_from_its_actual_span() -> None:
+    # The window end clips the slice to 100 s although slice_length is 15 min. Halving the
+    # nominal length would re-read the same 100 s span several times before stalling (#218 item 3).
+    route = respx.post(URL).mock(return_value=httpx.Response(200, json=_body(MAX_ROWS)))
+    bounds = PollBounds(
+        max_pages=100, max_window=timedelta(seconds=100), initial_lookback=timedelta(0)
+    )
+    result = await _connector(bounds).poll(SOURCES, watermark=START)
+    assert route.call_count == 2  # 100 s, then 50 s (halving 50 s would go below the floor)
+    assert result.shrunk_slices == 1
+    assert result.stalled_slice_start == START
+    assert result.next_watermark == START

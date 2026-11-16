@@ -276,8 +276,11 @@ class AzureMonitorConnector(BaseConnector):
                 # so the next poll re-reads it and nothing is duplicated or skipped. Within this
                 # poll the slice is retried at half length (bounded by the page budget) down to
                 # MIN_SLICE; below that it stays held and is reported as stalled.
-                halved = slice_len / 2
-                if halved < MIN_SLICE or page_end - cursor <= MIN_SLICE:
+                # Halve the span actually read: a final slice clipped by the window end is
+                # shorter than slice_len, and halving the nominal length would retry it
+                # unchanged and burn page budget.
+                halved = (page_end - cursor) / 2
+                if halved < MIN_SLICE:
                     stalled = True
                     partial = True
                     break

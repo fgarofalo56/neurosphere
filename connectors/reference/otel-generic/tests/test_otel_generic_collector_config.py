@@ -35,3 +35,19 @@ def test_collector_config_targets_edge_paths_with_json_and_no_compression() -> N
     assert "encoding: json" in text
     assert "compression: none" in text
     assert "${env:NS_PRODUCER_CREDENTIAL}" in text
+
+
+def test_collector_configs_parse_and_drop_request_and_response_bodies() -> None:
+    import yaml
+
+    for path in (CONFIG, COMPOSE_CONFIG):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        deleted: set[str] = set()
+        for proc in (doc.get("processors") or {}).values():
+            for action in proc.get("actions", []) or []:
+                if action.get("action") == "delete":
+                    deleted.add(action["key"])
+        assert deleted >= set(BODY_FIELD_NAMES), (
+            path.name,
+            sorted(set(BODY_FIELD_NAMES) - deleted),
+        )
