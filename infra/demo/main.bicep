@@ -314,9 +314,9 @@ var workersBaseSettings = union(
     NS_QUARANTINE_STORAGE_ACCOUNT: storageName
     NS_QUARANTINE_CONTAINER: quarantineContainer
   },
-  evaluationPilotSettings,
   recommendationsSettings,
   connectorSettings,
+  evaluationPilotSettings,
   writeTargetSettings
 )
 
