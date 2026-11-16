@@ -55,11 +55,12 @@ def test_provider_wraps_and_invalidates_on_write(monkeypatch: pytest.MonkeyPatch
 def test_write_through_makes_a_write_searchable_without_waiting_for_the_refresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    composed, repo = _compose(
+    composed, _repo = _compose(
         monkeypatch, {"NS_SEARCH_PROVIDER": "fixture", "NS_SEARCH_REFRESH_SECONDS": "3600"}
     )
     first = _ids(composed)
-    wrapped = IndexingCatalogRepository(repo, composed.app.state.search_runtime.indexer)
+    wrapped = composed.app.state.catalog_repository  # the data builder published the wrapper
+    assert isinstance(wrapped, IndexingCatalogRepository)
     asyncio.run(
         wrapped.create_entity(
             _seeder([FINANCE]), _agent("payroll-three", FINANCE, "payroll third finance agent")

@@ -225,15 +225,15 @@ Items 5 and 6 add `services/workers/tests/search_wiring` to the pytest line when
 | 2 | merged | prp-60-search-indexing-hardening | |
 | 3 | merged | prp-60-search-indexing-hardening | |
 | 4 | merged | prp-60-search-indexing-hardening | |
-| 5 | todo | | serial-after PRP-44 |
-| 6 | todo | | serial-after PRP-55 |
-| 7 | todo | | |
+| 5 | merged | prp-60-search-indexing-hardening | PRP-44 shipped; data.py _catalog now calls wrap_catalog_for_search |
+| 6 | blocked | | serial-after PRP-55 (not in PRPs/shipped on origin/main); done at merge time |
+| 7 | in-progress | prp-60-search-indexing-hardening | runbook done; prp_status --write, CHANGELOG and item 6 at merge time |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:
-- Deviations from the blueprint and why:
+- Deviations from the blueprint and why: `NS_SEARCH_ENSURE_INDEX` lives on `SearchSettings` (builders/search.py), so no runtime/settings.py edit; ensure-index runs as an app startup hook (builders are sync). `IndexingCatalogRepository` forwards every protocol method explicitly (runtime-checkable isinstance ignores `__getattr__`).
 - Descoped items:
 - OPEN gates (live Azure AI Search, items 5 and 6 if their predecessors had not merged):
-- Env vars for the operator (`NS_SEARCH_ENSURE_INDEX`):
+- Env vars for the operator (`NS_SEARCH_ENSURE_INDEX`, default false; `.env.example` not edited): `NS_SEARCH_ENSURE_INDEX`
 - Follow-up issue numbers:
 - Product check (can an operator stand up the Azure index and see a new entity searchable without editing files?):
