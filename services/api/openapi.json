@@ -3133,6 +3133,88 @@
         "title": "ContextWindowTokens",
         "type": "integer"
       },
+      "Control": {
+        "additionalProperties": false,
+        "description": "One control of an external framework held as library data (PRP-56). Metadata only: a short paraphrased title and a link to the official source, never copied text. A control record says what the framework names; it never says whether anyone meets it.",
+        "properties": {
+          "control_id": {
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,95}$",
+            "title": "Control Id",
+            "type": "string"
+          },
+          "framework_id": {
+            "$ref": "#/components/schemas/FrameworkId"
+          },
+          "framework_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Framework Version",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "source_retrieved": {
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            "title": "Source Retrieved",
+            "type": "string"
+          },
+          "source_url": {
+            "pattern": "^https://[^\\s]{1,500}$",
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "control_id",
+          "framework_id",
+          "title",
+          "source_url",
+          "source_retrieved",
+          "framework_version"
+        ],
+        "title": "Control",
+        "type": "object"
+      },
+      "ControlSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "control": {
+            "$ref": "#/components/schemas/Control"
+          },
+          "evidence_sources": {
+            "$ref": "#/components/schemas/EvidenceSources"
+          },
+          "summary": {
+            "enum": [
+              "evidence_present",
+              "evidence_partial",
+              "no_evidence",
+              "customer_responsibility"
+            ],
+            "title": "Summary",
+            "type": "string"
+          },
+          "support_status": {
+            "$ref": "#/components/schemas/SupportStatus"
+          }
+        },
+        "required": [
+          "control",
+          "support_status",
+          "evidence_sources",
+          "summary"
+        ],
+        "title": "ControlSummary",
+        "type": "object"
+      },
       "ConversationCreated": {
         "additionalProperties": false,
         "properties": {
@@ -5703,10 +5785,160 @@
         "title": "EvaluatorUsage",
         "type": "object"
       },
+      "EvidenceBundle": {
+        "additionalProperties": false,
+        "description": "Deterministic, stateless evidence bundle for one domain and one framework (PRP-56). Per-control summary words (evidence_present, evidence_partial, no_evidence, customer_responsibility) derive only from observations and support status. There is no pass, fail, score or percentage. digest is sha256 over the canonical JSON of the bundle without the digest member. This bundle is not an assessment; not FedRAMP authorized; the authorizing official decides.",
+        "properties": {
+          "controls": {
+            "items": {
+              "$ref": "#/components/schemas/ControlSummary"
+            },
+            "maxItems": 200,
+            "title": "Controls",
+            "type": "array"
+          },
+          "digest": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "domain_id": {
+            "maxLength": 512,
+            "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._-]+$",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "framework_id": {
+            "$ref": "#/components/schemas/FrameworkId"
+          },
+          "framework_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Framework Version",
+            "type": "string"
+          },
+          "generated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+          },
+          "library_version": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Library Version",
+            "type": "string"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceObservation"
+            },
+            "maxItems": 5,
+            "title": "Observations",
+            "type": "array"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "window_end": {
+            "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+          },
+          "window_start": {
+            "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+          }
+        },
+        "required": [
+          "schema_version",
+          "framework_id",
+          "framework_version",
+          "library_version",
+          "domain_id",
+          "generated_at",
+          "window_start",
+          "window_end",
+          "controls",
+          "observations",
+          "digest"
+        ],
+        "title": "EvidenceBundle",
+        "type": "object"
+      },
       "EvidenceId-Input": {
         "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,255}$",
         "title": "EvidenceId",
         "type": "string"
+      },
+      "EvidenceObservation": {
+        "additionalProperties": false,
+        "description": "What one read-only evidence source saw for a domain in a window (PRP-56). Counts, timestamps and ids only: no entity bodies, no prompts, no principal names. status: observed (the source answered), partial (answered with a cap or a gap), unavailable (store missing or down; reason_code says why), not_collected (the source cannot count this). Unknown numbers are null, never 0.",
+        "properties": {
+          "latest_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/Measure"
+            },
+            "maxItems": 20,
+            "title": "Measures",
+            "type": "array"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "source_id": {
+            "$ref": "#/components/schemas/EvidenceSourceId"
+          },
+          "status": {
+            "enum": [
+              "observed",
+              "partial",
+              "unavailable",
+              "not_collected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "window_end": {
+            "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+          },
+          "window_start": {
+            "$ref": "#/components/schemas/neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp"
+          }
+        },
+        "required": [
+          "schema_version",
+          "source_id",
+          "status",
+          "reason_code",
+          "window_start",
+          "window_end",
+          "latest_at",
+          "truncated",
+          "measures"
+        ],
+        "title": "EvidenceObservation",
+        "type": "object"
       },
       "EvidenceRef-Input": {
         "additionalProperties": false,
@@ -5803,6 +6035,25 @@
         ],
         "title": "EvidenceRef",
         "type": "object"
+      },
+      "EvidenceSourceId": {
+        "enum": [
+          "catalog_ownership",
+          "audit_chain",
+          "hitl_decisions",
+          "evaluation_results",
+          "cost_attribution"
+        ],
+        "title": "EvidenceSourceId",
+        "type": "string"
+      },
+      "EvidenceSources": {
+        "items": {
+          "$ref": "#/components/schemas/EvidenceSourceId"
+        },
+        "maxItems": 5,
+        "title": "EvidenceSources",
+        "type": "array"
       },
       "ExecutionState": {
         "additionalProperties": false,
@@ -6213,6 +6464,124 @@
           "upper"
         ],
         "title": "ForecastValue",
+        "type": "object"
+      },
+      "FrameworkDetailResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "controls": {
+            "items": {
+              "$ref": "#/components/schemas/MappedControlView"
+            },
+            "title": "Controls",
+            "type": "array"
+          },
+          "framework_id": {
+            "title": "Framework Id",
+            "type": "string"
+          },
+          "framework_version": {
+            "title": "Framework Version",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "source_retrieved": {
+            "title": "Source Retrieved",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "library_version",
+          "framework_id",
+          "title",
+          "framework_version",
+          "source_url",
+          "source_retrieved",
+          "controls"
+        ],
+        "title": "FrameworkDetailResponse",
+        "type": "object"
+      },
+      "FrameworkId": {
+        "enum": [
+          "nist_ai_rmf",
+          "sr_11_7",
+          "hipaa_technical_safeguards",
+          "omb_m_25_21"
+        ],
+        "title": "FrameworkId",
+        "type": "string"
+      },
+      "FrameworkListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "frameworks": {
+            "items": {
+              "$ref": "#/components/schemas/FrameworkSummary"
+            },
+            "title": "Frameworks",
+            "type": "array"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "library_version",
+          "frameworks"
+        ],
+        "title": "FrameworkListResponse",
+        "type": "object"
+      },
+      "FrameworkSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "control_count": {
+            "title": "Control Count",
+            "type": "integer"
+          },
+          "framework_id": {
+            "title": "Framework Id",
+            "type": "string"
+          },
+          "framework_version": {
+            "title": "Framework Version",
+            "type": "string"
+          },
+          "source_retrieved": {
+            "title": "Source Retrieved",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "framework_id",
+          "title",
+          "framework_version",
+          "source_url",
+          "source_retrieved",
+          "control_count"
+        ],
+        "title": "FrameworkSummary",
         "type": "object"
       },
       "Freshness": {
@@ -8616,6 +8985,48 @@
         "title": "Lock",
         "type": "object"
       },
+      "MappedControlView": {
+        "additionalProperties": false,
+        "properties": {
+          "control_id": {
+            "title": "Control Id",
+            "type": "string"
+          },
+          "evidence_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Sources",
+            "type": "array"
+          },
+          "source_retrieved": {
+            "title": "Source Retrieved",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "support_status": {
+            "title": "Support Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_id",
+          "title",
+          "source_url",
+          "source_retrieved",
+          "support_status",
+          "evidence_sources"
+        ],
+        "title": "MappedControlView",
+        "type": "object"
+      },
       "MaxOutputTokens": {
         "minimum": 0.0,
         "title": "MaxOutputTokens",
@@ -9067,6 +9478,34 @@
           "items"
         ],
         "title": "MeDomains",
+        "type": "object"
+      },
+      "Measure": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "Measure",
         "type": "object"
       },
       "MergedSummary": {
@@ -16679,6 +17118,18 @@
         "title": "SubscriptionScan",
         "type": "object"
       },
+      "SupportStatus": {
+        "enum": [
+          "designed",
+          "implemented_tested",
+          "inherited",
+          "customer",
+          "planned",
+          "not_applicable"
+        ],
+        "title": "SupportStatus",
+        "type": "string"
+      },
       "SyncView": {
         "additionalProperties": false,
         "properties": {
@@ -18911,6 +19362,11 @@
         ],
         "title": "Tool",
         "type": "object"
+      },
+      "neurosphere_contracts__compliance__v1__evidence_observation__UtcTimestamp": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+        "title": "UtcTimestamp",
+        "type": "string"
       },
       "neurosphere_contracts__deployment__v1__deployment_manifest__UtcTimestamp": {
         "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]{1,9})?Z$",
@@ -25397,6 +25853,214 @@
         "summary": "Search",
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/api/v1/compliance/domains/{domain}/bundle": {
+      "get": {
+        "operationId": "get_bundle_api_v1_compliance_domains__domain__bundle_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "framework_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9_]{1,64}$",
+              "title": "Framework Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceBundle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Bundle",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/compliance/domains/{domain}/bundle/export": {
+      "get": {
+        "operationId": "export_bundle_api_v1_compliance_domains__domain__bundle_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "framework_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9_]{1,64}$",
+              "title": "Framework Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "json",
+              "enum": [
+                "json",
+                "md"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Bundle",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/compliance/frameworks": {
+      "get": {
+        "operationId": "list_frameworks_api_v1_compliance_frameworks_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameworkListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Frameworks",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/compliance/frameworks/{framework_id}": {
+      "get": {
+        "operationId": "get_framework_api_v1_compliance_frameworks__framework_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "framework_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9_]{1,64}$",
+              "title": "Framework Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FrameworkDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Framework",
+        "tags": [
+          "compliance"
         ]
       }
     },
