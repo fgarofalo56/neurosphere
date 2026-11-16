@@ -48,7 +48,22 @@ _API_VERSIONS: Final = {
     "microsoft.operationalinsights/workspaces": "2023-09-01",
     "microsoft.search/searchservices": "2023-11-01",
     "microsoft.storage/storageaccounts": "2023-05-01",
-    "microsoft.apimanagement/service": "2022-08-01",
+    "microsoft.apimanagement/service": "2024-05-01",
+    "microsoft.web/sites": "2023-12-01",
+    "microsoft.web/serverfarms": "2023-12-01",
+    "microsoft.network/privateendpoints": "2024-05-01",
+    "microsoft.network/networksecuritygroups": "2024-05-01",
+    "microsoft.network/virtualnetworks": "2024-05-01",
+    "microsoft.network/privatednszones": "2024-06-01",
+    "microsoft.consumption/budgets": "2023-11-01",
+}
+
+# Top-level types the Bicep tree declares that the uninstall never deletes directly (key is the
+# lower-cased provider/type, value is the reason). A new Bicep type needs an _API_VERSIONS entry
+# or an entry here; tests/unit/infra/test_uninstall_api_versions.py enforces it.
+NOT_DELETED_DIRECTLY: Final = {
+    "microsoft.authorization/roleassignments": "extension resource, removed with its scope",
+    "microsoft.insights/diagnosticsettings": "extension resource, removed with its target",
 }
 
 
