@@ -1,0 +1,2 @@
+### Added
+- PRP-61: `detections` worker role with content-filter policy, APIM policy-fragment and shadow-AI account checks; findings are stored as the new recommendation kinds `configuration_finding` and `unregistered_ai_resource` (always advisory), appear in the recommendations list and review path, and feed a `configuration_findings` compliance evidence source. Metadata only. See `docs/runbooks/detections.md` (PR #318).
