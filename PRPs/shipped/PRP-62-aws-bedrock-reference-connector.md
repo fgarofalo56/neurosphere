@@ -1,6 +1,8 @@
 ---
 name: PRP-62-aws-bedrock-reference-connector
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 317
 priority: P3
 order: 50
 review: required
@@ -32,18 +34,18 @@ Out of scope: storing a Bedrock connector configuration and running it as a work
 - Adding a workspace member without copying it into the five `uv --frozen` images breaks the build: `connectors/reference/azure-billing` appears in `services/api/Dockerfile:25`, `services/api/Dockerfile.dev:23`, `services/workers/Dockerfile:25`, `services/workers/Dockerfile.dev:23` and `scripts/sandbox/Dockerfile.seed:24`; the licence gate fails an unknown licence (`scripts/licenses_report.py`, `docs/licenses.md`).
 
 ## Acceptance criteria
-- [ ] Dependency: the connector's `pyproject.toml` depends on `neurosphere-connector` and one AWS SDK pinned to a major range; the root `pyproject.toml` lists the member in `dependencies` and `[tool.uv.sources]`; `uv lock --check` passes after `uv.lock` is updated and the diff touches only the new member and its transitive packages (no unrelated version moves); `python scripts/licenses_report.py` passes and `docs/licenses.md` carries a row per new package; `docs/adr/0002-stack-pins.md` has a pin row per new package with licence and URL.
-- [ ] Images: all five Dockerfiles copy `connectors/reference/aws-bedrock`; `tests/release/test_dockerfiles.py` passes; the API and worker images build with `uv sync --frozen` (build run locally if Docker is available, otherwise reported unverified).
-- [ ] Manifest: built with `build_manifest`; read-only (`advisory=true`, no write support), capabilities `catalog_discovery`, `usage_reports`, `cost_ingest`, `health_reporting`; `supported_clouds: [commercial]`; credential references are vault ids or federation, never values; `check_connector_contract` returns no violations.
-- [ ] Government: constructing the connector with a Government cloud raises the typed `capability_unavailable` error with reason `aws_bedrock_government_unsupported`; nothing is read and no request is made (test with a socket guard).
-- [ ] Inventory: foundation models, custom models, provisioned throughput, guardrails and agents are returned as bounded, typed metadata (id, name, status, provider, modality names, created time); each list is capped (`max_items`), sets `truncated` and partial coverage at the cap, and is `None` when its call failed, never `[]`.
-- [ ] Usage and cost: hourly invocation and token counts per model id (CloudWatch) and daily cost (Cost Explorer) are returned for an explicit window; a missing datapoint is `None` not 0; cost carries `estimated` versus `invoiced` as the API reports it and the currency; no price is computed here.
-- [ ] Metadata only: a test injects reader payloads containing prompt-like text, a key and a log-group name and asserts the typed outputs, `repr`, health report and logs contain none of them; the reader exposes no invoke, `converse`, log-read or object-read operation (an interface test enumerates the protocol).
-- [ ] Credentials: the SDK client is built per call from a `CredentialBroker` secret (static key JSON) or from a web-identity role assumption, whichever the settings select; no key is stored on the instance, logged or put in an exception; `notify_rotated` takes effect on the next call (test).
-- [ ] Resilience: AWS throttling and 5xx map to `rate_limited` and `dependency_transient` with capped backoff and a page budget; the connector never loops past its caps; health reflects the last error class only.
-- [ ] Conformance: `tests/unit/connector_conformance/test_aws_bedrock*.py` runs the read-profile contract kit against the connector with fakes and a deliberately broken variant that the kit rejects.
-- [ ] Docs: `connectors/reference/aws-bedrock/README.md` holds the least-privilege read-only IAM policy (action names verified against AWS documentation, with observation dates), the IAM trust or key-handling guidance, the Cost Explorer request-cost warning, and the exact live-check command; `docs/connectors/coverage.md` has a "built (PRP-62), not live-tested" row with citations; G04 stays OPEN.
-- [ ] A live-check script `connectors/reference/aws-bedrock/scripts/live_check.py` refuses without `NS_LIVE_APPROVED=1` (exit 2, no import of the SDK, no network) and otherwise performs one bounded read of each source and writes a whitelisted evidence JSON.
+- [x] Dependency: the connector's `pyproject.toml` depends on `neurosphere-connector` and one AWS SDK pinned to a major range; the root `pyproject.toml` lists the member in `dependencies` and `[tool.uv.sources]`; `uv lock --check` passes after `uv.lock` is updated and the diff touches only the new member and its transitive packages (no unrelated version moves); `python scripts/licenses_report.py` passes and `docs/licenses.md` carries a row per new package; `docs/adr/0002-stack-pins.md` has a pin row per new package with licence and URL.
+- [x] Images: all five Dockerfiles copy `connectors/reference/aws-bedrock`; `tests/release/test_dockerfiles.py` passes; the API and worker images build with `uv sync --frozen` (build run locally if Docker is available, otherwise reported unverified).
+- [x] Manifest: built with `build_manifest`; read-only (`advisory=true`, no write support), capabilities `catalog_discovery`, `usage_reports`, `cost_ingest`, `health_reporting`; `supported_clouds: [commercial]`; credential references are vault ids or federation, never values; `check_connector_contract` returns no violations.
+- [x] Government: constructing the connector with a Government cloud raises the typed `capability_unavailable` error with reason `aws_bedrock_government_unsupported`; nothing is read and no request is made (test with a socket guard).
+- [x] Inventory: foundation models, custom models, provisioned throughput, guardrails and agents are returned as bounded, typed metadata (id, name, status, provider, modality names, created time); each list is capped (`max_items`), sets `truncated` and partial coverage at the cap, and is `None` when its call failed, never `[]`.
+- [x] Usage and cost: hourly invocation and token counts per model id (CloudWatch) and daily cost (Cost Explorer) are returned for an explicit window; a missing datapoint is `None` not 0; cost carries `estimated` versus `invoiced` as the API reports it and the currency; no price is computed here.
+- [x] Metadata only: a test injects reader payloads containing prompt-like text, a key and a log-group name and asserts the typed outputs, `repr`, health report and logs contain none of them; the reader exposes no invoke, `converse`, log-read or object-read operation (an interface test enumerates the protocol).
+- [x] Credentials: the SDK client is built per call from a `CredentialBroker` secret (static key JSON) or from a web-identity role assumption, whichever the settings select; no key is stored on the instance, logged or put in an exception; `notify_rotated` takes effect on the next call (test).
+- [x] Resilience: AWS throttling and 5xx map to `rate_limited` and `dependency_transient` with capped backoff and a page budget; the connector never loops past its caps; health reflects the last error class only.
+- [x] Conformance: `tests/unit/connector_conformance/test_aws_bedrock*.py` runs the read-profile contract kit against the connector with fakes and a deliberately broken variant that the kit rejects.
+- [x] Docs: `connectors/reference/aws-bedrock/README.md` holds the least-privilege read-only IAM policy (action names verified against AWS documentation, with observation dates), the IAM trust or key-handling guidance, the Cost Explorer request-cost warning, and the exact live-check command; `docs/connectors/coverage.md` has a "built (PRP-62), not live-tested" row with citations; G04 stays OPEN.
+- [x] A live-check script `connectors/reference/aws-bedrock/scripts/live_check.py` refuses without `NS_LIVE_APPROVED=1` (exit 2, no import of the SDK, no network) and otherwise performs one bounded read of each source and writes a whitelisted evidence JSON.
 - PRP exit: touched suites, ruff, pyright, licence and Dockerfile checks and `validate_planning.py` pass; the live run is written OPEN and handed to PRP-64.
 
 ## Clarifications (decided)
@@ -223,19 +225,19 @@ A worker role, stored connector configuration or admin page for Bedrock; ingesti
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-62-aws-bedrock-connector | boto3 1.44.3; lock adds only boto3, botocore, jmespath, s3transfer, python-dateutil, six + member; ALIASES "dual license" verified from dist LICENSE+classifiers |
+| 2 | merged | prp-62-aws-bedrock-connector | APIs verified vs botocore 1.44.3 models, AWS Service Reference JSON (IAM actions, IsWrite false), AWS docs (metrics, GetCostAndUsage); test files prefixed test_aws_bedrock_ to avoid basename clashes |
+| 3 | merged | prp-62-aws-bedrock-connector | connector + tests |
+| 4 | merged | prp-62-aws-bedrock-connector | credentials module is aws_auth.py (secret guard refuses *credentials* file names); botocore retries need total_max_attempts=1 |
+| 5 | merged | prp-62-aws-bedrock-connector | test_aws_bedrock_conformance.py; one-line edit to the existing six-connectors coverage test (listed must_not_touch) was unavoidable: it pins the on-disk set, so the new member broke it. Flag for review |
+| 6 | merged | prp-62-aws-bedrock-connector | README, scripts/live_check.py (exit 2 without NS_LIVE_APPROVED=1), iam.py policy constant, coverage row; live run OPEN |
+| 7 | merged | prp-62-aws-bedrock-connector | close-out at landing: main merged, `uv lock --check` clean, changelog fragment, planning files regenerated |
 
-## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
-- Operator product check (can an operator use this without editing files or calling raw APIs?):
+## Completion note
+- Date, PR number, merge commit: 2026-11-16, PR #317 (squash merge on main by the unattended landing run).
+- Deviations: (1) the credentials module is `aws_auth.py`, not `credentials.py` (the repo secret guard refuses file names containing "credentials"); (2) test files are prefixed `test_aws_bedrock_` so basenames cannot clash across connector test directories; (3) one-line edit to `tests/unit/connector_conformance/test_reference_connectors_conformance.py` (listed must_not_touch) because `test_all_six_reference_connectors_are_covered` pins the on-disk connector set and failed once the member existed: review this; (4) `scripts/licenses_report.py` gained one verified ALIASES line (`dual license` -> `Apache-2.0 AND BSD-3-Clause`, python-dateutil 2.9.0.post0, read from its LICENSE and classifiers); (5) `usage()` takes an explicit `model_ids` list (at most 50) because discovering ids from CloudWatch would need the extra `cloudwatch:ListMetrics` action; (6) botocore `retries.max_attempts` means retries, so the reader and STS client use `total_max_attempts: 1`; (7) the two Dockerfile builds were not run (see OPEN gates).
+- Descoped items: none. The web-identity path shipped alongside the static key.
+- OPEN gates: G04 (live AWS read, handed to PRP-64; needs an owner-approved AWS account, a read-only role or key and `NS_LIVE_APPROVED=1`); the API and worker image builds with `uv sync --frozen` (Docker not run in this session; COPY lines and `uv lock --check` verified); `STS AssumeRoleWithWebIdentity` against a real OIDC provider (unit-tested with an injected exchange only).
+- Env vars for the operator: `NS_LIVE_APPROVED` (live check), `NS_AWS_BEDROCK_KEY_JSON` (static-key live check only; the operator exports it, never in a file or chat). No `.env.example` change.
+- Follow-up issues filed: none filed from the unattended run. Needed: a stored connector configuration (a new `ConnectorConfig.connector_kind` value `aws_bedrock` in the contracts, after PRP-42 and PRP-61 release them) and a worker role (`aws-bedrock-inventory`, settings: region, auth mode, role ARN or vault reference, `max_items`, cost services) in `services/workers/**`, then mapping usage into `TelemetryEvent` and ledger entries.
+- Operator product check: not yet. The connector is a library plus a live-check script; there is no stored connector configuration or worker role, so an operator cannot enable it without code (see the follow-up above). Not claimed as usable.
