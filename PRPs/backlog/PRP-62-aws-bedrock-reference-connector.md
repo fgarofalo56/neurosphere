@@ -228,7 +228,7 @@ A worker role, stored connector configuration or admin page for Bedrock; ingesti
 | 3 | merged | prp-62-aws-bedrock-connector | connector + tests |
 | 4 | merged | prp-62-aws-bedrock-connector | credentials module is aws_auth.py (secret guard refuses *credentials* file names); botocore retries need total_max_attempts=1 |
 | 5 | merged | prp-62-aws-bedrock-connector | test_aws_bedrock_conformance.py; one-line edit to the existing six-connectors coverage test (listed must_not_touch) was unavoidable: it pins the on-disk set, so the new member broke it. Flag for review |
-| 6 | todo | | |
+| 6 | merged | prp-62-aws-bedrock-connector | README, scripts/live_check.py (exit 2 without NS_LIVE_APPROVED=1), iam.py policy constant, coverage row; live run OPEN |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
