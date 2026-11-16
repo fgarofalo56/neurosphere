@@ -45,7 +45,11 @@ jobs:
           node-version-file: .node-version
       - name: Regenerate (fails on a licence-policy violation)
         run: |
-          uv sync --frozen
+          # Same selection as the contracts job: the dev group plus the contracts member, whose
+          # datamodel-code-generator is otherwise never installed and so read as UNKNOWN on a
+          # bump (PRP-52, PR #198). Carry-forward cannot cover a bumped version.
+          uv sync --frozen --group dev
+          uv sync --frozen --inexact --package neurosphere-contracts --group dev
           pnpm install --frozen-lockfile
           python scripts/licenses_report.py
       - name: Detect change

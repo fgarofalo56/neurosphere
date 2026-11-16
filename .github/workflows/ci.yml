@@ -222,8 +222,11 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Licence register is current, no UNKNOWN or unapproved non-permissive licence
+        # CI is set on the runner, so --check also fails on a carried-forward row that is not on
+        # the cited allowlist (PRP-52). The sync selection matches dependabot-licences.yml.
         run: |
-          uv sync --frozen
+          uv sync --frozen --group dev
+          uv sync --frozen --inexact --package neurosphere-contracts --group dev
           pnpm install --frozen-lockfile
           python scripts/licenses_report.py --check
       - name: Workflows contain no suppressed failures

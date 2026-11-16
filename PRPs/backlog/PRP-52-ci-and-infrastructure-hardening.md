@@ -259,7 +259,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call. OPEN and operator-only: a live Bi
 | 3 | merged | prp-52-ci-infra-hardening | --source-dir mode, ci.yml DFD step + egress log step; real render not run locally (no Chrome) |
 | 4 | merged | prp-52-ci-infra-hardening | shared skip_or_fail loaded by path from ci_gate.py (no pyproject change); exact exec-failure markers; nslookup text fallback; compose-only probe run not run |
 | 5 | todo | | |
-| 6 | todo | | |
+| 6 | merged | prp-52-ci-infra-hardening | family rule + carried-forward CI check + --allow-carried; reproduced PR 197/198 in scratch worktrees (old script UNKNOWN, new resolves); dependabot ignore; sync selection in ci planning job + dependabot-licences |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)

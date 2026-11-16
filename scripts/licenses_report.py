@@ -20,9 +20,16 @@ with a reason. DENYLIST entries always fail (ADR-0002: @cosmograph is CC-BY-NC).
 Platform-gated packages that are not installed on this machine (for example rolldown
 bindings for another OS) cannot be read locally; their licence is carried forward from the
 committed docs/licenses.md for the SAME name and version, and is UNKNOWN if there is no such
-row. CI installs every architecture, so it never relies on the carry-forward. Python packages
-that no supported platform ever installs (emscripten-only markers) are resolved from
-PLATFORM_GATED, an exact-version map in which every entry cites its source.
+row. Python packages that no supported platform ever installs (emscripten-only markers) are
+resolved from PLATFORM_GATED, an exact-version map in which every entry cites its source.
+
+Dependency bumps (PRP-52): a platform binary family (NPM_PLATFORM_FAMILIES, for example
+@rolldown/binding-*) is resolved from an INSTALLED sibling of the same family and the SAME
+version, so a bump does not turn into UNKNOWN. A package that no rule can anchor stays UNKNOWN.
+Carry-forward is the last resort and is visible: when CI is set, --check fails if any row was
+carried forward and is not matched by CARRIED_FORWARD_ALLOWED (cited). The sharded pytest jobs
+have no node_modules, so their test passes --allow-carried; the planning job installs both
+trees and enforces the rule.
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
 import re
 import sys
 import tomllib
@@ -80,6 +88,41 @@ PLATFORM_GATED: dict[tuple[str, str], tuple[str, str]] = {
         "BSD-3-Clause",
         "PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved "
         "2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22)",
+    ),
+}
+# glob over the package name -> why one installed member can speak for the whole family.
+# Resolution needs an INSTALLED sibling at the SAME version whose own metadata gives the
+# licence; nothing is guessed and no network is used. A bump of the whole family therefore
+# resolves on the first install, and a family with no installed sibling stays UNKNOWN.
+NPM_PLATFORM_FAMILIES: dict[str, str] = {
+    "@rolldown/binding-*": (
+        "per-platform native bindings published together with rolldown from one repository "
+        "and release (github.com/rolldown/rolldown, packages/rolldown/npm/*); pnpm installs "
+        "only the binding for the host platform (PRP-52, #197)"
+    ),
+    "lightningcss-*": (
+        "per-platform native binaries of lightningcss published in one release "
+        "(github.com/parcel-bundler/lightningcss, npm/*); pnpm installs only the host "
+        "platform (PRP-52)"
+    ),
+}
+# glob over "<ecosystem>:<name>" -> citation. Rows that may be carried forward from the committed
+# register even under CI because no CI platform ever installs them and no family sibling exists.
+CARRIED_FORWARD_ALLOWED: dict[str, str] = {
+    "python:colorama": (
+        "locked only with marker sys_platform == 'win32' (uv.lock, pytest/click/tqdm dependents); "
+        "never installed on the Linux CI runners; licence from the committed register row of "
+        "the same version, read on a Windows install (PRP-52)"
+    ),
+    "python:pywin32": (
+        "locked only with marker sys_platform == 'win32' (uv.lock); never installed on the "
+        "Linux CI runners; licence from the committed register row of the same version, read "
+        "on a Windows install (PRP-52)"
+    ),
+    "npm:fsevents": (
+        "macOS-only optional dependency of chokidar-style watchers; never installed on the Linux "
+        "or Windows CI runners; licence taken from the committed register row of the same "
+        "version, re-verify on a bump (PRP-52)"
     ),
 }
 # glob patterns that always fail, whatever licence metadata says.
@@ -143,6 +186,7 @@ class Dep:
     licence: str  # normalised display string, or UNKNOWN, or first-party
     dev_only: bool
     note: str
+    carried: bool = False  # resolved from the committed register, not from installed metadata
 
     @property
     def scope(self) -> str:
@@ -330,13 +374,15 @@ def read_uv_lock(
             continue
         dist = installed.get(key)
         note = version_note(name, version)
+        was_carried = False
         if dist is not None and dist.version == version:
             lic = python_licence(dist)
         elif (key, version) in PLATFORM_GATED:
             lic, note = PLATFORM_GATED[(key, version)]
         else:
             lic = carried.get(("python", name, version), UNKNOWN)
-        deps.append(Dep("python", name, version, lic, key not in runtime, note))
+            was_carried = lic != UNKNOWN
+        deps.append(Dep("python", name, version, lic, key not in runtime, note, was_carried))
     return deps
 
 
@@ -449,6 +495,26 @@ def index_node_modules(pnpm_dir: Path) -> dict[tuple[str, str], dict]:
     return index
 
 
+def family_licence(name: str, version: str, index: dict[tuple[str, str], dict]) -> str | None:
+    """Licence of a platform-binary family member, read from installed siblings of one version.
+
+    Returns None unless ``name`` is in a documented family, at least one sibling with the SAME
+    version is installed, and every installed sibling agrees on one known licence.
+    """
+    for pattern in NPM_PLATFORM_FAMILIES:
+        if not fnmatch.fnmatchcase(name, pattern):
+            continue
+        found = {
+            npm_licence(pkg)
+            for (sib, sib_version), pkg in index.items()
+            if sib_version == version and fnmatch.fnmatchcase(sib, pattern)
+        }
+        found.discard(UNKNOWN)
+        if len(found) == 1:
+            return found.pop()
+    return None
+
+
 def read_pnpm_lock(
     lock: Path, pnpm_dir: Path, carried: dict[tuple[str, str, str], str]
 ) -> list[Dep]:
@@ -457,7 +523,16 @@ def read_pnpm_lock(
     deps: list[Dep] = []
     for name, version in packages:
         pkg = index.get((name, version))
-        lic = npm_licence(pkg) if pkg else carried.get(("npm", name, version), UNKNOWN)
+        was_carried = False
+        if pkg:
+            lic = npm_licence(pkg)
+        else:
+            family = family_licence(name, version, index)
+            if family is not None:
+                lic = family
+            else:
+                lic = carried.get(("npm", name, version), UNKNOWN)
+                was_carried = lic != UNKNOWN
         deps.append(
             Dep(
                 "npm",
@@ -466,6 +541,7 @@ def read_pnpm_lock(
                 lic,
                 f"{name}@{version}" not in runtime,
                 version_note(name, version),
+                was_carried,
             )
         )
     return deps
@@ -576,8 +652,27 @@ def splice_adr(adr_text: str, block: str) -> str:
 # --- entry point ------------------------------------------------------------------------
 
 
+def _in_ci() -> bool:
+    return os.environ.get("CI", "").strip().lower() not in ("", "0", "false", "no")
+
+
 def _norm(text: str) -> str:
     return text.replace("\r\n", "\n").rstrip("\n") + "\n"
+
+
+def carried_forward_problems(deps: list[Dep]) -> list[str]:
+    """Rows resolved by carry-forward that no CARRIED_FORWARD_ALLOWED pattern covers."""
+    out = []
+    for d in deps:
+        if not d.carried:
+            continue
+        label = f"{d.ecosystem}:{d.name}"
+        if any(fnmatch.fnmatchcase(label, pat) for pat in CARRIED_FORWARD_ALLOWED):
+            continue
+        out.append(
+            f"{label}@{d.version}: licence was carried forward, not read from installed metadata"
+        )
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -589,6 +684,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--node-modules", type=Path, default=ROOT / "node_modules")
     ap.add_argument("--output", type=Path, default=ROOT / "docs" / "licenses.md")
     ap.add_argument("--adr", type=Path, default=ADR_PATH)
+    ap.add_argument(
+        "--allow-carried",
+        action="store_true",
+        help="do not fail on carried-forward rows under CI (jobs without the npm tree)",
+    )
     args = ap.parse_args(argv)
 
     carried: dict[tuple[str, str, str], str] = {}
@@ -602,6 +702,10 @@ def main(argv: list[str] | None = None) -> int:
         deps += read_pnpm_lock(args.pnpm_lock, args.node_modules / ".pnpm", carried)
 
     problems = [f"{d.ecosystem}:{d.name}@{d.version}: {w}" for d in deps if (w := violation(d))]
+    if args.check and not args.allow_carried and _in_ci():
+        carried_problems = carried_forward_problems(deps)
+        print(f"carried-forward rows not allowlisted: {len(carried_problems)}")
+        problems += carried_problems
     register = _norm(render_register(deps))
     adr_new = None
     if args.adr.is_file():
