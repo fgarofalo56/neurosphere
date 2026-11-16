@@ -55,6 +55,8 @@ Kind = Literal[
     "unused_agent",
     "candidate_duplicate",
     "model_right_sizing",
+    "configuration_finding",
+    "unregistered_ai_resource",
 ]
 
 ReadScope = Annotated[
