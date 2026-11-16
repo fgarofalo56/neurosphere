@@ -229,7 +229,7 @@ The settings API or UI for entries; the deploy connector and apply (PRP-55); rol
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-54-write-targets | keyed registry + resolve helpers (PRP-50 shipped) |
-| 2 | todo | | |
+| 2 | merged | prp-54-write-targets | worker registration + domain-keyed resolve; Foundry entries carry no domain (key None) and need NS_FOUNDRY_LOCATION |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |

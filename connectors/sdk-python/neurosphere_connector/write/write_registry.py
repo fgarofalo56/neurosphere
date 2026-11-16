@@ -96,6 +96,10 @@ class WriteTargetRegistry:
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._targets))
 
+    def holds(self, name: str, target_key: str | None = None) -> bool:
+        """True when a connector is registered under exactly ``name`` and ``target_key``."""
+        return target_key in self._targets.get(name, {})
+
     def target_keys(self, name: str) -> tuple[str, ...]:
         """The target keys registered under ``name`` (the keyless default is not listed)."""
         return tuple(sorted(k for k in self._targets.get(name, {}) if k is not None))

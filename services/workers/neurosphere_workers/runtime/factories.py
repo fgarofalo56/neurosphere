@@ -241,14 +241,19 @@ __all__ = [
     "DeployWriteSettings",
     "RoleBuilder",
     "RuntimeConfig",
+    "WriteTargetEntry",
     "WriteTargetSeams",
     "WriteTargetSources",
+    "WriteTargetsFromStoreSettings",
     "compose_action_executor",
     "load_deploy_write_settings",
+    "load_write_target_entries",
     "load_write_target_settings",
+    "load_write_targets_from_store_settings",
     "register_deploy_target",
     "register_write_targets",
     "role_factories",
+    "write_target_entries",
 ]
 
 logger = logging.getLogger("neurosphere.workers.runtime")
@@ -680,11 +685,15 @@ async def _action_write_targets(
     try:
         foundry, apim = load_write_target_settings()
         deploy = load_deploy_write_settings()
+        from_store = load_write_targets_from_store_settings().from_store
     except ValueError:
         raise RoleConfigError("write_target_settings_invalid") from None
+    # PRP-54: stored entries define the targets only behind the explicit switch and only when
+    # the store holds at least one; otherwise exactly the env path.
+    entries = await load_write_target_entries(cfg, lifetime) if from_store else ()
     gateways: CosmosGatewayStore | None = None
     sources = WriteTargetSources()
-    if apim.enabled:
+    if apim.enabled or any(e.target_kind == "apim" for e in entries):
         gateways = CosmosGatewayStore.from_client(cosmos, database=cfg.store.database)
 
         def records_for(registration: GatewayRegistration) -> ApplyRecords:
@@ -703,6 +712,7 @@ async def _action_write_targets(
         # No durable PlanApprovals exists yet (the approval store is per API process), so an
         # enabled deploy target is skipped here with `deploy_sources_unconfigured`: fail closed.
         deploy=deploy,
+        entries=entries,
     )
     return registry, gateways
 
@@ -1473,6 +1483,82 @@ def load_deploy_write_settings() -> DeployWriteSettings:
         raise ValueError("deploy write settings are invalid") from None
 
 
+class WriteTargetsFromStoreSettings(BaseSettings):
+    """``NS_WRITE_TARGETS_FROM_STORE`` (PRP-54): honour stored ``write_targets`` entries.
+
+    OFF by default, so a deployment never gains a write path from stored data alone. When on and
+    the stored snapshot holds at least one entry, the stored entries define the targets for the
+    process and ``NS_FOUNDRY_*``/``NS_APIM_*`` are ignored; otherwise env applies. No hot reload.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="NS_WRITE_TARGETS_", frozen=True, extra="ignore")
+
+    from_store: bool = False
+
+
+def load_write_targets_from_store_settings() -> WriteTargetsFromStoreSettings:
+    """``NS_WRITE_TARGETS_FROM_STORE``; a malformed value raises ``ValueError``."""
+    try:
+        return WriteTargetsFromStoreSettings()
+    except ValidationError:
+        raise ValueError("write target settings are invalid") from None
+
+
+_FOUNDRY_ACCOUNT_ID: Final = re.compile(
+    r"^/subscriptions/(?P<sub>[0-9a-fA-F-]{36})/resourceGroups/(?P<rg>[^/]+)"
+    r"/providers/Microsoft\.CognitiveServices/accounts/(?P<account>[^/]+)$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class WriteTargetEntry:
+    """One stored write target (``system.write_target.<kind>``), reduced to what the factories
+    need. The ARM resource id is the whole reference: an APIM entry is bound to its gateway
+    registration (and so to a domain) by that id; a Foundry entry carries no domain, so it is
+    registered without a target key and answers every domain (one account per deployment)."""
+
+    target_kind: str
+    resource_id: str
+    enabled: bool = True
+
+
+def write_target_entries(snapshot: Any) -> tuple[WriteTargetEntry, ...]:
+    """The stored entries of a ``StoredSettingsSnapshot`` in document-id order."""
+    found: list[WriteTargetEntry] = []
+    for stored in getattr(snapshot, "write_targets", ()):
+        member = stored.setting.write_target
+        if member is None:
+            continue
+        found.append(
+            WriteTargetEntry(
+                target_kind=member.target_kind,
+                resource_id=member.resource_id.root,
+                enabled=bool(stored.setting.enabled),
+            )
+        )
+    return tuple(found)
+
+
+async def load_write_target_entries(
+    cfg: RuntimeConfig, lifetime: ClientLifetime
+) -> tuple[WriteTargetEntry, ...]:
+    """One bounded read of the stored entries; empty (env applies) on any failure."""
+    try:
+        repository = CosmosAdminConfigRepository.from_client(
+            create_cosmos_client(cfg.settings, lifetime=lifetime, account=cfg.store.cosmos_account),
+            database=cfg.store.database,
+        )
+        snapshot = await load_stored_settings(repository, cfg.customer_id, cloud=None)
+    except Exception:
+        _skipped("store", "write_targets_store_unavailable")
+        return ()
+    if snapshot.status != "loaded":
+        _skipped("store", "write_targets_store_unavailable")
+        return ()
+    return write_target_entries(snapshot)
+
+
 def load_write_target_settings() -> tuple[FoundryWriteSettings, ApimWriteSettings]:
     """``NS_FOUNDRY_*`` and ``NS_APIM_*``; a malformed value raises ``ValueError``."""
     try:
@@ -1489,7 +1575,13 @@ def _skipped(target: str, reason: str, detail: str | None = None) -> None:
     logger.warning("write target not registered: %s (%s)", target, reason, extra=extra)
 
 
-def _register(registry: WriteTargetRegistry, target: str, connector: object) -> bool:
+def _register(
+    registry: WriteTargetRegistry,
+    target: str,
+    connector: object,
+    *,
+    target_key: str | None = None,
+) -> bool:
     if getattr(connector, "advisory", False):
         _skipped(target, "connector_advisory", str(getattr(connector, "reason", "")) or None)
         return False
@@ -1498,11 +1590,15 @@ def _register(registry: WriteTargetRegistry, target: str, connector: object) -> 
     if name not in SUPPORTED_WRITE_CONNECTORS:
         _skipped(target, "write_target_unsupported")
         return False
-    if name in registry.names():
+    if target_key is None and name in registry.names():
         _skipped(target, "write_target_duplicate")
         return False
+    if target_key is not None and registry.holds(name, target_key):
+        # Two enabled entries of one connector in ONE domain: first wins, never a random pick.
+        _skipped(target, "write_target_duplicate_domain")
+        return False
     try:
-        registry.register(connector)
+        registry.register(connector, target_key=target_key)
     except CapabilityUnavailableError as exc:
         _skipped(target, str(exc.reason or "write_target_refused"))
         return False
@@ -1638,6 +1734,82 @@ def register_deploy_target(
     return _register(registry, "deploy", connector)
 
 
+async def _register_entries(
+    registry: WriteTargetRegistry,
+    entries: Sequence[WriteTargetEntry],
+    settings: Settings,
+    customer_id: str | None,
+    lifetime: ClientLifetime,
+    sources: WriteTargetSources,
+    seams: WriteTargetSeams,
+    credential: Callable[[], AsyncTokenCredential],
+) -> None:
+    """Build and register every enabled stored entry; one that cannot be built is skipped with
+    a reason code (never registered as advisory) and the rest still register."""
+    for entry in entries:
+        if not entry.enabled:
+            continue
+        label = f"stored:{entry.target_kind}"
+        if entry.target_kind == "foundry":
+            match = _FOUNDRY_ACCOUNT_ID.fullmatch(entry.resource_id)
+            if match is None:
+                _skipped(label, "foundry_config_invalid")
+                continue
+            # The stored entry has no region; the Models - List read needs one (env fallback).
+            location = FoundryWriteSettings().location
+            foundry = FoundryWriteSettings(
+                enabled=True,
+                subscription_id=match["sub"],
+                resource_group=match["rg"],
+                account=match["account"],
+                location=location,
+            )
+            connector = await _foundry_target(foundry, settings, lifetime, seams, credential)
+            if connector is not None:
+                _register(registry, label, connector)
+        elif entry.target_kind == "apim":
+            await _register_apim_entry(
+                registry, entry, label, settings, customer_id, lifetime, sources, seams, credential
+            )
+        else:
+            _skipped(label, "write_target_unsupported")
+
+
+async def _register_apim_entry(
+    registry: WriteTargetRegistry,
+    entry: WriteTargetEntry,
+    label: str,
+    settings: Settings,
+    customer_id: str | None,
+    lifetime: ClientLifetime,
+    sources: WriteTargetSources,
+    seams: WriteTargetSeams,
+    credential: Callable[[], AsyncTokenCredential],
+) -> None:
+    store = sources.gateway_store
+    finder = getattr(store, "find_by_arm_resource_id", None)
+    if customer_id is None:
+        _skipped(label, "customer_id_missing")
+        return
+    if store is None or finder is None:
+        _skipped(label, "gateway_store_unconfigured")
+        return
+    registration = await finder(customer_id, entry.resource_id)
+    if registration is None:
+        _skipped(label, "gateway_not_registered")
+        return
+    domain = registration.domain_id
+    if registry.holds(APIM_GATEWAY_CONNECTOR, domain):
+        _skipped(label, "write_target_duplicate_domain")
+        return
+    apim = ApimWriteSettings(enabled=True, gateway_id=registration.id, domain_id=domain)
+    connector = await _apim_target(
+        apim, settings, customer_id, lifetime, sources, seams, credential
+    )
+    if connector is not None:
+        _register(registry, label, connector, target_key=domain)
+
+
 async def register_write_targets(
     registry: WriteTargetRegistry,
     *,
@@ -1649,8 +1821,13 @@ async def register_write_targets(
     sources: WriteTargetSources | None = None,
     seams: WriteTargetSeams | None = None,
     deploy: DeployWriteSettings | None = None,
+    entries: Sequence[WriteTargetEntry] | None = None,
 ) -> tuple[str, ...]:
     """Register the configured write connectors into ``registry``; returns its names.
+
+    ``entries`` (PRP-54, stored ``write_targets``; ``None`` or empty = env path) replaces
+    ``foundry`` and ``apim``: each enabled entry is built by the same factories and registered
+    under its domain (``_register_entries``).
 
     Foundry first, then APIM, then deploy (deterministic; ``deploy`` None = off). Disabled
     targets are silent; enabled ones that cannot be registered are skipped with a logged reason.
@@ -1661,12 +1838,19 @@ async def register_write_targets(
     seams = seams or WriteTargetSeams()
     sources = sources or WriteTargetSources()
     lazy = _LazyCredential(settings, lifetime)
-    connector = await _foundry_target(foundry, settings, lifetime, seams, lazy.get)
-    if connector is not None:
-        _register(registry, "foundry", connector)
-    connector = await _apim_target(apim, settings, customer_id, lifetime, sources, seams, lazy.get)
-    if connector is not None:
-        _register(registry, "apim", connector)
+    if entries:
+        await _register_entries(
+            registry, entries, settings, customer_id, lifetime, sources, seams, lazy.get
+        )
+    else:
+        connector = await _foundry_target(foundry, settings, lifetime, seams, lazy.get)
+        if connector is not None:
+            _register(registry, "foundry", connector)
+        connector = await _apim_target(
+            apim, settings, customer_id, lifetime, sources, seams, lazy.get
+        )
+        if connector is not None:
+            _register(registry, "apim", connector)
     if deploy is not None:
         register_deploy_target(
             registry,
