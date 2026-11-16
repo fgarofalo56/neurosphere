@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "source_id": "catalog_ownership",
+  "status": "passed",
+  "reason_code": null,
+  "window_start": "2026-10-17T00:00:00Z",
+  "window_end": "2026-11-16T00:00:00Z",
+  "latest_at": "2026-11-10T09:30:00Z",
+  "truncated": false,
+  "measures": [
+    {
+      "name": "owners",
+      "value": 4
+    },
+    {
+      "name": "owners_overdue",
+      "value": 1
+    }
+  ]
+}

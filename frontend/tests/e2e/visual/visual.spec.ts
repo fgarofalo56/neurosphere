@@ -33,6 +33,12 @@ const PAGES = [
   // PRP-33 item 7: the gateway observe pages.
   { slug: "gateways", pattern: "/gateways" },
   { slug: "gateway-detail", pattern: "/gateways/detail" },
+  // PRP-53: the admin console pages.
+  { slug: "admin-identity", pattern: "/admin/identity" },
+  { slug: "admin-principal", pattern: "/admin/identity/principal" },
+  { slug: "admin-domains", pattern: "/admin/domains" },
+  { slug: "admin-system", pattern: "/admin/system" },
+  { slug: "admin-audit", pattern: "/admin/audit" },
 ] as const;
 
 function sampleFor(pattern: string) {

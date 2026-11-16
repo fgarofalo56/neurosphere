@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/compliance/v1/evidence-bundle.schema.json",
+  "title": "EvidenceBundle",
+  "description": "Deterministic, stateless evidence bundle for one domain and one framework (PRP-56). Per-control summary words (evidence_present, evidence_partial, no_evidence, customer_responsibility) derive only from observations and support status. There is no pass, fail, score or percentage. digest is sha256 over the canonical JSON of the bundle without the digest member. This bundle is not an assessment; not FedRAMP authorized; the authorizing official decides.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "framework_id",
+    "framework_version",
+    "library_version",
+    "domain_id",
+    "generated_at",
+    "window_start",
+    "window_end",
+    "controls",
+    "observations",
+    "digest"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "control.schema.json#/$defs/schema_version" },
+    "framework_id": { "$ref": "control.schema.json#/$defs/framework_id" },
+    "framework_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "library_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "domain_id": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._-]+$"
+    },
+    "generated_at": { "$ref": "evidence-observation.schema.json#/$defs/utc_timestamp" },
+    "window_start": { "$ref": "evidence-observation.schema.json#/$defs/utc_timestamp" },
+    "window_end": { "$ref": "evidence-observation.schema.json#/$defs/utc_timestamp" },
+    "controls": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/control_summary" }
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 5,
+      "items": { "$ref": "evidence-observation.schema.json" }
+    },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  },
+  "$defs": {
+    "control_summary": {
+      "title": "ControlSummary",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control", "support_status", "evidence_sources", "summary"],
+      "properties": {
+        "control": { "$ref": "control.schema.json" },
+        "support_status": { "$ref": "control-mapping.schema.json#/$defs/support_status" },
+        "evidence_sources": { "$ref": "control-mapping.schema.json#/$defs/evidence_sources" },
+        "summary": {
+          "type": "string",
+          "enum": [
+            "evidence_present",
+            "evidence_partial",
+            "no_evidence",
+            "customer_responsibility"
+          ]
+        }
+      }
+    }
+  }
+}

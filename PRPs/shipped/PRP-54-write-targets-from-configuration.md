@@ -1,6 +1,8 @@
 ---
 name: PRP-54-write-targets-from-configuration
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 310
 priority: P1
 order: 41
 review: required
@@ -32,15 +34,15 @@ Out of scope: the settings API, schema and validation of the `write_targets` ent
 - Operators cannot see or change targets: "No UI or API to register a write target; it is env plus restart" (lane-d step 3; `docs/validation/lane4-identity-docs-operator-setup.md` row "Action write targets").
 
 ## Acceptance criteria
-- [ ] Given stored `write_targets` entries (PRP-45) and `NS_WRITE_TARGETS_FROM_STORE=true`, When the API and the `actions` worker start, Then each enabled entry is built by the existing connector factories and registered; the registry holds two APIM connectors for two domains and the dry run of an intent in domain B reaches gateway B, never gateway A.
-- [ ] Given `NS_WRITE_TARGETS_FROM_STORE` unset or false, or no stored entries, Then behaviour is exactly today's env path (`services/api/tests/runtime_planes/test_write_targets.py`, `services/workers/tests/action_executor/test_write_target_wiring.py` pass unchanged); with nothing configured the registry is empty and a dry run still reports "no write target".
-- [ ] Given a stored entry that cannot be built (Government account, missing `deployments/write` permission, gateway not registered, gateway cloud differs, registration in another domain), Then it is skipped with a logged reason code from the existing set and never registered as advisory; the other entries still register.
-- [ ] Given two enabled entries of the same connector in the SAME domain, Then startup keeps the first and logs `write_target_duplicate_domain` for the second (fail closed, no random pick); entries for domains that differ from the gateway registration's domain are `gateway_domain_mismatch`.
-- [ ] `WriteTargetRegistry` keeps its existing API unchanged for single-target callers (`register(connector)`, `get(name)`, `supports(name, action)`, `names()`), and gains an additive `target_key` (the domain id): `register(connector, target_key=...)`, `get(name, target_key=...)`, `supports(name, action, target_key=...)`; `get(name)` with several keys and none given raises `capability_unavailable` reason `target_ambiguous`, never picks one.
-- [ ] The executor resolves with `stored.domain_id` and the API `connector_for` takes the intent's domain; an intent whose domain has no registered target is advisory, exactly as an unregistered connector is today; the kill switch, maker-checker, `check_gateway_binding` and `check_action` run unchanged.
+- [x] Given stored `write_targets` entries (PRP-45) and `NS_WRITE_TARGETS_FROM_STORE=true`, When the API and the `actions` worker start, Then each enabled entry is built by the existing connector factories and registered; the registry holds two APIM connectors for two domains and the dry run of an intent in domain B reaches gateway B, never gateway A.
+- [x] Given `NS_WRITE_TARGETS_FROM_STORE` unset or false, or no stored entries, Then behaviour is exactly today's env path (`services/api/tests/runtime_planes/test_write_targets.py`, `services/workers/tests/action_executor/test_write_target_wiring.py` pass unchanged); with nothing configured the registry is empty and a dry run still reports "no write target".
+- [x] Given a stored entry that cannot be built (Government account, missing `deployments/write` permission, gateway not registered, gateway cloud differs, registration in another domain), Then it is skipped with a logged reason code from the existing set and never registered as advisory; the other entries still register.
+- [x] Given two enabled entries of the same connector in the SAME domain, Then startup keeps the first and logs `write_target_duplicate_domain` for the second (fail closed, no random pick); entries for domains that differ from the gateway registration's domain are `gateway_domain_mismatch`.
+- [x] `WriteTargetRegistry` keeps its existing API unchanged for single-target callers (`register(connector)`, `get(name)`, `supports(name, action)`, `names()`), and gains an additive `target_key` (the domain id): `register(connector, target_key=...)`, `get(name, target_key=...)`, `supports(name, action, target_key=...)`; `get(name)` with several keys and none given raises `capability_unavailable` reason `target_ambiguous`, never picks one.
+- [x] The executor resolves with `stored.domain_id` and the API `connector_for` takes the intent's domain; an intent whose domain has no registered target is advisory, exactly as an unregistered connector is today; the kill switch, maker-checker, `check_gateway_binding` and `check_action` run unchanged.
 - [ ] Emulator proof (marked `integration`, local): with the compose Cosmos emulator and fake ARM seams (`WriteTargetSeams`), a `model_deployment_swap` and a `gateway_mode_change` run draft, approval by a different principal, recheck, apply and read-back verify, and the fake target's state changed; a self-approval, a disabled kill switch and a missing approval each stop the apply before the connector is called. No catalog metadata is edited to fake a swap.
-- [ ] Profiles: compose passes `NS_WRITE_TARGETS_FROM_STORE` and the env fallback names to the api and workers (default off); the Helm chart gains `writeTargets.fromStore` and `writeTargets.{foundry,apim}` values rendered into the api and workers env only when set; `infra/demo/main.bicep` gains `writeTargetsFromStore` (default false) wired into the api and workers settings; `helm template` and `az bicep build` tests prove all three, and no profile defaults to on.
-- [ ] No credential value in any new value, env or log: targets are subscription, resource group, account, region, gateway and domain ids; auth is the workload identity (A7); `.env.example` additions are listed in the completion note (agent-blocked).
+- [x] Profiles: compose passes `NS_WRITE_TARGETS_FROM_STORE` and the env fallback names to the api and workers (default off); the Helm chart gains `writeTargets.fromStore` and `writeTargets.{foundry,apim}` values rendered into the api and workers env only when set; `infra/demo/main.bicep` gains `writeTargetsFromStore` (default false) wired into the api and workers settings; `helm template` and `az bicep build` tests prove all three, and no profile defaults to on.
+- [x] No credential value in any new value, env or log: targets are subscription, resource group, account, region, gateway and domain ids; auth is the workload identity (A7); `.env.example` additions are listed in the completion note (agent-blocked).
 - PRP exit: touched suites plus `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green including the `helm` job; live write gates reported OPEN.
 
 ## Clarifications (decided)
@@ -228,18 +230,23 @@ The settings API or UI for entries; the deploy connector and apply (PRP-55); rol
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | merged | prp-54-write-targets | keyed registry + resolve helpers (PRP-50 shipped) |
+| 2 | merged | prp-54-write-targets | worker registration + domain-keyed resolve; Foundry entries carry no domain (key None) and need NS_FOUNDRY_LOCATION |
+| 3 | merged | prp-54-write-targets | configure_write_targets reads stored snapshot; connector_for(kind, domain) at 9 sites (deploy router unkeyed by design) |
+| 4 | merged | prp-54-write-targets | compose, Helm, demo Bicep opt-in; runbook; profile tests pass (helm+az present) |
+| 5 | merged | prp-54-write-targets | in-memory stores plus real registration and executor, mutating fake ARM; unmarked so it runs in CI; no Cosmos emulator involved |
+| 6 | merged | prp-54-write-targets | close-out |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-16, PR #310 (branch prp-54-write-targets, squash-merged after merging origin/main).
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+  - Item 5 emulator proof: the integration test (`tests/integration/actions/test_write_targets_from_store.py`) uses in-memory stores, the real registration code, the real executor and a scripted fake ARM that mutates its own state; no Cosmos emulator is involved and it is unmarked, so it runs in the CI python job. Acceptance criterion 7 is therefore left unticked as worded (compose Cosmos emulator, `integration` marker); the chain (second-principal approval, kill switch, apply, read-back verify, refusals before the connector is called) is proven with fakes.
+  - Ownership additions (not in the PRP-54 Ownership block, additive, unowned by any Tier-1 claim): `packages/core/neurosphere_core/gateway/store.py` and `packages/core/neurosphere_core/gateway/cosmos_store.py` gained `find_by_arm_resource_id`.
+  - Foundry stored entries are registered keyless (`target_key=None`) and the registry falls back to the keyless connector when a domain has no keyed one (`held.get(target_key) or held.get(None)`), so a stored Foundry entry answers every domain. This matches the "one Foundry account per deployment" limit but is looser than the spec's "a domain with no registered target is advisory" for Foundry. Documented in the runbook.
+  - Stored Foundry entries read the region from `FoundryWriteSettings().location`, so `NS_FOUNDRY_LOCATION` is still required with the stored path.
+  - In the worker and API paths, `if entries:` treats a store whose entries are all disabled as "stored defines targets": env is ignored and nothing registers. Consistent with "at least one entry" in the spec; a logged reason for operators is a follow-up.
+- Descoped items: none. `[serial-after: PRP-50]` item 1 was done (PRP-50 is shipped).
+- OPEN gates: any live Foundry or APIM write from a stored entry (needs `NS_LIVE_APPROVED=1`, an approved Limitlessdata target, operator role assignments); a hosted profile with `writeTargetsFromStore` on; a second live gateway; Government stays advisory (G02/G17 Government rows). Handed to PRP-64.
+- Env vars for the operator: `NS_WRITE_TARGETS_FROM_STORE` (default false) on the api and workers; passthrough of the existing `NS_FOUNDRY_*` and `NS_APIM_*` fallback names in compose and Helm (`writeTargets.fromStore`, `writeTargets.{foundry,apim}`); Bicep param `writeTargetsFromStore` (default false). `.env.example` was not edited (agent-blocked): add `NS_WRITE_TARGETS_FROM_STORE=false`.
+- Follow-up issues: #132 stays open (lifecycle `TargetRegistry` is PRP-23; judge and copilot rows are PRP-45 and PRP-16); log a reason when all stored entries are disabled; optional per-domain Foundry keying.
+- Product check (can an operator use it without editing files): partly. Entries are stored configuration and the switch is a profile value, but the switch is a deploy-time env/Helm/Bicep setting and the settings entries need the admin API (PRP-45) or console (PRP-57); the operator role assignments on the target account/gateway are manual.

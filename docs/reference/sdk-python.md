@@ -1,7 +1,7 @@
 # Connector SDK reference (Python)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `967d685b31dc55da1b2685e2824898c27cb8cb63`. Generated: 2026-11-16.
+> Source commit: `a78569075da10c536bcd75f4cf13a17564cea86e`. Generated: 2026-11-16.
 > Sources: `connectors/sdk-python/neurosphere_connector/`.
 
 Package `neurosphere_connector` (connector SDK, read side) and `neurosphere_connector.write` (write path, imported explicitly; it is advisory by default and carries no Azure SDK import). Symbols are the `__all__` of each package, extracted from source with `ast`. Public methods are listed under each class.
@@ -292,15 +292,17 @@ What the executor asks a connector to do: exact target, version and diff.
 class WriteTargetRegistry
 ```
 
-Connectors accepted as action targets, keyed by manifest name.
+Connectors accepted as action targets, keyed by manifest name and optional target key.
 
 Methods:
 
 - `def __init__(self) -> None`
-- `def register(self, connector: object) -> WriteConnector`
-- `def get(self, name: str) -> WriteConnector`
-- `def supports(self, name: str, action: str) -> bool`
+- `def register(self, connector: object, *, target_key: str | None=None) -> WriteConnector`
+- `def get(self, name: str, *, target_key: str | None=None) -> WriteConnector`
+- `def supports(self, name: str, action: str, *, target_key: str | None=None) -> bool`
 - `def names(self) -> tuple[str, ...]`
+- `def holds(self, name: str, target_key: str | None=None) -> bool`
+- `def target_keys(self, name: str) -> tuple[str, ...]`
 
 ### `build_verify_result`
 

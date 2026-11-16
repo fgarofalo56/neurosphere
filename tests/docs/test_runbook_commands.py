@@ -171,6 +171,10 @@ def test_no_em_dashes_and_no_backslash_paths() -> None:
 def test_no_compliance_claims_or_bypass_language() -> None:
     for path in _docs():
         low = path.read_text(encoding="utf-8").lower()
+        # The required negated disclaimer (PRP-23 wording, PRP-56 runbook) is not a claim.
+        low = " ".join(low.split()).replace(
+            "not fedramp authorized; the authorizing official decides", ""
+        )
         for banned in ["fedramp authorized", "fedramp-authorized", "compliance parity achieved"]:
             assert banned not in low, f"{path.name}: {banned}"
         assert "bypass" not in low.replace("no unrestricted bypass", ""), path.name

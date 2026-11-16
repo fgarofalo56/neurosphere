@@ -8,6 +8,7 @@ import {
   Panel,
   StatusPill,
 } from "../../design-system";
+import { AdminConsoleHome } from "../admin/shared/AdminConsoleHome";
 import { ForbiddenState } from "./ForbiddenState";
 import { probePath, type WorkspaceDef } from "./personas";
 
@@ -54,6 +55,9 @@ export function WorkspacePage({ def }: { readonly def: WorkspaceDef }): ReactEle
       </PageTemplate>
     );
   }
+
+  // PRP-53: the probe above still decides; the Admin persona then gets the console landing.
+  if (def.persona === "Admin") return <AdminConsoleHome title={label} />;
 
   return (
     <PageTemplate title={label} layout="grid">

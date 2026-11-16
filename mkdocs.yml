@@ -121,6 +121,7 @@ nav:
       - deploy/hosted-demo.md
   - Runbooks:
       - runbooks/operations.md
+      - runbooks/write-targets.md
       - runbooks/ingest.md
       - runbooks/admission-and-federation.md
       - runbooks/ingest-cost-attribution.md
@@ -132,6 +133,7 @@ nav:
       - runbooks/platform-config.md
       - runbooks/system-settings.md
       - runbooks/audit-siem.md
+      - runbooks/compliance-evidence.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md

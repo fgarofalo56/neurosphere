@@ -50,7 +50,13 @@ function setup(path: string, status: number, roles: Parameters<typeof workspaceN
 describe("workspace routes", () => {
   it.each(WORKSPACES)("renders the $label route and probes the API", async (def) => {
     const fetchImpl = setup(def.path, 200, NS_ROLES);
-    await screen.findByText(/Placeholder/);
+    if (def.persona === "Admin") {
+      // PRP-53: the Admin persona gets the console landing, not the placeholder.
+      await screen.findByTestId("admin-areas");
+      expect(screen.queryByText(/Placeholder/)).toBeNull();
+    } else {
+      await screen.findByText(/Placeholder/);
+    }
     expect(screen.getByRole("heading", { name: `${def.label} workspace` })).toBeTruthy();
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain(probePath(def.persona));
   });
@@ -75,6 +81,15 @@ describe("workspace routes", () => {
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(nav.textContent).not.toContain("Admin");
     expect(screen.queryByText(/Placeholder/)).toBeNull();
+  });
+
+  it("admin landing shows unknown, not zero, when the summaries cannot be read", async () => {
+    setup("/workspaces/admin", 200, NS_ROLES);
+    await screen.findByTestId("admin-areas");
+    await waitFor(() =>
+      expect(screen.getByTestId("checklist-summary").textContent).toContain("Unknown"),
+    );
+    expect(screen.getByTestId("restart-summary").textContent).toContain("Unknown");
   });
 
   it("shows a loading state while the probe is in flight", () => {

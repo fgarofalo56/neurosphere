@@ -204,6 +204,18 @@ class InMemoryGatewayStore:
                 return self._load(key)
         return None
 
+    async def find_by_arm_resource_id(
+        self, customer_id: str, arm_resource_id: str
+    ) -> GatewayRegistration | None:
+        """The customer's registration of ``arm_resource_id`` (PRP-54: stored write targets)."""
+        self._check()
+        wanted = arm_resource_id.lower()
+        for key in list(self._docs):
+            found = self._load(key) if key[0] == customer_id else None
+            if found is not None and found.arm_resource_id.lower() == wanted:
+                return found
+        return None
+
     async def list(
         self,
         customer_id: str,

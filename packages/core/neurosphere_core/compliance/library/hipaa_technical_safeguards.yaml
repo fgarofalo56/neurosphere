@@ -1,0 +1,89 @@
+# HIPAA Security Rule technical safeguards, 45 CFR 164.312, plus the information system activity
+# review specification of 164.308(a)(1)(ii)(D) (PRP-56 item 2). Paragraph ids and headings were
+# read from the eCFR (point-in-time 2025-01-01) on source_retrieved; titles are short paraphrases.
+# NeuroSphere holds metadata only and no ePHI: encryption, transmission security and ePHI
+# authentication stay with the customer. This is a mapping, not an assessment.
+framework_id: hipaa_technical_safeguards
+title: HIPAA Security Rule technical safeguards (45 CFR 164.312)
+framework_version: ecfr-2025-01-01
+source_url: https://www.ecfr.gov/current/title-45/part-164/section-164.312
+source_retrieved: "2026-11-16"
+controls:
+  - control_id: hipaa.164.312.a.1
+    title: Access control standard
+    support_status: designed
+    evidence_sources: [audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/auth/scope/permissions.py
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+  - control_id: hipaa.164.312.a.2.i
+    title: Unique user identification (required)
+    support_status: designed
+    evidence_sources: []
+    repo_paths:
+      - packages/core/neurosphere_core/auth/scope/pseudonym.py
+  - control_id: hipaa.164.312.a.2.ii
+    title: Emergency access procedures (required)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.a.2.iii
+    title: Automatic logoff (addressable)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.a.2.iv
+    title: Encryption and decryption (addressable)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.b
+    title: Audit controls standard
+    source_url: https://www.ecfr.gov/current/title-45/part-164/section-164.312
+    support_status: implemented_tested
+    evidence_sources: [audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: hipaa.164.312.c.1
+    title: Integrity standard
+    support_status: implemented_tested
+    evidence_sources: [audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: hipaa.164.312.c.2
+    title: Mechanism to authenticate ePHI (addressable)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.d
+    title: Person or entity authentication standard
+    support_status: designed
+    evidence_sources: []
+    repo_paths:
+      - packages/core/neurosphere_core/auth/scope/derivation.py
+  - control_id: hipaa.164.312.e.1
+    title: Transmission security standard
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.e.2.i
+    title: Integrity controls for transmission (addressable)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.312.e.2.ii
+    title: Encryption for transmission (addressable)
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: hipaa.164.308.a.1.ii.d
+    title: Information system activity review (required)
+    source_url: https://www.ecfr.gov/current/title-45/part-164/section-164.308
+    support_status: implemented_tested
+    evidence_sources: [audit_chain, hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py

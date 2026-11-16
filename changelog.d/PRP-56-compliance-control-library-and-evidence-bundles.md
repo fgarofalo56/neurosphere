@@ -1,0 +1,4 @@
+### Added
+- PRP-56: metadata-only compliance mapping. A versioned control library (NIST AI RMF, SR 11-7, HIPAA technical safeguards, OMB M-25-21) held as package data, five read-only evidence sources (catalog ownership, audit-chain integrity, HITL decisions, evaluation results, cost attribution) and a deterministic evidence bundle per domain and framework with a sha256 digest. It maps and collects evidence and never judges; no output says an estate is compliant or authorized.
+- PRP-56: `GET /api/v1/compliance/frameworks`, `/frameworks/{framework_id}`, `/domains/{domain}/bundle` and `/domains/{domain}/bundle/export` (JSON or Markdown), gated by `evidence.read` on the domain, with an allowed-read audit entry.
+- PRP-56: the `/compliance` and `/compliance/control` pages, the `compliance` contract family and runbook `docs/runbooks/compliance-evidence.md`.

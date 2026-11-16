@@ -72,6 +72,9 @@ param copilotDeployment string = 'mini'
 ])
 param copilotMode string = 'disabled'
 
+@description('PRP-54: when true the api and workers honour the stored write_targets entries (NS_WRITE_TARGETS_FROM_STORE). Default false: no write path appears from stored data alone. The workload identity needs operator-granted write roles on each target (docs/runbooks/write-targets.md).')
+param writeTargetsFromStore bool = false
+
 @description('Offline evaluation pilot (PRP-16): canonical id of a domain inside the worker identity scope. Empty (default) leaves the offline stage idle; the env vars are then omitted.')
 param evaluationPilotDomainId string = ''
 
@@ -236,6 +239,8 @@ var commonSettings = union(
   keyVaultPlainSettings
 )
 
+var writeTargetSettings = writeTargetsFromStore ? { NS_WRITE_TARGETS_FROM_STORE: 'true' } : {}
+
 var apiSettings = {
   NS_AUTH_AUDIENCES: entraClientId
   NS_EVALUATION_PILOT_DATASET_IDS: evaluationPilotDatasetIds
@@ -249,6 +254,8 @@ var apiSettings = {
   NS_COPILOT_MODEL_FEATURE: 'model_gpt_4_1_mini'
   NS_COPILOT_SKU: 'Global Standard'
 }
+
+var apiSettingsWithWriteTargets = union(apiSettings, writeTargetSettings)
 
 
 // NS_WORKER_OBJECT_ID is the workers' own system-assigned principal id, which exists only after
@@ -282,7 +289,8 @@ var workersBaseSettings = union(
     NS_QUARANTINE_STORAGE_ACCOUNT: storageName
     NS_QUARANTINE_CONTAINER: quarantineContainer
   },
-  evaluationPilotSettings
+  evaluationPilotSettings,
+  writeTargetSettings
 )
 
 var frontendSettings = {
@@ -319,7 +327,7 @@ module appServiceBootstrap '../appservice/main.bicep' = {
     capacity: 1
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
-    apiAppSettings: apiSettings
+    apiAppSettings: apiSettingsWithWriteTargets
     searchProvider: searchProvider
     searchService: searchService
     searchRegion: location
@@ -349,7 +357,7 @@ module appService '../appservice/main.bicep' = {
     capacity: 1
     commonAppSettings: commonSettings
     keyVaultSecretUris: keyVaultReferences
-    apiAppSettings: union(apiSettings, apiProbeSettings)
+    apiAppSettings: union(apiSettingsWithWriteTargets, apiProbeSettings)
     searchProvider: searchProvider
     searchService: searchService
     searchRegion: location

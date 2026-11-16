@@ -83,6 +83,25 @@ deployApply:
   enabled: false
   registerContainer: ""
 
+# Write targets (PRP-54). Everything is off by default: the write registry stays empty and a dry
+# run reports "no write target". fromStore sets NS_WRITE_TARGETS_FROM_STORE on the api and workers
+# so the stored write_targets entries (console) define the targets; foundry and apim are the env
+# fallback (NS_FOUNDRY_* / NS_APIM_*), rendered only when enabled. Names and ids only, no secret;
+# auth is the workload identity, whose write role assignments are operator-owned
+# (docs/runbooks/write-targets.md).
+writeTargets:
+  fromStore: false
+  foundry:
+    enabled: false
+    subscriptionId: ""
+    resourceGroup: ""
+    account: ""
+    location: ""
+  apim:
+    enabled: false
+    gatewayId: ""
+    domainId: ""
+
 # Catalog search (PRP-10 item 11) on the api container only. provider: fixture (in-process index,
 # the default) | azure (Azure AI Search via workload identity; set service and region) | "" (unset:
 # catalog search answers 503 search_unavailable). Names only: no key, connection string or host

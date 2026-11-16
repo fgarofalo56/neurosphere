@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "source_id": "cost_attribution",
+  "status": "not_collected",
+  "reason_code": "cost_center_absent",
+  "window_start": "2026-10-17T00:00:00Z",
+  "window_end": "2026-11-16T00:00:00Z",
+  "latest_at": null,
+  "truncated": false,
+  "measures": [
+    {
+      "name": "entries_with_cost_center",
+      "value": null
+    }
+  ]
+}

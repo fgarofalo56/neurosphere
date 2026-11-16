@@ -1,0 +1,61 @@
+# OMB Memorandum M-25-21, Accelerating Federal Use of AI through Innovation, Governance, and
+# Public Trust (April 3, 2025) (PRP-56 item 2). Section ids and headings were read from the memo
+# text on source_retrieved; titles are short paraphrases. A mapping row says what NeuroSphere can
+# observe; it is not an assessment and decides nothing for the agency or the authorizing official.
+framework_id: omb_m_25_21
+title: OMB M-25-21 AI governance and risk management practices
+framework_version: M-25-21
+source_url: https://www.whitehouse.gov/wp-content/uploads/2025/02/M-25-21-Accelerating-Federal-Use-of-AI-through-Innovation-Governance-and-Public-Trust.pdf
+source_retrieved: "2026-11-16"
+controls:
+  - control_id: omb-m-25-21.3.a.i
+    title: Chief AI Officer responsibilities, including the AI use case inventory
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: omb-m-25-21.3.a.ii
+    title: Agency AI governance board
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: omb-m-25-21.3.b.v
+    title: Update AI use case inventories
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: omb-m-25-21.4.b.i
+    title: Pre-deployment testing for high-impact AI
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: omb-m-25-21.4.b.ii
+    title: AI impact assessment, including related costs analysis
+    support_status: customer
+    evidence_sources: [cost_attribution]
+    repo_paths: []
+  - control_id: omb-m-25-21.4.b.iii
+    title: Ongoing monitoring for performance and potential adverse impacts
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results, audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: omb-m-25-21.4.b.iv
+    title: Human training and assessment for operators of AI
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: omb-m-25-21.4.b.v
+    title: Human oversight, intervention and accountability
+    support_status: implemented_tested
+    evidence_sources: [hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py

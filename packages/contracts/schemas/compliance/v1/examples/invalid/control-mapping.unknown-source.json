@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "control_id": "nist-ai-rmf.govern-2",
+  "framework_id": "nist_ai_rmf",
+  "support_status": "implemented_tested",
+  "evidence_sources": [
+    "prompt_capture"
+  ],
+  "repo_paths": [
+    "packages/core/neurosphere_core/compliance/sources/catalog.py"
+  ]
+}

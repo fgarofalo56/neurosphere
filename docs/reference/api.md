@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `967d685b31dc55da1b2685e2824898c27cb8cb63`. Generated: 2026-11-16.
+> Source commit: `a78569075da10c536bcd75f4cf13a17564cea86e`. Generated: 2026-11-16.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 202 operations on 168 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 206 operations on 172 paths.
 
 ## Status and verification
 
@@ -149,6 +149,10 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | catalog-curation | GET | `/catalog/curation/edges/{edge_id}/overrides` | Overrides |
 | catalog-curation | GET | `/catalog/curation/review-queue` | Review Queue |
 | catalog-curation | POST | `/catalog/curation/review-queue/{item_id}/resolve` | Resolve Review Item |
+| compliance | GET | `/api/v1/compliance/domains/{domain}/bundle` | Get Bundle |
+| compliance | GET | `/api/v1/compliance/domains/{domain}/bundle/export` | Export Bundle |
+| compliance | GET | `/api/v1/compliance/frameworks` | List Frameworks |
+| compliance | GET | `/api/v1/compliance/frameworks/{framework_id}` | Get Framework |
 | copilot | GET | `/api/v1/copilot/conversations` | List Conversations |
 | copilot | POST | `/api/v1/copilot/conversations` | Create Conversation |
 | copilot | GET | `/api/v1/copilot/conversations/{conversation_id}` | Get Conversation |
@@ -1163,6 +1167,35 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Parameters: `item_id` (path, required)
 - Request body: application/json: `ReviewResolveBody` (required)
 - Responses: `200` `ReviewItem`; `422` `HTTPValidationError`
+
+### Tag: compliance
+
+#### GET `/api/v1/compliance/domains/{domain}/bundle`
+
+- Operation id: `get_bundle_api_v1_compliance_domains__domain__bundle_get`
+- Summary: Get Bundle
+- Parameters: `domain` (path, required), `framework_id` (query, required), `window_days` (query)
+- Responses: `200` `EvidenceBundle`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/compliance/domains/{domain}/bundle/export`
+
+- Operation id: `export_bundle_api_v1_compliance_domains__domain__bundle_export_get`
+- Summary: Export Bundle
+- Parameters: `domain` (path, required), `framework_id` (query, required), `format` (query), `window_days` (query)
+- Responses: `200` no body; `422` `HTTPValidationError`
+
+#### GET `/api/v1/compliance/frameworks`
+
+- Operation id: `list_frameworks_api_v1_compliance_frameworks_get`
+- Summary: List Frameworks
+- Responses: `200` `FrameworkListResponse`
+
+#### GET `/api/v1/compliance/frameworks/{framework_id}`
+
+- Operation id: `get_framework_api_v1_compliance_frameworks__framework_id__get`
+- Summary: Get Framework
+- Parameters: `framework_id` (path, required)
+- Responses: `200` `FrameworkDetailResponse`; `422` `HTTPValidationError`
 
 ### Tag: copilot
 

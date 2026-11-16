@@ -107,7 +107,7 @@ def action_view(plane: ActionPlane, stored: StoredIntent) -> ActionView:
     requires_approval = stored.requires_approval if confirmed else plane.requires_approval(kind)
     return ActionView.build(
         stored,
-        advisory=stored.advisory or plane.connector_for(kind) is None,
+        advisory=stored.advisory or plane.connector_for(kind, stored.domain_id) is None,
         requires_approval=requires_approval,
         self_approval_forbidden=plane.self_approval_forbidden(kind),
     )

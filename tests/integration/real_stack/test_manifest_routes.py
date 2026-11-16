@@ -222,7 +222,7 @@ def stack(compose_stack: None) -> Iterator[Stack]:
 
 def test_the_call_map_covers_exactly_the_manifest() -> None:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))["routes"]
-    assert len(manifest) == 42
+    assert len(manifest) == 49
     assert sorted(calls.MANIFEST_CALLS) == sorted(manifest)
 
 

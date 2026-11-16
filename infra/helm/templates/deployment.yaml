@@ -121,6 +121,44 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- end }}
+            {{- if and (ne $name "frontend") $.Values.writeTargets.fromStore }}
+            # Opt-in (PRP-54): stored write_targets entries define the write registry; env below is
+            # the fallback when the store holds none. Unset: today's env-only behaviour.
+            - name: NS_WRITE_TARGETS_FROM_STORE
+              value: "true"
+            {{- end }}
+            {{- if and (ne $name "frontend") $.Values.writeTargets.foundry.enabled }}
+            - name: NS_FOUNDRY_ENABLED
+              value: "true"
+            {{- with $.Values.writeTargets.foundry.subscriptionId }}
+            - name: NS_FOUNDRY_SUBSCRIPTION_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.writeTargets.foundry.resourceGroup }}
+            - name: NS_FOUNDRY_RESOURCE_GROUP
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.writeTargets.foundry.account }}
+            - name: NS_FOUNDRY_ACCOUNT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.writeTargets.foundry.location }}
+            - name: NS_FOUNDRY_LOCATION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if and (ne $name "frontend") $.Values.writeTargets.apim.enabled }}
+            - name: NS_APIM_ENABLED
+              value: "true"
+            {{- with $.Values.writeTargets.apim.gatewayId }}
+            - name: NS_APIM_GATEWAY_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.writeTargets.apim.domainId }}
+            - name: NS_APIM_DOMAIN_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
             {{- if $search }}
             # Catalog search; unset provider keeps catalog search failing closed (503 search_unavailable).
             - name: NS_SEARCH_PROVIDER

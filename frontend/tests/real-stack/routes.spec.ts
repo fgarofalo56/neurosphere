@@ -56,6 +56,60 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  // PRP-53: the admin console. OPEN until PRP-38's job seeds a principal and covers these pages;
+  // the operator may not hold the deployment-admin scope, and each page then shows its forbidden
+  // state (a 403 on the first call of the page).
+  {
+    route: "/admin/audit",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/audit/",
+        why: "audit search needs audit.read; the customer-wide denials and SIEM views need it on the control domain",
+      },
+    ],
+  },
+  {
+    route: "/admin/domains",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/platform/",
+        why: "the domain registry needs the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
+  {
+    route: "/admin/identity",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/identity/",
+        why: "identity administration needs the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
+  {
+    route: "/admin/identity/principal",
+    via: { list: "/admin/identity", link: "a[href^='/admin/identity/principal']" },
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/identity/",
+        why: "identity administration needs the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
+  {
+    route: "/admin/system",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/system/",
+        why: "system status needs the deployment-admin scope (PRP-48), which the operator may not hold",
+      },
+    ],
+  },
   { route: "/actions", rows: "action-row" },
   {
     route: "/actions/detail",
@@ -75,6 +129,17 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  {
+    route: "/compliance",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/",
+        why: "the compliance evidence page needs the Auditor role (evidence.read and audit.read), which the operator may not hold; the page then shows its forbidden state",
+      },
+    ],
+  },
+  { route: "/compliance/control" },
   { route: "/catalog", rows: "entity-row" },
   {
     // Two hops: catalog list -> entity -> a relationship link on the entity page. An entity with

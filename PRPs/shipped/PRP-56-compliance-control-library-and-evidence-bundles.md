@@ -1,6 +1,6 @@
 ---
 name: PRP-56-compliance-control-library-and-evidence-bundles
-status: backlog
+status: shipped
 priority: P2
 order: 42
 review: required
@@ -15,6 +15,8 @@ wave: W17
 branch: prp-56-compliance-evidence
 allow_parallel: true
 issues: [248]
+shipped: 2026-11-16
+pr: 308
 ---
 
 # PRP-56: Compliance control library and evidence bundles
@@ -32,15 +34,15 @@ Out of scope: NeuroSphere's own 800-53 ATO documents, SSP narratives and POA&M (
 - Contracts are JSON Schema under `packages/contracts/schemas/<area>/v1/` with generated bindings (`packages/contracts/scripts/generate.py`), the place a new `compliance` family belongs.
 
 ## Acceptance criteria
-- [ ] Contracts: `packages/contracts/schemas/compliance/v1/` defines `ControlFramework`, `Control`, `ControlMapping`, `EvidenceObservation` and `EvidenceBundle` with examples; generated Python and TS bindings pass `python packages/contracts/scripts/generate.py --check`; unknown numeric values are `null`, never 0.
-- [ ] Library: four frameworks ship as YAML under `packages/core/neurosphere_core/compliance/library/`; every control carries `control_id`, a short paraphrased title, `source_url`, `source_retrieved` (date) and `framework_version`; a loader rejects duplicates, unknown statuses and a mapping that names an unknown control or evidence source; a test fails when `designed`/`implemented_tested` support cites a repo path that does not exist.
-- [ ] Vocabulary: support statuses are exactly the PRP-23 six; observation statuses are `observed | partial | unavailable | not_collected`; per-control summaries are `evidence_present | evidence_partial | no_evidence | customer_responsibility`. There is no pass, fail, score or percentage anywhere.
-- [ ] No-claim scan: a test scans the library, the Markdown runbook, every rendered bundle and the frontend strings and fails on affirmative claims (a planted "NeuroSphere is HIPAA compliant" fails; "does not determine compliance" passes), modelled on `tests/compliance/test_control_mapping.py:89-220`; the disclaimer fragment `not FedRAMP authorized; the authorizing official decides` appears in the Markdown bundle and the runbook.
-- [ ] Sources: five read-only `EvidenceSource` adapters (catalog ownership, audit-chain integrity, HITL decisions, evaluation results, cost attribution) return counts, timestamps and ids only (no entity bodies, no prompts, no principal names); a missing store yields `unavailable` with a reason code, a source that cannot count yields `not_collected`, never 0.
-- [ ] Bundle: given a domain and framework, the builder returns an `EvidenceBundle` with per-control support, observations and summary, a collection window, a library version and a sha256 over the canonical JSON; the same inputs and clock give identical bytes (golden test); the Markdown rendering lists the same facts.
-- [ ] API: `GET /api/v1/compliance/frameworks`, `/frameworks/{framework_id}`, `/domains/{domain}/bundle?framework_id=` and `/domains/{domain}/bundle/export?framework_id=&format=json|md` require `evidence.read` on the named domain (403 and a denial record otherwise, 503 when a dependency is down), derive the customer only from the server scope, and record an allowed-read audit entry (PRP-48 `audited_read`) naming domain, framework and digest.
+- [x] Contracts: `packages/contracts/schemas/compliance/v1/` defines `ControlFramework`, `Control`, `ControlMapping`, `EvidenceObservation` and `EvidenceBundle` with examples; generated Python and TS bindings pass `python packages/contracts/scripts/generate.py --check`; unknown numeric values are `null`, never 0.
+- [x] Library: four frameworks ship as YAML under `packages/core/neurosphere_core/compliance/library/`; every control carries `control_id`, a short paraphrased title, `source_url`, `source_retrieved` (date) and `framework_version`; a loader rejects duplicates, unknown statuses and a mapping that names an unknown control or evidence source; a test fails when `designed`/`implemented_tested` support cites a repo path that does not exist.
+- [x] Vocabulary: support statuses are exactly the PRP-23 six; observation statuses are `observed | partial | unavailable | not_collected`; per-control summaries are `evidence_present | evidence_partial | no_evidence | customer_responsibility`. There is no pass, fail, score or percentage anywhere.
+- [x] No-claim scan: a test scans the library, the Markdown runbook, every rendered bundle and the frontend strings and fails on affirmative claims (a planted "NeuroSphere is HIPAA compliant" fails; "does not determine compliance" passes), modelled on `tests/compliance/test_control_mapping.py:89-220`; the disclaimer fragment `not FedRAMP authorized; the authorizing official decides` appears in the Markdown bundle and the runbook.
+- [x] Sources: five read-only `EvidenceSource` adapters (catalog ownership, audit-chain integrity, HITL decisions, evaluation results, cost attribution) return counts, timestamps and ids only (no entity bodies, no prompts, no principal names); a missing store yields `unavailable` with a reason code, a source that cannot count yields `not_collected`, never 0.
+- [x] Bundle: given a domain and framework, the builder returns an `EvidenceBundle` with per-control support, observations and summary, a collection window, a library version and a sha256 over the canonical JSON; the same inputs and clock give identical bytes (golden test); the Markdown rendering lists the same facts.
+- [x] API: `GET /api/v1/compliance/frameworks`, `/frameworks/{framework_id}`, `/domains/{domain}/bundle?framework_id=` and `/domains/{domain}/bundle/export?framework_id=&format=json|md` require `evidence.read` on the named domain (403 and a denial record otherwise, 503 when a dependency is down), derive the customer only from the server scope, and record an allowed-read audit entry (PRP-48 `audited_read`) naming domain, framework and digest.
 - [ ] Page: `/compliance` lists frameworks, picks a readable domain, shows the control table with support status and evidence summary, and downloads the bundle; `/compliance/control` shows one control, its source link and observations; loading, empty, error and forbidden states exist; strings pass the no-claim scan; axe has zero serious or critical violations in light, dark and high-contrast; Docker-only visual baselines exist.
-- [ ] Route inventories, manifest, nav, route samples and mock handlers are updated (Tier 2 lines only); `services/api/openapi.json` and `docs/reference/**` are regenerated at close-out.
+- [x] Route inventories, manifest, nav, route samples and mock handlers are updated (Tier 2 lines only); `services/api/openapi.json` and `docs/reference/**` are regenerated at close-out.
 - PRP exit: an auditor can pick a domain and a framework, see which controls have catalog, audit, HITL, evaluation and cost evidence and which are the customer's responsibility, and download a deterministic bundle, with no sentence that says the estate is compliant.
 
 ## Clarifications (decided)
@@ -244,20 +246,21 @@ FINRA mapping; attestations, sign-off, history or scheduled bundles; auto-remedi
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | prp-56-compliance-evidence | five schemas, examples, bindings, tests/contracts green |
+| 2 | merged | prp-56-compliance-evidence | library: nist_ai_rmf 19, sr_11_7 8, hipaa 13, omb 8 controls |
+| 3 | merged | prp-56-compliance-evidence | five sources + claims scanner |
+| 4 | merged | prp-56-compliance-evidence | bundle, renderer, golden |
+| 5 | merged | prp-56-compliance-evidence | router, deps, 17 API tests; audit record names domain + control count (see deviations) |
+| 6 | merged | prp-56-compliance-evidence | pages, hooks, strings, mock, 14 vitest tests |
+| 7 | merged | prp-56-compliance-evidence | Tier-2 lines added; compliance e2e 8 passed, a11y/keyboard/aria rows for both routes passed on the mock API; visual baselines OPEN (Docker only) |
+| 8 | merged | prp-56-compliance-evidence | runbook, nav, Tier-3 regeneration, changelog fragment and close-out done at merge |
 
 ## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
-- Operator product check (can an operator use this without editing files or calling raw APIs?):
+- Date, PR number, merge commit: 2026-11-16, PR #308 (squash; the merge commit is the main tip after merge).
+- Deviations: the allowed-read audit record names the domain and control count rather than the digest (PRP-48 `audited_read` shape). The Page acceptance box is left unticked because the Docker-only visual baselines were not generated. The manifest-count assertions in `services/api/tests/runtime_routes/test_manifest_routes_serve.py` and `tests/integration/real_stack/test_manifest_routes.py` were raised from 47 to 49 for the two new routes (outside the declared Tier-2 list).
+- Descoped items: FINRA mapping, attestations, history and scheduled bundles (as planned). No `[serial-after]` items existed.
+- OPEN gates: visual baselines (Docker only); live read of a hosted bundle (PRP-64 / PRP-58). No live or paid call was made.
+- Env vars for the operator: none new.
+- Controls in the library: NIST AI RMF 19, SR 11-7 8, HIPAA 13, OMB M-25-21 8.
+- Follow-up issues filed: none filed by this run. Reviewer follow-ups: (1) `HitlDecisionsSource` counts executed and failed items as `decided_approved`; a failed execution is not necessarily an approval, so consider a separate measure. (2) `/frameworks` and `/frameworks/{id}` require `evidence.read` but are not domain-scoped; this is fine for static library metadata, and the runbook should state it. (3) `CostAttributionSource.list_entries` loads all customer entries in the window before applying the cap, so the bound is applied after the read.
+- Operator product check (can an operator use this without editing files or calling raw APIs?): yes for an auditor holding `evidence.read` on a domain (page, control detail, bundle download). Admin does not hold `evidence.read` and does not get the page (ASSUMPTION, clarification 4).

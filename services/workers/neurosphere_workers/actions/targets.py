@@ -78,14 +78,20 @@ def resolve_connector(
     table: Mapping[str, str],
     action_kind: str,
     target_kind: str | None = None,
+    *,
+    target_key: str | None = None,
 ) -> WriteConnector:
-    """The connector that executes ``action_kind`` on ``target_kind``, or unavailable."""
+    """The connector that executes ``action_kind`` on ``target_kind``, or unavailable.
+
+    ``target_key`` is the intent's domain id (PRP-54): the registry may hold one connector of
+    a kind per domain. Without a registered connector for that domain the intent is advisory.
+    """
     name = connector_name(table, action_kind, target_kind)
     if name is None:
         raise _unavailable("no write connector is mapped to this action kind")
-    if not registry.supports(name, action_kind):
+    if not registry.supports(name, action_kind, target_key=target_key):
         raise _unavailable("the mapped connector is not a write target for this action")
-    connector = registry.get(name)
+    connector = registry.get(name, target_key=target_key)
     if connector.advisory or connector.manifest.advisory:
         raise _unavailable("the mapped connector is advisory")
     return connector
