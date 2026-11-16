@@ -46,12 +46,12 @@ Out of scope: any tool that reads interaction content (decision GD-3; PRP-104's 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | May content reach the copilot or MCP | Yes for investigators; no | ASSUMPTION (GD-3, recommended default): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star |
+| 1 | May content reach the copilot or MCP | Yes for investigators; no | Decided by the owner 2026-11-16 (GD-3): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star |
 | 2 | Permission per tool | Several | `list_policies`, `list_violations`, `explain_violation`: `govpolicy.read` (PRP-105); `search_interactions`: `data.read` (PRP-104's metadata route permission); `get_governance_trail`: `audit.read` (PRP-109); draft tools: `action.propose` |
 | 3 | Principal pseudonyms in tool results | Include; exclude | ASSUMPTION: exclude; the explorer UI shows them to people, the model does not need them |
 | 4 | Exception "draft" | Action intent; HITL request | HITL request through PRP-105 (exceptions are not executor kinds); the reviewer decides in the review queue |
-| 5 | MCP audit | Governance tools only; every MCP tool | ASSUMPTION (GD-25, recommended default): every MCP tool call is audited (`mcp.tool_call`), not only the governance tools. Here: one observer (no MCP call is audited today; the cost is one record per call) |
-| 6 | Enforcement default | `audit`; `enforce` | ASSUMPTION (GD-7, recommended default): `audit` for every policy and point; `enforce` only by an approved action, per point. Here: the mode-change draft tool proposes it through the generic actions route (GD-44), never applies it |
+| 5 | MCP audit | Governance tools only; every MCP tool | Decided by the owner 2026-11-16 (GD-25): every MCP tool call is audited (`mcp.tool_call`), not only the governance tools. Here: one observer (no MCP call is audited today; the cost is one record per call) |
+| 6 | Enforcement default | `audit`; `enforce` | Decided by the owner 2026-11-16 (GD-7): `audit` for every policy and point; `enforce` only by an approved action, per point. Here: the mode-change draft tool proposes it through the generic actions route (GD-44), never applies it |
 | 7 | Groundedness cases | Add to PRP-80's set; own file | Own file `tests/evals/copilot_governance/cases.yaml` (PRP-80 ships later, W31, and owns its 100-question set) |
 
 ## Context manifest

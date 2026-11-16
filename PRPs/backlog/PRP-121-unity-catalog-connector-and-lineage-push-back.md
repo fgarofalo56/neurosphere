@@ -44,14 +44,14 @@ Out of scope: the Purview read connector, label mapping, precedence and banners 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | ASSUMPTION (GD-11, recommended default): steward-curated value (locked) over customer label over NeuroSphere inference | as PRP-120 | Applied to Unity tags by PRP-120's resolver unchanged |
-| 2 | When push-back is enabled per target | When create works; when create, read-back and delete are all verified | ASSUMPTION (GD-35, recommended default): all three verified; without read-back there is no verify and without delete there is no rollback, so the executor contract cannot be honoured |
+| 1 | Decided by the owner 2026-11-16 (GD-11): steward-curated value (locked) over customer label over NeuroSphere inference | as PRP-120 | Applied to Unity tags by PRP-120's resolver unchanged |
+| 2 | When push-back is enabled per target | When create works; when create, read-back and delete are all verified | Decided by the owner 2026-11-16 (GD-35): all three verified; without read-back there is no verify and without delete there is no rollback, so the executor contract cannot be honoured |
 | 3 | Which edges are exported | All presented edges; asserted and curated only | ASSUMPTION: `asserted` and `curated` by default; `inferred` only with the per-draft flag `include_inferred`, shown in the dry run as inferred |
 | 4 | One kind, two targets | Two kinds; one kind with a target override | One kind `lineage_push` (PRP-110); `ACTION_CONNECTORS["lineage_push"]` names the Unity connector and `TARGET_KIND_CONNECTORS` routes target entity type `purview_lineage` to the Purview connector (ASSUMPTION: target entity types `unity_lineage`, `purview_lineage`, used by no other kind) |
 | 5 | Credentials | Stored secret; workload identity | Workload identity as every write target today (`runtime/builders/write_targets.py` docstring); a PRP-42 credential reference only if item 1 shows the API needs one; never a value in settings or logs |
 | 6 | Least privilege | One broad role; separate read and write | Separate: the read connector's identity never holds the write privilege; exact privileges written from documentation in item 1; granting them is an operator step |
 | 7 | Self-approval (GD-20: who approves each governance action kind) | Default review policy; pinned | Pinned: `lineage_push` is added to PRP-108's `PINNED_NO_SELF_APPROVAL` with one line |
-| 8 | Priority | P1; P2 | ASSUMPTION (GD-42, recommended default): PRP-120 (Purview) and PRP-121 (Unity Catalog) are P1, because the original product description named both. Here: `priority: P1` in this PRP's frontmatter |
+| 8 | Priority | P1; P2 | Decided by the owner 2026-11-16 (GD-42): PRP-120 (Purview) and PRP-121 (Unity Catalog) are P1, because the original product description named both. Here: `priority: P1` in this PRP's frontmatter |
 
 ## Context manifest
 

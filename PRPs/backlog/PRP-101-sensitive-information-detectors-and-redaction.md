@@ -44,12 +44,12 @@ Out of scope: running detectors on the ingest path or anywhere else (PRP-103); e
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Reverse the metadata-only decision | keep; reverse for opt-in capture | ASSUMPTION (GD-14, approved in principle 2026-11-16): the 2026-11-06 metadata-only decision is reversed for opt-in capture only; capture stays OFF by default and "bodies disabled by default" stays true; the orchestrator records it in the decision log. Here: the log is `docs/DECISIONS-LOG.md` |
-| 2 | Detector set at launch | deterministic set; add a model detector | ASSUMPTION (GD-6, recommended default): deterministic detector set (design section 2.2) plus customer dictionaries; no model detector |
-| 3 | What is never stored | redact credentials only; redact all | ASSUMPTION (GD-4, recommended default): credentials and secrets always redacted; payment card numbers redacted by default; other detected types redacted or kept per capture policy, default redact. Here: the credential rule is not configurable; the card default is configurable by capture policy |
+| 1 | Reverse the metadata-only decision | keep; reverse for opt-in capture | Decided by the owner 2026-11-16 (GD-14): the 2026-11-06 metadata-only decision is reversed for opt-in capture only; capture stays OFF by default and "bodies disabled by default" stays true; the orchestrator records it in the decision log. Here: the log is `docs/DECISIONS-LOG.md` |
+| 2 | Detector set at launch | deterministic set; add a model detector | Decided by the owner 2026-11-16 (GD-6): deterministic detector set (design section 2.2) plus customer dictionaries; no model detector |
+| 3 | What is never stored | redact credentials only; redact all | Decided by the owner 2026-11-16 (GD-4): credentials and secrets always redacted; payment card numbers redacted by default; other detected types redacted or kept per capture policy, default redact. Here: the credential rule is not configurable; the card default is configurable by capture policy |
 | 4 | Placeholder shape | opaque `[REDACTED]`; typed; typed plus hash | Typed, PRP-99 grammar `[[ns-redacted:<detected_category>]]`; no hash, length or partial digits (design 2.1) |
 | 5 | Bounded customer regex without a new dependency | `regex` package with timeout; static check plus chunking | ASSUMPTION: Python `re` with a static safety check, a pattern length cap and fixed-size chunks; budget exhaustion fails the part closed. A dependency would need the W21 lockfile owner (PRP-102) and is not taken |
-| 6 | Quality gate | report only; gate some detectors | ASSUMPTION (GD-19, recommended default): only the credential detectors and Luhn-valid payment cards are gated at recall 1.0 on the synthetic corpus; the other detectors report measured recall without a gate |
+| 6 | Quality gate | report only; gate some detectors | Decided by the owner 2026-11-16 (GD-19): only the credential detectors and Luhn-valid payment cards are gated at recall 1.0 on the synthetic corpus; the other detectors report measured recall without a gate |
 | 7 | Unicode evasion | detect on raw text; normalize first | ASSUMPTION: NFKC normalization and removal of zero-width characters before detection; the redacted output is the normalized text |
 | 8 | Rewrite the four existing rule sets | consolidate now; follow-up | Follow-up issue (design PRP-101 scope) |
 
@@ -209,7 +209,7 @@ None. No external call is made; the model-based detector is not built (GD-6).
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 1-3 are GD assumptions, rows 5-7 are ASSUMPTIONS for plan approval)
+- [ ] All clarification questions are decided, not guessed (rows 1-3 are GD decisions made 2026-11-16, rows 5-7 are ASSUMPTIONS for plan approval)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |

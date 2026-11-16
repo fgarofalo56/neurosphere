@@ -46,14 +46,14 @@ Out of scope: capture and storage (PRP-103, PRP-102); copilot or MCP access to c
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Reverse metadata-only | keep; reverse for opt-in | ASSUMPTION (GD-14, approved in principle 2026-11-16): the 2026-11-06 metadata-only decision is reversed for opt-in capture only; capture stays OFF by default and "bodies disabled by default" stays true; the orchestrator records it in the decision log |
-| 2 | Who may read content | security auditor; admin; new role | ASSUMPTION (GD-2, recommended default): new privileged, time-bound role `interaction_investigator`; admin does not hold `interaction.read`; purpose required on every read. Here: admin can assign the role (PRP-99 added it, empty) but holds neither permission |
-| 3 | Content to copilot or MCP | allowed for investigators; no | ASSUMPTION (GD-3, recommended default): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star |
+| 1 | Reverse metadata-only | keep; reverse for opt-in | Decided by the owner 2026-11-16 (GD-14): the 2026-11-06 metadata-only decision is reversed for opt-in capture only; capture stays OFF by default and "bodies disabled by default" stays true; the orchestrator records it in the decision log |
+| 2 | Who may read content | security auditor; admin; new role | Decided by the owner 2026-11-16 (GD-2): new privileged, time-bound role `interaction_investigator`; admin does not hold `interaction.read`; purpose required on every read. Here: admin can assign the role (PRP-99 added it, empty) but holds neither permission |
+| 3 | Content to copilot or MCP | allowed for investigators; no | Decided by the owner 2026-11-16 (GD-3): captured content is not shown to the copilot or MCP; tools see metadata and findings only; revisit after the north star |
 | 4 | How the purpose is audited | free text; code | PRP-99 `InteractionAccessPurpose` code plus optional case reference; bound into the record's `state_digest` (the audit contract has no purpose field) and repeated in a metadata access entry on the interaction index |
 | 5 | Audit failure on a content read | fail open like `audited_read`; fail closed | Fail closed: append the record first through the audit repository, decrypt only after it succeeds (`run_audited_mutation` style, `audit/repository.py:247-270`) |
 | 6 | Metadata permission | `interaction.read`; `data.read` | `data.read` in the domain (design: "metadata listing without the content permission"); an investigator who needs the list also holds a viewer assignment there |
-| 7 | Export limits | other limits | ASSUMPTION (GD-17, recommended default): an interaction export holds at most 500 interactions from one domain, its bundle expires after 24 hours, and an investigator has at most 5 open exports. Here: 500 follows the lifecycle `MAX_EXPORT_RECORDS` precedent (`lifecycle/models.py:21`) |
-| 8 | Maximum investigator assignment | existing privileged rule only; a cap | ASSUMPTION (GD-16, recommended default): an `interaction_investigator` assignment longer than 7 days is refused (`role_assignment_too_long`) |
+| 7 | Export limits | other limits | Decided by the owner 2026-11-16 (GD-17): an interaction export holds at most 500 interactions from one domain, its bundle expires after 24 hours, and an investigator has at most 5 open exports. Here: 500 follows the lifecycle `MAX_EXPORT_RECORDS` precedent (`lifecycle/models.py:21`) |
+| 8 | Maximum investigator assignment | existing privileged rule only; a cap | Decided by the owner 2026-11-16 (GD-16): an `interaction_investigator` assignment longer than 7 days is refused (`role_assignment_too_long`) |
 | 10 | Who binds PRP-105's `InteractionFindingReader` | PRP-103; this PRP; PRP-109 | This PRP, item 8, and nobody else: PRP-105 (W21) left the port unbound and named binding functions for it; this is the first wave where both PRP-105 and the index query (PRP-102) exist next to the explorer that owns read semantics |
 | 9 | Replay switch | edit `builders/data.py:576`; derive | `get_payload_policy` derives `allow_bodies` from the presence of the explorer on `app.state`; `builders/data.py` is not edited |
 
@@ -277,7 +277,7 @@ None run here. Reading content on the hosted app (synthetic domain) is part of P
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 1-3, 7 and 8 are GD assumptions)
+- [x] All clarification questions are decided, not guessed (rows 1-3, 7 and 8 are GD decisions made 2026-11-16)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |

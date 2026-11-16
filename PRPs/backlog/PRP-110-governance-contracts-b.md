@@ -55,11 +55,11 @@ Out of scope: connectors, stores, containers, workers, routes and UI that use th
 | 4 | Over-privilege and shadow-AI findings | new schema; recommendation kinds | Recommendation kinds with the PRP-70 rule (`advisory: true`, `method: rule`, no `score`); `unused_entitlement` and `excess_write_entitlement` are ASSUMPTIONS added beyond the design list because PRP-119 (W29) has no contracts owner |
 | 5 | Registration check placement | `risk/v1`; `policy/v1` | `policy/v1` beside the decision contracts; the check is a policy read |
 | 6 | Free text in risk documents | none; bounded | Bounded customer-authored text in impact assessments and incident notes (max 8000 and 2000 characters); never captured content, never a NeuroSphere verdict |
-| 7 | Label precedence | as design | ASSUMPTION (GD-11, recommended default): steward-curated value (locked) over customer label over NeuroSphere inference. Here: recorded in `ExternalLabel` and `LabelMapping` descriptions; PRP-120 implements (GD-49 for the missing field lock) |
-| 8 | Risk tier wording | as design | ASSUMPTION (GD-15, recommended default): the risk tier is the customer's recorded determination with the questionnaire as evidence; the product never states a legal classification. Here: `RiskTierDetermination` requires `determined_by` and its description says so |
-| 9 | Estate connector order | as design | ASSUMPTION (GD-9, recommended default): estate connector order M365 Copilot and Copilot Studio, GitHub Copilot, ChatGPT Enterprise, Anthropic, Cursor; Entra shadow AI last. Here: `UsageReport.source_system` lists all of them now; order is the connector PRPs' |
+| 7 | Label precedence | as design | Decided by the owner 2026-11-16 (GD-11): steward-curated value (locked) over customer label over NeuroSphere inference. Here: recorded in `ExternalLabel` and `LabelMapping` descriptions; PRP-120 implements (GD-49 for the missing field lock) |
+| 8 | Risk tier wording | as design | Decided by the owner 2026-11-16 (GD-15): the risk tier is the customer's recorded determination with the questionnaire as evidence; the product never states a legal classification. Here: `RiskTierDetermination` requires `determined_by` and its description says so |
+| 9 | Estate connector order | as design | Decided by the owner 2026-11-16 (GD-9): estate connector order M365 Copilot and Copilot Studio, GitHub Copilot, ChatGPT Enterprise, Anthropic, Cursor; Entra shadow AI last. Here: `UsageReport.source_system` lists all of them now; order is the connector PRPs' |
 | 10 | Entra Agent ID | model now; verify first | `identity_kind` value `entra_agent_id` exists but is documented "used only if PRP-118's verification finds a documented API" (U-9) |
-| 11 | CI caller role for the registration check | `ci` role value; read-class roles | ASSUMPTION (GD-45, recommended default): no dedicated CI role: `registration.check` is granted to the read-class roles (viewer, analyst, domain_steward, admin). Here: no role value is added; if the owner chooses a `ci` role, the next contracts owner adds it |
+| 11 | CI caller role for the registration check | `ci` role value; read-class roles | Decided by the owner 2026-11-16 (GD-45): no dedicated CI role: `registration.check` is granted to the read-class roles (viewer, analyst, domain_steward, admin). Here: no role value is added; if the owner chooses a `ci` role, the next contracts owner adds it |
 | 12 | Late event classes and dataset reference | leave to consumers; add here | Added here because W26 to W32 have no contracts owner: three `NotificationEventClass` values for PRP-114 and PRP-115, and an optional `SafetyEvaluationRecord.dataset` for PRP-131. Attestation campaigns stay core-local in PRP-130 (no schema) |
 
 ## Context manifest
@@ -248,7 +248,7 @@ Connectors, stores, routes, workers, UI and core catalog models. No legal risk c
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 3, 4 and the GD rows are ASSUMPTIONS for plan approval)
+- [ ] All clarification questions are decided, not guessed (rows 3 and 4 are ASSUMPTIONS for plan approval; the GD rows were decided 2026-11-16)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
