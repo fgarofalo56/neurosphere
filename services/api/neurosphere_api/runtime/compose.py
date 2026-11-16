@@ -35,6 +35,7 @@ from neurosphere_core.cloud import Settings
 from neurosphere_core.stores import CONTAINERS, ensure_local_containers
 
 from neurosphere_api.authz.routes import verify_route_permissions
+from neurosphere_api.deprecation import install_alias_headers
 from neurosphere_api.health.probes import DependencyProbe, classify, probes_from_env
 from neurosphere_api.runtime.builders import (
     BuildContext,
@@ -179,6 +180,7 @@ def compose_app(
     """
     env = dict(os.environ if environ is None else environ)
     install_cors(app)
+    install_alias_headers(app)
     registry = ComponentRegistry()
     state = CompositionState(
         app=app,
