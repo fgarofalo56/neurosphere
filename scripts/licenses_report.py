@@ -151,6 +151,10 @@ ALIASES = {
     "psfl": "PSF-2.0",
     "mozilla public license 2.0 (mpl 2.0)": "MPL-2.0",
     "mpl-2.0": "MPL-2.0",
+    # python-dateutil 2.9.0.post0: LICENSE is Apache-2.0 with BSD-3-Clause for earlier
+    # contributions and the classifiers list both (read from the installed dist, PRP-62).
+    # AND is the conservative reading: both must be permissive.
+    "dual license": "Apache-2.0 AND BSD-3-Clause",
 }
 CLASSIFIER_MAP = {
     "License :: OSI Approved :: MIT License": "MIT",

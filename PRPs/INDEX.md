@@ -10,10 +10,9 @@ _none_
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | PRP-62-aws-bedrock-reference-connector (backlog) | sonnet / sonnet | required |
+| [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector | - | sonnet / sonnet | required |
 | [PRP-66-operations-and-sign-off-gates](backlog/PRP-66-operations-and-sign-off-gates.md) | P1 | 54 | PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening | PRP-67-hosted-environment-hardening (backlog) | sonnet / sonnet | required |
 | [PRP-67-hosted-environment-hardening](backlog/PRP-67-hosted-environment-hardening.md) | P2 | 55 | PRP-58-hosted-data-path-and-environment-hardening | - | sonnet / sonnet | required |
-| [PRP-62-aws-bedrock-reference-connector](backlog/PRP-62-aws-bedrock-reference-connector.md) | P3 | 50 | PRP-42-connector-configuration-and-credential-references | - | sonnet / sonnet | required |
 | [PRP-69-mcp-private-network-servers](backlog/PRP-69-mcp-private-network-servers.md) | P3 | 57 | - | - | opus / sonnet | required |
 
 ## Blocked
@@ -36,6 +35,7 @@ _none_
 | [PRP-59-deploy-and-government-follow-ups](shipped/PRP-59-deploy-and-government-follow-ups.md) | 2026-11-16 | #307 |
 | [PRP-60-search-indexing-hardening](shipped/PRP-60-search-indexing-hardening.md) | 2026-11-16 | #311 |
 | [PRP-61-configuration-detections-and-shadow-ai-discovery](shipped/PRP-61-configuration-detections-and-shadow-ai-discovery.md) | 2026-11-16 | #318 |
+| [PRP-62-aws-bedrock-reference-connector](shipped/PRP-62-aws-bedrock-reference-connector.md) | 2026-11-16 | #317 |
 | [PRP-63-delivery-pipeline-to-hosted](shipped/PRP-63-delivery-pipeline-to-hosted.md) | 2026-11-16 | #316 |
 | [PRP-11-analytics-adapters](shipped/PRP-11-analytics-adapters.md) | 2026-11-15 | #275 |
 | [PRP-15-recommendations-engine](shipped/PRP-15-recommendations-engine.md) | 2026-11-15 | #281 |
