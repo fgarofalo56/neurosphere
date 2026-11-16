@@ -133,11 +133,11 @@ def load() -> list[dict]:
         for path in sorted((PRPS / state).glob("PRP-*.md")):
             text = path.read_text(encoding="utf-8")
             fm = frontmatter(text)
-            title = re.search(r"^# (PRP-\d{2}: .+)$", text, re.M)
+            title = re.search(r"^# (PRP-\d{2,3}: .+)$", text, re.M)
             stack = bool(re.search(r"holds the compose stack", text, re.I))
             prps.append(
                 {
-                    "id": path.name[:6],
+                    "id": re.match(r"PRP-\d+", path.name).group(0),  # type: ignore[union-attr]
                     "stem": path.stem,
                     "rel": f"{state}/{path.name}",
                     "title": title.group(1) if title else path.stem,
@@ -147,9 +147,9 @@ def load() -> list[dict]:
                     "model": fm.get("model", ""),
                     "review": fm.get("review", ""),
                     "branch": fm.get("branch", ""),
-                    "deps": re.findall(r"PRP-\d{2}", fm.get("depends_on", "")),
+                    "deps": re.findall(r"PRP-\d{2,3}", fm.get("depends_on", "")),
                     "issues": re.findall(r"\d+", fm.get("issues", "")),
-                    "serial": sorted(set(re.findall(r"\[serial-after: (PRP-\d{2})\]", text))),
+                    "serial": sorted(set(re.findall(r"\[serial-after: (PRP-\d{2,3})\]", text))),
                     "stack": stack,
                     "own": ownership(text),
                 }
@@ -210,7 +210,7 @@ def render(prps: list[dict]) -> str:
         for p in sorted(waves[wave], key=lambda p: p["order"]):
             lines.append(f'    P{p["id"][4:]}["{p["id"]}"]')
         lines.append("  end")
-    for p in sorted(prps, key=lambda p: p["id"]):
+    for p in sorted(prps, key=lambda p: int(p["id"][4:])):
         for d in p["deps"]:
             if d in ids:
                 lines.append(f"  P{d[4:]} --> P{p['id'][4:]}")

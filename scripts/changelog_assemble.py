@@ -34,7 +34,7 @@ SECTION_ORDER: tuple[str, ...] = _release.SECTION_ORDER
 UNRELEASED_RE: re.Pattern[str] = _release.UNRELEASED_RE
 NEXT_HEADING_RE: re.Pattern[str] = _release.NEXT_HEADING_RE
 
-NAME_RE = re.compile(r"^(PRP-\d{2}-[a-z0-9-]+|issue-\d+)\.md$")
+NAME_RE = re.compile(r"^(PRP-\d{2,3}-[a-z0-9-]+|issue-\d+)\.md$")
 HEADING_RE = re.compile(r"^### (.+?)[ \t]*$")
 ITEM_RE = re.compile(r"^\s*(?:[-*+]|\d+\.)\s+\S")
 

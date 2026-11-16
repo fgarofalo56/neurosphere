@@ -32,8 +32,8 @@ MASTER = PRPS / "PRP-MASTER-neurosphere.md"
 BEGIN = "<!-- prp-status:begin -->"
 END = "<!-- prp-status:end -->"
 STATES = ("backlog", "active", "shipped")
-FILE_RE = re.compile(r"^PRP-(\d{2})-([a-z0-9-]+)\.md$")
-PRP_REF_RE = re.compile(r"\bPRP-(\d{2})\b")
+FILE_RE = re.compile(r"^PRP-(\d{2,3})-([a-z0-9-]+)\.md$")
+PRP_REF_RE = re.compile(r"\bPRP-(\d{2,3})\b")
 
 
 @dataclass
@@ -69,7 +69,7 @@ def parse_depends(raw: str) -> tuple[list[str], list[str]]:
     ids = PRP_REF_RE.findall(raw)
     # A dependency is written as the full file stem (PRP-01-contracts-and-schemas);
     # drop the slug with the id so it is not mistaken for a manual gate.
-    rest = re.sub(r"\bPRP-\d{2}(?:-[a-z0-9-]+)?", "", raw)
+    rest = re.sub(r"\bPRP-\d{2,3}(?:-[a-z0-9-]+)?", "", raw)
     manual = [
         token.strip(" +[]")
         for token in re.split(r"[,+;]", rest)
@@ -110,7 +110,7 @@ def scan() -> dict[str, Prp]:
 def start_rank(prp: Prp) -> tuple[str, str, str]:
     """Rank like `prp_index.py next`: an explicit priority (P0..P3) first, then wave, then id."""
     priority = prp.priority.upper()
-    return (priority if re.fullmatch(r"P[0-3]", priority) else "P9", prp.wave, prp.pid)
+    return (priority if re.fullmatch(r"P[0-3]", priority) else "P9", prp.wave, prp.pid.zfill(3))
 
 
 def render(prps: dict[str, Prp]) -> str:
@@ -141,7 +141,7 @@ def render(prps: dict[str, Prp]) -> str:
         "| PRP | Status | Wave | Depends on | Ready | Model | Review | Note |",
         "|---|---|---|---|---|---|---|---|",
     ]
-    for p in sorted(prps.values(), key=lambda x: x.pid):
+    for p in sorted(prps.values(), key=lambda x: int(x.pid)):
         unmet = [d for d in p.depends if prps.get(d, Prp("", "", "", Path())).state != "shipped"]
         if p.state == "shipped":
             ready = "done"
