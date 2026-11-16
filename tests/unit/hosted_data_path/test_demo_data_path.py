@@ -152,11 +152,7 @@ def test_main_creates_no_wide_role_assignment_for_the_connectors(main_arm: dict[
 
 
 def test_generated_params_cover_the_new_and_pilot_parameters() -> None:
-    sys.path.insert(0, str(GATES))
-    try:
-        import _hosted_demo_common as cm
-    finally:
-        sys.path.remove(str(GATES))
+    cm = _hosted_demo().cm
     for name in (*NEW_PARAMS, *PILOT_PARAMS):
         assert name in cm.GENERATED_PARAMS
     text = MAIN.read_text(encoding="utf-8")
