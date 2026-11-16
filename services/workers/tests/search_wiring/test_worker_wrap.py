@@ -8,7 +8,6 @@ from typing import Any, cast
 import pytest
 from neurosphere_core.clients import ClientLifetime
 from neurosphere_core.search.write_hook import IndexingCatalogRepository
-from neurosphere_workers.runtime.factories import RuntimeConfig
 from neurosphere_workers.runtime.search_wiring import WorkerSearchSettings, wrap_catalog_for_search
 
 NS = "synthco"
@@ -35,14 +34,15 @@ class FakeBackend:
         return [SimpleNamespace(succeeded=True) for _ in documents]
 
 
-def _cfg(cloud: str = "commercial") -> RuntimeConfig:
-    return cast(RuntimeConfig, SimpleNamespace(cloud=cloud, settings=SimpleNamespace()))
-
-
 def _wrap(settings: WorkerSearchSettings, backend: FakeBackend | None) -> tuple[Any, Any]:
     repo = StubRepo()
     wrapped = wrap_catalog_for_search(
-        _cfg(), ClientLifetime(), cast(Any, repo), backend=backend, settings=settings
+        "commercial",
+        cast(Any, SimpleNamespace()),
+        ClientLifetime(),
+        cast(Any, repo),
+        backend=backend,
+        settings=settings,
     )
     return repo, wrapped
 

@@ -16,21 +16,19 @@ Same ``NS_SEARCH_*`` names as the API. Authentication is the workload identity
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import Any, Final, Literal, cast
 
 from azure.identity.aio import DefaultAzureCredential
 from neurosphere_core.capabilities import CapabilityResult
 from neurosphere_core.catalog import CatalogRepository
 from neurosphere_core.clients.lifetime import ClientLifetime
+from neurosphere_core.cloud import CloudProfile
 from neurosphere_core.search.azure import azure_search_capability
 from neurosphere_core.search.azure.client import create_search_client
 from neurosphere_core.search.indexer import AzureIndexSink, CatalogIndexer
 from neurosphere_core.search.write_hook import IndexingCatalogRepository
 from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-if TYPE_CHECKING:
-    from neurosphere_workers.runtime.factories import RuntimeConfig
 
 __all__ = ["WorkerSearchSettings", "wrap_catalog_for_search"]
 
@@ -56,7 +54,8 @@ class WorkerSearchSettings(BaseSettings):
 
 
 def wrap_catalog_for_search(
-    cfg: RuntimeConfig,
+    cloud: str,
+    profile: CloudProfile,
     lifetime: ClientLifetime,
     repository: CatalogRepository,
     *,
@@ -75,7 +74,7 @@ def wrap_catalog_for_search(
     if search.provider != "azure" or not search.region:
         return repository
     try:
-        capability: CapabilityResult = azure_search_capability(cfg.cloud, search.region)
+        capability: CapabilityResult = azure_search_capability(cloud, search.region)
     except (ValidationError, ValueError):
         _log.warning("worker search region invalid; catalog writes are not indexed")
         return repository
@@ -85,13 +84,11 @@ def wrap_catalog_for_search(
     if backend is None:
         if not search.service:
             return repository
-        credential = lifetime.register(
-            DefaultAzureCredential(authority=cfg.settings.cloud_profile.login_host)
-        )
+        credential = lifetime.register(DefaultAzureCredential(authority=profile.login_host))
         try:
             backend = lifetime.register(
                 create_search_client(
-                    cfg.settings.cloud_profile,
+                    profile,
                     service=search.service,
                     index_name=search.index,
                     credential=credential,

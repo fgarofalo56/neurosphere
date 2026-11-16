@@ -129,11 +129,13 @@ async def test_explicit_remove_and_fixture_store() -> None:
     indexer = _indexer(repo, store)
     await indexer.refresh(SCOPE_A)
     assert len(store) == 2
-    assert await indexer.remove([_id("one")]) == 1
+    removed = await indexer.remove([_id("one")])
+    assert removed == 1
     assert len(store) == 1
     await store.delete(["not-there"])
     assert len(store) == 1
-    assert await indexer.remove([]) == 0
+    removed_none = await indexer.remove([])
+    assert removed_none == 0
 
 
 async def test_composite_and_azure_delete_use_encoded_keys() -> None:

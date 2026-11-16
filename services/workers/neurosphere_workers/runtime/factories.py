@@ -465,7 +465,8 @@ async def build_projections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
     source = ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime)))
     projection = CatalogProjection(
         repository=wrap_catalog_for_search(
-            cfg,
+            cfg.cloud,
+            cfg.settings.cloud_profile,
             lifetime,
             CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
         ),
@@ -1384,7 +1385,8 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
     poller = FoundryDiscoveryPoller(
         targets=targets,
         repository=wrap_catalog_for_search(
-            cfg,
+            cfg.cloud,
+            cfg.settings.cloud_profile,
             lifetime,
             CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
         ),
