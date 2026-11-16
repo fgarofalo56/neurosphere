@@ -4,33 +4,38 @@ Routers moved under ``/api/v1`` keep their old prefix for one release. :func:`re
 registers the router at the successor prefix, and its operations again at the old prefix through
 an alias router (same endpoints, same dependencies) that marks every operation ``deprecated`` in
 OpenAPI and adds the response headers
-``Deprecation: true``, ``Sunset: <HTTP-date>`` (RFC 8594) and
+``Deprecation: @<epoch>`` (RFC 9745), ``Sunset: <HTTP-date>`` (RFC 8594) and
 ``Link: <successor>; rel="successor-version"``. Handlers, dependencies and permissions are shared,
 so both forms authorize identically; the alias adds no permission and removes none.
 
-The headers are set on the dependency-injected ``Response``, so they are present on every
-response a handler produces. Error responses built by the app-level exception handlers (401, 403,
-422, 503) do not carry them.
+The headers are set on the dependency-injected ``Response`` (every response a handler produces)
+and by :func:`install_alias_headers`, an ASGI middleware keyed on the alias prefixes that
+:func:`register_with_alias` records, so error responses built by the app-level exception
+handlers (401, 403, 422, 503) carry them too. Both write identical values.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, MutableMapping
 from datetime import UTC, datetime
 from email.utils import format_datetime
-from typing import Final
+from typing import Any, Final
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.routing import APIRoute
 
 from neurosphere_api.routers import RouterRegistry
 
 __all__ = [
+    "ALIAS_SUCCESSORS",
+    "DEPRECATED_AT",
     "DEPRECATION_HEADER",
     "SUNSET",
     "SUNSET_AT",
+    "alias_headers",
     "deprecated_alias",
+    "install_alias_headers",
     "register_with_alias",
     "successor_path",
 ]
@@ -39,8 +44,12 @@ __all__ = [
 SUNSET_AT: Final = datetime(2027, 4, 30, tzinfo=UTC)
 #: ``Sunset`` header value: an IMF-fixdate (RFC 8594 section 3).
 SUNSET: Final = format_datetime(SUNSET_AT, usegmt=True)
-#: ``Deprecation`` header value, as fixed by the PRP-29 wire contract.
-DEPRECATION_HEADER: Final = "true"
+#: When the aliases were deprecated (ASSUMPTION: the PRP-29 release month; change here only).
+DEPRECATED_AT: Final = datetime(2026, 11, 1, tzinfo=UTC)
+#: ``Deprecation`` header value: an RFC 9745 structured-field date, ``@<epoch seconds>``.
+DEPRECATION_HEADER: Final = f"@{int(DEPRECATED_AT.timestamp())}"
+#: Alias prefix -> successor prefix, recorded by :func:`register_with_alias`.
+ALIAS_SUCCESSORS: Final[dict[str, str]] = {}
 
 # RFC 3986 pchar plus "/": anything else in the successor path is percent-encoded, so a request
 # path can never inject a header delimiter, a ">" or a control character into the Link value.
@@ -56,6 +65,67 @@ def successor_path(request_path: str, *, alias_prefix: str, successor_prefix: st
     return quote(successor_prefix + rest, safe=_PATH_SAFE)
 
 
+def alias_headers(
+    request_path: str, *, alias_prefix: str, successor_prefix: str
+) -> tuple[tuple[str, str], ...]:
+    """The three alias response headers for a request path (root path already stripped)."""
+    successor = successor_path(
+        request_path, alias_prefix=alias_prefix, successor_prefix=successor_prefix
+    )
+    return (
+        ("Deprecation", DEPRECATION_HEADER),
+        ("Sunset", SUNSET),
+        ("Link", f'<{successor}>; rel="successor-version"'),
+    )
+
+
+def _match_alias(path: str) -> str | None:
+    """The longest registered alias prefix of ``path`` (segment boundary), else ``None``."""
+    best: str | None = None
+    for alias in ALIAS_SUCCESSORS:
+        if (path == alias or path.startswith(alias + "/")) and (
+            best is None or len(alias) > len(best)
+        ):
+            best = alias
+    return best
+
+
+class _AliasHeadersMiddleware:
+    """Pure ASGI: adds the alias headers to every HTTP response on an alias path."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        path = str(scope.get("path", ""))
+        root = scope.get("root_path", "")
+        if isinstance(root, str) and root and path.startswith(root):
+            path = path[len(root) :]
+        alias = _match_alias(path)
+        if alias is None:
+            await self.app(scope, receive, send)
+            return
+        extra = alias_headers(path, alias_prefix=alias, successor_prefix=ALIAS_SUCCESSORS[alias])
+
+        async def send_with_headers(message: MutableMapping[str, Any]) -> None:
+            if message["type"] == "http.response.start":
+                names = {name.lower().encode("latin-1") for name, _ in extra}
+                headers = [(k, v) for k, v in message.get("headers", []) if k.lower() not in names]
+                headers.extend((n.lower().encode("latin-1"), v.encode("latin-1")) for n, v in extra)
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+def install_alias_headers(app: FastAPI) -> None:
+    """Install the alias-header middleware (error responses included) on ``app``."""
+    app.add_middleware(_AliasHeadersMiddleware)
+
+
 def _headers_dependency(
     alias_prefix: str, successor_prefix: str
 ) -> Callable[[Request, Response], Awaitable[None]]:
@@ -64,12 +134,10 @@ def _headers_dependency(
         root = request.scope.get("root_path", "")
         if isinstance(root, str) and root and path.startswith(root):
             path = path[len(root) :]
-        successor = successor_path(
+        for name, value in alias_headers(
             path, alias_prefix=alias_prefix, successor_prefix=successor_prefix
-        )
-        response.headers["Deprecation"] = DEPRECATION_HEADER
-        response.headers["Sunset"] = SUNSET
-        response.headers["Link"] = f'<{successor}>; rel="successor-version"'
+        ):
+            response.headers[name] = value
 
     return deprecated_path_headers
 
@@ -129,3 +197,4 @@ def register_with_alias(
         alias_prefix,
         deprecated_alias(router, alias_prefix=alias_prefix, successor_prefix=prefix),
     )
+    ALIAS_SUCCESSORS[alias_prefix.rstrip("/")] = prefix.rstrip("/")

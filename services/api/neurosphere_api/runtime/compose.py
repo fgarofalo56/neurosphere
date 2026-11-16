@@ -14,7 +14,10 @@
 4. wraps the lifespan: at startup, when a Cosmos client was built from settings, ``NS_ENV=local``
    runs ``ensure_local_containers`` on the emulator and every other env only checks that the
    declared containers exist (step ``cosmos_containers``; it never creates anything); then the
-   builders' startup hooks run. At shutdown the hooks run and the composition's clients close.
+   builders' startup hooks run. All of that runs in a BACKGROUND task (PRP-51): the step is
+   ``pending`` (blocking ``/readyz``) until it ends, and the lifespan waits at most
+   ``STARTUP_GRACE_SECONDS`` for it. At shutdown the task is cancelled, the hooks run and the
+   composition's clients close.
 
 It adds no route, so the exported OpenAPI document is unchanged.
 """
@@ -35,6 +38,7 @@ from neurosphere_core.cloud import Settings
 from neurosphere_core.stores import CONTAINERS, ensure_local_containers
 
 from neurosphere_api.authz.routes import verify_route_permissions
+from neurosphere_api.deprecation import install_alias_headers
 from neurosphere_api.health.probes import DependencyProbe, classify, probes_from_env
 from neurosphere_api.runtime.builders import (
     BuildContext,
@@ -44,13 +48,15 @@ from neurosphere_api.runtime.builders import (
     default_builders,
 )
 from neurosphere_api.runtime.cors import install_cors
-from neurosphere_api.runtime.overrides import CompositionOverrides
+from neurosphere_api.runtime.errors import StartupRefusedError
+from neurosphere_api.runtime.overrides import CompositionOverrides, refuse_overrides_outside_local
 from neurosphere_api.runtime.readiness import install_readiness
 from neurosphere_api.runtime.status import ComponentRegistry
 
 __all__ = [
     "CONTAINER_STEP",
     "CONTAINER_STEP_TIMEOUT_SECONDS",
+    "STARTUP_GRACE_SECONDS",
     "STATE_ATTRIBUTE",
     "compose_app",
 ]
@@ -58,6 +64,10 @@ __all__ = [
 STATE_ATTRIBUTE: Final = "composition"
 CONTAINER_STEP: Final = "cosmos_containers"
 CONTAINER_STEP_TIMEOUT_SECONDS: Final = 60.0
+#: How long the lifespan lets the background startup run before accepting traffic. Fast
+#: (emulator, fake) steps finish inside it so the first request sees the settled state; a
+#: hung step is never waited for beyond this.
+STARTUP_GRACE_SECONDS: Final = 0.5
 
 _log = logging.getLogger("neurosphere_api.runtime")
 
@@ -88,6 +98,8 @@ def _run_builders(state: CompositionState, builders: Sequence[BuilderSpec]) -> N
     for spec in builders:
         try:
             spec.build(BuildContext(state, spec))
+        except StartupRefusedError:
+            raise  # a refusal is a hard stop, never a degraded component
         except Exception as exc:
             _log.error("builder %s raised %s", spec.name, type(exc).__name__)
             for name in spec.components:
@@ -127,6 +139,12 @@ async def _container_step(state: CompositionState) -> None:
     except Exception as exc:
         registry.failed(CONTAINER_STEP, classify(exc))
         _log.warning("cosmos container step failed: %s", type(exc).__name__)
+    else:
+        registry.ok(CONTAINER_STEP)
+
+
+def _container_step_will_run(state: CompositionState) -> bool:
+    return state.cosmos is not None and not state.cosmos_overridden
 
 
 async def _run_startup(state: CompositionState) -> None:
@@ -148,9 +166,19 @@ def _wrap_lifespan(app: FastAPI, state: CompositionState) -> None:
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[Any]:
         try:
-            await _run_startup(state)
-            async with original(application) as inner:
-                yield inner
+            if _container_step_will_run(state):
+                # PRP-51: the verify runs in the background; readiness is blocked (pending)
+                # from the first request, liveness never waits for it.
+                state.registry.pending(CONTAINER_STEP)
+            task = asyncio.create_task(_run_startup(state), name="ns-composition-startup")
+            try:
+                await asyncio.wait({task}, timeout=STARTUP_GRACE_SECONDS)
+                async with original(application) as inner:
+                    yield inner
+            finally:
+                if not task.done():
+                    task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
         finally:
             for hook in reversed(state.shutdown):
                 try:
@@ -177,8 +205,10 @@ def compose_app(
     none of them). ``environ`` feeds the environment readiness probes (default ``os.environ``);
     the settings classes read the process environment themselves.
     """
+    refuse_overrides_outside_local(settings, overrides)
     env = dict(os.environ if environ is None else environ)
     install_cors(app)
+    install_alias_headers(app)
     registry = ComponentRegistry()
     state = CompositionState(
         app=app,

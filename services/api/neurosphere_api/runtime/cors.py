@@ -12,11 +12,12 @@ from __future__ import annotations
 from typing import Final
 
 from fastapi import FastAPI
-from neurosphere_core.errors import InvalidSchemaError, ValidationIssue
+from neurosphere_core.errors import ValidationIssue
 from pydantic import ValidationError
 from starlette.middleware.cors import CORSMiddleware
 
 from neurosphere_api.middleware import CORRELATION_HEADER
+from neurosphere_api.runtime.errors import CorsConfigError
 from neurosphere_api.runtime.settings import CorsSettings
 
 __all__ = [
@@ -50,7 +51,7 @@ def load_cors_settings() -> CorsSettings:
             ValidationIssue("/" + "/".join(str(p) for p in err["loc"]), str(err["msg"])[:200])
             for err in exc.errors(include_input=False, include_url=False)
         ]
-        error = InvalidSchemaError("invalid NS_CORS_ALLOWED_ORIGINS", reason="config")
+        error = CorsConfigError("invalid NS_CORS_ALLOWED_ORIGINS", reason="config")
         error.errors = tuple(issues)
         raise error from None
 

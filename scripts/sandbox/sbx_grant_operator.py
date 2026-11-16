@@ -361,6 +361,12 @@ async def _run_real(env: Mapping[str, str], endpoint: str, key: str, **grant: An
 
 def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.cloud != "commercial":
+        print(
+            "REFUSED: the stack seed is Commercial-only; --cloud government is not supported.",
+            file=sys.stderr,
+        )
+        return EXIT_REFUSED
     environ = dict(os.environ) if env is None else dict(env)
     if args.hosted is not None:
         return _main_hosted(args, environ)
