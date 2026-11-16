@@ -30,6 +30,7 @@ from neurosphere_core.catalog.protocol import CatalogRepository, EntityFilter
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
+from neurosphere_core.search.azure.schema import to_azure_document
 from neurosphere_core.search.fixture.index import (
     FixtureSearchIndex,
     SearchDocument,
@@ -108,7 +109,7 @@ class AzureIndexSink:
 
     async def upsert(self, documents: Sequence[SearchDocument]) -> None:
         for start in range(0, len(documents), UPLOAD_BATCH):
-            batch = [d.model_dump() for d in documents[start : start + UPLOAD_BATCH]]
+            batch = [to_azure_document(d) for d in documents[start : start + UPLOAD_BATCH]]
             results = await self._backend.merge_or_upload_documents(documents=batch)
             failed = sum(1 for r in results or () if not getattr(r, "succeeded", True))
             if failed:

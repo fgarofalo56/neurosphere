@@ -126,7 +126,15 @@ async def test_azure_sink_upserts_documents_without_a_key_path() -> None:
     assert await CatalogIndexer(repo, sink).refresh(SCOPE_A) == 2
     assert len(backend.calls) == 1
     for doc in backend.calls[0]:
-        assert set(doc) == {"id", "entity", "cloud", "customer_id", "domain_id", "text"}
+        assert set(doc) == {
+            "id",
+            "entity_id",
+            "entity",
+            "cloud",
+            "customer_id",
+            "domain_id",
+            "text",
+        }
     assert len(store) == 2
 
 

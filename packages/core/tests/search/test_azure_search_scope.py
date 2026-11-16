@@ -25,6 +25,7 @@ from neurosphere_core.search.azure import (
     require_azure_search,
 )
 from neurosphere_core.search.azure.filters import _drop_none, scope_hash_of
+from neurosphere_core.search.azure.schema import to_azure_document
 from neurosphere_core.search.fixture import FixtureSearchIndex, documents_from_catalog
 from neurosphere_core.search.fixture.index import SearchDocument, tokenize
 
@@ -138,7 +139,7 @@ class FakeSearchClient:
     """Evaluates the filter over a sandbox doc set; records every call."""
 
     def __init__(self, docs: list[SearchDocument]) -> None:
-        self.docs = [d.model_dump() for d in docs]
+        self.docs = [to_azure_document(d) for d in docs]
         self.calls: list[dict[str, Any]] = []
         self.delay = 0.0
 
