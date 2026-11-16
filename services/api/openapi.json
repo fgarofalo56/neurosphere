@@ -2868,7 +2868,8 @@
               "ok",
               "failed",
               "disabled",
-              "not_built"
+              "not_built",
+              "pending"
             ],
             "title": "State",
             "type": "string"
