@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from neurosphere_contracts.deployment.v1.capability_matrix_entry import CapabilityMatrixEntry
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.capabilities import CapabilityMatrix, MatrixLoadError, default_matrix
+from neurosphere_core.capabilities.validate import GOVERNMENT_DEPLOYABLE_REGIONS
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.scope import IdentityScope
 
@@ -37,7 +38,6 @@ from neurosphere_api.ui_adapters.models import CapabilityMatrixView
 __all__ = ["PREFIX", "build_router", "get_capability_matrix", "matrix_version"]
 
 PREFIX: Final = "/api/v1/capabilities"
-_GOV_PREFIXES: Final = ("usgov", "usdod")
 
 ReadAnywhere = Annotated[IdentityScope, Depends(require(Permission.DATA_READ))]
 CloudParam = Annotated[Literal["commercial", "government"] | None, Query()]
@@ -73,7 +73,7 @@ def _speaks_for(row: CapabilityMatrixEntry, region: str) -> bool:
     if row.region in (region, "global"):
         return True
     if row.region == "*":
-        is_gov_region = region.startswith(_GOV_PREFIXES)
+        is_gov_region = region in GOVERNMENT_DEPLOYABLE_REGIONS
         return is_gov_region if row.cloud == "government" else not is_gov_region
     return False
 

@@ -30,26 +30,26 @@ BICEPPARAM = ROOT / "infra" / "bicep" / "params" / "government" / "main.biceppar
 # the Government cloud profile's own suffixes plus the manifest's documented ones, never a bare
 # "azure.us", so a typo such as foo.azure.us or documents.azure.us.evil.com fails.
 _GOV_PROFILE = profile_for(CloudName.GOVERNMENT)
+_MANIFEST_ENDPOINTS: dict[str, str] = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))[
+    "endpoints"
+]
 KNOWN_GOV_SUFFIXES: frozenset[str] = frozenset(
     {
+        # Derived from the Government cloud profile (PRP-59, #212).
         _GOV_PROFILE.cosmos_suffix.lstrip("."),
         _GOV_PROFILE.eventhubs_suffix.lstrip("."),
         _GOV_PROFILE.search_suffix.lstrip("."),
         _GOV_PROFILE.apim_gateway_suffix.lstrip("."),
         _GOV_PROFILE.login_host.split(".", 1)[1],
         _GOV_PROFILE.management_host.split(".", 1)[1],
-        # Documented in sovereign-profile.yaml (endpoints, privateDnsZones, egressHosts).
-        "portal.azure.us",
-        "graph.microsoft.us",
-        "monitor.azure.us",
+        # Derived from the manifest's declared endpoints (hosts and dot-prefixed suffixes).
+        *(v.lstrip(".") for v in _MANIFEST_ENDPOINTS.values()),
+        # Service suffixes only egressHosts name; none is a bare "azure.us".
         "openai.azure.us",
         "cognitiveservices.azure.us",
         "opinsights.azure.us",
         "databricks.azure.us",
         "azure-automation.us",
-        "azurewebsites.us",
-        "azurecr.us",
-        "loganalytics.us",
     }
 )
 GOV_SUFFIX = re.compile(
@@ -94,6 +94,16 @@ def test_endpoints_equal_cloud_resolver(manifest: dict[str, Any]) -> None:
     assert ep["cosmosSuffix"] == prof.cosmos_suffix
     assert ep["eventHubsSuffix"] == prof.eventhubs_suffix
     assert ep["searchSuffix"] == prof.search_suffix
+
+
+def test_every_manifest_host_is_covered_by_a_known_suffix(manifest: dict[str, Any]) -> None:
+    hosts = {
+        *manifest["endpoints"].values(),
+        *manifest["egressHosts"],
+        *(z.removeprefix("privatelink.") for z in manifest["privateDnsZones"].values()),
+    }
+    uncovered = sorted(str(h) for h in hosts if not _is_gov(str(h)))
+    assert uncovered == [], f"hosts in sovereign-profile.yaml no known suffix covers: {uncovered}"
 
 
 def test_every_endpoint_is_government(manifest: dict[str, Any]) -> None:

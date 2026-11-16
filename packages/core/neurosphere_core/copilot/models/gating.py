@@ -20,7 +20,7 @@ from datetime import date
 
 import httpx
 from azure.core.credentials_async import AsyncTokenCredential
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from neurosphere_core.capabilities import (
     CapabilityMatrix,
@@ -99,18 +99,24 @@ def _evaluate(
             "no capability-matrix model feature is configured, so availability is unverified",
             config,
         )
-    result = validate_profile(
-        DeploymentProfile(
+    try:
+        profile = DeploymentProfile(
             cloud=cloud,
             regions=(region,),
             hosting="aks",
             analytics="fabric",
             features=_requests(config),
             allow_preview=allow_preview,
-        ),
-        matrix,
-        today,
-    )
+        )
+    except ValidationError:
+        # An empty, malformed or non-deployable region (for example usdod*, #212).
+        return _disabled(
+            config.kind,
+            "capability_unavailable",
+            f"region {region!r} is not a deployable {cloud} region",
+            config,
+        )
+    result = validate_profile(profile, matrix, today)
     capabilities = tuple(r for r in result.results if r.kind == "feature")
     blocked = [r for r in capabilities if r.status == "disabled"]
     if blocked:
