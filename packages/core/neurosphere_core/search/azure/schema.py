@@ -19,7 +19,6 @@ from typing import Any, Final, Protocol
 
 from azure.search.documents.indexes.models import (
     SearchableField,
-    SearchFieldDataType,
     SearchIndex,
     SimpleField,
 )
@@ -84,7 +83,7 @@ def to_azure_document(document: SearchDocument) -> dict[str, Any]:
 
 def catalog_index_definition(name: str = DEFAULT_INDEX_NAME) -> SearchIndex:
     """The catalog index: opaque key, filterable scope fields, searchable ``text``."""
-    string = SearchFieldDataType.String
+    string = "Edm.String"
     return SearchIndex(
         name=name,
         fields=[

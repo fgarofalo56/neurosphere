@@ -36,9 +36,13 @@ RESTRICTED_TEXT = "classified-payroll-bot"
 class RecordingSink:
     def __init__(self) -> None:
         self.batches: list[list[str]] = []
+        self.deleted: list[str] = []
 
     async def upsert(self, documents: Sequence[SearchDocument]) -> None:
         self.batches.append([d.id for d in documents])
+
+    async def delete(self, ids: Sequence[str]) -> None:
+        self.deleted = list(ids)
 
 
 class FakeUploadBackend:
@@ -50,6 +54,9 @@ class FakeUploadBackend:
         self, documents: list[dict[str, Any]], **_kwargs: Any
     ) -> Any:
         self.calls.append(documents)
+        return [SimpleNamespace(succeeded=not self._fail) for _ in documents]
+
+    async def delete_documents(self, documents: list[dict[str, Any]], **_kwargs: Any) -> Any:
         return [SimpleNamespace(succeeded=not self._fail) for _ in documents]
 
 
