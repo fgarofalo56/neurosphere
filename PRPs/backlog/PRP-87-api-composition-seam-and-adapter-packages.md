@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 8
 ns: NS-07, NS-08
 depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary, PRP-51-composition-and-api-hygiene, PRP-67-hosted-environment-hardening]
-wave: W25
+wave: W35
 branch: prp-87-api-composition-seam
 allow_parallel: true
 issues: []
@@ -22,7 +22,7 @@ issues: []
 ## Goal
 Make the API composition ask a `Backends` provider (PRP-85) for every port instead of constructing Cosmos, Blob, Event Hubs and credential objects inline, with an Azure provider that wraps exactly today's construction, and prove that nothing changes on Azure. In the same wave, scaffold the five adapter workspace packages with every dependency the program needs (root and service `pyproject.toml`, `uv.lock`, licence register, ADR-0002 pins, the `portable` test marker), so no later multi-cloud PRP touches the lockfile. Then remove the API and core Azure leaks that sit on the seam: split the Protocol-plus-Cosmos modules, turn the SDK error translator into a registry, and let model and judge adapters take a `TokenProvider`. It is for PRP-89, 91, 93, 94 and 95, which register non-Azure implementations against this seam, and for operators of existing Azure deployments, who must see no difference. It is Opus because it rewires `builders/authz.py`, the policy store and about 40 construction sites in Tier-1 files under a strict no-change bar.
 
-Out of scope: the worker composition (`services/workers/neurosphere_workers/runtime/factories.py`), the event-consumer and object-store ports and the five blob Protocols (PRP-88, same wave); any non-Azure implementation (PRP-89..95); contracts (PRP-86); Helm and compose (PRP-96); moving `ContainerSpec.partition_key()` out of `packages/core/neurosphere_core/stores/containers.py` (Tier-1 stores file, not granted here; stays on the ratchet list for PRP-98); telemetry, the Databricks executor and the docs-assistant model leak (PRP-95); the generalised "no static credential outside local" rule for other platforms (PRP-94); the frontend `oidc-client-ts` dependency (PRP-93 owns `pnpm-lock.yaml` in W26).
+Out of scope: the worker composition (`services/workers/neurosphere_workers/runtime/factories.py`), the event-consumer and object-store ports and the five blob Protocols (PRP-88, same wave); any non-Azure implementation (PRP-89..95); contracts (PRP-86); Helm and compose (PRP-96); moving `ContainerSpec.partition_key()` out of `packages/core/neurosphere_core/stores/containers.py` (Tier-1 stores file, not granted here; stays on the ratchet list for PRP-98); telemetry, the Databricks executor and the docs-assistant model leak (PRP-95); the generalised "no static credential outside local" rule for other platforms (PRP-94); the frontend `oidc-client-ts` dependency (PRP-93 owns `pnpm-lock.yaml` in W36).
 
 ## Why
 - Original PRD 5f (`git show 9fbf5f4c:docs/PRD.md`, lines 96-107): "with provider-specific managed-service substitutions (e.g., Event Hubs vs. MSK vs. Pub/Sub) behind a common abstraction layer" and "Core platform logic (ingestion normalization, graph API, recommendation engine, copilot) is cloud-agnostic; only infra adapters differ." v1.2 excluded hosting outside Azure (`docs/PRD.md:4`, `:57` "AWS/GCP hosting ... outside the initial baseline"; `PRP.md:7` "No commitment to platform hosting on AWS/GCP/on-prem."). The owner restored it on 2026-11-16 with all four targets.
@@ -97,7 +97,7 @@ Out of scope: the worker composition (`services/workers/neurosphere_workers/runt
 - The Azure path must not call `entry_points()`; a broken third-party entry point must never affect an Azure deployment.
 - Same-named test modules across the five new packages collide in one pytest session (no `__init__.py`): name them `test_adapters_<x>_skeleton.py`.
 - `--strict-markers` is on (`pyproject.toml` `addopts`): register `portable` in the same commit that first uses it.
-- `services/workers/pyproject.toml` is owned here although PRP-88 owns the rest of `services/workers/**` in W25: PRP-88 must not edit it; if it needs a dependency it adds a `[serial-after: PRP-87]` item.
+- `services/workers/pyproject.toml` is owned here although PRP-88 owns the rest of `services/workers/**` in W35: PRP-88 must not edit it; if it needs a dependency it adds a `[serial-after: PRP-87]` item.
 - The images are `python:3.12-alpine`: check that `asyncpg`, `aiokafka` and any Google native dependency install under `uv sync --frozen` in the builder stage before committing the lock.
 - PEP 562 shims: keep the `TYPE_CHECKING` import so pyright still types `CosmosJobStore` and friends; repo-wide pyright runs in CI.
 - `translating()` is imported by neutral modules; the registry must be populated before first use, so the Azure provider registers at import of `neurosphere_core.platform.azure` and the API composition imports it first.
@@ -210,7 +210,7 @@ Parallelization: items 1 and 2 [P] (no shared file). Item 3 after 2. Items 4 and
 
 ### Item 6 - Split mixed modules and the translator registry (cuttable unit)
 - Deliverable: move Cosmos classes to the `*_cosmos` / `publisher_eventhubs` modules with PEP 562 shims; `clients/errors.py` becomes a registry with the Azure translator in `platform/azure/errors.py`; both `lifecycle_delete.py` modules catch `NotFoundError` from the translator instead of the Cosmos exception; `KNOWN_LEAKS` entries removed.
-- Owned files: the split modules listed in Ownership, `clients/errors.py`, `catalog/lifecycle_delete.py`, `ledger/lifecycle_delete.py`, `tests/architecture/boundary.py` (treated as Tier-2 in W25: this PRP only deletes its own `KNOWN_LEAKS` lines and lowers `LEAK_CEILING`; PRP-88 deletes worker lines; at rebase keep both deletions and recompute the ceiling).
+- Owned files: the split modules listed in Ownership, `clients/errors.py`, `catalog/lifecycle_delete.py`, `ledger/lifecycle_delete.py`, `tests/architecture/boundary.py` (treated as Tier-2 in W35: this PRP only deletes its own `KNOWN_LEAKS` lines and lowers `LEAK_CEILING`; PRP-88 deletes worker lines; at rebase keep both deletions and recompute the ceiling).
 - Depends on: item 4.
 - Acceptance criteria: criterion 4 for these files; existing tests that import old paths pass unchanged.
 - Tests: `packages/core/tests/admin`, `gateway_core`, `lifecycle_cosmos`, `lifecycle`, `clients`, `services/api/tests/sandbox_api`, `ingest`, `services/workers/tests/lifecycle_worker`, `tests/architecture`.
@@ -247,7 +247,7 @@ python scripts/prp_status.py --check
 python scripts/validate_planning.py
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
 ```
-Emulator check (local): PRP-88 holds the W25 compose lane, so run this only when PRP-88's item 7 is not running the stack: `docker compose up -d --wait`, then `uv run pytest -q -m integration tests/integration/real_stack`.
+Emulator check (local): PRP-88 holds the W35 compose lane, so run this only when PRP-88's item 7 is not running the stack: `docker compose up -d --wait`, then `uv run pytest -q -m integration tests/integration/real_stack`.
 
 ## Migration and rollback
 No data, schema or setting migration: Azure composition builds the same objects from the same settings, and `NS_PLATFORM` defaults to `azure`. Rollback is a revert of the PR; the snapshot makes a partial revert detectable. A dependency problem found after merge is fixed by a follow-up lock change from the next `uv.lock` owner, never by editing the lock in another PRP.

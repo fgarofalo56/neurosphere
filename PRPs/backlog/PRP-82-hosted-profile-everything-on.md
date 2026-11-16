@@ -209,7 +209,7 @@ No data migration. `hostedProfile` defaults to `baseline`, so an existing deploy
 All of these need `NS_LIVE_APPROVED=1`, operator approval, the P2S VPN and, for the model, an approved Foundry deployment; none ran in this PRP and each is OPEN until recorded under `docs/evidence/hosted/`: deploy with `everything-on` through the delivery pipeline; the hosted seed; the signed-in nav walk (Entra MFA); one live copilot turn and one real catalog question (the first live turn is also tracked by PRP-64); Azure AI Search against the real index (PRP-60 follow-through); a served-build check against the deployed tag. Throughput on the hosted ingest edge is PRP-84 and PRP-66.
 
 ## NOT building
-New workflows or edits to the delivery pipeline (PRP-63); a CI browser run of the signed-in walk; changes to the infrastructure smoke; Government or multi-cloud hosted profiles (PRP-85 and later); a new Foundry account or deployment; production data; write-target or deploy-apply enablement; fixes to pages found empty (each is filed against the PRP that owns the page).
+New workflows or edits to the delivery pipeline (PRP-63); a CI browser run of the signed-in walk; changes to the infrastructure smoke; Government or multi-cloud hosted profiles (PRP-85 and later); a new Foundry account or deployment; production data; write-target or deploy-apply enablement; fixes to pages found empty (each is filed against the PRP that owns the page); the governance-core features (interaction capture, policy engine, notifications, approval gate): "everything on" means every feature that exists when this PRP runs, those do not exist yet, and PRP-109 owns turning them on in the hosted profile.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared
@@ -229,6 +229,7 @@ New workflows or edits to the delivery pipeline (PRP-63); a CI browser run of th
 
 ## Completion note (filled at ship)
 - Date and PR:
+- Scope note: "everything on" here excludes the governance-core features that did not exist at this PRP's wave (capture, policy, notifications, approval); PRP-109 turns them on in hosted.
 - Deviations:
 - Descoped items:
 - OPEN gates:

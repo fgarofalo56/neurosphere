@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 7
 ns: NS-06
 depends_on: [PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-60-search-indexing-hardening]
-wave: W23
+wave: W31
 branch: prp-80-copilot-docs-retrieval
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-80: Copilot docs retrieval, telemetry summaries and the groundedness set
 
 ## Goal
-Add the retrieval half of the original copilot: a `search_docs` tool that retrieves, scope-first and lexically, from three sources (the published product documentation, catalog descriptions through the existing authorized search, and per-domain telemetry summaries built from hour and day aggregates) and returns cited passages; a 100-question operator groundedness set with a programmatic judge that runs offline on recorded streams in CI and, operator-gated, against a real model; and Helm values that let a cluster deployment configure the copilot. It is for the operations lead who asks "how do I register a producer?" or "which agents had errors yesterday?" and for the owner who wants the original Phase 3 exit measured instead of assumed. It runs in W23 after PRP-78 (copilot registry, tool wiring module, recorded demo adapter) and PRP-60 (catalog search on Azure AI Search fixed).
+Add the retrieval half of the original copilot: a `search_docs` tool that retrieves, scope-first and lexically, from three sources (the published product documentation, catalog descriptions through the existing authorized search, and per-domain telemetry summaries built from hour and day aggregates) and returns cited passages; a 100-question operator groundedness set with a programmatic judge that runs offline on recorded streams in CI and, operator-gated, against a real model; and Helm values that let a cluster deployment configure the copilot. It is for the operations lead who asks "how do I register a producer?" or "which agents had errors yesterday?" and for the owner who wants the original Phase 3 exit measured instead of assumed. It runs in W31 after PRP-78 (copilot registry, tool wiring module, recorded demo adapter) and PRP-60 (catalog search on Azure AI Search fixed).
 
 Out of scope: graph, timeline and recommender tools, tool-call audit and progress events (PRP-78); a vector or semantic ranking mode (optional later step, clarification 2); the first live model turn and the live groundedness run itself (operator-gated, PRP-64); putting the built docs site into the hosted API image (Dockerfiles are Tier 1; follow-up, see item 8); the public docs assistant (`services/docs-assistant`, unchanged and still separate).
 
@@ -49,13 +49,13 @@ Out of scope: graph, timeline and recommender tools, tool-call audit and progres
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
 | 1 | Docs corpus boundary | repository Markdown; built site | Built site HTML only, like `services/docs-assistant/docs_assistant/index.py` (published pages only; `exclude_docs` already applied) |
-| 2 | Vector store | Azure AI Search vectors; Qdrant; lexical first | Lexical BM25 first (gap analysis section 5 item 3); ASSUMPTION: vectors are an optional later ranking signal behind the same port |
+| 2 | Vector store | Azure AI Search vectors; Qdrant; lexical first | Lexical BM25 first (gap analysis section 5 item 3); ASSUMPTION: vectors are an optional later ranking signal behind the same port; PRP-135 (W33) adds the embedding port and hybrid ranking there |
 | 3 | Telemetry summaries | indexed by a worker; built on demand | ASSUMPTION: built on demand from aggregates per readable domain with a 300 s cache; no new container or worker role |
 | 4 | Groundedness judge | LLM judge (PRP-16); programmatic | Programmatic (citations resolve, claims cited, required ids present); ASSUMPTION: an LLM judge pass can be added later through PRP-16 calibration |
 | 5 | What "recorded streams" means | one fixture; per-question transcripts | One scripted transcript per question (tool calls, then an answer citing issued handles) replayed through the real engine and tools on the seeded world |
 | 6 | Pass bar offline vs live | assert 90 % both; assert offline only | Offline asserts 100/100 (it tests the pipeline); live reports the measured rate against the >90 % target and is not asserted in CI |
-| 7 | Docs in the hosted image | edit Dockerfiles here; follow-up | Follow-up (Dockerfiles are Tier 1 with no W23 owner); hosted reports `docs_corpus_unconfigured` until then |
-| 8 | Helm edits | here; serial | `[serial-after: PRP-84]`, which owns `infra/helm/**` in W23 |
+| 7 | Docs in the hosted image | edit Dockerfiles here; follow-up | Follow-up (Dockerfiles are Tier 1 with no W31 owner); hosted reports `docs_corpus_unconfigured` until then |
+| 8 | Helm edits | here; serial | Here: nobody owns `infra/helm/**` in W31 (PRP-84 holds it in W32 and rebases on this). If the orchestrator does not grant the Tier-1 edit, follow-up |
 
 ## Context manifest
 
@@ -191,10 +191,10 @@ Parallelization: items 1 and 2 are [P] (separate core modules and test files). I
 - Tests: `frontend/src/features/copilot/copilot.test.tsx`.
 - Pattern references: `frontend/src/features/copilot/components.tsx:105-115`.
 
-### Item 8 - Helm values and close-out  [serial-after: PRP-84]
-- Deliverable: after PRP-84 merges and the branch is rebased, the `copilot:` values block and template env lines, plus a render test; if the orchestrator does not grant the Tier-1 edit, file a follow-up instead and record it. Then Tier-3 regeneration (`openapi.json` if status or models changed, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`), `mkdocs.yml` nav line for the evidence README if published, changelog fragment, completion note with env vars, the OPEN live run, and the follow-up for the docs site in the hosted image.
-- Owned files: `infra/helm/values.yaml`, `infra/helm/templates/deployment.yaml`, `tests/unit/infra/test_helm_render.py` (all as granted after PRP-84), this PRP file, Tier-3 files.
-- Depends on: items 1-7; PRP-84 merged.
+### Item 8 - Helm values and close-out
+- Deliverable: the `copilot:` values block and template env lines, plus a render test; if the orchestrator does not grant the Tier-1 edit, file a follow-up instead and record it. Then Tier-3 regeneration (`openapi.json` if status or models changed, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`), `mkdocs.yml` nav line for the evidence README if published, changelog fragment, completion note with env vars, the OPEN live run, and the follow-up for the docs site in the hosted image.
+- Owned files: `infra/helm/values.yaml`, `infra/helm/templates/deployment.yaml`, `tests/unit/infra/test_helm_render.py` (Tier 1, as granted), this PRP file, Tier-3 files.
+- Depends on: items 1-7.
 - Acceptance criteria: criterion 10; validation gates pass.
 
 ## Validation gates
@@ -218,7 +218,7 @@ No data migration and no container: the docs corpus lives in memory, summaries i
 The live groundedness run on a real model (100 questions, >90 % target) and the first-token measurement against a provider need `NS_LIVE_APPROVED=1` and an approved Foundry endpoint; they are OPEN and handed to PRP-64 (a row to add there). Docs retrieval in the hosted environment stays OPEN until the built site is in the image (follow-up).
 
 ## NOT building
-Vector embeddings or a vector store; an indexing worker for summaries; changes to `services/docs-assistant`; a docs site build inside the API image; LLM-judge scoring of groundedness; copilot usage metrics; MCP exposure of `search_docs`.
+Vector embeddings or a vector store (PRP-135); an indexing worker for summaries; changes to `services/docs-assistant`; a docs site build inside the API image; LLM-judge scoring of groundedness; copilot usage metrics; MCP exposure of `search_docs`.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

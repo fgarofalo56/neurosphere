@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 8
 ns: NS-01, NS-02
-depends_on: [PRP-88-worker-composition-seam-event-and-object-ports, PRP-89-postgres-foundation-catalog-and-security-stores]
-wave: W27
+depends_on: [PRP-88-worker-composition-seam-event-and-object-ports, PRP-89-postgres-foundation-catalog-and-security-stores, PRP-102-encrypted-interaction-store-and-retention, PRP-107-notification-channels-and-subscriptions, PRP-117-connector-runner-and-estate-foundation]
+wave: W37
 branch: prp-90-postgres-data-plane-stores
 allow_parallel: true
 issues: []
@@ -33,6 +33,7 @@ Out of scope: the PostgreSQL pool, schema generator, migration runner, TTL sweep
 - Lifecycle delete backends catch Cosmos exceptions in neutral modules (`core/ledger/lifecycle_delete.py:19`, `core/catalog/lifecycle_delete.py:20`) and take a raw container, so a PostgreSQL deployment cannot honour deletion requests without a twin.
 
 ## Acceptance criteria
+- [ ] Governance-core data-plane stores: PostgreSQL implementations with conformance modules (in-memory twin and PostgreSQL, identical outcomes, customer and domain isolation) for the containers `interaction_index` and `interaction_capture_policies` (the interaction index and capture policy stores of PRP-102 and PRP-103; the index never holds content, only the pointer and metadata; delete of index and blob together is exercised with PRP-92's object store), `notification_outbox` (PRP-107: ordering, retry state, de-duplication key), `connector_status` and `estate_usage` (PRP-117).
 - [ ] Given each store below, When its conformance `CHECKS` run against `InMemory*` and against the PostgreSQL implementation (marker `portable`, compose PostgreSQL), Then both pass with identical results; each module also ships one deliberately broken implementation that fails a named check.
 - [ ] Given two customers using identical ids, When any read, list, write, delete, prune, replace or advance runs for customer A, Then customer B's rows are never returned or changed; every statement binds the customer (and the domain wherever the Cosmos query filtered on it) as parameters, never by string formatting.
 - [ ] Given `LedgerStore.write_entry(entry, None)` for an existing id, Then it returns False; given a stale `expected_version`, Then False and the stored row is unchanged; given the current version, Then True and the version changes. `put_allocation` is idempotent by id.
@@ -56,7 +57,7 @@ Out of scope: the PostgreSQL pool, schema generator, migration runner, TTL sweep
 | 6 | Cross-customer scans | forbid; keep bounded | Keep what the Protocols already do and no more: price snapshots are a global bounded list (`MAX_SNAPSHOTS`, error `price_set_too_large`); everything else is customer-scoped |
 | 7 | Registration | edit PRP-88's lazy table; own module | `neurosphere_adapters_postgres/registry/dataplane.py`, which PRP-89 pre-creates and hands over (its `register_worker` is reached through PRP-89's `registration.py`, which PRP-88's lazy table imports for kind `postgres`), so no Tier-1 file is touched |
 | 8 | Cut line if the session overruns | descope last item | Price snapshots last; see `## Cut line` |
-| 9 | Compose lane in W27 | parallel; serialized | This PRP is the W27 compose-stack holder: it runs the portable PostgreSQL fragment first; PRP-91 and then PRP-94 run their compose-backed gates only after this PRP released it. Each uses unique schema names per test module; no file is shared |
+| 9 | Compose lane in W37 | parallel; serialized | This PRP is the W37 compose-stack holder: it runs the portable PostgreSQL fragment first; PRP-91 and then PRP-94 run their compose-backed gates only after this PRP released it. Each uses unique schema names per test module; no file is shared |
 
 ## Context manifest
 
@@ -209,7 +210,7 @@ Parallelization: item 1 first (creates the package root and the shared test help
 - Tests: validation gates.
 
 ## Cut line
-Ledger, outbox, checkpoints and ingestion stores are never cut. Price snapshots (the `PgPriceSnapshotStore` half of item 5) are last and the only cuttable unit; what remains merges safely because no other item depends on them (the e2e test then runs with the price table file). If cut: non-Azure workers load prices from `NS_LEDGER_PRICE_TABLE_FILE` (`ingestion/wiring.py` `load_price_table`) and the admin price pages report disabled with reason `price_store_unavailable`; recorded in the completion note with a follow-up issue. PRP-96 renders only settings that exist; PRP-98's matrix shows the cut stores as `disabled: <reason>`.
+Ledger, outbox, checkpoints and ingestion stores are never cut. Price snapshots (the `PgPriceSnapshotStore` half of item 5) are last and the only cuttable unit; what remains merges safely because no other item depends on them (the e2e test then runs with the price table file). If cut: non-Azure workers load prices from `NS_LEDGER_PRICE_TABLE_FILE` (`ingestion/wiring.py` `load_price_table`) and the admin price pages report disabled with reason `price_store_unavailable`; recorded in the completion note with a follow-up issue. PRP-96 renders only settings that exist; PRP-98's matrix shows the cut stores as `disabled: <reason>`. The governance-core data-plane group above may be split into a follow-up PRP (design expectation: PRP-90 or PRP-91 splits) as a unit; capture and notifications are then reported `disabled: platform_backend_missing` on non-Azure platforms, never a Cosmos fallback.
 
 ## Validation gates
 ```bash

@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-05, NS-06, NS-07, NS-08
 depends_on: [PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector, PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-80-copilot-docs-retrieval-and-groundedness]
-wave: W30
+wave: W33
 branch: prp-64-live-gates
 allow_parallel: true
 issues: [258, 57]
@@ -51,8 +51,9 @@ Out of scope: building anything the gates exercise (the scripts and features com
 | 5 | Items needing a script that does not exist | Write one; do it by hand | SIEM sink check has no script: run the documented manual procedure; adding a script under `scripts/gates/` is allowed only as a gate-script addition recorded as a deviation. ASSUMPTION |
 | 6 | Running agent versus operator | Agent runs all; operator runs billable steps | The agent prepares `temp/campaign/*.ps1` or `.sh` command files with placeholders filled from operator-supplied names; the operator or the agent runs them only after approval; interactive logins and credential installs are the operator's |
 | 7 | Evidence spill | One file; per item | One file per run under the gate's directory, never overwriting an earlier run |
-| 8 | Split with PRP-66 | Keep one PRP; two PRPs | Two PRPs, both W30 (17 items were too many for one sitting). Evidence directories are disjoint (see Ownership); both edit `docs/RESEARCH-AND-GATES.md`, so PRP-66's register edits are its final item and run after this PRP's. The G17 observe run also answers #179 item 4 and #148 item 6; PRP-66 posts those answers from this PRP's evidence file |
+| 8 | Split with PRP-66 | Keep one PRP; two PRPs | Two PRPs, PRP-64 in W33 and PRP-66 in W34 (17 items were too many for one sitting). Evidence directories are disjoint (see Ownership); both edit `docs/RESEARCH-AND-GATES.md`, so PRP-66's register edits are its final item and run after this PRP's. The G17 observe run also answers #179 item 4 and #148 item 6; PRP-66 posts those answers from this PRP's evidence file |
 | 9 | Changelog entry | Edit `CHANGELOG.md`; fragment file | ASSUMPTION: PRP-68 (W11) ships the `changelog.d/` fragment convention first, so this PRP writes `changelog.d/PRP-64.md` (new) and never edits `CHANGELOG.md` |
+| 10 | G17 enforcement evidence | here; PRP-136 | Hand-off: the G17 manage-gate evidence that governance enforcement (PRP-112, PRP-113, PRP-115) needs is handed to PRP-136, which records it from this PRP's G17 results; this PRP adds no governance gates of its own |
 
 ## Context manifest
 

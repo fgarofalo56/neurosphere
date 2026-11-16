@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 8
 ns: NS-06, NS-07
 depends_on: [PRP-86-contracts-platform-dimension-and-credential-kinds, PRP-87-api-composition-seam-and-adapter-packages]
-wave: W26
+wave: W36
 branch: prp-95-model-telemetry-and-analytics-adapters
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-95: Model endpoints, OTLP telemetry and portable analytics
 
 ## Goal
-Make the copilot, the evaluation judge, the telemetry export and the analytics query path work on a deployment that is not Azure. Three model adapters (`openai_compatible`, `bedrock`, `vertex`) join the existing `ModelAdapter` Protocol with the same redaction, gating and error taxonomy as the Azure adapters; an OTLP export option sends metrics and traces to an OpenTelemetry Collector instead of the Azure Monitor exporter; a PostgreSQL `Dialect` and adapter run the analytics contract on the portable database; and the Databricks executor takes a neutral token provider instead of building an Azure credential. It is for the operator of an AWS, GCP or on-prem install (PRP-96, PRP-97) and for PRP-98, which lists the conformance matrix. It runs in W26 on top of PRP-87 (adapter packages, pinned dependencies, `TokenProvider` in place of `AsyncTokenCredential`). Azure behaviour must not change.
+Make the copilot, the evaluation judge, the telemetry export and the analytics query path work on a deployment that is not Azure. Three model adapters (`openai_compatible`, `bedrock`, `vertex`) join the existing `ModelAdapter` Protocol with the same redaction, gating and error taxonomy as the Azure adapters; an OTLP export option sends metrics and traces to an OpenTelemetry Collector instead of the Azure Monitor exporter; a PostgreSQL `Dialect` and adapter run the analytics contract on the portable database; and the Databricks executor takes a neutral token provider instead of building an Azure credential. It is for the operator of an AWS, GCP or on-prem install (PRP-96, PRP-97) and for PRP-98, which lists the conformance matrix. It runs in W36 on top of PRP-87 (adapter packages, pinned dependencies, `TokenProvider` in place of `AsyncTokenCredential`). Azure behaviour must not change.
 
 Out of scope: secret readers and the credential providers that mint bearer tokens, IAM database tokens and broker credentials (PRP-94); the PostgreSQL connection pool, schema and stores (PRP-89 to PRP-91); contract and capability-matrix platform rows (PRP-86); the Helm values that set these options (PRP-96); the Collector deployment in a cluster (PRP-96) and its Terraform inputs (PRP-97); any real Bedrock, Vertex or OpenAI-compatible call (paid; OPEN, PRP-64); a Pub/Sub, OpenSearch or ClickHouse adapter (OPEN, not scoped); new dependencies (PRP-87 owns `pyproject.toml` and `uv.lock`).
 
@@ -75,10 +75,10 @@ Out of scope: secret readers and the credential providers that mint bearer token
 - `services/api/neurosphere_api/runtime/builders/copilot.py:92-195` and `builders/analytics.py` - how modes and backends are named today (read only; Tier 1).
 
 ### Interfaces consumed
-- PRP-87: adapter packages with pinned dependencies (`neurosphere_adapters_models` skeleton with its `registration:register` entry-point stub), `TokenProvider` replacing `AsyncTokenCredential` in `rest.py`, `approved_endpoint.py`, `gating.py` and `endpoint_judge.py` (PRP-87 item 7; if PRP-87 cut it, item 2 here makes those files accept a `TokenProvider`, as they are this PRP's owned files in W26), the `portable` pytest marker, and the backend provider through which the copilot and analytics builders ask for ports.
-- PRP-94 (W27, later wave): credential and token providers (bearer token for Vertex and OpenAI-compatible, AWS credentials for Bedrock). This PRP's tests inject a static `TokenProvider`; PRP-94 item 6 wires the real providers through the PRP-87/PRP-88 seams.
+- PRP-87: adapter packages with pinned dependencies (`neurosphere_adapters_models` skeleton with its `registration:register` entry-point stub), `TokenProvider` replacing `AsyncTokenCredential` in `rest.py`, `approved_endpoint.py`, `gating.py` and `endpoint_judge.py` (PRP-87 item 7; if PRP-87 cut it, item 2 here makes those files accept a `TokenProvider`, as they are this PRP's owned files in W36), the `portable` pytest marker, and the backend provider through which the copilot and analytics builders ask for ports.
+- PRP-94 (W37, later wave): credential and token providers (bearer token for Vertex and OpenAI-compatible, AWS credentials for Bedrock). This PRP's tests inject a static `TokenProvider`; PRP-94 item 6 wires the real providers through the PRP-87/PRP-88 seams.
 - PRP-89 (same wave, not consumed): PostgreSQL pool and TLS settings. The analytics executor takes an injected pool factory; container tests build their own `asyncpg` pool from compose; PRP-94 item 6 wires PRP-89's pool into it.
-- PRP-86 (W25): the capability matrix `platform` dimension, `analytics_backend` value `postgres` and the AWS/GCP rows; the new kinds and `postgres` resolve through those rows or are disabled with a reason.
+- PRP-86 (W35): the capability matrix `platform` dimension, `analytics_backend` value `postgres` and the AWS/GCP rows; the new kinds and `postgres` resolve through those rows or are disabled with a reason.
 - PRP-85: `NS_PLATFORM` and `DeploymentTarget` (`neurosphere_core.cloud`), the neutral port definitions (`TokenProvider`, `TelemetryExporterFactory`), and the registry of platform settings (the `NS_COPILOT_*`, `NS_TELEMETRY_EXPORTER` and `NS_ANALYTICS_BACKEND=postgres` rows are this PRP's).
 
 ### Interfaces provided

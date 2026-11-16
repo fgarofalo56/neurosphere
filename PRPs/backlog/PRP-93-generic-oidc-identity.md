@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 8
 ns: NS-08, NS-09
 depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary, PRP-87-api-composition-seam-and-adapter-packages]
-wave: W26
+wave: W36
 branch: prp-93-generic-oidc
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-93: Generic OIDC identity beside Entra (API, workers and frontend)
 
 ## Goal
-Let a deployment on AWS, GCP or an on-prem cluster sign users in and validate their access tokens with a generic OpenID Connect issuer (Keycloak, Amazon Cognito or the customer's own IdP), configured explicitly per deployment, while the Entra path stays byte-for-byte as strict as it is today. The API gains an OIDC validator that produces the same `VerifiedClaims` the scope deriver already consumes, with an exact issuer, a pinned JWKS URI, RS256 only, explicit audiences (or an explicit client-id check for issuers that omit `aud`) and a declared claim map in which every missing, unmapped or ambiguous claim denies. Authorization stays where it is: the server derives scope from the policy store, never from token roles or groups. The frontend gains an `AuthClient` seam with the existing MSAL implementation and an `oidc-client-ts` implementation (authorization code with PKCE) chosen by runtime config. It is for the operator of a non-Azure deployment, which today cannot sign anyone in (owner decision 2026-11-16), and it runs in W26 after PRP-85 and PRP-87.
+Let a deployment on AWS, GCP or an on-prem cluster sign users in and validate their access tokens with a generic OpenID Connect issuer (Keycloak, Amazon Cognito or the customer's own IdP), configured explicitly per deployment, while the Entra path stays byte-for-byte as strict as it is today. The API gains an OIDC validator that produces the same `VerifiedClaims` the scope deriver already consumes, with an exact issuer, a pinned JWKS URI, RS256 only, explicit audiences (or an explicit client-id check for issuers that omit `aud`) and a declared claim map in which every missing, unmapped or ambiguous claim denies. Authorization stays where it is: the server derives scope from the policy store, never from token roles or groups. The frontend gains an `AuthClient` seam with the existing MSAL implementation and an `oidc-client-ts` implementation (authorization code with PKCE) chosen by runtime config. It is for the operator of a non-Azure deployment, which today cannot sign anyone in (owner decision 2026-11-16), and it runs in W36 after PRP-85 and PRP-87.
 
 Out of scope: workload identity, secret readers and IAM tokens (PRP-94); Helm values that render the identity block and the `kind` sign-in smoke (PRP-96); Cognito user pool Terraform (PRP-97); contract changes to the principal id grammar (PRP-86 or a later contracts PRP, see clarification 4); several identity providers active in one deployment; a Google-native IdP (OPEN, design section 9 item 9).
 
@@ -100,7 +100,7 @@ Out of scope: workload identity, secret readers and IAM tokens (PRP-94); Helm va
 - JWKS from a misconfigured IdP may contain symmetric (`oct`) keys: `parse_jwks` must keep dropping them (`_PRIVATE_MEMBERS` contains `k`); add a test with an `oct` key whose `kid` matches the token.
 - The pseudonym input becomes `tenant_label:subject`; changing the tenant label after go-live changes every principal id (state this in the runbook; it is equivalent to a new tenant).
 - `NS_AUTH_TENANT_ID` remains required for Entra and must be ignored, not validated as a GUID, when the provider is `oidc`.
-- Frontend: Fluent dialog tests need `hidden: true`; Playwright needs unique `NS_E2E_APP_PORT` and `NS_MOCK_API_PORT` per worktree; visual baselines are Docker-only. The Keycloak container holds the portable compose lane after PRP-89 and PRP-92 in W26.
+- Frontend: Fluent dialog tests need `hidden: true`; Playwright needs unique `NS_E2E_APP_PORT` and `NS_MOCK_API_PORT` per worktree; visual baselines are Docker-only. The Keycloak container holds the portable compose lane after PRP-89 and PRP-92 in W36.
 - CodeQL: never log a claim value or token fragment; hostname checks use exact origin comparison, never `endswith` without a leading dot.
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
@@ -179,7 +179,7 @@ Parallelization: item 1 first. Items 2 and 6 [P] after item 1 (core versus front
 - Pattern references: `auth/jwt/validator.py`, `packages/core/tests/auth/jwt/test_jwks_cache.py`.
 
 ### Item 4 - Scope derivation, API selection and workers
-- Deliverable: `ScopeDerivationConfig` accepts a tenant label when the provider is `oidc` (GUID rule unchanged for Entra); API and worker `AuthSettings` gain `provider` (Tier-2 new fields); the authenticator is selected through the PRP-87 seam; `EnvClaimsSource` builds `oidc` claims when configured. If the PRP-87 seam offers no selection point, this item is `[serial-after: PRP-87]` and makes the minimal edit in `services/api/neurosphere_api/runtime/builders/authz.py` (`_tenant`, `_authenticator`) only after confirming no other W26 PRP holds that file; report it.
+- Deliverable: `ScopeDerivationConfig` accepts a tenant label when the provider is `oidc` (GUID rule unchanged for Entra); API and worker `AuthSettings` gain `provider` (Tier-2 new fields); the authenticator is selected through the PRP-87 seam; `EnvClaimsSource` builds `oidc` claims when configured. If the PRP-87 seam offers no selection point, this item is `[serial-after: PRP-87]` and makes the minimal edit in `services/api/neurosphere_api/runtime/builders/authz.py` (`_tenant`, `_authenticator`) only after confirming no other W36 PRP holds that file; report it.
 - Owned files: `auth/scope/derivation.py`, `services/workers/neurosphere_workers/runtime/identity.py`, Tier-2 lines, `services/api/tests/authz_oidc/**`, `services/workers/tests/runtime_identity_oidc/**`.
 - Depends on: item 3.
 - Acceptance criteria: criteria 2, 7 and 8; with the provider unset `services/api/tests/runtime_api`, `services/api/tests/authz` and `packages/core/tests/auth/scope` pass unchanged.
@@ -189,7 +189,7 @@ Parallelization: item 1 first. Items 2 and 6 [P] after item 1 (core versus front
 ### Item 5 - Keycloak conformance and authorization negatives  [serial-after: PRP-89]
 - Deliverable: `infra/compose/portable/keycloak.yml` plus a realm export with synthetic users, groups and a role mapper; `tests/conformance/oidc/` (CHECKS run on the recorded-fixture issuer by default and on the container with marker `portable`, plus a broken validator that skips the issuer check); first step: record the actual Keycloak token claim layout (issuer string, `aud`, `azp`, roles path) and update the Keycloak profile from it, removing its UNVERIFIED mark only for what was observed; `tests/security/authz/test_oidc_role_injection.py`.
 - Owned files: the compose fragment and realm, `tests/conformance/oidc/**`, `tests/security/authz/test_oidc*.py`.
-- Depends on: item 4; PRP-89 merged (same wave: its harness `tests/conformance/conftest.py` and `scripts/portable/run_conformance.py`), and PRP-92 done with the W26 portable compose lane.
+- Depends on: item 4; PRP-89 merged (same wave: its harness `tests/conformance/conftest.py` and `scripts/portable/run_conformance.py`), and PRP-92 done with the W36 portable compose lane.
 - Acceptance criteria: criteria 5 and 9; the broken validator fails.
 - Tests: `tests/conformance/oidc/test_fixture_issuer.py`, `test_keycloak.py`, `test_broken.py`; `tests/security/authz/test_oidc_role_injection.py`.
 - Pattern references: `tests/unit/connector_conformance/test_reference_connectors_conformance.py`.

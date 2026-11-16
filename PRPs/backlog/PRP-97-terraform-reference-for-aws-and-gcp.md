@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 8
 ns: NS-07, NS-08
 depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary, PRP-94-secret-readers-and-workload-identity]
-wave: W28
+wave: W38
 branch: prp-97-terraform-reference-for-aws-and-gcp
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-97: Reference Terraform for AWS and GCP
 
 ## Goal
-Provide reference infrastructure-as-code for the two cloud targets that have none: `infra/terraform/aws` and `infra/terraform/gcp`. Each provisions the managed services the portable backends run on (network, Kubernetes cluster, managed PostgreSQL, managed Kafka, object storage, secret entries without values, identities for the workloads, optionally an identity provider) and emits one platform-outputs document, in the schema PRP-85 fixed, that the Helm values from PRP-96 consume. Nothing is applied: the deliverable is HCL that validates, formats, passes static policy tests and produces a reviewable plan-level contract, plus an operator runbook with an approval gate. It is for the architect who wants an AWS or GCP landing zone for NeuroSphere and for PRP-98, which hands the real `apply` to the live gates. It runs in W28 beside PRP-96 and shares no file with it. Azure stays on Bicep; this PRP does not re-implement Azure in Terraform, and the on-prem target has no Terraform because the cluster belongs to the customer (PRP-96 owns its reference).
+Provide reference infrastructure-as-code for the two cloud targets that have none: `infra/terraform/aws` and `infra/terraform/gcp`. Each provisions the managed services the portable backends run on (network, Kubernetes cluster, managed PostgreSQL, managed Kafka, object storage, secret entries without values, identities for the workloads, optionally an identity provider) and emits one platform-outputs document, in the schema PRP-85 fixed, that the Helm values from PRP-96 consume. Nothing is applied: the deliverable is HCL that validates, formats, passes static policy tests and produces a reviewable plan-level contract, plus an operator runbook with an approval gate. It is for the architect who wants an AWS or GCP landing zone for NeuroSphere and for PRP-98, which hands the real `apply` to the live gates. It runs in W38 beside PRP-96 and shares no file with it. Azure stays on Bicep; this PRP does not re-implement Azure in Terraform, and the on-prem target has no Terraform because the cluster belongs to the customer (PRP-96 owns its reference).
 
 Out of scope: Helm values and charts (PRP-96); the adapters and settings the outputs feed (PRP-89 to PRP-95); the conformance matrix and the live `apply` scripts (PRP-98, PRP-64); AKS cluster IaC and Bicep changes; AWS GovCloud, Google Assured Workloads and any Government-class boundary; multi-region or cross-region DR design; a Pub/Sub or OpenSearch module; edits to workflows (the CI step is data-driven or a `[serial-after]` item).
 

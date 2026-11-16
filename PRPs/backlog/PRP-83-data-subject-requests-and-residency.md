@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 7
 ns: NS-08, NS-10
-depends_on: [PRP-81-compliance-mappings-soc2-iso27001-gdpr]
-wave: W23
+depends_on: [PRP-81-compliance-mappings-soc2-iso27001-gdpr, PRP-102-encrypted-interaction-store-and-retention]
+wave: W32
 branch: prp-83-dsr-and-residency
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-83: Data-subject requests, legal holds and residency
 
 ## Goal
-Finish the data-protection half of the original compliance scope on top of what PRP-23 and PRP-44 already built. An admin gets a page for legal holds and data-subject requests on the lifecycle API (place and release holds, request erasure, pseudonymization or deletion with a mandatory dry-run first, watch requests move to their outcome) and an execute-mode runbook; the residency label on a domain stops being decoration, because domain creation is refused when the region is not in the deployment's approved set and an admin can see which existing domains fall outside it; the allowed-read audit that PRP-48 started on five routes extends to the remaining read routes, with a test that makes every new read route decide; and the Bicep modules gain optional customer-managed-key parameters (platform-managed keys stay the default). It is for the records officer or privacy lead who today needs raw API calls to place a hold, for the auditor who asks "who read this", and for the operator who must show where data lives and who holds the keys. It runs in W23 on PRP-81, whose GDPR control ids this PRP's features back.
+Finish the data-protection half of the original compliance scope on top of what PRP-23 and PRP-44 already built. An admin gets a page for legal holds and data-subject requests on the lifecycle API (place and release holds, request erasure, pseudonymization or deletion with a mandatory dry-run first, watch requests move to their outcome) and an execute-mode runbook; the residency label on a domain stops being decoration, because domain creation is refused when the region is not in the deployment's approved set and an admin can see which existing domains fall outside it; the allowed-read audit that PRP-48 started on five routes extends to the remaining read routes, with a test that makes every new read route decide; and the Bicep modules gain optional customer-managed-key parameters (platform-managed keys stay the default). It is for the records officer or privacy lead who today needs raw API calls to place a hold, for the auditor who asks "who read this", and for the operator who must show where data lives and who holds the keys. It runs in W32 on PRP-81, whose GDPR control ids this PRP's features back.
 
 Lifecycle deletes data and deletion cannot be undone: nothing here changes the worker's default (`NS_LIFECYCLE_MODE=dry_run`), nothing here sets execute mode, and the page can only submit requests; the worker mode stays an operator setting.
 
@@ -49,6 +49,8 @@ Evidence from the current tree (re-verified in this worktree):
 - [ ] Given a real request submitted while an identical dry-run request is pending (and the reverse), Then they are separate jobs (the dedupe key includes `dry_run`); two identical real requests still deduplicate; existing queued jobs are not corrupted (migration section).
 - [ ] The requests list never contains a subject id or record body: it shows the action, target kind and container, and a short digest of the subject id; audit records for these routes already hold ids by digest and that is asserted by a test that reads the stored records.
 - [ ] Given `NS_RESIDENCY_APPROVED_REGIONS` set, When a domain is created with a `residency_region` outside the set, or a Government domain with a non-`usgov*`/`usdod*` region, or a Commercial domain with one, Then creation is 422 with reason `residency_region_not_approved` or `residency_region_wrong_cloud`, nothing is stored and a denial-style audit record names the domain id, not the region list; given the setting unset, behaviour is exactly as today and `GET /api/v1/admin/platform/residency` reports `policy: unset`.
+- [ ] Interaction content (PRP-102 data class `interaction_content`): Given captured content for a pseudonymous subject, When an erasure or pseudonymization request names the subject, Then the dry run and the outcome include the content blob and its index record together (counts only, never content); a legal hold on the domain or agent stops deletion of that content (holds beat expiry; export of held content stays allowed through PRP-104's audited export, which the page links to, not through a new lifecycle export route); the page and runbook list the data class.
+- [ ] Residency covers the content store: the residency report lists the interaction content storage account and its region with `within_policy`, and a capture policy whose content store is outside the approved set is reported (and refused on creation when `NS_RESIDENCY_APPROVED_REGIONS` is set).
 - [ ] `GET /api/v1/admin/platform/residency` (customer-level `config.manage`) returns the approved regions, and each registered domain with `within_policy` true, false or `unknown`; it changes nothing; the admin console shows it on the lifecycle page as a read-only card.
 - [ ] Every read route that returns catalog, graph, map, replay, report or export data uses `audited_read` or is on an explicit exemption list with a reason; a test enumerates all routes and fails on an undeclared read route (including routes added by PRP-72, PRP-73, PRP-74 and PRP-76); each newly audited route records domains and result count only, never terms, ids requested or bodies; an audit-store failure never blocks a read.
 - [ ] Each of `cosmos.bicep`, `storage.bicep`, `eventhubs.bicep` and `search.bicep` accepts optional customer-managed-key parameters; with the defaults the compiled ARM is byte-for-byte unchanged in the encryption properties (platform-managed); with a key uri the compiled ARM carries the documented property for that service; a key without an identity is refused at compile time by an assertion or an `@allowed` guard; Government modules do not enable a CMK property for a service whose Government support is unverified.
@@ -89,7 +91,8 @@ Evidence from the current tree (re-verified in this worktree):
 - PRP-44 (shipped): domain registry, `DomainAdmin`, `PlatformAdmin` plane, `Platform` dependency, `config.manage` at customer level.
 - PRP-48 (shipped): `audited_read`, `ReadAudit.allowed`, `read_audit_stats`.
 - PRP-53 and PRP-57 (shipped): admin console areas and shared admin components.
-- PRP-81 (W20, merged): `packages/core/neurosphere_core/compliance/library/gdpr.yaml` with ids `gdpr.art-5`, `gdpr.art-17`, `gdpr.art-25`, `gdpr.art-30`, `gdpr.art-32`, `gdpr.art-44` to `gdpr.art-49` (those PRP-81 item 3 included). This PRP edits that existing file's `status` and evidence-path fields only; it does not create it or change ids.
+- PRP-102 (W21, merged): data class `interaction_content`, the interaction store and its lifecycle target, `InteractionCaptureSetting.content_storage_account_resource_id`.
+- PRP-81 (W25, merged): `packages/core/neurosphere_core/compliance/library/gdpr.yaml` with ids `gdpr.art-5`, `gdpr.art-17`, `gdpr.art-25`, `gdpr.art-30`, `gdpr.art-32`, `gdpr.art-44` to `gdpr.art-49` (those PRP-81 item 3 included). This PRP edits that existing file's `status` and evidence-path fields only; it does not create it or change ids.
 - PRP-72, PRP-73, PRP-74, PRP-76 (earlier waves, assumed merged): new read routes that the coverage test must find already audited or exempt.
 
 ### Interfaces provided

@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 7
 ns: NS-02
-depends_on: [PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions]
-wave: W21
+depends_on: [PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions, PRP-108-agent-approval-gate-and-platform-control-actions, PRP-105-policy-engine-core]
+wave: W24
 branch: prp-76-catalog-registration-completeness
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-76: Catalog registration completeness
 
 ## Goal
-Make the agent catalog carry the metadata the original PRD required and let people see it change. The registration form gains owner, tags, capabilities, environment, a semver-checked version label and declared data scopes; owner and data-scope choices become audited `owned_by`, `reads` and `writes` edges through a new edge-assert route (today no route can create them by hand). Every create and update writes an immutable revision, so version history is queryable and a History tab shows the diff of declared capabilities between two versions. Agents that telemetry created but nobody registered ("shadow agents") get their own list and page, and a metadata-completeness endpoint and tile report what share of registered agents has an owner, a version label and capability tags. It is for the platform engineer who registers agents, the steward who triages undeclared ones and the platform owner who wants the completeness number. It runs in W21 on PRP-70 (fields, revision contract) and PRP-73 (shipped in W20; both edit `catalog/**`).
+Make the agent catalog carry the metadata the original PRD required and let people see it change. The registration form gains owner, tags, capabilities, environment, a semver-checked version label and declared data scopes; owner and data-scope choices become audited `owned_by`, `reads` and `writes` edges through a new edge-assert route (today no route can create them by hand). Every create and update writes an immutable revision, so version history is queryable and a History tab shows the diff of declared capabilities between two versions. Agents that telemetry created but nobody registered ("shadow agents") get their own list and page, and a metadata-completeness endpoint and tile report what share of registered agents has an owner, a version label and capability tags. It is for the platform engineer who registers agents, the steward who triages undeclared ones and the platform owner who wants the completeness number. It runs in W24 on PRP-70 (fields, revision contract) and PRP-73 (shipped in W20; both edit `catalog/**`).
 
 Out of scope: the data-access, sensitivity and blast-radius questions (PRP-73, merged first); contract and schema changes (PRP-70 is sole owner of `packages/contracts/**`); configuration findings and Azure Resource Graph shadow-AI discovery (PRP-61); agent or tool recommendation (PRP-72, PRP-75); the map badge for undeclared agents (PRP-77 may read the list route); automatic consolidation or merging of agents (never automatic); a user delete (deprecation stays the only retirement).
 
@@ -48,6 +48,7 @@ Evidence from the current tree (re-verified in this worktree):
 - [ ] `GET /api/v1/catalog/versions?entity_id=` lists revisions newest first, bounded and paged; `GET /api/v1/catalog/versions/diff?entity_id=&from=&to=` returns field-level changes with added and removed capabilities, tags and data scopes called out; an entity outside the caller's scope is 404 with no leak.
 - [ ] Given telemetry-created draft agents (`discovered_from = telemetry`), When `GET /api/v1/catalog/undeclared-agents` runs, Then it lists them with first and last seen (from their edges, bounded scan with the stale-agent page cap), the domain, the discovery rule and a `truncated` flag; agents a steward already registered (active) or deprecated are absent; the page offers "Register", which opens the edit form prefilled for that draft.
 - [ ] `GET /api/v1/catalog/completeness` returns, for registered (active) agents in the caller's scope: totals, counts and ratios for owner, version label, capability tags and all three together; ratios are `null` (never 0 or 100) when there are no agents; a field PRP-70 does not provide is reported `unavailable` with a reason code; the explorer shows the tile with the scan bound and a partial-result note.
+- [ ] Given the registration check from PRP-108 (`RegistrationCheck`) is in `enforce` mode, When an update would move an AgentVersion's `lifecycle_status` to `active`, Then the catalog service refuses it with reason `registration_blocked` unless the approval state is `approved`; in `audit` and `off` mode the update is unchanged (a test per mode).
 - [ ] Every new route requires an explicit permission (`data.read` for reads, `catalog.curate` for writes), derives scope from the server identity, is in the route inventories and aliased under `/catalog/...`; reads of the new routes are audited with `audited_read`.
 - [ ] The History tab on the entity page shows revisions and a two-version diff; `/catalog/undeclared` and the explorer tile pass axe in light, dark and high-contrast; no string claims an estate is complete or compliant.
 - PRP exit: a steward registers an agent with an owner and data scopes in one flow, edits its capabilities, opens History and sees the capability diff, triages an undeclared agent from the list, and the explorer shows the completeness percentage.
@@ -55,7 +56,7 @@ Evidence from the current tree (re-verified in this worktree):
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | Where revisions live | Inside the catalog container; new container | New container `catalog_revisions` (customer and domain partition, like `catalog_review_queue`); this PRP is the Tier-1 stores owner in W21 (`stores/containers.py`, `infra/compose/cosmos-containers.json`, `infra/demo/modules/cosmos-data.bicep`; `infra/bicep/modules/cosmos.bicep` defines no containers, per the PRP-43 note) |
+| 1 | Where revisions live | Inside the catalog container; new container | New container `catalog_revisions` (customer and domain partition, like `catalog_review_queue`); this PRP is the Tier-1 stores owner in W24 (`stores/containers.py`, `infra/compose/cosmos-containers.json`, `infra/demo/modules/cosmos-data.bicep`; `infra/bicep/modules/cosmos.bicep` defines no containers, per the PRP-43 note) |
 | 2 | Revision write ordering | Before the entity write; after | ASSUMPTION: after a successful entity write, idempotent by (entity id, version), so a failed entity write leaves no phantom revision; a failed revision write is a visible gap, not an error |
 | 3 | History route shape | Sub-path of an entity; separate prefix with query parameters | `/api/v1/catalog/versions?entity_id=...` because `/entities/{entity_id:path}` would match any sub-path |
 | 4 | Edge-assert permission | `data.read`; `catalog.curate` | `catalog.curate` on the source entity's domain, the rule the entity update uses. ASSUMPTION: asserting an edge to an entity in another domain also needs read of that entity through `get_entity` |
@@ -175,11 +176,12 @@ Parallelization: item 1 first. Items 3 and 4 are [P] after item 2 (separate pack
 - Pattern references: `neurosphere_core/catalog/review_queue_cosmos.py`.
 
 ### Item 2 - Revisions in the service, versions routes and builder
+- Governance-core additions: the registration form leaves a labelled slot for the run-as identity field (PRP-118 fills it; this PRP adds no identity logic) and a slot for the approval panel (PRP-108 mounts `frontend/src/features/catalog/approval/**` into `CatalogEntityPage.tsx`); and `CatalogService` closes the direct path that sets an AgentVersion `active` without approval (PRP-108 is a dependency): when the registration check from PRP-108 is in `enforce` mode (the registration enforcement binding of PRP-105), an update that moves `lifecycle_status` to `active` calls the registration check and is refused with reason `registration_blocked` unless the approval state is `approved` (default `off`/`audit` behaviour unchanged). `catalog/service.py` stays this PRP's file.
 - Deliverable: `CatalogService` takes an optional revision recorder, writes revision 1 on create and one per update after the entity write, validates the version label, and returns a reason-coded warning when the revision write fails; `get_revision_store` dependency; `revisions/router.py` with the two read routes under `audited_read`; builder `runtime/builders/catalog_revisions.py` (Cosmos on the shared client, in-memory only under `NS_ENV=local`), optional component `catalog_revisions`; `reconstructed` current revision for legacy entities.
 - Owned files: `catalog/service.py`, `catalog/dependencies.py`, `catalog/revisions/**`, `runtime/builders/catalog_revisions.py`, `services/api/tests/catalog_registration_api/test_versions.py`, `test_revision_failure.py`, `test_builder.py`; updated pinned tests listed in Gotchas.
 - Must NOT touch: `catalog/router.py`, `runtime/builders/data.py`.
 - Depends on: item 1.
-- Acceptance criteria: the revision, legacy and failure-gap criteria; existing `services/api/tests/catalog` and `catalog_api` suites pass unchanged except the pinned component lists.
+- Acceptance criteria: the revision, legacy and failure-gap criteria; the activate-without-approval path is refused under `enforce` and unchanged under `off` (a test per mode); existing `services/api/tests/catalog` and `catalog_api` suites pass unchanged except the pinned component lists.
 - Tests: the three new files plus `services/api/tests/catalog`, `catalog_api`, `runtime_api`, `runtime_gateway_builder`, `runtime_data`.
 - Pattern references: `catalog/service.py:144-232`; PRP-41 builder.
 

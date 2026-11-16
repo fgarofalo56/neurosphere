@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 6
 ns: NS-09, NS-08
 depends_on: []
-wave: W24
+wave: W33
 branch: prp-69-mcp-private-network
 allow_parallel: true
 issues: [267, 115]

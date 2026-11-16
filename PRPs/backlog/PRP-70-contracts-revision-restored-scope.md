@@ -20,7 +20,7 @@ issues: []
 # PRP-70: Contracts revision for the restored original scope
 
 ## Goal
-Ship, in one Tier-1 pass, the additive `v1` contract changes that the restored-scope PRPs (PRP-71 to PRP-83) and PRP-61 code against, and nothing above the wire layer: capability tags, capabilities and environment on catalog entities; a sensitivity and residency vocabulary on data assets (PII, PHI, CUI and similar); an entity revision record and a revision diff for version history; the agent-match request, response and feedback contracts for the task-to-agent recommender; map node facets and a topology-change marker; four compliance framework ids (SOC 2, ISO 27001, GDPR, NIST 800-53); the two recommendation kinds PRP-61 needs; and the structured-query allowlist entries that make the new fields filterable. It is for the writers and implementers of PRP-71..83, who are being written against the names in "Interfaces provided" right now, and it runs alone on `packages/contracts/**` in W19 because a wrong name here is refactored in a dozen PRPs. Opus with a required review, following the PRP-37 precedent.
+Ship, in one Tier-1 pass, the additive `v1` contract changes that the restored-scope PRPs (PRP-71 to PRP-83) and PRP-61 code against, and nothing above the wire layer: capability tags, capabilities and environment on catalog entities; a sensitivity and residency vocabulary on data assets (PII, PHI, CUI and similar); an entity revision record and a revision diff for version history; the agent-match request, response and feedback contracts for the task-to-agent recommender; map node facets and a topology-change marker; six compliance framework ids (SOC 2, ISO 27001, GDPR, NIST 800-53, EU AI Act, ISO/IEC 42001); optional tool, service and MCP-server identity on the telemetry event (governance-core fold F1); the two recommendation kinds PRP-61 needs (already shipped by PRP-61 if present on main at execution: verify, then skip); and the structured-query allowlist entries that make the new fields filterable. It is for the writers and implementers of PRP-71..83, who are being written against the names in "Interfaces provided" right now, and it runs alone on `packages/contracts/**` in W19 because a wrong name here is refactored in a dozen PRPs. Opus with a required review, following the PRP-37 precedent.
 
 Out of scope: every route, store, container, worker, seed and UI that uses these contracts (PRP-71 seed and demo profile, PRP-72 matcher and feedback store, PRP-73 access and sensitivity queries, PRP-74/77 map, PRP-75 find-an-agent UI, PRP-76 registration form and revision store, PRP-78/80 copilot tools, PRP-81 framework library data, PRP-83 residency enforcement); PRP-61's API `Kind` literal, filter list and detection workers (PRP-61 keeps them; it no longer edits contracts); populating any new field from telemetry or connectors.
 
@@ -30,7 +30,7 @@ Out of scope: every route, store, container, worker, seed and UI that uses these
 - Restores the original persona "Compliance/Security Officer" ("agents touching regulated data (PII, PHI, CUI)") and the 5e story "which agents touch EU customer data?". Data assets carry only `classification` (`public..unknown`, `catalog/v1/common.schema.json:68`), `residency_region` and `contains_personal_data` (`catalog/v1/grounding_source.schema.json:99`); no category or geography vocabulary exists.
 - Restores original 5d: "Supports filtering/search by node type, tag, environment, health status" and story "filter the map by environment (prod/staging) or cloud provider". The map wire model has no environment, tag or error field (`services/api/neurosphere_api/map/models.py:41-55`). v1.2 kept the map but bounded it (`docs/PRD.md:25`, `:51`); facets are compatible with that bound.
 - Restores original 5g: "Documented mapping of platform controls to SOC 2 Trust Services Criteria and ISO 27001 Annex A controls" and "Data residency controls configurable per tenant/region (GDPR Art. 44-49 support)". Removed by `docs/PRD.md:39` ("Map to applicable NIST 800-53 Rev 5 and agency requirements") and `:57` ("formal certifications ... are outside the initial baseline"). `FrameworkId` is a closed four-value enum (`compliance/v1/control.schema.json:41`).
-- PRP-61 (backlog) item 1 planned to add `configuration_finding` and `unregistered_ai_resource` to the recommendation kinds; moving that here leaves one contracts owner per wave (ASSIGNMENTS W19 row).
+- PRP-61 (backlog at planning time; shipped as built on main) item 1 planned to add `configuration_finding` and `unregistered_ai_resource` to the recommendation kinds; moving that here leaves one contracts owner per wave (ASSIGNMENTS W19 row).
 
 ## Acceptance criteria
 - [ ] Every schema and `$defs` entry in "Interfaces provided" exists with the exact name, generates Python and TypeScript bindings, and has at least one valid and one invalid example listed in its area's examples manifest; `python packages/contracts/scripts/generate.py --check` passes.
@@ -41,7 +41,9 @@ Out of scope: every route, store, container, worker, seed and UI that uses these
 - [ ] `AgentMatchRequest` rejects `domain_id`, `customer_id` or any unknown key, a `task_text` over 2000 characters or with control characters other than tab and newline, and `limit` over 50; `AgentMatchResponse` requires a per-candidate `signals` list whose `value` is a number in [0,1] or null (unknown, never 0); `AgentMatchFeedback` stores a `task_digest`, never task text.
 - [ ] A recommendation of kind `configuration_finding` or `unregistered_ai_resource` with `evidence_status: sufficient` validates without `score`; the same kind with `advisory: false` or `method: statistical` is rejected; a `cost_spike` without `score` is still rejected (existing invalid example unchanged).
 - [ ] `StructuredQuery` accepts the new keyword and boolean fields on catalog entities and `FIELD_APPLICABILITY` lists them; a filter on `sensitivity_category` for `telemetry_event` fails the applicability validator.
-- [ ] `Control.framework_id` accepts `soc2_tsc`, `iso_27001_annex_a`, `gdpr`, `nist_800_53_r5`; the existing four still validate; no example contains wording that claims compliance (the PRP-56 claims scanner pattern).
+- [ ] `Control.framework_id` accepts `soc2_tsc`, `iso_27001_annex_a`, `gdpr`, `nist_800_53_r5`, `eu_ai_act`, `iso_42001` (fold F2; PRP-128 ships the mappings as data with no further contract change); the existing four still validate; no example contains wording that claims compliance (the PRP-56 claims scanner pattern).
+- [ ] Fold F1: a `TelemetryEvent` with `tool` {`external_tool_id`, `canonical_tool_id`, `tool_name`}, `service` {`external_service_id`, `canonical_service_id`} and `mcp_server_ref` validates; an event without them validates unchanged and the three fields default to null; `tool` or `service` as an empty object, an unknown key inside them, or a value over its length cap is rejected (JSON Schema and Pydantic); `schema_version` has a minor bump; no body-like field is added and `payload_ref` is untouched (`tests/contracts/test_telemetry_tool_service_identity.py`).
+- [ ] The finding-kind criterion (the two recommendation kinds) is already shipped by PRP-61 if present on main at execution: verify it, then skip that part of item 3 and its label edits; otherwise ship it as written.
 - [ ] `pnpm --filter @neurosphere/frontend typecheck` passes: the two new kinds have labels in `frontend/src/features/recommendations/strings.ts` (`KIND_LABELS` is a `Record<RecommendationKind, string>`).
 - PRP exit: touched suites, `generate.py --check`, ruff, pyright, contracts TS tests, frontend typecheck and `validate_planning.py` pass; PR open with CI green including `contracts`; Tier-3 files regenerated at merge.
 
@@ -59,10 +61,13 @@ Out of scope: every route, store, container, worker, seed and UI that uses these
 | 9 | New enum values on closed enums (`kind`, `framework_id`) | v2; additive | Additive (the additive-only test does not compare new values); descriptions of `kind`, `framework_id`, `sensitivity_category`, `residency_geography` and `capability` now say "open-ended: readers must tolerate unknown values" |
 | 10 | Score rule for the two finding kinds | fabricate 1.0; allow no score | Allow `sufficient` without `score` for those kinds only, with `advisory: true` and `method: rule` (PRP-61 clarification 7, made final here) |
 | 11 | Free text on feedback | comment field; reason codes | Reason codes only (no PII-bearing free text stored) |
+| 12 | Tool, service and MCP identity on telemetry (fold F1) | wait for PRP-99; fold here | Fold here: PRP-71 seeds telemetry in W20 in parallel with PRP-99 and needs the names; optional nullable, additive. The content channel, interactions, policy and every other governance schema stay in PRP-99 and PRP-110 |
+| 13 | EU AI Act and ISO/IEC 42001 ids (fold F2) | wait for PRP-128; fold here | Fold here, inside item 4, since this PRP already edits and open-ends `framework_id`; values `eu_ai_act`, `iso_42001` (`nist_ai_rmf` already exists) |
 
 ## Context manifest
 
 ### Files to read first
+- `packages/contracts/schemas/telemetry/v1/telemetry-event.schema.json` and its examples - where fold F1 lands.
 - `docs/adr/0004-contract-versioning.md` - additive-only rule and the PRP-37 amendment (baseline test, allowlist).
 - `packages/contracts/scripts/generate.py` - discovery `*/v*/*.schema.json`, `--check`; `packages/contracts/scripts/test_generate.py:45-60` area set.
 - `packages/contracts/schemas/catalog/v1/common.schema.json` - `$defs` style (`token`, `classification`, `relation_type`, `entity_type`).
@@ -107,7 +112,13 @@ Recommendations (`recommendations/v1/`):
 
 Query (`query/v1/structured-query.schema.json`): `keyword_field` adds `tag`, `capability`, `sensitivity_category`, `residency_region`, `residency_geography`; `boolean_field` adds `contains_personal_data`. Documented semantics on list-valued fields: `eq` = contains, `in` = contains any, `ne`/`not_in` = contains none.
 
-Compliance: `compliance/v1/control.schema.json` `$defs/framework_id` adds `soc2_tsc`, `iso_27001_annex_a`, `gdpr`, `nist_800_53_r5` (every compliance schema that `$ref`s it inherits them).
+Compliance: `compliance/v1/control.schema.json` `$defs/framework_id` adds `soc2_tsc`, `iso_27001_annex_a`, `gdpr`, `nist_800_53_r5`, `eu_ai_act`, `iso_42001` (fold F2; every compliance schema that `$ref`s it inherits them).
+
+Telemetry (fold F1, `telemetry/v1/telemetry-event.schema.json`, all optional and nullable, default null, `schema_version` minor bump):
+- `tool` -> {`external_tool_id` (length-capped string or null), `canonical_tool_id` (catalog canonical id or null), `tool_name` (length-capped string or null)}; at least one member present when `tool` is not null.
+- `service` -> {`external_service_id`, `canonical_service_id`}, same rules.
+- `mcp_server_ref` -> length-capped string (canonical McpServer id or external reference) or null.
+These are the names PRP-99 and PRP-100 were written against. `payload_ref` and the body-free rule are unchanged.
 
 Map (new area `map/v1/`, fragment schemas without `schema_version`):
 - `map-node-facets.schema.json` -> `MapNodeFacets` {`entity_type` (catalog `entity_type` or null for clusters), `environment`, `cloud` (or null), `tags`, `lifecycle_status` (or null), `discovery` (`declared`|`telemetry`|`import`|`unknown`, default `unknown`), `health` (`ok`|`degraded`|`failing`|`unknown`, default `unknown`), `error_rate` (0-1 or null), `error_count` (>=0 or null), `request_count` (>=0 or null), `last_error_at` (or null), `sensitivity_categories`, `residency_geography` (or null)}.
@@ -152,7 +163,7 @@ must_not_touch:
 
 ## Implementation blueprint
 
-Parallelization: items 1 to 4 are serial (they share the generated Python and TypeScript output and `ts/src/index.ts`). Item 5 after 4; item 6 last.
+Parallelization: items 1 to 4 and item 7 are serial (they share the generated Python and TypeScript output and `ts/src/index.ts`; item 7 follows item 4). Item 5 after 7; item 6 last.
 
 ### Item 1 - Catalog vocabulary, entity fields and query allowlist
 - Deliverable: the catalog `$defs` and entity properties in "Interfaces provided"; examples (agent tagged, tool with capabilities, grounding source with categories and geography; invalid uppercase tag, unknown environment, duplicate category); `StructuredQuery` keyword and boolean additions; `FIELD_APPLICABILITY` rows; regenerated bindings.
@@ -173,6 +184,7 @@ Parallelization: items 1 to 4 are serial (they share the generated Python and Ty
 - Pattern references: `admin/v1/admin-config-document.schema.json`, `tests/contracts/test_admin_platform_schemas.py`.
 
 ### Item 3 - Agent match contracts and the two finding kinds
+- Note: the finding-kind part (recommendation `kind` values, score rule, the two `strings.ts` labels, `test_recommendation_finding_kinds.py`) is already shipped by PRP-61 if present on main at execution: verify, then skip that part. The agent-match schemas still ship here.
 - Deliverable: the four `agent-match-*` schemas with examples (cold-start response with `historical_success` value null, scored response, accepted feedback; invalid: request with `domain_id`, signal value 1.2, feedback with free-text `comment`); recommendation kind and rule changes with two valid and two invalid examples; manifest entries; bindings; the two labels in `strings.ts` ("Configuration finding", "Unregistered AI resource").
 - Owned files: `packages/contracts/schemas/recommendations/v1/**`, generated output, `frontend/src/features/recommendations/strings.ts`, `tests/contracts/test_agent_match.py` (new), `tests/contracts/test_recommendation_finding_kinds.py` (new; the file PRP-61 planned, now here).
 - Must NOT touch: `frontend/src/features/recommendations/types.ts`, `services/api/neurosphere_api/recommendations/**`.
@@ -182,29 +194,38 @@ Parallelization: items 1 to 4 are serial (they share the generated Python and Ty
 - Pattern references: `recommendations/v1/examples/valid/recommendation.cold-start-unused-agent.json`, `tests/contracts/test_admin_no_credential_values.py` (field walker style for "no free text" check).
 
 ### Item 4 - Compliance framework ids and the map area
-- Deliverable: four `framework_id` values with one valid `Control` example each (paraphrased title, official source URL, no copied text); `map/v1/map-node-facets.schema.json` and `map-topology-change.schema.json` with examples and manifest; `map` added to the area set in `test_generate.py`; bindings.
+- Deliverable: six `framework_id` values (the four plus `eu_ai_act`, `iso_42001`, fold F2) with one valid `Control` example each (paraphrased title, official source URL, no copied text); `map/v1/map-node-facets.schema.json` and `map-topology-change.schema.json` with examples and manifest; `map` added to the area set in `test_generate.py`; bindings.
 - Owned files: `packages/contracts/schemas/compliance/v1/**`, `packages/contracts/schemas/map/v1/**` (new), `packages/contracts/scripts/test_generate.py`, generated output, `tests/contracts/test_map_facets.py` (new), `tests/contracts/test_compliance_schemas.py`.
 - Must NOT touch: `packages/core/neurosphere_core/compliance/library/**` (PRP-81 adds the framework data).
 - Depends on: item 3.
-- Acceptance criteria: criterion 9; `MapNodeFacets` rejects `error_rate` 1.5 and an unknown `health`; `MapTopologyChange` rejects empty `change_kinds`; `packages/core/tests/compliance_lib` still passes (library ids unchanged).
+- Acceptance criteria: criterion 9 (all six ids); `MapNodeFacets` rejects `error_rate` 1.5 and an unknown `health`; `MapTopologyChange` rejects empty `change_kinds`; `packages/core/tests/compliance_lib` still passes (library ids unchanged).
 - Tests: `tests/contracts/test_map_facets.py`, `tests/contracts/test_compliance_schemas.py`, `packages/contracts/scripts/test_generate.py`.
 - Pattern references: `compliance/v1/examples/valid/control.nist-govern-2.json`, `actions/v1/target-ref.schema.json`.
+
+### Item 7 - Telemetry tool, service and MCP-server identity (fold F1)
+- Deliverable: the optional nullable `tool`, `service` and `mcp_server_ref` properties of "Interfaces provided" on `telemetry-event.schema.json`, one valid example with them and one invalid (empty `tool` object), examples manifest entries, a minor `schema_version` bump, regenerated Python and TypeScript bindings.
+- Owned files: `packages/contracts/schemas/telemetry/v1/**`, generated output, `tests/contracts/test_telemetry_tool_service_identity.py` (new).
+- Must NOT touch: `services/api/neurosphere_api/ingest/**`, `packages/core/**`, the `payload_ref` definition.
+- Depends on: item 4.
+- Acceptance criteria: the fold F1 criterion; every existing telemetry example still validates; the additive-only test passes with empty `ALLOWED_TIGHTENINGS`.
+- Tests: `tests/contracts/test_telemetry_tool_service_identity.py`, `test_additive_only.py`, `test_schemas.py`, `test_roundtrip.py`.
+- Pattern references: `tests/contracts/test_catalog_restored_fields.py` (item 1), the optional-nullable properties already in `telemetry-event.schema.json`.
 
 ### Item 5 - Consumer sweep
 - Deliverable: run the consumer suites named in the gates; list every failure caused by the new optional fields. Allowed fixes are test-expectation updates in `tests/contracts/**`; any failure elsewhere (a test pinning a full entity dump, a snapshot) is recorded as a deviation with the file name and fixed only if it is a pure expectation update, never a product-code change; otherwise stop and report.
 - Owned files: none new.
-- Depends on: item 4.
+- Depends on: item 7.
 - Acceptance criteria: the gate suites pass, or each remaining failure is reported with its file and cause.
 - Tests: the `uv run pytest` line in "Validation gates".
 
 ### Item 6 - Integration and close-out
-- Deliverable: ADR-0004 amendment note (PRP-70: the additive changes listed above, the open-ended enum wording, the `map` area, empty `ALLOWED_TIGHTENINGS`); refresh the additive-only baseline after review; rebase, regenerate Tier-3 (`services/api/openapi.json`, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`); changelog fragment `changelog.d/PRP-70-contracts-revision-restored-scope.md`; completion note that repeats every provided name for PRP-71..83 authors and tells PRP-61 to drop its contracts item.
+- Deliverable: ADR-0004 amendment note (PRP-70: the additive changes listed above including fold F1 telemetry identity and fold F2 framework ids, the open-ended enum wording, the `map` area, empty `ALLOWED_TIGHTENINGS`); refresh the additive-only baseline after review; rebase, regenerate Tier-3 (`services/api/openapi.json`, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`); changelog fragment `changelog.d/PRP-70-contracts-revision-restored-scope.md`; completion note that repeats every provided name for PRP-71..83 authors and tells PRP-99, PRP-100, PRP-71 and PRP-128 authors the F1 and F2 names (PRP-61 has already shipped its own contract changes).
 - Owned files: `docs/adr/0004-contract-versioning.md`, `tests/contracts/fixtures/v1-baseline/**`, this PRP file, Tier-3 files per reference section 2.
-- Depends on: items 1-5.
+- Depends on: items 1-5 and 7.
 - Acceptance criteria: validation gates pass; CI green including `contracts`.
 
 ## Cut line
-If the session runs low on context, the `map/v1` area (item 4, second half: `MapNodeFacets`, `MapTopologyChange`, the `test_generate.py` area-set change) and the entity-revision contract (item 2: `EntityRevision`, `EntityRevisionDiff`, `check_revision_version_order`) move to a follow-up PRP. Everything else (items 1 and 3, the compliance framework ids, the consumer sweep and close-out) still ships as a mergeable unit; the PRP completion note names the follow-up. PRP-74 (map facets and topology push) and PRP-76 (revision store, version history and diff) are then BLOCKED on that follow-up. Acceptance criteria recorded unmet in that case: criterion 5 (`EntityRevision` and `EntityRevisionDiff`) and the `MapNodeFacets` and `MapTopologyChange` clauses of the item 4 acceptance (rejects `error_rate` 1.5, unknown `health`, empty `change_kinds`); the `generate.py --check` and additive-only criteria must still pass on what shipped.
+If the session runs low on context, the `map/v1` area (item 4, second half: `MapNodeFacets`, `MapTopologyChange`, the `test_generate.py` area-set change) and the entity-revision contract (item 2: `EntityRevision`, `EntityRevisionDiff`, `check_revision_version_order`) move to a follow-up PRP. Item 7 (fold F1) and the F2 framework ids never move: PRP-71, PRP-100 and PRP-128 code against them. Everything else (items 1 and 3, the compliance framework ids, item 7, the consumer sweep and close-out) still ships as a mergeable unit; the PRP completion note names the follow-up. PRP-74 (map facets and topology push) and PRP-76 (revision store, version history and diff) are then BLOCKED on that follow-up. Acceptance criteria recorded unmet in that case: criterion 5 (`EntityRevision` and `EntityRevisionDiff`) and the `MapNodeFacets` and `MapTopologyChange` clauses of the item 4 acceptance (rejects `error_rate` 1.5, unknown `health`, empty `change_kinds`); the `generate.py --check` and additive-only criteria must still pass on what shipped.
 
 ## Validation gates
 ```bash
@@ -245,6 +266,7 @@ Routes, stores, containers, seeds, UI, the matcher, the revision writer, the res
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
+| 7 | todo | | |
 
 ## Completion note (filled at ship)
 - Date and PR:

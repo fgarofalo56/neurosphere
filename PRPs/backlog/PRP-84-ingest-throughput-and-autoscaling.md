@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 7
 ns: NS-01, NS-05
-depends_on: [PRP-58-hosted-data-path-and-environment-hardening, PRP-67-hosted-environment-hardening, PRP-79-agent-sdk-and-telemetry-onboarding]
-wave: W23
+depends_on: [PRP-58-hosted-data-path-and-environment-hardening, PRP-67-hosted-environment-hardening, PRP-79-agent-sdk-and-telemetry-onboarding, PRP-103-interaction-capture-policy-and-edge]
+wave: W32
 branch: prp-84-ingest-throughput
 allow_parallel: true
 issues: []
@@ -39,6 +39,7 @@ Out of scope: running the 1k and 10k profiles on real Azure and the sized enviro
 - [ ] Given `autoscaling.enabled=true`, When `helm template` renders with the CI values, Then it emits an HPA for the API (CPU target, min and max), a KEDA `ScaledObject` for the ingestion worker pool (Event Hubs trigger with blob checkpoint settings, min, max, lag threshold), and PodDisruptionBudgets; Given `autoscaling.enabled=false` (default), Then the render is byte-identical to today except documented additions.
 - [ ] Given `workers.pools`, Then ingestion, projections and aggregates scale as one pool while roles that must run once (timers, lifecycle, evaluation, actions) stay at one replica; the chart fails with a clear message if a single-instance role is placed in a scalable pool (the role safety list is verified from worker code in item 3, not assumed).
 - [ ] Given the e2e probe, When it runs against the compose stack with background load, Then it reports p50, p95, p99 and max of event-to-graph latency for both observation points (new agent visible via the catalog; metric delta on the map WebSocket), the count of probes that never arrived within the timeout, and the measurement definition; the probe never fails a run for being slow, it records `meets_target` as data (as `map_freshness` does).
+- [ ] Capture-on profile: the load profiles include a capture-on profile (synthetic content only, a capture policy enabled for the load domain only) that measures the shed order under overload: capture is shed first, telemetry events keep being accepted and published, and `ingest_overloaded` behaves as before; real-Azure runs of it stay OPEN.
 - [ ] Given the 1k and 10k profiles, Then the runner emits evidence JSON holding: environment label, git sha, profile, duration, achieved events/s, accepted/429/error counts, edge request p50/p95/p99, e2e latency, edge replicas and workers per pool over time, partition count, consumer lag samples, and the measured-versus-target table with the target quoted from the original PRD and v1.2; no threshold is tuned to a result.
 - [ ] Given a local compose re-run of the pilot profile after items 1 and 2, Then the result is committed under `docs/evidence/G07/ingest/` with the 2026-11-15 baseline beside it, whatever it shows, including a failure; G07 stays OPEN unless a real-Azure run meets the bar.
 - [ ] `docs/runbooks/ingest-scaling.md` lists the knobs (worker count, in-flight limit, publish concurrency, partition count, pool sizes, KEDA threshold), the exact operator commands for the real-Azure 1k and 10k runs, and states that they were not run.
@@ -47,7 +48,7 @@ Out of scope: running the 1k and 10k profiles on real Azure and the sized enviro
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| 1 | How the edge goes multi-process | Change the Dockerfile CMD; `WEB_CONCURRENCY` | `WEB_CONCURRENCY` (uvicorn reads it as the `--workers` default). No Dockerfile edit, so PRP-79's Dockerfile ownership in W22 is not touched. |
+| 1 | How the edge goes multi-process | Change the Dockerfile CMD; `WEB_CONCURRENCY` | `WEB_CONCURRENCY` (uvicorn reads it as the `--workers` default). No Dockerfile edit, so PRP-79's Dockerfile ownership in W25 is not touched. |
 | 2 | Per-producer rate limit across processes | Shared limiter in Cosmos; per-process buckets documented | ASSUMPTION: per-process buckets, documented as effective rate = per-process rate times processes (and times replicas). A shared limiter would add a store hop on the hottest path; revisit only if measurement shows abuse. |
 | 3 | Back-pressure signal | Unbounded queue; in-flight cap with 429 | In-flight cap, 429 plus `Retry-After`; never an unbounded in-process queue. |
 | 4 | Worker scaling signal | CPU; Event Hubs lag | KEDA on Event Hubs lag for the ingestion pool (CPU for the API). ASSUMPTION: KEDA is installed by the operator; the chart renders the `ScaledObject` only when enabled and does not install KEDA. The scaler's checkpoint settings must match what `ingestion/consumer.py` writes (blob checkpoint store); verify against KEDA documentation at execution (UNVERIFIED here). |
@@ -72,7 +73,8 @@ Out of scope: running the 1k and 10k profiles on real Azure and the sized enviro
 ### Interfaces consumed
 - Shipped: `IngestService.authorize`, `Publisher` protocol, `HubMessage.partition_key()`, ingest counters and reason families (PRP-46), per-producer limiter, producer store (PRP-41), worker roles and checkpoint store, `tests/load/profiles` (PRP-21), realtime WebSocket (`/api/v1/realtime/ws`) and `AggregateDeltaSource`.
 - PRP-58: hosted parameters for worker roles and the store switch, Helm role switches (names it added to `values.yaml` and the deployment template); PRP-67: Helm probe values and `deployment.yaml` edits (read both before editing the same template).
-- PRP-79 (W22, merged first): `ingest/encoding.py`, `ingest/limits.py` and the gzip-aware `_read` in `ingest/router.py`. This PRP edits `router.py` only to call the back-pressure check after the body is read and to map `ingest_overloaded` to 429; it does not edit `_read`, `encoding.py`, `limits.py` or the Dockerfiles (PRP-79 Tier 1) and rebases on PRP-79's `router.py`.
+- PRP-103 (W22, merged): the capture branch in `ingest/service.py` and its back-pressure rule (capture is shed before telemetry); this PRP does not edit `service.py`/`capture.py`.
+- PRP-79 (W25, merged first): `ingest/encoding.py`, `ingest/limits.py` and the gzip-aware `_read` in `ingest/router.py`. This PRP edits `router.py` only to call the back-pressure check after the body is read and to map `ingest_overloaded` to 429; it does not edit `_read`, `encoding.py`, `limits.py` or the Dockerfiles (PRP-79 Tier 1) and rebases on PRP-79's `router.py`.
 - PRP-63/PRP-82 for the deployed environment the operator runs against (not edited here).
 
 ### Interfaces provided
@@ -227,7 +229,7 @@ No data migration. New settings default to today's behaviour; autoscaling templa
 OPEN and operator-gated (`NS_LIVE_APPROVED=1`, approved spend, a named sized environment on real Event Hubs and Cosmos, VPN where the data plane is private), handed to PRP-66 with the commands from item 7: pilot 1k events/s profile on real Azure; enterprise 10k events/s profile; the e2e latency number on real Azure; KEDA behaviour on a real cluster; Event Hubs partition count change. The enterprise and stress bars (10k, 50k sustained, 150k burst) stay OPEN until those runs; G07 stays OPEN. The local compose numbers are reported as emulator and shared-host results, not capacity.
 
 ## NOT building
-Real-Azure runs or a sized environment; OTLP protobuf and gzip, quarantine read API, Entra producer auth (PRP-79); a shared cross-process rate limiter; admission control on the ingest path via the domain quota policy; Kafka, ClickHouse or any non-Event-Hubs broker (PRP-85 and later own portability); a promise that 10k events/s at p95 under 5 s is met; the stress profile; autoscaling of Cosmos throughput.
+Real-Azure runs or a sized environment; OTLP protobuf and gzip, quarantine read API, Entra producer auth (PRP-79); a shared cross-process rate limiter; admission control on the ingest path via the domain quota policy; Kafka, ClickHouse or any non-Event-Hubs broker (PRP-85 and later own portability); a promise that 10k events/s at p95 under 5 s is met; the stress profile; autoscaling of Cosmos throughput; real-Azure runs of the capture-on profile (OPEN).
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

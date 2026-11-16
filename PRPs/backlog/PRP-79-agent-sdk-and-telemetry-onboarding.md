@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 7
 ns: NS-01, NS-09
 depends_on: [PRP-58-hosted-data-path-and-environment-hardening]
-wave: W22
+wave: W25
 branch: prp-79-agent-sdk-onboarding
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-79: Agent SDK and telemetry onboarding
 
 ## Goal
-Let an agent developer connect an agent to NeuroSphere in a few lines and see it on the map without asking an operator to read a collector runbook. It ships a small agent-side Python package (`neurosphere-agent`) that wraps the existing OTLP/JSON path with the right resource attributes, a redaction guard and a connection check; an ingest edge that also accepts gzip request bodies (what standard OpenTelemetry exporters send by default); a quarantine read API and an admin page so malformed events stop vanishing from the user's view; and a "connect your agent in ten minutes" quickstart that is run against the local stack by a test. It is for the platform engineer in original feature 5a. It runs in W22 after PRP-58, which turns the producer store on in every profile so a producer can be registered through the admin API (PRP-41) and the UI (PRP-57) in any environment.
+Let an agent developer connect an agent to NeuroSphere in a few lines and see it on the map without asking an operator to read a collector runbook. It ships a small agent-side Python package (`neurosphere-agent`) that wraps the existing OTLP/JSON path with the right resource attributes, a redaction guard and a connection check; an ingest edge that also accepts gzip request bodies (what standard OpenTelemetry exporters send by default); a quarantine read API and an admin page so malformed events stop vanishing from the user's view; and a "connect your agent in ten minutes" quickstart that is run against the local stack by a test. It is for the platform engineer in original feature 5a. It runs in W25 after PRP-58, which turns the producer store on in every profile so a producer can be registered through the admin API (PRP-41) and the UI (PRP-57) in any environment.
 
 Out of scope: the platform and copilot dogfooding span exporter (a separate follow-up; see NOT building); the Entra producer authenticator and signed payloads (a separate follow-up, the seam stays in `ingest/auth.py`); OTLP protobuf at the edge (needs a new `opentelemetry-proto`/`protobuf` dependency, deferred; see Clarifications); the TypeScript SDK; ingest throughput and autoscaling (PRP-84); producer registry and its admin page (PRP-41, PRP-57, shipped); the quarantine replay action (stays the CLI `neurosphere_workers.quarantine`); publishing the package to PyPI (needs operator approval).
 
@@ -34,7 +34,8 @@ Out of scope: the platform and copilot dogfooding span exporter (a separate foll
 ## Acceptance criteria
 - [ ] Given a registered producer and its secret in an environment variable, When a developer calls `neurosphere_agent.init(agent_id=..., ingest_url=...)` and runs one span through `agent_span(...)`, Then the edge answers 202 and, on the local stack, the agent appears as a `draft` catalog entity within the projection interval.
 - [ ] Given `neurosphere_agent.verify_connection()`, Then it returns a result with a reason code for each failure class (`ingest_not_configured` 503, unauthorized 401, rate-limited 429, unreachable, unsupported media) and a plain-English next step; it never prints the credential or the response body.
-- [ ] Given a span carrying prompt or response attributes, Then they are dropped before send and counted (reuse of `redact_outgoing`); the package exposes no option to send bodies.
+- [ ] Given a span carrying prompt or response attributes, Then they are dropped before send and counted (reuse of `redact_outgoing`); the package exposes no option to send bodies in this PRP (opt-in capture is PRP-111, a separate policy-gated source; the redaction guard here is unchanged).
+- [ ] Tool and service identity: given a tool call or a service-bound span, the SDK sets the attributes PRP-100's OTLP mapping turns into the PRP-70 fold F1 fields (`tool.tool_name`, `tool.external_tool_id`, `service.external_service_id`, `mcp_server_ref`; attribute names read from PRP-100 "Interfaces provided" at execution); a span without them sends none and still validates.
 - [ ] Given an exporter that sends `Content-Encoding: gzip`, When the body is within `max_body_bytes` after decompression, Then the edge accepts it; Given a decompressed size over the limit, a malformed gzip stream, a nested or non-gzip encoding, Then the edge answers the existing 4xx reason codes with a bounded amount of work (no unbounded decompression); `identity` bodies behave exactly as today.
 - [ ] Given a customer-level administrator, When they call `GET /api/v1/admin/quarantine`, Then they get a bounded page of quarantine records (doc id, reason, attempts, quarantined time, source id, event id, replayed flag) filterable by reason and date, and `GET /api/v1/admin/quarantine/{doc_id}` returns the record with its body-free payload or hash and size; callers without customer-level `config.manage` get 403 with a denial record; the list never scans more than a configured number of blobs and reports `truncated`.
 - [ ] Given the admin console, Then a Quarantine page lists and filters records, shows the reason with a one-line explanation per `QuarantineReason`, shows the replay command text for an operator, and states that replay is a CLI action; it passes axe and keyboard checks.
@@ -76,7 +77,7 @@ Out of scope: the platform and copilot dogfooding span exporter (a separate foll
 
 ### Interfaces provided
 - Package `neurosphere_agent` (distribution `neurosphere-agent`, directory `connectors/agent-sdk-python`): `init(agent_id, ingest_url, token=None, ...)`, `agent_span(...)` context manager (sets `gen_ai.agent.id`, `gen_ai.operation.name`, model, provider and token-usage attributes), `emit_event(...)` for a CloudEvents webhook post, `verify_connection() -> ConnectionCheck`, `shutdown()`. Env names `NS_AGENT_INGEST_URL`, `NS_AGENT_INGEST_TOKEN`, `NS_AGENT_ID`.
-- Edge: gzip request bodies accepted on all three ingest routes (`ingest/encoding.py`, `router.py` `_read` and `limits.py`). PRP-84 (W23) later edits the same `ingest/router.py` only to add the `ingest_overloaded` 429 admission check and never `_read`, `encoding.py` or `limits.py`; this PRP adds no overload, rate-limit or publisher change.
+- Edge: gzip request bodies accepted on all three ingest routes (`ingest/encoding.py`, `router.py` `_read` and `limits.py`). PRP-84 (W32) later edits the same `ingest/router.py` only to add the `ingest_overloaded` 429 admission check and never `_read`, `encoding.py` or `limits.py`; this PRP adds no overload, rate-limit or publisher change.
 - Routes `GET /api/v1/admin/quarantine` and `GET /api/v1/admin/quarantine/{doc_id}`; package `neurosphere_api.admin.quarantine`; component `quarantine_reader` (optional) in `runtime/status.py`; settings `NS_QUARANTINE_LIST_MAX_BLOBS` (default 5000).
 - Frontend route `/admin/quarantine`, area `quarantine` in `ADMIN_AREAS`; docs `docs/connectors/quickstart.md`.
 
@@ -94,7 +95,7 @@ Out of scope: the platform and copilot dogfooding span exporter (a separate foll
 - Blob metadata (`reason`, `customer_id`, `quarantined_date`) is only a listing filter and is never trusted over the record; re-check `customer_id` on the loaded record before returning it.
 - `doc_id` comes from the path: validate it against a strict pattern before building a blob name (path traversal and prefix injection).
 - Records never carry bodies (`find_body_fields` is enforced in `QuarantineRecord`); the API must not add fields beyond the record's own.
-- The local compose stack uses Azurite with a connection string only when `NS_ENV=local`; hosted uses managed identity (`create_quarantine_container`). The API compose service needs `NS_QUARANTINE_*` set; that edit is in `docker-compose.yml`, a Tier-1 file PRP-71 holds in W20, not W22: sequence it as a one-line additive change in item 5, `[serial-after: PRP-78]` (PRP-78 holds `docker-compose.yml` as Tier 1 in W22 for the demo-profile switch), and rebase.
+- The local compose stack uses Azurite with a connection string only when `NS_ENV=local`; hosted uses managed identity (`create_quarantine_container`). The API compose service needs `NS_QUARANTINE_*` set; that edit is in `docker-compose.yml`, a Tier-1 file; in W25 no other PRP holds it (PRP-71 W20, PRP-78 W23 and PRP-109 W24 are merged before this wave), so this PRP edits it directly as a one-line additive change in item 5 after rebasing.
 - A new workspace member can break all five `uv sync --frozen` images (api, workers, both `.dev` Dockerfiles, `scripts/sandbox/Dockerfile.seed`) only if the lock closure of a built package references it; `neurosphere-connector-otel-generic` is not copied into the api image today, so check closures before adding COPY lines.
 - New test roots: use `connectors/agent-sdk-python/tests` (covered by the `connectors` testpath and shard); do not add a new top-level root.
 - `.env.example` is agent-blocked: hand the operator a script for any new variable, or document variables in the runbook only.
@@ -154,6 +155,8 @@ must_not_touch:
   - connectors/reference/**
   - connectors/sdk-python/**
   - frontend/src/features/admin/sources/**
+  - connectors/agent-sdk-python/neurosphere_agent/capture/**
+  - connectors/agent-sdk-python/neurosphere_agent/guard/**
 ```
 
 ## Implementation blueprint
@@ -165,7 +168,7 @@ Parallelization: items 1, 2 and 3 [P] (SDK package, edge encoding and the quaran
 - Owned files: `connectors/agent-sdk-python/**`, the Tier-1 files named in Ownership.
 - Must NOT touch: `connectors/reference/**`, `connectors/sdk-python/**`.
 - Depends on: PRP-58 merged (soft; the code does not need it, the quickstart does).
-- Acceptance criteria: criteria 1 (against a fake edge), 2, 3 and 9; the credential is never in `repr`, logs or exceptions; `init` twice is idempotent; `shutdown` flushes; a span without prompt text and with a body attribute sends the first and drops the second.
+- Acceptance criteria: criteria 1 (against a fake edge), 2, 3, the tool and service identity criterion and 9; the package reserves `neurosphere_agent/capture/` and `neurosphere_agent/guard/` (PRP-111 and PRP-114) and creates no file under them; the credential is never in `repr`, logs or exceptions; `init` twice is idempotent; `shutdown` flushes; a span without prompt text and with a body attribute sends the first and drops the second.
 - Tests: `connectors/agent-sdk-python/tests/test_init_and_span.py`, `test_verify_connection.py`, `test_redaction.py`, `test_secret_hygiene.py`, plus `uv lock --check` and the workspace-member tests under `tests/unit`.
 - Pattern references: `otel-generic/exporter.py`, `otel-generic/pyproject.toml`, `connectors/sdk-python/tests/`.
 
@@ -196,7 +199,7 @@ Parallelization: items 1, 2 and 3 [P] (SDK package, edge encoding and the quaran
 - Tests: `frontend/src/features/admin/quarantine/__tests__/*.test.tsx`, `frontend/tests/e2e/admin-quarantine/quarantine.spec.ts`, a11y route samples.
 - Pattern references: `ProducersPage.tsx`, `admin-sources.ts` mock.
 
-### Item 5 - Quickstart and local-stack proof  [serial-after: PRP-78]
+### Item 5 - Quickstart and local-stack proof
 - Deliverable: `docs/connectors/quickstart.md` (register a producer, install, five-line `init`, a span, `verify_connection`, see the draft agent on the map and in the catalog, find a rejected event in quarantine; marker comments around the runnable snippet); `tests/integration/agent_onboarding/` (extracts the snippet, runs it against the compose api, asserts 202 and the entity; posts a malformed event and finds it in the quarantine API); `docs/runbooks/quarantine.md`; compose `NS_QUARANTINE_*` lines for the api service (additive); nav entry.
 - Owned files: the docs, `tests/integration/agent_onboarding/**`, Tier-2 lines (`docker-compose.yml`, `mkdocs.yml`).
 - Must NOT touch: connector SDK or other runbooks except to link.
@@ -235,7 +238,7 @@ No data migration. The edge change is additive (a new accepted encoding). The qu
 No live call. Open: an ingest and quarantine run on hosted Azure with a real producer (PRP-82 deploys, operator-attended; evidence in PRP-64), throughput of gzip bodies at 1k and 10k events/s (PRP-84, PRP-66), publication of the SDK to a package index (operator approval), the dogfooding exporter and Entra producer authenticator (follow-up PRPs).
 
 ## NOT building
-OTLP protobuf; the TypeScript or any non-Python SDK; a published package; a quarantine replay or delete action in the UI or API; the platform and copilot self-telemetry exporter under a built-in producer (follow-up); the Entra producer authenticator and payload signing (follow-up); binary-mode CloudEvents headers; auto-registration of producers from the SDK; a collector distribution.
+OTLP protobuf; the TypeScript or any non-Python SDK; a published package; a quarantine replay or delete action in the UI or API; the platform and copilot self-telemetry exporter under a built-in producer (follow-up); the Entra producer authenticator and payload signing (follow-up); binary-mode CloudEvents headers; auto-registration of producers from the SDK; a collector distribution; any capture or guard code (PRP-111 and PRP-114 own `neurosphere_agent/capture/` and `neurosphere_agent/guard/`).
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

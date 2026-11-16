@@ -10,8 +10,8 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 8
 ns: NS-07, NS-08
-depends_on: [PRP-86-contracts-platform-dimension-and-credential-kinds, PRP-89-postgres-foundation-catalog-and-security-stores, PRP-92-kafka-and-object-store-adapters, PRP-95-model-telemetry-and-analytics-adapters]
-wave: W27
+depends_on: [PRP-86-contracts-platform-dimension-and-credential-kinds, PRP-89-postgres-foundation-catalog-and-security-stores, PRP-92-kafka-and-object-store-adapters, PRP-95-model-telemetry-and-analytics-adapters, PRP-102-encrypted-interaction-store-and-retention]
+wave: W37
 branch: prp-94-secret-readers
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-94: Secret readers and workload identity for AWS, GCP and Kubernetes
 
 ## Goal
-Give every non-Azure deployment a way to reach its database, broker, buckets, model endpoints and connector secrets without a static credential in configuration. Secret readers for AWS Secrets Manager, Google Secret Manager, a mounted Kubernetes secret file and the Vault KV HTTP API sit beside the existing Key Vault reader behind one reader Protocol, dispatched by `CredentialReference.kind`, each refusing a reference that does not belong to the deployment (account, project, path or mount allowlist) before any network call, the way `parse_key_vault_secret` checks the vault suffix today. Token providers fill the hooks PRP-89 (PostgreSQL pool), PRP-92 (Kafka, S3, GCS) and PRP-95 (Bedrock, Vertex, OpenAI-compatible, and the PostgreSQL analytics executor's pool factory) left open, and this PRP wires the real providers (and PRP-89's pool for the analytics executor) through the PRP-87/PRP-88 seams where those PRPs' tests only injected static ones: EKS and GKE workload identity, RDS IAM database tokens, Cloud SQL IAM, MSK and Google Managed Kafka authentication. Configuration, logs, audit records, exceptions and OpenAPI carry references only, never values. It is for the operator of an AWS, GCP or on-prem install (owner decision 2026-11-16) and runs in W27 after the contract kinds (PRP-86) and the hooks exist.
+Give every non-Azure deployment a way to reach its database, broker, buckets, model endpoints and connector secrets without a static credential in configuration. Secret readers for AWS Secrets Manager, Google Secret Manager, a mounted Kubernetes secret file and the Vault KV HTTP API sit beside the existing Key Vault reader behind one reader Protocol, dispatched by `CredentialReference.kind`, each refusing a reference that does not belong to the deployment (account, project, path or mount allowlist) before any network call, the way `parse_key_vault_secret` checks the vault suffix today. Token providers fill the hooks PRP-89 (PostgreSQL pool), PRP-92 (Kafka, S3, GCS) and PRP-95 (Bedrock, Vertex, OpenAI-compatible, and the PostgreSQL analytics executor's pool factory) left open, and this PRP wires the real providers (and PRP-89's pool for the analytics executor) through the PRP-87/PRP-88 seams where those PRPs' tests only injected static ones: EKS and GKE workload identity, RDS IAM database tokens, Cloud SQL IAM, MSK and Google Managed Kafka authentication. Configuration, logs, audit records, exceptions and OpenAPI carry references only, never values. It is for the operator of an AWS, GCP or on-prem install (owner decision 2026-11-16) and runs in W37 after the contract kinds (PRP-86) and the hooks exist.
 
 Out of scope: the reference kinds themselves and `check_credential_reference` (PRP-86 contracts and `admin/connectors/references.py`); Helm `serviceAccount.identity` blocks and the CSI `SecretProviderClass` parameters (PRP-96); IAM roles, service accounts and empty secret entries in Terraform (PRP-97); MCP outbound credentials (the registered server has no reference field today, `packages/core/neurosphere_core/mcp/outbound_auth.py:41-52`; follow-up); real AWS and GCP runs (OPEN, PRP-98).
 
@@ -33,6 +33,7 @@ Out of scope: the reference kinds themselves and `check_credential_reference` (P
 - The frontend credential field accepts only the two Azure kinds (`frontend/src/features/admin/sources/credentialReference.ts:4-30`, `types.ts:45-49`).
 
 ## Acceptance criteria
+- [ ] Key wrapping for interaction content: for each platform a `KeyWrapper` (PRP-102 protocol) implementation exists and is selected by platform: AWS KMS (aws), Google Cloud KMS (gcp), Vault transit (kubernetes and on-prem), each refusing a key reference outside the deployment's allowlist before any network call and never logging key ids beyond the id, URI or material; where no provider is available or verified for a platform, content capture is disabled there with reason `capture_key_wrap_unavailable` and the capability and coverage pages say so, with no plaintext or local-file fallback outside `NS_ENV=local`. Each provider's wrap and unwrap API facts are verify-first.
 - [ ] Given a stored connector config whose credential is any supported kind for the active `NS_PLATFORM`, When the worker resolves it, Then the matching reader returns the value as `SecretStr`; Given a kind not supported on the platform (for example `key_vault_secret` on `aws`), Then resolution fails with `credential_reference_invalid` and the role idles with that reason; the Key Vault path on Azure is unchanged (`services/workers/tests/connector_config_worker` passes unmodified).
 - [ ] Each reader refuses, before requesting any token or making any call: a `secret_arn` outside the allowlisted accounts and region or not a `secretsmanager` ARN; a `secret_version_name` outside the allowlisted projects; a `kubernetes_secret_name`/`kubernetes_secret_key` pair that fails the name grammar or whose file (`<mount root>/<name>/<key>`) resolves outside the configured mount roots; a `vault_mount`/`vault_path`/`vault_key` outside the allowlisted mount and prefix or an address not exactly equal to the configured one. Hostname checks are exact or leading-dot suffix checks.
 - [ ] Every reader failure (refused reference, 4xx, 5xx, timeout, malformed body, token failure) raises the one neutral error with a reason code only; no ARN, resource name, path, secret name or value appears in exceptions, logs (including `httpx` and `botocore` loggers), audit payloads, readiness reasons or OpenAPI examples. A leak test greps all captured output for the reference and the value.
@@ -94,7 +95,7 @@ Out of scope: the reference kinds themselves and `check_credential_reference` (P
 - Kubernetes secret volumes are symlinks into a `..data` directory; resolve the real path and check it stays under the mount root, rather than refusing all symlinks.
 - RDS and Cloud SQL tokens expire (minutes); the pool must ask for a token per new connection, not once at start.
 - A test fixture must never contain a real-looking key (gitleaks fingerprints are commit-scoped): build fake values at runtime.
-- Only one session may run the portable compose fragments; PRP-90 is the W27 compose-stack holder, and this PRP's OpenBao steps run `[serial-after: PRP-90, PRP-91]` (after both released the lane).
+- Only one session may run the portable compose fragments; PRP-90 is the W37 compose-stack holder, and this PRP's OpenBao steps run `[serial-after: PRP-90, PRP-91]` (after both released the lane).
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
 ## Ownership
@@ -204,6 +205,9 @@ Parallelization: item 1 first. Items 2 and 3 [P] after item 1. Items 4 and 5 [P]
 - Owned files: the suite, runbooks, Tier-2 lines, this PRP file, Tier-3 files.
 - Depends on: items 1-7.
 - Acceptance criteria: validation gates pass; CI green.
+
+## Cut line
+The Vault transit key-wrap provider (and, if the session overruns, the Google Cloud KMS one) is the cuttable unit: what remains merges safely because capture is then disabled on that platform with reason `capture_key_wrap_unavailable`, recorded in the completion note with a follow-up issue. The secret readers, database IAM tokens and broker, bucket and model credentials are never cut.
 
 ## Validation gates
 ```bash

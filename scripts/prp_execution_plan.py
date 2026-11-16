@@ -30,29 +30,39 @@ WAVE_GATES = {
     "W16": "System status reports every unconfigured feature; per-node map metrics populated on the emulator stack.",
     "W17": "An operator can assign a role and read the first-run checklist in the UI; a write target is enabled from configuration.",
     "W18": "An operator can register a producer and a connector in the UI; hosted IaC builds offline with the connector roles.",
-    "W19": "Main deploys to the hosted Azure environment by pipeline (dry run green; first live run needs the operator). Restored-scope contracts reviewed (Opus).",
-    "W20": "`make demo-up` brings up a seeded world where every nav entry shows data; a task returns ranked agents with an explanation; a sensitivity question returns the agents that touch that data.",
-    "W21": "The hosted profile renders with everything on (offline build); Find an agent, catalog history and undeclared agents work on the local stack; the map shows services and tools and receives topology pushes.",
-    "W22": "The map filters, searches and highlights incident impact; the copilot answers graph, timeline and recommend questions with citations (owner decision on the recorded mode applied); the agent SDK quickstart works against the local stack.",
-    "W23": "Copilot retrieval and the groundedness set pass on the recorded transport; data-subject requests can be submitted; ingest back-pressure and autoscaling render in the chart.",
-    "W24": "Owner has confirmed the multi-cloud decisions listed in PRP-85; the adapter boundary test is in CI with its known-leaks list.",
-    "W25": "API and worker composition go through the backend seam with no Azure behaviour change (existing suites and the real-stack job green).",
-    "W26": "PostgreSQL catalog and security stores, Kafka and object-store adapters, generic OIDC and the model adapters pass their conformance suites in containers.",
-    "W27": "Every store Protocol has a PostgreSQL implementation that passes the same conformance checks as the Cosmos one; secret readers and workload identity pass theirs.",
-    "W28": "The chart renders for all four platforms and the Azure manifests are byte-identical to before; the on-prem reference installs on a local cluster; AWS and GCP Terraform validates.",
-    "W29": "No Azure import remains outside adapter modules; the conformance matrix is published; per-target RPO/RTO are documented as unmeasured targets.",
-    "W30": "Every gate has evidence or is recorded OPEN with its reason.",
+    "W19": "Hosted hardening and the restored-scope contracts are merged (contracts reviewed, Opus), including tool and service identity on the telemetry event; observed agents resolve to catalog entries.",
+    "W20": "`make demo-up` brings up a seeded world where every nav entry shows data; a task returns ranked agents with an explanation; a sensitivity question returns the agents that touch that data; governance contracts A reviewed (Opus).",
+    "W21": "The hosted profile renders with everything on (offline build); detectors are measured on the synthetic corpus; the content store round-trips encrypted; a policy flags a graph violation locally.",
+    "W22": "Tools and services have real aggregates and appear on the map; capture works at the edge with all six metadata-only guards still failing closed when it is off; a notification is delivered to a local sink.",
+    "W23": "An investigator can explore and export with reads audited before decryption; policies and violations are usable in the UI; an agent version is approved through the action executor; the copilot answers graph, timeline and recommend questions.",
+    "W24": "The north-star scenario passes on the local stack (PRP-109); the hosted run is evidenced or recorded OPEN. Find an agent, catalog history and the map incident view work.",
+    "W25": "Governance contracts B reviewed (Opus); the agent SDK quickstart works; gateway enforcement dry-runs a fragment diff; SOC 2, ISO 27001 and GDPR mappings load.",
+    "W26": "The connector runner schedules a fake connector; SDK and gateway capture sources feed the one edge pipeline; tool calls are guarded; budget thresholds alert.",
+    "W27": "Run-as identities and entitlements are in the graph (fixtures); Purview labels are mapped (fixtures); the decision API and SDK guard work; the copilot answers governance questions without returning content.",
+    "W28": "Unity Catalog is mapped; the Microsoft 365, GitHub Copilot and Cursor connectors are verified and built, or shown as not built with the reason.",
+    "W29": 'Over-privilege findings and "who could" answers show their coverage; every estate connector is built or shown as not built with the reason on the coverage page.',
+    "W30": "The AI system register and tiering are usable; alert rules create incidents.",
+    "W31": "The CI check fails an unregistered agent in a sample workflow; an attestation campaign runs; a ticket is created through approval; copilot retrieval passes the groundedness set on the recorded transport.",
+    "W32": "Cards export from recorded facts; the chargeback view works; data-subject requests cover captured interactions; ingest autoscaling renders in the chart.",
+    "W33": "Every Azure and governance live gate has evidence or is recorded OPEN with its reason.",
+    "W34": "Sign-off gates are recorded; the adapter boundary test is in CI with its known-leaks list.",
+    "W35": "API and worker composition go through the backend seam with no Azure behaviour change (existing suites and the real-stack job green).",
+    "W36": "PostgreSQL catalog and security stores, Kafka and object-store adapters, generic OIDC and the model adapters pass their conformance suites in containers.",
+    "W37": "Every store Protocol, including the governance-core stores, has a PostgreSQL implementation that passes the same conformance checks as the Cosmos one; secret readers and workload identity pass theirs.",
+    "W38": "The chart renders for all four platforms and the Azure manifests are byte-identical to before; the on-prem reference installs on a local cluster; AWS and GCP Terraform validates.",
+    "W39": "No Azure import remains outside adapter modules; the conformance matrix is published; per-target RPO/RTO are documented as unmeasured targets.",
 }
 
-HEADER = """# Execution plan: parallel build, waves W19 to W30
+HEADER = """# Execution plan: parallel build, waves W19 to W39
 
-This plan covers every PRP that is not shipped. Waves W11 to W18 are done; the
-remaining waves were re-planned on 2026-11-16 when the owner restored the
-original product scope (decisions D13 and D14 in `docs/DECISIONS-LOG.md`):
-W19 to W23 add back the original features, W24 to W29 add multi-cloud hosting,
-W30 is the operator-attended live gates. Shared rules, file-ownership tiers,
-commands and traps are in `PRPs/reference/parallel-build-reference.md`; read
-that first.
+This plan covers every PRP that is not shipped. Waves W11 to W18 are done. The
+remaining waves were re-planned on 2026-11-16 (decisions D13 to D18 in
+`docs/DECISIONS-LOG.md`): W19 to W24 restore the original features and build
+the governance core up to the north-star scenario (PRP-109), which is the
+product definition of done; W25 to W33 add enforcement depth, estate coverage,
+identity, Purview and Unity Catalog, risk, incidents and the live gates; W34 to
+W39 add multi-cloud hosting. Shared rules, file-ownership tiers, commands and
+traps are in `PRPs/reference/parallel-build-reference.md`; read that first.
 
 The tables, graph and prompts between the markers below are generated by
 `python scripts/prp_execution_plan.py --write` from the PRP files. Edit the PRPs

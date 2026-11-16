@@ -10,8 +10,8 @@ orchestrator_model: opus
 implementer_model: sonnet
 phase: 8
 ns: NS-02, NS-07, NS-08
-depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary, PRP-87-api-composition-seam-and-adapter-packages]
-wave: W26
+depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary, PRP-87-api-composition-seam-and-adapter-packages, PRP-102-encrypted-interaction-store-and-retention]
+wave: W36
 branch: prp-89-postgres-foundation
 allow_parallel: true
 issues: []
@@ -40,6 +40,7 @@ Out of scope: data-plane stores (ledger, aggregates, outbox, ingestion markers, 
 - [ ] Revocation: a stored entry is returned until its retention expires, an `until_lifted` entry (no TTL) never expires, an expired entry reads as absent before the sweeper runs, and a store error reaches `CachedRevocationChecker` as a transient error so the existing fail-closed behaviour holds (`packages/core/tests/auth/revocation/test_fail_closed.py` passes against the PostgreSQL store).
 - [ ] Isolation: every statement the collection helper builds binds the partition columns of its container; a query or point read for customer A (or domain D1) never returns a document of customer B (or domain D2) in any conformance check, including keyset paging and catalog graph traversal; a call without a partition value is refused before any SQL runs.
 - [ ] No generated SQL: every statement is a fixed, parameterised template; field names come only from the existing allowlists (`catalog/repo/backend.py` `FIELDS`); a test feeds hostile field names and values and asserts refusal or parameter binding.
+- [ ] Governance-core containers: the schema generator and migrations cover every container in `CONTAINERS` at execution, including the governance-core ones declared by earlier waves (`interaction_index`, `interaction_capture_policies` (PRP-102), `policy_definitions`, `policy_violations`, `policy_exceptions` (PRP-102), `notification_outbox` (PRP-102), `connector_status`, `estate_usage` (PRP-117), `ai_systems`, `risk_determinations`, `impact_assessments`, `alert_rules`, `incidents`, `attestations`, `attestation_campaigns` (PRP-127), `safety_evaluation_records` (PRP-131); `catalog_revisions` and `recommendation_feedback` likewise if declared), with the declared partition columns; a parity test fails when a declared container has no table, so `--check` has no drift. The store implementations for them are PRP-90 and PRP-91.
 - [ ] Schema: `python -m neurosphere_adapters_postgres.schema --check` reports no drift between `CONTAINERS` and the versioned migrations; applying the migrations twice is a no-op; an unknown applied migration refuses startup with a reason code.
 - [ ] Selecting PostgreSQL through the PRP-87 backend selector (`NS_PLATFORM` other than `azure`, resolved by `select_backends`) composes the API with every store of this PRP on PostgreSQL and the authz component ready; with the selector unset, behaviour and goldens on Azure are unchanged (existing suites and `services/api/tests/test_openapi_drift.py` pass).
 - [ ] No password or DSN with credentials appears in logs, exceptions, readiness reasons or settings `repr`; outside `NS_ENV=local` a password setting is refused (credential comes from the token-provider hook, PRP-94).
@@ -99,7 +100,7 @@ Out of scope: data-plane stores (ledger, aggregates, outbox, ingestion markers, 
 - A replace that matches zero rows is either stale or missing: decide with the same statement (`RETURNING` plus a follow-up existence probe inside the transaction), never by a second unguarded read.
 - `READ COMMITTED` is enough for a conditional `UPDATE ... WHERE etag = $n`; the policy transaction must still lock the head row (`SELECT ... FOR UPDATE`) or check it with the same conditional update, to match the Cosmos batch semantics.
 - Revocations are partitioned by `principal_id` (`containers.py:101-107`), not customer; the principal id carries the customer segment. Keep the Cosmos partitioning, do not add a customer column the Protocol does not supply.
-- The compose project name of the main stack is shared across worktrees; the portable fragment uses its own name and port. Within W26 this PRP holds the portable compose lane first, then PRP-92, then PRP-93. Use `127.0.0.1`.
+- The compose project name of the main stack is shared across worktrees; the portable fragment uses its own name and port. Within W36 this PRP holds the portable compose lane first, then PRP-92, then PRP-93. Use `127.0.0.1`.
 - Registering an implementation in PRP-85's port inventory is an additive Tier-2 line (PRP-85 declares `PORTS` Tier-2 after it merges).
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 

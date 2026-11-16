@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 7
 ns: NS-03, NS-05
 depends_on: [PRP-72-agent-and-tool-recommender-backend]
-wave: W21
+wave: W24
 branch: prp-75-find-an-agent-ui
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-75: "Find an agent" page and recommendation metrics
 
 ## Goal
-Give a person a place to type a task, see ranked agents and tools with a score, a confidence and a readable explanation (matched tags, graph relationships, telemetry signals), follow links to the entity and the map, and accept or reject each candidate. A small metrics strip shows the acceptance rate, so the original "recommendation acceptance rate" metric is visible instead of invisible, and a metadata-completeness tile appears when PRP-76 provides the endpoint. It is for the operations lead and platform engineer from original feature 5c, on the Quality navigation group, built against the mock API first and then covered on the real stack. It runs in W21 on top of PRP-72 (routes and contract types from PRP-70).
+Give a person a place to type a task, see ranked agents and tools with a score, a confidence and a readable explanation (matched tags, graph relationships, telemetry signals), follow links to the entity and the map, and accept or reject each candidate. A small metrics strip shows the acceptance rate, so the original "recommendation acceptance rate" metric is visible instead of invisible, and a metadata-completeness tile appears when PRP-76 provides the endpoint. It is for the operations lead and platform engineer from original feature 5c, on the Quality navigation group, built against the mock API first and then covered on the real stack. It runs in W24 on top of PRP-72 (routes and contract types from PRP-70).
 
 Out of scope: the matcher, feedback store and routes (PRP-72); tags, capabilities and the completeness endpoint (PRP-70 and PRP-76); the copilot tool and any chat entry point (PRP-78); changing the existing detector recommendations pages; live-map overlays (PRP-77); any invocation of the chosen agent.
 

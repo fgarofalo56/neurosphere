@@ -36,6 +36,7 @@ Out of scope: the contract fields and vocabularies themselves (PRP-70); the reco
 - [ ] The world contains at least: 30 agents across 4 domains, 6 services, 12 tools, 4 model deployments, 10 data assets spanning classifications and sensitivity categories (PII, PHI, financial at least) with both EU and US residency, `reads` and `writes` edges so that at least one data asset has two writer agents and at least one EU PII asset has a reader, and 4 agents that appear only in telemetry (no catalog entity), each recorded in the manifest.
 - [ ] Given the incident manifest, Then one service fails during the last hour of the seeded window (error outcomes, raised latency) and its downstream agents (via `depends_on` or `invokes`) show degraded health in the aggregates while unrelated agents do not; the manifest names the service, the downstream agent ids and the window, so tests and the later map and copilot PRPs can assert against it.
 - [ ] Agent versions include at least three agents with two versions whose declared capabilities differ, so a version diff has something to show.
+- [ ] Tool and service identity: tool-call and service-bound spans in the seeded telemetry carry the PRP-70 fold F1 fields (`tool.external_tool_id`, `tool.canonical_tool_id`, `tool.tool_name`, `service.external_service_id`, `service.canonical_service_id`, `mcp_server_ref`) matching the seeded Tool, Service and McpServer entities, so PRP-100's per-tool and per-service aggregates and PRP-74's map have real series; spans without a tool or service leave the fields null; the output still validates as `TelemetryEvent`.
 - [ ] Given `make demo-up` with the two Entra ids exported, Then the stack builds, seeds and reports healthy; given `make demo-check`, Then every route in `frontend/src/app/route-manifest.json` either has data behind its backing API call or appears in a named, reasoned allow-list (`demo_expected_empty`), and an unexplained empty page fails the check.
 - [ ] The profile turns on, and `/api/v1/admin/system/status` reports as not disabled: producer store (`NS_INGEST_PRODUCER_STORE`), MCP server, scan, lifecycle (dry-run), detector recommendations from the archive source, connector roles idle-but-configured, and the stored feature settings; each non-obvious item has one line in `docs/dev/local-setup.md` saying what is real and what is fake.
 - [ ] Copilot: the profile sets a single switch (`NS_DEMO_COPILOT_MODE`, always `disabled` when this PRP ships) and the check reports copilot as `pending_prp_78` rather than silently passing. Copilot on in the local demo is NOT delivered here: PRP-78 owns the recorded mode and flips the switch (the owner allowed it for the local demo on 2026-11-16, PRP-78 clarification 6), so the profile default becomes `recorded` once PRP-78 ships.
@@ -49,7 +50,7 @@ Out of scope: the contract fields and vocabularies themselves (PRP-70); the reco
 | 1 | Hand-curated or generated names | Curated JSON; name tables fed to the random generator | Curated data files under `sandbox/demo/` for entities and edges (readable, reviewable), generator code only for telemetry volume around them; the curated world is deterministic by construction. |
 | 2 | New fields and vocabularies | Define here; consume PRP-70 | Consume PRP-70 (tags, capabilities, environment on agent, tool and service; `sensitivity_categories` on data assets; revision record). If a field is missing at start, stop and report; do not define contract fields in this PRP. |
 | 3 | Load path | Raw document writes; real seed path | Real path: `sbx_seed_stack.py` (Event Hubs and workers for telemetry; `create_entity` for catalog). |
-| 4 | Copilot in the local profile | Edit the copilot builder here; wait for PRP-78 | ASSUMPTION: the `fixture` recorded adapter exists in core (`packages/core/neurosphere_core/copilot/models/gating.py:153,179`) but `CopilotMode` has no `fixture` value and `runtime/builders/copilot.py` is PRP-78's Tier-1 file in W22. This PRP ships the switch and check; PRP-78 (item 8, decided by the owner 2026-11-16) turns it on. |
+| 4 | Copilot in the local profile | Edit the copilot builder here; wait for PRP-78 | ASSUMPTION: the `fixture` recorded adapter exists in core (`packages/core/neurosphere_core/copilot/models/gating.py:153,179`) but `CopilotMode` has no `fixture` value and `runtime/builders/copilot.py` is PRP-78's Tier-1 file in W23. This PRP ships the switch and check; PRP-78 (item 8, decided by the owner 2026-11-16) turns it on. |
 | 5 | Write targets against fakes | Build a fake ARM server; keep advisory | ASSUMPTION: decided at item 5 after reading `runtime/builders/write_targets.py` and the cloud profile: a loopback fake is built only if the ARM host can be overridden under `NS_ENV=local`; otherwise write targets stay advisory with dry-run intents seeded, and the gap is reported OPEN. |
 | 6 | Lifecycle | Execute; dry-run | Dry-run only (`NS_LIFECYCLE_MODE=dry_run`); local data is synthetic but execute mode has no UI yet (PRP-83). |
 | 7 | New compose profile or env passthrough | Second compose file; existing file plus env file | Existing `docker-compose.yml` with `${VAR:-default}` passthrough for names PRP-58 did not already add, plus `infra/dev/demo-profile.env` (names and non-secret values). Defaults for non-demo runs unchanged. |
@@ -136,6 +137,7 @@ must_not_touch:
   - infra/demo/**
   - infra/helm/**
   - infra/appservice/**
+  - sandbox/demo/governance/**
 ```
 
 ## Implementation blueprint
@@ -152,7 +154,7 @@ Parallelization: item 1 first. Items 2 and 4 [P] after item 1 (disjoint files). 
 - Pattern references: `sandbox/tests/test_schema_validity.py`, `sandbox/catalog.py:90-175`.
 
 ### Item 2 - Telemetry for the demo world and the scripted incident  [P]
-- Deliverable: `sandbox/demo/incident.py` producing delegation traces and cost for the curated agents (including telemetry-only agents that carry no catalog entity), a service outage window with error and latency effects on exactly the downstream agents, and `incident-manifest.json`.
+- Deliverable: `sandbox/demo/incident.py` (and the demo telemetry it shares with item 1's ids) emitting tool and service identity on spans per PRP-70 fold F1, producing delegation traces and cost for the curated agents (including telemetry-only agents that carry no catalog entity), a service outage window with error and latency effects on exactly the downstream agents, and `incident-manifest.json`.
 - Owned files: `sandbox/demo/incident.py`, `sandbox/tests/test_demo_world_incident.py`.
 - Must NOT touch: `sandbox/traces.py`, `costs.py` (call them).
 - Depends on: item 1 (ids).
@@ -221,7 +223,7 @@ No data migration. The demo world is new generator output and seed data in a loc
 None live. Everything runs on emulators and fakes. OPEN until PRP-78 ships: the copilot answering in the profile. OPEN until an operator supplies a model endpoint (PRP-64): a real copilot turn. If the local write-target fake is not possible (clarification 5), write-target apply stays advisory and is reported OPEN. A compose run that did not happen is reported OPEN, not passed.
 
 ## NOT building
-New contract fields or vocabularies (PRP-70); map, recommender or graph-question backends (PRP-72, 73, 74); the hosted seed and smoke (PRP-82); a real or paid model call; execute-mode lifecycle; production data of any kind; changing code defaults so that features are on outside the profile.
+New contract fields or vocabularies (PRP-70); map, recommender or graph-question backends (PRP-72, 73, 74); the hosted seed and smoke (PRP-82); a real or paid model call; execute-mode lifecycle; production data of any kind; changing code defaults so that features are on outside the profile; the governance seed (synthetic governance agent, PII-labelled asset, policy, notification sink) under `sandbox/demo/governance/**`, which PRP-109 owns.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-05, NS-06, NS-07, NS-08
-depends_on: [PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-84-ingest-throughput-and-autoscaling, PRP-82-hosted-profile-everything-on, PRP-77-live-map-filters-search-and-incident-view]
-wave: W30
+depends_on: [PRP-21-scale-federation-finops-and-dr, PRP-49-per-agent-aggregates-and-map-metrics, PRP-55-real-deploy-apply, PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-84-ingest-throughput-and-autoscaling, PRP-82-hosted-profile-everything-on, PRP-77-live-map-filters-search-and-incident-view, PRP-109-north-star-scenario-acceptance]
+wave: W34
 branch: prp-66-operations-gates
 allow_parallel: true
 issues: [268, 39, 40, 108, 124, 144, 179, 148]
@@ -40,6 +40,7 @@ Out of scope: the Azure service gates (G17 observe and manage, G16, G04, G12, G0
 - [ ] A gate that did not run stays OPEN and the register row says why (no sized environment, no GPU hardware, no human tester, no Government subscription, dependency PRP not shipped).
 - [ ] The map evidence states mean and p5 fps separately, with renderer and hardware recorded; headless SwiftShader numbers are labelled as such and never recorded as a pass.
 - [ ] The accessibility sign-off blocks hold tester, date, browser, OS and AT versions dictated by the human; the agent never signs; each FAIL is in `docs/accessibility/remediation-log.md` with an owner.
+- [ ] Hosted north-star run (PRP-109): the sign-off list includes the operator-approved hosted run of `frontend/tests/hosted/north-star.spec.ts` against the `governanceProfile=north-star` deployment; it ends in `PASS` with evidence under `docs/evidence/north-star/` or `OPEN (not run)` with the reason; PRP-136 re-runs it later.
 - [ ] The register rows listed under Ownership are edited only for facts the evidence shows, in the final item, after PRP-64's register edits; no production, SLA, Government or authorization claim is added.
 - PRP exit: the completion note holds a table of every item with outcome, evidence path, spend and register row, and a list of what stays OPEN and what closes each; #40, #108 and #124 may be closed only on PASS (the operator closes issues).
 
@@ -52,7 +53,7 @@ Out of scope: the Azure service gates (G17 observe and manage, G16, G04, G12, G0
 | 4 | Where a script is delivered by another PRP | Wait; mark OPEN | If that PRP has not shipped, the item is `OPEN (not run)` and says which PRP (PRP-61 detections check is optional) |
 | 5 | Running agent versus operator | Agent runs all; operator runs billable steps | The agent prepares `temp/campaign/*.ps1` or `.sh` command files with placeholders filled from operator-supplied names; the operator or the agent runs them only after approval; interactive logins, credential installs and portal steps are the operator's |
 | 6 | Evidence spill | One file; per item | One file per run under the gate's directory, never overwriting an earlier run |
-| 7 | Split with PRP-64 | One PRP; two PRPs | Two PRPs, both W30 with disjoint evidence paths (see Ownership). Both edit `docs/RESEARCH-AND-GATES.md`, so this PRP's register edits are its final item with `[serial-after: PRP-64]` |
+| 7 | Split with PRP-64 | One PRP; two PRPs | Two PRPs, PRP-64 in W33 and this PRP in W34, with disjoint evidence paths (see Ownership). Both edit `docs/RESEARCH-AND-GATES.md`, so this PRP's register edits are its final item with `[serial-after: PRP-64]` |
 | 8 | #179 item 4 and #148 item 6 | Rerun here; read PRP-64's evidence | Both are answered by the G17 observe run, which PRP-64 item 2 owns. This PRP reads that evidence file and posts the results; if it did not run, both stay OPEN. ASSUMPTION |
 | 9 | Tracking issue | Share #258; none | #258 stays with PRP-64. This PRP has no tracking issue of its own; the issue numbers in frontmatter are the operator-only issues it answers. ASSUMPTION |
 | 10 | Changelog entry | Edit `CHANGELOG.md`; fragment file | ASSUMPTION: PRP-68 (W11) ships the `changelog.d/` fragment convention first, so this PRP writes `changelog.d/PRP-66.md` (new) and never edits `CHANGELOG.md` |
@@ -191,8 +192,13 @@ Every item is independent and operator-attended: the dependency noted is a shipp
 - Command: the spec command in the live-map runbook with `NS_MAP_PERF_HEADED=1`, unique `NS_E2E_APP_PORT` and `NS_MOCK_API_PORT`, three runs; copy the result to `docs/evidence/G07/map/interaction-latency-operator-run<N>.json` with renderer and hardware recorded (headless SwiftShader numbers are labelled, never a pass).
 - Approval: none beyond the workstation session. Spend cap: USD 0. Register row: G07 (map sentence, with the item 5 fps figures). Ends OPEN when no GPU hardware is available.
 
+### Item 11b - Hosted north-star run (PRP-109)
+- Depends on: PRP-109 shipped (the hosted governance profile and `frontend/tests/hosted/north-star.spec.ts`), PRP-63's pipeline, the hosted environment of PRP-82.
+- Command: the deploy pipeline run with `governance_profile=north-star` and the spec, as the PRP-109 runbook (`docs/demo/north-star.md`) lists; synthetic content only, the capture policy scoped to the demo domain.
+- Approval: the operator's written approval in the session naming the environment; `NS_LIVE_APPROVED=1`; spend row and cap as for the other live items. Evidence: `docs/evidence/north-star/`. No new register row (the Ownership row list is unchanged); the result goes in the completion note table. Ends OPEN when not run.
+
 ### Item 12 - Integration and close-out  [serial-after: PRP-64]
-- Deliverable: after PRP-64's close-out has merged (both edit the one register file in W30), edit only the register rows listed under Ownership, in one close-out commit, plus the Government record from item 8; write `changelog.d/PRP-66.md`; regenerate `PRPs/INDEX.md` and the status table (`python scripts/prp_status.py --write`); fill the completion note table (item, outcome, evidence, spend, row); file follow-up issues; tell the operator which issues may be closed (#40, #108, #124 only on PASS).
+- Deliverable: after PRP-64's close-out has merged (both edit the one register file; PRP-64 merges a wave earlier, W33), edit only the register rows listed under Ownership, in one close-out commit, plus the Government record from item 8; write `changelog.d/PRP-66.md`; regenerate `PRPs/INDEX.md` and the status table (`python scripts/prp_status.py --write`); fill the completion note table (item, outcome, evidence, spend, row); file follow-up issues; tell the operator which issues may be closed (#40, #108, #124 only on PASS).
 - Owned files: `docs/RESEARCH-AND-GATES.md` (rows listed under Ownership only), `changelog.d/PRP-66.md` (new), this PRP file.
 - Acceptance criteria: every item has an outcome row; no register row outside this PRP's list is touched; the GUID grep in Validation gates is clean.
 - Tests: `uv run pytest -q tests/unit/gates tests/docs`.
@@ -237,6 +243,7 @@ Product code, new gate scripts beyond a fix needed to finish a run, new infrastr
 | 9 | todo | | |
 | 10 | todo | | |
 | 11 | todo | | |
+| 11b | todo | | PRP-109 hosted north-star run |
 | 12 | todo | | serial-after PRP-64 |
 
 ## Completion note (filled at ship)

@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 8
 ns: NS-01, NS-07
 depends_on: [PRP-85-deployment-target-ports-and-adapter-boundary]
-wave: W25
+wave: W35
 branch: prp-88-worker-seam-event-object-ports
 allow_parallel: true
 issues: []
@@ -97,7 +97,7 @@ Out of scope: the deployment-target contract, the `Backends` registry Protocol, 
 - `build_pipeline_deps` is shared with the quarantine replay CLI; its signature and the "containers are created only when `NS_ENV=local`" rule stay.
 - S3, GCS and Azure lower-case or restrict metadata differently: the port's metadata is ASCII `str -> str` with lower-case keys, as the archive already writes (`sha256`, `reason`, `customer_id`, `quarantined_date`); `quarantine/blob.py` already drops non-printable values.
 - `RuntimeConfig` and the `BUILDERS` mapping are patched by tests; keep their shape.
-- The real-stack and `integration` suites need the compose emulators. PRP-88 holds the compose stack in W25 for item 7 only; do not run compose from any other item.
+- The real-stack and `integration` suites need the compose emulators. PRP-88 holds the compose stack in W35 for item 7 only; do not run compose from any other item.
 - Same-named test directories shadow each other: new worker test directories are `runtime_backends` and `ingestion_stream_port`.
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
@@ -203,7 +203,7 @@ Parallelization: item 1 first. Items 2 then 3 and 4 (3 and 4 share no file once 
 - Pattern references: `factories.py:309-345`, `runtime/adapters.py:150-175`.
 
 ### Item 7 - Proof run and ratchet shrink  [serial-after: PRP-85]
-- Deliverable: run the compose emulators once (this PRP holds the stack) and the local integration suites; record the commands and results in the PR; remove the worker files that no longer import Azure from `KNOWN_LEAKS` in `tests/architecture/boundary.py` and lower `LEAK_CEILING` (deletion-only Tier-2, shared with PRP-87 in W25: at rebase keep both deletions and recompute the ceiling). Allowed only after PRP-85 merged.
+- Deliverable: run the compose emulators once (this PRP holds the stack) and the local integration suites; record the commands and results in the PR; remove the worker files that no longer import Azure from `KNOWN_LEAKS` in `tests/architecture/boundary.py` and lower `LEAK_CEILING` (deletion-only Tier-2, shared with PRP-87 in W35: at rebase keep both deletions and recompute the ceiling). Allowed only after PRP-85 merged.
 - Owned files: `tests/architecture/boundary.py` (Tier-2, entry removal only).
 - Must NOT touch: the boundary test logic.
 - Depends on: item 6; PRP-85 merged.

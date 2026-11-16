@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 7
 ns: NS-06, NS-02, NS-03, NS-08
 depends_on: [PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions, PRP-72-agent-and-tool-recommender-backend, PRP-71-realistic-seeded-world-and-demo-profile]
-wave: W22
+wave: W23
 branch: prp-78-copilot-graph-tools
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-78: Copilot graph, timeline and recommender tools, tool-call audit, demo-profile copilot
 
 ## Goal
-Give the copilot the three tools the original PRD asked for and the shipped copilot lacks, all bounded and structured: `graph_query` (neighbours, impact and data-access questions over the catalog graph, depth and budget capped, scope server-derived, no model-authored query text), `get_timeline` ("what changed in the last hour": audit-recorded changes, metric shifts and new recommendations in one ordered list) and `recommend_agent` (the PRP-72 task-to-agent matcher). Every tool call, allowed or refused, is written to the audit chain; the SSE stream emits progress events before the model finishes; and the copilot answers in the local demo profile through an explicitly labelled recorded demo model, with the documented path to a real endpoint unchanged. It is for the operations lead and the SRE personas, who today get a disabled dock and, with an endpoint, a copilot that cannot answer "which agents touch EU customer data?" or "what changed in the last hour?". It runs in W22 after PRP-73 (access queries) and PRP-72 (matcher) because it consumes both.
+Give the copilot the three tools the original PRD asked for and the shipped copilot lacks, all bounded and structured: `graph_query` (neighbours, impact and data-access questions over the catalog graph, depth and budget capped, scope server-derived, no model-authored query text), `get_timeline` ("what changed in the last hour": audit-recorded changes, metric shifts and new recommendations in one ordered list) and `recommend_agent` (the PRP-72 task-to-agent matcher). Every tool call, allowed or refused, is written to the audit chain; the SSE stream emits progress events before the model finishes; and the copilot answers in the local demo profile through an explicitly labelled recorded demo model, with the documented path to a real endpoint unchanged. It is for the operations lead and the SRE personas, who today get a disabled dock and, with an endpoint, a copilot that cannot answer "which agents touch EU customer data?" or "what changed in the last hour?". It runs in W23 after PRP-73 (access queries) and PRP-72 (matcher) because it consumes both.
 
 Out of scope: `search_docs`, the 100-question groundedness set and Helm copilot values (PRP-80); provisional token streaming of unjudged text (decided against here, clarification 5); the first real-model turn (operator-gated, PRP-64); MCP exposure of the new tools (the MCP tool list in `services/api/neurosphere_api/mcp/server/tools.py` stays as is; PRP-69 or a follow-up); new catalog queries or matcher logic (PRP-73, PRP-72).
 
@@ -166,7 +166,7 @@ Parallelization: items 1, 2 and 3 are [P] (separate core modules and test files;
 - Pattern references: `builtin.py:308-346` (`_list_recommendations`).
 
 ### Item 4 - Copilot registry and tool-call observer
-- Deliverable: `build_copilot_registry` (five defaults plus the three new tools when their ports are bound); `ToolCallObserver` called by `ToolRegistry.invoke` after every call with name, outcome, domain ids and record count (no values); `COPILOT_TOOL_NAMES`; `build_default_registry` unchanged.
+- Deliverable: a documented extension point for later guards and tools (PRP-113 adds a pre-invoke policy decision in `ToolRegistry.invoke`; PRP-116 adds the governance tools): `ToolCallObserver` and a registration hook are the only seams, ownership of `copilot/tools/registry.py` stays with this PRP in W23 and is handed on in the completion note; `build_copilot_registry` (five defaults plus the three new tools when their ports are bound); `ToolCallObserver` called by `ToolRegistry.invoke` after every call with name, outcome, domain ids and record count (no values); `COPILOT_TOOL_NAMES`; `build_default_registry` unchanged.
 - Owned files: `copilot/tools/registry.py`, `copilot/tools/__init__.py`, `copilot/tools/builtin.py` (registry function only), `packages/core/tests/copilot_graph_tools/test_registry.py`.
 - Depends on: items 1-3.
 - Acceptance criteria: default registry still five tools; copilot registry eight with all ports; observer sees refusals and successes; existing `packages/core/tests/copilot` passes.
@@ -199,7 +199,7 @@ Parallelization: items 1, 2 and 3 are [P] (separate core modules and test files;
 - Pattern references: `stream.ts:213-260`.
 
 ### Item 8 - Demo profile default, runbook and close-out  [serial-after: PRP-71]
-- Deliverable: switch the PRP-71 local demo profile to the recorded mode: set `NS_DEMO_COPILOT_MODE=recorded` in `infra/dev/demo-profile.env` and, if compose does not already map it to `NS_COPILOT_MODE`, the one passthrough line in `docker-compose.yml` (Tier 1 in this PRP's ownership; nobody else owns it in W22; PRP-79's compose line is `[serial-after: PRP-78]`). Remove the `pending_prp_78` state from `scripts/sandbox/sbx_demo_check.py` (PRP-71 file, granted here for that one check). Runbook section (recorded mode, the eight tools, the real-endpoint path, audit records); Tier-3 regeneration (`openapi.json`, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`); changelog fragment; completion note with OPEN live turn and env vars.
+- Deliverable: switch the PRP-71 local demo profile to the recorded mode: set `NS_DEMO_COPILOT_MODE=recorded` in `infra/dev/demo-profile.env` and, if compose does not already map it to `NS_COPILOT_MODE`, the one passthrough line in `docker-compose.yml` (Tier 1 in this PRP's ownership; nobody else owns it in W23). Remove the `pending_prp_78` state from `scripts/sandbox/sbx_demo_check.py` (PRP-71 file, granted here for that one check). Runbook section (recorded mode, the eight tools, the real-endpoint path, audit records); Tier-3 regeneration (`openapi.json`, `docs/reference/**`, status table, `PRPs/INDEX.md`, `PRPs/EXECUTION-PLAN.md`); changelog fragment; completion note with OPEN live turn and env vars.
 - Owned files: `docs/runbooks/copilot.md`, `infra/dev/demo-profile.env`, `scripts/sandbox/sbx_demo_check.py`, `docker-compose.yml` (one line), this PRP file, Tier-3 files.
 - Depends on: items 6, 7; PRP-71 merged.
 - Acceptance criteria: validation gates pass; product check: a fresh demo stack answers the five demo questions in the dock without editing files.
@@ -225,7 +225,7 @@ No data migration: audit records are new appends; no container. Turn off: `NS_CO
 The first real-model turn with the new tools (`NS_LIVE_APPROVED=1`, an operator-approved Foundry endpoint in Limitlessdata) is OPEN and handed to PRP-64 (a row to add there). First-token time against a real provider stays OPEN (G07). Everything here is proven with the recorded demo adapter, scripted test adapters and in-memory twins.
 
 ## NOT building
-`search_docs` and the groundedness set (PRP-80); provisional token streaming; MCP exposure of the new tools; model-authored query text of any kind; copilot write tools beyond the existing `propose_action`; a hosted recorded mode; usage metrics for weekly active copilot users (follow-up).
+`search_docs` and the groundedness set (PRP-80); provisional token streaming; MCP exposure of the new tools; model-authored query text of any kind; any policy, violation, interaction or governance tool (PRP-116 adds them; the copilot never gets an interaction-content tool); a pre-invoke policy decision (PRP-113); copilot write tools beyond the existing `propose_action`; a hosted recorded mode; usage metrics for weekly active copilot users (follow-up).
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

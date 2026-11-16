@@ -64,6 +64,7 @@ Evidence from the current tree (re-verified in this worktree):
 | 7 | Telemetry-inferred edges | Only declared edges; infer from `data_source_refs` | Infer. Whether the normaliser keeps `data_source_refs` through to the projection input is UNVERIFIED (gap analysis section 6): item 2 first reads `LoadedEvent` and the ingest normaliser; if the field is dropped, the item reports it and the inference half is descoped to a follow-up with declared edges still answering |
 | 8 | EU region list | Hard-code; data file | Data file with a source URL and retrieval date. Subagents have no Microsoft Learn tool: the orchestrator reads the Azure geographies page and pastes the Europe region names into the brief; the list is never written from memory |
 | 9 | "Downstream" semantics | Edges out of the node; things that depend on the node | Dependents: entities whose edges lead to the failing node, that is `impact_paths(direction="upstream")`. The route is named `dependents` so the direction cannot be misread |
+| 10 | Label precedence and "who could" | decide now; leave open | Precedence the engine and the filters must honour once customer labels arrive (PRP-120): a steward-curated value is locked and wins, then a customer label mapped to a sensitivity category, then inference from telemetry or declared fields. Today only the curated and inferred layers exist; the engine reads an effective value through one function so a label layer slots in without a route change. Responses are phrased as "who did" (observed edges); PRP-119 adds "who could" beside them under `catalog/access/could/**`, which this PRP does not create |
 
 ## Context manifest
 
@@ -89,7 +90,7 @@ Evidence from the current tree (re-verified in this worktree):
 - Audit operations `catalog.access_query`, `catalog.dependents`; component name none (no builder change).
 - Worker: `data_access_candidates(loaded)` in `projections/catalog/mapping.py`, rule name `data_source_ref`.
 - Frontend route `catalog/access` (`CATALOG_ACCESS_ROUTE`) and mock handlers `frontend/tests/mock-api/features/catalog-access.ts`.
-- Compatibility with PRP-76 (W21, edits `catalog/**` after this merges): this PRP touches only new files under `catalog/graph/access.py`, `catalog/graph/data/**`, `catalog/access/**` and one hook line in `routers.py`; it does not edit `catalog/router.py`, `catalog/service.py`, `catalog/protocol.py`, `catalog/repo/**`, `EntityForm.tsx`, `entityFormModel.ts` or `StaleAgentsPage.tsx`, which PRP-76 edits. The two shared frontend files are `routes.tsx` and `paths.ts` (this PRP appends one route; PRP-76 appends its own after rebase).
+- Compatibility with PRP-76 (W24, edits `catalog/**` after this merges): this PRP touches only new files under `catalog/graph/access.py`, `catalog/graph/data/**`, `catalog/access/**` and one hook line in `routers.py`; it does not edit `catalog/router.py`, `catalog/service.py`, `catalog/protocol.py`, `catalog/repo/**`, `EntityForm.tsx`, `entityFormModel.ts` or `StaleAgentsPage.tsx`, which PRP-76 edits. The two shared frontend files are `routes.tsx` and `paths.ts` (this PRP appends one route; PRP-76 appends its own after rebase).
 
 ### Patterns to match
 - Router with alias and read audit: `catalog/router.py:117,263-273`; registration: `catalog/curation/router.py:172-173`.
@@ -99,7 +100,7 @@ Evidence from the current tree (re-verified in this worktree):
 - Frontend page and mock pairing: `frontend/src/features/catalog/StaleAgentsPage.tsx`, `frontend/tests/mock-api/features/catalog.ts`.
 
 ### Gotchas
-- `EntityFilter` is `extra="forbid"`; do not add fields to it here (PRP-76 owns `protocol.py` edits in W21). Filter inside `access.py`.
+- `EntityFilter` is `extra="forbid"`; do not add fields to it here (PRP-76 owns `protocol.py` edits in W24). Filter inside `access.py`.
 - Stored documents were written before PRP-70: a null `sensitivity_categories` means unassessed, not none. Never turn null into false (the contract says `contains_personal_data` is "null when not assessed").
 - `list_edges_by_node` filters on the edge's own domain; whether the other endpoint is in scope is a graph-level rule, so fetch each accessor through `get_entity(scope, id)` and drop what it does not return.
 - The telemetry example uses a `data_asset` type segment (`telemetry-event.full-model-call.json`) while the catalog id pattern for assets is `grounding_source`; only `grounding_source` ids create edges. If the ingest side should map `data_asset`, report it, do not alias it here.
@@ -152,6 +153,8 @@ must_not_touch:
   - frontend/src/features/catalog/EntityForm.tsx
   - frontend/src/features/catalog/entityFormModel.ts
   - frontend/tests/mock-api/server.ts
+  - services/api/neurosphere_api/catalog/access/could/**
+  - frontend/src/features/catalog/access/could/**
 ```
 
 ## Implementation blueprint
@@ -241,7 +244,7 @@ No data migration: the routes read existing documents; inferred `reads` and `wri
 None run here: behaviour is proven on in-memory twins and the mock API. Cosmos RU cost of the bounded asset scan is unmeasured and is handed to PRP-64 with the other catalog measurements (live Cosmos, `NS_LIVE_APPROVED=1`). Visual baselines are Docker-only.
 
 ## NOT building
-Cosmos-side filter fields and a backfill; attribute-based (classification-aware) read rules; owner and data-scope pickers (PRP-76); map impact highlight (PRP-74, PRP-77); the copilot tool (PRP-78); embeddings or any model call; a Cypher, Gremlin or SQL surface; export of access results (a later `data.export` decision); any statement that an estate is compliant.
+The "who could" (entitlement) question and `catalog/access/could/**` (reserved for PRP-119); label ingestion (PRP-120); Cosmos-side filter fields and a backfill; attribute-based (classification-aware) read rules; owner and data-scope pickers (PRP-76); map impact highlight (PRP-74, PRP-77); the copilot tool (PRP-78); embeddings or any model call; a Cypher, Gremlin or SQL surface; export of access results (a later `data.export` decision); any statement that an estate is compliant.
 
 ## Definition of Ready check
 - [x] Every item has owned files declared

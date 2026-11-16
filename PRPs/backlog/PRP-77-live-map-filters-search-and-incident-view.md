@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 7
 ns: NS-05
 depends_on: [PRP-74-live-map-topology-backend]
-wave: W22
+wave: W24
 branch: prp-77-live-map-filters-search-incident
 allow_parallel: true
 issues: []
@@ -20,7 +20,7 @@ issues: []
 # PRP-77: Live map filters, search and incident view
 
 ## Goal
-Make the live map usable for the two people the original PRD wrote it for. The architect narrows the map by node type, tag, environment, cloud provider and health and finds any node by name from a search box that jumps to it. The SRE selects a failing service (or a node that just turned failing) and sees every agent that depends on it highlighted, with the highlight kept current as telemetry and topology change. New nodes and edges appear without a reload because the client refetches when the server pushes a topology change. The accessible table gets the same filters, the same search and the same impact list, so nothing is mouse-only. The PRD's interaction-latency figure is measured here and the number is recorded with the hardware named. It is for the SRE, the architect and the keyboard and screen-reader user, and it runs in W22 on the PRP-74 routes.
+Make the live map usable for the two people the original PRD wrote it for. The architect narrows the map by node type, tag, environment, cloud provider and health and finds any node by name from a search box that jumps to it. The SRE selects a failing service (or a node that just turned failing) and sees every agent that depends on it highlighted, with the highlight kept current as telemetry and topology change. New nodes and edges appear without a reload because the client refetches when the server pushes a topology change. The accessible table gets the same filters, the same search and the same impact list, so nothing is mouse-only. The PRD's interaction-latency figure is measured here and the number is recorded with the hardware named. It is for the SRE, the architect and the keyboard and screen-reader user, and it runs in W24 on the PRP-74 routes.
 
 Out of scope: every server route, node field, push message and the whole-graph search (PRP-74); the 50k-node browser target, which stays cluster-first and bounded by design (see clarification 1); the headed re-measure of frame rate and latency on operator hardware (PRP-66, which reads the evidence file this PRP defines); per-edge traffic overlays (no server field exists); the catalog entity page and its impact table (`frontend/src/features/catalog/**`, PRP-73 and PRP-76 own it); the copilot (PRP-78).
 

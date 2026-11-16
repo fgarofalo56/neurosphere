@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 8
 ns: NS-02, NS-04, NS-06, NS-09
-depends_on: [PRP-87-api-composition-seam-and-adapter-packages, PRP-88-worker-composition-seam-event-and-object-ports, PRP-89-postgres-foundation-catalog-and-security-stores, PRP-60-search-indexing-hardening]
-wave: W27
+depends_on: [PRP-87-api-composition-seam-and-adapter-packages, PRP-88-worker-composition-seam-event-and-object-ports, PRP-89-postgres-foundation-catalog-and-security-stores, PRP-60-search-indexing-hardening, PRP-105-policy-engine-core, PRP-127-ai-system-register-tiering-and-impact-assessments, PRP-131-model-and-agent-cards-and-safety-evaluation-records]
+wave: W37
 branch: prp-91-postgres-control-plane-stores-and-search
 allow_parallel: true
 issues: []
@@ -33,6 +33,7 @@ Out of scope: the PostgreSQL pool, schema generator, `PgCollection`, migrations,
 - The security-critical rule is unchanged by the platform: authorization is enforced at every query path, so the PostgreSQL search applies cloud, customer, allowed domains and granted resources in SQL before ranking, never after (`FixtureSearchIndex._in_scope`, `fixture/index.py:106-125`, is the reference).
 
 ## Acceptance criteria
+- [ ] Governance-core control-plane stores: PostgreSQL implementations with conformance modules (same rules as every store here) for `policy_definitions`, `policy_violations`, `policy_exceptions` (PRP-105: version heads, violation de-duplication keys, exception expiry), `ai_systems`, `risk_determinations`, `impact_assessments`, `attestations`, `attestation_campaigns` (PRP-127, PRP-130), `alert_rules`, `incidents` (PRP-127, PRP-132; timeline documents) and `safety_evaluation_records` (PRP-131); and, if PRP-135's vector backend has shipped, a `pgvector` column and similarity query behind its embedding port with the scope predicate in the SQL `WHERE` clause (otherwise recorded as not applicable).
 - [ ] Given each store below, When its conformance `CHECKS` run against the in-memory implementation and against PostgreSQL (marker `portable`), Then both pass with identical outcomes; each module ships one deliberately broken implementation that fails a named check. Existing shared modules (recommendations, evaluation) run unchanged against PostgreSQL.
 - [ ] Given two customers (and two domains within one customer) using identical ids, When any read, list, write, delete or transition runs for one, Then the other's rows are never returned or changed; every statement binds customer (and domain where Cosmos filtered on it) as parameters.
 - [ ] Given `IntentStore.create` replayed with the same `(principal_id, idempotency_key)` and identical payload, Then the original intent is returned; with a different payload digest, Then `idempotency_key_reused`; concurrent first creates yield exactly one stored intent. Given `replace` with a stale `if_match`, Then `stale_version` reason `intent_modified`. `ExecutionControl.set` is last-write-wins and an unreadable store is treated as disabled (`require_execution_enabled` still fails closed).
@@ -56,7 +57,7 @@ Out of scope: the PostgreSQL pool, schema generator, `PgCollection`, migrations,
 | 6 | Where the API-package stores live | adapter package; API package | `ConversationStore`, `ReportStore` and `SandboxStore` and their model types are defined in `services/api`, which the adapter package must not import. The PostgreSQL twins therefore live beside them as `copilot/postgres_store.py`, `reports/postgres_store.py` and `sandbox/postgres_store.py` and import `PgCollection` from the adapter package; they are lazily imported by kind. PRP-85's boundary rules list these three files in `ADAPTER_PATHS` |
 | 7 | Cut line if the session overruns | descope last | See `## Cut line` |
 | 8 | Cross-partition scans | forbid; keep as Cosmos | Keep exactly the bounded scans the Protocols define (`IntentStore.list_in_states`, `HitlStore.due` and `open_maker_checker`, id lookups across domains inside one customer); each gets an index and a conformance check for the bound and the order |
-| 9 | Compose lane in W27 | parallel; serialized | PRP-90 is the W27 compose-stack holder; this PRP runs its compose-backed gates `[serial-after: PRP-90]` (after PRP-90 released PostgreSQL), before PRP-94, with its own schema names. No file is shared with PRP-90 or PRP-94 |
+| 9 | Compose lane in W37 | parallel; serialized | PRP-90 is the W37 compose-stack holder; this PRP runs its compose-backed gates `[serial-after: PRP-90]` (after PRP-90 released PostgreSQL), before PRP-94, with its own schema names. No file is shared with PRP-90 or PRP-94 |
 
 ## Context manifest
 
@@ -231,6 +232,7 @@ Parallelization: item 1 first (creates the package root and shared helpers). Ite
 - Tests: validation gates.
 
 ## Cut line
+The governance-core control-plane group (policy, register, risk, attestation, alerting, safety records and `pgvector`) may be split into a follow-up PRP as a unit (design expectation: PRP-90 or PRP-91 splits); those stores are then reported `disabled: platform_backend_missing` on non-Azure platforms, never a Cosmos fallback, and PRP-96 and PRP-98 show them so.
 Actions, HITL, recommendations, evaluation, MCP, lifecycle, conversations and search (and items 7-8) are never cut. If the session overruns, the deploy register, gateways and gateway records (part of item 4) and reports and the sandbox store (part of item 6) are descoped; what remains merges safely because item 7 registers only the stores that exist, and the descoped ones are reported "disabled with a reason" (capability `platform_not_supported` or `store_backend_unavailable`) on non-Azure platforms, never silently missing, with a follow-up issue. If PRP-88 cut its late-role group, item 7 still registers the worker-side stores, but the actions, hitl_timers, recommendations, evaluation and gateway_poll roles keep refusing to start on non-Azure platforms with `capability_unavailable` (`backend_not_registered`) until PRP-88's follow-up lands; this is recorded in the completion note. PRP-96 renders only settings that exist; PRP-98's matrix shows cut stores as `disabled: <reason>`.
 
 ## Validation gates
