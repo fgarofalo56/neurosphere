@@ -222,6 +222,38 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
     # stale-agents page issue no GET on render: the edge id arrives in the URL and the dry run is
     # a POST.
     "/admin/execution-control": (*_SHELL, _EMERGENCY),
+    # PRP-53: the admin console. The seeded stack may hold no principal or domain beyond the
+    # operator's own, so these rows do not require data (no ``non_empty``). Writes need a user
+    # action and are not listed. The customer-wide audit views (/audit/denials, /audit/siem/status)
+    # need audit.read on the control domain, which this suite's operator does not hold; they are
+    # covered by the audit API suites and the console's mock-API tests, not listed here.
+    "/admin/audit": (
+        *_SHELL,
+        ApiCall(
+            "/api/v1/audit/search",
+            q(since="2026-01-01T00:00:00Z", until="2026-01-08T00:00:00Z", page_size=25),
+        ),
+    ),
+    "/admin/domains": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/platform/domains", q(include_retired="false", limit=200)),
+    ),
+    "/admin/identity": (*_SHELL, ApiCall("/api/v1/admin/identity/principals", q(limit=25))),
+    "/admin/identity/principal": (
+        *_SHELL,
+        ApiCall(
+            "/api/v1/admin/identity/principals",
+            q(limit=25),
+            capture=(("principal_id", ("items", 0, "principal", "principal_id")),),
+        ),
+        ApiCall("/api/v1/admin/identity/principals/{principal_id}", needs=("principal_id",)),
+    ),
+    "/admin/system": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/system/status"),
+        ApiCall("/api/v1/admin/system/checklist"),
+        ApiCall("/api/v1/admin/system/settings"),
+    ),
     "/audit": (
         *_SHELL,
         ApiCall("/api/v1/audit/domains"),

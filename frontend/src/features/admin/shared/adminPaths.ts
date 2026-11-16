@@ -47,6 +47,7 @@ export const identityPaths = {
 
 export const platformPaths = {
   domains: (): string => `${ADMIN_PLATFORM_API}/domains`,
+  domain: (domainId: string): string => `${ADMIN_PLATFORM_API}/domains/${enc(domainId)}`,
   retire: (domainId: string): string => `${ADMIN_PLATFORM_API}/domains/${enc(domainId)}/retire`,
 };
 

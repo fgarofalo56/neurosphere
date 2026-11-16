@@ -7,6 +7,7 @@ import {
   TRACE_COMPLETE,
 } from "../../mock-api/server.ts";
 import { AUDIT_DOMAIN_FINANCE } from "../../mock-api/features/audit.ts";
+import { ADMIN_PRINCIPAL_ID } from "../../mock-api/features/admin-core.ts";
 
 // PRP-24 item 3: one or more concrete URLs for EVERY pattern in src/app/route-manifest.json. The
 // spec fails when a manifest pattern has no sample here (or a sample names a pattern that is not
@@ -241,6 +242,42 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     name: "execution control",
     url: `/admin/execution-control?${q()}`,
     ready: "main h1",
+  },
+  // PRP-53: the admin console pages need the Admin persona (Viewer settles in a forbidden state).
+  {
+    pattern: "/admin/identity",
+    name: "admin identity",
+    url: "/admin/identity",
+    ready: "[data-testid='principal-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/identity/principal",
+    name: "admin principal",
+    url: `/admin/identity/principal?principal_id=${encodeURIComponent(ADMIN_PRINCIPAL_ID)}`,
+    ready: "[data-testid='principal-etag']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/domains",
+    name: "admin domains",
+    url: "/admin/domains",
+    ready: "[data-testid='domain-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/system",
+    name: "admin system",
+    url: "/admin/system",
+    ready: "[data-testid='setting-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/audit",
+    name: "admin audit",
+    url: "/admin/audit",
+    ready: "[data-testid='audit-row']",
+    persona: "admin",
   },
 ];
 

@@ -69,6 +69,11 @@ export const useSettings = createQueryHook<Record<string, never>, SettingsPageVi
     client.get<SettingsPageView>(systemPaths.settings(), undefined, signal),
 });
 
+/** A list field from a response: a malformed body (not an array) reads as an empty list. */
+export function asList<T>(value: readonly T[] | undefined): readonly T[] {
+  return Array.isArray(value) ? (value as readonly T[]) : [];
+}
+
 /** Items with a status the console can count; a malformed body yields undefined (unknown). */
 export function checklistCounts(
   page: ChecklistPageView | undefined,
