@@ -254,7 +254,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call. OPEN and operator-only: a live Bi
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-52-ci-infra-hardening | security.yml env-passed matrix, install-scanners.sh, --include-dev-deps, aggregator; actionlint clean |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |

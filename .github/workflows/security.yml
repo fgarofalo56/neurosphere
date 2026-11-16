@@ -72,28 +72,18 @@ jobs:
       matrix: ${{ fromJSON(needs.discover-images.outputs.matrix) }}
     env:
       IMAGE: neurosphere-${{ matrix.service }}:scan
+      # matrix values reach the shell only through env, never through ${{ }} in run:
+      SERVICE: ${{ matrix.service }}
+      DOCKERFILE: ${{ matrix.dockerfile }}
     steps:
       - uses: actions/checkout@v7
       - name: Install syft, trivy and grype (version and sha256 pinned)
-        run: |
-          set -euo pipefail
-          dl="$RUNNER_TEMP/scanners"
-          mkdir -p "$dl/bin"
-          curl -sSfL -o "$dl/syft.tgz" "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
-          echo "${SYFT_SHA256}  $dl/syft.tgz" | sha256sum -c -
-          curl -sSfL -o "$dl/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-          echo "${TRIVY_SHA256}  $dl/trivy.tgz" | sha256sum -c -
-          curl -sSfL -o "$dl/grype.tgz" "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
-          echo "${GRYPE_SHA256}  $dl/grype.tgz" | sha256sum -c -
-          tar -xzf "$dl/syft.tgz" -C "$dl/bin" syft
-          tar -xzf "$dl/trivy.tgz" -C "$dl/bin" trivy
-          tar -xzf "$dl/grype.tgz" -C "$dl/bin" grype
-          echo "$dl/bin" >> "$GITHUB_PATH"
+        run: bash scripts/ci/install-scanners.sh
       - name: Build image
         # A Dockerfile that exists but does not build fails the job here.
-        run: docker build -f "${{ matrix.dockerfile }}" -t "$IMAGE" .
+        run: docker build -f "$DOCKERFILE" -t "$IMAGE" .
       - name: SBOM (syft, CycloneDX)
-        run: syft "$IMAGE" -o "cyclonedx-json=$RUNNER_TEMP/sbom-image-${{ matrix.service }}.cdx.json"
+        run: syft "$IMAGE" -o "cyclonedx-json=$RUNNER_TEMP/sbom-image-${SERVICE}.cdx.json"
       - uses: actions/upload-artifact@v7
         with:
           name: sbom-image-${{ matrix.service }}
@@ -111,20 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install syft, trivy and grype (version and sha256 pinned)
-        run: |
-          set -euo pipefail
-          dl="$RUNNER_TEMP/scanners"
-          mkdir -p "$dl/bin"
-          curl -sSfL -o "$dl/syft.tgz" "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
-          echo "${SYFT_SHA256}  $dl/syft.tgz" | sha256sum -c -
-          curl -sSfL -o "$dl/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-          echo "${TRIVY_SHA256}  $dl/trivy.tgz" | sha256sum -c -
-          curl -sSfL -o "$dl/grype.tgz" "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
-          echo "${GRYPE_SHA256}  $dl/grype.tgz" | sha256sum -c -
-          tar -xzf "$dl/syft.tgz" -C "$dl/bin" syft
-          tar -xzf "$dl/trivy.tgz" -C "$dl/bin" trivy
-          tar -xzf "$dl/grype.tgz" -C "$dl/bin" grype
-          echo "$dl/bin" >> "$GITHUB_PATH"
+        run: bash scripts/ci/install-scanners.sh
       - name: SBOM of the source tree (syft)
         run: syft dir:. -o "cyclonedx-json=$RUNNER_TEMP/sbom-source.cdx.json"
       - uses: actions/upload-artifact@v7
@@ -135,7 +112,7 @@ jobs:
       # pip-audit has no severity field, so the Python High gate is Trivy and Grype
       # over uv.lock. ci.yml keeps its own pip-audit run untouched.
       - name: Trivy filesystem scan of lockfiles (High and Critical fail)
-        run: trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 .
+        run: trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --exit-code 1 .
       - name: Grype scan of the source tree (High and Critical fail)
         run: grype dir:. --fail-on high
       - uses: pnpm/action-setup@v6
@@ -145,3 +122,36 @@ jobs:
           cache: pnpm
       - name: pnpm audit (High and above)
         run: pnpm audit --audit-level high
+
+  images-all-scans:
+    # Aggregator (PRP-52, #66): the image matrix is skipped when no Dockerfile exists, so
+    # a skipped matrix cannot be told apart from a green one by looking at checks alone.
+    # This job fails when images were discovered but the scan job did not succeed, and
+    # passes when there is no image at all. The "images exist and the scan path runs"
+    # bullet of #66 is satisfied by the current runs (image api/docs-assistant/frontend).
+    name: images (all scans)
+    needs: [discover-images, image-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every discovered image scan to succeed
+        env:
+          HAS_IMAGES: ${{ needs.discover-images.outputs.has_images }}
+          DISCOVER_RESULT: ${{ needs.discover-images.result }}
+          SCAN_RESULT: ${{ needs.image-scan.result }}
+        run: |
+          set -euo pipefail
+          if [ "$DISCOVER_RESULT" != "success" ]; then
+            echo "::error::image discovery did not succeed ($DISCOVER_RESULT)"
+            exit 1
+          fi
+          if [ "$HAS_IMAGES" != "true" ]; then
+            echo "::notice::no production image discovered; nothing to scan"
+            exit 0
+          fi
+          if [ "$SCAN_RESULT" != "success" ]; then
+            echo "::error::images were discovered but the image scan result is '$SCAN_RESULT'"
+            exit 1
+          fi
+          echo "all discovered image scans succeeded"
