@@ -219,9 +219,9 @@ None run here. A stored copilot or judge endpoint pointing at a real model is on
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | verifying | prp-45-system-status-settings | core snapshot + validators; 30 tests |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
+| 2 | verifying | prp-45-system-status-settings | status + checklist routes; contract checklist statuses |
+| 3 | verifying | prp-45-system-status-settings | settings GET/PUT, If-Match, diff, audit |
+| 4 | verifying | prp-45-system-status-settings | snapshot before builders; copilot, search, mcp, scan read it |
 | 5 | todo | | |
 | 6 | todo | | |
 
