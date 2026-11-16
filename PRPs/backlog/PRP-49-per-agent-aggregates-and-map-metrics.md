@@ -232,8 +232,8 @@ Additive only. `EventFact` gains optional fields and the aggregate container gai
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | verifying | prp-49-per-agent-aggregates | SubjectPoint lives in models.py (circular import), re-exported by subject.py |
+| 2 | verifying | prp-49-per-agent-aggregates | |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
