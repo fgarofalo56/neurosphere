@@ -120,7 +120,8 @@ CARRIED_FORWARD_ALLOWED: dict[str, str] = {
         "on a Windows install (PRP-52)"
     ),
     "npm:fsevents": (
-        "macOS-only optional dependency of chokidar-style watchers; never installed on the Linux "
+        "macOS-only optional dependency of vite (pnpm-lock.yaml: vite@8.3.5 "
+        "optionalDependencies); never installed on the Linux "
         "or Windows CI runners; licence taken from the committed register row of the same "
         "version, re-verify on a bump (PRP-52)"
     ),

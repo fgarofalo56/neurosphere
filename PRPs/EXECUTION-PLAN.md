@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W16
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-52: CI and infrastructure hardening](backlog/PRP-52-ci-and-infrastructure-hardening.md) | sonnet | required | none | PRP-11 | - | `prp-52-ci-infra-hardening` |
-
-Gate before the next wave: System status reports every unconfigured feature; per-node map metrics populated on the emulator stack.
-
 ### W17
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -115,9 +107,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W16
-    P52["PRP-52"]
-  end
   subgraph W17
     P53["PRP-53"]
     P54["PRP-54"]
@@ -166,7 +155,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W16 | PRP-52 | `.github/workflows/ci.yml`<br>`.github/workflows/security.yml`<br>`.github/workflows/contracts.yml`<br>`infra/bicep/modules/**`<br>`infra/helm/**`<br>`services/api/Dockerfile`<br>`services/workers/Dockerfile`<br>`services/docs-assistant/Dockerfile`<br>`.grype.yaml` |
 | W17 | PRP-54 | `docker-compose.yml`<br>`infra/helm/**`<br>`infra/demo/main.bicep`<br>`services/workers/neurosphere_workers/runtime/factories.py`<br>`services/api/neurosphere_api/runtime/planes.py` |
 | W17 | PRP-56 | `packages/contracts/**` |
 | W18 | PRP-55 | `packages/core/neurosphere_core/stores/containers.py`<br>`infra/compose/cosmos-containers.json`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
@@ -181,14 +169,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-52 (W16)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-52-ci-and-infrastructure-hardening.md
-
-Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-52-ci-infra-hardening cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-53 (W17)
 

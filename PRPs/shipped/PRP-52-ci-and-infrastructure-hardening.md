@@ -1,6 +1,8 @@
 ---
 name: PRP-52-ci-and-infrastructure-hardening
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 302
 priority: P2
 order: 39
 review: required
@@ -35,17 +37,17 @@ Out of scope: the real-stack compose job (PRP-38, new workflow `real-stack.yml`)
 - PRP-00 review follow-up (`PRPs/shipped/PRP-00-toolchain-workspaces-and-gates.md:265`): "fail CI if any licence row was carried forward". PRP-13 follow-up (a): the Helm chart and App Service profile do not require `NS_CLOUD` (`infra/helm/values.yaml:42` `env: {}`; only `values-government.yaml:18` sets it).
 
 ## Acceptance criteria
-- [ ] `security.yml`: no `${{ }}` interpolation of `matrix.*` inside `run:` (values pass through `env:` and are quoted); one script `scripts/ci/install-scanners.sh` (new) installs syft, trivy and grype by pinned version and sha256 and both jobs call it; `trivy fs` runs with `--include-dev-deps`; an aggregator job `images (all scans)` fails when the discover step found images but a scan job was skipped or failed, and passes when no image exists (#66). `actionlint` output shown.
-- [ ] Network: Given the network module, when it compiles (`az bicep build`), then an `AllowAzureLoadBalancerInbound` rule (priority below 4096) exists and `vnetAddressPrefix` is a root parameter of `modules/main.bicep` with the current value as default; `tests/security/network/test_bicep_network.py` pins both (#67).
-- [ ] Helm: `values.yaml` documents (comments next to `networkPolicy.egressAllowlist`) the egress that workload identity and Azure Monitor need, with a copy-paste example entry commented out; the chart fails to render without `env.NS_CLOUD` (`required`), `ci/values-ci.yaml` and `values-government.yaml` set it, and a Helm render test asserts the failure and the success (PRP-13 leftover (a), Helm half).
-- [ ] DFD: `python scripts/render_mermaid.py --source docs/security/dfd` (or the multi-source mode the implementer designs) renders every block in `docs/security/dfd/*.md` and fails on a parser error; `ci.yml`'s `mermaid` job runs it; the ARCHITECTURE five-block rule is unchanged (#68). Unit test in `tests/test_render_mermaid.py`.
-- [ ] APIM: `apim.bicep` takes an optional `uiApiRateLimitCalls` (default 0 = no policy) and, only when the service is created (never in reuse mode) and the value is above 0, applies a service-level `rate-limit-by-key` policy loaded from `infra/bicep/modules/policies/apim-ui-ingress.xml` (new); a test pins the "never in reuse mode" rule; `docs/security/threat-model.md` is NOT edited here (PRP-36 ran first; record the change in the completion note so PRP-48's owner updates the row) (#69).
-- [ ] Egress: `ci.yml` `egress-compose` has an `if: failure()` step that dumps `docker compose logs` (bounded, no secrets); the four `_skip_or_fail` copies are replaced by one shared, unit-tested helper (or, if no shared import path exists without a `pyproject.toml` change, by a drift test that fails when a copy differs from `tests/security/egress/ci_gate.py`); the `"no service"` marker risk is removed by matching the busybox message exactly; the nslookup assertion falls back to the output text (#215).
-- [ ] Images: Given `docker build` of `services/api/Dockerfile`, `services/workers/Dockerfile` and `services/docs-assistant/Dockerfile`, then the final image has no `sqlite-libs` apk, `python -c "import neurosphere_core.analytics"` succeeds in it, and the four `sqlite-libs` ignore rules are removed from `.grype.yaml` with Grype still passing (#171). This needs the lazy `sqlite3` import in `stub.py` (item 5, `[serial-after: PRP-11]`).
-- [ ] Licences: Given the bumped lockfiles of PRs #197 and #198 (checked out into a scratch worktree, not pushed), `python scripts/licenses_report.py --check` reports no UNKNOWN licence for the `@rolldown/binding-*` family and for `datamodel-code-generator`; resolution is by a cited rule (a documented platform-family map anchored on the installed sibling package, and the same `uv sync` selection as the python CI job), never by defaulting to permissive.
-- [ ] Carried-forward rows: when `CI` is set, `licenses_report.py --check` fails if any row was resolved by carry-forward and is not listed in a named, cited allowlist; the first CI run's real count is recorded in the PR (PRP-00 leftover).
-- [ ] `.github/dependabot.yml` ignores version updates of `datamodel-code-generator` with a comment pointing to `packages/contracts/python/pyproject.toml:13-16`, so PR #198 can be rebuilt without the generator bump (bumping it is a deliberate contracts change, PRP-37's area).
-- [ ] No suppressed failure appears in any workflow (`|| true`, `continue-on-error`, `if: always()` that hides a red job): the planning validator passes.
+- [x] `security.yml`: no `${{ }}` interpolation of `matrix.*` inside `run:` (values pass through `env:` and are quoted); one script `scripts/ci/install-scanners.sh` (new) installs syft, trivy and grype by pinned version and sha256 and both jobs call it; `trivy fs` runs with `--include-dev-deps`; an aggregator job `images (all scans)` fails when the discover step found images but a scan job was skipped or failed, and passes when no image exists (#66). `actionlint` output shown.
+- [x] Network: Given the network module, when it compiles (`az bicep build`), then an `AllowAzureLoadBalancerInbound` rule (priority below 4096) exists and `vnetAddressPrefix` is a root parameter of `modules/main.bicep` with the current value as default; `tests/security/network/test_bicep_network.py` pins both (#67).
+- [x] Helm: `values.yaml` documents (comments next to `networkPolicy.egressAllowlist`) the egress that workload identity and Azure Monitor need, with a copy-paste example entry commented out; the chart fails to render without `env.NS_CLOUD` (`required`), `ci/values-ci.yaml` and `values-government.yaml` set it, and a Helm render test asserts the failure and the success (PRP-13 leftover (a), Helm half).
+- [x] DFD: `python scripts/render_mermaid.py --source docs/security/dfd` (or the multi-source mode the implementer designs) renders every block in `docs/security/dfd/*.md` and fails on a parser error; `ci.yml`'s `mermaid` job runs it; the ARCHITECTURE five-block rule is unchanged (#68). Unit test in `tests/test_render_mermaid.py`.
+- [x] APIM: `apim.bicep` takes an optional `uiApiRateLimitCalls` (default 0 = no policy) and, only when the service is created (never in reuse mode) and the value is above 0, applies a service-level `rate-limit-by-key` policy loaded from `infra/bicep/modules/policies/apim-ui-ingress.xml` (new); a test pins the "never in reuse mode" rule; `docs/security/threat-model.md` is NOT edited here (PRP-36 ran first; record the change in the completion note so PRP-48's owner updates the row) (#69).
+- [x] Egress: `ci.yml` `egress-compose` has an `if: failure()` step that dumps `docker compose logs` (bounded, no secrets); the four `_skip_or_fail` copies are replaced by one shared, unit-tested helper (or, if no shared import path exists without a `pyproject.toml` change, by a drift test that fails when a copy differs from `tests/security/egress/ci_gate.py`); the `"no service"` marker risk is removed by matching the busybox message exactly; the nslookup assertion falls back to the output text (#215).
+- [x] Images: Given `docker build` of `services/api/Dockerfile`, `services/workers/Dockerfile` and `services/docs-assistant/Dockerfile`, then the final image has no `sqlite-libs` apk, `python -c "import neurosphere_core.analytics"` succeeds in it, and the four `sqlite-libs` ignore rules are removed from `.grype.yaml` with Grype still passing (#171). This needs the lazy `sqlite3` import in `stub.py` (item 5, `[serial-after: PRP-11]`).
+- [x] Licences: Given the bumped lockfiles of PRs #197 and #198 (checked out into a scratch worktree, not pushed), `python scripts/licenses_report.py --check` reports no UNKNOWN licence for the `@rolldown/binding-*` family and for `datamodel-code-generator`; resolution is by a cited rule (a documented platform-family map anchored on the installed sibling package, and the same `uv sync` selection as the python CI job), never by defaulting to permissive.
+- [x] Carried-forward rows: when `CI` is set, `licenses_report.py --check` fails if any row was resolved by carry-forward and is not listed in a named, cited allowlist; the first CI run's real count is recorded in the PR (PRP-00 leftover).
+- [x] `.github/dependabot.yml` ignores version updates of `datamodel-code-generator` with a comment pointing to `packages/contracts/python/pyproject.toml:13-16`, so PR #198 can be rebuilt without the generator bump (bumping it is a deliberate contracts change, PRP-37's area).
+- [x] No suppressed failure appears in any workflow (`|| true`, `continue-on-error`, `if: always()` that hides a red job): the planning validator passes.
 
 PRP exit: every box ticked, `verify-gates.ps1` full run green, review pass approved, PR open with CI green including the non-required `security`, `helm`, `contracts` and `egress-compose` jobs, and the two Dependabot PRs shown passing the licence step when re-run by the operator (or the evidence from the scratch worktree).
 
@@ -260,13 +262,13 @@ No `NS_LIVE_APPROVED=1` item and no paid call. OPEN and operator-only: a live Bi
 | 4 | merged | prp-52-ci-infra-hardening | shared skip_or_fail loaded by path from ci_gate.py (no pyproject change); exact exec-failure markers; nslookup text fallback; compose-only probe run not run |
 | 5 | merged | prp-52-ci-infra-hardening | lazy sqlite3 in stub.py (PRP-11 shipped); .python-rundeps re-pin then apk del; 3 images built, no sqlite apk, analytics import ok; .grype.yaml ignore emptied; Grype run is CI-only |
 | 6 | merged | prp-52-ci-infra-hardening | family rule + carried-forward CI check + --allow-carried; reproduced PR 197/198 in scratch worktrees (old script UNKNOWN, new resolves); dependabot ignore; sync selection in ci planning job + dependabot-licences |
-| 7 | todo | | |
+| 7 | merged | land-prp-52 | close-out: completion note, changelog fragment, index regeneration |
 
-## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+## Completion note
+- Date and PR: 2026-11-16, PR #302 (squash merge to main).
+- Deviations: the shared `skip_or_fail` is loaded by path from `tests/security/egress/ci_gate.py` (no `pyproject.toml` change, clarification 6). The Helm `NS_CLOUD` check hard-fails on any value other than `commercial` or `government`, which is stricter than the spec and intended. Item 5's serial dependency (PRP-11, lazy `sqlite3` in `analytics/base/stub.py`) was already shipped, so it was done in this PR.
+- Descoped items: the App Service `NS_CLOUD` requirement is handed to PRP-58 (`infra/appservice/**` is not owned here; PRP-58 must add it). The `docs/security/threat-model.md` APIM rate-limit row is not edited here: the PRP-48 owner updates it (#69 stays open for the non-Bicep half). The DFD Mermaid render was not run locally (no Chrome); the CI `mermaid` job is the evidence.
+- OPEN gates: live Bicep what-if of the root template (PRP-64, operator); Grype run is CI-only; compose-only egress probe not run locally; making `security`, `contracts`, `helm`, `frontend-e2e`, `egress-compose` and the `images (all scans)` aggregator required checks (operator, branch protection; do not require the aggregator until it has run on main, it uses `if: always()` and checks results explicitly); rebasing Dependabot PRs #197 and #198 after merge.
+- Env vars for the operator: none new. `NS_CLOUD` is now required in the Helm values for every environment; `uiApiRateLimitCalls` is a Bicep parameter, default 0 (off).
+- Follow-up issues: reviewer follow-ups handled at close-out: the `fsevents` carry-forward citation now names its actual dependent (vite optionalDependencies in `pnpm-lock.yaml`); the bare `"is not running"` egress marker is kept on purpose and documented (docker daemon messages carry a variable container id); the compose log dump service names `egress-probe` and `azurite` match `docker-compose.yml`. Remaining: PRP-58 App Service `NS_CLOUD`; PRP-48 owner threat-model row.
+- Product check: CI and infrastructure work with no operator-facing UI; operator actions are listed under OPEN gates.

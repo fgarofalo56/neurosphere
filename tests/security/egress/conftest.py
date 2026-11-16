@@ -60,6 +60,9 @@ EXEC_FAILURE_MARKERS = (
     "no such container",
     "no such service:",
     'service "egress-probe" is not running',
+    # Docker daemon form for a stopped container ("Error response from daemon: container <id> is
+    # not running"); the id varies, so only the tail can be matched. Reviewed as broader than the
+    # compose phrase above and kept deliberately: a stopped probe must never read as "blocked".
     "is not running",
 )
 
