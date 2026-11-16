@@ -12,7 +12,7 @@ import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from neurosphere_connector_foundry_actions.endpoints import AccountRef
@@ -37,7 +37,6 @@ from neurosphere_workers.runtime.roles import RoleConfigError
 if TYPE_CHECKING:
     from neurosphere_core.clients import ClientLifetime
 
-    from neurosphere_workers.runtime.factories import RuntimeConfig
     from neurosphere_workers.runtime.supervisor import RoleRunnable
 
 __all__ = ["DetectionRunner", "TickSummary", "build_detections"]
@@ -189,8 +188,9 @@ def validate(settings: DetectionSettings, cloud: CloudName) -> ValidatedConfig:
     return ValidatedConfig(accounts, subscriptions, policies, fragments)
 
 
-async def build_detections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
-    # Imported here: ``factories`` imports this module for its BUILDERS table.
+async def build_detections(cfg: Any, lifetime: ClientLifetime) -> RoleRunnable:
+    # ``cfg`` is a ``runtime.factories.RuntimeConfig``; typed Any because importing it here would
+    # create an import cycle (``factories`` imports this module for its BUILDERS table).
     from azure.identity.aio import DefaultAzureCredential
     from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
     from neurosphere_core.gateway import CosmosGatewayStore
@@ -311,7 +311,7 @@ async def build_detections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Role
     return _tick_role("detections", PeriodicTick(job, settings.interval_seconds), cfg)
 
 
-async def _discovery_targets(cfg: RuntimeConfig, lifetime: ClientLifetime) -> tuple[str, ...]:
+async def _discovery_targets(cfg: Any, lifetime: ClientLifetime) -> tuple[str, ...]:
     """Foundry resource names the ``foundry_discovery`` role is configured with (the known set)."""
     from neurosphere_workers.connector_config import (
         ConnectorIdle,
