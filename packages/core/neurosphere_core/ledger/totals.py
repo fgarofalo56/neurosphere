@@ -47,6 +47,7 @@ class LedgerFilters:
     provider: str | None = None
     model: str | None = None
     source_id: str | None = None
+    cost_center: str | None = None
 
     def matches(self, entry: LedgerEntry) -> bool:
         return (
@@ -55,6 +56,7 @@ class LedgerFilters:
             and (self.provider is None or entry.provider == self.provider)
             and (self.model is None or entry.model == self.model)
             and (self.source_id is None or entry.source_id == self.source_id)
+            and (self.cost_center is None or entry.cost_center == self.cost_center)
         )
 
 

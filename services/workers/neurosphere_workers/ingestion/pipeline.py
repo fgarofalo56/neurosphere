@@ -83,6 +83,14 @@ class PipelineDeps:
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
     rng: Callable[[], float] = random.random  # backoff jitter only
     clock: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
+    _duplicate_counter: Any = field(init=False, repr=False, default=None)
+
+    def duplicates_counter(self) -> Any:
+        """Created once per deps object, on first use (#167); ``meter`` may be set after init."""
+        if self._duplicate_counter is None:
+            meter = self.meter or otel_metrics.get_meter(_METER_NAME)
+            self._duplicate_counter = meter.create_counter(METRIC_INGEST_DUPLICATES, unit="{event}")
+        return self._duplicate_counter
 
 
 class _Rejected(Exception):  # noqa: N818 - internal control flow
@@ -239,9 +247,7 @@ async def process_batch(
     newest: dict[tuple[str, str], datetime | None] = {}
     accepted = duplicates = late = 0
     quarantined: dict[QuarantineReason, int] = {}
-    duplicate_counter = (deps.meter or otel_metrics.get_meter(_METER_NAME)).create_counter(
-        METRIC_INGEST_DUPLICATES, unit="{event}"
-    )
+    duplicate_counter = deps.duplicates_counter()
 
     async def with_retry(op: Callable[[], Awaitable[None]]) -> None:
         await retry_with_backoff(op, policy, sleep=deps.sleep, rng=deps.rng)

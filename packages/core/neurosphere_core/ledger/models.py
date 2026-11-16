@@ -142,6 +142,7 @@ class Observation(_Frozen):
     retry_count: int | None = Field(default=None, ge=0)
     retry_amount: Money | None = None
     allocation: AllocationParts | None = None
+    cost_center: str | None = Field(default=None, min_length=1, max_length=128)
 
     @model_validator(mode="after")
     def _consistent(self) -> Observation:
@@ -207,10 +208,18 @@ class LedgerEntry(_Frozen):
     retry_amount: Money | None = None
     allocation: AllocationParts | None = None
     token_breakdown: TokenCounts | None = None
+    # Agreed cost center of the observations; None when none carries one or two disagree.
+    cost_center: str | None = Field(default=None, min_length=1, max_length=128)
     content_hash: str = ""
 
     def with_hash(self) -> LedgerEntry:
         payload = self.model_dump(mode="json", exclude={"content_hash"})
+        # The hash covers cost_center only when set, so pre-PRP-46 entries keep their hash.
+        if payload.get("cost_center") is None:
+            payload.pop("cost_center", None)
+        for obs in payload["observations"]:
+            if obs.get("cost_center") is None:
+                obs.pop("cost_center", None)
         digest = hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
         return self.model_copy(update={"content_hash": digest})
 

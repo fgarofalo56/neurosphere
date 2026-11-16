@@ -1,6 +1,8 @@
 ---
 name: PRP-46-cost-center-attribution-and-ingest-follow-ups
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 296
 priority: P1
 order: 33
 review: required
@@ -33,21 +35,21 @@ Out of scope: the `CostRecord.tags` schema itself (PRP-37, merged earlier); dash
 - PRP-34 leftovers verified in code: the create step PUTs with `if_match=None` (`connectors/reference/apim-gateway/.../applier.py:163-172`, `arm.py:293-305`); the grant recorder has no stale-intent guard that the MCP recorder has (`services/workers/neurosphere_workers/publication/mcp.py:160-185` versus `publication/grant.py:70-90,129`); `publication-record` for MCP needs `action.propose` while the grant record route needs `catalog.curate` (`catalog/mcp_publish.py:146,504-510` versus `catalog/grant_publish.py:101,355`).
 
 ## Acceptance criteria
-- [ ] Given a cost CloudEvent with extension `nscostcenter: "CC-4410"`, when ingested, then the stored `HubMessage` data carries `tags.cost_center == "CC-4410"` and `HubMessage.cost_center == "CC-4410"`; given a telemetry CloudEvent with the extension, `HubMessage.cost_center` is set (telemetry has no tags field) (#190 items 1 and 3).
-- [ ] The extension value is stripped of control characters, must match `^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$` (the Grant pattern), and `N/A` or empty is treated as absent; an invalid value never rejects the event, is not stored, and the value is never logged (#190 item 3).
-- [ ] Given a cost record that already carries `tags.cost_center` and a different extension value, the record's own tag wins and the mismatch is counted, not rejected.
-- [ ] Given a `HubMessage` with `cost_center`, the outbox mapping puts it on the `Observation`; `LedgerEntry.cost_center` is set when every observation of the request agrees or only one carries it, and is `None` when two observations disagree (never a guess) (#190 ledger bullet).
-- [ ] `LedgerFilters(cost_center="CC-4410")` and `StoreLedgerReader.totals` filter on it; entries stored before this change still load with `cost_center=None`.
-- [ ] A gateway `model_call` telemetry event for a Commercial priced model yields an estimated ledger amount through the price table, and a Government one yields `price_unresolved` (not 0); a test pins both (#148 item 4 is satisfied by the existing telemetry pricing path, recorded in Clarifications 2).
-- [ ] The poller still posts no unpriced `CostRecord` (decision D2 stays); a test asserts the posted events carry `nscostcenter` only for attributed rows.
-- [ ] After a poll, `GatewayRegistration.poll_attribution` holds counts `attributed_row`, `attributed_exact`, `attributed_subscription_only`, `unattributed`, `metrics_query_failed` (bool), and the gateway detail API returns it; a failing metrics query shows `metrics_query_failed=true` and the poll status stays `ok` (#179 items 1 and 2).
-- [ ] An ARM id whose resource group is `.` or `..`, or ends with `.`, is refused by `normalize_arm_id`; a failed `_record_failure` logs the exception type with the gateway id and never raises; a 403 on an optional inventory list (backends, policy fragments) downgrades that list to empty with `capabilities[...]="unreadable"` instead of failing the sync (#148 item 2).
-- [ ] `process_batch` creates its duplicates counter once per `PipelineDeps`, asserted by a counting meter fake (#167).
-- [ ] A non-billing invoiced record dropped by `_map_cost` increments a counter `ns.outbox.cost_dropped{reason="invoiced_not_billing"}` and logs the reason code once per batch, never the record (#168).
-- [ ] An `observation_source` that disagrees with the producer registration is a per-item `MappingError` with the new reason `observation_source_mismatch` beside `invoiced_not_billing`; identity claims (`customer_id`, `cloud`, `source_id`) stay whole-request 403 `claim_mismatch`; `docs/runbooks/ingest-cost-attribution.md` lists the families (#169).
-- [ ] A create step now sends `If-None-Match: *`; given a resource that appears between plan and apply, the PUT answers 412 and the applier raises `StaleVersionError(reason="resource_appeared")` without overwriting; the in-memory twin behaves the same (PRP-34 create race).
-- [ ] Given a grant published by an intent applied at t2, replaying an older intent applied at t1 < t2 is refused with `stale_intent` (409), in the API record route and in the worker recorder (PRP-34 grant replay).
-- [ ] `POST .../mcp-servers/{id}/publication-record` requires `catalog.curate` on the server's domain, like the grant route; `publish` and `unpublish` keep `action.propose` (PRP-34 permission mismatch).
+- [x] Given a cost CloudEvent with extension `nscostcenter: "CC-4410"`, when ingested, then the stored `HubMessage` data carries `tags.cost_center == "CC-4410"` and `HubMessage.cost_center == "CC-4410"`; given a telemetry CloudEvent with the extension, `HubMessage.cost_center` is set (telemetry has no tags field) (#190 items 1 and 3).
+- [x] The extension value is stripped of control characters, must match `^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$` (the Grant pattern), and `N/A` or empty is treated as absent; an invalid value never rejects the event, is not stored, and the value is never logged (#190 item 3).
+- [x] Given a cost record that already carries `tags.cost_center` and a different extension value, the record's own tag wins and the mismatch is counted, not rejected.
+- [x] Given a `HubMessage` with `cost_center`, the outbox mapping puts it on the `Observation`; `LedgerEntry.cost_center` is set when every observation of the request agrees or only one carries it, and is `None` when two observations disagree (never a guess) (#190 ledger bullet).
+- [x] `LedgerFilters(cost_center="CC-4410")` and `StoreLedgerReader.totals` filter on it; entries stored before this change still load with `cost_center=None`.
+- [x] A gateway `model_call` telemetry event for a Commercial priced model yields an estimated ledger amount through the price table, and a Government one yields `price_unresolved` (not 0); a test pins both (#148 item 4 is satisfied by the existing telemetry pricing path, recorded in Clarifications 2).
+- [x] The poller still posts no unpriced `CostRecord` (decision D2 stays); a test asserts the posted events carry `nscostcenter` only for attributed rows.
+- [x] After a poll, `GatewayRegistration.poll_attribution` holds counts `attributed_row`, `attributed_exact`, `attributed_subscription_only`, `unattributed`, `metrics_query_failed` (bool), and the gateway detail API returns it; a failing metrics query shows `metrics_query_failed=true` and the poll status stays `ok` (#179 items 1 and 2).
+- [x] An ARM id whose resource group is `.` or `..`, or ends with `.`, is refused by `normalize_arm_id`; a failed `_record_failure` logs the exception type with the gateway id and never raises; a 403 on an optional inventory list (backends, policy fragments) downgrades that list to empty with `capabilities[...]="unreadable"` instead of failing the sync (#148 item 2).
+- [x] `process_batch` creates its duplicates counter once per `PipelineDeps`, asserted by a counting meter fake (#167).
+- [x] A non-billing invoiced record dropped by `_map_cost` increments a counter `ns.outbox.cost_dropped{reason="invoiced_not_billing"}` and logs the reason code once per batch, never the record (#168).
+- [x] An `observation_source` that disagrees with the producer registration is a per-item `MappingError` with the new reason `observation_source_mismatch` beside `invoiced_not_billing`; identity claims (`customer_id`, `cloud`, `source_id`) stay whole-request 403 `claim_mismatch`; `docs/runbooks/ingest-cost-attribution.md` lists the families (#169).
+- [x] A create step now sends `If-None-Match: *`; given a resource that appears between plan and apply, the PUT answers 412 and the applier raises `StaleVersionError(reason="resource_appeared")` without overwriting; the in-memory twin behaves the same (PRP-34 create race).
+- [x] Given a grant published by an intent applied at t2, replaying an older intent applied at t1 < t2 is refused with `stale_intent` (409), in the API record route and in the worker recorder (PRP-34 grant replay).
+- [x] `POST .../mcp-servers/{id}/publication-record` requires `catalog.curate` on the server's domain, like the grant route; `publish` and `unpublish` keep `action.propose` (PRP-34 permission mismatch).
 - [ ] PRP exit: targeted suites, `ruff`, `pyright`, `python packages/contracts/scripts/generate.py --check`, `services/api/tests/test_openapi_drift.py` and `verify-gates.ps1 -Mode full` pass; live attribution checks are reported OPEN.
 
 ## Clarifications (decided)
@@ -242,18 +244,20 @@ Unpriced `CostRecord` posting (D2 reversal); dashboards or finops grouping by co
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | after 1 |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | merged | prp-46-cost-center | done (ingest extension, reasons, runbook) |
+| 2 | merged | prp-46-cost-center | done (ledger, outbox counter, pipeline counter) |
+| 3 | merged | prp-46-cost-center | done |
+| 4 | merged | prp-46-cost-center | done |
+| 5 | merged | prp-46-cost-center | done |
+| 6 | merged | prp-46-land | Tier-3 regen, changelog fragment, prp_status done at merge |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint:
-- Descoped items:
-- OPEN gates (#179 items 3 and 4, #148 item 6):
-- Env vars for the operator (none new; list #148 item 3 names for `.env.example`):
-- Follow-up issue numbers (dashboards by cost center, inventory chunking):
-- Issue state (#190, #178, #148, #179, #167, #168, #169):
+- Date, PR, merge commit: 2026-11-15, PR #296 (squash merge).
+- Deviations from the blueprint: none in behaviour. Edits outside the Ownership list (fixture updates forced by the changes): `services/api/tests/catalog/test_catalog_api.py`, `services/api/tests/ingest/test_cloudevents.py` (403-to-per-item change), `services/workers/tests/action_executor/test_apim_wiring.py`; also `projections/outbox/sink.py` and the `gateway/__init__.py` and `payload/__init__.py` export lines.
+- Descoped items: dashboards by cost center, gateway inventory chunking (Clarification 7), Government attribution, unpriced CostRecord posting.
+- OPEN gates (#179 items 3 and 4, #148 item 6): Government attribution host, `Subscription ID` dimension live check and G17 observe rerun need `NS_LIVE_APPROVED=1` and an operator (PRP-64). Not run.
+- Env vars for the operator: none new. The `.env.example` names from #148 item 3 remain an operator edit (agent-blocked).
+- Follow-up issue numbers (dashboards by cost center, inventory chunking): not filed in this merge step; still to file.
+- Reviewer follow-ups (open): confirm stale-intent guard semantics (`check_grant_not_superseded` compares intent apply time with `provenance.recorded_at`); `cost_center_mismatches` should be an OTel counter, not a plain count; test fixture files touched outside the Ownership list (above); add a mixed-attribution poller test (exact, subscription-only and unattributed rows in one poll).
+- Issue state: #239 closed by this PR; #190, #178, #167, #168, #169 closed as resolved; #148 and #179 stay open for the OPEN live items.
+- Product check: cost center is filterable in `LedgerFilters` and the gateway detail API shows `poll_attribution`; no dashboard or finops route groups by it yet, so operators cannot see spend by cost center in the UI (gap, follow-up).

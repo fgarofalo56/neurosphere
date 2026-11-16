@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W15
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-46: Cost-center attribution and ingest follow-ups](backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md) | sonnet | required | none | - | - | `prp-46-cost-center` |
-
-Gate before the next wave: Authz and audit-chain suites green; cost-center attribution visible in the ledger.
-
 ### W16
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -126,9 +118,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W15
-    P46["PRP-46"]
-  end
   subgraph W16
     P45["PRP-45"]
     P49["PRP-49"]
@@ -203,14 +192,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-46 (W15)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md
-
-Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-46-cost-center cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-45 (W16)
 

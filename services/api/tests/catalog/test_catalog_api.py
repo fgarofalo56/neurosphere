@@ -462,9 +462,7 @@ def test_all_catalog_routes_declare_permissions() -> None:
         (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publication", ("GET",)): read,
         (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publish", ("POST",)): ("action.propose",),
         (f"{PREFIX}/mcp-servers/{{entity_id:path}}/unpublish", ("POST",)): ("action.propose",),
-        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publication-record", ("POST",)): (
-            "action.propose",
-        ),
+        (f"{PREFIX}/mcp-servers/{{entity_id:path}}/publication-record", ("POST",)): curate,
     }
 
 

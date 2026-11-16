@@ -97,6 +97,7 @@ def _map_telemetry(
         token_breakdown=tokens,
         retry_count=retry_count,
         retry_amount=retry_amount,
+        cost_center=event.message.cost_center,
     )
     return RequestObservation(event.message.customer_id, request_id, DEFAULT_COST_CATEGORY, obs)
 
@@ -115,6 +116,19 @@ def _parts(contract: CostRecord) -> AllocationParts | None:
         reservation=one(alloc.reservation),
         license_seat=one(alloc.license_seat),
     )
+
+
+REASON_INVOICED_NOT_BILLING = "invoiced_not_billing"
+
+
+def dropped_reason(event: NormalizedEvent) -> str | None:
+    """Why ``map_event`` returned ``None`` for a cost record that should have been visible."""
+    contract = event.contract
+    if isinstance(contract, CostRecord):
+        kind = event.message.observation_kind or contract.observation_source
+        if contract.kind == "invoiced" and kind != "billing":
+            return REASON_INVOICED_NOT_BILLING
+    return None
 
 
 def _map_cost(
@@ -157,6 +171,7 @@ def _map_cost(
             model=_label(contract.model),
             model_version=_label(contract.model_version),
             token_breakdown=_tokens(contract),
+            cost_center=event.message.cost_center,
             **common,  # type: ignore[arg-type]
         )
         return RequestObservation(event.message.customer_id, request_id, DEFAULT_COST_CATEGORY, obs)

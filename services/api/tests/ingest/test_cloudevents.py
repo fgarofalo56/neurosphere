@@ -115,11 +115,12 @@ def test_cost_event_with_request_id_extension(harness: Harness) -> None:
     assert msg.data["amount"] == "1.25"
 
 
-def test_cost_observation_source_mismatch_is_403(harness: Harness) -> None:
+def test_cost_observation_source_mismatch_is_per_item(harness: Harness) -> None:
     data = cost_data("cost-2")
     data["observation_source"] = "billing"
     resp = send(harness, ce(CLOUDEVENT_TYPE_COST, data), STRUCTURED)
-    assert resp.status_code == 403
+    assert resp.status_code == 202
+    assert resp.json()["rejected"] == [{"index": 0, "reason_code": "observation_source_mismatch"}]
     assert harness.publisher.messages == []
 
 

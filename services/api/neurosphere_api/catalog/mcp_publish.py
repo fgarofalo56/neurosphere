@@ -7,7 +7,7 @@ Mounted at ``/api/v1/catalog/mcp-servers`` (registered by ``catalog.router.regis
 | GET    | ``/{entity_id}/publication``                 | ``data.read``                       |
 | POST   | ``/{entity_id}/publish``                     | ``action.propose``                  |
 | POST   | ``/{entity_id}/unpublish``                   | ``action.propose``                  |
-| POST   | ``/{entity_id}/publication-record``          | ``action.propose``                  |
+| POST   | ``/{entity_id}/publication-record``          | ``catalog.curate``                  |
 
 ``publish`` and ``unpublish`` never touch the gateway: they DRAFT an ``mcp_server_publish`` or
 ``mcp_server_unpublish`` action intent through the one action plane (same ``ActionApi.draft`` as
@@ -144,6 +144,7 @@ _NAMED_VALUES_NOTE: Final = (
 
 ReadAccess = Annotated[EntityAccess, Depends(entity_access(Permission.DATA_READ))]
 ProposeAccess = Annotated[EntityAccess, Depends(entity_access(Permission.ACTION_PROPOSE))]
+CurateAccess = Annotated[EntityAccess, Depends(entity_access(Permission.CATALOG_CURATE))]
 Actions = Annotated[ActionPlane, Depends(get_action_plane)]
 Gateways = Annotated[GatewayPlane, Depends(get_gateway_plane)]
 Repository = Annotated[CatalogRepository, Depends(get_repository)]
@@ -506,7 +507,7 @@ def build_mcp_publish_router() -> APIRouter:
         request: Request,
         response: Response,
         body: McpPublicationRecordBody,
-        access: ProposeAccess,
+        access: CurateAccess,
         actions: Actions,
         service: Service,
         clock: ClockDep,

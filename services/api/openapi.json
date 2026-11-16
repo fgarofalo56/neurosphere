@@ -6333,6 +6333,16 @@
             "title": "Name",
             "type": "string"
           },
+          "poll_attribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PollAttribution"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "poll_status": {
             "anyOf": [
               {
@@ -6493,6 +6503,13 @@
             "format": "date-time",
             "title": "Taken At",
             "type": "string"
+          },
+          "unreadable_lists": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unreadable Lists",
+            "type": "array"
           }
         },
         "required": [
@@ -6715,6 +6732,16 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "poll_attribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PollAttribution"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "poll_status": {
             "anyOf": [
@@ -10826,6 +10853,43 @@
           "name"
         ],
         "title": "PolicyFragmentEntry",
+        "type": "object"
+      },
+      "PollAttribution": {
+        "additionalProperties": false,
+        "description": "Cost-center attribution counts of the latest gateway poll (PRP-46, #179).",
+        "properties": {
+          "attributed_exact": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Attributed Exact",
+            "type": "integer"
+          },
+          "attributed_row": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Attributed Row",
+            "type": "integer"
+          },
+          "attributed_subscription_only": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Attributed Subscription Only",
+            "type": "integer"
+          },
+          "metrics_query_failed": {
+            "default": false,
+            "title": "Metrics Query Failed",
+            "type": "boolean"
+          },
+          "unattributed": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Unattributed",
+            "type": "integer"
+          }
+        },
+        "title": "PollAttribution",
         "type": "object"
       },
       "PoolMember": {
@@ -17796,6 +17860,7 @@
           "unsupported_event_type",
           "request_id_mismatch",
           "invoiced_not_billing",
+          "observation_source_mismatch",
           "unsupported_metric_type",
           "unmapped_metric_name",
           "unsupported_temporality"

@@ -89,6 +89,8 @@ STEWARD: Final = helpers.ALICE
 VIEWER: Final = helpers.BOB
 OUTSIDER: Final = helpers.CAROL
 SEEDER: Final = helpers.NOBODY
+# Analyst of FINANCE: holds action.propose but not catalog.curate (PRP-46).
+ANALYST: Final = "a1b2c3d4-0001-4aaa-8bbb-00000000a001"
 FINANCE: Final[str] = helpers.FINANCE
 OPERATIONS: Final[str] = helpers.OPERATIONS
 CUSTOMER: Final[str] = helpers.CUSTOMER
@@ -249,6 +251,7 @@ def make_env(server: dict[str, Any] | None = None) -> Env:
         helpers.policy(STEWARD, helpers.role(Role.DOMAIN_STEWARD, FINANCE)),
         helpers.policy(VIEWER, helpers.role(Role.VIEWER, FINANCE)),
         helpers.policy(OUTSIDER, helpers.role(Role.DOMAIN_STEWARD, OPERATIONS)),
+        helpers.policy(ANALYST, helpers.role(Role.ANALYST, FINANCE)),
         helpers.policy(SEEDER, helpers.role(Role.DOMAIN_STEWARD, FINANCE, OPERATIONS)),
     )
 
@@ -377,6 +380,13 @@ def test_drafting_needs_action_propose_on_the_servers_domain(env: Env) -> None:
     # Nothing was drafted by any refused caller.
     page = asyncio.run(env.intents.list(CUSTOMER, FINANCE))
     assert list(page.items) == []
+
+
+def test_publication_record_needs_catalog_curate_not_just_action_propose(env: Env) -> None:
+    # An analyst may draft (action.propose) but the record route writes a catalog entity.
+    some_intent = "00000000-0000-4000-8000-000000000001"
+    assert env.record(some_intent, ANALYST).status_code == 403
+    assert env.record(some_intent, STEWARD).status_code != 403
 
 
 def test_status_needs_data_read_and_states_zero_body_bytes(env: Env) -> None:

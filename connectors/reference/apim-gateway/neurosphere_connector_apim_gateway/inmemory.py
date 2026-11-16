@@ -19,7 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from neurosphere_core.errors import InvalidSchemaError
+from neurosphere_core.errors import InvalidSchemaError, StaleVersionError
 
 from neurosphere_connector_apim_gateway.arm import (
     PERMISSIONS_PATH,
@@ -123,7 +123,14 @@ class InMemoryApim:
             path=path, properties=strip_secrets(rtype, copy.deepcopy(props)), etag=etag
         )
 
-    async def put(self, path: str, properties: Mapping[str, Any], *, if_match: str | None) -> None:
+    async def put(
+        self,
+        path: str,
+        properties: Mapping[str, Any],
+        *,
+        if_match: str | None,
+        if_none_match: bool = False,
+    ) -> None:
         rtype = check_path(path)
         self._enter("PUT", path, if_match)
         if any(k in properties for k in ("primaryKey", "secondaryKey")) or (
@@ -131,6 +138,11 @@ class InMemoryApim:
         ):
             raise InvalidSchemaError("secret material is never written", reason="secret_in_payload")
         entry = self.resources.get(path)
+        if if_none_match and entry is not None:
+            raise StaleVersionError(
+                "a resource the plan expected to create already exists",
+                reason="resource_appeared",
+            )
         if entry is None and if_match not in (None, "*"):
             raise map_status(412)
         if entry is not None and if_match != "*" and if_match != entry[1]:

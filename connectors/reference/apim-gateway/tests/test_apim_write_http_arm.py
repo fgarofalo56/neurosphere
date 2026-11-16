@@ -102,6 +102,21 @@ async def test_put_sends_if_match_and_412_is_stale_version() -> None:
     assert err.value.reason == "etag_mismatch"
 
 
+async def test_create_sends_if_none_match_and_412_is_resource_appeared() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(412 if request.url.path.endswith("/b-taken") else 200, json={})
+
+    arm, rec, _ = _arm(handler)
+    await arm.put("backends/b-new", {"url": "https://x"}, if_match=None, if_none_match=True)
+    assert rec.requests[0].headers["If-None-Match"] == "*"
+    assert "If-Match" not in rec.requests[0].headers
+    with pytest.raises(StaleVersionError) as err:
+        await arm.put("backends/b-taken", {"url": "https://x"}, if_match=None, if_none_match=True)
+    assert err.value.reason == "resource_appeared"
+    await arm.put("backends/b-upd", {"url": "https://x"}, if_match='"e"')
+    assert "If-None-Match" not in rec.requests[2].headers
+
+
 async def test_429_honours_retry_after_then_maps_to_dependency_transient() -> None:
     attempts = {"n": 0}
 

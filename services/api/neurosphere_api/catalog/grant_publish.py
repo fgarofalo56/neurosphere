@@ -54,6 +54,7 @@ from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaErr
 from neurosphere_workers.publication import ApplyRecordReader, reader_for
 from neurosphere_workers.publication.grant import (
     check_grant_intent,
+    check_grant_not_superseded,
     grant_attributes,
     grant_publication_update,
     grant_recorded,
@@ -257,6 +258,7 @@ async def _record(
     doc = dump(access.entity)
     if grant_recorded(doc, str(stored.intent.intent_id.root)):
         return access.entity
+    check_grant_not_superseded(doc, stored)
     updated = await grant_publication_update(doc, stored, records, now)
     return await service.update(
         access.scope,
