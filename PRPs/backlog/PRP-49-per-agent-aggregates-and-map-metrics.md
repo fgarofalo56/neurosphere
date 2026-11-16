@@ -235,7 +235,7 @@ Additive only. `EventFact` gains optional fields and the aggregate container gai
 | 1 | verifying | prp-49-per-agent-aggregates | SubjectPoint lives in models.py (circular import), re-exported by subject.py |
 | 2 | verifying | prp-49-per-agent-aggregates | |
 | 3 | verifying | prp-49-per-agent-aggregates | |
-| 4 | todo | | |
+| 4 | verifying | prp-49-per-agent-aggregates | Model delta ids are provider/model, so the client ignores them (deployment ids differ); agent nodes merge |
 | 5 | todo | | |
 | 6 | todo | | |
 
