@@ -84,6 +84,18 @@ param evaluationPilotSubjectId string = ''
 @description('Registered synthetic dataset ids for the evaluation pilot, comma separated (NS_EVALUATION_PILOT_DATASET_IDS on the API, NS_WORKER_EVAL_PILOT_DATASET_IDS on the workers).')
 param evaluationPilotDatasetIds string = 'sbx-groundedness-pilot'
 
+@description('PRP-58: connector worker roles to switch on in the workers site, a subset of gateway_poll, foundry_discovery and billing_export. Empty (default) runs none. Stored connector config (PRP-42) says what each role polls; this parameter only starts the role. Needs the workers identity roles of connector-rbac.bicep and a producer secret in Key Vault; see docs/deploy/hosted-demo.md.')
+param connectorRoles array = []
+
+@description('PRP-58: switch the recommendations worker role on, reading the lakehouse archive (NS_WORKER_REC_SOURCE=archive) instead of sandbox files. Default false.')
+param recommendationsEnabled bool = false
+
+@description('PRP-58: ARM resource ids of existing Foundry accounts the foundry_discovery role may read, /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.CognitiveServices/accounts/<name>. Each gets the Foundry User role for the workers identity at that account scope only. The deploying principal needs role-assignment rights there; otherwise run the one-line az role assignment create from docs/deploy/hosted-demo.md.')
+param foundryAccountIds array = []
+
+@description('PRP-58: ARM resource id of the existing storage account holding the Cost Management export container (billing_export). Gets Storage Blob Data Reader for the workers identity at that account scope only. Empty (default) assigns nothing.')
+param billingExportStorageAccountId string = ''
+
 @description('Catalog search provider (NS_SEARCH_PROVIDER). The demo deploys no AI Search, so it defaults to the in-process fixture; set azure with searchService when an existing service is referenced.')
 @allowed([
   'fixture'
@@ -239,9 +251,20 @@ var commonSettings = union(
   keyVaultPlainSettings
 )
 
+// PRP-58: the hosted data path. IaC only starts roles and points them at the API; what each
+// connector polls lives in stored connector configuration (PRP-42), never in app settings.
+var workerRoles = concat(
+  ['ingestion', 'projections', 'aggregates', 'actions', 'hitl_timers', 'lifecycle', 'evaluation'],
+  recommendationsEnabled ? ['recommendations'] : [],
+  connectorRoles
+)
+var recommendationsSettings = recommendationsEnabled ? { NS_WORKER_REC_SOURCE: 'archive' } : {}
+var connectorSettings = empty(connectorRoles) ? {} : { NS_API_BASE_URL: apiUpstream }
+
 var writeTargetSettings = writeTargetsFromStore ? { NS_WRITE_TARGETS_FROM_STORE: 'true' } : {}
 
 var apiSettings = {
+  NS_INGEST_PRODUCER_STORE: 'true'
   NS_AUTH_AUDIENCES: entraClientId
   NS_EVALUATION_PILOT_DATASET_IDS: evaluationPilotDatasetIds
   NS_INGEST_EVENTHUBS_NAMESPACE: eventHubsName
@@ -262,9 +285,10 @@ var apiSettingsWithWriteTargets = union(apiSettings, writeTargetSettings)
 // the site does (D8). The sites are therefore declared twice with identical resources: the
 // bootstrap pass creates them and their identities, the second pass adds the object id. Both
 // passes target the same resources, so the result is one plan, three sites.
-// Not 'all': the recommendations role reads sandbox data from a compose volume mount
-// (NS_WORKER_REC_DATA_DIR) that the hosted image does not have; hosted recommendations are written
-// by the seeder instead. The evaluation role IS enabled: the workers image carries the SYNTHETIC
+// Not 'all': the recommendations role is opt-in (recommendationsEnabled, PRP-58) and reads the
+// lakehouse archive (NS_WORKER_REC_SOURCE=archive), because the sandbox files of
+// NS_WORKER_REC_DATA_DIR are not in the hosted image; with it off the seeder writes the hosted
+// recommendations instead. The connector roles are opt-in too (connectorRoles). The evaluation role IS enabled: the workers image carries the SYNTHETIC
 // benchmark registry at /app/evaluation-data (services/workers/Dockerfile), with the fixture judge.
 // The offline pilot stays idle unless evaluationPilotDomainId and evaluationPilotSubjectId are set.
 var evaluationPilotSettings = empty(evaluationPilotDomainId) || empty(evaluationPilotSubjectId)
@@ -277,7 +301,8 @@ var evaluationPilotSettings = empty(evaluationPilotDomainId) || empty(evaluation
 
 var workersBaseSettings = union(
   {
-    NS_WORKER_ROLES: 'ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation'
+    NS_WORKER_ROLES: join(workerRoles, ',')
+    NS_WORKER_CONNECTOR_CONFIG_SOURCE: 'auto'
     NS_WORKER_EVAL_DATA_DIR: '/app/evaluation-data'
     NS_WORKER_EVAL_JUDGE: 'fixture'
     NS_WORKER_TENANT_ID: entraTenantId
@@ -290,6 +315,8 @@ var workersBaseSettings = union(
     NS_QUARANTINE_CONTAINER: quarantineContainer
   },
   evaluationPilotSettings,
+  recommendationsSettings,
+  connectorSettings,
   writeTargetSettings
 )
 
@@ -432,6 +459,36 @@ module keyVaultRbac 'modules/keyvault-rbac.bicep' = if (deployKeyVault) {
       appServiceBootstrap.outputs.apiPrincipalId
       appServiceBootstrap.outputs.workersPrincipalId
     ]
+  }
+}
+
+// PRP-58: per-account Foundry reader and export-storage reader for the workers identity. One
+// deployment per resource at that resource's own group (it may be in another subscription); the
+// assignment scope is the resource itself, never the group or the subscription.
+var billingExportSubscriptionId = empty(billingExportStorageAccountId)
+  ? subscription().subscriptionId
+  : split(billingExportStorageAccountId, '/')[2]
+var billingExportResourceGroup = empty(billingExportStorageAccountId)
+  ? resourceGroup().name
+  : split(billingExportStorageAccountId, '/')[4]
+
+module foundryRbac 'modules/connector-rbac.bicep' = [
+  for accountId in foundryAccountIds: {
+    name: '${prefix}-foundry-rbac-${take(uniqueString(accountId), 8)}'
+    scope: resourceGroup(split(accountId, '/')[2], split(accountId, '/')[4])
+    params: {
+      workersPrincipalId: appServiceBootstrap.outputs.workersPrincipalId
+      foundryAccountName: last(split(accountId, '/'))
+    }
+  }
+]
+
+module billingExportRbac 'modules/connector-rbac.bicep' = if (!empty(billingExportStorageAccountId)) {
+  name: '${prefix}-billing-export-rbac'
+  scope: resourceGroup(billingExportSubscriptionId, billingExportResourceGroup)
+  params: {
+    workersPrincipalId: appServiceBootstrap.outputs.workersPrincipalId
+    exportStorageAccountName: last(split(billingExportStorageAccountId, '/'))
   }
 }
 
