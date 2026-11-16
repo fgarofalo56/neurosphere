@@ -258,7 +258,7 @@ No `NS_LIVE_APPROVED=1` item and no paid call. OPEN and operator-only: a live Bi
 | 2 | merged | prp-52-ci-infra-hardening | LB allow rule, vnetAddressPrefix, APIM uiApiRateLimitCalls + policy, Helm NS_CLOUD required + egress docs; App Service NS_CLOUD handed to PRP-58 |
 | 3 | merged | prp-52-ci-infra-hardening | --source-dir mode, ci.yml DFD step + egress log step; real render not run locally (no Chrome) |
 | 4 | merged | prp-52-ci-infra-hardening | shared skip_or_fail loaded by path from ci_gate.py (no pyproject change); exact exec-failure markers; nslookup text fallback; compose-only probe run not run |
-| 5 | todo | | |
+| 5 | merged | prp-52-ci-infra-hardening | lazy sqlite3 in stub.py (PRP-11 shipped); .python-rundeps re-pin then apk del; 3 images built, no sqlite apk, analytics import ok; .grype.yaml ignore emptied; Grype run is CI-only |
 | 6 | merged | prp-52-ci-infra-hardening | family rule + carried-forward CI check + --allow-carried; reproduced PR 197/198 in scratch worktrees (old script UNKNOWN, new resolves); dependabot ignore; sync selection in ci planning job + dependabot-licences |
 | 7 | todo | | |
 
