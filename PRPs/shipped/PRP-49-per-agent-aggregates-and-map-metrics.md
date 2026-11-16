@@ -234,12 +234,12 @@ Additive only. `EventFact` gains optional fields and the aggregate container gai
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-49-per-agent-aggregates | SubjectPoint lives in models.py (circular import), re-exported by subject.py |
-| 2 | done | prp-49-per-agent-aggregates | |
-| 3 | done | prp-49-per-agent-aggregates | |
-| 4 | done | prp-49-per-agent-aggregates | Model delta ids are provider/model, so the client ignores them (deployment ids differ); agent nodes merge |
-| 5 | done | prp-49-per-agent-aggregates | |
-| 6 | done | prp-49-per-agent-aggregates | Close-out in the landing commit |
+| 1 | merged | prp-49-per-agent-aggregates | SubjectPoint lives in models.py (circular import), re-exported by subject.py |
+| 2 | merged | prp-49-per-agent-aggregates | |
+| 3 | merged | prp-49-per-agent-aggregates | |
+| 4 | merged | prp-49-per-agent-aggregates | Model delta ids are provider/model, so the client ignores them (deployment ids differ); agent nodes merge |
+| 5 | merged | prp-49-per-agent-aggregates | |
+| 6 | merged | prp-49-per-agent-aggregates | Close-out in the landing commit |
 
 ## Completion note (filled at ship)
 - Date, PR, merged commits: 2026-11-15, PR #301 (squash).

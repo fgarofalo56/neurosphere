@@ -180,7 +180,7 @@ Routes, UI, mock handlers, worker pickup, any secret value storage; schema chang
 | 1 | verifying | prp-65-admin-store | permissions, control-domain helpers, role pins; tests pass locally |
 | 2 | verifying | prp-65-admin-store | policy_admin.py twins + pure changes; emulator suite written, not run (PRP-38 holds compose) |
 | 3 | verifying | prp-65-admin-store | neurosphere_core.admin + admin_config container + export; emulator suite written, not run (PRP-38 holds compose) |
-| 4 | done | prp-65-admin-store | close-out 2026-11-15 |
+| 4 | merged | prp-65-admin-store | close-out 2026-11-15 |
 
 ## Completion note (filled at ship)
 - Date and PR: 2026-11-15, PR #277 (squash-merged after green CI)

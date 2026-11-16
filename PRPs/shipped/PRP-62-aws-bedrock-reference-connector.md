@@ -13,7 +13,7 @@ implementer_model: sonnet
 phase: 6
 ns: NS-09, NS-01
 depends_on: [PRP-42-connector-configuration-and-credential-references]
-wave: W19
+wave: W23
 branch: prp-62-aws-bedrock-connector
 allow_parallel: true
 issues: [256]

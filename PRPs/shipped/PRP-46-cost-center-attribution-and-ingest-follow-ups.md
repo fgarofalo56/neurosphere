@@ -246,9 +246,9 @@ Unpriced `CostRecord` posting (D2 reversal); dashboards or finops grouping by co
 |---|---|---|---|
 | 1 | merged | prp-46-cost-center | done (ingest extension, reasons, runbook) |
 | 2 | merged | prp-46-cost-center | done (ledger, outbox counter, pipeline counter) |
-| 3 | merged | prp-46-cost-center | done |
-| 4 | merged | prp-46-cost-center | done |
-| 5 | merged | prp-46-cost-center | done |
+| 3 | merged | prp-46-cost-center | merged |
+| 4 | merged | prp-46-cost-center | merged |
+| 5 | merged | prp-46-cost-center | merged |
 | 6 | merged | prp-46-land | Tier-3 regen, changelog fragment, prp_status done at merge |
 
 ## Completion note (filled at ship)

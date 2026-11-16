@@ -205,11 +205,11 @@ A deploy workflow (PRP-63); connector or producer logic; Key Vault secret creati
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-58-hosted-data-path | demo Bicep, connector-rbac module, GENERATED_PARAMS, plan flags, runbook section 8 |
-| 2 | done | prp-58-hosted-data-path | App Service params, Helm values+template; goldens unchanged (defaults inert) |
-| 3 | done | prp-58-hosted-data-path | compose pass-through, parity test; compose stack not run |
-| 4 | done | prp-58-hosted-data-path | G04 script + offline tests; live run OPEN |
-| 5 | done | prp-58-hosted-data-path | close-out: Tier-3 regeneration, completion note, changelog fragment |
+| 1 | merged | prp-58-hosted-data-path | demo Bicep, connector-rbac module, GENERATED_PARAMS, plan flags, runbook section 8 |
+| 2 | merged | prp-58-hosted-data-path | App Service params, Helm values+template; goldens unchanged (defaults inert) |
+| 3 | merged | prp-58-hosted-data-path | compose pass-through, parity test; compose stack not run |
+| 4 | merged | prp-58-hosted-data-path | G04 script + offline tests; live run OPEN |
+| 5 | merged | prp-58-hosted-data-path | close-out: Tier-3 regeneration, completion note, changelog fragment |
 
 ## Completion note (filled at ship)
 - Date and PR: 2026-11-16, PR #312.

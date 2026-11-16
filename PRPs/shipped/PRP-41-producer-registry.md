@@ -223,12 +223,12 @@ Console page; per-producer rate-limit or quota editing; secret overlap window; E
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-41-producer-registry | core ProducerAdmin, secret hygiene (9 tests) |
-| 2 | done | prp-41-producer-registry | StoreProducerRegistry, LayeredProducerRegistry, bootstrap switch |
-| 3 | done | prp-41-producer-registry | six routes, audited, show-once |
-| 4 | done | prp-41-producer-registry | edge builder, admin_producers component, startup refresher |
-| 5 | done | prp-41-producer-registry | ABAC + secrecy suites |
-| 6 | done | prp-41-producer-registry | routers hook, inventory, runbook done; Tier-3 regeneration, changelog fragment and close-out done in the close-out commit |
+| 1 | merged | prp-41-producer-registry | core ProducerAdmin, secret hygiene (9 tests) |
+| 2 | merged | prp-41-producer-registry | StoreProducerRegistry, LayeredProducerRegistry, bootstrap switch |
+| 3 | merged | prp-41-producer-registry | six routes, audited, show-once |
+| 4 | merged | prp-41-producer-registry | edge builder, admin_producers component, startup refresher |
+| 5 | merged | prp-41-producer-registry | ABAC + secrecy suites |
+| 6 | merged | prp-41-producer-registry | routers hook, inventory, runbook done; Tier-3 regeneration, changelog fragment and close-out done in the close-out commit |
 
 ## Completion note (filled at ship)
 - Date and PR: 2026-11-15, PR #290 (issue 235).
