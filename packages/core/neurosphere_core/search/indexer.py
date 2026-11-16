@@ -217,13 +217,16 @@ class CatalogIndexer:
         wanted = sorted(set(ids))
         if not wanted:
             return 0
+        # Forget the digests BEFORE the await: a concurrent scope that re-enumerates one of these
+        # ids then sees it as changed and re-upserts it instead of skipping on an equal digest.
+        for doc_id in wanted:
+            self._seen.pop(doc_id, None)
         try:
             await self._sink.delete(wanted)
         except Exception:
             self._pending_delete.update(wanted)
             raise
         for doc_id in wanted:
-            self._seen.pop(doc_id, None)
             self._pending_delete.discard(doc_id)
         return len(wanted)
 
@@ -268,6 +271,8 @@ class CatalogIndexer:
             held = self._held_by_any_scope()
             self._pending_delete -= held  # re-enumerated, so no longer a delete candidate
             candidates -= held
+            # Re-check just before the delete (no await between this and remove's first await).
+            candidates -= self._held_by_any_scope()
             removed = await self.remove(candidates)
         _log.info("catalog indexer refresh: %d documents upserted, %d removed", sent, removed)
         return sent

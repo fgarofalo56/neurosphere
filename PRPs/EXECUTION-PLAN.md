@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W18
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-60: Search indexing hardening](backlog/PRP-60-search-indexing-hardening.md) | sonnet | required | none | PRP-44, PRP-55 | - | `prp-60-search-indexing-hardening` |
-
-Gate before the next wave: An operator can register a producer and a connector in the UI; hosted IaC builds offline with the connector roles.
-
 ### W19
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -93,9 +85,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W18
-    P60["PRP-60"]
-  end
   subgraph W19
     P51["PRP-51"]
     P61["PRP-61"]
@@ -123,7 +112,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W18 | PRP-60 | `services/api/neurosphere_api/runtime/builders/search.py` |
 | W19 | PRP-51 | `services/api/neurosphere_api/runtime/builders/__init__.py`<br>`services/api/neurosphere_api/routers.py` |
 | W19 | PRP-61 | `packages/contracts/**` |
 | W19 | PRP-62 | `pyproject.toml`<br>`uv.lock`<br>`docs/licenses.md`<br>`docs/adr/0002-stack-pins.md`<br>`services/api/Dockerfile`<br>`services/api/Dockerfile.dev`<br>`services/workers/Dockerfile`<br>`services/workers/Dockerfile.dev`<br>`scripts/sandbox/Dockerfile.seed` |
@@ -133,14 +121,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-60 (W18)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-60-search-indexing-hardening.md
-
-Context for this run: wave W18 of PRPs/EXECUTION-PLAN.md, branch prp-60-search-indexing-hardening cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-51 (W19)
 

@@ -167,3 +167,21 @@ async def test_delete_logs_counts_only(caplog: pytest.LogCaptureFixture) -> None
     repo.by_domain[DOMAIN_A] = []
     await indexer.refresh(SCOPE_A)
     assert "secretname" not in caplog.text
+
+
+async def test_digest_is_dropped_before_the_delete_await_so_a_concurrent_scope_reupserts() -> None:
+    repo = StubRepo()
+    repo.by_domain[DOMAIN_A] = [_ent("one")]
+    seen_during_delete: list[bool] = []
+
+    class _Sink(RecordingSink):
+        async def delete(self, ids: Sequence[str]) -> None:
+            seen_during_delete.append(_id("one") in indexer._seen)  # pyright: ignore[reportPrivateUsage]
+            await super().delete(ids)
+
+    sink = _Sink()
+    indexer = _indexer(repo, sink)
+    await indexer.refresh(SCOPE_A)
+    repo.by_domain[DOMAIN_A] = []
+    await indexer.refresh(SCOPE_A)
+    assert seen_during_delete == [False]
