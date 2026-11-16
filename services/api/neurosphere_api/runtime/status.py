@@ -7,7 +7,9 @@ Every component has exactly one state:
   value, host, key or exception text);
 * ``disabled``: an optional component that is deliberately off (for example copilot without
   ``NS_COPILOT_MODE``);
-* ``not_built``: nothing built it (yet). Item 1's placeholder builders report this.
+* ``not_built``: nothing built it (yet). Item 1's placeholder builders report this;
+* ``pending`` (startup steps only, PRP-51): the step runs in the background and has not finished.
+  It blocks readiness from the first request until the step ends ``ok`` or ``failed``.
 
 Readiness: a REQUIRED component blocks readiness unless ``ok``; an OPTIONAL component blocks
 only when ``failed`` (misconfigured), never when ``disabled`` or ``not_built``. Startup steps
@@ -70,7 +72,7 @@ OPTIONAL_COMPONENTS: Final = (
 #: Startup steps that are not components but still gate readiness when they fail.
 STARTUP_STEPS: Final = ("cosmos_containers",)
 
-ComponentState = Literal["ok", "failed", "disabled", "not_built"]
+ComponentState = Literal["ok", "failed", "disabled", "not_built", "pending"]
 _REASON: Final = re.compile(r"[a-z][a-z0-9_]{0,63}")
 
 
@@ -158,6 +160,12 @@ class ComponentRegistry:
 
     def not_built(self, name: str) -> None:
         self.set(name, "not_built")
+
+    def pending(self, name: str) -> None:
+        """A startup step that has begun but not finished; blocks readiness until it ends."""
+        if not self._statuses[name].step:
+            raise ValueError(f"only a startup step can be pending: {name}")
+        self.set(name, "pending")
 
     def reported(self, name: str) -> bool:
         return name in self._reported

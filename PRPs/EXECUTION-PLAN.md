@@ -56,10 +56,9 @@ on a red `main`.
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-51: Composition and API hygiene](backlog/PRP-51-composition-and-api-hygiene.md) | sonnet | required | none | - | - | `prp-51-composition-hygiene` |
-| 2 | [PRP-61: Configuration detections and shadow-AI discovery](backlog/PRP-61-configuration-detections-and-shadow-ai-discovery.md) | sonnet | required | none | PRP-56 | - | `prp-61-detections` |
-| 3 | [PRP-62: AWS Bedrock reference connector (metadata only)](backlog/PRP-62-aws-bedrock-reference-connector.md) | sonnet | required | none | - | - | `prp-62-aws-bedrock-connector` |
-| 4 | [PRP-63: Delivery pipeline to the hosted environment](backlog/PRP-63-delivery-pipeline-to-hosted.md) | sonnet | required | none | - | - | `prp-63-delivery-pipeline` |
+| 1 | [PRP-61: Configuration detections and shadow-AI discovery](backlog/PRP-61-configuration-detections-and-shadow-ai-discovery.md) | sonnet | required | none | PRP-56 | - | `prp-61-detections` |
+| 2 | [PRP-62: AWS Bedrock reference connector (metadata only)](backlog/PRP-62-aws-bedrock-reference-connector.md) | sonnet | required | none | - | - | `prp-62-aws-bedrock-connector` |
+| 3 | [PRP-63: Delivery pipeline to the hosted environment](backlog/PRP-63-delivery-pipeline-to-hosted.md) | sonnet | required | none | - | - | `prp-63-delivery-pipeline` |
 
 Gate before the next wave: Delivery workflow passes its dry run; no open critical or high security finding.
 
@@ -86,7 +85,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 ```mermaid
 flowchart LR
   subgraph W19
-    P51["PRP-51"]
     P61["PRP-61"]
     P62["PRP-62"]
     P63["PRP-63"]
@@ -112,7 +110,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W19 | PRP-51 | `services/api/neurosphere_api/runtime/builders/__init__.py`<br>`services/api/neurosphere_api/routers.py` |
 | W19 | PRP-61 | `packages/contracts/**` |
 | W19 | PRP-62 | `pyproject.toml`<br>`uv.lock`<br>`docs/licenses.md`<br>`docs/adr/0002-stack-pins.md`<br>`services/api/Dockerfile`<br>`services/api/Dockerfile.dev`<br>`services/workers/Dockerfile`<br>`services/workers/Dockerfile.dev`<br>`scripts/sandbox/Dockerfile.seed` |
 | W19 | PRP-63 | `.github/workflows/deploy-hosted.yml`<br>`.github/workflows/release.yml` |
@@ -121,14 +118,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-51 (W19)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-51-composition-and-api-hygiene.md
-
-Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-51-composition-hygiene cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-61 (W19)
 
