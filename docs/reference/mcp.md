@@ -1,7 +1,7 @@
 # MCP reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `3161a153f216a58180a54fd04c8bf33e98776b00`. Generated: 2026-11-15.
+> Source commit: `967d685b31dc55da1b2685e2824898c27cb8cb63`. Generated: 2026-11-16.
 > Sources: `services/api/neurosphere_api/mcp/server/` and the live tool registry.
 
 The NeuroSphere MCP server exposes bounded structured tools and read-only resources over streamable HTTP with OAuth 2.1 resource-server auth. Every call re-derives the caller's `IdentityScope` server-side; scope-shaped arguments (domain, customer, tenant, scope) are refused, never consulted. There is **no confirm, execute or approve tool**: an agent can draft and present a confirmation, a human confirms in the UI or REST API through the same durable action executor. Annotations are client hints, never authorization.

@@ -1,7 +1,7 @@
 # Connector SDK reference (Python)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `3161a153f216a58180a54fd04c8bf33e98776b00`. Generated: 2026-11-15.
+> Source commit: `967d685b31dc55da1b2685e2824898c27cb8cb63`. Generated: 2026-11-16.
 > Sources: `connectors/sdk-python/neurosphere_connector/`.
 
 Package `neurosphere_connector` (connector SDK, read side) and `neurosphere_connector.write` (write path, imported explicitly; it is advisory by default and carries no Azure SDK import). Symbols are the `__all__` of each package, extracted from source with `ast`. Public methods are listed under each class.
@@ -181,6 +181,14 @@ def manifest_issues(data: Mapping[str, Any] | str | bytes) -> list[ValidationIss
 
 Return every contract violation (empty list means valid). Messages never hold values.
 
+### `tracked`
+
+```python
+def tracked(fn: _F) -> _F
+```
+
+Feed the outcome of an async method into ``self._tracker`` (a ``HealthTracker``).
+
 ### `validate_manifest`
 
 ```python
@@ -302,10 +310,18 @@ def build_verify_result(request: WriteRequest, observed_state: Mapping[str, Any]
 
 Helper for implementers: ``observed_state`` must come from reading the real target.
 
+### `check_capable`
+
+```python
+def check_capable(connector: object) -> WriteConnector
+```
+
+Return ``connector`` as a ``WriteConnector`` or raise ``CapabilityUnavailableError``.
+
 ### `check_diff_against_state`
 
 ```python
-def check_diff_against_state(diff: ProposedDiff, observed_state: Mapping[str, Any], *, prior_state: Mapping[str, Any] | None=None) -> tuple[OperationCheck, ...]
+def check_diff_against_state(diff: ProposedDiff, observed_state: Mapping[str, Any], *, prior_state: Mapping[str, Any] | None=None, numeric_equivalence: bool=False) -> tuple[OperationCheck, ...]
 ```
 
 Compare each requested operation with the state actually read back from the target.
