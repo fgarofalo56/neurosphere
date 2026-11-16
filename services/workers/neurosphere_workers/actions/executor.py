@@ -397,6 +397,7 @@ class ActionExecutor:
                 self._table,
                 stored.intent.action_kind,
                 stored.intent.target.entity_type,
+                target_key=stored.domain_id,
             )
             await check_gateway_binding(
                 connector,

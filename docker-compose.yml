@@ -168,8 +168,16 @@ services:
       NS_SEARCH_PROVIDER: fixture
       # Write targets (PRP-35): OFF by default, so the write registry is empty and a dry run
       # reports "no write target". Enabling needs the target config too (docs/runbooks/runtime-composition.md).
-      NS_FOUNDRY_ENABLED: "false"
-      NS_APIM_ENABLED: "false"
+      NS_FOUNDRY_ENABLED: ${NS_FOUNDRY_ENABLED:-false}
+      NS_FOUNDRY_SUBSCRIPTION_ID: ${NS_FOUNDRY_SUBSCRIPTION_ID:-}
+      NS_FOUNDRY_RESOURCE_GROUP: ${NS_FOUNDRY_RESOURCE_GROUP:-}
+      NS_FOUNDRY_ACCOUNT: ${NS_FOUNDRY_ACCOUNT:-}
+      NS_FOUNDRY_LOCATION: ${NS_FOUNDRY_LOCATION:-}
+      NS_APIM_ENABLED: ${NS_APIM_ENABLED:-false}
+      NS_APIM_GATEWAY_ID: ${NS_APIM_GATEWAY_ID:-}
+      NS_APIM_DOMAIN_ID: ${NS_APIM_DOMAIN_ID:-}
+      # PRP-54: stored write_targets entries define the targets only when set to true.
+      NS_WRITE_TARGETS_FROM_STORE: ${NS_WRITE_TARGETS_FROM_STORE:-false}
     volumes:
       - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
       - ./infra/dev/admission-quotas.dev.json:/etc/neurosphere/admission-quotas.json:ro
@@ -231,8 +239,16 @@ services:
       NS_WORKER_EVAL_PILOT_SUBJECT_ID: commercial:synthco:sandbox:agent:a-000000
       NS_WORKER_EVAL_OFFLINE_INTERVAL_SECONDS: "300"
       # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
-      NS_FOUNDRY_ENABLED: "false"
-      NS_APIM_ENABLED: "false"
+      NS_FOUNDRY_ENABLED: ${NS_FOUNDRY_ENABLED:-false}
+      NS_FOUNDRY_SUBSCRIPTION_ID: ${NS_FOUNDRY_SUBSCRIPTION_ID:-}
+      NS_FOUNDRY_RESOURCE_GROUP: ${NS_FOUNDRY_RESOURCE_GROUP:-}
+      NS_FOUNDRY_ACCOUNT: ${NS_FOUNDRY_ACCOUNT:-}
+      NS_FOUNDRY_LOCATION: ${NS_FOUNDRY_LOCATION:-}
+      NS_APIM_ENABLED: ${NS_APIM_ENABLED:-false}
+      NS_APIM_GATEWAY_ID: ${NS_APIM_GATEWAY_ID:-}
+      NS_APIM_DOMAIN_ID: ${NS_APIM_DOMAIN_ID:-}
+      # PRP-54: stored write_targets entries define the targets only when set to true.
+      NS_WRITE_TARGETS_FROM_STORE: ${NS_WRITE_TARGETS_FROM_STORE:-false}
       # Ingestion role (PRP-07): names match infra/compose/eventhubs.config.json. Emulator
       # clients come from the bootstrap-built NS_EVENTHUBS_/NS_BLOB_ connection strings.
       NS_INGESTION_EVENTHUB_NAME: telemetry

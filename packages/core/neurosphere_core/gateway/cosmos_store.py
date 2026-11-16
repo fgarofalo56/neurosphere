@@ -153,6 +153,25 @@ class CosmosGatewayStore:
             _raise_mapped(exc)
         return _registration(rows[0]) if rows else None
 
+    async def find_by_arm_resource_id(
+        self, customer_id: str, arm_resource_id: str
+    ) -> GatewayRegistration | None:
+        """Cross-partition query by customer and ARM id (PRP-54: stored write targets)."""
+        sql = (
+            "SELECT TOP 1 * FROM c WHERE c.doc_type = @doc_type"
+            " AND c.customer_id = @customer AND LOWER(c.arm_resource_id) = @arm"
+        )
+        params: builtins.list[dict[str, Any]] = [
+            {"name": "@doc_type", "value": GATEWAY_DOC_TYPE},
+            {"name": "@customer", "value": customer_id},
+            {"name": "@arm", "value": arm_resource_id.lower()},
+        ]
+        try:
+            rows = [row async for row in self._container.query_items(sql, parameters=params)]
+        except Exception as exc:
+            _raise_mapped(exc)
+        return _registration(rows[0]) if rows else None
+
     async def list(
         self,
         customer_id: str,

@@ -38,6 +38,7 @@ PARAMETERS = [
     "copilotEndpoint",
     "copilotDeployment",
     "copilotMode",
+    "writeTargetsFromStore",
     "evaluationPilotDomainId",
     "evaluationPilotSubjectId",
     "evaluationPilotDatasetIds",

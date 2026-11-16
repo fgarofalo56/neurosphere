@@ -52,31 +52,57 @@ _check_capable = check_capable
 
 
 class WriteTargetRegistry:
-    """Connectors accepted as action targets, keyed by manifest name."""
+    """Connectors accepted as action targets, keyed by manifest name and optional target key.
+
+    PRP-54: ``target_key`` (the intent's domain id) lets one registry hold several connectors
+    of the same manifest name. A connector registered without a key is the default for every
+    key that has no connector of its own. ``get(name)`` without a key stays valid while exactly
+    one connector holds ``name``; with several it raises ``target_ambiguous``, never picks one.
+    """
 
     def __init__(self) -> None:
-        self._targets: dict[str, WriteConnector] = {}
+        self._targets: dict[str, dict[str | None, WriteConnector]] = {}
 
-    def register(self, connector: object) -> WriteConnector:
+    def register(self, connector: object, *, target_key: str | None = None) -> WriteConnector:
         """Validate and add ``connector``; raises ``CapabilityUnavailableError`` if not writable."""
         capable = check_capable(connector)
-        self._targets[capable.manifest.name] = capable
+        self._targets.setdefault(capable.manifest.name, {})[target_key] = capable
         return capable
 
-    def get(self, name: str) -> WriteConnector:
-        try:
-            return self._targets[name]
-        except KeyError:
-            raise _reject(
-                "not_a_write_target", "no write target registered under that name"
-            ) from None
+    def _find(self, name: str, target_key: str | None) -> WriteConnector | None:
+        """The connector for ``name``/``target_key``; ``None`` when none; ambiguity raises."""
+        held = self._targets.get(name)
+        if not held:
+            return None
+        if target_key is not None:
+            return held.get(target_key) or held.get(None)
+        if len(held) == 1:
+            return next(iter(held.values()))
+        raise _reject("target_ambiguous", "several targets are registered; a target key is needed")
 
-    def supports(self, name: str, action: str) -> bool:
-        target = self._targets.get(name)
+    def get(self, name: str, *, target_key: str | None = None) -> WriteConnector:
+        found = self._find(name, target_key)
+        if found is None:
+            raise _reject("not_a_write_target", "no write target registered under that name")
+        return found
+
+    def supports(self, name: str, action: str, *, target_key: str | None = None) -> bool:
+        try:
+            target = self._find(name, target_key)
+        except CapabilityUnavailableError:
+            return False
         return target is not None and action in target.manifest.write_support.actions
 
     def names(self) -> tuple[str, ...]:
         return tuple(sorted(self._targets))
+
+    def holds(self, name: str, target_key: str | None = None) -> bool:
+        """True when a connector is registered under exactly ``name`` and ``target_key``."""
+        return target_key in self._targets.get(name, {})
+
+    def target_keys(self, name: str) -> tuple[str, ...]:
+        """The target keys registered under ``name`` (the keyless default is not listed)."""
+        return tuple(sorted(k for k in self._targets.get(name, {}) if k is not None))
 
 
 def register_write_target(registry: WriteTargetRegistry, connector: object) -> WriteConnector:
