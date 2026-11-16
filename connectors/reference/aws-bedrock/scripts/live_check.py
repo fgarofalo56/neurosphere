@@ -221,6 +221,8 @@ def main(argv: list[str] | None = None) -> int:
             raise RefusedError("--budget-cap-usd must be greater than 0 (record the cap)")
         if args.max_pages < 1 or args.max_pages > 5:
             raise RefusedError("--max-pages must be between 1 and 5")
+        if not Path(args.evidence_dir).resolve().is_relative_to(Path.cwd().resolve()):
+            raise RefusedError("--evidence-dir must be inside the current working directory")
         connector = _build_connector(args)
     except RefusedError as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)

@@ -113,6 +113,24 @@ def test_approved_static_key_without_the_env_var_is_refused() -> None:
     assert "NS_AWS_BEDROCK_KEY_JSON" in proc.stderr
 
 
+def test_evidence_dir_outside_the_working_directory_is_refused() -> None:
+    proc = _run(
+        [
+            "--region",
+            "us-east-1",
+            "--auth",
+            "static-key",
+            "--budget-cap-usd",
+            "1",
+            "--evidence-dir",
+            "../../outside",
+        ],
+        {"NS_LIVE_APPROVED": "1", "NS_AWS_BEDROCK_KEY_JSON": "{}"},
+    )
+    assert "EXIT 2" in proc.stdout, proc.stderr
+    assert "--evidence-dir" in proc.stderr
+
+
 def test_govcloud_region_is_refused_even_when_approved() -> None:
     proc = _run(
         ["--region", "us-gov-west-1", "--auth", "static-key", "--budget-cap-usd", "1"],

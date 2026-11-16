@@ -229,13 +229,13 @@ A worker role, stored connector configuration or admin page for Bedrock; ingesti
 | 4 | merged | prp-62-aws-bedrock-connector | credentials module is aws_auth.py (secret guard refuses *credentials* file names); botocore retries need total_max_attempts=1 |
 | 5 | merged | prp-62-aws-bedrock-connector | test_aws_bedrock_conformance.py; one-line edit to the existing six-connectors coverage test (listed must_not_touch) was unavoidable: it pins the on-disk set, so the new member broke it. Flag for review |
 | 6 | merged | prp-62-aws-bedrock-connector | README, scripts/live_check.py (exit 2 without NS_LIVE_APPROVED=1), iam.py policy constant, coverage row; live run OPEN |
-| 7 | todo | | |
+| 7 | todo | | Merge step: rebase, `uv lock --check`, `prp_status.py --write`, INDEX, `changelog.d/` fragment, fill the note below |
 
 ## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
+- Date, PR number, merge commit: (merge step)
+- Deviations: (1) the credentials module is `aws_auth.py`, not `credentials.py` (the repo secret guard refuses file names containing "credentials"); (2) test files are prefixed `test_aws_bedrock_` so basenames cannot clash across connector test directories; (3) one-line edit to `tests/unit/connector_conformance/test_reference_connectors_conformance.py` (listed must_not_touch) because `test_all_six_reference_connectors_are_covered` pins the on-disk connector set and failed once the member existed: review this; (4) `scripts/licenses_report.py` gained one verified ALIASES line (`dual license` -> `Apache-2.0 AND BSD-3-Clause`, python-dateutil 2.9.0.post0, read from its LICENSE and classifiers); (5) `usage()` takes an explicit `model_ids` list (at most 50) because discovering ids from CloudWatch would need the extra `cloudwatch:ListMetrics` action; (6) botocore `retries.max_attempts` means retries, so the reader and STS client use `total_max_attempts: 1`; (7) the two Dockerfile builds were not run (see OPEN gates).
+- Descoped items: none. The web-identity path shipped alongside the static key.
+- OPEN gates: G04 (live AWS read, handed to PRP-64; needs an owner-approved AWS account, a read-only role or key and `NS_LIVE_APPROVED=1`); the API and worker image builds with `uv sync --frozen` (Docker not run in this session; COPY lines and `uv lock --check` verified); `STS AssumeRoleWithWebIdentity` against a real OIDC provider (unit-tested with an injected exchange only).
+- Env vars for the operator: `NS_LIVE_APPROVED` (live check), `NS_AWS_BEDROCK_KEY_JSON` (static-key live check only; the operator exports it, never in a file or chat). No `.env.example` change.
+- Follow-up issues filed: none filed from the unattended run. Needed: a stored connector configuration (a new `ConnectorConfig.connector_kind` value `aws_bedrock` in the contracts, after PRP-42 and PRP-61 release them) and a worker role (`aws-bedrock-inventory`, settings: region, auth mode, role ARN or vault reference, `max_items`, cost services) in `services/workers/**`, then mapping usage into `TelemetryEvent` and ledger entries.
 - Operator product check (can an operator use this without editing files or calling raw APIs?):
