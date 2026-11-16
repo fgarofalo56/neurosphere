@@ -58,6 +58,8 @@ def result(
     answered: int = 2,
     partial: bool = False,
     lag_ms: int | None = 60_000,
+    stalled_slice_start: datetime | None = None,
+    truncated_pages: int = 0,
 ) -> PollResult:
     return PollResult(
         records=records,
@@ -69,6 +71,8 @@ def result(
         coverage=CoverageReport(expected_sources=2, answered_sources=answered, partial=partial),
         freshness=FreshnessReport(lag_ms=lag_ms) if lag_ms is not None else FreshnessReport(),
         failed_sources={} if answered == 2 else {WORKSPACE: "dependency_transient"},
+        truncated_pages=truncated_pages,
+        stalled_slice_start=stalled_slice_start,
     )
 
 
