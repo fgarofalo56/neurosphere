@@ -51,7 +51,7 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 from azure.identity.aio import DefaultAzureCredential
 from azure.search.documents.indexes.aio import SearchIndexClient
@@ -76,6 +76,7 @@ from neurosphere_core.search.indexer import (
     FixtureSearchStore,
     IndexSink,
 )
+from neurosphere_core.search.write_hook import IndexingCatalogRepository
 from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -279,10 +280,17 @@ def wrap_catalog_for_search(
 ) -> tuple[CatalogRepository, GraphQuery | None]:
     """Compose search for ``repository``: ``(repository to publish, graph or None)``.
 
-    The single call the data builder makes. The repository is returned unchanged when no
-    provider is configured.
+    The single call the data builder makes. With a provider configured the repository is wrapped
+    in :class:`IndexingCatalogRepository`: a create, update or deprecate is upserted into the
+    sink at once (a sink failure never fails the write) and ``SearchRuntime.invalidate()`` is
+    called. With no provider the repository is returned unchanged.
     """
-    return repository, build_catalog_graph(ctx, repository)
+    graph = build_catalog_graph(ctx, repository)
+    runtime = getattr(ctx.app.state, "search_runtime", None)
+    if graph is None or not isinstance(runtime, SearchRuntime):
+        return repository, graph
+    wrapped = IndexingCatalogRepository(repository, runtime.indexer, on_write=runtime.invalidate)
+    return cast(CatalogRepository, wrapped), graph
 
 
 def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> GraphQuery | None:
