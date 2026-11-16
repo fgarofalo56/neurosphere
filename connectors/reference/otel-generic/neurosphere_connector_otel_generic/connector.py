@@ -77,8 +77,8 @@ DEFAULT_CREDENTIAL_REF: Final = CredentialRef(
 )
 
 _CLOUD_BY_VAULT_HOST: Final[dict[str, Literal["commercial", "government"]]] = {
-    "vault.azure.net": "commercial",
-    "vault.usgovcloudapi.net": "government",
+    ".vault.azure.net": "commercial",
+    ".vault.usgovcloudapi.net": "government",
 }
 MAX_RETRY_AFTER_SECONDS: Final = 300
 _RETRYABLE_STATUS: Final = frozenset({500, 502, 503, 504})
@@ -111,7 +111,9 @@ def _manifest(ref: CredentialRef) -> ConnectorManifest:
     host = ref.vault_ref.removeprefix("https://").split("/", 1)[0].lower()
     cloud: Literal["commercial", "government"] | None = None
     for suffix, known in _CLOUD_BY_VAULT_HOST.items():
-        if host.endswith(suffix):
+        # Leading-dot suffix and a non-empty label: ``evilvault.azure.net`` and the bare apex
+        # do not match.
+        if host.endswith(suffix) and len(host) > len(suffix):
             cloud = known
     if cloud is None:
         # No silent fallback to commercial: a wrong cloud would cross the boundary.
