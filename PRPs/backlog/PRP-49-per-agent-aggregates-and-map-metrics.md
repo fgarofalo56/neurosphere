@@ -237,7 +237,7 @@ Additive only. `EventFact` gains optional fields and the aggregate container gai
 | 3 | verifying | prp-49-per-agent-aggregates | |
 | 4 | verifying | prp-49-per-agent-aggregates | Model delta ids are provider/model, so the client ignores them (deployment ids differ); agent nodes merge |
 | 5 | verifying | prp-49-per-agent-aggregates | |
-| 6 | todo | | |
+| 6 | todo | | Left for merge step: Tier-3 regeneration, changelog fragment, close-out |
 
 ## Completion note (filled at ship)
 - Date, PR, merged commits:
