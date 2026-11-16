@@ -49,8 +49,8 @@ Out of scope: secret readers and the credential providers that mint bearer token
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
 | 1 | Where the new adapters live | `neurosphere-core`; `packages/adapters-models` | `packages/adapters-models` (`neurosphere_adapters_models`, scaffolded by PRP-87); the Protocol, kinds, endpoints and gating stay in core |
-| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | ASSUMPTION: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
-| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | ASSUMPTION: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
+| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | Decided by the owner 2026-11-16: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR |
+| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | Decided by the owner 2026-11-16: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR |
 | 4 | How hosts are approved off Azure | suffix table per cloud; exact-host operator list | Exact-host list in operator configuration (ASSUMPTION setting `NS_COPILOT_APPROVED_HOSTS`, comma-separated hostnames, names only); a suffix table for AWS or Google would approve any tenant's host |
 | 5 | Judge | Azure-only; same kinds | ASSUMPTION: the judge gets the same three kinds through the same request builders, so `endpoint_judge.py` is generalised, not duplicated |
 | 6 | Bedrock call style | Converse and ConverseStream; InvokeModel | ASSUMPTION: Converse and ConverseStream (model-neutral tool-use shape); verify first from AWS documentation, alternative InvokeModelWithResponseStream |
@@ -234,7 +234,7 @@ Secret readers or token minting (PRP-94); Pub/Sub, OpenSearch, ClickHouse adapte
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows D-1, D-2, 4, 5, 6, 7, 8, 9 are ASSUMPTIONS for plan approval; row 11 is owner decision D-12 in PRP-85)
+- [ ] All clarification questions are decided, not guessed (D-1 and D-2 were decided by the owner 2026-11-16; rows 4, 5, 6, 7, 8, 9 are ASSUMPTIONS for plan approval; row 11 is owner decision D-12 in PRP-85)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |

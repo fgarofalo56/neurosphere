@@ -60,7 +60,7 @@ Out of scope: graph, timeline and recommender tools, tool-call audit and progres
 ## Context manifest
 
 ### Files to read first
-- `PRPs/backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md` (or its shipped copy) - "Interfaces provided": `build_copilot_registry`, `neurosphere_api.copilot.tooling.build_tool_ports`, `progress` event (and `RecordedDemoAdapter` if approved).
+- `PRPs/backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md` (or its shipped copy) - "Interfaces provided": `build_copilot_registry`, `neurosphere_api.copilot.tooling.build_tool_ports`, `progress` event (and `RecordedDemoAdapter`, decided by the owner 2026-11-16).
 - `packages/core/neurosphere_core/copilot/tools/builtin.py` - `_build_result`, `_readable_domains`, citation rows.
 - `services/api/neurosphere_api/copilot/engine.py` - `_tool_content` handles (`:249-275`), `_judge` (`:681-707`).
 - `services/docs-assistant/docs_assistant/index.py` - `tokenize`, `_PageParser`, `_chunks_from_html`, `DocsIndex` (pattern only; do not import).
@@ -71,7 +71,7 @@ Out of scope: graph, timeline and recommender tools, tool-call audit and progres
 - `tests/e2e/copilot/test_first_token.py` - an unmarked engine-level measurement test to imitate for the offline harness.
 
 ### Interfaces consumed
-- PRP-78: `build_copilot_registry(deps, *, sink, observer)`, `CopilotToolDependencies`, `neurosphere_api.copilot.tooling.build_tool_ports(ctx)`, `CopilotToolAuditor`, `COPILOT_TOOL_NAMES`; `RecordedDemoAdapter` only if the owner approved PRP-78 clarification 6 (this PRP's groundedness harness uses its own scripted transcripts and does not depend on it).
+- PRP-78: `build_copilot_registry(deps, *, sink, observer)`, `CopilotToolDependencies`, `neurosphere_api.copilot.tooling.build_tool_ports(ctx)`, `CopilotToolAuditor`, `COPILOT_TOOL_NAMES`; `RecordedDemoAdapter` (PRP-78 clarification 6, decided 2026-11-16; this PRP's groundedness harness uses its own scripted transcripts and does not depend on it).
 - PRP-60: the catalog search index correct on Azure AI Search (`text` field, encoded keys, worker writes indexed); the `catalog` source uses whatever provider is composed.
 - PRP-71: the seeded realistic world the groundedness set is written against (the sandbox world otherwise). PRP-70: catalog `tags`, `capabilities` (indexed text).
 - Shipped: `GraphQuery.search` on `app.state.catalog_graph`, `AggregateReader`, the PRP-19 registry, judge and citation rules, the `live` pytest marker (`pyproject.toml:93`). PRP-55, PRP-58 and PRP-60 are treated as shipped.

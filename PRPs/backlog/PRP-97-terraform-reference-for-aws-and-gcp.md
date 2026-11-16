@@ -46,8 +46,8 @@ Out of scope: Helm values and charts (PRP-96); the adapters and settings the out
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | ASSUMPTION: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
-| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | ASSUMPTION: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
+| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | Decided by the owner 2026-11-16: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR |
+| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | Decided by the owner 2026-11-16: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR |
 | 3 | Tool and licence | Terraform; OpenTofu; both | ASSUMPTION: write HCL both accept; validate with OpenTofu in CI; confirm the licence and the version from the OpenTofu release page at execution (nothing from memory) |
 | 4 | Provider versions | pin exact; ranges | Pin exact provider versions in `.terraform.lock.hcl` committed per root module (hashes, no secret); versions chosen at execution from the registry, recorded with date |
 | 5 | Remote state | include a backend; none | No backend block with real names; a `backend.tf.example` documents an S3 or GCS backend with variables only; state is sensitive and never committed |
@@ -207,7 +207,7 @@ Azure Terraform; on-prem Terraform; AKS IaC; GovCloud or Assured Workloads; mult
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows D-1, D-2, 3, 9, 10, 11 and 12 are ASSUMPTIONS for plan approval; owner decision D-4 in PRP-85 (hyphenated regions) applies to the region inputs)
+- [ ] All clarification questions are decided, not guessed (D-1 and D-2 were decided by the owner 2026-11-16; rows 3, 9, 10, 11 and 12 are ASSUMPTIONS for plan approval; owner decision D-4 in PRP-85 (hyphenated regions) applies to the region inputs)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |

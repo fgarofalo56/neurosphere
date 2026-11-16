@@ -49,8 +49,8 @@ Out of scope: the Azure Bicep templates and AKS cluster IaC (not in this program
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
 |---|----------|-----------------|----------|
-| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | ASSUMPTION: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
-| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | ASSUMPTION: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR; the owner confirms at the PRP-85 ADR stop point |
+| D-1 | Hosting axis (program decision D-1) | new `DeploymentTarget` axis beside `NS_CLOUD`; widen the cloud enum | Decided by the owner 2026-11-16: a new `DeploymentTarget` axis (`NS_PLATFORM` = azure, aws, gcp, kubernetes; default azure) beside the existing `NS_CLOUD` boundary class; `government` is valid only with azure; canonical IDs are unchanged (they keep the `commercial:` first segment on AWS, GCP and on-prem). Recorded in the PRP-85 multicloud-hosting ADR |
+| D-2 | Backend strategy (program decision D-2) | a native service adapter per cloud; one portable backend set | Decided by the owner 2026-11-16: one portable backend set (PostgreSQL, Kafka API, S3 API plus native GCS, generic OIDC, OTLP, OpenAI-compatible/Bedrock/Vertex model adapters) running on each cloud's managed service or in-cluster, not a native service adapter per cloud (no DynamoDB, Firestore or Pub/Sub adapters). Recorded in the PRP-85 multicloud-hosting ADR |
 | 3 | Azure rendering | refactor templates freely; keep output identical | Identical for existing value sets, proven by goldens (acceptance 1); new template logic is additive and guarded by `platform` |
 | 4 | Where `platform` defaults | required; default azure | ASSUMPTION: default `azure`, so existing deployments need no change; the `NS_CLOUD` required rule is unchanged |
 | 5 | Pod identity token | keep `automountServiceAccountToken` tied to Azure flag; per platform | Per platform: Azure flag unchanged; EKS and GKE mount the projected token; plain Kubernetes mounts it only when `serviceAccount.automountToken` is set (default false) |
@@ -229,7 +229,7 @@ Azure Bicep or AKS cluster IaC; Terraform (PRP-97); conformance matrix, DR and l
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows D-1, D-2, 4, 6, 7, 9 and 10 are ASSUMPTIONS for plan approval; row 7 depends on owner decisions D-5 and D-8, and D-6 and D-10 in PRP-85 also apply)
+- [ ] All clarification questions are decided, not guessed (D-1 and D-2 were decided by the owner 2026-11-16; rows 4, 6, 7, 9 and 10 are ASSUMPTIONS for plan approval; row 7 depends on owner decisions D-5 and D-8, and D-6 and D-10 in PRP-85 also apply)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
