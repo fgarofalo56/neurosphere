@@ -1,6 +1,8 @@
 ---
 name: PRP-60-search-indexing-hardening
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 311
 priority: P2
 order: 47
 review: required
@@ -33,15 +35,15 @@ Out of scope: any live Azure AI Search run (OPEN, handed to PRP-64); the Bicep s
 - ASSIGNMENTS named `services/api/neurosphere_api/search/**` and `services/workers/neurosphere_workers/search/**`; neither directory exists. The real code is `packages/core/neurosphere_core/search/**` and `services/api/neurosphere_api/runtime/builders/search.py` (the two `_NoSearch` fallbacks are in `runtime/builders/data.py:190-217` and `services/workers/tests/projections/test_catalog_entity_discovery.py:26`).
 
 ## Acceptance criteria
-- [ ] Given a canonical id with colons, When it is indexed to Azure, Then the document key is an encoded form that contains only characters Azure allows (URL-safe base64 of the canonical id, no padding), the canonical id is stored in a separate retrievable, filterable `entity_id` field, and decoding the key returns the canonical id (round-trip property test).
-- [ ] The Azure query path selects and returns `entity_id` as the hit id, grants are filtered on `entity_id`, and `_doc_in_scope` checks `entity_id`; the fixture path is unchanged; existing scope-filter tests pass unmodified in behaviour.
-- [ ] An index definition (`catalog_index_definition()`) declares the key field, `entity_id`, `entity`, `cloud`, `customer_id`, `domain_id` as filterable strings and `text` as a searchable string; a test asserts every field `SearchDocument` serialises exists in the definition (drift guard).
-- [ ] `NS_SEARCH_ENSURE_INDEX` (default false) makes the builder create-or-update the index through an injected index client when true and the Azure provider is enabled; with it false nothing is created; unsupported cloud or region still makes no request (existing test extended).
-- [ ] Given an entity that disappears from a scope's enumeration, When that scope refreshes, Then its document is deleted from the sinks, and a document still enumerated by another scope's last refresh is not deleted by a stale scope (ref-counted removal test); a delete failure raises `DependencyTransientError` and the document stays remembered for retry.
-- [ ] Given two scopes, When scope A's refresh is slow, Then scope B's search is not delayed (test with a gated sink); concurrent searches for the same scope share one refresh (single-flight); the per-scope lock table is bounded.
-- [ ] Given a catalog write through the wrapped repository (create, update, deprecate), Then the changed entity is upserted or removed in the sink without a full re-enumeration, and a sink failure does not fail the catalog write (logged by exception type only).
-- [ ] No document body, id or entity text is logged (extend `test_document_bodies_are_never_logged`); no key or connection string path is introduced.
-- [ ] The two serial wiring items are present and either done after their predecessor merged or reported as `[serial-after]` open; a note in the completion records which.
+- [x] Given a canonical id with colons, When it is indexed to Azure, Then the document key is an encoded form that contains only characters Azure allows (URL-safe base64 of the canonical id, no padding), the canonical id is stored in a separate retrievable, filterable `entity_id` field, and decoding the key returns the canonical id (round-trip property test).
+- [x] The Azure query path selects and returns `entity_id` as the hit id, grants are filtered on `entity_id`, and `_doc_in_scope` checks `entity_id`; the fixture path is unchanged; existing scope-filter tests pass unmodified in behaviour.
+- [x] An index definition (`catalog_index_definition()`) declares the key field, `entity_id`, `entity`, `cloud`, `customer_id`, `domain_id` as filterable strings and `text` as a searchable string; a test asserts every field `SearchDocument` serialises exists in the definition (drift guard).
+- [x] `NS_SEARCH_ENSURE_INDEX` (default false) makes the builder create-or-update the index through an injected index client when true and the Azure provider is enabled; with it false nothing is created; unsupported cloud or region still makes no request (existing test extended).
+- [x] Given an entity that disappears from a scope's enumeration, When that scope refreshes, Then its document is deleted from the sinks, and a document still enumerated by another scope's last refresh is not deleted by a stale scope (ref-counted removal test); a delete failure raises `DependencyTransientError` and the document stays remembered for retry.
+- [x] Given two scopes, When scope A's refresh is slow, Then scope B's search is not delayed (test with a gated sink); concurrent searches for the same scope share one refresh (single-flight); the per-scope lock table is bounded.
+- [x] Given a catalog write through the wrapped repository (create, update, deprecate), Then the changed entity is upserted or removed in the sink without a full re-enumeration, and a sink failure does not fail the catalog write (logged by exception type only).
+- [x] No document body, id or entity text is logged (extend `test_document_bodies_are_never_logged`); no key or connection string path is introduced.
+- [x] The two serial wiring items are present and either done after their predecessor merged or reported as `[serial-after]` open; a note in the completion records which.
 - [ ] PRP exit: touched suites pass, `verify-gates.ps1 -Mode full` green, one review pass approved, live Azure checks reported OPEN.
 
 ## Clarifications (decided)
@@ -221,19 +223,20 @@ Items 5 and 6 add `services/workers/tests/search_wiring` to the pytest line when
 
 | Item | Status | Branch/worktree | Notes |
 |------|--------|-----------------|-------|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | serial-after PRP-44 |
-| 6 | todo | | serial-after PRP-55 |
-| 7 | todo | | |
+| 1 | merged | prp-60-search-indexing-hardening | |
+| 2 | merged | prp-60-search-indexing-hardening | |
+| 3 | merged | prp-60-search-indexing-hardening | |
+| 4 | merged | prp-60-search-indexing-hardening | |
+| 5 | merged | prp-60-search-indexing-hardening | PRP-44 shipped; data.py _catalog now calls wrap_catalog_for_search |
+| 6 | merged | prp-60-search-indexing-hardening | PRP-55 shipped; worker wrap in runtime/search_wiring.py (new), applied in build_projections and foundry_discovery |
+| 7 | merged | prp-60-search-indexing-hardening | close-out done 2026-11-16 |
 
-## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (live Azure AI Search, items 5 and 6 if their predecessors had not merged):
-- Env vars for the operator (`NS_SEARCH_ENSURE_INDEX`):
-- Follow-up issue numbers:
-- Product check (can an operator stand up the Azure index and see a new entity searchable without editing files?):
+
+## Completion note
+- Date, PR, merge commit: 2026-11-16, PR #311, merge commit recorded by the squash merge.
+- Deviations from the blueprint and why: `NS_SEARCH_ENSURE_INDEX` lives on `SearchSettings` (builders/search.py), so no runtime/settings.py edit; ensure-index runs as an app startup hook (builders are sync). `IndexingCatalogRepository` forwards every protocol method explicitly (runtime-checkable isinstance ignores `__getattr__`). Item 6 (done at merge time, PRP-55 shipped): the wrap lives in a new module `services/workers/neurosphere_workers/runtime/search_wiring.py` (`WorkerSearchSettings`, `wrap_catalog_for_search`) and `factories.py` only gains an import and two call sites (`build_projections`, `build_foundry_discovery`); the other `CosmosCatalogRepository` constructions in factories are read-only or recorder paths and are not wrapped. Item 5 edited `runtime/builders/data.py` (`_catalog`) after PRP-44 shipped. Review follow-up fixed at merge: `CatalogIndexer.remove` now drops the remembered digest before awaiting the sink delete and `refresh` re-checks `held` just before the delete, so a concurrent scope that re-enumerates the id re-upserts it (test `test_digest_is_dropped_before_the_delete_await_so_a_concurrent_scope_reupserts`). A narrow window remains where a concurrent upsert can land at the sink before the delete; it self-heals at the next refresh (at most `NS_SEARCH_REFRESH_SECONDS`) and the repository re-fetch means it never widens access.
+- Descoped items: hiding deprecated entities from search (Clarification 5 assumption stands).
+- OPEN gates: live Azure AI Search (index create, upsert, delete, query with the encoded key and `entity_id` filter) was not run (needs `NS_LIVE_APPROVED=1`); handed to PRP-64 with PRP-58's hosted wiring. Existing indexes built before this change have no `entity_id` field; hits from old documents are skipped by `_doc_in_scope` (safe), and the runbook says to re-create the index with `ensure_index`.
+- Env vars for the operator (`.env.example` not edited): `NS_SEARCH_ENSURE_INDEX` (default false; API only). The worker reads the existing `NS_SEARCH_PROVIDER`, `NS_SEARCH_SERVICE`, `NS_SEARCH_INDEX`, `NS_SEARCH_REGION`; `.env.example` needs a `NS_SEARCH_ENSURE_INDEX` entry.
+- Follow-up issue numbers: none filed; optional follow-up is hiding deprecated entities from search.
+- Product check (can an operator stand up the Azure index and see a new entity searchable without editing files?): partly. `NS_SEARCH_ENSURE_INDEX=true` creates the index and write-through makes new entities searchable, but there is no admin button for it (PRP-45 stored settings carry the provider only) and it is unverified against live Azure.

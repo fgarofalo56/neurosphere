@@ -25,7 +25,7 @@ from neurosphere_core.search.azure.filters import (
     FIELD_CLOUD,
     FIELD_CUSTOMER,
     FIELD_DOMAIN,
-    FIELD_ID,
+    FIELD_ENTITY_ID,
     build_filter,
     build_search_text,
 )
@@ -34,7 +34,7 @@ from neurosphere_core.search.protocol import SearchHit, SearchRequest, SearchRes
 __all__ = ["AzureAuthorizedSearch", "SearchBackend", "create_search_client"]
 
 _SCORE_DECIMALS: Final = 9
-_SELECT: Final = [FIELD_ID, FIELD_DOMAIN, FIELD_CUSTOMER, FIELD_CLOUD]
+_SELECT: Final = [FIELD_ENTITY_ID, FIELD_DOMAIN, FIELD_CUSTOMER, FIELD_CLOUD]
 _GOV_AUDIENCE: Final = "https://search.azure.us"
 
 
@@ -105,7 +105,7 @@ class AzureAuthorizedSearch:
                     if not _doc_in_scope(doc, scope, allowed, granted):
                         continue  # defense in depth; the filter should have excluded it
                     collected.append(
-                        (round(float(doc["@search.score"]), _SCORE_DECIMALS), doc["id"])
+                        (round(float(doc["@search.score"]), _SCORE_DECIMALS), doc[FIELD_ENTITY_ID])
                     )
                 count = await pager.get_count() if hasattr(pager, "get_count") else None
                 matched = count if isinstance(count, int) else len(collected)
@@ -144,6 +144,6 @@ def _doc_in_scope(
     return (
         doc.get(FIELD_CLOUD) == scope.cloud
         and doc.get(FIELD_CUSTOMER) == scope.customer_id
-        and isinstance(doc.get(FIELD_ID), str)
-        and (doc.get(FIELD_DOMAIN) in allowed or doc[FIELD_ID] in granted)
+        and isinstance(doc.get(FIELD_ENTITY_ID), str)
+        and (doc.get(FIELD_DOMAIN) in allowed or doc[FIELD_ENTITY_ID] in granted)
     )

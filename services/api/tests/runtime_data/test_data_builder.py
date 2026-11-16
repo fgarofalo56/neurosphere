@@ -204,3 +204,27 @@ def test_a_wrongly_typed_backend_is_refused_by_name(monkeypatch: pytest.MonkeyPa
     overrides = configured_overrides(clock, backends=backends, blob_client=overrides.blob_client)
     composed = compose(overrides, builders=builders_with_real_data(), clock=clock)
     assert composed.registry.get("ledger").reason == "ledger_store_override_invalid"
+
+
+def test_catalog_repository_is_unwrapped_without_a_search_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from neurosphere_core.search.write_hook import IndexingCatalogRepository
+
+    configure_auth_env(monkeypatch)
+    monkeypatch.delenv("NS_SEARCH_PROVIDER", raising=False)
+    clock = FakeClock()
+    composed = compose(data_overrides(clock), builders=builders_with_real_data(), clock=clock)
+    assert not isinstance(composed.app.state.catalog_repository, IndexingCatalogRepository)
+
+
+def test_catalog_repository_is_write_through_with_a_search_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from neurosphere_core.search.write_hook import IndexingCatalogRepository
+
+    configure_auth_env(monkeypatch)
+    monkeypatch.setenv("NS_SEARCH_PROVIDER", "fixture")
+    clock = FakeClock()
+    composed = compose(data_overrides(clock), builders=builders_with_real_data(), clock=clock)
+    assert isinstance(composed.app.state.catalog_repository, IndexingCatalogRepository)

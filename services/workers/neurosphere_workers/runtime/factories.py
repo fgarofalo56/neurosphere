@@ -228,6 +228,7 @@ from neurosphere_workers.runtime.checkpoint import CheckpointStore, CosmosRuntim
 from neurosphere_workers.runtime.identity import PolicyStack, build_identity, build_policy_stack
 from neurosphere_workers.runtime.price_refresh import PriceTableRefresher
 from neurosphere_workers.runtime.roles import RoleConfigError
+from neurosphere_workers.runtime.search_wiring import wrap_catalog_for_search
 from neurosphere_workers.runtime.settings import (
     ApimWriteSettings,
     AuthSettings,
@@ -463,7 +464,12 @@ async def build_projections(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Rol
     identity = build_identity(cfg.settings, stack=stack, worker=cfg.worker, customer_id=customer)
     source = ArchiveTraceEventSource(ArchiveReader(_archive_container(cfg, lifetime)))
     projection = CatalogProjection(
-        repository=CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        repository=wrap_catalog_for_search(
+            cfg.cloud,
+            cfg.settings.cloud_profile,
+            lifetime,
+            CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        ),
         review_queue=CosmosReviewQueue.from_client(cosmos, database=cfg.store.database),
         source=source,
         scope_provider=identity.scope_provider,
@@ -1378,7 +1384,12 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
     identity = build_identity(cfg.settings, stack=stack, worker=cfg.worker, customer_id=customer)
     poller = FoundryDiscoveryPoller(
         targets=targets,
-        repository=CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        repository=wrap_catalog_for_search(
+            cfg.cloud,
+            cfg.settings.cloud_profile,
+            lifetime,
+            CosmosCatalogRepository(db.get_container_client(_CATALOG_CONTAINER)),
+        ),
         scope_provider=identity.scope_provider,
         customer_id=customer,
         domain_id=disc.domain_id,

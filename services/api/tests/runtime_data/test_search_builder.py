@@ -201,7 +201,7 @@ def test_azure_supported_region_queries_azure_with_a_server_side_scope_filter(
     odata = azure.searches[0]["filter"]
     assert FINANCE in odata and HR not in odata
     # the indexer pushed only the in-scope entity
-    uploaded = [d["id"] for batch in azure.uploads for d in batch]
+    uploaded = [d["entity_id"] for batch in azure.uploads for d in batch]
     assert uploaded == [f"commercial:{CUSTOMER}:foundry:agent:support-bot"]
 
 
