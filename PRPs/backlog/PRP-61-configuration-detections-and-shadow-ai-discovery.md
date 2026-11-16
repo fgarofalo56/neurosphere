@@ -229,7 +229,7 @@ Content or prompt inspection; PII detection in data; policy XML parsing; auto-re
 | 3 | merged | prp-61-detections | ARM, Resource Graph, gateway, catalog readers |
 | 4 | merged | prp-61-detections | role, settings, registration; NS_WORKER_DETECT_* |
 | 5 | merged | prp-61-detections | evidence source + 4 library mappings; also touched models.py id list, contract enum, API deps line, golden |
-| 6 | todo | | |
+| 6 | merged | prp-61-detections | e2e test + runbook + mkdocs nav |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
