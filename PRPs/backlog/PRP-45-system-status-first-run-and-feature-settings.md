@@ -218,7 +218,7 @@ None run here. A stored copilot or judge endpoint pointing at a real model is on
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | verifying | prp-45-system-status-settings | core snapshot + validators; 30 tests |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
