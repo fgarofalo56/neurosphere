@@ -27,6 +27,14 @@ import {
   type ViewportNode,
 } from "./types";
 
+/** Kinds a delta may only update (never create): the viewport API owns their labels. */
+const METRICS_ONLY_KINDS: ReadonlySet<NodeKind> = new Set<NodeKind>([
+  "agent",
+  "sub_agent",
+  "model",
+  "source",
+]);
+
 export interface MapNodeAttributes {
   x: number;
   y: number;
@@ -374,11 +382,26 @@ export class MapGraph {
     return n;
   }
 
-  /** Applies one realtime delta: validated upserts only; unknown shapes are ignored. */
+  /**
+   * Applies one realtime delta: validated shapes only. A delta node whose id is already in the
+   * graph changes only its `metrics` (the server's label, cluster and member count are not
+   * authoritative for a node the viewport API described). Agent, sub_agent, model and source
+   * nodes the graph does not know are ignored; the domain cluster node (and people) still upsert.
+   */
   applyDelta(rawNodes: readonly unknown[], rawEdges: readonly unknown[]): void {
     const nodes = rawNodes.map(parseNode).filter((n): n is ViewportNode => n !== null);
     const edges = rawEdges.map(parseEdge).filter((e): e is ViewportEdge => e !== null);
-    this.upsertNodes(nodes);
+    const upserts: ViewportNode[] = [];
+    for (const node of nodes) {
+      if (node.kind === "cluster") {
+        upserts.push(node);
+      } else if (this.graph.hasNode(node.id)) {
+        this.graph.mergeNodeAttributes(node.id, { metrics: node.metrics });
+      } else if (!METRICS_ONLY_KINDS.has(node.kind)) {
+        upserts.push(node);
+      }
+    }
+    this.upsertNodes(upserts);
     this.upsertEdges(edges);
     this.restyle();
   }

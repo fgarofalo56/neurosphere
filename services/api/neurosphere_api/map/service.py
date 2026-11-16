@@ -12,16 +12,22 @@ status for coverage and lag. Nothing loads the whole enterprise graph:
 * an edge is emitted only when BOTH endpoints are nodes of this response, so an edge to an
   out-of-scope or off-page node is dropped, never left dangling.
 
-Per-node runtime metrics are not available from the hot aggregates (they are domain-level, with
-no per-node series), so they are ``null`` / ``unknown``; the catalog fact ``context_size`` is the
-one populated value. People are pseudonymized with the PRP-06 ``PrincipalPseudonymizer``.
+Per-node runtime metrics (PRP-49) come from the per-agent and per-model ``subject`` aggregate
+series: one bounded batch read per kind for the nodes of the response, newest point of the last
+two hour buckets. A node with no point, an unknown value, a person or a cluster keeps ``null`` /
+``unknown`` (never 0); a failing subject read degrades to unknown metrics and ``partial``
+coverage. Model nodes match by ``(provider, model_name)`` (case-insensitive), so every deployment
+of one model shows the model's metrics (model-level, not deployment-level). ``context_size`` is a
+catalog fact. People are pseudonymized with the PRP-06 ``PrincipalPseudonymizer``.
 """
 
 import asyncio
 import base64
 import binascii
+import logging
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Final
 
 from neurosphere_contracts.catalog.v1.agent import Agent
@@ -29,7 +35,16 @@ from neurosphere_contracts.catalog.v1.grounding_source import GroundingSource
 from neurosphere_contracts.catalog.v1.model_deployment import ModelDeployment
 from neurosphere_contracts.catalog.v1.person import Person
 from neurosphere_contracts.query.v1.budget import Budget
-from neurosphere_core.aggregates import AggregateReader
+from neurosphere_core.aggregates import (
+    AggregateReader,
+    AggregateWindow,
+    SubjectKind,
+    SubjectMetricsReader,
+    SubjectPoint,
+    bucket_start,
+    health_for_error_rate,
+    subject_series_key,
+)
 from neurosphere_core.auth.scope import PrincipalPseudonymizer
 from neurosphere_core.catalog import CatalogEntity, CatalogRepository, EntityFilter, GraphQuery
 from neurosphere_core.catalog.graph import EdgesAmongQuery
@@ -61,6 +76,9 @@ _BULK_TIMEOUT_MS: Final = 10_000
 _BULK_MAX_NODES: Final = 5000  # Budget contract ceiling
 _BULK_MAX_EDGES: Final = 20_000  # Budget contract ceiling
 _CLUSTER_PREFIX: Final = "kind:"
+_SUBJECT_TIMEOUT_S: Final = 5.0
+
+logger = logging.getLogger(__name__)
 
 VIEWPORT_ENTITY_TYPES: Final = ("agent", "grounding_source", "model_deployment", "person")
 _KIND: Final[dict[str, NodeKind]] = {
@@ -143,6 +161,8 @@ class _Builder:
         self.pseudonymizer = pseudonymizer
         self.clock = clock
         self.limits = limits
+        self.subjects: dict[str, SubjectPoint] = {}  # entity id -> newest subject point
+        self.subjects_failed = False
 
     def _filter(self, entity_types: list[str]) -> EntityFilter:
         return EntityFilter.model_validate(
@@ -202,9 +222,76 @@ class _Builder:
 
     # ------------------------------------------------------------------ nodes
 
+    @staticmethod
+    def subject_key_of(entity: CatalogEntity) -> str | None:
+        """Series key of an agent or model deployment; ``None`` for everything else."""
+        if isinstance(entity, Agent):
+            return subject_series_key("agent", entity.id)
+        if isinstance(entity, ModelDeployment):
+            provider = str(getattr(entity.provider, "root", entity.provider))
+            return subject_series_key("model", provider, entity.model_name)
+        return None
+
+    async def load_subjects(self, entities: list[CatalogEntity]) -> None:
+        """Newest subject point per agent and model of the response (bounded batch reads).
+
+        Only runs when the reader implements ``SubjectMetricsReader``. Any failure leaves the
+        metrics unknown and flags the response ``partial``; it never fails the viewport.
+        """
+        reader = self.reader
+        if not isinstance(reader, SubjectMetricsReader):
+            return
+        keys: dict[SubjectKind, list[str]] = {"agent": [], "model": []}
+        owners: dict[str, list[str]] = {}
+        for entity in entities:
+            key = self.subject_key_of(entity)
+            if key is None:
+                continue
+            kind: SubjectKind = "agent" if key.startswith("agent:") else "model"
+            keys[kind].append(key)
+            owners.setdefault(key, []).append(entity.id)
+        if not owners:
+            return
+        end = bucket_start(self.clock(), "hour") + timedelta(hours=1)
+        window = AggregateWindow(start=end - timedelta(hours=2), end=end)
+        try:
+            for kind in ("agent", "model"):
+                if not keys[kind]:
+                    continue
+                found = await asyncio.wait_for(
+                    reader.latest_subject_points(
+                        self.scope.customer_id,
+                        self.domain_id,
+                        kind,
+                        sorted(set(keys[kind])),
+                        window,
+                    ),
+                    _SUBJECT_TIMEOUT_S,
+                )
+                self.subjects_failed = self.subjects_failed or found.truncated
+                for key, point in found.points.items():
+                    for entity_id in owners.get(key, []):
+                        self.subjects[entity_id] = point
+        except Exception:
+            logger.warning("subject metrics read failed; node metrics are unknown")
+            self.subjects.clear()
+            self.subjects_failed = True
+
+    def _metrics_of(self, entity_id: str) -> NodeMetrics:
+        point = self.subjects.get(entity_id)
+        if point is None:
+            return NodeMetrics()
+        tokens = [t for t in (point.input_tokens, point.output_tokens) if t is not None]
+        return NodeMetrics(
+            frequency=float(point.event_count),
+            latency_p95_ms=None if point.p95_ms is None else float(point.p95_ms),
+            tokens=float(sum(tokens)) if tokens else None,
+            health=health_for_error_rate(point.error_rate),
+        )
+
     def node_for(self, entity: CatalogEntity, cluster_id: str | None) -> ViewportNode:
         kind = _KIND[entity.entity_type]
-        metrics = NodeMetrics()
+        metrics = self._metrics_of(entity.id)
         if isinstance(entity, Person):
             label = self.pseudonymizer.pseudonym(self.scope.customer_id, entity.id)
             return ViewportNode(
@@ -212,7 +299,9 @@ class _Builder:
             )
         if isinstance(entity, ModelDeployment):
             window = entity.context_window_tokens
-            metrics = NodeMetrics(context_size=None if window is None else window.root)
+            metrics = metrics.model_copy(
+                update={"context_size": None if window is None else window.root}
+            )
             label = entity.deployment_name
         elif isinstance(entity, Agent | GroundingSource):
             label = entity.display_name.root
@@ -395,12 +484,15 @@ async def build_viewport(
     if edges_state.incomplete and reason is None:
         reason = "traversal_incomplete"
 
+    await b.load_subjects(entities)
     nodes = [b.node_for(e, member_cluster) for e in entities]
     nodes = _sub_agents(nodes, edges_state, public)
     nodes.extend(clusters)
     nodes = nodes[: limits.max_nodes]  # belt and braces: never above the hard ceiling
     edges = [_edge_out(e, public) for e in sorted(edges_state.items.values(), key=_edge_key)]
-    coverage = await b.coverage(incomplete=edges_state.incomplete or scan_capped)
+    coverage = await b.coverage(
+        incomplete=edges_state.incomplete or scan_capped or b.subjects_failed
+    )
     return ViewportResponse(
         domain_id=domain_id,
         nodes=nodes,
