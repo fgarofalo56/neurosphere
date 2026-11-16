@@ -206,13 +206,13 @@ OPEN until PRP-64: the first OIDC login, the first approved plan and apply, and 
 | 2 | merged | prp-63-delivery-pipeline | deploy-hosted.yml; actionlint clean |
 | 3 | merged | prp-63-delivery-pipeline | delivery.md + mkdocs nav line; operator script temp/setup-delivery-oidc.ps1 parse-checked, not run |
 | 4 | merged | prp-63-delivery-pipeline | static tests + release.yml header comment |
-| 5 | todo | | |
+| 5 | in-progress | prp-63-delivery-pipeline | completion note drafted; changelog fragment and Tier-3 regeneration left for the merge step |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: (filled at close-out)
+- Deviations: (1) the register is NOT persisted as an artifact (clarification 6): it holds full resource ids and artifacts of this public repo are readable by any signed-in GitHub user; an update deploy relies on the Cosmos copy, which needs the Cosmos data-plane role for the delivery identity. UNVERIFIED until PRP-64 compares register rows before and after the first run. (2) the plan hash is read from the plan evidence JSON (`details.plan_sha256`), not a log scrape. (3) the plan-job summary lists change types and resource types only, not resource ids. (4) `mkdocs.yml` got one nav line for `docs/deploy/delivery.md`. (5) Snyk reported 2 low Path Traversal findings on `hosted_smoke.py` (operator-supplied `--result-json` and `GITHUB_STEP_SUMMARY`); accepted, same pattern as the other gate scripts.
+- Descoped items: none.
+- OPEN gates: first OIDC login, first approved plan and apply, first smoke on the real environment, the exact role list, register correctness without a local export (all PRP-64, need `NS_LIVE_APPROVED=1` and the operator approving `hosted-demo`). Deployed: no, unverified live. Close-out item 5 (changelog fragment, Tier-3 regeneration) is left for the merge step.
+- Env vars for the operator: secrets `NS_AZURE_CLIENT_ID`, `NS_AZURE_TENANT_ID`, `NS_AZURE_SUBSCRIPTION_ID`, `NS_INTEGRATION_SUBNET_ID`, `NS_PE_SUBNET_ID`, `NS_COSMOS_ZONE_ID`, `NS_EVENTHUBS_ZONE_ID`, `NS_BLOB_ZONE_ID`, `NS_WEBAPPS_ZONE_ID`, `NS_KEYVAULT_ZONE_ID`, `NS_ENTRA_TENANT_ID`, `NS_ENTRA_CLIENT_ID`, `NS_COPILOT_ENDPOINT`, `NS_BUDGET_EMAILS`, `NS_TAG_OWNER`, `NS_FOUNDRY_ACCOUNT_IDS`, `NS_BILLING_EXPORT_STORAGE_ID` on both environments `hosted-demo-plan` and `hosted-demo`; optional variables `NS_HOSTED_RESOURCE_GROUP`, `NS_HOSTED_LOCATION`, `NS_HOSTED_PREFIX`, `NS_HOSTED_SKU`, `NS_HOSTED_COPILOT_MODE`, `NS_HOSTED_COPILOT_DEPLOYMENT`, `NS_HOSTED_CONNECTOR_ROLES`, `NS_HOSTED_RECOMMENDATIONS`, `NS_HOSTED_EVAL_DOMAIN_ID`, `NS_HOSTED_EVAL_SUBJECT_ID`, `NS_HOSTED_EVAL_DATASET_IDS`. Operator script: `temp/setup-delivery-oidc.ps1` in the worktree (untracked), run `powershell -NoProfile -File temp/setup-delivery-oidc.ps1 -SubscriptionId <id> -WhatIf` first, then without `-WhatIf`; report back the app display name, roles assigned and secret counts, never values. The two draft rc releases need a decision (publish by hand or let the first run handle rc.2).
+- Follow-up issues: none filed.
+- Product check: operator can run the pipeline from GitHub without editing files; first-time setup needs the operator script; live run is PRP-64.

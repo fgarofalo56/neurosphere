@@ -31,7 +31,9 @@ def jobs(wf: dict[str, Any]) -> dict[str, Any]:
 
 def _triggers(wf: dict[str, Any]) -> dict[str, Any]:
     # PyYAML reads the bare key `on` as boolean True.
-    return wf.get("on") or wf[True]
+    loose: dict[Any, Any] = dict(wf)
+    value: Any = loose.get("on") or loose.get(True)
+    return value
 
 
 def _steps_text(job: dict[str, Any]) -> str:
