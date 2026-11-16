@@ -2648,6 +2648,23 @@
         "title": "ChangeView",
         "type": "object"
       },
+      "ChecklistPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FirstRunChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ChecklistPage",
+        "type": "object"
+      },
       "CircuitBreakerRule": {
         "additionalProperties": false,
         "properties": {
@@ -2818,6 +2835,58 @@
           "withheld_span_count"
         ],
         "title": "Completeness",
+        "type": "object"
+      },
+      "ComponentView": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks_readiness": {
+            "title": "Blocks Readiness",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "failed",
+              "disabled",
+              "not_built"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "state",
+          "required",
+          "reason",
+          "blocks_readiness",
+          "step"
+        ],
+        "title": "ComponentView",
         "type": "object"
       },
       "ConfigHash": {
@@ -4193,6 +4262,26 @@
         "title": "DiagnosticsState",
         "type": "object"
       },
+      "DiffEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "pointer": {
+            "title": "Pointer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pointer"
+        ],
+        "title": "DiffEntry",
+        "type": "object"
+      },
       "DiscoveredResource": {
         "additionalProperties": false,
         "properties": {
@@ -4276,6 +4365,12 @@
         "minLength": 1,
         "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
         "title": "DisplayName",
+        "type": "string"
+      },
+      "DocPath": {
+        "maxLength": 256,
+        "pattern": "^docs/[A-Za-z0-9._/-]{1,200}\\.md(#[a-z0-9-]{1,64})?$",
+        "title": "DocPath",
         "type": "string"
       },
       "DocumentRef": {
@@ -5934,6 +6029,67 @@
           }
         ],
         "title": "Filter"
+      },
+      "FirstRunChecklistItem": {
+        "additionalProperties": false,
+        "description": "OUTPUT-ONLY. One row of the operator first-run checklist (PRP-45): whether a platform component is configured, with a machine reason and a documentation path when it is not complete. complete carries no reason; every other status carries one, so the console can say why a component is missing, disabled or failing instead of showing a blank.",
+        "properties": {
+          "component": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "doc_path": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocPath"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "item_id": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "status": {
+            "enum": [
+              "complete",
+              "missing",
+              "disabled",
+              "not_applicable",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "item_id",
+          "component",
+          "status",
+          "reason",
+          "doc_path",
+          "required"
+        ],
+        "title": "FirstRunChecklistItem",
+        "type": "object"
       },
       "ForecastMethod": {
         "additionalProperties": false,
@@ -15357,10 +15513,205 @@
         "title": "SetConfidence",
         "type": "number"
       },
+      "SettingEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "Value",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id",
+          "version",
+          "etag",
+          "value"
+        ],
+        "title": "SettingEntry",
+        "type": "object"
+      },
+      "SettingView": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_by_runtime": {
+            "title": "Applied By Runtime",
+            "type": "boolean"
+          },
+          "applied_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Revision"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/SettingEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "restart_required": {
+            "title": "Restart Required",
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "stored",
+              "env",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stored_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stored Revision"
+          }
+        },
+        "required": [
+          "key",
+          "source",
+          "stored_revision",
+          "applied_revision",
+          "restart_required",
+          "applied_by_runtime",
+          "etag",
+          "entries"
+        ],
+        "title": "SettingView",
+        "type": "object"
+      },
+      "SettingWriteResult": {
+        "additionalProperties": false,
+        "properties": {
+          "applied_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Revision"
+          },
+          "diff": {
+            "items": {
+              "$ref": "#/components/schemas/DiffEntry"
+            },
+            "title": "Diff",
+            "type": "array"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "etag": {
+            "title": "Etag",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "restart_required": {
+            "title": "Restart Required",
+            "type": "boolean"
+          },
+          "stored_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stored Revision"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "document_id",
+          "version",
+          "etag",
+          "stored_revision",
+          "applied_revision",
+          "restart_required",
+          "diff"
+        ],
+        "title": "SettingWriteResult",
+        "type": "object"
+      },
       "Settings": {
         "maxLength": 512,
         "title": "Settings",
         "type": "string"
+      },
+      "SettingsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "stored_settings": {
+            "$ref": "#/components/schemas/StoredSettingsState"
+          }
+        },
+        "required": [
+          "items",
+          "stored_settings"
+        ],
+        "title": "SettingsPage",
+        "type": "object"
       },
       "Sha256Hash": {
         "pattern": "^sha256:[0-9a-f]{64}$",
@@ -15982,6 +16333,45 @@
         "title": "StoredReason",
         "type": "string"
       },
+      "StoredSettingsState": {
+        "additionalProperties": false,
+        "properties": {
+          "invalid_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Invalid Keys",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "loaded",
+              "unavailable",
+              "unconfigured"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "invalid_keys"
+        ],
+        "title": "StoredSettingsState",
+        "type": "object"
+      },
       "StructuredQuery": {
         "additionalProperties": false,
         "description": "Request-side structured query used by REST, copilot tools and MCP (PRP.md section 3, NS-06). It carries structured allowlisted filters only, never executable query text: there is no free-text field, every field name is an allowlisted enum, every operator is typed per field kind, and string values are charset-restricted keywords or canonical IDs that the server binds as parameters (never concatenated into SQL/Cypher/KQL). Budgets (timeout_ms, limit, max_depth) are mandatory. Authorization comes only from the server-derived IdentityScope, which this schema never references: a domain_id or customer filter can only narrow results inside that scope. Rules JSON Schema cannot express: field applicability per entity is checked by tests/contracts/validators.py::check_structured_query_field_applicability; time_range.start < time_range.end by tests/contracts/validators.py::check_time_range_order; between bounds lo <= hi by tests/contracts/validators.py::check_between_order.",
@@ -16351,6 +16741,40 @@
           "synced_at"
         ],
         "title": "SyncView",
+        "type": "object"
+      },
+      "SystemStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentView"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "probes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Probes",
+            "type": "object"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "stored_settings": {
+            "$ref": "#/components/schemas/StoredSettingsState"
+          }
+        },
+        "required": [
+          "ready",
+          "components",
+          "probes",
+          "stored_settings"
+        ],
+        "title": "SystemStatus",
         "type": "object"
       },
       "Target": {
@@ -21451,6 +21875,181 @@
         "summary": "Rotate Producer",
         "tags": [
           "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/system/checklist": {
+      "get": {
+        "operationId": "system_checklist_api_v1_admin_system_checklist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "System Checklist",
+        "tags": [
+          "admin-system"
+        ]
+      }
+    },
+    "/api/v1/admin/system/settings": {
+      "get": {
+        "operationId": "list_settings_api_v1_admin_system_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Settings",
+        "tags": [
+          "admin-system-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/system/settings/{key}": {
+      "get": {
+        "operationId": "get_setting_api_v1_admin_system_settings__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z_]{1,32}$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Setting",
+        "tags": [
+          "admin-system-settings"
+        ]
+      },
+      "put": {
+        "operationId": "put_setting_api_v1_admin_system_settings__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z_]{1,32}$",
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingWriteResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Setting",
+        "tags": [
+          "admin-system-settings"
+        ]
+      }
+    },
+    "/api/v1/admin/system/status": {
+      "get": {
+        "operationId": "system_status_api_v1_admin_system_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "System Status",
+        "tags": [
+          "admin-system"
         ]
       }
     },

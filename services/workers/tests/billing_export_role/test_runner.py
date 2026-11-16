@@ -192,3 +192,32 @@ async def test_held_days_post_once_the_month_closes_without_duplicates() -> None
     assert len(set(ids)) == 2
     await poller.tick()
     assert poller.last_status.status == STATUS_UNCHANGED
+
+
+async def test_restated_closed_day_is_counted_and_not_posted() -> None:
+    ingest = FakeIngest()
+    source = default_source()
+    poller = make_poller(source, ingest)
+    await poller.tick()
+    first = len(ingest.events)
+    assert poller.last_status.restated == 0
+    source.blobs[PART0] = CSV0.replace("4.00", "9.99").encode()
+    source.manifest = manifest(rows=5, runInfo={"runId": "run-2"})
+    await poller.tick()
+    assert poller.last_status.status == STATUS_OK
+    assert poller.last_status.restated == 1
+    # Only the restated day is withheld; unchanged days re-post with the same ids (deduped).
+    assert len(ingest.events) == first + (first - 1)
+    assert "9.99" not in {r.amount.root for r in _records(ingest)}  # first amount wins
+
+
+async def test_unchanged_reread_has_no_restatement_and_posts_nothing_new() -> None:
+    ingest = FakeIngest()
+    source = default_source()
+    poller = make_poller(source, ingest)
+    await poller.tick()
+    ids = {e["id"] for e in ingest.events}
+    source.manifest = manifest(rows=5, runInfo={"runId": "run-2"})
+    await poller.tick()
+    assert poller.last_status.restated == 0
+    assert {e["id"] for e in ingest.events} == ids

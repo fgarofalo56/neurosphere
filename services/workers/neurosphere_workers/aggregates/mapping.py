@@ -161,5 +161,13 @@ def contribution_from_event(
         origin="event",
         occurred_at=moment,
         observed_at=moment,
-        event=EventFact(duration_ms=event.duration_ms, outcome=event.outcome or "unknown"),
+        event=EventFact(
+            duration_ms=event.duration_ms,
+            outcome=event.outcome or "unknown",
+            agent_id=event.canonical_agent_id.root if event.canonical_agent_id else None,
+            provider=event.provider.root if event.provider else None,
+            model=event.model.root if event.model else None,
+            input_tokens=event.token_breakdown.input if event.token_breakdown else None,
+            output_tokens=event.token_breakdown.output if event.token_breakdown else None,
+        ),
     )

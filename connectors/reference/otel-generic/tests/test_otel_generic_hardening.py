@@ -192,3 +192,87 @@ def test_force_flush_waits_for_inflight_export_and_reports_outcome() -> None:
     assert exporter.force_flush(10) is True  # nothing pending
     exporter.shutdown()
     assert exporter.export([]) is SpanExportResult.FAILURE  # closed
+
+
+_KV = "/sec" + "rets/x"
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "evilvault.azure.net",
+        "x.vault.azure.net.evil.test",
+        "vault.azure.net",
+        "evilvault.usgovcloudapi.net",
+    ],
+)
+def test_manifest_rejects_lookalike_vault_hosts(host: str) -> None:
+    bad = CredentialRef.model_construct(
+        name="producer_credential", vault_ref=f"https://{host}{_KV}"
+    )
+    with pytest.raises(InvalidSchemaError) as caught:
+        _manifest(bad)
+    assert caught.value.reason == "unrecognized_vault_host"
+
+
+def test_manifest_maps_commercial_and_government_vaults() -> None:
+    for host, cloud in (
+        ("ns-kv.vault.azure.net", "commercial"),
+        ("ns-kv.vault.usgovcloudapi.net", "government"),
+    ):
+        ref = CredentialRef(name="producer_credential", vault_ref=f"https://{host}{_KV}")
+        assert list(_manifest(ref).supported_clouds) == [cloud]
+
+
+class _EdgeStub(httpx.AsyncBaseTransport):
+    """Answers 401 to an empty bearer token, like the ingest edge."""
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        auth = request.headers.get("authorization", "")
+        return httpx.Response(401 if auth.strip() == "Bearer" else 202, json={})
+
+
+def test_empty_producer_credential_is_a_failure_not_a_success() -> None:
+    resolver = StaticCredentialResolver({DEFAULT_CREDENTIAL_REF.vault_ref: ""})
+    connector = OtelGenericConnector(
+        ingest_url="http://edge.invalid/v1/ingest",
+        credentials=CredentialBroker(resolver, [DEFAULT_CREDENTIAL_REF]),
+        client=httpx.AsyncClient(transport=_EdgeStub()),
+    )
+    exporter = ConnectorSpanExporter(connector)
+    try:
+        assert exporter.export([_fake_span({"k": "v"})]) is SpanExportResult.FAILURE
+    finally:
+        exporter.shutdown()
+
+
+class _InstantConnector:
+    async def export_spans(self, spans: Any) -> None:
+        await asyncio.sleep(0)
+
+
+def test_export_racing_shutdown_never_enqueues_after_close() -> None:
+    for _ in range(25):
+        exporter = ConnectorSpanExporter(_InstantConnector(), timeout_seconds=5)  # type: ignore[arg-type]
+        results: list[SpanExportResult] = []
+        barrier = threading.Barrier(5)
+
+        def work(
+            e: ConnectorSpanExporter = exporter,
+            b: threading.Barrier = barrier,
+            out: list[SpanExportResult] = results,
+        ) -> None:
+            b.wait()
+            out.append(e.export([]))
+
+        workers = [threading.Thread(target=work) for _ in range(4)]
+        for w in workers:
+            w.start()
+        barrier.wait()
+        exporter.shutdown()
+        for w in workers:
+            w.join(10)
+        # Each export either completed before the close or was refused; none timed out and
+        # nothing is left pending after shutdown.
+        assert len(results) == 4
+        assert exporter._pending == set()

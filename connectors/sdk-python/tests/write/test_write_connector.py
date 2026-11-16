@@ -293,3 +293,72 @@ def test_import_pulls_in_no_azure_modules() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_numeric_equivalence_is_an_explicit_opt_in() -> None:
+    from neurosphere_connector.write import check_diff_against_state
+
+    def matched(req: WriteRequest, state: dict[str, Any], numeric: bool = False) -> bool:
+        checks = check_diff_against_state(req.proposed_diff, state, numeric_equivalence=numeric)
+        return checks[0].matched
+
+    one = _diff({"op": "replace", "path": "/f", "value": 1})
+    assert matched(one, {"f": 1.0}) is False  # strict by default
+    assert matched(one, {"f": 1.0}, True)
+    assert matched(one, {"f": 2.0}, True) is False
+    assert matched(one, {"f": True}, True) is False  # bool is never a number
+    nested = _diff({"op": "add", "path": "/f", "value": {"k": [1]}})
+    assert matched(nested, {"f": {"k": [1.0]}}, True)
+
+
+def test_move_copy_without_from_are_unverifiable_with_missing_from() -> None:
+    from neurosphere_connector.write import check_diff_against_state
+
+    for op in ("move", "copy"):
+        diff = ProposedDiff.model_construct(
+            operations=[PatchOperation.model_construct(op=op, path="/b", value=None, from_=None)]
+        )
+        check = check_diff_against_state(diff, {"b": 1}, prior_state={"a": 1})[0]
+        assert check.verifiable is False
+        assert check.matched is False
+        assert check.reason == "missing_from"
+
+
+def test_mapping_proxy_observed_state_is_supported() -> None:
+    from types import MappingProxyType
+
+    from neurosphere_connector.write import check_diff_against_state
+
+    state = MappingProxyType({"a": MappingProxyType({"b": 1})})
+    diff = _diff({"op": "replace", "path": "/a/b", "value": 1})
+    assert check_diff_against_state(diff.proposed_diff, state)[0].matched is True
+    rm = _diff({"op": "remove", "path": "/a/b"})
+    assert check_diff_against_state(rm.proposed_diff, state)[0].matched is False
+
+
+def test_remove_on_a_missing_parent_path_is_matched() -> None:
+    from neurosphere_connector.write import check_diff_against_state
+
+    rm = _diff({"op": "remove", "path": "/missing/deep/leaf"})
+    assert check_diff_against_state(rm.proposed_diff, {"other": 1})[0].matched is True
+
+
+def test_check_capable_is_public_and_names_the_missing_member() -> None:
+    from neurosphere_connector.write import check_capable
+    from neurosphere_connector.write.write_registry import _check_capable
+
+    assert _check_capable is check_capable  # private alias kept
+    writer = FakeWriter()
+    assert check_capable(writer) is writer
+    with pytest.raises(CapabilityUnavailableError) as ei:
+        check_capable(object())
+    assert ei.value.reason == "write_protocol_not_implemented"
+
+    class BrokenManifest(FakeWriter):
+        @property
+        def manifest(self) -> Any:
+            raise AttributeError("write_support", name="write_support")
+
+    with pytest.raises(CapabilityUnavailableError) as missing:
+        check_capable(BrokenManifest())
+    assert "write_support" in str(missing.value.detail)

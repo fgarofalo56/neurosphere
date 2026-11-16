@@ -15,7 +15,10 @@ before the current month are posted as ``invoiced``. The export rows carry no bi
 the calendar month is the rule. Open-month days are held back and counted in
 ``last_status.held_open_period``; they are never posted as ``estimated`` (that needs a price
 version and billing has none). Restatement limit: the first amount posted for a closed day wins,
-because ids exclude the amount.
+because ids exclude the amount. A later export that reports a different amount for the same
+day, resource and meter is detected (in memory, per process), counted in
+``last_status.restated`` and logged as ``billing_export.restated`` with counts only; it is not
+posted. Superseding the invoiced amount is a ledger concept (follow-up, PRP-07 territory).
 
 Rules:
 
@@ -95,6 +98,7 @@ class TickStatus:
     rows_dropped_no_date: int = 0
     blobs_missing: tuple[str, ...] = ()
     held_open_period: int = 0
+    restated: int = 0
 
 
 def _utcnow() -> datetime:
@@ -208,6 +212,8 @@ class BillingExportPoller:
         self._clock = clock
         self._posted_manifest: str | None = None
         self._held_month: tuple[int, int] | None = None  # set while open-period days were held
+        # Posted closed-day key (the id digest) -> the first amount accepted for it.
+        self._posted_amounts: dict[str, str] = {}
         self.last_status = TickStatus()
 
     async def tick(self) -> None:
@@ -236,6 +242,7 @@ class BillingExportPoller:
             return
 
         events: list[dict[str, Any]] = []
+        fresh: dict[str, str] = {}
         for agg in result.aggregates:
             if agg.cost is None:
                 status.skipped_null_cost += 1
@@ -254,6 +261,12 @@ class BillingExportPoller:
             if record is None:
                 status.skipped_unmappable += 1
                 continue
+            digest = record.cost_id.root
+            first = self._posted_amounts.get(digest)
+            if first is not None and Decimal(first) != Decimal(record.amount.root):
+                status.restated += 1  # first amount wins: counted, not posted
+                continue
+            fresh[digest] = record.amount.root
             events.append(_cloud_event(record))
 
         accepted_all = True
@@ -281,6 +294,11 @@ class BillingExportPoller:
                     "complete": export.complete,
                 },
             )
+        if status.restated:
+            logger.warning(
+                "billing export restated closed days (first amount kept)",
+                extra={"event": "billing_export.restated", "restated": status.restated},
+            )
         if status.held_open_period:
             logger.info(
                 "billing export open-period days held (closed months only; first amount wins)",
@@ -292,6 +310,8 @@ class BillingExportPoller:
         if not export.complete or not accepted_all:
             status.status = STATUS_INCOMPLETE if not export.complete else STATUS_INGEST_FAILED
             return  # no checkpoint: the next tick re-reads, replays are deduped
+        for digest, amount in fresh.items():
+            self._posted_amounts.setdefault(digest, amount)
         self._posted_manifest = export.manifest_sha256 or None
         self._held_month = month if status.held_open_period else None
         status.status = STATUS_OK

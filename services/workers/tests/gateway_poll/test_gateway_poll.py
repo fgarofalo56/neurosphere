@@ -28,6 +28,7 @@ from neurosphere_workers.ingestion.gateway_poll import (
     STATUS_PARTIAL,
     STATUS_RATE_LIMITED,
     STATUS_REFUSED_GOVERNMENT,
+    STATUS_STALLED,
     GatewayPollSettings,
 )
 from neurosphere_workers.ingestion.models import RawMessage
@@ -128,6 +129,35 @@ async def test_mid_poll_rate_limit_ingests_completed_slices_and_keeps_status() -
     stored = await rig.current(reg)
     assert (stored.poll_watermark, stored.poll_status) == (w_ok, STATUS_RATE_LIMITED)
     assert len(rig.api.events) == len(all_rows()) > 0
+
+
+async def test_stalled_slice_is_a_distinct_status_with_the_watermark_held(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    held = NOW - LOOKBACK + SLICE
+    rig = Rig(
+        FakeConnector(
+            [
+                result(
+                    all_rows(),
+                    next_watermark=held,
+                    partial=True,
+                    stalled_slice_start=held,
+                    truncated_pages=2,
+                )
+            ]
+        )
+    )
+    reg = await _seed(rig)
+    with caplog.at_level(logging.WARNING):
+        await rig.poller.tick()
+    stalled = await rig.current(reg)
+    assert stalled.poll_status == STATUS_STALLED == "stalled"
+    assert stalled.poll_watermark == held  # held, never advanced past the stalled slice
+    logged = [r for r in caplog.records if getattr(r, "event", "") == "gateway_poll.stalled"]
+    assert len(logged) == 1
+    assert logged[0].stalled_slice_start == held.isoformat()  # type: ignore[attr-defined]
+    assert logged[0].truncated_source_queries == 2  # type: ignore[attr-defined]
 
 
 async def test_partial_slice_stops_the_watermark_and_is_repolled() -> None:

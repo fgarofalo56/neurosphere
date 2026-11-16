@@ -15,7 +15,11 @@ from neurosphere_connector.write.write_models import (
     check_diff_against_state,
 )
 from neurosphere_connector.write.write_protocol import WriteConnector, build_verify_result
-from neurosphere_connector.write.write_registry import WriteTargetRegistry, register_write_target
+from neurosphere_connector.write.write_registry import (
+    WriteTargetRegistry,
+    check_capable,
+    register_write_target,
+)
 
 __all__ = [
     "AdvisoryWriteMixin",
@@ -28,6 +32,7 @@ __all__ = [
     "WriteRequest",
     "WriteTargetRegistry",
     "build_verify_result",
+    "check_capable",
     "check_diff_against_state",
     "register_write_target",
 ]

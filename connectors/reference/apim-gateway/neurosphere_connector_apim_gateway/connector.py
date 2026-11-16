@@ -19,19 +19,17 @@ repo-wide test to this package.
 
 from __future__ import annotations
 
-import functools
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Callable, Sequence
 from typing import (
     Any,
     Final,
     Protocol,
-    TypeVar,
     cast,
     get_args,
     runtime_checkable,
 )
 
-from neurosphere_connector import HealthReport, HealthTracker, build_manifest
+from neurosphere_connector import HealthReport, HealthTracker, build_manifest, tracked
 from neurosphere_connector.manifest import WriteAction
 from neurosphere_connector.write import (
     AdvisoryWriteMixin,
@@ -102,7 +100,6 @@ ACTION_KINDS: Final = (
 # v2 tiers are unverified in Government (PRP-34 gotcha); manage stays disabled until this row
 # says ``available``.
 GOVERNMENT_ROW: Final = "apim.backend_pool.government.any.standard_v2"
-_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 #: Refusal when a diff grammar does not belong to the intent's action kind (PRP-34 item 10).
 ACTION_KIND_MISMATCH: Final = "action_kind_mismatch"
@@ -161,27 +158,6 @@ class ApimGatewayAdvisoryConnector(AdvisoryWriteMixin):
     @property
     def manifest(self) -> ConnectorManifest:
         return _manifest(advisory=True)
-
-
-def _tracked(fn: _F) -> _F:  # noqa: UP047 (CodeQL: no PEP 695 with nested def)
-    """Feed the outcome of an apply/verify/rollback call into ``health()``. Errors re-raise.
-
-    Typed ``_F -> _F`` so the decorated method keeps its exact ``async def`` type and still
-    satisfies the ``WriteConnector`` protocol.
-    """
-
-    @functools.wraps(fn)
-    async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        tracker: HealthTracker = cast(Any, args[0])._tracker
-        try:
-            result = await fn(*args, **kwargs)
-        except Exception as exc:
-            tracker.record_error(exc)
-            raise
-        tracker.record_success()
-        return result
-
-    return cast(_F, wrapper)
 
 
 class ApimGatewayConnector:
@@ -348,7 +324,7 @@ class ApimGatewayConnector:
             would_change=plan.would_change,
         )
 
-    @_tracked
+    @tracked
     async def apply(self, request: WriteRequest) -> ApplyResult:
         if self._is_mode_change(request.target.entity_type):
             return await self._mode_handler().apply(request)
@@ -363,7 +339,7 @@ class ApimGatewayConnector:
             rollback_token=record.id,
         )
 
-    @_tracked
+    @tracked
     async def verify(self, request: WriteRequest) -> VerifyResult:
         """Read every planned resource back. Observed state holds booleans, never payloads."""
         if self._is_mode_change(request.target.entity_type):
@@ -395,7 +371,7 @@ class ApimGatewayConnector:
             observed_version=await self._current_version(translator, request),
         )
 
-    @_tracked
+    @tracked
     async def rollback(self, applied: ApplyResult) -> RollbackResult:
         """Run the reverse plan of a succeeded apply from its ownership record."""
         if self._is_mode_change(applied.target.entity_type):

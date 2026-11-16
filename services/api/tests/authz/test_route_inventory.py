@@ -451,6 +451,26 @@ def test_platform_admin_routes_declare_config_manage() -> None:
     }
 
 
+def test_system_admin_routes_declare_config_manage() -> None:
+    """PRP-45: every system admin route needs config.manage (deployment-scoped on top)."""
+    app = create_app(Settings(env="local"))
+    base = "/api/v1/admin/system"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path.startswith(base)
+        for m in e.methods
+    }
+    perm = ("config.manage",)
+    assert found == {
+        (f"{base}/status", "GET"): perm,
+        (f"{base}/checklist", "GET"): perm,
+        (f"{base}/settings", "GET"): perm,
+        (f"{base}/settings/{{key}}", "GET"): perm,
+        (f"{base}/settings/{{key}}", "PUT"): perm,
+    }
+
+
 def test_role_gated_routes_are_exactly_the_declared_set() -> None:
     """PRP-48 item 1 (#91): the workspace route is role-gated and claims no permission."""
     from neurosphere_api.authz import ROLE_GATED_PATHS

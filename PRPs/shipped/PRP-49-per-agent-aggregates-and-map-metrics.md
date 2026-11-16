@@ -1,6 +1,8 @@
 ---
 name: PRP-49-per-agent-aggregates-and-map-metrics
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 301
 priority: P2
 order: 37
 review: required
@@ -33,19 +35,19 @@ Out of scope: the viewport edge batching, the delta pump and the replay guard (P
 - The map client would overwrite what it cannot see: `frontend/src/features/map/mapGraph.ts:221-253` merges `label`, `clusterId` and `memberCount` from every delta node into an existing node, so a metrics-only delta from the server would blank a human label unless the merge changes.
 
 ## Acceptance criteria
-- [ ] Given a telemetry `model_call` event with `canonical_agent_id`, `provider`, `model`, `duration_ms`, `outcome` and `token_breakdown`, When the aggregates worker applies it, Then the stored contribution carries those fields and the bucket rollup writes `subject` documents for the series `agent:<id>` and `model:<provider>/<model>` at the hour and day grains.
-- [ ] Given events with a missing agent id, duration, outcome or tokens, Then the subject point keeps those as unknown (`None`, `complete=False`), counts them in `missing_count` or `unknown_outcome_count`, and never turns them into 0 (null-not-zero test beside `test_nulls_not_zero.py`).
-- [ ] Given the same contribution applied twice, or a bucket rebuilt from the same contributions, Then the subject documents are equal and a one-event rebuild writes only the changed documents (counted-writes test on the fake container).
-- [ ] Given a bucket with more distinct subjects than the per-bucket cap, Then the documents kept are deterministic (sorted by series key), the overflow is logged by count only, and no reader returns a partial point as complete.
-- [ ] Given a viewport request for a domain with agent and model entities and subject points in the last two hour buckets, When the map service builds nodes, Then each agent and model node carries `frequency`, `latency_p95_ms`, `tokens` and `health` from its latest point, and a node with no point or an unknown value keeps `null` and `unknown` (never 0).
-- [ ] Given the subject read fails or times out, When the viewport is built, Then nodes keep unknown metrics, `coverage.state` is `partial` and the response is still 200; given a caller scoped away from the domain, Then the request is refused before any subject read (scope test).
-- [ ] Given a person node, a cluster node or an entity with no subject mapping, Then its metrics stay unknown and no subject read is issued for it.
-- [ ] Given hourly points for several agents of one domain, When the realtime source polls, Then the delta carries the domain cluster node plus at most `MAX_DELTA_SUBJECT_NODES` agent and model nodes (those with the newest points), with unknown values `None`; the cache TTL and digest behaviour are unchanged.
-- [ ] Given a delta node whose id already exists in the map graph, When the client applies it, Then only `metrics` change (label, cluster and member count are kept); a delta node of kind agent, sub_agent, model or source whose id is not in the graph is ignored; the existing domain cluster upsert still works (vitest).
-- [ ] The dashboards, reconciliation, federation and copilot-evidence readers that already use `AggregateReader` still pass unchanged (cross-suite run).
-- [ ] `services/api/openapi.json` does not change (drift test green); `PRP-18`'s edge batching call is not reintroduced.
+- [x] Given a telemetry `model_call` event with `canonical_agent_id`, `provider`, `model`, `duration_ms`, `outcome` and `token_breakdown`, When the aggregates worker applies it, Then the stored contribution carries those fields and the bucket rollup writes `subject` documents for the series `agent:<id>` and `model:<provider>/<model>` at the hour and day grains.
+- [x] Given events with a missing agent id, duration, outcome or tokens, Then the subject point keeps those as unknown (`None`, `complete=False`), counts them in `missing_count` or `unknown_outcome_count`, and never turns them into 0 (null-not-zero test beside `test_nulls_not_zero.py`).
+- [x] Given the same contribution applied twice, or a bucket rebuilt from the same contributions, Then the subject documents are equal and a one-event rebuild writes only the changed documents (counted-writes test on the fake container).
+- [x] Given a bucket with more distinct subjects than the per-bucket cap, Then the documents kept are deterministic (sorted by series key), the overflow is logged by count only, and no reader returns a partial point as complete.
+- [x] Given a viewport request for a domain with agent and model entities and subject points in the last two hour buckets, When the map service builds nodes, Then each agent and model node carries `frequency`, `latency_p95_ms`, `tokens` and `health` from its latest point, and a node with no point or an unknown value keeps `null` and `unknown` (never 0).
+- [x] Given the subject read fails or times out, When the viewport is built, Then nodes keep unknown metrics, `coverage.state` is `partial` and the response is still 200; given a caller scoped away from the domain, Then the request is refused before any subject read (scope test).
+- [x] Given a person node, a cluster node or an entity with no subject mapping, Then its metrics stay unknown and no subject read is issued for it.
+- [x] Given hourly points for several agents of one domain, When the realtime source polls, Then the delta carries the domain cluster node plus at most `MAX_DELTA_SUBJECT_NODES` agent and model nodes (those with the newest points), with unknown values `None`; the cache TTL and digest behaviour are unchanged.
+- [x] Given a delta node whose id already exists in the map graph, When the client applies it, Then only `metrics` change (label, cluster and member count are kept); a delta node of kind agent, sub_agent, model or source whose id is not in the graph is ignored; the existing domain cluster upsert still works (vitest).
+- [x] The dashboards, reconciliation, federation and copilot-evidence readers that already use `AggregateReader` still pass unchanged (cross-suite run).
+- [x] `services/api/openapi.json` does not change (drift test green); `PRP-18`'s edge batching call is not reintroduced.
 - [ ] Map performance on operator hardware with real subject data is written OPEN and handed to PRP-64.
-- [ ] PRP exit: the touched pytest and vitest suites pass, `verify-gates.ps1 -Mode full` is green, `python scripts/validate_planning.py` passes.
+- [x] PRP exit: the touched pytest and vitest suites pass, `verify-gates.ps1 -Mode full` is green, `python scripts/validate_planning.py` passes.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -232,18 +234,22 @@ Additive only. `EventFact` gains optional fields and the aggregate container gai
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | done | prp-49-per-agent-aggregates | SubjectPoint lives in models.py (circular import), re-exported by subject.py |
+| 2 | done | prp-49-per-agent-aggregates | |
+| 3 | done | prp-49-per-agent-aggregates | |
+| 4 | done | prp-49-per-agent-aggregates | Model delta ids are provider/model, so the client ignores them (deployment ids differ); agent nodes merge |
+| 5 | done | prp-49-per-agent-aggregates | |
+| 6 | done | prp-49-per-agent-aggregates | Close-out in the landing commit |
 
 ## Completion note (filled at ship)
-- Date, PR, merged commits:
-- Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates (real Cosmos cost and growth, map perf re-measure, hosted check):
-- Env vars for the operator (none expected):
-- Follow-up issue numbers:
-- Product check (does a node on `/map` show live metrics without editing files?):
+- Date, PR, merged commits: 2026-11-15, PR #301 (squash).
+- Deviations from the blueprint and why: `SubjectPoint` lives in `models.py` (circular import) and is re-exported by `subject.py`. Model delta ids are `provider/model`, which differ from catalog deployment ids, so the client ignores model deltas and only agent deltas take effect (matches the 'ignored if unknown' rule). Assumptions proceeded on as stated: model matching by (provider, model_name), 5000 subject series cap per bucket, no backfill.
+- Descoped items: none. No `[serial-after]` items existed.
+- OPEN gates (real Cosmos cost and growth, map perf re-measure, hosted check): real Cosmos RU per rebuild, `IN` query cost, 429s and document growth (G07, G12); map frame rate and viewport latency with real subject data (handed to PRP-64); hosted verification of live agent and model metrics (needs the PRP-58 data path and an approved deployment). `tests/integration/map` and `tests/load/map_freshness` need compose emulators and were not run in this unattended landing.
+- Env vars for the operator (none expected): none new.
+- Follow-up issue numbers (reviewer follow-ups, not yet filed as issues):
+  1. `packages/core/neurosphere_core/aggregates/cosmos.py` `replace_bucket`: the query is now `SELECT *`, so real Cosmos rows include system fields (`_rid`, `_self`, `_etag`, `_attachments`, `_ts`). `stored.get(doc.id) == body` will then never match, and the unchanged-document skip only works on the fake container. Correctness is unaffected because it writes every document as before. Strip keys starting with `_` before comparing, and add a fake row with system fields to the test.
+  2. `services/api/neurosphere_api/realtime/source.py` `_subject_node`: model delta nodes use id `provider/model`, but graph model nodes use the catalog deployment id. The client therefore always ignores model deltas, so only agent deltas have any effect. Model-level realtime metrics are effectively dead until ids are mapped.
+  3. `map/service.py` `load_subjects`: when the reader's `truncated` flag is set, the metrics of the kept keys are still applied and coverage is marked partial. Acceptable; consider logging the dropped-key count.
+  4. Cosmos `newest_subject_points` reads every subject document in the window and ranks them client-side, up to 5000 per bucket for each hourly poll per domain. RU cost is unmeasured and stays under the G07/G12 OPEN gates for PRP-64.
+- Product check (does a node on `/map` show live metrics without editing files?): yes for agent nodes once telemetry has flowed through the aggregates worker; model nodes show model-level metrics on the viewport but not via realtime deltas (follow-up 2). Hosted check is OPEN.

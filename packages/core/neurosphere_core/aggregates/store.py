@@ -26,6 +26,12 @@ from neurosphere_core.aggregates.models import (
     QueryResult,
     format_bucket,
 )
+from neurosphere_core.aggregates.subject import (
+    MAX_SUBJECT_KEYS_PER_READ,
+    SubjectKind,
+    SubjectLookup,
+    SubjectPoint,
+)
 from neurosphere_core.errors import InvalidSchemaError
 
 MAX_SERIES_CEILING = 50
@@ -60,6 +66,44 @@ def select_series(docs: Sequence[AggregateDoc], max_series: int, max_points: int
             points = points[-max_points:]
         series.append(AggregateSeries(key=key, points=tuple(points)))
     return QueryResult(series=tuple(series), truncated=truncated)
+
+
+def validate_subject_window(window: AggregateWindow) -> None:
+    """Subject reads are hour grain: same retention bound as ``validate_query``."""
+    if window.span.total_seconds() > HOUR_RETENTION_DAYS * 86_400:
+        raise InvalidSchemaError(
+            f"the hour grain is limited to {HOUR_RETENTION_DAYS} days", reason="hour_window"
+        )
+
+
+def bounded_keys(keys: Sequence[str]) -> tuple[list[str], bool]:
+    """Distinct keys, sorted, at most ``MAX_SUBJECT_KEYS_PER_READ``; flag when some were dropped."""
+    ordered = sorted(set(keys))
+    return ordered[:MAX_SUBJECT_KEYS_PER_READ], len(ordered) > MAX_SUBJECT_KEYS_PER_READ
+
+
+def pick_latest(
+    docs: Sequence[AggregateDoc], keys: Sequence[str], truncated: bool
+) -> SubjectLookup:
+    """Newest subject point per requested key (``bucket_start`` decides, then id for ties)."""
+    wanted = set(keys)
+    best: dict[str, SubjectPoint] = {}
+    for doc in docs:
+        if not isinstance(doc, SubjectPoint) or doc.series_key not in wanted:
+            continue
+        current = best.get(doc.series_key)
+        if current is None or (doc.bucket_start, doc.id) > (current.bucket_start, current.id):
+            best[doc.series_key] = doc
+    return SubjectLookup(points=best, truncated=truncated)
+
+
+def pick_newest(docs: Sequence[AggregateDoc], limit: int) -> SubjectLookup:
+    """The ``limit`` subjects whose newest point is newest (ties broken by series key)."""
+    best = pick_latest(docs, [d.series_key for d in docs], False).points
+    ranked = sorted(best.values(), key=lambda p: p.series_key)
+    ranked.sort(key=lambda p: p.bucket_start, reverse=True)  # stable: ties stay ordered by key
+    kept = ranked[: max(0, limit)]
+    return SubjectLookup(points={p.series_key: p for p in kept}, truncated=len(ranked) > len(kept))
 
 
 @runtime_checkable
@@ -134,8 +178,47 @@ class InMemoryAggregateStore:
         self._contributions: dict[tuple[str, str], Contribution] = {}
         self._docs: dict[tuple[str, str], AggregateDoc] = {}
         self._status: dict[str, AggregateStatus] = {}
+        self.document_writes = 0
+        """Aggregate documents actually written by ``replace_bucket`` (test counter)."""
 
     # ---- read side
+
+    def _subject_docs(
+        self, customer_id: str, domain_id: str, window: AggregateWindow
+    ) -> list[AggregateDoc]:
+        start, end = format_bucket(window.start), format_bucket(window.end)
+        return [
+            doc
+            for (cust, _), doc in self._docs.items()
+            if cust == customer_id
+            and doc.domain_id == domain_id
+            and doc.metric == "subject"
+            and doc.grain == "hour"
+            and start <= doc.bucket_start < end
+        ]
+
+    async def latest_subject_points(
+        self,
+        customer_id: str,
+        domain_id: str,
+        kind: SubjectKind,
+        keys: Sequence[str],
+        window: AggregateWindow,
+    ) -> SubjectLookup:
+        validate_subject_window(window)
+        kept, truncated = bounded_keys(keys)
+        docs = [
+            d
+            for d in self._subject_docs(customer_id, domain_id, window)
+            if isinstance(d, SubjectPoint) and d.subject_kind == kind
+        ]
+        return pick_latest(docs, kept, truncated)
+
+    async def newest_subject_points(
+        self, customer_id: str, domain_id: str, window: AggregateWindow, limit: int
+    ) -> SubjectLookup:
+        validate_subject_window(window)
+        return pick_newest(self._subject_docs(customer_id, domain_id, window), limit)
 
     async def query(
         self,
@@ -193,16 +276,20 @@ class InMemoryAggregateStore:
         start: str,
         docs: Sequence[AggregateDoc],
     ) -> None:
+        keep = {doc.id for doc in docs}
         for key, existing in list(self._docs.items()):
             if (
                 key[0] == customer_id
                 and existing.domain_id == domain_id
                 and existing.grain == grain
                 and existing.bucket_start == start
+                and key[1] not in keep
             ):
                 del self._docs[key]
         for doc in docs:
-            self._docs[(customer_id, doc.id)] = doc
+            if self._docs.get((customer_id, doc.id)) != doc:  # unchanged documents are skipped
+                self._docs[(customer_id, doc.id)] = doc
+                self.document_writes += 1
 
     async def put_status(self, status: AggregateStatus) -> None:
         self._status[status.customer_id] = status
@@ -242,6 +329,10 @@ __all__ = [
     "AggregateReader",
     "AggregateStore",
     "InMemoryAggregateStore",
+    "bounded_keys",
+    "pick_latest",
+    "pick_newest",
     "select_series",
     "validate_query",
+    "validate_subject_window",
 ]

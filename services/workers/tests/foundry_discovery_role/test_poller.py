@@ -13,7 +13,7 @@ from neurosphere_connector_foundry import (
     project_endpoint,
 )
 from neurosphere_core.cloud.profile import CloudName
-from neurosphere_core.errors import DependencyTransientError, RateLimitedError
+from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError, RateLimitedError
 from neurosphere_workers.ingestion.foundry_discovery import (
     FoundryDiscoveryPoller,
     ProjectTarget,
@@ -100,7 +100,7 @@ def _poller(
         repository=cast(Any, repo),
         scope_provider=FakeScopes(),
         customer_id=CUSTOMER,
-        domain_id=f"commercial:{CUSTOMER}:neurosphere:domain:d1",
+        domain_id=f"{cloud.value}:{CUSTOMER}:neurosphere:domain:d1",
         cloud=cloud.value,
     )
 
@@ -143,7 +143,7 @@ async def test_government_reports_unavailable_capabilities(
 ) -> None:
     repo = FakeRepo()
     poller = _poller(FakeReader([], []), repo, CloudName.GOVERNMENT)
-    with caplog.at_level(logging.INFO):
+    with caplog.at_level(logging.DEBUG):
         await poller.tick()
     unavailable = poller.last_status.unavailable["res-one/proj-one"]
     assert "hosted_agents" in unavailable
@@ -182,6 +182,79 @@ async def test_unknown_source_creates_nothing_for_it() -> None:
 
     await _poller(HalfReader([], DEPLOYMENTS), repo).tick()
     assert set(repo.docs) == {DEPLOY_ID}
+
+
+async def test_capability_names_are_not_logged_at_info(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    poller = _poller(FakeReader([], []), FakeRepo(), CloudName.GOVERNMENT)
+    with caplog.at_level(logging.INFO):
+        await poller.tick()
+    assert not [
+        r
+        for r in caplog.records
+        if getattr(r, "event", "") == "worker.foundry_discovery_capabilities"
+    ]
+
+
+def _two_project_poller(repo: FakeRepo) -> FoundryDiscoveryPoller:
+    targets = []
+    for project in ("res-one/proj-one", "res-one/proj-two"):
+        resource, name = project.split("/")
+        connector = FoundryDiscoveryConnector(
+            reader=FakeReader([], DEPLOYMENTS),  # type: ignore[arg-type]
+            cloud=CloudName.COMMERCIAL,
+            project_endpoint=project_endpoint(CloudName.COMMERCIAL, resource, name),
+        )
+        targets.append(ProjectTarget(project, connector))
+    return FoundryDiscoveryPoller(
+        targets=targets,
+        repository=cast(Any, repo),
+        scope_provider=FakeScopes(),
+        customer_id=CUSTOMER,
+        domain_id=f"commercial:{CUSTOMER}:neurosphere:domain:d1",
+        cloud="commercial",
+    )
+
+
+async def test_same_deployment_name_in_two_projects_is_a_counted_collision(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    repo = FakeRepo()
+    poller = _two_project_poller(repo)
+    with caplog.at_level(logging.INFO):
+        await poller.tick()
+    assert poller.last_status.created == 1
+    assert poller.last_status.collisions == 1
+    assert repo.updates == 0
+    first = repo.docs[DEPLOY_ID].model_dump(mode="json")
+    assert first["attributes"]["foundry_project"] == "res-one/proj-one"
+    logged = [
+        r
+        for r in caplog.records
+        if getattr(r, "event", "") == "worker.foundry_discovery_collisions"
+    ]
+    assert len(logged) == 1
+    # A second tick sees the same collision again (and still modifies nothing).
+    await poller.tick()
+    assert poller.last_status.collisions == 1
+    assert repo.updates == 0
+
+
+async def test_domain_outside_runtime_cloud_and_customer_fails_closed() -> None:
+    for domain in (
+        "government:synthco:neurosphere:domain:d1",
+        "commercial:other:neurosphere:domain:d1",
+    ):
+        with pytest.raises(InvalidSchemaError):
+            FoundryDiscoveryPoller(
+                targets=[],
+                repository=cast(Any, FakeRepo()),
+                scope_provider=FakeScopes(),
+                customer_id=CUSTOMER,
+                domain_id=domain,
+                cloud="commercial",
+            )
 
 
 def test_result_type_exported() -> None:

@@ -186,3 +186,15 @@ async def test_read_profile_is_unchanged_for_a_writer() -> None:
     # Coverage and freshness stay read-only requirements.
     codes = await _codes(Writer())
     assert {"coverage_missing", "freshness_missing"} <= codes
+
+
+async def test_write_profile_names_the_missing_member() -> None:
+    class BrokenManifest(Writer):
+        @property
+        def manifest(self) -> Any:
+            raise AttributeError("write_support", name="write_support")
+
+    violations = await check_write_connector_contract(BrokenManifest())
+    missing = [v for v in violations if v.code == "write_protocol_missing"]
+    assert missing
+    assert "write_support" in missing[0].message

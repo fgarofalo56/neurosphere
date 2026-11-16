@@ -39,11 +39,12 @@ class ConnectorSpanExporter(SpanExporter):
         self._thread.start()
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        if self._closed:
-            return SpanExportResult.FAILURE
-        # Submit and register under one lock: the loop thread can start the coroutine at once,
-        # and a force_flush between the two steps would see nothing pending and report flushed.
+        # Closed check, submit and register under one lock: shutdown closes under the same lock,
+        # so nothing enqueues after the flush, and a force_flush between submit and register
+        # would otherwise see nothing pending and report flushed.
         with self._lock:
+            if self._closed:
+                return SpanExportResult.FAILURE
             future = asyncio.run_coroutine_threadsafe(
                 self._connector.export_spans(spans), self._loop
             )
@@ -74,8 +75,9 @@ class ConnectorSpanExporter(SpanExporter):
         return all(not f.cancelled() and f.exception() is None for f in done)
 
     def shutdown(self) -> None:
+        with self._lock:
+            self._closed = True
         self.force_flush(int(self._timeout * 1000))
-        self._closed = True
         if self._loop.is_running():
             self._loop.call_soon_threadsafe(self._loop.stop)
             self._thread.join(timeout=5)

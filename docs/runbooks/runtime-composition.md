@@ -4,6 +4,11 @@ PRP-35 wires four seams so a fresh stack holds data and can act on it. Each is o
 environment; this page lists every variable, its default, and what it does. Related runbooks:
 [ingest.md](ingest.md), [seeding.md](seeding.md).
 
+Stored settings (PRP-45): search, copilot, the judge, scan and the MCP server can also be set
+through `/api/v1/admin/system/settings`; a stored value beats the variables below at the next
+start, and `/api/v1/admin/system/status` and `/checklist` show what is configured. Stored write
+targets are listed but not registered yet (PRP-54). See [system-settings.md](system-settings.md).
+
 ## Local compose quick start
 
 ```bash
@@ -44,6 +49,9 @@ Dev bearer token (emulator stack only): `dev-ingest.ns-dev-only-ingest-secret`. 
 | `NS_SEARCH_INDEX` | `neurosphere-catalog` | Index name. |
 | `NS_SEARCH_REGION` | unset | Region used for the capability lookup. |
 | `NS_SEARCH_REFRESH_SECONDS` | `30` | Per-scope re-index interval. |
+
+A stored `search` setting replaces the provider, service and index (see
+[system-settings.md](system-settings.md#stored-settings)).
 
 Search runs only with the caller's own scope; hits are re-fetched through the repository with that
 scope. Auth to Azure is `DefaultAzureCredential` only (no keys).

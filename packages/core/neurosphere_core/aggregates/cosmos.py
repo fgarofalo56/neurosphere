@@ -30,7 +30,15 @@ from neurosphere_core.aggregates.models import (
     QueryResult,
     format_bucket,
 )
-from neurosphere_core.aggregates.store import select_series, validate_query
+from neurosphere_core.aggregates.store import (
+    bounded_keys,
+    pick_latest,
+    pick_newest,
+    select_series,
+    validate_query,
+    validate_subject_window,
+)
+from neurosphere_core.aggregates.subject import KEYS_PER_QUERY, SubjectKind, SubjectLookup
 from neurosphere_core.clients import translating
 
 if TYPE_CHECKING:
@@ -93,6 +101,65 @@ class CosmosAggregateStore:
         docs: list[AggregateDoc] = [AGGREGATE_ADAPTER.validate_python(row) for row in rows]
         return select_series(docs, max_series, max_points)
 
+    async def _subject_rows(
+        self,
+        customer_id: str,
+        domain_id: str,
+        window: AggregateWindow,
+        extra: str,
+        extra_params: list[dict[str, Any]],
+    ) -> list[AggregateDoc]:
+        rows = await self._query(
+            "SELECT * FROM c WHERE c.customer_id = @customer AND c.doc_type = 'aggregate' "  # noqa: S608
+            "AND c.domain_id = @domain AND c.metric = 'subject' AND c.grain = 'hour' "
+            "AND c.bucket_start >= @start AND c.bucket_start < @end" + extra,  # extra: only @params
+            [
+                {"name": "@customer", "value": customer_id},
+                {"name": "@domain", "value": domain_id},
+                {"name": "@start", "value": format_bucket(window.start)},
+                {"name": "@end", "value": format_bucket(window.end)},
+                *extra_params,
+            ],
+            customer_id,
+        )
+        return [AGGREGATE_ADAPTER.validate_python(row) for row in rows]
+
+    async def latest_subject_points(
+        self,
+        customer_id: str,
+        domain_id: str,
+        kind: SubjectKind,
+        keys: Sequence[str],
+        window: AggregateWindow,
+    ) -> SubjectLookup:
+        validate_subject_window(window)
+        kept, truncated = bounded_keys(keys)
+        docs: list[AggregateDoc] = []
+        for offset in range(0, len(kept), KEYS_PER_QUERY):
+            chunk = kept[offset : offset + KEYS_PER_QUERY]
+            names = [f"@k{i}" for i in range(len(chunk))]
+            docs.extend(
+                await self._subject_rows(
+                    customer_id,
+                    domain_id,
+                    window,
+                    " AND c.subject_kind = @kind AND c.series_key IN (" + ", ".join(names) + ")",
+                    [
+                        {"name": "@kind", "value": kind},
+                        *({"name": n, "value": k} for n, k in zip(names, chunk, strict=True)),
+                    ],
+                )
+            )
+        return pick_latest(docs, kept, truncated)
+
+    async def newest_subject_points(
+        self, customer_id: str, domain_id: str, window: AggregateWindow, limit: int
+    ) -> SubjectLookup:
+        validate_subject_window(window)
+        # No composite index on the emulator: read the window's subject documents (bounded by
+        # MAX_SUBJECT_SERIES_PER_BUCKET per bucket) and rank client-side.
+        return pick_newest(await self._subject_rows(customer_id, domain_id, window, "", []), limit)
+
     async def status(self, customer_id: str) -> AggregateStatus | None:
         with translating():
             try:
@@ -152,7 +219,7 @@ class CosmosAggregateStore:
         docs: Sequence[AggregateDoc],
     ) -> None:
         existing = await self._query(
-            "SELECT c.id FROM c WHERE c.customer_id = @customer AND c.doc_type = 'aggregate' "
+            "SELECT * FROM c WHERE c.customer_id = @customer AND c.doc_type = 'aggregate' "
             "AND c.domain_id = @domain AND c.grain = @grain AND c.bucket_start = @start",
             [
                 {"name": "@customer", "value": customer_id},
@@ -163,9 +230,13 @@ class CosmosAggregateStore:
             customer_id,
         )
         keep = {doc.id for doc in docs}
+        stored = {str(row["id"]): row for row in existing}
         with translating():
             for doc in docs:
-                await self._container.upsert_item(body=doc.model_dump(mode="json"))
+                body = doc.model_dump(mode="json")
+                if stored.get(doc.id) == body:
+                    continue  # unchanged: a one-event rebuild writes only the changed documents
+                await self._container.upsert_item(body=body)
             for row in existing:
                 if row["id"] not in keep:
                     await self._delete(customer_id, str(row["id"]))

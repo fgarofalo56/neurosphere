@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `e4e03eb5552674caf448b2558d9ebe4db604397c`. Generated: 2026-11-15.
+> Source commit: `967d685b31dc55da1b2685e2824898c27cb8cb63`. Generated: 2026-11-16.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 197 operations on 164 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 202 operations on 168 paths.
 
 ## Status and verification
 
@@ -82,6 +82,11 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/disable` | Disable Producer |
 | admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/enable` | Enable Producer |
 | admin-producers | POST | `/api/v1/admin/sources/producers/{producer_id}/rotate` | Rotate Producer |
+| admin-system | GET | `/api/v1/admin/system/checklist` | System Checklist |
+| admin-system | GET | `/api/v1/admin/system/status` | System Status |
+| admin-system-settings | GET | `/api/v1/admin/system/settings` | List Settings |
+| admin-system-settings | GET | `/api/v1/admin/system/settings/{key}` | Get Setting |
+| admin-system-settings | PUT | `/api/v1/admin/system/settings/{key}` | Put Setting |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/api/v1/audit/chains/{chain_id}/verify` | Verify Audit Chain |
 | audit | GET | `/api/v1/audit/denials` | List Audit Denials |
@@ -592,6 +597,43 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Rotate Producer
 - Parameters: `producer_id` (path, required), `If-Match` (header)
 - Responses: `200` `ProducerSecretIssued`; `422` `HTTPValidationError`
+
+### Tag: admin-system
+
+#### GET `/api/v1/admin/system/checklist`
+
+- Operation id: `system_checklist_api_v1_admin_system_checklist_get`
+- Summary: System Checklist
+- Responses: `200` `ChecklistPage`
+
+#### GET `/api/v1/admin/system/status`
+
+- Operation id: `system_status_api_v1_admin_system_status_get`
+- Summary: System Status
+- Responses: `200` `SystemStatus`
+
+### Tag: admin-system-settings
+
+#### GET `/api/v1/admin/system/settings`
+
+- Operation id: `list_settings_api_v1_admin_system_settings_get`
+- Summary: List Settings
+- Responses: `200` `SettingsPage`
+
+#### GET `/api/v1/admin/system/settings/{key}`
+
+- Operation id: `get_setting_api_v1_admin_system_settings__key__get`
+- Summary: Get Setting
+- Parameters: `key` (path, required)
+- Responses: `200` `SettingView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/system/settings/{key}`
+
+- Operation id: `put_setting_api_v1_admin_system_settings__key__put`
+- Summary: Put Setting
+- Parameters: `key` (path, required), `If-Match` (header)
+- Request body: application/json: `object` (optional)
+- Responses: `200` `SettingWriteResult`; `422` `HTTPValidationError`
 
 ### Tag: audit
 
