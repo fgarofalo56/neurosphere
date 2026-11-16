@@ -223,7 +223,7 @@ A worker role, stored connector configuration or admin page for Bedrock; ingesti
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-62-aws-bedrock-connector | boto3 1.44.3; lock adds only boto3, botocore, jmespath, s3transfer, python-dateutil, six + member; ALIASES "dual license" verified from dist LICENSE+classifiers |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
