@@ -27,7 +27,7 @@ class ComponentView(BaseModel):
     model_config = _FROZEN
 
     name: str
-    state: Literal["ok", "failed", "disabled", "not_built"]
+    state: Literal["ok", "failed", "disabled", "not_built", "pending"]
     required: bool
     #: Failure reason code; ``None`` unless ``state`` is ``failed``.
     reason: str | None

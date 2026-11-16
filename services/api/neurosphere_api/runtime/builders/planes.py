@@ -153,7 +153,9 @@ class PolicyReviewerDirectory:
     A principal is known when the policy store holds a document for it in that customer; the
     actor is its pseudonym (the last canonical-id segment, exactly as scope derivation sets
     ``principal_pseudonym``). Whether that principal may REVIEW the item is decided separately by
-    the HITL authorizer against the current policy; this only resolves who they are.
+    the HITL authorizer against the current policy; this only resolves who they are. The gate is
+    :class:`neurosphere_api.hitl.ports.RecheckerReviewerAuthorizer` (``can_review``, fail closed):
+    a principal known here is NOT thereby allowed to review.
     """
 
     def __init__(self, policy_repository: PolicyRepository) -> None:

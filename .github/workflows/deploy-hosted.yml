@@ -1,0 +1,415 @@
+name: deploy-hosted
+
+# PRP-63: delivery pipeline to the hosted environment (update path only).
+#
+# Flow: a release is published from main by `release.yml` (draft release, signed images) ->
+#   resolve   validates the tag, checks it belongs to main, fixes the date-derived parameters
+#   plan      Azure login (OIDC), `hosted_demo.py plan`, plan sha256 in the job summary
+#   apply     waits for a reviewer in the protected environment `hosted-demo`, then
+#             `hosted_demo.py deploy --approve-plan <that hash>`, restarts the frontend and
+#             runs scripts/gates/hosted_smoke.py; a red smoke fails the job
+#   publish-release  turns the draft release of the tag into a published one, only after a
+#             green apply (no Azure login, contents: write and nothing else)
+#
+# Triggers
+#   workflow_run       completion of `release` for a pushed v*.*.* tag (push events only; a pull
+#                      request run or a dry run of `release` never deploys)
+#   workflow_dispatch  main only; inputs image_tag and apply (default false = plan only)
+#
+# Azure login is OpenID Connect only (federated credential, no stored secret). Every id
+# comes from environment secrets because the repository is public and subscription ids appear
+# inside subnet and zone ids. See docs/deploy/delivery.md for the setup and the secret names.
+# Nothing here ever runs `teardown`, the first-ever deploy, or anything that bypasses the plan.
+# No step suppresses a failing exit code.
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Release tag to deploy, for example v0.1.0-rc.2 (the leading v is optional)"
+        type: string
+        required: true
+      apply:
+        description: "Also deploy after the plan (needs reviewer approval); false = plan only"
+        type: boolean
+        default: false
+
+permissions: {}
+
+# One deploy at a time. Queued runs wait; nothing is cancelled half-way through a deployment.
+concurrency:
+  group: hosted-demo-deploy
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: resolve tag
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+      apply: ${{ steps.resolve.outputs.apply }}
+      delete_after: ${{ steps.resolve.outputs.delete_after }}
+      budget_start: ${{ steps.resolve.outputs.budget_start }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate the tag and fix the date-derived parameters
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          INPUT_IMAGE_TAG: ${{ inputs.image_tag }}
+          INPUT_APPLY: ${{ inputs.apply }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            raw="$RUN_HEAD_BRANCH"
+            apply=true
+          else
+            raw="$INPUT_IMAGE_TAG"
+            apply=false
+            if [ "$INPUT_APPLY" = "true" ]; then
+              apply=true
+            fi
+          fi
+          raw="${raw#v}"
+          semver='^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)(-([0-9A-Za-z-]+)([.][0-9A-Za-z-]+)*)?$'
+          if ! [[ "$raw" =~ $semver ]]; then
+            echo "::error::the tag is not a valid SemVer release tag"
+            exit 1
+          fi
+          tag="v${raw}"
+          commit="$(git rev-parse -q --verify "refs/tags/${tag}^{commit}")"
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::tag ${tag} is not an ancestor of main; only releases cut from main deploy"
+            exit 1
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease > /dev/null
+          {
+            echo "tag=${tag}"
+            echo "image_tag=${raw}"
+            echo "apply=${apply}"
+            echo "delete_after=$(date -u -d '+30 days' +%Y-%m-%d)"
+            echo "budget_start=$(date -u +%Y-%m-01)"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=${tag} image_tag=${raw} apply=${apply}"
+
+  plan:
+    name: plan (what-if)
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Unprotected environment with its own federated credential: read access plus what-if.
+    environment: hosted-demo-plan
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      plan_sha256: ${{ steps.hash.outputs.plan_sha256 }}
+    env:
+      IMAGE_TAG: ${{ needs.resolve.outputs.image_tag }}
+      TAG_DELETE_AFTER: ${{ needs.resolve.outputs.delete_after }}
+      BUDGET_START: ${{ needs.resolve.outputs.budget_start }}
+      OPERATOR: ${{ github.triggering_actor }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.NS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.NS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.NS_AZURE_SUBSCRIPTION_ID }}
+      - name: Write infra arguments
+        env:
+          AZ_SUBSCRIPTION: ${{ secrets.NS_AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.NS_HOSTED_RESOURCE_GROUP }}
+          LOCATION: ${{ vars.NS_HOSTED_LOCATION }}
+          PREFIX: ${{ vars.NS_HOSTED_PREFIX }}
+          SKU: ${{ vars.NS_HOSTED_SKU }}
+          INTEGRATION_SUBNET_ID: ${{ secrets.NS_INTEGRATION_SUBNET_ID }}
+          PE_SUBNET_ID: ${{ secrets.NS_PE_SUBNET_ID }}
+          COSMOS_ZONE_ID: ${{ secrets.NS_COSMOS_ZONE_ID }}
+          EVENTHUBS_ZONE_ID: ${{ secrets.NS_EVENTHUBS_ZONE_ID }}
+          BLOB_ZONE_ID: ${{ secrets.NS_BLOB_ZONE_ID }}
+          WEBAPPS_ZONE_ID: ${{ secrets.NS_WEBAPPS_ZONE_ID }}
+          KEYVAULT_ZONE_ID: ${{ secrets.NS_KEYVAULT_ZONE_ID }}
+          ENTRA_TENANT_ID: ${{ secrets.NS_ENTRA_TENANT_ID }}
+          ENTRA_CLIENT_ID: ${{ secrets.NS_ENTRA_CLIENT_ID }}
+          COPILOT_ENDPOINT: ${{ secrets.NS_COPILOT_ENDPOINT }}
+          COPILOT_MODE: ${{ vars.NS_HOSTED_COPILOT_MODE }}
+          COPILOT_DEPLOYMENT: ${{ vars.NS_HOSTED_COPILOT_DEPLOYMENT }}
+          BUDGET_EMAILS: ${{ secrets.NS_BUDGET_EMAILS }}
+          TAG_OWNER: ${{ secrets.NS_TAG_OWNER }}
+          CONNECTOR_ROLES: ${{ vars.NS_HOSTED_CONNECTOR_ROLES }}
+          FOUNDRY_ACCOUNT_IDS: ${{ secrets.NS_FOUNDRY_ACCOUNT_IDS }}
+          BILLING_EXPORT_STORAGE_ID: ${{ secrets.NS_BILLING_EXPORT_STORAGE_ID }}
+          RECOMMENDATIONS: ${{ vars.NS_HOSTED_RECOMMENDATIONS }}
+          EVAL_DOMAIN_ID: ${{ vars.NS_HOSTED_EVAL_DOMAIN_ID }}
+          EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
+          EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
+        run: |
+          set -euo pipefail
+          args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
+          add() {
+            if [ -n "$2" ]; then
+              args+=("$1" "$2")
+            fi
+          }
+          add --resource-group "$RESOURCE_GROUP"
+          add --location "$LOCATION"
+          add --prefix "$PREFIX"
+          add --sku "$SKU"
+          add --integration-subnet-id "$INTEGRATION_SUBNET_ID"
+          add --private-endpoint-subnet-id "$PE_SUBNET_ID"
+          add --cosmos-zone-id "$COSMOS_ZONE_ID"
+          add --eventhubs-zone-id "$EVENTHUBS_ZONE_ID"
+          add --blob-zone-id "$BLOB_ZONE_ID"
+          add --webapps-zone-id "$WEBAPPS_ZONE_ID"
+          add --keyvault-zone-id "$KEYVAULT_ZONE_ID"
+          add --entra-tenant-id "$ENTRA_TENANT_ID"
+          add --entra-client-id "$ENTRA_CLIENT_ID"
+          add --copilot-endpoint "$COPILOT_ENDPOINT"
+          add --copilot-mode "$COPILOT_MODE"
+          add --copilot-deployment "$COPILOT_DEPLOYMENT"
+          add --budget-contact-emails "$BUDGET_EMAILS"
+          add --budget-start-date "$BUDGET_START"
+          add --tag-owner "$TAG_OWNER"
+          add --tag-delete-after "$TAG_DELETE_AFTER"
+          add --connector-roles "$CONNECTOR_ROLES"
+          add --foundry-account-ids "$FOUNDRY_ACCOUNT_IDS"
+          add --billing-export-storage-account-id "$BILLING_EXPORT_STORAGE_ID"
+          add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
+          add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
+          add --evaluation-pilot-dataset-ids "$EVAL_DATASET_IDS"
+          if [ "$RECOMMENDATIONS" = "true" ]; then
+            args+=(--recommendations)
+          fi
+          printf '%s\n' "${args[@]}" > "$RUNNER_TEMP/hosted-args.txt"
+      - name: Plan
+        env:
+          NS_LIVE_APPROVED: "1"
+        run: |
+          set -euo pipefail
+          mapfile -t ARGS < "$RUNNER_TEMP/hosted-args.txt"
+          uv run python scripts/gates/hosted_demo.py plan "${ARGS[@]}" \
+            --evidence-dir "$RUNNER_TEMP/evidence" --state-dir "$RUNNER_TEMP/state"
+      - name: Plan hash and summary
+        id: hash
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/evidence" <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          from pathlib import Path
+
+          files = sorted(Path(sys.argv[1]).glob("*-plan.json"))
+          if len(files) != 1:
+              sys.exit(f"expected exactly one plan evidence file, found {len(files)}")
+          evidence = json.loads(files[0].read_text(encoding="utf-8"))
+          if evidence.get("result") != "PASS":
+              sys.exit("plan evidence result is not PASS")
+          details = evidence.get("details", {})
+          digest = str(details.get("plan_sha256", ""))
+          if not re.fullmatch(r"[0-9a-f]{64}", digest):
+              sys.exit("plan evidence has no valid plan_sha256")
+          lines = [
+              "## Hosted deploy plan",
+              "",
+              f"Plan sha256: `{digest}`",
+              f"Change counts: `{json.dumps(details.get('change_counts', {}), sort_keys=True)}`",
+              "",
+              "| change | resource type |",
+              "|---|---|",
+          ]
+          for change in details.get("changes", []):
+              lines.append(f"| {change.get('changeType')} | {change.get('resourceType')} |")
+          lines.append("")
+          lines.append("The apply job deploys exactly this plan after a reviewer approves it.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write("\n".join(lines) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write(f"plan_sha256={digest}\n")
+          PY
+      - name: Upload plan evidence (scrubbed by hosted_demo.py, short retention)
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosted-plan-evidence
+          path: ${{ runner.temp }}/evidence
+          retention-days: 7
+          if-no-files-found: error
+
+  apply:
+    name: apply (approval, deploy, smoke)
+    needs: [resolve, plan]
+    if: needs.resolve.outputs.apply == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Protected environment: required reviewers. The job does not start until one approves.
+    environment: hosted-demo
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      IMAGE_TAG: ${{ needs.resolve.outputs.image_tag }}
+      TAG_DELETE_AFTER: ${{ needs.resolve.outputs.delete_after }}
+      BUDGET_START: ${{ needs.resolve.outputs.budget_start }}
+      OPERATOR: ${{ github.triggering_actor }}
+      PLAN_SHA256: ${{ needs.plan.outputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+      - name: Sync workspace
+        run: uv sync --frozen --group dev
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.NS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.NS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.NS_AZURE_SUBSCRIPTION_ID }}
+      - name: Write infra arguments
+        env:
+          AZ_SUBSCRIPTION: ${{ secrets.NS_AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.NS_HOSTED_RESOURCE_GROUP }}
+          LOCATION: ${{ vars.NS_HOSTED_LOCATION }}
+          PREFIX: ${{ vars.NS_HOSTED_PREFIX }}
+          SKU: ${{ vars.NS_HOSTED_SKU }}
+          INTEGRATION_SUBNET_ID: ${{ secrets.NS_INTEGRATION_SUBNET_ID }}
+          PE_SUBNET_ID: ${{ secrets.NS_PE_SUBNET_ID }}
+          COSMOS_ZONE_ID: ${{ secrets.NS_COSMOS_ZONE_ID }}
+          EVENTHUBS_ZONE_ID: ${{ secrets.NS_EVENTHUBS_ZONE_ID }}
+          BLOB_ZONE_ID: ${{ secrets.NS_BLOB_ZONE_ID }}
+          WEBAPPS_ZONE_ID: ${{ secrets.NS_WEBAPPS_ZONE_ID }}
+          KEYVAULT_ZONE_ID: ${{ secrets.NS_KEYVAULT_ZONE_ID }}
+          ENTRA_TENANT_ID: ${{ secrets.NS_ENTRA_TENANT_ID }}
+          ENTRA_CLIENT_ID: ${{ secrets.NS_ENTRA_CLIENT_ID }}
+          COPILOT_ENDPOINT: ${{ secrets.NS_COPILOT_ENDPOINT }}
+          COPILOT_MODE: ${{ vars.NS_HOSTED_COPILOT_MODE }}
+          COPILOT_DEPLOYMENT: ${{ vars.NS_HOSTED_COPILOT_DEPLOYMENT }}
+          BUDGET_EMAILS: ${{ secrets.NS_BUDGET_EMAILS }}
+          TAG_OWNER: ${{ secrets.NS_TAG_OWNER }}
+          CONNECTOR_ROLES: ${{ vars.NS_HOSTED_CONNECTOR_ROLES }}
+          FOUNDRY_ACCOUNT_IDS: ${{ secrets.NS_FOUNDRY_ACCOUNT_IDS }}
+          BILLING_EXPORT_STORAGE_ID: ${{ secrets.NS_BILLING_EXPORT_STORAGE_ID }}
+          RECOMMENDATIONS: ${{ vars.NS_HOSTED_RECOMMENDATIONS }}
+          EVAL_DOMAIN_ID: ${{ vars.NS_HOSTED_EVAL_DOMAIN_ID }}
+          EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
+          EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
+        run: |
+          set -euo pipefail
+          args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
+          add() {
+            if [ -n "$2" ]; then
+              args+=("$1" "$2")
+            fi
+          }
+          add --resource-group "$RESOURCE_GROUP"
+          add --location "$LOCATION"
+          add --prefix "$PREFIX"
+          add --sku "$SKU"
+          add --integration-subnet-id "$INTEGRATION_SUBNET_ID"
+          add --private-endpoint-subnet-id "$PE_SUBNET_ID"
+          add --cosmos-zone-id "$COSMOS_ZONE_ID"
+          add --eventhubs-zone-id "$EVENTHUBS_ZONE_ID"
+          add --blob-zone-id "$BLOB_ZONE_ID"
+          add --webapps-zone-id "$WEBAPPS_ZONE_ID"
+          add --keyvault-zone-id "$KEYVAULT_ZONE_ID"
+          add --entra-tenant-id "$ENTRA_TENANT_ID"
+          add --entra-client-id "$ENTRA_CLIENT_ID"
+          add --copilot-endpoint "$COPILOT_ENDPOINT"
+          add --copilot-mode "$COPILOT_MODE"
+          add --copilot-deployment "$COPILOT_DEPLOYMENT"
+          add --budget-contact-emails "$BUDGET_EMAILS"
+          add --budget-start-date "$BUDGET_START"
+          add --tag-owner "$TAG_OWNER"
+          add --tag-delete-after "$TAG_DELETE_AFTER"
+          add --connector-roles "$CONNECTOR_ROLES"
+          add --foundry-account-ids "$FOUNDRY_ACCOUNT_IDS"
+          add --billing-export-storage-account-id "$BILLING_EXPORT_STORAGE_ID"
+          add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
+          add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
+          add --evaluation-pilot-dataset-ids "$EVAL_DATASET_IDS"
+          if [ "$RECOMMENDATIONS" = "true" ]; then
+            args+=(--recommendations)
+          fi
+          printf '%s\n' "${args[@]}" > "$RUNNER_TEMP/hosted-args.txt"
+      - name: Deploy the approved plan
+        env:
+          NS_LIVE_APPROVED: "1"
+        run: |
+          set -euo pipefail
+          if ! [[ "$PLAN_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::the plan job did not produce a sha256"
+            exit 1
+          fi
+          mapfile -t ARGS < "$RUNNER_TEMP/hosted-args.txt"
+          uv run python scripts/gates/hosted_demo.py deploy "${ARGS[@]}" \
+            --approve-plan "$PLAN_SHA256" \
+            --approve-shared hub-subnet,hub-pe,hub-dns,budget \
+            --evidence-dir "$RUNNER_TEMP/evidence" --state-dir "$RUNNER_TEMP/state"
+      - name: Smoke
+        env:
+          AZ_SUBSCRIPTION: ${{ secrets.NS_AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ vars.NS_HOSTED_RESOURCE_GROUP }}
+        run: |
+          set -euo pipefail
+          rg="${RESOURCE_GROUP:-rg-neurosphere-demo}"
+          uv run python scripts/gates/hosted_smoke.py \
+            --subscription "$AZ_SUBSCRIPTION" --resource-group "$rg" \
+            --restart-frontend --result-json "$RUNNER_TEMP/smoke/result.json"
+      - name: Upload deploy evidence and smoke result (scrubbed, short retention)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hosted-deploy-evidence
+          path: |
+            ${{ runner.temp }}/evidence
+            ${{ runner.temp }}/smoke
+          retention-days: 7
+          if-no-files-found: warn
+
+  publish-release:
+    name: publish the draft release
+    needs: [resolve, apply]
+    if: needs.apply.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the draft release (prerelease flag is kept)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          is_draft="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)"
+          if [ "$is_draft" = "true" ]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+            echo "published ${TAG}"
+          else
+            echo "::notice::release ${TAG} is already published; nothing to do"
+          fi

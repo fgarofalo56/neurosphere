@@ -19,6 +19,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 from fastapi import APIRouter, WebSocket
 from fastapi.testclient import TestClient
 from neurosphere_api.deprecation import (
+    DEPRECATED_AT,
     DEPRECATION_HEADER,
     SUNSET,
     SUNSET_AT,
@@ -42,7 +43,7 @@ def _openapi_path(template: str) -> str:
 
 
 def _assert_alias_headers(headers: Any, successor: str) -> None:
-    assert headers["deprecation"] == "true"
+    assert headers["deprecation"] == DEPRECATION_HEADER
     assert headers["sunset"] == "Fri, 30 Apr 2027 00:00:00 GMT"
     assert headers["link"] == f'<{successor}>; rel="successor-version"'
 
@@ -57,7 +58,7 @@ def _assert_no_alias_headers(headers: Any) -> None:
 def test_sunset_is_one_imf_fixdate_constant() -> None:
     assert SUNSET == "Fri, 30 Apr 2027 00:00:00 GMT"
     assert parsedate_to_datetime(SUNSET) == SUNSET_AT
-    assert DEPRECATION_HEADER == "true"
+    assert DEPRECATION_HEADER == f"@{int(DEPRECATED_AT.timestamp())}"
 
 
 @pytest.mark.parametrize(

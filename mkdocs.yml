@@ -119,6 +119,7 @@ nav:
       - dev/diagram-rendering.md
       - runbooks/seeding.md
       - deploy/hosted-demo.md
+      - deploy/delivery.md
   - Runbooks:
       - runbooks/operations.md
       - runbooks/write-targets.md
@@ -128,6 +129,7 @@ nav:
       - runbooks/lifecycle.md
       - runbooks/catalog-review-queue.md
       - runbooks/runtime-composition.md
+      - runbooks/api-path-aliases.md
       - runbooks/identity-admin.md
       - runbooks/connector-config.md
       - runbooks/platform-config.md

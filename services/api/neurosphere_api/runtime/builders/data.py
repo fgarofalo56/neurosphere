@@ -118,6 +118,7 @@ from neurosphere_api.runtime.builders import (
     HITL_SERVICE,
     POLICY_REPOSITORY,
     PSEUDONYMIZER,
+    RECOMMENDATION_STORE,
     REVIEW_POLICIES,
     REVOCATION_CHECKER,
     REVOCATION_HOOKS,
@@ -362,7 +363,8 @@ def _recommendations(ctx: BuildContext) -> None:
         store = CosmosRecommendationStore.from_client(
             ctx.cosmos_client(), database=ctx.store_settings().database
         )
-    ctx.app.state.recommendation_store = store
+    ctx.app.state.recommendation_store = store  # request-time dependencies read app.state
+    ctx.publish(RECOMMENDATION_STORE, store)
 
 
 # -- audit, HITL review router --------------------------------------------------------------
