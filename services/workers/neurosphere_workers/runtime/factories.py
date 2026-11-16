@@ -32,7 +32,7 @@ import os
 import re
 import socket
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from functools import partial
@@ -84,6 +84,7 @@ from neurosphere_core.clients.factories import (
 )
 from neurosphere_core.cloud import CloudName, Settings, load_settings
 from neurosphere_core.copilot.models.endpoints import AdapterConfig, endpoint_problem
+from neurosphere_core.deploy.fabric import FabricProvisioner
 from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
 from neurosphere_core.errors import CapabilityUnavailableError, InvalidSchemaError, ValidationIssue
 from neurosphere_core.evaluation.calibration import LabelSet, ingest_labels
@@ -126,7 +127,7 @@ from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationSt
 from neurosphere_core.scope import IdentityScope
 from neurosphere_core.search.fixture import FixtureSearchIndex
 from neurosphere_core.stores import ensure_local_containers
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from neurosphere_workers.actions import (
@@ -144,7 +145,12 @@ from neurosphere_workers.actions.apim import (
     build_apim_gateway_connector,
     build_http_apim_gateway_connector,
 )
-from neurosphere_workers.actions.deploy import DeployConnector, PlanApprovals
+from neurosphere_workers.actions.deploy import (
+    ArmProvisioner,
+    DeployConnector,
+    FabricObserver,
+    PlanApprovals,
+)
 from neurosphere_workers.admin_platform import ledger_price_table, load_review_policies
 from neurosphere_workers.aggregates.handler import AggregateProjection
 from neurosphere_workers.aggregates.sources import StoreLedgerSource
@@ -700,6 +706,11 @@ async def _action_write_targets(
             return apim_record_store(cosmos, database=cfg.store.database, registration=registration)
 
         sources = WriteTargetSources(gateway_store=gateways, records_for=records_for)
+    if deploy.enabled:
+        # PRP-55: durable approvals (written by the API) + the Cosmos register + ARM/Fabric
+        # provisioners. Without a register container the deploy target is skipped with
+        # `deploy_sources_unconfigured` (fail closed).
+        sources = replace(sources, deploy=_deploy_sources(cfg, lifetime, cosmos, deploy))
     registry = WriteTargetRegistry()
     await register_write_targets(
         registry,
@@ -709,12 +720,42 @@ async def _action_write_targets(
         foundry=foundry,
         apim=apim,
         sources=sources,
-        # No durable PlanApprovals exists yet (the approval store is per API process), so an
-        # enabled deploy target is skipped here with `deploy_sources_unconfigured`: fail closed.
         deploy=deploy,
         entries=entries,
     )
     return registry, gateways
+
+
+def _deploy_sources(
+    cfg: RuntimeConfig,
+    lifetime: ClientLifetime,
+    cosmos: CosmosClient,
+    deploy: DeployWriteSettings,
+) -> DeploySources | None:
+    """The worker's deploy collaborators, or ``None`` when the register container is unset."""
+    if deploy.register_container is None:
+        return None
+    # Imported here so a process that only imports this module (the API's deploy bootstrap)
+    # never loads the ARM/Fabric transport.
+    from neurosphere_workers.actions.deploy_http import DEFAULT_TIMEOUT
+    from neurosphere_workers.actions.deploy_wiring import build_deploy_collaborators
+
+    http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=DEFAULT_TIMEOUT))).client
+    built = build_deploy_collaborators(
+        profile=cfg.settings.cloud_profile,
+        cosmos=cosmos,
+        database=cfg.store.database,
+        register_container=deploy.register_container,
+        http_client=http,
+        credential=_LazyCredential(cfg.settings, lifetime).get,
+    )
+    return DeploySources(
+        approvals=built.approvals,
+        register=built.register,
+        arm=built.arm,
+        fabric=built.fabric,
+        observer=built.observer,
+    )
 
 
 async def build_hitl_timers(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
@@ -1456,12 +1497,16 @@ class DeployWriteSettings(BaseSettings):
     """``NS_DEPLOY_APPLY_ENABLED`` (PRP-08 item 14): opt-in for the deploy write connector.
 
     OFF by default. Even when set, the connector is registered only when its collaborators
-    (:class:`DeploySources`) are supplied; there is no secret in this setting.
+    (:class:`DeploySources`) are supplied; there is no secret in this setting. The ``actions``
+    role builds them from ``NS_DEPLOY_APPLY_REGISTER_CONTAINER`` (PRP-55: the same name the API
+    reads); unset leaves the deploy target unregistered (``deploy_sources_unconfigured``).
     """
 
     model_config = SettingsConfigDict(env_prefix="NS_DEPLOY_APPLY_", frozen=True, extra="ignore")
 
     enabled: bool = False
+    # The Cosmos container of the ownership register (partition key /deployment_id).
+    register_container: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1473,6 +1518,10 @@ class DeploySources:
     approvals: PlanApprovals | None = None
     register: RegisterStore | None = None
     inventory: LiveInventory | None = None
+    #: PRP-55: provisioners; a missing one keeps its items ``capability_unavailable``.
+    arm: ArmProvisioner | None = None
+    fabric: FabricProvisioner | None = None
+    observer: FabricObserver | None = None
 
 
 def load_deploy_write_settings() -> DeployWriteSettings:
@@ -1713,9 +1762,11 @@ def register_deploy_target(
 
     Fail closed: disabled is silent; enabled without a customer or without approvals/register
     collaborators is skipped with a logged reason (the deploy intents stay advisory and nothing
-    acts). The register is wrapped to ``customer_id`` so the connector can neither read nor write
-    another customer's rows. No Fabric/ARM provisioner is supplied here, so an apply of a
-    resource that needs one stays ``capability_unavailable``; uninstall is dry-run only.
+    acts). The register is wrapped to ``customer_id`` and the connector is bound to it, so it can
+    neither read nor write another customer's rows nor act on another customer's target. The
+    ARM/Fabric provisioners come from ``sources`` (the worker wires real ones, the API plan-only
+    stand-ins); a missing one keeps its items ``capability_unavailable``. Uninstall is dry-run
+    only.
     """
     if not deploy.enabled:
         return False
@@ -1727,8 +1778,12 @@ def register_deploy_target(
         return False
     connector = DeployConnector(
         cloud=settings.cloud_profile.cloud,
+        customer_id=customer_id,
         approvals=sources.approvals,
         register=CustomerScopedRegister(sources.register, customer_id),
+        fabric=sources.fabric,
+        observer=sources.observer,
+        arm=sources.arm,
         inventory=sources.inventory,
     )
     return _register(registry, "deploy", connector)

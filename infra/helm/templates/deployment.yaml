@@ -69,7 +69,7 @@ spec:
           {{- end }}
           {{- end }}
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
-          {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
+          {{- $deployApply := and (or (eq $name "api") (eq $name "workers")) $.Values.deployApply.enabled }}
           {{- $search := and (eq $name "api") $.Values.search.provider }}
           {{- $evalApi := and (eq $name "api") $.Values.evaluation.pilotDatasetIds }}
           {{- $evalWorker := and (eq $name "workers") (or $.Values.workers.roles $.Values.evaluation.dataDir) }}

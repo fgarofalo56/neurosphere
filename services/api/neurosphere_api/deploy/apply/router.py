@@ -24,7 +24,6 @@ from typing import Annotated, Final
 
 from fastapi import APIRouter, Depends, FastAPI, Path, Request, status
 from neurosphere_connector.write import WriteConnector, WriteRequest
-from neurosphere_contracts.deployment.v1.deploy_action_plan import DeployActionPlan
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.auth.scope import Permission
 from neurosphere_core.deploy.register import CustomerScopedRegister, LiveInventory, RegisterStore
@@ -167,7 +166,7 @@ def build_router() -> APIRouter:
         auditor = _auditor(request, scope)  # fails closed when audit is not configured
         store = _approvals(request)
         try:
-            record = store.approve(scope, body.plan, body.target)
+            record = await store.approve(scope, body.plan, body.target)
         except NeuroSphereError as exc:
             await auditor.refused_for(
                 OP_APPROVE, exc, kind="plan", ident=body.plan.plan_id, entity=ENTITY_PLAN
@@ -207,19 +206,12 @@ def build_router() -> APIRouter:
     ) -> ApplyView:
         auditor = _auditor(request, scope)
         try:
-            record = _approvals(request).record(scope, body.plan_id)
+            record = await _approvals(request).record(scope, body.plan_id)
             if body.plan_hash != record.approved.plan_hash:
                 raise InvalidSchemaError(
                     "the plan changed since it was approved", reason="plan_hash_mismatch"
                 )
-            plan = DeployActionPlan(
-                schema_version="1.0.0",
-                plan_id=record.approved.plan_id,
-                plan_hash=record.approved.plan_hash,
-                deployment_id=record.approved.deployment_id,
-                cloud=record.cloud,  # type: ignore[arg-type]
-                resources=list(record.resources),
-            )
+            plan = record.action_plan()
             target = plan_target(record.cloud, scope.customer_id, plan.plan_id)
             planned = await _connector(plane, APPLY_KIND).dry_run(
                 WriteRequest(

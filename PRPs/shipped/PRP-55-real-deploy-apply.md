@@ -1,6 +1,8 @@
 ---
 name: PRP-55-real-deploy-apply
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 314
 priority: P1
 order: 45
 review: required
@@ -33,15 +35,15 @@ Out of scope: write-target registry from stored configuration and multiple targe
 - Already done, not repeated here: register optimistic concurrency (`packages/core/neurosphere_core/deploy/register/cosmos_store.py:63-81` uses `_etag` and raises `StaleVersionError`).
 
 ## Acceptance criteria
-- [ ] Given a plan approved through `POST /api/v1/deploy/apply/...` in one process, When an executor worker in another process (separate store instances on the same Cosmos container) executes the confirmed `deploy_plan_apply` intent, Then it reads the same approval and proceeds; with no approval or a changed hash it refuses (`plan_not_approved` / hash mismatch) and nothing is provisioned.
-- [ ] The approval store is durable: approve is create-only per `(customer_id, plan_id)`; a second approval with a different hash is `plan_id_conflict`; an expired approval reads as absent; no eviction; no secret or principal e-mail stored (approver pseudonym only).
-- [ ] Given `NS_DEPLOY_APPLY_ENABLED=true` and the register container set on the worker, When the `actions` role starts, Then `deploy` is in the worker write-target registry; unset keeps today's behaviour (not registered, API 503 `apply_not_configured`).
-- [ ] The ARM provisioner creates only allowlisted services (decision 2) with the `neurosphere:created-by` tag, reports `created=False` for an existing resource, polls long-running operations with a bounded timeout, and uses the deployment cloud's management host (`CloudProfile.management_url`), never another cloud's; any other service stays `capability_unavailable`.
-- [ ] Fabric items run through `FabricProvisioner` over a real bearer transport only where `fabric_unavailable_reason` returns `None`; otherwise `capability_unavailable` with that reason, zero HTTP calls.
-- [ ] Verify-by-change: success is reported only when `verify` reads each created resource back (ARM GET / Fabric observer); a missing resource after apply is a failed verify and the executor's rollback path runs.
-- [ ] Register rows are written as `created` for new resources and `reused` for consented reuse; a target whose customer differs from the connector-bound customer is refused (test).
-- [ ] An in-memory end-to-end test (unmarked, runs in CI) covers approve, confirm, execute, verify and register with a fake ARM transport; an `integration` test repeats it on the Cosmos emulator.
-- [ ] `scripts/gates/deploy_apply_live.py` (new) refuses without `NS_LIVE_APPROVED=1` (exit non-zero, no Azure call) and documents the throwaway-resource-group run for PRP-64.
+- [x] Given a plan approved through `POST /api/v1/deploy/apply/...` in one process, When an executor worker in another process (separate store instances on the same Cosmos container) executes the confirmed `deploy_plan_apply` intent, Then it reads the same approval and proceeds; with no approval or a changed hash it refuses (`plan_not_approved` / hash mismatch) and nothing is provisioned.
+- [x] The approval store is durable: approve is create-only per `(customer_id, plan_id)`; a second approval with a different hash is `plan_id_conflict`; an expired approval reads as absent; no eviction; no secret or principal e-mail stored (approver pseudonym only).
+- [x] Given `NS_DEPLOY_APPLY_ENABLED=true` and the register container set on the worker, When the `actions` role starts, Then `deploy` is in the worker write-target registry; unset keeps today's behaviour (not registered, API 503 `apply_not_configured`).
+- [x] The ARM provisioner creates only allowlisted services (decision 2) with the `neurosphere:created-by` tag, reports `created=False` for an existing resource, polls long-running operations with a bounded timeout, and uses the deployment cloud's management host (`CloudProfile.management_url`), never another cloud's; any other service stays `capability_unavailable`.
+- [x] Fabric items run through `FabricProvisioner` over a real bearer transport only where `fabric_unavailable_reason` returns `None`; otherwise `capability_unavailable` with that reason, zero HTTP calls.
+- [x] Verify-by-change: success is reported only when `verify` reads each created resource back (ARM GET / Fabric observer); a missing resource after apply is a failed verify and the executor's rollback path runs.
+- [x] Register rows are written as `created` for new resources and `reused` for consented reuse; a target whose customer differs from the connector-bound customer is refused (test).
+- [x] An in-memory end-to-end test (unmarked, runs in CI) covers approve, confirm, execute, verify and register with a fake ARM transport; an `integration` test repeats it on the Cosmos emulator.
+- [x] `scripts/gates/deploy_apply_live.py` (new) refuses without `NS_LIVE_APPROVED=1` (exit non-zero, no Azure call) and documents the throwaway-resource-group run for PRP-64.
 - PRP exit: with the opt-in set on API and workers, an approved plan provisions allowlisted resources through the action executor and the register and UI show the verified result; live evidence is OPEN until PRP-64 runs it.
 
 ## Clarifications (decided)
@@ -223,20 +225,21 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | verifying | prp-55-real-deploy-apply | core approvals store + container; tests green |
+| 2 | verifying | prp-55-real-deploy-apply | PlanApprovalStore over core repository (async), eviction removed, bootstrap builds Cosmos repo; ARM names from core table |
+| 3 | verifying | prp-55-real-deploy-apply | core ARM allowlist table; worker BearerDeployHttp + HttpArmProvisioner; MockTransport tests green |
+| 4 | verifying | prp-55-real-deploy-apply | DeployWriteSettings.register_container; actions role builds durable approvals + Cosmos register + ARM/Fabric (deploy_wiring, lazy import); API gets plan-only provisioners |
+| 5 | verifying | prp-55-real-deploy-apply | connector customer binding (customer_mismatch), allowlist pre-check, tagged create; verify mismatch -> executor rollback path -> failed (no delete) |
+| 6 | verifying | prp-55-real-deploy-apply | unmarked in-memory e2e (API approve -> worker executor -> fake ARM -> verify -> register) green; integration twin written, collected, NOT run (no compose stack in this session); live runner refuses without NS_LIVE_APPROVED=1 |
+| 7 | verifying | prp-55-land | PRP-58 shipped (#312); Helm deployApply env and App Service deployApplySettings now reach the workers too; test_helm_render updated, green |
+| 8 | done | prp-55-land | close-out at merge (PR 314) |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: 2026-11-16, PR #314 (merged after W18 PRP-58 #312).
+- Deviations: Two additive one-line edits outside the Ownership block: `packages/core/tests/stores_registry/test_registry.py` (wire-contract row + constant pin for the new container, required by the Tier-1 `containers.py` change) and `tests/security/actions/test_single_executor_path.py` (`APPLY_EXCEPTIONS` entry for `scripts/gates/deploy_apply_live.py`, same pattern as G05). API apply routes and `PlanApprovalStore.approve/record` are now async. The API's deploy connector gets plan-only provisioners (`PlanOnlyArmProvisioner`, refusing Fabric transport) so its dry-run mirrors the worker allowlist with no transport; the worker transport is imported lazily by `factories._deploy_sources` (test proves the API never loads it). ARM resource names now follow the per-service rule (`neurosphere_core.deploy.arm.arm_resource_name`). Verify mismatch runs the executor rollback path, which the deploy connector refuses (no automatic delete), so the intent ends `failed` / `rollback_failed` with operator attention.
+- Descoped items: none. Item 7 done at merge (PRP-58 shipped): Helm `deployApply` env and App Service `deployApplySettings` now also reach the workers (the register container reaches App Service workers through the workers app settings, key `NS_DEPLOY_APPLY_REGISTER_CONTAINER`), still off by default. It edited `infra/helm/**`, `infra/appservice/main.bicep` and `tests/unit/infra/test_helm_render.py` as the blueprint declares (serial-after PRP-58).
+- Local evidence: `uv run pytest -q -m integration tests/integration/deploy_apply` against the compose emulators at 127.0.0.1: 2 passed (2026-11-16). `tests/unit/infra`: 82 passed.
+- OPEN gates: live apply into a throwaway RG (`scripts/gates/deploy_apply_live.py`, PRP-64); live uninstall #40, Government Fabric #39, G01 Government, G02.
+- Env vars for the operator: `NS_DEPLOY_APPLY_ENABLED` and `NS_DEPLOY_APPLY_REGISTER_CONTAINER` now also on the WORKERS (actions role), same names as the API. The `deploy_plan_approvals` container must exist (hosted redeploy before the image boots; non-local boot checks registry containers). Re-approve plans after upgrade (in-memory approvals are lost).
+- Follow-up issues (reviewer follow-ups, filed at merge): (1) `deploy_arm.py:ensure_tagged` and `deploy.py:_apply_one`: if the PUT is accepted and the LRO poll then times out (`lro_timeout`) or a later plan item fails, the resource exists with the `neurosphere:created-by` tag but has no register row; a retry GETs it, sees `created=False` and refuses `resource_exists_not_owned`, so uninstall cannot see it. Fix: treat an existing resource whose tags carry the same deployment id and plan id as created by this plan, or write a `pending` register row before the PUT. (2) `neurosphere_core.deploy.arm.name_for`: storage account names (`nsst` + alnum deployment id, truncated to 24) can collide across tenants or ids differing only in punctuation; the 409 surfaces as a generic `unexpected_status`. Map 409 / `StorageAccountAlreadyTaken` to a specific reason or add a short deterministic hash suffix. (3) `deploy/approvals/cosmos_store.py`: expired approvals are never deleted and the container has `default_ttl` null; set a per-item `ttl` from `expires_at` with container TTL enabled. (4) `deploy_arm.py:_check`: a 409 from the ARM PUT is reported as `unexpected_status`/`upstream_invalid`; add a dedicated reason. (5) ARM services beyond the decision-2 allowlist. (6) Runbook for enabling apply (none owned here). The two test files outside the Ownership block merged cleanly with origin/main (no concurrent W18 edit).
+- Product check: an operator can approve and apply from the `/deploy` wizard once the opt-in env and register container are set on API and workers; no file edit or raw API call is needed after that. Enabling still needs env/Helm values and the `deploy_plan_approvals` container (infra redeploy). Live evidence is OPEN until PRP-64.
