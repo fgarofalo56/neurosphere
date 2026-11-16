@@ -30,6 +30,7 @@ from neurosphere_core.detections import (
     DeploymentConfig,
     DeploymentConfigRead,
 )
+
 from neurosphere_workers.detections.readers.common import ReadError, TokenSource, send
 
 __all__ = ["ArmDeploymentReader"]
