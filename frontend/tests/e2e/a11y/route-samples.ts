@@ -293,6 +293,56 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     ready: "[data-testid='audit-row']",
     persona: "admin",
   },
+  // PRP-57: admin console part 2 (Admin persona; the mock gates every route on `admin`).
+  {
+    pattern: "/admin/sources/producers",
+    name: "admin producers",
+    url: "/admin/sources/producers",
+    ready: "[data-testid='producer-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/sources/connectors",
+    name: "admin connectors",
+    url: "/admin/sources/connectors",
+    ready: "[data-testid='connector-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/gateways",
+    name: "admin gateway registration",
+    url: "/admin/gateways",
+    ready: "form",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/catalog-import",
+    name: "admin catalog import",
+    url: "/admin/catalog-import",
+    ready: "main h1",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/pricing",
+    name: "admin pricing",
+    url: "/admin/pricing",
+    ready: "[data-testid='budget-row']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/features",
+    name: "admin features",
+    url: "/admin/features",
+    ready: "[data-testid='setting-card'][data-key='write_targets']",
+    persona: "admin",
+  },
+  {
+    pattern: "/admin/review-policy",
+    name: "admin review policy",
+    url: "/admin/review-policy",
+    ready: "[data-testid='effective-policy']",
+    persona: "admin",
+  },
 ];
 
 /** Representative routes for the theme pack matrix (home, a dashboard, map table, reports view, sandbox). */
