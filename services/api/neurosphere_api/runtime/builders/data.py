@@ -118,6 +118,7 @@ from neurosphere_api.runtime.builders import (
     HITL_SERVICE,
     POLICY_REPOSITORY,
     PSEUDONYMIZER,
+    RECOMMENDATION_STORE,
     REVIEW_POLICIES,
     REVOCATION_CHECKER,
     REVOCATION_HOOKS,
@@ -128,7 +129,7 @@ from neurosphere_api.runtime.builders import (
     ComponentUnavailableError,
 )
 from neurosphere_api.runtime.builders.blob import archive_container
-from neurosphere_api.runtime.builders.search import build_catalog_graph
+from neurosphere_api.runtime.builders.search import wrap_catalog_for_search
 from neurosphere_api.runtime.pseudonym import resolve_pseudonym_key
 from neurosphere_api.runtime.settings import AuditSiemSettings, AuthSettings
 from neurosphere_api.sandbox.repository import CosmosSandboxStore, SandboxRepository
@@ -246,7 +247,7 @@ def _catalog(ctx: BuildContext) -> None:
         )
     graph = _backend(ctx, "catalog_graph", GraphQuery)
     if graph is None:
-        graph = build_catalog_graph(ctx, repository)
+        repository, graph = wrap_catalog_for_search(ctx, repository)
     if graph is None:
         graph = RepositoryGraphQuery(repository, _NoSearch())  # type: ignore[arg-type]
     state = ctx.app.state
@@ -362,7 +363,8 @@ def _recommendations(ctx: BuildContext) -> None:
         store = CosmosRecommendationStore.from_client(
             ctx.cosmos_client(), database=ctx.store_settings().database
         )
-    ctx.app.state.recommendation_store = store
+    ctx.app.state.recommendation_store = store  # request-time dependencies read app.state
+    ctx.publish(RECOMMENDATION_STORE, store)
 
 
 # -- audit, HITL review router --------------------------------------------------------------

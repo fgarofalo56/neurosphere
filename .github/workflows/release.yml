@@ -10,6 +10,11 @@ name: release
 #   pull_request       path-filtered, always dry run: builds, SBOMs, lints and packages,
 #                      pushes and signs nothing
 #
+# Release policy (PRP-63): a tag release stays a DRAFT until the hosted smoke is green.
+# `deploy-hosted.yml` listens for the completion of this workflow (`name: release` must stay
+# stable for its workflow_run trigger), deploys the tag after a reviewer approves it, runs the
+# smoke and only then publishes the draft. This workflow never publishes a release itself.
+#
 # Fails closed: no step suppresses a failing exit code. Binaries are installed by version
 # and sha256 (same pattern as security.yml); no third-party docker, cosign or syft action.
 # Only the `sign` job holds id-token: write; only `release-notes` holds contents: write.

@@ -20,6 +20,7 @@ read by ``neurosphere_core.clients``).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Final, Literal
 
@@ -75,11 +76,30 @@ class WorkerSettings(BaseSettings):
         return _blank_is_none(value)
 
 
+#: Azure Cosmos DB account naming (same rule as the API ``StoreSettings``).
+COSMOS_ACCOUNT_PATTERN: Final = re.compile(r"[a-z0-9][a-z0-9-]{1,42}[a-z0-9]")
+
+
 class StoreSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="NS_STORE_", frozen=True, extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="NS_STORE_", frozen=True, extra="ignore", hide_input_in_errors=True
+    )
 
     database: str = Field(default=DEFAULT_DATABASE, min_length=1, max_length=255)
     cosmos_account: str | None = None
+
+    @field_validator("cosmos_account", mode="before")
+    @classmethod
+    def _cosmos_account(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            if COSMOS_ACCOUNT_PATTERN.fullmatch(value):
+                return value
+        raise ValueError("NS_STORE_COSMOS_ACCOUNT must be a Cosmos account name, not a URL or key")
 
 
 class AuthSettings(BaseSettings):

@@ -28,6 +28,7 @@ __all__ = [
     "FIELD_CUSTOMER",
     "FIELD_DOMAIN",
     "FIELD_ENTITY",
+    "FIELD_ENTITY_ID",
     "FIELD_ID",
     "build_filter",
     "build_search_text",
@@ -35,7 +36,8 @@ __all__ = [
     "scope_hash_of",
 ]
 
-FIELD_ID: Final = "id"
+FIELD_ID: Final = "id"  # opaque Azure document key (encoded)
+FIELD_ENTITY_ID: Final = "entity_id"  # canonical catalog id
 FIELD_ENTITY: Final = "entity"
 FIELD_CLOUD: Final = "cloud"
 FIELD_CUSTOMER: Final = "customer_id"
@@ -64,7 +66,8 @@ def build_filter(scope: IdentityScope, request: SearchRequest) -> str | None:
     """Return the ``$filter`` string, or ``None`` when nothing can be in scope.
 
     ``None`` means the caller must return an empty result without calling the service. The
-    clauses are ``cloud eq`` AND ``customer_id eq`` AND (``domain_id`` in allowed OR ``id`` in
+    clauses are ``cloud eq`` AND ``customer_id eq`` AND (``domain_id`` in allowed OR
+    ``entity_id`` in
     read grants) AND optional narrowing by entity and by requested domains. Requested domains
     outside the scope never widen anything: they only intersect (zero results, no error).
     """
@@ -96,7 +99,7 @@ def build_filter(scope: IdentityScope, request: SearchRequest) -> str | None:
     if allowed:
         access.append(_in(FIELD_DOMAIN, allowed))
     if granted:
-        access.append(_in(FIELD_ID, granted))
+        access.append(_in(FIELD_ENTITY_ID, granted))
     if not access:
         return None
 

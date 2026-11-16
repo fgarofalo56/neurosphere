@@ -1,4 +1,5 @@
-"""Prebuilt backends a TEST may hand to ``compose_app`` (PRP-29 wire contract).
+"""Prebuilt backends a TEST may hand to ``compose_app`` (PRP-29 wire contract;
+refused unless ``NS_ENV=local``, PRP-51).
 
 ``neurosphere_api.main.create`` never passes overrides, so nothing here is reachable from the
 production entry point; a test-only token authenticator exists only in test code that builds
@@ -13,7 +14,7 @@ a field per backend. Names in use are documented in ``runtime/builders/__init__.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from types import MappingProxyType
 from typing import Any
 
@@ -21,8 +22,9 @@ from neurosphere_core.auth.revocation import RevocationStore
 from neurosphere_core.auth.scope import PolicyRepository
 
 from neurosphere_api.authz import DenialRecorder, ScopeSource, TokenAuthenticator
+from neurosphere_api.runtime.errors import StartupRefusedError
 
-__all__ = ["CompositionOverrides"]
+__all__ = ["CompositionOverrides", "refuse_overrides_outside_local"]
 
 
 def _empty() -> Mapping[str, object]:
@@ -59,3 +61,20 @@ class CompositionOverrides:
 
     def backend(self, name: str) -> object | None:
         return self.backends.get(name)
+
+
+def refuse_overrides_outside_local(settings: Any, overrides: CompositionOverrides | None) -> None:
+    """Refuse test overrides unless ``settings.env == "local"``; names fields, never values."""
+    if overrides is None or getattr(settings, "env", None) == "local":
+        return
+    given = sorted(
+        f.name
+        for f in fields(overrides)
+        if (value := getattr(overrides, f.name)) is not None
+        and not (f.name == "backends" and not value)
+    )
+    if given:
+        raise StartupRefusedError(
+            "composition overrides are test-only and refused outside NS_ENV=local: "
+            + ", ".join(given)
+        )

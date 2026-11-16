@@ -19,6 +19,7 @@ from neurosphere_core.auth.scope import cosmos_repository as policy_store
 from neurosphere_core.catalog.partitioning import PartitionKeyShape, partition_key_paths
 from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
 from neurosphere_core.cloud import CloudName, Settings
+from neurosphere_core.deploy.approvals import cosmos_store as approvals_store
 from neurosphere_core.deploy.register import cosmos_store as register_store
 from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_core.lifecycle.rules import AUDIT_CONTAINERS
@@ -53,6 +54,7 @@ WIRE_CONTRACT: dict[str, tuple[str, ...]] = {
     "reports": ("/customer_id", "/domain_id"),
     "mcp_servers": ("/id",),
     "deploy_register": ("/deployment_id",),
+    "deploy_plan_approvals": ("/customer_id",),
     "recommendations": ("/customer_id", "/domain_id"),
     "evaluation_runs": ("/customer_id", "/domain_id"),
     "evaluation_results": ("/customer_id", "/domain_id"),
@@ -107,6 +109,9 @@ def test_audit_mcp_aggregates_and_register_constants() -> None:
     assert _paths(mcp_store.DEFAULT_MCP_SERVER_CONTAINER) == (mcp_store.PARTITION_KEY_PATH,)
     assert _paths("aggregates") == (aggregates_store.PARTITION_KEY_PATH,)
     assert _paths("deploy_register") == (register_store.PARTITION_KEY_PATH,)
+    assert _paths(approvals_store.DEFAULT_APPROVALS_CONTAINER) == (
+        approvals_store.PARTITION_KEY_PATH,
+    )
 
 
 def test_catalog_uses_the_repository_default_shape() -> None:

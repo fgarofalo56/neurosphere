@@ -90,6 +90,9 @@ def test_key_settings_come_from_the_ns_auth_environment(monkeypatch: pytest.Monk
 
 
 def test_outside_local_without_a_key_authz_is_not_ready(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "neurosphere_api.runtime.compose.refuse_overrides_outside_local", lambda *_: None
+    )
     configure_auth_env(monkeypatch)
     clock = FakeClock()
     composed = compose(

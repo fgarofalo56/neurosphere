@@ -186,8 +186,9 @@ def test_deploy_apply_opt_in_is_off_by_default_and_api_only_when_enabled() -> No
     )
     assert _env(enabled["api"])["NS_DEPLOY_APPLY_ENABLED"] == "true"
     assert _env(enabled["api"])["NS_DEPLOY_APPLY_REGISTER_CONTAINER"] == "deploy-register"
-    for other in ("workers", "frontend"):
-        assert not [k for k in _env(enabled[other]) if k.startswith("NS_DEPLOY_APPLY_")]
+    assert _env(enabled["workers"])["NS_DEPLOY_APPLY_ENABLED"] == "true"  # PRP-55 durable approvals
+    assert _env(enabled["workers"])["NS_DEPLOY_APPLY_REGISTER_CONTAINER"] == "deploy-register"
+    assert not [k for k in _env(enabled["frontend"]) if k.startswith("NS_DEPLOY_APPLY_")]
     bare = _containers(_render("--set", "deployApply.enabled=true"))
     assert "NS_DEPLOY_APPLY_REGISTER_CONTAINER" not in _env(bare["api"])  # unset is not rendered
 
@@ -197,7 +198,7 @@ def test_app_service_deploy_apply_opt_in_is_one_default_off_parameter() -> None:
     assert "param deployApplyEnabled bool = false" in text
     expected = "deployApplyEnabled ? [{ name: 'NS_DEPLOY_APPLY_ENABLED', value: 'true' }] : []"
     assert expected in text
-    assert text.count("deployApplySettings,") == 1  # the api site only
+    assert text.count("deployApplySettings,") == 2  # api and workers sites, never the frontend
 
 
 def test_evaluation_env_reaches_workers_and_api_pilot_ids() -> None:

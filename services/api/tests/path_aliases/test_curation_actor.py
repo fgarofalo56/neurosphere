@@ -21,6 +21,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     role,
 )
 from neurosphere_api.catalog.curation import get_clock, get_repository, get_review_queue
+from neurosphere_api.deprecation import DEPRECATION_HEADER
 from neurosphere_contracts.catalog.v1.edge_override import EdgeOverride
 from neurosphere_contracts.catalog.v1.invokes import InvokesRelation
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
@@ -152,6 +153,6 @@ def test_accepted_decision_on_the_alias_carries_the_successor_link() -> None:
     world = _World()
     response = world.decide(FORMS[0], principal_id_for(ALICE))
     assert response.status_code == 201
-    assert response.headers["deprecation"] == "true"
+    assert response.headers["deprecation"] == DEPRECATION_HEADER
     successor = f"/api/v1/catalog/curation/edges/{EDGE_ID}/decisions"
     assert response.headers["link"] == f'<{successor}>; rel="successor-version"'

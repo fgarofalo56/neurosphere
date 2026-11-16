@@ -49,12 +49,23 @@ Dev bearer token (emulator stack only): `dev-ingest.ns-dev-only-ingest-secret`. 
 | `NS_SEARCH_INDEX` | `neurosphere-catalog` | Index name. |
 | `NS_SEARCH_REGION` | unset | Region used for the capability lookup. |
 | `NS_SEARCH_REFRESH_SECONDS` | `30` | Per-scope re-index interval. |
+| `NS_SEARCH_ENSURE_INDEX` | `false` | When `true` and Azure serves, create or update the catalog index at API startup (needs index-write RBAC, Search Service Contributor). `false` creates nothing; an operator script can use `catalog_index_definition()` from `neurosphere_core.search.azure.schema`. |
 
 A stored `search` setting replaces the provider, service and index (see
 [system-settings.md](system-settings.md#stored-settings)).
 
 Search runs only with the caller's own scope; hits are re-fetched through the repository with that
 scope. Auth to Azure is `DefaultAzureCredential` only (no keys).
+
+Azure document keys are the URL-safe base64 (no padding) of the canonical id; the canonical id
+is stored in a filterable `entity_id` field, which is what grants filter on and what hits return.
+An index built with the old schema (key = canonical id, no `entity_id`) must be recreated with
+`ensure_index` (`NS_SEARCH_ENSURE_INDEX=true` on an empty index, or an operator script): hits from
+old documents have no `entity_id` and are skipped, which is safe but returns nothing.
+Freshness: catalog writes through the API are written to the index at once (write-through) and
+invalidate every scope's refresh; entities that leave a scope's enumeration are deleted from the
+index at that scope's next refresh (ref-counted across scopes). Refreshes are single-flight per
+scope, so one slow scope never delays another.
 
 ### Write targets (api and workers, same names)
 
@@ -82,9 +93,13 @@ configured.
 - Live Azure AI Search (index, indexer, security trimming) needs an approved environment and
   `NS_LIVE_APPROVED=1`.
 - Live Foundry / APIM writes need `NS_LIVE_APPROVED=1` and an operator-approved target.
-- The Azure index needs a `text` field that is not yet defined (IaC creates the service only).
-- Worker catalog writes do not invalidate the API's search index; freshness is the
-  `NS_SEARCH_REFRESH_SECONDS` interval.
+- The index schema now lives in code (`catalog_index_definition()`); creating it live is OPEN
+  (PRP-64).
+- Worker catalog writes (the `projections` and `foundry_discovery` roles) are written through
+  to Azure AI Search when the worker has `NS_SEARCH_PROVIDER=azure`, `NS_SEARCH_REGION` (a
+  supported capability row) and `NS_SEARCH_SERVICE` (and optionally `NS_SEARCH_INDEX`); the
+  workload identity needs Search Index Data Contributor. Otherwise nothing is wrapped. With
+  `fixture` they become visible in the API at the next refresh (`NS_SEARCH_REFRESH_SECONDS`).
 - No aliases are seeded (the sandbox generator emits none).
 - Multiple APIM gateways in one registry (needs a registry keyed by gateway).
 - `/v1` catalog search over HTTP needs an Entra token; the smoke test exercises it in-process

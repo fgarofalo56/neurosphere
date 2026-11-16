@@ -126,6 +126,17 @@
     },
     {
       "default_ttl": null,
+      "name": "deploy_plan_approvals",
+      "owner": "neurosphere_core.deploy.approvals.cosmos_store",
+      "partition_key": {
+        "kind": "Hash",
+        "paths": [
+          "/customer_id"
+        ]
+      }
+    },
+    {
+      "default_ttl": null,
       "name": "deploy_register",
       "owner": "neurosphere_core.deploy.register.cosmos_store",
       "partition_key": {

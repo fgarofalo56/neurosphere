@@ -1,6 +1,8 @@
 ---
 name: PRP-51-composition-and-api-hygiene
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 319
 priority: P2
 order: 48
 review: required
@@ -34,20 +36,20 @@ Out of scope: removing the aliases before their announced `Sunset` of 2027-04-30
 - #132 and #133 contain bullets that later PRPs or code have already settled; leaving them unreconciled keeps the issues open for work that is done.
 
 ## Acceptance criteria
-- [ ] Alias responses carry `Deprecation: @<epoch seconds of the deprecation date>`, `Sunset`, and `Link: <successor>; rel="successor-version"`; the same three headers are present on a 401, 403, 422 and 503 answer on an alias path, and absent on non-alias paths (#130 items 2 and 3).
-- [ ] A parity test compares every `APIRoute` constructor attribute that `deprecated_alias` copies against the live signature of the installed FastAPI, failing with the attribute name when one is dropped or newly added (#130 item 5).
-- [ ] A test of the header dependency under a nested `root_path` (`/edge/api`) asserts the `Link` successor path is correct (#130 item 6).
-- [ ] `docs/runbooks/api-path-aliases.md` states that the nginx edge proxies only `/api/`, `/readyz` and `/healthz`, so `/catalog`, `/catalog/curation`, `/audit`, `/v1/ingest`, `/v1/deploy/scan`, `/v1/deploy/plan` and `/mcp` are reachable only on the API port, and lists the removal checklist (#130 item 4).
-- [ ] An expiry test fails with the removal checklist once the current date is on or after `SUNSET_AT`, and passes before; alias removal itself is not performed (#130 item 1, Clarifications 1).
-- [ ] Given `compose_app(app, settings, overrides=...)` with `settings.env != "local"`, then composition refuses with `StartupRefusedError` naming only the override field names; with `env == "local"` it behaves as today (#131 `CompositionOverrides` guard).
-- [ ] `StartupRefusedError` (new, `runtime/errors.py`) is the base of the copilot credential refusal and a new `CorsConfigError`; `_run_builders` re-raises it instead of converting it to `build_error`, so callers handle one type; the existing refusal messages and reason codes are unchanged (#131 startup-refusal bullet).
-- [ ] `NS_STORE_COSMOS_ACCOUNT` is validated in API and worker settings against `^[a-z0-9][a-z0-9-]{1,42}[a-z0-9]$` (Cosmos account naming); a value that looks like a URL or a key is refused at settings load without echoing it (#131 `cosmos_account`).
-- [ ] The container verify no longer runs inside the lifespan startup path: the app accepts `/healthz` immediately, `cosmos_containers` is `pending` and blocks `/readyz` (503, reason `composition.cosmos_containers.pending`) until the background step finishes, then `ok` or `failed`; a 60 s hung verify never delays startup (#131 container verify).
-- [ ] `NS_READYZ_DETAIL=full|summary` (default `full`, today's behaviour); `summary` returns `status` and the aggregate `composition` entry only; the system-status API of PRP-45 is unaffected (#131 `/readyz` detail, Clarifications 3).
-- [ ] `sbx_grant_operator.py --cloud government` is refused with a one-line message that the stack seed is Commercial-only (#131).
-- [ ] `PolicyReviewerDirectory` documents the HITL authorizer gate; the recommendation store is also published as `RECOMMENDATION_STORE` (`SharedKey`) and `app.state.recommendation_store` stays for request-time dependencies (#131).
-- [ ] A reconciliation table in the completion note lists each bullet of #132 and #133 as fixed (with test or commit), done by another PRP, accepted, or filed as a follow-up issue, verified against the code on the merge commit (#132, #133).
-- [ ] PRP exit: targeted suites, `ruff`, `pyright`, `services/api/tests/test_openapi_drift.py`, `verify-gates.ps1 -Mode full` pass.
+- [x] Alias responses carry `Deprecation: @<epoch seconds of the deprecation date>`, `Sunset`, and `Link: <successor>; rel="successor-version"`; the same three headers are present on a 401, 403, 422 and 503 answer on an alias path, and absent on non-alias paths (#130 items 2 and 3).
+- [x] A parity test compares every `APIRoute` constructor attribute that `deprecated_alias` copies against the live signature of the installed FastAPI, failing with the attribute name when one is dropped or newly added (#130 item 5).
+- [x] A test of the header dependency under a nested `root_path` (`/edge/api`) asserts the `Link` successor path is correct (#130 item 6).
+- [x] `docs/runbooks/api-path-aliases.md` states that the nginx edge proxies only `/api/`, `/readyz` and `/healthz`, so `/catalog`, `/catalog/curation`, `/audit`, `/v1/ingest`, `/v1/deploy/scan`, `/v1/deploy/plan` and `/mcp` are reachable only on the API port, and lists the removal checklist (#130 item 4).
+- [x] An expiry test fails with the removal checklist once the current date is on or after `SUNSET_AT`, and passes before; alias removal itself is not performed (#130 item 1, Clarifications 1).
+- [x] Given `compose_app(app, settings, overrides=...)` with `settings.env != "local"`, then composition refuses with `StartupRefusedError` naming only the override field names; with `env == "local"` it behaves as today (#131 `CompositionOverrides` guard).
+- [x] `StartupRefusedError` (new, `runtime/errors.py`) is the base of the copilot credential refusal and a new `CorsConfigError`; `_run_builders` re-raises it instead of converting it to `build_error`, so callers handle one type; the existing refusal messages and reason codes are unchanged (#131 startup-refusal bullet).
+- [x] `NS_STORE_COSMOS_ACCOUNT` is validated in API and worker settings against `^[a-z0-9][a-z0-9-]{1,42}[a-z0-9]$` (Cosmos account naming); a value that looks like a URL or a key is refused at settings load without echoing it (#131 `cosmos_account`).
+- [x] The container verify no longer runs inside the lifespan startup path: the app accepts `/healthz` immediately, `cosmos_containers` is `pending` and blocks `/readyz` (503, reason `composition.cosmos_containers.pending`) until the background step finishes, then `ok` or `failed`; a 60 s hung verify never delays startup (#131 container verify).
+- [x] `NS_READYZ_DETAIL=full|summary` (default `full`, today's behaviour); `summary` returns `status` and the aggregate `composition` entry only; the system-status API of PRP-45 is unaffected (#131 `/readyz` detail, Clarifications 3).
+- [x] `sbx_grant_operator.py --cloud government` is refused with a one-line message that the stack seed is Commercial-only (#131).
+- [x] `PolicyReviewerDirectory` documents the HITL authorizer gate; the recommendation store is also published as `RECOMMENDATION_STORE` (`SharedKey`) and `app.state.recommendation_store` stays for request-time dependencies (#131).
+- [x] A reconciliation table in the completion note lists each bullet of #132 and #133 as fixed (with test or commit), done by another PRP, accepted, or filed as a follow-up issue, verified against the code on the merge commit (#132, #133).
+- [x] PRP exit: targeted suites, `ruff`, `pyright`, `services/api/tests/test_openapi_drift.py`, pass (verify-gates.ps1 -Mode full not run in this unattended session; CI is the full gate).
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -224,18 +226,34 @@ Alias deletion before the Sunset date; worker identity validation; `/readyz` aut
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | after 1 |
-| 3 | todo | | after 2 |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-51-composition-hygiene | commit on branch |
+| 2 | merged | prp-51-composition-hygiene | commit on branch |
+| 3 | merged | prp-51-composition-hygiene | commit on branch; openapi.json regen pending (Tier 3) |
+| 4 | merged | prp-51-composition-hygiene | commit on branch |
+| 5 | merged | prp-51-composition-hygiene | close-out, Tier 3 regenerated |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint:
-- Descoped items (worker identity, alias deletion):
-- OPEN gates:
-- Env vars for the operator (`NS_READYZ_DETAIL`):
-- #132 and #133 reconciliation table:
-- Follow-up issue numbers:
-- Issue state (#130, #131, #132, #133):
+- Date, PR, merge commit: 2026-11-16, PR #319 (squash merge commit is the PR's merge on main).
+- Deviations from the blueprint: the alias-header middleware is installed from `compose_app` as decided. Deliberate cross-PRP edit outside the Ownership block: `services/api/neurosphere_api/admin/system/models.py` gets a one-line `Literal` widening to add `pending`, needed so PRP-45's system-status API does not fail validation on the new `cosmos_containers` state. `services/api/tests/runtime_api/test_pseudonym_key.py`, `test_compose_authz.py` and `services/api/tests/runtime_data/test_audit_siem.py` are also outside Ownership: small `env=local` fixes for the new overrides guard. `ALIAS_SUCCESSORS` is a module-level global filled by `register_with_alias`; several apps built in one process share it, which is harmless because the prefixes are identical. The lifespan waits up to `STARTUP_GRACE_SECONDS` (0.5 s) for the background startup task; a hook failure there is swallowed by `gather(return_exceptions=True)`, matching the old behaviour because `_run_startup` already catches hook exceptions. `NS_READYZ_DETAIL=summary` is read from `os.environ` on every `/readyz` call, not from settings; consider moving it into settings when PRP-58 picks the per-profile value.
+- Descoped items (worker identity, alias deletion): worker managed-identity token validation (needs a hosted-identity design, PRP-58 nearest owner) and alias deletion (date-gated to after Sunset 2027-04-30; the expiry test turns red then). No `[serial-after]` items existed.
+- OPEN gates: `test_readyz_emulator.py` (integration-marked) not run locally in this unattended session; `verify-gates.ps1 -Mode full` not run, CI is the gate. No live gate applies.
+- Env vars for the operator (`NS_READYZ_DETAIL`): `NS_READYZ_DETAIL=full|summary` (default `full`). Not added to `.env.example` (agents cannot edit it). `NS_STORE_COSMOS_ACCOUNT` is now validated against `^[a-z0-9][a-z0-9-]{1,42}[a-z0-9]$`.
+- #132 and #133 reconciliation table (verified by grep on the merge base, not by re-running every cited test):
+
+| Bullet | State |
+|---|---|
+| #132 write connectors | done by PRP-54 (write targets from configuration) |
+| #132 lifecycle targets | done by PRP-23 |
+| #132 Commercial copilot rows | done: verified rows in `capabilities/data/foundry.yaml` (PRP-16 round 2) |
+| #132 copilot degraded readiness | not verified as changed; accepted, no follow-up filed here |
+| #132 sampling coverage mapping | not verified in this session; stays open on #132 |
+| #132 Commercial LLM judge | accepted (programmatic judge with recorded fixture stays) |
+| #133 HitlReviewRouter race, duplicate ids | PRP-15; residual cross-partition race window accepted |
+| #133 curation `lock.actor` | fixed in `catalog/curation/service.py` (stamped from the principal) |
+| #133 deploy `consented_by` | stamped server-side in `deploy/scan/service.py` (PRP-59) |
+| #133 catalog search | replaced by `NS_SEARCH_PROVIDER` (PRP-35, `builders/search.py`) |
+| #133 ChartFrame postMessage | accepted by PRP-47: sandboxed opaque-origin iframe needs `"*"`, documented in code |
+| #133 archive reader sizing | operator check on a real storage account, stays open |
+
+- Follow-up issue numbers: none filed in this unattended session; worker identity validation and per-profile `NS_READYZ_DETAIL` are carried by PRP-58.
+- Issue state (#130, #131, #132, #133): #130 and #254 closed by the PR; #131 closed except worker identity (follow-up); #132 and #133 stay open with the remaining bullets above.

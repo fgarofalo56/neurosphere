@@ -71,6 +71,7 @@ from neurosphere_api.runtime.builders import (
     BuilderSpec,
     ComponentUnavailableError,
 )
+from neurosphere_api.runtime.errors import StartupRefusedError
 from neurosphere_api.runtime.status import is_reason_code
 
 __all__ = [
@@ -92,7 +93,7 @@ _CREDENTIAL_MARKERS: Final = ("KEY", "SECRET", "PASSWORD")
 CopilotMode = Literal["disabled", "approved_endpoint", "foundry_agent"]
 
 
-class CopilotCredentialConfigError(BaseException):
+class CopilotCredentialConfigError(StartupRefusedError):
     """A credential-shaped ``NS_COPILOT_*`` variable is set: startup is refused (see module)."""
 
 

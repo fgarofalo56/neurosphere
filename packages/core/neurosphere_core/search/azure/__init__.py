@@ -11,6 +11,12 @@ from neurosphere_core.search.azure.fallback import (
     require_azure_search,
 )
 from neurosphere_core.search.azure.filters import build_filter, build_search_text, cache_key
+from neurosphere_core.search.azure.schema import (
+    catalog_index_definition,
+    decode_document_key,
+    encode_document_key,
+    ensure_index,
+)
 
 __all__ = [
     "AzureAuthorizedSearch",
@@ -20,6 +26,10 @@ __all__ = [
     "build_filter",
     "build_search_text",
     "cache_key",
+    "catalog_index_definition",
     "create_search_client",
+    "decode_document_key",
+    "encode_document_key",
+    "ensure_index",
     "require_azure_search",
 ]

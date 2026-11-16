@@ -1,0 +1,2 @@
+### Changed
+- PRP-51: deprecated path aliases now send RFC 9745 `Deprecation: @<epoch>`, `Sunset` and `Link` headers on every response including errors; test-only `CompositionOverrides` are refused outside `NS_ENV=local`; copilot and CORS startup refusals share `StartupRefusedError`; `NS_STORE_COSMOS_ACCOUNT` is validated; the Cosmos container verify runs in the background with a `pending` readiness state; new `NS_READYZ_DETAIL=full|summary` (default `full`). See `docs/runbooks/api-path-aliases.md` (PR #319).

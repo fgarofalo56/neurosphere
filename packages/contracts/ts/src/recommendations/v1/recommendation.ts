@@ -59,7 +59,7 @@ export type Currency = string;
 export type Date = string;
 
 /**
- * An evidence-backed suggestion (NS-03): kind, evidence window, coverage, uncertainty, prerequisites, projected estimate and owner. Recommendations are insights, not actions: executing one goes through the shared action executor (schemas/actions/v1). Cold start uses bounded rules rather than fabricated scores: when evidence_status is insufficient_evidence, score must be absent; when score is absent, evidence_status must be insufficient_evidence. A projected_estimate always cites price_version. candidate_duplicate is always advisory (consolidation review, never an automatic merge). Unknown numeric values are null, never 0. Rules JSON Schema cannot express: evidence_window.start < evidence_window.end (tests/contracts/validators.py::check_time_range_order); uncertainty.lower <= score <= uncertainty.upper when both present (tests/contracts/validators.py::check_recommendation_score_interval); every subject_ids and owner_id belongs to the same cloud and customer as the document (tests/contracts/validators.py::check_recommendation_same_boundary).
+ * An evidence-backed suggestion (NS-03): kind, evidence window, coverage, uncertainty, prerequisites, projected estimate and owner. Recommendations are insights, not actions: executing one goes through the shared action executor (schemas/actions/v1). Cold start uses bounded rules rather than fabricated scores: when evidence_status is insufficient_evidence, score must be absent; when score is absent, evidence_status must be insufficient_evidence. A projected_estimate always cites price_version. candidate_duplicate is always advisory (consolidation review, never an automatic merge). configuration_finding and unregistered_ai_resource (PRP-61) are deterministic rule findings: always advisory, method rule, and evidence_status sufficient is valid without a score (a deterministic check has no confidence to fabricate); they state that a configuration differs from the declared expectation, never that a deployment is safe or compliant. Unknown numeric values are null, never 0. Rules JSON Schema cannot express: evidence_window.start < evidence_window.end (tests/contracts/validators.py::check_time_range_order); uncertainty.lower <= score <= uncertainty.upper when both present (tests/contracts/validators.py::check_recommendation_score_interval); every subject_ids and owner_id belongs to the same cloud and customer as the document (tests/contracts/validators.py::check_recommendation_same_boundary).
  */
 export interface Recommendation {
   schema_version: SchemaVersion;
@@ -76,7 +76,9 @@ export interface Recommendation {
     | "error_rate_degradation"
     | "unused_agent"
     | "candidate_duplicate"
-    | "model_right_sizing";
+    | "model_right_sizing"
+    | "configuration_finding"
+    | "unregistered_ai_resource";
   /**
    * Canonical IDs of the agents, versions or deployments the recommendation is about.
    *

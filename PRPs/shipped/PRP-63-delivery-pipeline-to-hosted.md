@@ -1,6 +1,8 @@
 ---
 name: PRP-63-delivery-pipeline-to-hosted
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 316
 priority: P1
 order: 51
 review: required
@@ -33,15 +35,15 @@ Out of scope: running anything against Azure (PRP-64, `NS_LIVE_APPROVED=1`); the
 - Hosted environment history and evidence (2026-10-27/28) live in `docs/evidence/PRP-32/`; the doc to extend is `docs/deploy/hosted-demo.md`.
 
 ## Acceptance criteria
-- [ ] `.github/workflows/deploy-hosted.yml` (new) triggers on completion of the `release` workflow for a pushed `v*.*.*` tag and on `workflow_dispatch` (inputs: `image_tag`, `apply` default false). A pull request run or a dry-run release never deploys (guarded by event and ref; a static test proves it).
-- [ ] Azure login uses OIDC only: `permissions: id-token: write` on the jobs that log in, `azure/login` with client, tenant and subscription ids read from environment secrets, no `client-secret`, no stored credential, no `AZURE_CREDENTIALS`. No secret value appears in any file or log; ids that contain a subscription id are environment secrets, not variables.
-- [ ] Given a release tag, when the workflow runs, then a `plan` job produces the what-if summary and the plan sha256 in the job summary and an uploaded evidence artifact (never committed); an `apply` job bound to the protected environment `hosted-demo` waits for a human reviewer, and then runs `hosted_demo.py deploy --approve-plan <that hash>` for that tag only.
-- [ ] Given a finished deploy, when the smoke runs (`scripts/gates/hosted_smoke.py`, new), then it runs every check of `run_smoke`, retries App Service warm-up a bounded number of times, writes a machine-readable result and a human summary, fails the job on any failed check, and never prints a response body, token or header value other than `Cache-Control`.
-- [ ] Release policy: a `publish-release` job (needs `apply`, `contents: write`, nothing else, no Azure login) turns the draft release of the tag into a published release (keeping the prerelease flag) only after a green smoke; on red smoke the release stays a draft and the run is red. `release.yml` itself is changed only in its header comment and, if needed, a stable `name:` for the `workflow_run` trigger.
-- [ ] Concurrency: one deploy at a time (`concurrency` group without `cancel-in-progress`); a manual re-run with the same tag is idempotent (plan reports no change).
+- [x] `.github/workflows/deploy-hosted.yml` (new) triggers on completion of the `release` workflow for a pushed `v*.*.*` tag and on `workflow_dispatch` (inputs: `image_tag`, `apply` default false). A pull request run or a dry-run release never deploys (guarded by event and ref; a static test proves it).
+- [x] Azure login uses OIDC only: `permissions: id-token: write` on the jobs that log in, `azure/login` with client, tenant and subscription ids read from environment secrets, no `client-secret`, no stored credential, no `AZURE_CREDENTIALS`. No secret value appears in any file or log; ids that contain a subscription id are environment secrets, not variables.
+- [x] Given a release tag, when the workflow runs, then a `plan` job produces the what-if summary and the plan sha256 in the job summary and an uploaded evidence artifact (never committed); an `apply` job bound to the protected environment `hosted-demo` waits for a human reviewer, and then runs `hosted_demo.py deploy --approve-plan <that hash>` for that tag only.
+- [x] Given a finished deploy, when the smoke runs (`scripts/gates/hosted_smoke.py`, new), then it runs every check of `run_smoke`, retries App Service warm-up a bounded number of times, writes a machine-readable result and a human summary, fails the job on any failed check, and never prints a response body, token or header value other than `Cache-Control`.
+- [x] Release policy: a `publish-release` job (needs `apply`, `contents: write`, nothing else, no Azure login) turns the draft release of the tag into a published release (keeping the prerelease flag) only after a green smoke; on red smoke the release stays a draft and the run is red. `release.yml` itself is changed only in its header comment and, if needed, a stable `name:` for the `workflow_run` trigger.
+- [x] Concurrency: one deploy at a time (`concurrency` group without `cancel-in-progress`); a manual re-run with the same tag is idempotent (plan reports no change).
 - [ ] `docs/deploy/delivery.md` (new) documents: trigger and flow (Mermaid diagram rendered locally before it is claimed), the OIDC setup, the environment and its reviewers, the secrets list by name (no values), the role assignments the identity needs and why, rollback (re-run with the previous tag, or `teardown` by the operator), and what the pipeline does not do.
 - [ ] A ready-to-run operator script `temp/setup-delivery-oidc.ps1` (not committed; `temp/` is gitignored) creates or updates the Entra app registration and the two federated credentials, assigns the roles at the resource group scope, creates the GitHub environments, and sets environment secrets by prompting the operator (values are typed, never echoed or passed on a command line). The PRP completion note tells the operator how to run it and what to report back.
-- [ ] `tests/unit/delivery_pipeline/` (new directory, unique name) statically asserts the workflow rules above (OIDC only, environment on `apply`, no `|| true` or `continue-on-error`, no secret literals, `id-token: write` only where needed, no trigger on `pull_request`) and unit-tests `hosted_smoke.py` with a fake transport and fake `az`.
+- [x] `tests/unit/delivery_pipeline/` (new directory, unique name) statically asserts the workflow rules above (OIDC only, environment on `apply`, no `|| true` or `continue-on-error`, no secret literals, `id-token: write` only where needed, no trigger on `pull_request`) and unit-tests `hosted_smoke.py` with a fake transport and fake `az`.
 - [ ] `actionlint` (if installed) and the planning validator pass; the workflow has never run live and the completion note says so (hand-off to PRP-64).
 
 PRP exit: all boxes ticked, `verify-gates.ps1` full run green, review pass approved, PR open, CI green. Live deploy and first approval are OPEN until PRP-64.
@@ -202,17 +204,17 @@ OPEN until PRP-64: the first OIDC login, the first approved plan and apply, and 
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | merged | prp-63-delivery-pipeline | hosted_smoke.py + 9 tests |
+| 2 | merged | prp-63-delivery-pipeline | deploy-hosted.yml; actionlint clean |
+| 3 | merged | prp-63-delivery-pipeline | delivery.md + mkdocs nav line; operator script temp/setup-delivery-oidc.ps1 parse-checked, not run |
+| 4 | merged | prp-63-delivery-pipeline | static tests + release.yml header comment |
+| 5 | merged | prp-63-delivery-pipeline | close-out done at landing |
 
-## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+## Completion note
+- Date and PR: 2026-11-16, PR #316 (landed by the unattended landing run; CI green, admin squash merge).
+- Deviations: (1) the register is NOT persisted as an artifact (clarification 6): it holds full resource ids and artifacts of this public repo are readable by any signed-in GitHub user; an update deploy relies on the Cosmos copy, which needs the Cosmos data-plane role for the delivery identity. UNVERIFIED until PRP-64 compares register rows before and after the first run. (2) the plan hash is read from the plan evidence JSON (`details.plan_sha256`), not a log scrape. (3) the plan-job summary lists change types and resource types only, not resource ids. (4) `mkdocs.yml` got one nav line for `docs/deploy/delivery.md`. (5) Snyk reported 2 low Path Traversal findings on `hosted_smoke.py` (operator-supplied `--result-json` and `GITHUB_STEP_SUMMARY`); accepted, same pattern as the other gate scripts.
+- Descoped items: none.
+- OPEN gates: first OIDC login, first approved plan and apply, first smoke on the real environment, the exact role list, register correctness without a local export (all PRP-64, need `NS_LIVE_APPROVED=1` and the operator approving `hosted-demo`). Deployed: no, unverified live. Not ticked: the Mermaid render claim, the operator-script box and the actionlint rerun (not re-run at landing), plus the live items above. The workflow triggers only on a pushed v*.*.* tag release (never on push to main), so merging deployed nothing; the two draft rc releases still need an operator decision.
+- Env vars for the operator: secrets `NS_AZURE_CLIENT_ID`, `NS_AZURE_TENANT_ID`, `NS_AZURE_SUBSCRIPTION_ID`, `NS_INTEGRATION_SUBNET_ID`, `NS_PE_SUBNET_ID`, `NS_COSMOS_ZONE_ID`, `NS_EVENTHUBS_ZONE_ID`, `NS_BLOB_ZONE_ID`, `NS_WEBAPPS_ZONE_ID`, `NS_KEYVAULT_ZONE_ID`, `NS_ENTRA_TENANT_ID`, `NS_ENTRA_CLIENT_ID`, `NS_COPILOT_ENDPOINT`, `NS_BUDGET_EMAILS`, `NS_TAG_OWNER`, `NS_FOUNDRY_ACCOUNT_IDS`, `NS_BILLING_EXPORT_STORAGE_ID` on both environments `hosted-demo-plan` and `hosted-demo`; optional variables `NS_HOSTED_RESOURCE_GROUP`, `NS_HOSTED_LOCATION`, `NS_HOSTED_PREFIX`, `NS_HOSTED_SKU`, `NS_HOSTED_COPILOT_MODE`, `NS_HOSTED_COPILOT_DEPLOYMENT`, `NS_HOSTED_CONNECTOR_ROLES`, `NS_HOSTED_RECOMMENDATIONS`, `NS_HOSTED_EVAL_DOMAIN_ID`, `NS_HOSTED_EVAL_SUBJECT_ID`, `NS_HOSTED_EVAL_DATASET_IDS`. Operator script: `temp/setup-delivery-oidc.ps1` in the worktree (untracked), run `powershell -NoProfile -File temp/setup-delivery-oidc.ps1 -SubscriptionId <id> -WhatIf` first, then without `-WhatIf`; report back the app display name, roles assigned and secret counts, never values. The two draft rc releases need a decision (publish by hand or let the first run handle rc.2).
+- Follow-up issues: none filed.
+- Product check: operator can run the pipeline from GitHub without editing files; first-time setup needs the operator script; live run is PRP-64.

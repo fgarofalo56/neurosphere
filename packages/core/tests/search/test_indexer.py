@@ -36,9 +36,13 @@ RESTRICTED_TEXT = "classified-payroll-bot"
 class RecordingSink:
     def __init__(self) -> None:
         self.batches: list[list[str]] = []
+        self.deleted: list[str] = []
 
     async def upsert(self, documents: Sequence[SearchDocument]) -> None:
         self.batches.append([d.id for d in documents])
+
+    async def delete(self, ids: Sequence[str]) -> None:
+        self.deleted = list(ids)
 
 
 class FakeUploadBackend:
@@ -50,6 +54,9 @@ class FakeUploadBackend:
         self, documents: list[dict[str, Any]], **_kwargs: Any
     ) -> Any:
         self.calls.append(documents)
+        return [SimpleNamespace(succeeded=not self._fail) for _ in documents]
+
+    async def delete_documents(self, documents: list[dict[str, Any]], **_kwargs: Any) -> Any:
         return [SimpleNamespace(succeeded=not self._fail) for _ in documents]
 
 
@@ -126,7 +133,15 @@ async def test_azure_sink_upserts_documents_without_a_key_path() -> None:
     assert await CatalogIndexer(repo, sink).refresh(SCOPE_A) == 2
     assert len(backend.calls) == 1
     for doc in backend.calls[0]:
-        assert set(doc) == {"id", "entity", "cloud", "customer_id", "domain_id", "text"}
+        assert set(doc) == {
+            "id",
+            "entity_id",
+            "entity",
+            "cloud",
+            "customer_id",
+            "domain_id",
+            "text",
+        }
     assert len(store) == 2
 
 

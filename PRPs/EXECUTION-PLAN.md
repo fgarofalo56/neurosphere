@@ -56,24 +56,13 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W18
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-55: Real deploy apply](backlog/PRP-55-real-deploy-apply.md) | opus | required | none | PRP-58 | - | `prp-55-real-deploy-apply` |
-| 2 | [PRP-60: Search indexing hardening](backlog/PRP-60-search-indexing-hardening.md) | sonnet | required | none | PRP-44, PRP-55 | - | `prp-60-search-indexing-hardening` |
-
-Gate before the next wave: An operator can register a producer and a connector in the UI; hosted IaC builds offline with the connector roles.
-
 ### W19
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-63: Delivery pipeline to the hosted environment](backlog/PRP-63-delivery-pipeline-to-hosted.md) | sonnet | required | none | - | - | `prp-63-delivery-pipeline` |
-| 2 | [PRP-67: Hosted environment hardening](backlog/PRP-67-hosted-environment-hardening.md) | sonnet | required | none | - | - | `prp-67-hosted-hardening` |
-| 3 | [PRP-51: Composition and API hygiene](backlog/PRP-51-composition-and-api-hygiene.md) | sonnet | required | none | PRP-67 | - | `prp-51-composition-hygiene` |
-| 4 | [PRP-70: Contracts revision for the restored original scope](backlog/PRP-70-contracts-revision-restored-scope.md) | opus | required | none | - | - | `prp-70-contracts-restored-scope` |
-| 5 | [PRP-137: Telemetry agent identity resolution (external id to canonical agent id)](backlog/PRP-137-telemetry-agent-identity-resolution.md) | sonnet | required | none | - | - | `prp-137-agent-identity-resolution` |
+| 1 | [PRP-67: Hosted environment hardening](backlog/PRP-67-hosted-environment-hardening.md) | sonnet | required | none | - | - | `prp-67-hosted-hardening` |
+| 2 | [PRP-70: Contracts revision for the restored original scope](backlog/PRP-70-contracts-revision-restored-scope.md) | opus | required | none | - | - | `prp-70-contracts-restored-scope` |
+| 3 | [PRP-137: Telemetry agent identity resolution (external id to canonical agent id)](backlog/PRP-137-telemetry-agent-identity-resolution.md) | sonnet | required | none | - | - | `prp-137-agent-identity-resolution` |
 
 Gate before the next wave: Hosted hardening and the restored-scope contracts are merged (contracts reviewed, Opus), including tool and service identity on the telemetry event; observed agents resolve to catalog entries.
 
@@ -92,7 +81,7 @@ Gate before the next wave: `make demo-up` brings up a seeded world where every n
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-82: Hosted Azure profile with everything on, seeded and checked](backlog/PRP-82-hosted-profile-everything-on.md) | sonnet | required | PRP-63, PRP-67, PRP-60, PRP-71 | PRP-67 | - | `prp-82-hosted-everything-on` |
+| 1 | [PRP-82: Hosted Azure profile with everything on, seeded and checked](backlog/PRP-82-hosted-profile-everything-on.md) | sonnet | required | PRP-67, PRP-71 | PRP-67 | - | `prp-82-hosted-everything-on` |
 | 2 | [PRP-101: Sensitive-information detectors and typed redaction (pure core library)](backlog/PRP-101-sensitive-information-detectors-and-redaction.md) | opus | required | PRP-70, PRP-99 | - | - | `prp-101-detectors-and-redaction` |
 | 3 | [PRP-102: Encrypted interaction store, retention and legal hold](backlog/PRP-102-encrypted-interaction-store-and-retention.md) | opus | required | PRP-99 | PRP-107 | - | `prp-102-encrypted-interaction-store` |
 | 4 | [PRP-105: Governance policy engine core (definitions, evaluator, violations, exceptions, decide)](backlog/PRP-105-policy-engine-core.md) | opus | required | PRP-99, PRP-73 | PRP-102 | yes | `prp-105-policy-engine-core` |
@@ -103,11 +92,10 @@ Gate before the next wave: The hosted profile renders with everything on (offlin
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-61: Configuration detections and shadow-AI discovery](backlog/PRP-61-configuration-detections-and-shadow-ai-discovery.md) | sonnet | required | PRP-70 | PRP-56 | - | `prp-61-detections` |
-| 2 | [PRP-100: Telemetry tool and service identity, and per-tool and per-service aggregates](backlog/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | sonnet | required | PRP-70, PRP-71 | - | - | `prp-100-telemetry-tool-service-identity` |
-| 3 | [PRP-74: Live map topology backend (services and tools, facets, topology push, search, impact)](backlog/PRP-74-live-map-topology-backend.md) | sonnet | required | PRP-70, PRP-71, PRP-73, PRP-100, PRP-137 | PRP-100 | - | `prp-74-live-map-topology-backend` |
-| 4 | [PRP-103: Interaction capture policy and the ingest-edge capture path](backlog/PRP-103-interaction-capture-policy-and-edge.md) | opus | required | PRP-99, PRP-101, PRP-102 | PRP-103, PRP-107 | - | `prp-103-capture-policy-and-edge` |
-| 5 | [PRP-107: Notification channels and subscriptions (a notification that reaches a person)](backlog/PRP-107-notification-channels-and-subscriptions.md) | sonnet | required | PRP-99, PRP-102, PRP-105 | PRP-103, PRP-107 | - | `prp-107-notification-channels` |
+| 1 | [PRP-100: Telemetry tool and service identity, and per-tool and per-service aggregates](backlog/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | sonnet | required | PRP-70, PRP-71 | - | - | `prp-100-telemetry-tool-service-identity` |
+| 2 | [PRP-74: Live map topology backend (services and tools, facets, topology push, search, impact)](backlog/PRP-74-live-map-topology-backend.md) | sonnet | required | PRP-70, PRP-71, PRP-73, PRP-100, PRP-137 | PRP-100 | - | `prp-74-live-map-topology-backend` |
+| 3 | [PRP-103: Interaction capture policy and the ingest-edge capture path](backlog/PRP-103-interaction-capture-policy-and-edge.md) | opus | required | PRP-99, PRP-101, PRP-102 | PRP-103, PRP-107 | - | `prp-103-capture-policy-and-edge` |
+| 4 | [PRP-107: Notification channels and subscriptions (a notification that reaches a person)](backlog/PRP-107-notification-channels-and-subscriptions.md) | sonnet | required | PRP-99, PRP-102, PRP-105 | PRP-103, PRP-107 | - | `prp-107-notification-channels` |
 
 Gate before the next wave: Tools and services have real aggregates and appear on the map; capture works at the edge with all six metadata-only guards still failing closed when it is off; a notification is delivered to a local sink.
 
@@ -130,7 +118,7 @@ Gate before the next wave: An investigator can explore and export with reads aud
 | 1 | [PRP-75: "Find an agent" page and recommendation metrics](backlog/PRP-75-find-an-agent-ui-and-recommendation-metrics.md) | sonnet | required | PRP-72 | - | - | `prp-75-find-an-agent-ui` |
 | 2 | [PRP-76: Catalog registration completeness](backlog/PRP-76-catalog-registration-completeness.md) | sonnet | required | PRP-70, PRP-73, PRP-108, PRP-105 | - | - | `prp-76-catalog-registration-completeness` |
 | 3 | [PRP-77: Live map filters, search and incident view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | sonnet | required | PRP-74 | - | - | `prp-77-live-map-filters-search-incident` |
-| 4 | [PRP-109: North-star scenario acceptance (the governance definition of done)](backlog/PRP-109-north-star-scenario-acceptance.md) | opus | required | PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82, PRP-63, PRP-71 | - | - | `prp-109-north-star-acceptance` |
+| 4 | [PRP-109: North-star scenario acceptance (the governance definition of done)](backlog/PRP-109-north-star-scenario-acceptance.md) | opus | required | PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82, PRP-71 | - | - | `prp-109-north-star-acceptance` |
 
 Gate before the next wave: The north-star scenario passes on the local stack (PRP-109); the hosted run is evidenced or recorded OPEN. Find an agent, catalog history and the map incident view work.
 
@@ -181,10 +169,10 @@ Gate before the next wave: Unity Catalog is mapped; the Microsoft 365, GitHub Co
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-119: Over-privilege findings and "who could access"](backlog/PRP-119-over-privilege-findings-and-could-access.md) | sonnet | required | PRP-118, PRP-73, PRP-105, PRP-61, PRP-120 | - | - | `prp-119-over-privilege-could-access` |
+| 1 | [PRP-119: Over-privilege findings and "who could access"](backlog/PRP-119-over-privilege-findings-and-could-access.md) | sonnet | required | PRP-118, PRP-73, PRP-105, PRP-120 | - | - | `prp-119-over-privilege-could-access` |
 | 2 | [PRP-124: OpenAI ChatGPT Enterprise connector](backlog/PRP-124-openai-chatgpt-enterprise-connector.md) | sonnet | required | PRP-110, PRP-117 | - | - | `prp-124-openai-enterprise-connector` |
 | 3 | [PRP-125: Anthropic Claude connector](backlog/PRP-125-anthropic-claude-connector.md) | sonnet | required | PRP-110, PRP-117 | - | - | `prp-125-anthropic-claude-connector` |
-| 4 | [PRP-126: Shadow-AI discovery from identity and cloud-app data](backlog/PRP-126-shadow-ai-discovery-identity-and-cloud-apps.md) | sonnet | required | PRP-61, PRP-110, PRP-117, PRP-118 | - | - | `prp-126-shadow-ai-identity` |
+| 4 | [PRP-126: Shadow-AI discovery from identity and cloud-app data](backlog/PRP-126-shadow-ai-discovery-identity-and-cloud-apps.md) | sonnet | required | PRP-110, PRP-117, PRP-118 | - | - | `prp-126-shadow-ai-identity` |
 
 Gate before the next wave: Over-privilege findings and "who could" answers show their coverage; every estate connector is built or shown as not built with the reason on the coverage page.
 
@@ -202,7 +190,7 @@ Gate before the next wave: The AI system register and tiering are usable; alert 
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-80: Copilot docs retrieval, telemetry summaries and the groundedness set](backlog/PRP-80-copilot-docs-retrieval-and-groundedness.md) | opus | required | PRP-78, PRP-60 | - | - | `prp-80-copilot-docs-retrieval` |
+| 1 | [PRP-80: Copilot docs retrieval, telemetry summaries and the groundedness set](backlog/PRP-80-copilot-docs-retrieval-and-groundedness.md) | opus | required | PRP-78 | - | - | `prp-80-copilot-docs-retrieval` |
 | 2 | [PRP-129: CI/CD registration and policy gate](backlog/PRP-129-cicd-registration-and-policy-gate.md) | opus | required | PRP-108, PRP-105, PRP-127 | - | - | `prp-129-cicd-gate` |
 | 3 | [PRP-130: Owner re-attestation campaigns](backlog/PRP-130-owner-reattestation-campaigns.md) | sonnet | required | PRP-105, PRP-107, PRP-110, PRP-76 | - | - | `prp-130-attestation-campaigns` |
 | 4 | [PRP-133: Ticketing integration](backlog/PRP-133-ticketing-integration.md) | opus | required | PRP-132, PRP-117, PRP-101 | - | - | `prp-133-ticketing` |
@@ -226,7 +214,7 @@ Gate before the next wave: Cards export from recorded facts; the chargeback view
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-64: Live gates campaign, Azure service gates (operator-attended)](backlog/PRP-64-live-gates-campaign.md) | sonnet | required | PRP-62, PRP-78, PRP-80 | - | - | `prp-64-live-gates` |
 | 2 | [PRP-69: Private-network MCP servers (per-server SSRF override)](backlog/PRP-69-mcp-private-network-servers.md) | opus | required | none | PRP-67 | - | `prp-69-mcp-private-network` |
-| 3 | [PRP-135: Semantic matching and embedding port](backlog/PRP-135-semantic-matching-and-embedding-port.md) | sonnet | required | PRP-72, PRP-80, PRP-60 | - | - | `prp-135-semantic-matching` |
+| 3 | [PRP-135: Semantic matching and embedding port](backlog/PRP-135-semantic-matching-and-embedding-port.md) | sonnet | required | PRP-72, PRP-80 | - | - | `prp-135-semantic-matching` |
 | 4 | [PRP-136: Governance live gates campaign (operator-attended)](backlog/PRP-136-governance-live-gates-campaign.md) | sonnet | required | PRP-102, PRP-107, PRP-109, PRP-111, PRP-112, PRP-118, PRP-120, PRP-121, PRP-122, PRP-123, PRP-124, PRP-125, PRP-126, PRP-129, PRP-133 | PRP-135, PRP-64 | - | `prp-136-governance-live-gates` |
 
 Gate before the next wave: Every Azure and governance live gate has evidence or is recorded OPEN with its reason.
@@ -235,7 +223,7 @@ Gate before the next wave: Every Azure and governance live gate has evidence or 
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-66: Operations and sign-off gates (operator-attended)](backlog/PRP-66-operations-and-sign-off-gates.md) | sonnet | required | PRP-55, PRP-63, PRP-67, PRP-84, PRP-82, PRP-77, PRP-109 | PRP-64 | - | `prp-66-operations-gates` |
+| 1 | [PRP-66: Operations and sign-off gates (operator-attended)](backlog/PRP-66-operations-and-sign-off-gates.md) | sonnet | required | PRP-67, PRP-84, PRP-82, PRP-77, PRP-109 | PRP-64 | - | `prp-66-operations-gates` |
 | 2 | [PRP-85: Deployment target, neutral ports and the adapter boundary (multi-cloud foundation)](backlog/PRP-85-deployment-target-ports-and-adapter-boundary.md) | opus | required | none | - | - | `prp-85-deployment-target-ports` |
 
 Gate before the next wave: Sign-off gates are recorded; the adapter boundary test is in CI with its known-leaks list.
@@ -246,7 +234,7 @@ Gate before the next wave: Sign-off gates are recorded; the adapter boundary tes
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-86: Contracts for platforms (capability-matrix platform dimension, deployment target, credential-reference kinds)](backlog/PRP-86-contracts-platform-dimension-and-credential-kinds.md) | opus | required | PRP-85, PRP-70, PRP-107, PRP-117 | - | - | `prp-86-contracts-platform` |
 | 2 | [PRP-88: Worker composition seam, event consumer and object store ports](backlog/PRP-88-worker-composition-seam-event-and-object-ports.md) | sonnet | required | PRP-85 | PRP-85 | yes | `prp-88-worker-seam-event-object-ports` |
-| 3 | [PRP-87: API composition seam and adapter-package scaffolding (no Azure behaviour change)](backlog/PRP-87-api-composition-seam-and-adapter-packages.md) | opus | required | PRP-85, PRP-51, PRP-67 | PRP-87 | - | `prp-87-api-composition-seam` |
+| 3 | [PRP-87: API composition seam and adapter-package scaffolding (no Azure behaviour change)](backlog/PRP-87-api-composition-seam-and-adapter-packages.md) | opus | required | PRP-85, PRP-67 | PRP-87 | - | `prp-87-api-composition-seam` |
 
 Gate before the next wave: API and worker composition go through the backend seam with no Azure behaviour change (existing suites and the real-stack job green).
 
@@ -266,7 +254,7 @@ Gate before the next wave: PostgreSQL catalog and security stores, Kafka and obj
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-90: PostgreSQL data-plane stores](backlog/PRP-90-postgres-data-plane-stores.md) | sonnet | required | PRP-88, PRP-89, PRP-102, PRP-107, PRP-117 | PRP-87 | - | `prp-90-postgres-data-plane-stores` |
-| 2 | [PRP-91: PostgreSQL control-plane stores and full-text search](backlog/PRP-91-postgres-control-plane-stores-and-search.md) | sonnet | required | PRP-87, PRP-88, PRP-89, PRP-60, PRP-105, PRP-127, PRP-131 | PRP-90 | - | `prp-91-postgres-control-plane-stores-and-search` |
+| 2 | [PRP-91: PostgreSQL control-plane stores and full-text search](backlog/PRP-91-postgres-control-plane-stores-and-search.md) | sonnet | required | PRP-87, PRP-88, PRP-89, PRP-105, PRP-127, PRP-131 | PRP-90 | - | `prp-91-postgres-control-plane-stores-and-search` |
 | 3 | [PRP-94: Secret readers and workload identity for AWS, GCP and Kubernetes](backlog/PRP-94-secret-readers-and-workload-identity.md) | opus | required | PRP-86, PRP-89, PRP-92, PRP-95, PRP-102 | - | - | `prp-94-secret-readers` |
 
 Gate before the next wave: Every store Protocol, including the governance-core stores, has a PostgreSQL implementation that passes the same conformance checks as the Cosmos one; secret readers and workload identity pass theirs.
@@ -275,7 +263,7 @@ Gate before the next wave: Every store Protocol, including the governance-core s
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-96: Helm for four platforms, portable compose profile, on-prem reference and air-gap bundle](backlog/PRP-96-helm-for-four-platforms-and-on-prem-reference.md) | sonnet | required | PRP-89, PRP-90, PRP-91, PRP-92, PRP-93, PRP-94, PRP-95, PRP-63, PRP-67, PRP-105, PRP-107, PRP-117, PRP-130, PRP-132 | - | - | `prp-96-helm-for-four-platforms-and-on-prem-reference` |
+| 1 | [PRP-96: Helm for four platforms, portable compose profile, on-prem reference and air-gap bundle](backlog/PRP-96-helm-for-four-platforms-and-on-prem-reference.md) | sonnet | required | PRP-89, PRP-90, PRP-91, PRP-92, PRP-93, PRP-94, PRP-95, PRP-67, PRP-105, PRP-107, PRP-117, PRP-130, PRP-132 | - | - | `prp-96-helm-for-four-platforms-and-on-prem-reference` |
 | 2 | [PRP-97: Reference Terraform for AWS and GCP](backlog/PRP-97-terraform-reference-for-aws-and-gcp.md) | sonnet | required | PRP-85, PRP-94 | PRP-87, PRP-96 | - | `prp-97-terraform-reference-for-aws-and-gcp` |
 
 Gate before the next wave: The chart renders for all four platforms and the Azure manifests are byte-identical to before; the on-prem reference installs on a local cluster; AWS and GCP Terraform validates.
@@ -292,13 +280,7 @@ Gate before the next wave: No Azure import remains outside adapter modules; the 
 
 ```mermaid
 flowchart LR
-  subgraph W18
-    P55["PRP-55"]
-    P60["PRP-60"]
-  end
   subgraph W19
-    P51["PRP-51"]
-    P63["PRP-63"]
     P67["PRP-67"]
     P70["PRP-70"]
     P137["PRP-137"]
@@ -316,7 +298,6 @@ flowchart LR
     P105["PRP-105"]
   end
   subgraph W22
-    P61["PRP-61"]
     P74["PRP-74"]
     P100["PRP-100"]
     P103["PRP-103"]
@@ -414,12 +395,9 @@ flowchart LR
   subgraph W39
     P98["PRP-98"]
   end
-  P70 --> P61
   P62 --> P64
   P78 --> P64
   P80 --> P64
-  P55 --> P66
-  P63 --> P66
   P67 --> P66
   P84 --> P66
   P82 --> P66
@@ -444,11 +422,8 @@ flowchart LR
   P72 --> P78
   P71 --> P78
   P78 --> P80
-  P60 --> P80
   P70 --> P81
-  P63 --> P82
   P67 --> P82
-  P60 --> P82
   P71 --> P82
   P81 --> P83
   P102 --> P83
@@ -460,7 +435,6 @@ flowchart LR
   P107 --> P86
   P117 --> P86
   P85 --> P87
-  P51 --> P87
   P67 --> P87
   P85 --> P88
   P85 --> P89
@@ -474,7 +448,6 @@ flowchart LR
   P87 --> P91
   P88 --> P91
   P89 --> P91
-  P60 --> P91
   P105 --> P91
   P127 --> P91
   P131 --> P91
@@ -497,7 +470,6 @@ flowchart LR
   P93 --> P96
   P94 --> P96
   P95 --> P96
-  P63 --> P96
   P67 --> P96
   P105 --> P96
   P107 --> P96
@@ -553,7 +525,6 @@ flowchart LR
   P107 --> P109
   P108 --> P109
   P82 --> P109
-  P63 --> P109
   P71 --> P109
   P99 --> P110
   P103 --> P111
@@ -586,7 +557,6 @@ flowchart LR
   P118 --> P119
   P73 --> P119
   P105 --> P119
-  P61 --> P119
   P120 --> P119
   P110 --> P120
   P117 --> P120
@@ -602,7 +572,6 @@ flowchart LR
   P117 --> P124
   P110 --> P125
   P117 --> P125
-  P61 --> P126
   P110 --> P126
   P117 --> P126
   P118 --> P126
@@ -636,7 +605,6 @@ flowchart LR
   P137 --> P134
   P72 --> P135
   P80 --> P135
-  P60 --> P135
   P102 --> P136
   P107 --> P136
   P109 --> P136
@@ -662,10 +630,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W18 | PRP-55 | `packages/core/neurosphere_core/stores/containers.py`<br>`infra/compose/cosmos-containers.json`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
-| W18 | PRP-60 | `services/api/neurosphere_api/runtime/builders/search.py` |
-| W19 | PRP-51 | `services/api/neurosphere_api/runtime/builders/__init__.py`<br>`services/api/neurosphere_api/routers.py` |
-| W19 | PRP-63 | `.github/workflows/deploy-hosted.yml`<br>`.github/workflows/release.yml` |
 | W19 | PRP-67 | `infra/demo/**`<br>`infra/appservice/main.bicep`<br>`infra/helm/**` |
 | W19 | PRP-70 | `packages/contracts/schemas/**` |
 | W19 | PRP-137 | `services/workers/neurosphere_workers/runtime/factories.py` |
@@ -699,38 +663,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-55 (W18)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-55-real-deploy-apply.md
-
-Context for this run: wave W18 of PRPs/EXECUTION-PLAN.md, branch prp-55-real-deploy-apply cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-60 (W18)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-60-search-indexing-hardening.md
-
-Context for this run: wave W18 of PRPs/EXECUTION-PLAN.md, branch prp-60-search-indexing-hardening cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-51 (W19)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-51-composition-and-api-hygiene.md
-
-Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-51-composition-hygiene cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-63 (W19)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-63-delivery-pipeline-to-hosted.md
-
-Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-63-delivery-pipeline cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-67 (W19)
 
@@ -793,7 +725,7 @@ Context for this run: wave W20 of PRPs/EXECUTION-PLAN.md, branch prp-99-governan
 ```text
 /prp:prp-execute PRPs/backlog/PRP-82-hosted-profile-everything-on.md
 
-Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-82-hosted-everything-on cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-63, PRP-67, PRP-60, PRP-71 are in PRPs/shipped/ on origin/main; if not, stop and say so. PRP-105 holds the compose stack in this wave: do not run docker compose or make stack-up. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-82-hosted-everything-on cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-67, PRP-71 are in PRPs/shipped/ on origin/main; if not, stop and say so. PRP-105 holds the compose stack in this wave: do not run docker compose or make stack-up. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-101 (W21)
@@ -818,14 +750,6 @@ Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-102-encrypt
 /prp:prp-execute PRPs/backlog/PRP-105-policy-engine-core.md
 
 Context for this run: wave W21 of PRPs/EXECUTION-PLAN.md, branch prp-105-policy-engine-core cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-99, PRP-73 are in PRPs/shipped/ on origin/main; if not, stop and say so. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-61 (W22)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-61-configuration-detections-and-shadow-ai-discovery.md
-
-Context for this run: wave W22 of PRPs/EXECUTION-PLAN.md, branch prp-61-detections cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-70 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-74 (W22)
@@ -929,7 +853,7 @@ Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-77-live-map
 ```text
 /prp:prp-execute PRPs/backlog/PRP-109-north-star-scenario-acceptance.md
 
-Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-109-north-star-acceptance cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82, PRP-63, PRP-71 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-109-north-star-acceptance cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82, PRP-71 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-79 (W25)
@@ -1057,7 +981,7 @@ Context for this run: wave W28 of PRPs/EXECUTION-PLAN.md, branch prp-123-github-
 ```text
 /prp:prp-execute PRPs/backlog/PRP-119-over-privilege-findings-and-could-access.md
 
-Context for this run: wave W29 of PRPs/EXECUTION-PLAN.md, branch prp-119-over-privilege-could-access cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-118, PRP-73, PRP-105, PRP-61, PRP-120 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W29 of PRPs/EXECUTION-PLAN.md, branch prp-119-over-privilege-could-access cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-118, PRP-73, PRP-105, PRP-120 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-124 (W29)
@@ -1081,7 +1005,7 @@ Context for this run: wave W29 of PRPs/EXECUTION-PLAN.md, branch prp-125-anthrop
 ```text
 /prp:prp-execute PRPs/backlog/PRP-126-shadow-ai-discovery-identity-and-cloud-apps.md
 
-Context for this run: wave W29 of PRPs/EXECUTION-PLAN.md, branch prp-126-shadow-ai-identity cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-61, PRP-110, PRP-117, PRP-118 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W29 of PRPs/EXECUTION-PLAN.md, branch prp-126-shadow-ai-identity cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-110, PRP-117, PRP-118 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-127 (W30)
@@ -1113,7 +1037,7 @@ Context for this run: wave W30 of PRPs/EXECUTION-PLAN.md, branch prp-132-alert-r
 ```text
 /prp:prp-execute PRPs/backlog/PRP-80-copilot-docs-retrieval-and-groundedness.md
 
-Context for this run: wave W31 of PRPs/EXECUTION-PLAN.md, branch prp-80-copilot-docs-retrieval cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-78, PRP-60 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W31 of PRPs/EXECUTION-PLAN.md, branch prp-80-copilot-docs-retrieval cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-78 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-129 (W31)
@@ -1193,7 +1117,7 @@ Context for this run: wave W33 of PRPs/EXECUTION-PLAN.md, branch prp-69-mcp-priv
 ```text
 /prp:prp-execute PRPs/backlog/PRP-135-semantic-matching-and-embedding-port.md
 
-Context for this run: wave W33 of PRPs/EXECUTION-PLAN.md, branch prp-135-semantic-matching cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-72, PRP-80, PRP-60 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W33 of PRPs/EXECUTION-PLAN.md, branch prp-135-semantic-matching cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-72, PRP-80 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-136 (W33)
@@ -1209,7 +1133,7 @@ Context for this run: wave W33 of PRPs/EXECUTION-PLAN.md, branch prp-136-governa
 ```text
 /prp:prp-execute PRPs/backlog/PRP-66-operations-and-sign-off-gates.md
 
-Context for this run: wave W34 of PRPs/EXECUTION-PLAN.md, branch prp-66-operations-gates cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-55, PRP-63, PRP-67, PRP-84, PRP-82, PRP-77, PRP-109 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W34 of PRPs/EXECUTION-PLAN.md, branch prp-66-operations-gates cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-67, PRP-84, PRP-82, PRP-77, PRP-109 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-85 (W34)
@@ -1233,7 +1157,7 @@ Context for this run: wave W35 of PRPs/EXECUTION-PLAN.md, branch prp-86-contract
 ```text
 /prp:prp-execute PRPs/backlog/PRP-87-api-composition-seam-and-adapter-packages.md
 
-Context for this run: wave W35 of PRPs/EXECUTION-PLAN.md, branch prp-87-api-composition-seam cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-85, PRP-51, PRP-67 are in PRPs/shipped/ on origin/main; if not, stop and say so. PRP-88 holds the compose stack in this wave: do not run docker compose or make stack-up. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W35 of PRPs/EXECUTION-PLAN.md, branch prp-87-api-composition-seam cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-85, PRP-67 are in PRPs/shipped/ on origin/main; if not, stop and say so. PRP-88 holds the compose stack in this wave: do not run docker compose or make stack-up. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-88 (W35)
@@ -1289,7 +1213,7 @@ Context for this run: wave W37 of PRPs/EXECUTION-PLAN.md, branch prp-90-postgres
 ```text
 /prp:prp-execute PRPs/backlog/PRP-91-postgres-control-plane-stores-and-search.md
 
-Context for this run: wave W37 of PRPs/EXECUTION-PLAN.md, branch prp-91-postgres-control-plane-stores-and-search cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-87, PRP-88, PRP-89, PRP-60, PRP-105, PRP-127, PRP-131 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W37 of PRPs/EXECUTION-PLAN.md, branch prp-91-postgres-control-plane-stores-and-search cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-87, PRP-88, PRP-89, PRP-105, PRP-127, PRP-131 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-94 (W37)
@@ -1305,7 +1229,7 @@ Context for this run: wave W37 of PRPs/EXECUTION-PLAN.md, branch prp-94-secret-r
 ```text
 /prp:prp-execute PRPs/backlog/PRP-96-helm-for-four-platforms-and-on-prem-reference.md
 
-Context for this run: wave W38 of PRPs/EXECUTION-PLAN.md, branch prp-96-helm-for-four-platforms-and-on-prem-reference cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-89, PRP-90, PRP-91, PRP-92, PRP-93, PRP-94, PRP-95, PRP-63, PRP-67, PRP-105, PRP-107, PRP-117, PRP-130, PRP-132 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W38 of PRPs/EXECUTION-PLAN.md, branch prp-96-helm-for-four-platforms-and-on-prem-reference cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-89, PRP-90, PRP-91, PRP-92, PRP-93, PRP-94, PRP-95, PRP-67, PRP-105, PRP-107, PRP-117, PRP-130, PRP-132 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-97 (W38)
