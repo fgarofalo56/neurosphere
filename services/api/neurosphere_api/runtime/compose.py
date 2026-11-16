@@ -45,7 +45,8 @@ from neurosphere_api.runtime.builders import (
     default_builders,
 )
 from neurosphere_api.runtime.cors import install_cors
-from neurosphere_api.runtime.overrides import CompositionOverrides
+from neurosphere_api.runtime.errors import StartupRefusedError
+from neurosphere_api.runtime.overrides import CompositionOverrides, refuse_overrides_outside_local
 from neurosphere_api.runtime.readiness import install_readiness
 from neurosphere_api.runtime.status import ComponentRegistry
 
@@ -89,6 +90,8 @@ def _run_builders(state: CompositionState, builders: Sequence[BuilderSpec]) -> N
     for spec in builders:
         try:
             spec.build(BuildContext(state, spec))
+        except StartupRefusedError:
+            raise  # a refusal is a hard stop, never a degraded component
         except Exception as exc:
             _log.error("builder %s raised %s", spec.name, type(exc).__name__)
             for name in spec.components:
@@ -178,6 +181,7 @@ def compose_app(
     none of them). ``environ`` feeds the environment readiness probes (default ``os.environ``);
     the settings classes read the process environment themselves.
     """
+    refuse_overrides_outside_local(settings, overrides)
     env = dict(os.environ if environ is None else environ)
     install_cors(app)
     install_alias_headers(app)

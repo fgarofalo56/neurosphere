@@ -129,6 +129,9 @@ def test_validator_and_deriver_bound_to_different_tenants_fail(
 
 
 def test_outside_local_customer_id_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "neurosphere_api.runtime.compose.refuse_overrides_outside_local", lambda *_: None
+    )
     configure_auth_env(monkeypatch, PSEUDONYM_KEY="k" * 40)
     monkeypatch.setenv(
         "NS_AUTH_PSEUDONYM_KEY_REFERENCE", "https://ns-test-kv.vault.azure.net/secrets/pseudonym"

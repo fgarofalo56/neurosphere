@@ -224,7 +224,7 @@ Alias deletion before the Sunset date; worker identity validation; `/readyz` aut
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-51-composition-hygiene | commit on branch |
-| 2 | todo | | after 1 |
+| 2 | merged | prp-51-composition-hygiene | commit on branch |
 | 3 | todo | | after 2 |
 | 4 | todo | | |
 | 5 | todo | | |
