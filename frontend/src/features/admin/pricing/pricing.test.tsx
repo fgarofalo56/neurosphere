@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { fakeFetch, problem, renderAdmin, stubResizeObserver } from "../shared/test-support";
-import { groupAmount, isDecimalAmount, parseThresholds, showAmount } from "./decimal";
+import { isDecimalAmount, parseThresholds, showAmount } from "./decimal";
 import { PricingPage } from "./PricingPage";
 import { parseRows } from "./PriceSheetsPanel";
 
@@ -55,7 +55,13 @@ const BUDGET = {
 };
 const DOMAINS = {
   items: [
-    { domain_id: FINANCE, display_name: "Finance", display_name_source: "catalog", cloud: "commercial", permissions: [] },
+    {
+      domain_id: FINANCE,
+      display_name: "Finance",
+      display_name_source: "catalog",
+      cloud: "commercial",
+      permissions: [],
+    },
   ],
 };
 
@@ -71,7 +77,6 @@ describe("decimal helpers", () => {
     expect(isDecimalAmount("0.1234567890123")).toBe(false);
     // 0.1 + 0.2 as strings stays as received.
     expect(showAmount("0.300000000004")).toBe("0.300000000004");
-    expect(groupAmount("1234567.125")).toBe("1,234,567.125");
     expect(showAmount(null)).toBe("Unknown");
     expect(showAmount("0")).toBe("0");
     expect(parseThresholds("50, 80,100")).toEqual([50, 80, 100]);
@@ -115,49 +120,71 @@ describe("PricingPage", () => {
     await waitFor(() => expect(screen.getAllByTestId("forbidden-state")).toHaveLength(2));
   });
 
-  it("uploads a price sheet and shows the API field pointer for a bad row", { timeout: 30000 }, async () => {
-    let reject = true;
-    const { impl, calls } = fakeFetch(
-      handler((req) => {
-        if (req.method !== "POST" || !req.url.pathname.endsWith("/price-sheets")) return undefined;
-        if (reject) {
-          reject = false;
-          return problem(422, "invalid_schema", "/body/rows/0/retail_price: bad");
-        }
-        return {
-          status: 201,
-          body: {
-            created: true,
-            sheet: SHEETS.items[1],
-            coverage: { snapshot_id: "s", rows: 1, models_priced: 1, models_incomplete: [], rows_without_token_meter: 0, warnings: [] },
-          },
-        };
-      }),
-    );
-    renderAdmin(<PricingPage />, impl);
-    await screen.findAllByTestId("price-sheet-row");
-    fireEvent.change(screen.getByLabelText(/Snapshot id/), { target: { value: "azure-2026-12" } });
-    fireEvent.change(screen.getByLabelText(/Source URL/), { target: { value: "https://prices.example.invalid/s" } });
-    fireEvent.change(screen.getByLabelText(/Retrieval date/), { target: { value: "2026-12-02" } });
-    fireEvent.change(screen.getByLabelText(/Effective date/), { target: { value: "2026-12-01" } });
-    const submitButton = screen.getByRole("button", { name: "Upload price sheet" });
-    expect(submitButton.hasAttribute("disabled")).toBe(true);
-    fireEvent.change(screen.getByLabelText(/Rows \(JSON array\)/), {
-      target: {
-        value:
-          '[{"service_name":"s","sku_name":"k","unit_of_measure":"1K","retail_price":"0.300000000004"}]',
-      },
-    });
-    expect(submitButton.hasAttribute("disabled")).toBe(false);
-    await userEvent.click(submitButton);
-    expect((await screen.findByTestId("upload-error")).textContent).toContain("rows/0/retail_price");
-    await userEvent.click(submitButton);
-    expect((await screen.findByTestId("upload-done")).textContent).toContain("created");
-    const post = calls.filter((c) => c.method === "POST").at(-1);
-    expect((post?.body as { rows: { retail_price: string }[] }).rows[0]?.retail_price).toBe(
-      "0.300000000004",
-    );
-  });
+  it(
+    "uploads a price sheet and shows the API field pointer for a bad row",
+    { timeout: 30000 },
+    async () => {
+      let reject = true;
+      const { impl, calls } = fakeFetch(
+        handler((req) => {
+          if (req.method !== "POST" || !req.url.pathname.endsWith("/price-sheets"))
+            return undefined;
+          if (reject) {
+            reject = false;
+            return problem(422, "invalid_schema", "/body/rows/0/retail_price: bad");
+          }
+          return {
+            status: 201,
+            body: {
+              created: true,
+              sheet: SHEETS.items[1],
+              coverage: {
+                snapshot_id: "s",
+                rows: 1,
+                models_priced: 1,
+                models_incomplete: [],
+                rows_without_token_meter: 0,
+                warnings: [],
+              },
+            },
+          };
+        }),
+      );
+      renderAdmin(<PricingPage />, impl);
+      await screen.findAllByTestId("price-sheet-row");
+      fireEvent.change(screen.getByLabelText(/Snapshot id/), {
+        target: { value: "azure-2026-12" },
+      });
+      fireEvent.change(screen.getByLabelText(/Source URL/), {
+        target: { value: "https://prices.example.invalid/s" },
+      });
+      fireEvent.change(screen.getByLabelText(/Retrieval date/), {
+        target: { value: "2026-12-02" },
+      });
+      fireEvent.change(screen.getByLabelText(/Effective date/), {
+        target: { value: "2026-12-01" },
+      });
+      const submitButton = screen.getByRole("button", { name: "Upload price sheet" });
+      expect(submitButton.hasAttribute("disabled")).toBe(true);
+      fireEvent.change(screen.getByLabelText(/Rows \(JSON array\)/), {
+        target: {
+          value:
+            '[{"service_name":"s","sku_name":"k","unit_of_measure":"1K","retail_price":"0.300000000004"}]',
+        },
+      });
+      expect(submitButton.hasAttribute("disabled")).toBe(false);
+      await userEvent.click(submitButton);
+      expect((await screen.findByTestId("upload-error")).textContent).toContain(
+        "rows/0/retail_price",
+      );
+      await userEvent.click(submitButton);
+      expect((await screen.findByTestId("upload-done")).textContent).toContain("created");
+      const post = calls.filter((c) => c.method === "POST").at(-1);
+      expect((post?.body as { rows: { retail_price: string }[] }).rows[0]?.retail_price).toBe(
+        "0.300000000004",
+      );
+    },
+  );
 
   it("creates a budget and sends the amount as a decimal string", async () => {
     const { impl, calls } = fakeFetch(
@@ -177,7 +204,11 @@ describe("PricingPage", () => {
     await userEvent.click(dialog().getByRole("button", { name: "Confirm change", hidden: true }));
     await screen.findByTestId("change-done");
     const post = calls.find((c) => c.method === "POST" && c.url.pathname.endsWith("/budgets"));
-    expect(post?.body).toMatchObject({ amount: "2500.50", domain_id: FINANCE, thresholds_percent: [50, 80, 100] });
+    expect(post?.body).toMatchObject({
+      amount: "2500.50",
+      domain_id: FINANCE,
+      thresholds_percent: [50, 80, 100],
+    });
   });
 
   it("edits a budget with If-Match and shows stale on 409", async () => {

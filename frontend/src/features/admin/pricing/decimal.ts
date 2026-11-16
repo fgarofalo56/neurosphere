@@ -14,14 +14,6 @@ export function showAmount(value: string | null | undefined): string {
   return value === null || value === undefined || value === "" ? "Unknown" : value;
 }
 
-/** Thousands separators on the integer part only; the fraction is kept verbatim. */
-export function groupAmount(value: string): string {
-  if (!isDecimalAmount(value)) return value;
-  const [whole = "", fraction] = value.split(".");
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
-}
-
 /** Parses "50, 80,100" into whole-number percents 1..1000, or undefined when any is wrong. */
 export function parseThresholds(text: string): number[] | undefined {
   const parts = text

@@ -3,8 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactElement } from "react";
 import { DataTable, EmptyState, LoadingState, StatusPill } from "../../../design-system";
 import { QueryErrorState, changeErrorText } from "../shared/AdminStates";
+import { JsonFileInput } from "../sources/JsonFileInput";
 import { isDecimalAmount } from "./decimal";
-import { PRICE_SHEETS_KEY, usePriceSheets, useUploadPriceSheet, type PriceSheetView } from "./hooks";
+import {
+  PRICE_SHEETS_KEY,
+  usePriceSheets,
+  useUploadPriceSheet,
+  type PriceSheetView,
+} from "./hooks";
 
 export const PRICE_STRINGS = {
   heading: "Price sheets",
@@ -23,7 +29,7 @@ export const PRICE_STRINGS = {
   },
   rowsField: "Rows (JSON array)",
   rowsHint:
-    "Each row needs service_name, sku_name, unit_of_measure and retail_price as a decimal string, for example \"0.0015\".",
+    'Each row needs service_name, sku_name, unit_of_measure and retail_price as a decimal string, for example "0.0015".',
   rowsFile: "Upload rows from a JSON file",
   rowsInvalid: "Rows must be a JSON array of objects whose retail_price is a decimal string.",
   synthetic: "Synthetic data",
@@ -126,15 +132,31 @@ export function PriceSheetsPanel(): ReactElement {
           getRowId={(r) => r.snapshot_id}
           getRowProps={() => ({ "data-testid": "price-sheet-row" })}
           columns={[
-            { key: "id", header: PRICE_STRINGS.headers.id, render: (r) => <code>{r.snapshot_id}</code> },
+            {
+              key: "id",
+              header: PRICE_STRINGS.headers.id,
+              render: (r) => <code>{r.snapshot_id}</code>,
+            },
             {
               key: "source",
               header: PRICE_STRINGS.headers.source,
               render: (r) => `${r.source}${r.synthetic ? " (synthetic)" : ""}`,
             },
-            { key: "ret", header: PRICE_STRINGS.headers.retrieved, render: (r) => r.retrieval_date },
-            { key: "eff", header: PRICE_STRINGS.headers.effective, render: (r) => r.effective_date },
-            { key: "clouds", header: PRICE_STRINGS.headers.clouds, render: (r) => r.clouds.join(", ") },
+            {
+              key: "ret",
+              header: PRICE_STRINGS.headers.retrieved,
+              render: (r) => r.retrieval_date,
+            },
+            {
+              key: "eff",
+              header: PRICE_STRINGS.headers.effective,
+              render: (r) => r.effective_date,
+            },
+            {
+              key: "clouds",
+              header: PRICE_STRINGS.headers.clouds,
+              render: (r) => r.clouds.join(", "),
+            },
             { key: "rows", header: PRICE_STRINGS.headers.rows, render: (r) => r.row_count },
             {
               key: "ver",
@@ -169,7 +191,9 @@ export function PriceSheetsPanel(): ReactElement {
               notes,
               rows,
             },
-            { onSuccess: () => void queryClient.invalidateQueries({ queryKey: [PRICE_SHEETS_KEY] }) },
+            {
+              onSuccess: () => void queryClient.invalidateQueries({ queryKey: [PRICE_SHEETS_KEY] }),
+            },
           );
         }}
       >
@@ -227,14 +251,7 @@ export function PriceSheetsPanel(): ReactElement {
           <Textarea rows={6} value={rowsText} onChange={(_e, d) => setRowsText(d.value)} />
         </Field>
         <Field label={PRICE_STRINGS.rowsFile}>
-          <input
-            type="file"
-            accept="application/json,.json"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file !== undefined) void file.text().then(setRowsText);
-            }}
-          />
+          <JsonFileInput label={PRICE_STRINGS.rowsFile} onText={setRowsText} />
         </Field>
         <div>
           <Button type="submit" appearance="primary" disabled={!valid || upload.isPending}>

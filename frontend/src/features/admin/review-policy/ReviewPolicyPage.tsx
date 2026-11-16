@@ -65,7 +65,11 @@ interface PolicyView {
   readonly document: PolicyDocument;
 }
 interface PolicyWriteView extends PolicyView {
-  readonly changes?: readonly { readonly path: string; readonly before?: unknown; readonly after?: unknown }[];
+  readonly changes?: readonly {
+    readonly path: string;
+    readonly before?: unknown;
+    readonly after?: unknown;
+  }[];
 }
 
 const REVIEW_KINDS = [
@@ -251,7 +255,11 @@ function PolicyEditor({
       </Field>
       <h2>{REVIEW_POLICY_STRINGS.kindDefaults}</h2>
       {doc.kind_defaults.map((k) => (
-        <section key={k.review_kind} aria-label={`Default for ${k.review_kind}`} data-testid="kind-default">
+        <section
+          key={k.review_kind}
+          aria-label={`Default for ${k.review_kind}`}
+          data-testid="kind-default"
+        >
           <h3>{k.review_kind}</h3>
           <SettingsEditor
             name={k.review_kind}
@@ -288,7 +296,10 @@ function PolicyEditor({
             size="small"
             aria-label={`${REVIEW_POLICY_STRINGS.removeOverride} ${key(o)}`}
             onClick={() =>
-              setDoc({ ...doc, action_overrides: doc.action_overrides.filter((x) => key(x) !== key(o)) })
+              setDoc({
+                ...doc,
+                action_overrides: doc.action_overrides.filter((x) => key(x) !== key(o)),
+              })
             }
           >
             {REVIEW_POLICY_STRINGS.removeOverride}
@@ -309,7 +320,9 @@ function PolicyEditor({
           label="Override action kind"
           validationState={newAction !== "" && !ACTION_KIND.test(newAction) ? "error" : "none"}
           validationMessage={
-            newAction !== "" && !ACTION_KIND.test(newAction) ? "Lower-case letters, digits and _." : undefined
+            newAction !== "" && !ACTION_KIND.test(newAction)
+              ? "Lower-case letters, digits and _."
+              : undefined
           }
         >
           <Input value={newAction} onChange={(_e, d) => setNewAction(d.value)} />
@@ -396,7 +409,9 @@ function PolicyEditor({
 }
 
 function ReviewPolicyBody(): ReactElement {
-  const query = useAdminGet<PolicyView>("admin-review-policy", { path: pricingPaths.reviewPolicy() });
+  const query = useAdminGet<PolicyView>("admin-review-policy", {
+    path: pricingPaths.reviewPolicy(),
+  });
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
   if (query.isError) {
@@ -431,7 +446,10 @@ function ReviewPolicyBody(): ReactElement {
 
 export function ReviewPolicyPage(): ReactElement {
   return (
-    <PageTemplate title={REVIEW_POLICY_STRINGS.title} description={REVIEW_POLICY_STRINGS.description}>
+    <PageTemplate
+      title={REVIEW_POLICY_STRINGS.title}
+      description={REVIEW_POLICY_STRINGS.description}
+    >
       <AdminTabs />
       <ReviewPolicyBody />
     </PageTemplate>

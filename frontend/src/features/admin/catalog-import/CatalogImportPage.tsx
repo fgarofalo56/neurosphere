@@ -5,6 +5,7 @@ import { changeErrorText } from "../shared/AdminStates";
 import { AdminTabs } from "../shared/AdminTabs";
 import { useEtagMutation } from "../shared/transport";
 import { existingPaths } from "../sources/apiPaths";
+import { JsonFileInput } from "../sources/JsonFileInput";
 import { MAX_IMPORT_ITEMS, MAX_PREVIEW_ROWS, parsePayload } from "./importPayload";
 
 export const IMPORT_STRINGS = {
@@ -126,16 +127,11 @@ function ImportBody(): ReactElement {
         />
       </Field>
       <Field label={IMPORT_STRINGS.upload}>
-        <input
-          type="file"
-          accept="application/json,.json"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file === undefined) return;
-            void file.text().then((t) => {
-              setText(t);
-              setResult(null);
-            });
+        <JsonFileInput
+          label={IMPORT_STRINGS.upload}
+          onText={(t) => {
+            setText(t);
+            setResult(null);
           }}
         />
       </Field>

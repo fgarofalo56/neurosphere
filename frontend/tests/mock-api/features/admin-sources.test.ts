@@ -55,13 +55,14 @@ async function call(
   } as unknown as FeatureMockContext;
   const handled = handle(ctx);
   if (handled) await finished;
-  let body: Body = {};
-  try {
-    body = JSON.parse(text) as Body;
-  } catch {
-    body = {};
-  }
-  return { handled, status, headers, body, text };
+  const parse = (): Body => {
+    try {
+      return JSON.parse(text) as Body;
+    } catch {
+      return {};
+    }
+  };
+  return { handled, status, headers, body: parse(), text };
 }
 
 const P = "/api/v1/admin/sources/producers";
@@ -80,10 +81,19 @@ describe("admin-sources mock", () => {
 
   it("answers 401 without a token and 403 for a non-admin persona on every area", async () => {
     expect((await call("GET", P, { authorized: false })).status).toBe(401);
-    for (const path of [P, C, `${PL}/price-sheets`, `${PL}/budgets`, `${PL}/review-policy`, `${S}/copilot`]) {
+    for (const path of [
+      P,
+      C,
+      `${PL}/price-sheets`,
+      `${PL}/budgets`,
+      `${PL}/review-policy`,
+      `${S}/copilot`,
+    ]) {
       expect((await call("GET", path, { role: "viewer" })).status).toBe(403);
     }
-    expect((await call("POST", "/api/v1/catalog/import", { role: "viewer", body: {} })).status).toBe(403);
+    expect(
+      (await call("POST", "/api/v1/catalog/import", { role: "viewer", body: {} })).status,
+    ).toBe(403);
   });
 
   it("returns the secret in exactly the create and rotate responses", async () => {
@@ -98,18 +108,38 @@ describe("admin-sources mock", () => {
     expect(created.status).toBe(201);
     expect(created.body["secret"]).toBe(SOURCES_SECRET);
     expect((await call("GET", P)).text).not.toContain(SOURCES_SECRET);
-    const rotated = await call("POST", `${P}/${SOURCES_PRODUCER_ID}/rotate`, { ifMatch: '"producer-1"' });
+    const rotated = await call("POST", `${P}/${SOURCES_PRODUCER_ID}/rotate`, {
+      ifMatch: '"producer-1"',
+    });
     expect(rotated.status).toBe(200);
     expect(rotated.text).not.toContain(SOURCES_SECRET);
     expect(rotated.body["secret"]).toBeTypeOf("string");
   });
 
   it("answers 422, 409 and stale fixtures for producers", async () => {
-    expect((await call("POST", P, { body: { producer_id: "bad id!", sources: {} } })).status).toBe(422);
-    expect((await call("POST", P, { body: { producer_id: SOURCES_PRODUCER_ID, sources: { a: "gateway" } } })).status).toBe(409);
-    expect((await call("POST", `${P}/${SOURCES_PRODUCER_STALE}/disable`, { ifMatch: '"producer-1"' })).status).toBe(409);
-    expect((await call("POST", `${P}/${SOURCES_PRODUCER_ID}/disable`, { ifMatch: '"producer-9"' })).status).toBe(409);
-    expect((await call("POST", `${P}/${SOURCES_PRODUCER_ID}/disable`, { ifMatch: '"producer-1"' })).body["status"]).toBe("disabled");
+    expect((await call("POST", P, { body: { producer_id: "bad id!", sources: {} } })).status).toBe(
+      422,
+    );
+    expect(
+      (
+        await call("POST", P, {
+          body: { producer_id: SOURCES_PRODUCER_ID, sources: { a: "gateway" } },
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (await call("POST", `${P}/${SOURCES_PRODUCER_STALE}/disable`, { ifMatch: '"producer-1"' }))
+        .status,
+    ).toBe(409);
+    expect(
+      (await call("POST", `${P}/${SOURCES_PRODUCER_ID}/disable`, { ifMatch: '"producer-9"' }))
+        .status,
+    ).toBe(409);
+    expect(
+      (await call("POST", `${P}/${SOURCES_PRODUCER_ID}/disable`, { ifMatch: '"producer-1"' })).body[
+        "status"
+      ],
+    ).toBe("disabled");
   });
 
   it("validates connector credential references and warns for otel", async () => {
@@ -120,16 +150,27 @@ describe("admin-sources mock", () => {
       settings: {},
       enabled: true,
     };
-    const bad = await call("POST", C, { body: { ...config, credential: { kind: "key_vault_secret", secret_uri: "hunter2" } } });
+    const bad = await call("POST", C, {
+      body: { ...config, credential: { kind: "key_vault_secret", secret_uri: "hunter2" } },
+    });
     expect(bad.status).toBe(422);
     expect(bad.body["detail"]).toContain("secret_uri");
     const ok = await call("POST", C, { body: { ...config, credential: null } });
     expect(ok.status).toBe(201);
     expect(ok.body["warnings"]).toEqual(["producer_not_in_store"]);
-    expect((await call("POST", `${C}/${SOURCES_CONNECTOR_STALE}/disable`, { ifMatch: '"connector-1"' })).status).toBe(409);
-    const retired = await call("DELETE", `${C}/${SOURCES_CONNECTOR_ID}`, { ifMatch: '"connector-1"' });
+    expect(
+      (await call("POST", `${C}/${SOURCES_CONNECTOR_STALE}/disable`, { ifMatch: '"connector-1"' }))
+        .status,
+    ).toBe(409);
+    const retired = await call("DELETE", `${C}/${SOURCES_CONNECTOR_ID}`, {
+      ifMatch: '"connector-1"',
+    });
     expect(retired.body["status"]).toBe("retired");
-    expect((await call("GET", C)).body["items"].some((i: Body) => i["connector_id"] === SOURCES_CONNECTOR_ID)).toBe(false);
+    expect(
+      (await call("GET", C)).body["items"].some(
+        (i: Body) => i["connector_id"] === SOURCES_CONNECTOR_ID,
+      ),
+    ).toBe(false);
   });
 
   it("keeps price sheets, budgets and amounts as decimal strings", async () => {
@@ -152,9 +193,15 @@ describe("admin-sources mock", () => {
   it("round-trips the review policy and settings with ETags", async () => {
     const policy = await call("GET", `${PL}/review-policy`);
     expect(policy.headers["etag"]).toBe('"policy-1"');
-    const stale = await call("PUT", `${PL}/review-policy`, { ifMatch: '"policy-9"', body: policy.body["document"] });
+    const stale = await call("PUT", `${PL}/review-policy`, {
+      ifMatch: '"policy-9"',
+      body: policy.body["document"],
+    });
     expect(stale.status).toBe(409);
-    const saved = await call("PUT", `${PL}/review-policy`, { ifMatch: '"policy-1"', body: policy.body["document"] });
+    const saved = await call("PUT", `${PL}/review-policy`, {
+      ifMatch: '"policy-1"',
+      body: policy.body["document"],
+    });
     expect(saved.status).toBe(200);
     const setting = await call("GET", `${S}/copilot`);
     expect(setting.headers["etag"]).toBe('"setting-copilot-3"');
@@ -169,12 +216,18 @@ describe("admin-sources mock", () => {
   it("answers the import dry run and commit with mixed outcomes", async () => {
     const items = [{ id: "a" }, { id: "b", reject: true }, { name: "no id" }];
     const dry = await call("POST", "/api/v1/catalog/import", { body: { items, dry_run: true } });
-    expect(dry.body["items"].map((i: Body) => i["status"])).toEqual(["valid", "rejected", "rejected"]);
+    expect(dry.body["items"].map((i: Body) => i["status"])).toEqual([
+      "valid",
+      "rejected",
+      "rejected",
+    ]);
     const tooMany = await call("POST", "/api/v1/catalog/import", {
       body: { items: Array.from({ length: 101 }, (_, i) => ({ id: String(i) })) },
     });
     expect(tooMany.status).toBe(422);
-    const clean = await call("POST", "/api/v1/catalog/import", { body: { items: [{ id: "a" }], dry_run: false } });
+    const clean = await call("POST", "/api/v1/catalog/import", {
+      body: { items: [{ id: "a" }], dry_run: false },
+    });
     expect(clean.body).toMatchObject({ committed: true, dry_run: false });
   });
 });

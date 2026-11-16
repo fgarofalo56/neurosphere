@@ -22,7 +22,7 @@ export const SOURCES_PRODUCER_ID = "ingest-app-a";
 export const SOURCES_PRODUCER_STALE = "ingest-stale";
 export const SOURCES_CONNECTOR_ID = "gw-poll-main";
 export const SOURCES_CONNECTOR_STALE = "gw-poll-stale";
-export const SOURCES_DOMAIN = "commercial:e2e:catalog:domain:finance";
+export const SOURCES_DOMAIN = "commercial:e2e:sandbox:domain:finance";
 /** A synthetic value that looks like a generated secret; it must reach the DOM once only. */
 export const SOURCES_SECRET = "SYNTHETICsecretValueForTestsOnly0123456789abcdefghij";
 export const SOURCES_NEXT_SECRET = "SYNTHETICrotatedSecretForTestsOnly0123456789abcdefgh";
@@ -223,7 +223,10 @@ function initialSheets(): PriceSheet[] {
 }
 
 function initialSettings(): Setting[] {
-  const cred = { kind: "managed_identity", managed_identity_client_id: "11111111-1111-4111-8111-111111111111" };
+  const cred = {
+    kind: "managed_identity",
+    managed_identity_client_id: "11111111-1111-4111-8111-111111111111",
+  };
   return [
     {
       key: "copilot",
@@ -323,7 +326,11 @@ const stale = (ctx: FeatureMockContext, version: number, prefix: string): boolea
   return header !== undefined && header !== q(version, prefix);
 };
 const trail = (rest: string): string[] =>
-  rest.replace(/^\//, "").split("/").filter((p) => p !== "").map(decodeURIComponent);
+  rest
+    .replace(/^\//, "")
+    .split("/")
+    .filter((p) => p !== "")
+    .map(decodeURIComponent);
 
 // ---- producers ------------------------------------------------------------------------------
 
@@ -367,10 +374,7 @@ async function producerRoutes(ctx: FeatureMockContext, rest: string): Promise<vo
     return json(ctx, 200, producer, { etag: q(producer.version, "producer") });
   }
   if (method !== "POST") return json(ctx, 405, { error: "method not allowed" });
-  if (
-    producer.producer_id === SOURCES_PRODUCER_STALE ||
-    stale(ctx, producer.version, "producer")
-  ) {
+  if (producer.producer_id === SOURCES_PRODUCER_STALE || stale(ctx, producer.version, "producer")) {
     return problem(ctx, 409, "stale_version", "etag_mismatch");
   }
   const action = parts[1];
@@ -400,7 +404,8 @@ function issued(id: string, secret: string): Record<string, unknown> {
 
 // ---- connectors -----------------------------------------------------------------------------
 
-const VAULT = /^https:\/\/[a-z][a-z0-9-]{1,22}[a-z0-9]\.vault\.(azure\.net|usgovcloudapi\.net)\/secrets\/[A-Za-z0-9-]{1,127}(\/[0-9a-f]{32})?$/;
+const VAULT =
+  /^https:\/\/[a-z][a-z0-9-]{1,22}[a-z0-9]\.vault\.(azure\.net|usgovcloudapi\.net)\/secrets\/[A-Za-z0-9-]{1,127}(\/[0-9a-f]{32})?$/;
 
 function credentialProblem(body: Record<string, unknown>): string | undefined {
   const cred = body["credential"];
@@ -413,7 +418,9 @@ function credentialProblem(body: Record<string, unknown>): string | undefined {
   }
   if (c["kind"] === "managed_identity") {
     return typeof c["managed_identity_client_id"] === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(c["managed_identity_client_id"])
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+        c["managed_identity_client_id"],
+      )
       ? undefined
       : "/body/credential/managed_identity_client_id: not a client id";
   }
@@ -440,7 +447,10 @@ async function connectorRoutes(ctx: FeatureMockContext, rest: string): Promise<v
     if (method === "GET") {
       const kind = ctx.url.searchParams.get("connector_kind");
       return json(ctx, 200, {
-        items: connectors.filter((c) => c.status !== "retired" && (kind === null || kind === "" || c.connector_kind === kind)),
+        items: connectors.filter(
+          (c) =>
+            c.status !== "retired" && (kind === null || kind === "" || c.connector_kind === kind),
+        ),
       });
     }
     if (method !== "POST") return json(ctx, 405, { error: "method not allowed" });
@@ -464,7 +474,10 @@ async function connectorRoutes(ctx: FeatureMockContext, rest: string): Promise<v
   if (method !== "PUT" && method !== "DELETE" && method !== "POST") {
     return json(ctx, 405, { error: "method not allowed" });
   }
-  if (connector.connector_id === SOURCES_CONNECTOR_STALE || stale(ctx, connector.version, "connector")) {
+  if (
+    connector.connector_id === SOURCES_CONNECTOR_STALE ||
+    stale(ctx, connector.version, "connector")
+  ) {
     return problem(ctx, 409, "stale_version", "etag_mismatch");
   }
   if (method === "PUT") {
@@ -476,7 +489,8 @@ async function connectorRoutes(ctx: FeatureMockContext, rest: string): Promise<v
     return json(ctx, 200, next, { etag: q(next.version, "connector") });
   }
   if (method === "DELETE") connector.status = "retired";
-  else if (parts[1] === "enable" || parts[1] === "disable") connector.enabled = parts[1] === "enable";
+  else if (parts[1] === "enable" || parts[1] === "disable")
+    connector.enabled = parts[1] === "enable";
   else return problem(ctx, 404, "not_found", "unknown_route");
   connector.version += 1;
   return json(ctx, 200, connector, { etag: q(connector.version, "connector") });
@@ -507,7 +521,12 @@ async function platformRoutes(ctx: FeatureMockContext, rest: string): Promise<bo
       (r) => typeof r["retail_price"] !== "string" || !AMOUNT.test(r["retail_price"]),
     );
     if (rows.length === 0 || badIndex >= 0) {
-      return fail(ctx, 422, "invalid_schema", `/body/rows/${Math.max(badIndex, 0)}/retail_price: not a decimal amount`);
+      return fail(
+        ctx,
+        422,
+        "invalid_schema",
+        `/body/rows/${Math.max(badIndex, 0)}/retail_price: not a decimal amount`,
+      );
     }
     const id = String(body["snapshot_id"]);
     const existing = sheets.find((s) => s.snapshot_id === id);
@@ -603,19 +622,29 @@ async function platformRoutes(ctx: FeatureMockContext, rest: string): Promise<bo
       ...((body["action_overrides"] ?? []) as { policy: Record<string, number> }[]),
     ];
     if (all.some((e) => (e.policy["expiry_seconds"] ?? 0) < (e.policy["sla_seconds"] ?? 0))) {
-      return fail(ctx, 422, "invalid_schema", "expiry_seconds must not be shorter than sla_seconds");
+      return fail(
+        ctx,
+        422,
+        "invalid_schema",
+        "expiry_seconds must not be shorter than sla_seconds",
+      );
     }
     const before = reviewPolicy;
     reviewPolicy = body;
     reviewVersion += 1;
-    return reply(ctx, 200, {
-      source: "stored",
-      version: reviewVersion,
-      policy_version: String(body["policy_version"]),
-      document: body,
-      before,
-      changes: [],
-    }, { etag: q(reviewVersion, "policy") });
+    return reply(
+      ctx,
+      200,
+      {
+        source: "stored",
+        version: reviewVersion,
+        policy_version: String(body["policy_version"]),
+        document: body,
+        before,
+        changes: [],
+      },
+      { etag: q(reviewVersion, "policy") },
+    );
   }
   return false;
 }
@@ -649,7 +678,14 @@ function settingView(s: Setting): Record<string, unknown> {
     applied_by_runtime: s.key !== "write_targets",
     etag: stored ? q(s.version, `setting-${s.key}`) : null,
     entries: stored
-      ? [{ document_id: `system.${s.key}`, version: s.version, etag: q(s.version, "doc"), value: s.body }]
+      ? [
+          {
+            document_id: `system.${s.key}`,
+            version: s.version,
+            etag: q(s.version, "doc"),
+            value: s.body,
+          },
+        ]
       : [],
   };
 }
@@ -662,7 +698,8 @@ function diffOf(
   const walk = (b: unknown, a: unknown, pointer: string): void => {
     if (a !== null && typeof a === "object" && !Array.isArray(a)) {
       const bo = (b !== null && typeof b === "object" ? b : {}) as Record<string, unknown>;
-      for (const [k, v] of Object.entries(a as Record<string, unknown>)) walk(bo[k], v, `${pointer}/${k}`);
+      for (const [k, v] of Object.entries(a as Record<string, unknown>))
+        walk(bo[k], v, `${pointer}/${k}`);
       return;
     }
     if (JSON.stringify(b) !== JSON.stringify(a)) out.push({ pointer, before: b, after: a });
@@ -686,22 +723,35 @@ async function settingRoutes(ctx: FeatureMockContext, key: string): Promise<void
   }
   const body = await readJson(ctx);
   const member = (body[key] ?? {}) as Record<string, unknown>;
-  if (typeof member["endpoint"] === "string" && member["endpoint"].startsWith(SOURCES_BAD_ENDPOINT)) {
-    return problem(ctx, 422, "invalid_schema", `/body/${key}/endpoint: ${SOURCES_CROSS_CLOUD_TEXT}`);
+  if (
+    typeof member["endpoint"] === "string" &&
+    member["endpoint"].startsWith(SOURCES_BAD_ENDPOINT)
+  ) {
+    return problem(
+      ctx,
+      422,
+      "invalid_schema",
+      `/body/${key}/endpoint: ${SOURCES_CROSS_CLOUD_TEXT}`,
+    );
   }
   const diff = diffOf(setting.body, body);
   setting.body = body;
   setting.version += 1;
-  return json(ctx, 200, {
-    key,
-    document_id: `system.${key}`,
-    version: setting.version,
-    etag: q(setting.version, `setting-${key}`),
-    stored_revision: setting.version,
-    applied_revision: setting.version - 1,
-    restart_required: true,
-    diff,
-  }, { etag: q(setting.version, `setting-${key}`) });
+  return json(
+    ctx,
+    200,
+    {
+      key,
+      document_id: `system.${key}`,
+      version: setting.version,
+      etag: q(setting.version, `setting-${key}`),
+      stored_revision: setting.version,
+      applied_revision: setting.version - 1,
+      restart_required: true,
+      diff,
+    },
+    { etag: q(setting.version, `setting-${key}`) },
+  );
 }
 
 // ---- catalog import -------------------------------------------------------------------------

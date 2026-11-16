@@ -1,7 +1,13 @@
 import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { fakeFetch, problem, renderAdmin, stubResizeObserver, type FakeRequest } from "../shared/test-support";
+import {
+  fakeFetch,
+  problem,
+  renderAdmin,
+  stubResizeObserver,
+  type FakeRequest,
+} from "../shared/test-support";
 import { describeSeconds, joinSeconds, splitSeconds } from "./duration";
 import { ReviewPolicyPage } from "./ReviewPolicyPage";
 
@@ -30,8 +36,7 @@ const DOC = {
 const VIEW = { source: "stored", version: 1, policy_version: "policy-1", document: DOC };
 
 function handler(extra?: (req: FakeRequest) => ReturnType<Parameters<typeof fakeFetch>[0]>) {
-  return (req: FakeRequest) =>
-    extra?.(req) ?? { body: VIEW, headers: { ETag: '"policy-1"' } };
+  return (req: FakeRequest) => extra?.(req) ?? { body: VIEW, headers: { ETag: '"policy-1"' } };
 }
 
 describe("duration helpers", () => {
@@ -58,7 +63,9 @@ describe("ReviewPolicyPage", () => {
   it("sends whole seconds with If-Match after confirming the diff", async () => {
     const { impl, calls } = fakeFetch(
       handler((req) =>
-        req.method === "PUT" ? { body: { ...VIEW, version: 2, before: DOC, changes: [] } } : undefined,
+        req.method === "PUT"
+          ? { body: { ...VIEW, version: 2, before: DOC, changes: [] } }
+          : undefined,
       ),
     );
     renderAdmin(<ReviewPolicyPage />, impl);
@@ -86,21 +93,29 @@ describe("ReviewPolicyPage", () => {
       ),
     );
     renderAdmin(<ReviewPolicyPage />, bad.impl);
-    fireEvent.change(await screen.findByLabelText("maker_checker: SLA hours", { selector: "input" }), {
-      target: { value: "5" },
-    });
+    fireEvent.change(
+      await screen.findByLabelText("maker_checker: SLA hours", { selector: "input" }),
+      {
+        target: { value: "5" },
+      },
+    );
     await userEvent.click(screen.getByRole("button", { name: "Save review policy" }));
     const dlg = within(await screen.findByTestId("change-confirm-dialog"));
     await userEvent.click(dlg.getByRole("button", { name: "Confirm change", hidden: true }));
     expect((await screen.findByTestId("policy-error")).textContent).toContain("shorter than sla");
     cleanup();
     const stale = fakeFetch(
-      handler((req) => (req.method === "PUT" ? problem(409, "stale_version", "etag_mismatch") : undefined)),
+      handler((req) =>
+        req.method === "PUT" ? problem(409, "stale_version", "etag_mismatch") : undefined,
+      ),
     );
     renderAdmin(<ReviewPolicyPage />, stale.impl);
-    fireEvent.change(await screen.findByLabelText("maker_checker: SLA hours", { selector: "input" }), {
-      target: { value: "5" },
-    });
+    fireEvent.change(
+      await screen.findByLabelText("maker_checker: SLA hours", { selector: "input" }),
+      {
+        target: { value: "5" },
+      },
+    );
     await userEvent.click(screen.getByRole("button", { name: "Save review policy" }));
     const dlg2 = within(await screen.findByTestId("change-confirm-dialog"));
     await userEvent.click(dlg2.getByRole("button", { name: "Confirm change", hidden: true }));
@@ -114,7 +129,9 @@ describe("ReviewPolicyPage", () => {
     fireEvent.change(screen.getByLabelText("Override action kind"), { target: { value: "grant" } });
     await userEvent.click(screen.getByRole("button", { name: "Add override" }));
     expect(screen.getAllByTestId("action-override")).toHaveLength(2);
-    await userEvent.click(screen.getByRole("button", { name: "Remove override maker_checker/grant" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Remove override maker_checker/grant" }),
+    );
     expect(screen.getAllByTestId("action-override")).toHaveLength(1);
   });
 

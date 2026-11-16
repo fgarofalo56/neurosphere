@@ -63,7 +63,11 @@ interface SettingView {
 interface WriteResult {
   readonly key: string;
   readonly restart_required: boolean;
-  readonly diff: readonly { readonly pointer: string; readonly before?: unknown; readonly after?: unknown }[];
+  readonly diff: readonly {
+    readonly pointer: string;
+    readonly before?: unknown;
+    readonly after?: unknown;
+  }[];
 }
 
 function showValue(value: unknown): string {
@@ -82,7 +86,11 @@ function initialDraft(spec: SettingSpec, view: SettingView | undefined): Setting
 function Meta({ view }: { readonly view: SettingView | undefined }): ReactElement {
   return (
     <p data-testid="setting-meta">
-      {FEATURE_STRINGS.source}: <StatusPill label={view?.source ?? "default"} tone={view?.source === "stored" ? "success" : "neutral"} />{" "}
+      {FEATURE_STRINGS.source}:{" "}
+      <StatusPill
+        label={view?.source ?? "default"}
+        tone={view?.source === "stored" ? "success" : "neutral"}
+      />{" "}
       {FEATURE_STRINGS.revision}: {view?.stored_revision ?? "none"}{" "}
       {view?.restart_required === true ? (
         <StatusPill label={FEATURE_STRINGS.restartRequired} tone="warning" />
@@ -134,13 +142,17 @@ function SettingCard({
           {f.kind === "lines" ? (
             <Textarea
               value={draft.values[f.name] ?? ""}
-              onChange={(_e, d) => setDraft({ ...draft, values: { ...draft.values, [f.name]: d.value } })}
+              onChange={(_e, d) =>
+                setDraft({ ...draft, values: { ...draft.values, [f.name]: d.value } })
+              }
             />
           ) : (
             <Input
               inputMode={f.kind === "number" ? "numeric" : undefined}
               value={draft.values[f.name] ?? ""}
-              onChange={(_e, d) => setDraft({ ...draft, values: { ...draft.values, [f.name]: d.value } })}
+              onChange={(_e, d) =>
+                setDraft({ ...draft, values: { ...draft.values, [f.name]: d.value } })
+              }
             />
           )}
         </Field>
@@ -214,7 +226,11 @@ function SettingCard({
 
 function WriteTargetsCard({ view }: { readonly view: SettingView | undefined }): ReactElement {
   return (
-    <section aria-labelledby="setting-write_targets" data-testid="setting-card" data-key="write_targets">
+    <section
+      aria-labelledby="setting-write_targets"
+      data-testid="setting-card"
+      data-key="write_targets"
+    >
       <h2 id="setting-write_targets">Write targets</h2>
       <Meta view={view} />
       <p data-testid="write-targets-note">{FEATURE_STRINGS.writeTargetsNote}</p>
@@ -229,7 +245,8 @@ function WriteTargetsCard({ view }: { readonly view: SettingView | undefined }):
               <li key={e.document_id}>
                 <code>{e.document_id}</code>: {String(target["target_kind"] ?? "target")}
                 {", "}
-                {e.value["enabled"] === true ? "enabled" : "disabled"}, {describeReference(credential)}
+                {e.value["enabled"] === true ? "enabled" : "disabled"},{" "}
+                {describeReference(credential)}
               </li>
             );
           })}
@@ -289,4 +306,3 @@ export function FeatureSettingsPage(): ReactElement {
     </PageTemplate>
   );
 }
-

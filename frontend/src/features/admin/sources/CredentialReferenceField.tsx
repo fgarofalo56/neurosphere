@@ -1,6 +1,10 @@
 import { Field, Input, Select } from "@fluentui/react-components";
 import type { ReactElement } from "react";
-import { credentialProblem, type CredentialDraft, type CredentialKind } from "./credentialReference";
+import {
+  credentialProblem,
+  type CredentialDraft,
+  type CredentialKind,
+} from "./credentialReference";
 
 /**
  * A credential REFERENCE only: a Key Vault secret URI or a managed identity client id. Anything
@@ -30,7 +34,9 @@ export function CredentialReferenceField({
           onChange={(_e, d) => onChange({ kind: d.value as CredentialKind, value: "" })}
         >
           {allowNone ? <option value="none">None</option> : null}
-          {allowKeyVault ? <option value="key_vault_secret">Key Vault secret reference</option> : null}
+          {allowKeyVault ? (
+            <option value="key_vault_secret">Key Vault secret reference</option>
+          ) : null}
           <option value="managed_identity">Managed identity</option>
         </Select>
       </Field>

@@ -1,7 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { fakeFetch, problem, renderAdmin, stubResizeObserver, type FakeRequest } from "../shared/test-support";
+import {
+  fakeFetch,
+  problem,
+  renderAdmin,
+  stubResizeObserver,
+  type FakeRequest,
+} from "../shared/test-support";
 import { FeatureSettingsPage } from "./FeatureSettingsPage";
 import { SETTING_SPECS, bodyFromDraft, draftFromStored } from "./settingSpecs";
 
@@ -135,7 +141,9 @@ describe("FeatureSettingsPage", () => {
   it("shows the validator text on 422 and a stale message on 409", async () => {
     const first = fakeFetch(
       handler((req) =>
-        req.method === "PUT" ? problem(422, "invalid_schema", "endpoint belongs to another cloud") : undefined,
+        req.method === "PUT"
+          ? problem(422, "invalid_schema", "endpoint belongs to another cloud")
+          : undefined,
       ),
     );
     renderAdmin(<FeatureSettingsPage />, first.impl);
@@ -148,7 +156,9 @@ describe("FeatureSettingsPage", () => {
     expect((await screen.findByTestId("setting-error")).textContent).toContain("another cloud");
     cleanup();
     const second = fakeFetch(
-      handler((req) => (req.method === "PUT" ? problem(409, "stale_version", "etag_mismatch") : undefined)),
+      handler((req) =>
+        req.method === "PUT" ? problem(409, "stale_version", "etag_mismatch") : undefined,
+      ),
     );
     renderAdmin(<FeatureSettingsPage />, second.impl);
     fireEvent.change(await screen.findByLabelText(/Copilot model Deployment name/), {
@@ -157,7 +167,9 @@ describe("FeatureSettingsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save setting: Copilot model" }));
     const dlg2 = within(await screen.findByTestId("change-confirm-dialog"));
     await userEvent.click(dlg2.getByRole("button", { name: "Confirm change", hidden: true }));
-    expect((await screen.findByTestId("setting-error")).textContent).toContain("Reload and try again");
+    expect((await screen.findByTestId("setting-error")).textContent).toContain(
+      "Reload and try again",
+    );
   });
 
   it("shows forbidden per card", async () => {

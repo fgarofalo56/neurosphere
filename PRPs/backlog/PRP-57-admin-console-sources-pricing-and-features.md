@@ -235,14 +235,14 @@ Backend routes, contracts or permissions; identity, domain, status and audit pag
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 2 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 3 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 4 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 5 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 6 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
+| 7 | verifying | prp-57-admin-console-sources | e2e, a11y, real-stack rows done; visual baselines generated in Docker |
+| 8 | todo | | merge step: rebase, Tier-3 regeneration, close-out |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit:

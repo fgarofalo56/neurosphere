@@ -227,7 +227,10 @@ describe("ConnectorsPage", () => {
     await userEvent.type(dialog().getByLabelText(/Connector id/), "gw-two");
     await userEvent.click(await dialog().findByLabelText(/Finance/));
     await userEvent.selectOptions(dialog().getByLabelText("Credential type"), "key_vault_secret");
-    await userEvent.type(dialog().getByLabelText(/Key Vault secret URI/), "hunter2-not-a-reference");
+    await userEvent.type(
+      dialog().getByLabelText(/Key Vault secret URI/),
+      "hunter2-not-a-reference",
+    );
     expect(await dialog().findByText(/never accepted/)).toBeTruthy();
     expect(submit().hasAttribute("disabled")).toBe(true);
     expect(calls.some((c) => c.method === "POST")).toBe(false);
@@ -253,7 +256,10 @@ describe("ConnectorsPage", () => {
     const { impl, calls } = fakeFetch(
       handler((req) =>
         req.method === "POST"
-          ? { status: 201, body: { ...CONNECTOR, connector_id: "gw-two", warnings: ["producer_not_in_store"] } }
+          ? {
+              status: 201,
+              body: { ...CONNECTOR, connector_id: "gw-two", warnings: ["producer_not_in_store"] },
+            }
           : undefined,
       ),
     );

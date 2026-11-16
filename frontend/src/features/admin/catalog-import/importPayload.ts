@@ -3,7 +3,11 @@ export const MAX_IMPORT_ITEMS = 100;
 export const MAX_PREVIEW_ROWS = 100;
 
 export type ParsedPayload =
-  | { readonly ok: true; readonly items: readonly Record<string, unknown>[]; readonly digest: string }
+  | {
+      readonly ok: true;
+      readonly items: readonly Record<string, unknown>[];
+      readonly digest: string;
+    }
   | { readonly ok: false; readonly error: string };
 
 /** Stable JSON: object keys sorted, so the same payload always gives the same text. */

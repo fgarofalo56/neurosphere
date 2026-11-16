@@ -5,7 +5,7 @@ import { DataTable, EmptyState, LoadingState } from "../../../design-system";
 import { ChangeConfirmDialog } from "../../governed-change";
 import { QueryErrorState, changeErrorText } from "../shared/AdminStates";
 import { useReadableDomains } from "../sources/hooks";
-import { groupAmount, isDecimalAmount, parseThresholds, showAmount } from "./decimal";
+import { isDecimalAmount, parseThresholds, showAmount } from "./decimal";
 import {
   BUDGETS_KEY,
   useBudgets,
@@ -172,7 +172,9 @@ export function BudgetsPanel(): ReactElement {
       <Field
         label={BUDGET_STRINGS.fields.amount}
         required
-        validationState={form.amount !== "" && !isDecimalAmount(form.amount.trim()) ? "error" : "none"}
+        validationState={
+          form.amount !== "" && !isDecimalAmount(form.amount.trim()) ? "error" : "none"
+        }
         validationMessage={
           form.amount !== "" && !isDecimalAmount(form.amount.trim())
             ? BUDGET_STRINGS.amountInvalid
@@ -190,7 +192,9 @@ export function BudgetsPanel(): ReactElement {
       <Field
         label={BUDGET_STRINGS.fields.thresholds}
         validationState={thresholds === undefined ? "error" : "none"}
-        validationMessage={thresholds === undefined ? "Whole numbers 1 to 1000, at most 10." : undefined}
+        validationMessage={
+          thresholds === undefined ? "Whole numbers 1 to 1000, at most 10." : undefined
+        }
       >
         <Input
           value={form.thresholds}
@@ -235,13 +239,17 @@ export function BudgetsPanel(): ReactElement {
           getRowId={(r) => r.budget_id}
           getRowProps={() => ({ "data-testid": "budget-row" })}
           columns={[
-            { key: "id", header: BUDGET_STRINGS.headers.id, render: (r) => <code>{r.budget_id}</code> },
+            {
+              key: "id",
+              header: BUDGET_STRINGS.headers.id,
+              render: (r) => <code>{r.budget_id}</code>,
+            },
             { key: "domain", header: BUDGET_STRINGS.headers.domain, render: (r) => r.domain_id },
             { key: "period", header: BUDGET_STRINGS.headers.period, render: (r) => r.period },
             {
               key: "amount",
               header: BUDGET_STRINGS.headers.amount,
-              render: (r) => `${groupAmount(showAmount(r.amount))} ${r.currency}`,
+              render: (r) => `${showAmount(r.amount)} ${r.currency}`,
             },
             {
               key: "thr",
@@ -290,7 +298,13 @@ export function BudgetsPanel(): ReactElement {
           title={BUDGET_STRINGS.dialog.create}
           target={form.budgetId.trim() === "" ? "(new budget)" : form.budgetId.trim()}
           version={BUDGET_STRINGS.dialog.noVersion}
-          diff={[{ field: "amount", before: "none", after: `${form.amount} ${form.currency} ${form.period}` }]}
+          diff={[
+            {
+              field: "amount",
+              before: "none",
+              after: `${form.amount} ${form.currency} ${form.period}`,
+            },
+          ]}
           reasonMode="code"
           controlsValid={valid}
           submitting={create.isPending}
@@ -298,7 +312,8 @@ export function BudgetsPanel(): ReactElement {
           controls={controls(false)}
           onSubmit={() => {
             const b = body();
-            if (b !== undefined) create.mutate(b, { onSuccess: () => finish(BUDGET_STRINGS.dialog.create) });
+            if (b !== undefined)
+              create.mutate(b, { onSuccess: () => finish(BUDGET_STRINGS.dialog.create) });
           }}
           onClose={closeDialog}
         />

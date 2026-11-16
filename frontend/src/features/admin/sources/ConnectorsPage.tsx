@@ -140,7 +140,8 @@ function ConnectorsBody(): ReactElement {
   const items = query.data.data.items;
   const readable = domains.data?.data.items ?? [];
   const settings = parseSettings(form.settingsText);
-  const credentialClear = form.credential.kind === "none" || credentialProblem(form.credential) === undefined;
+  const credentialClear =
+    form.credential.kind === "none" || credentialProblem(form.credential) === undefined;
   const formValid =
     SLUG.test(form.connectorId.trim()) &&
     form.domainIds.length > 0 &&
@@ -377,7 +378,8 @@ function ConnectorsBody(): ReactElement {
           controls={controls(false)}
           onSubmit={() => {
             const b = body();
-            if (b !== undefined) create.mutate(b, { onSuccess: (r) => finish(S.dialog.create, r.data) });
+            if (b !== undefined)
+              create.mutate(b, { onSuccess: (r) => finish(S.dialog.create, r.data) });
           }}
           onClose={closeDialog}
         />
@@ -430,7 +432,12 @@ function ConnectorsBody(): ReactElement {
             {
               field: "status",
               before: dialog.view.status,
-              after: dialog.action === "retire" ? "retired" : dialog.action === "enable" ? "enabled" : "disabled",
+              after:
+                dialog.action === "retire"
+                  ? "retired"
+                  : dialog.action === "enable"
+                    ? "enabled"
+                    : "disabled",
             },
           ]}
           reasonMode="code"

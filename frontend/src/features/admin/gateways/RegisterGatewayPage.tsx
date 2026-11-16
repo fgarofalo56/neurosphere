@@ -16,7 +16,8 @@ export const GATEWAY_STRINGS = {
     "Register an API Management instance so its gateway can be observed. The API checks that you may register in the chosen domain.",
   domain: "Domain",
   arm: "API Management resource id",
-  armHint: "/subscriptions/<id>/resourceGroups/<name>/providers/Microsoft.ApiManagement/service/<name>",
+  armHint:
+    "/subscriptions/<id>/resourceGroups/<name>/providers/Microsoft.ApiManagement/service/<name>",
   armInvalid: "This does not look like an API Management resource id.",
   workspace: "Log Analytics workspace id (optional)",
   workspaceInvalid: "A workspace id is a GUID.",
@@ -131,9 +132,7 @@ function RegisterBody(): ReactElement {
       {register.isSuccess ? (
         <div role="status" data-testid="register-done">
           {GATEWAY_STRINGS.registered}: <code>{register.data.data.name}</code>{" "}
-          <Link
-            to={gatewayDetailHref(register.data.data.domain_id, register.data.data.id)}
-          >
+          <Link to={gatewayDetailHref(register.data.data.domain_id, register.data.data.id)}>
             {GATEWAY_STRINGS.open}
           </Link>
         </div>

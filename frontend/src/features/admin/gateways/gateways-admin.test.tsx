@@ -42,7 +42,9 @@ describe("RegisterGatewayPage", () => {
     const done = await screen.findByTestId("register-done");
     expect(done.querySelector("a")?.getAttribute("href")).toContain("/gateways/detail?");
     const post = calls.find((c) => c.method === "POST");
-    expect(post?.url.pathname).toBe(`/api/v1/gateways/domains/${encodeURIComponent(FINANCE)}/gateways`);
+    expect(post?.url.pathname).toBe(
+      `/api/v1/gateways/domains/${encodeURIComponent(FINANCE)}/gateways`,
+    );
     expect(post?.body).toEqual({ arm_resource_id: ARM });
   });
 
@@ -56,7 +58,9 @@ describe("RegisterGatewayPage", () => {
         req.method === "POST" ? problem(status, code, "detail text") : { body: DOMAINS },
       );
       renderAdmin(<RegisterGatewayPage />, impl);
-      fireEvent.change(await screen.findByLabelText(/API Management resource id/), { target: { value: ARM } });
+      fireEvent.change(await screen.findByLabelText(/API Management resource id/), {
+        target: { value: ARM },
+      });
       await userEvent.click(screen.getByRole("button", { name: "Register gateway" }));
       expect((await screen.findByTestId("register-error")).textContent).toContain(code);
       cleanup();

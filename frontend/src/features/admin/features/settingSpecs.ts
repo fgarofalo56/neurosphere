@@ -54,7 +54,13 @@ export const SETTING_SPECS: Readonly<Record<Exclude<SettingKey, "write_targets">
     fields: [
       { name: "endpoint", label: "Endpoint (https)", kind: "text", required: true },
       { name: "deployment", label: "Deployment name", kind: "text", required: true },
-      { name: "api_version", label: "API version", kind: "text", required: true, hint: "2025-01-01-preview" },
+      {
+        name: "api_version",
+        label: "API version",
+        kind: "text",
+        required: true,
+        hint: "2025-01-01-preview",
+      },
       RESOURCE,
     ],
   },
@@ -67,7 +73,13 @@ export const SETTING_SPECS: Readonly<Record<Exclude<SettingKey, "write_targets">
     fields: [
       { name: "endpoint", label: "Endpoint (https)", kind: "text", required: true },
       { name: "deployment", label: "Deployment name", kind: "text", required: true },
-      { name: "api_version", label: "API version", kind: "text", required: true, hint: "2025-01-01-preview" },
+      {
+        name: "api_version",
+        label: "API version",
+        kind: "text",
+        required: true,
+        hint: "2025-01-01-preview",
+      },
       RESOURCE,
     ],
   },
@@ -90,7 +102,12 @@ export const SETTING_SPECS: Readonly<Record<Exclude<SettingKey, "write_targets">
     member: "scan",
     credential: "any",
     fields: [
-      { name: "interval_seconds", label: "Interval in seconds (300 to 604800)", kind: "number", required: true },
+      {
+        name: "interval_seconds",
+        label: "Interval in seconds (300 to 604800)",
+        kind: "number",
+        required: true,
+      },
       { name: "scopes", label: "Scopes (one per line)", kind: "lines", required: true },
     ],
   },
@@ -100,7 +117,10 @@ export const SETTING_SPECS: Readonly<Record<Exclude<SettingKey, "write_targets">
     description: "The NeuroSphere MCP server endpoint published to clients.",
     member: "mcp_server",
     credential: "optional",
-    fields: [{ name: "endpoint", label: "Endpoint (https)", kind: "text", required: true }, RESOURCE],
+    fields: [
+      { name: "endpoint", label: "Endpoint (https)", kind: "text", required: true },
+      RESOURCE,
+    ],
   },
 };
 
@@ -110,7 +130,11 @@ export interface SettingDraft {
   readonly credential: CredentialDraft;
 }
 
-export const EMPTY_DRAFT: SettingDraft = { enabled: false, values: {}, credential: EMPTY_CREDENTIAL };
+export const EMPTY_DRAFT: SettingDraft = {
+  enabled: false,
+  values: {},
+  credential: EMPTY_CREDENTIAL,
+};
 
 type Json = Record<string, unknown>;
 
@@ -187,7 +211,8 @@ export function draftDiff(
   for (const f of spec.fields) {
     const b = (before.values[f.name] ?? "").trim();
     const a = (after.values[f.name] ?? "").trim();
-    if (a !== b) rows.push({ field: f.name, before: b === "" ? "unset" : b, after: a === "" ? "unset" : a });
+    if (a !== b)
+      rows.push({ field: f.name, before: b === "" ? "unset" : b, after: a === "" ? "unset" : a });
   }
   const bc = `${before.credential.kind}:${before.credential.value.trim()}`;
   const ac = `${after.credential.kind}:${after.credential.value.trim()}`;

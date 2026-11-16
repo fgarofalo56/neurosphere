@@ -83,7 +83,9 @@ describe("CatalogImportPage", () => {
     typeJson('[{"id":"a"},{"name":"b"}]');
     await userEvent.click(screen.getByRole("button", { name: "Dry run" }));
     expect(await screen.findByText("missing_id")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Commit import" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Commit import" }).hasAttribute("disabled")).toBe(
+      true,
+    );
   });
 
   it("states the limit and sends nothing for an oversized payload", async () => {
