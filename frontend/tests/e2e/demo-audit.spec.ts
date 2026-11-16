@@ -147,7 +147,7 @@ async function assertForbidden(page: Page, route: string): Promise<void> {
   await settle(page);
   await expect
     .soft(page.locator('[data-testid="forbidden-state"]'), `${route}: expected forbidden`)
-    .toHaveCount(1);
+    .not.toHaveCount(0); // PRP-57: a page with one card per setting or sheet shows one state per card
 }
 
 test.describe("demo route audit", () => {
