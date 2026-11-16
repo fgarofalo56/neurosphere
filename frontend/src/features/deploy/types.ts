@@ -31,6 +31,8 @@ export interface SubscriptionScan {
 }
 
 export interface ScanResponse {
+  /** Server-issued id the plan route consumes; absent when the scan store is not configured. */
+  readonly scan_id?: string | null;
   readonly visibility_limited: true;
   readonly visibility_note: string;
   readonly consent_id: string;
@@ -91,7 +93,8 @@ export interface DeploymentProfile {
 
 export interface PlanRequest {
   readonly profile: DeploymentProfile;
-  readonly scan: ScanResponse | null;
+  /** Id of the stored scan; the API refuses a scan body. */
+  readonly scan_id: string;
   readonly choices: Readonly<Record<string, ServiceChoice>>;
   readonly consents: readonly OwnerConsentRecord[];
 }

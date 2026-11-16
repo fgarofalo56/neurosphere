@@ -64,6 +64,19 @@ def test_unverified_rows_stay_unverified(world: World, shipped: CapabilityMatrix
         assert served[row_id]["availability"] == "unverified"
 
 
+def test_dod_region_is_not_government_for_wildcard_rows() -> None:
+    w = make_world()
+    w.h.app.state.capability_matrix = matrix_from_rows(
+        [
+            _row(cloud="government", region="*", feature="vector"),
+            _row(cloud="government", region="usgovvirginia", feature="base"),
+        ]
+    )
+    assert w.get(VIEWER, PATH, params={"region": "usdodeast"}).json()["items"] == []
+    gov = w.get(VIEWER, PATH, params={"region": "usgovtexas"}).json()
+    assert {r["id"] for r in gov["items"]} == {"ai_search.vector.government.any.any"}
+
+
 @pytest.mark.parametrize("cloud", ["commercial", "government"])
 def test_cloud_filter_never_mixes_clouds(world: World, cloud: str) -> None:
     response = world.get(VIEWER, PATH, params={"cloud": cloud})

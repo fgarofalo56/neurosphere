@@ -29,7 +29,8 @@ export const DEPLOY_RESOURCES_DIGEST = `sha256:${"fedcba9876543210".repeat(4)}`;
 
 const SOURCE =
   "https://learn.microsoft.com/azure/azure-government/compare-azure-government-global-azure";
-const GOV_REGION = /^(usgov|usdod)/;
+const GOV_REGION = /^(usgovvirginia|usgovarizona|usgovtexas)$/;
+const DOD_REGION = /^usdod/;
 
 interface ScanBody {
   consent?: { consent_id?: string; consented_by?: string; consented_subscriptions?: string[] };
@@ -71,7 +72,14 @@ const CATEGORY: Record<string, string> = {
   analytics_workspace: "analytics_workspace",
 };
 
+/** Scans issued by the mock, keyed by scan_id, so the plan route plans from a stored scan. */
+const STORED_SCANS = new Map<string, StoredScan>();
+interface StoredScan {
+  subscriptions?: { resources?: Resource[] }[];
+}
+
 function scanFor(body: ScanBody) {
+  const scanId = `scan-${(STORED_SCANS.size + 1).toString(16).padStart(32, "0")}`;
   const consented = new Set(body.consent?.consented_subscriptions ?? []);
   const subs = (body.subscription_ids ?? []).map((id) => {
     if (!consented.has(id))
@@ -113,9 +121,11 @@ function scanFor(body: ScanBody) {
     ];
     return { subscription_id: id, status: "visible", resources, note: null };
   });
+  STORED_SCANS.set(scanId, { subscriptions: subs });
   return {
     visibility_limited: true,
     visibility_note: DEPLOY_VISIBILITY_NOTE,
+    scan_id: scanId,
     consent_id: body.consent?.consent_id ?? "",
     scanned_at: "2026-10-15T12:00:00Z",
     subscriptions: subs,
@@ -124,14 +134,15 @@ function scanFor(body: ScanBody) {
 
 interface PlanBody {
   profile?: { cloud?: string; regions?: string[] };
-  scan?: { subscriptions?: { resources?: Resource[] }[] } | null;
+  scan?: unknown;
+  scan_id?: string;
   choices?: Record<string, { decision: string; resource_id?: string; fallback?: string }>;
   consents?: { granted: boolean; resource_ids: string[]; owner_principal?: string }[];
 }
 
-function planFor(body: PlanBody) {
+function planFor(body: PlanBody, stored: StoredScan | undefined) {
   const gov = body.profile?.cloud === "government";
-  const found = (body.scan?.subscriptions ?? []).flatMap((s) => s.resources ?? []);
+  const found = (stored?.subscriptions ?? []).flatMap((s) => s.resources ?? []);
   const consents = body.consents ?? [];
   const items = SERVICES.map((service) => {
     const candidate = found.find((r) => CATEGORY[r.category] === service);
@@ -298,6 +309,7 @@ const MATRIX: Row[] = [
 function speaks(r: Row, region: string): boolean {
   if (r.region === region || r.region === "global") return true;
   if (r.region !== "*") return false;
+  if (DOD_REGION.test(region)) return false;
   return r.cloud === "government" ? GOV_REGION.test(region) : !GOV_REGION.test(region);
 }
 
@@ -508,7 +520,19 @@ export const handle: FeatureMockHandler = (ctx) => {
   }
 
   if (url.pathname === "/api/v1/deploy/plan" && method === "POST") {
-    void ctx.readBody().then((raw) => send(planFor(JSON.parse(raw) as PlanBody)));
+    void ctx.readBody().then((raw) => {
+      const body = JSON.parse(raw) as PlanBody;
+      if (body.scan !== undefined && body.scan !== null) {
+        ctx.problem(422, "invalid_schema", "scan_body_not_accepted", "A scan body is not accepted");
+        return;
+      }
+      const stored = body.scan_id === undefined ? undefined : STORED_SCANS.get(body.scan_id);
+      if (body.scan_id !== undefined && stored === undefined) {
+        ctx.problem(422, "invalid_schema", "scan_not_found", "The scan does not exist");
+        return;
+      }
+      send(planFor(body, stored));
+    });
     return true;
   }
 

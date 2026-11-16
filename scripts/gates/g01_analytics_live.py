@@ -81,6 +81,10 @@ REPO = Path(__file__).resolve().parents[2]
 SCRIPT_VERSION = "1.0.0"
 GATE = "G01"
 ADAPTERS = ("fabric", "synapse", "databricks")
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _evidence_paths import RefusedError, confine_evidence_dir  # noqa: E402
+
 EVIDENCE_DIR = REPO / "docs" / "evidence" / "G01" / "analytics"
 DATA_LABEL = (
     "synthetic sandbox dataset (build_dataset('commercial')); no production or customer data"
@@ -126,22 +130,6 @@ COLUMN_TYPES: tuple[tuple[str, str], ...] = (
     ("output_tokens", "BIGINT"),
     ("cost_amount", "DECIMAL(38,12)"),
 )
-
-
-class RefusedError(RuntimeError):
-    """A precondition failed before anything ran."""
-
-
-def confine_evidence_dir(raw: str, allowed_roots: Sequence[Path]) -> Path:
-    """Resolve a CLI-supplied evidence dir and require it inside an allowed root.
-
-    Refuses (RefusedError) traversal and absolute out-of-root paths before anything is written.
-    """
-    resolved = Path(raw).resolve()
-    for root in allowed_roots:
-        if resolved.is_relative_to(Path(root).resolve()):
-            return resolved
-    raise RefusedError("--evidence-dir must resolve inside the G01 analytics evidence directory.")
 
 
 # --------------------------------------------------------------------------- scrubber
@@ -771,7 +759,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_TIMEOUT_MS,
         help="per-request time budget in ms (contract ceiling 30000)",
     )
-    ap.add_argument("--evidence-dir", default=str(EVIDENCE_DIR))
+    ap.add_argument(
+        "--evidence-dir",
+        default=str(EVIDENCE_DIR),
+        help="evidence output; confined to docs/evidence/G01/analytics (anything else is refused)",
+    )
     return ap
 
 
@@ -821,7 +813,9 @@ def main(
     active = dict(DEFAULT_RUNNERS if runners is None else runners)
     try:
         evidence_dir = confine_evidence_dir(
-            args.evidence_dir, [EVIDENCE_DIR] if evidence_roots is None else evidence_roots
+            args.evidence_dir,
+            [EVIDENCE_DIR] if evidence_roots is None else evidence_roots,
+            "the G01 analytics evidence directory (docs/evidence/G01/analytics)",
         )
     except RefusedError as exc:
         print(f"REFUSED: {exc} No connection was attempted.", file=sys.stderr)

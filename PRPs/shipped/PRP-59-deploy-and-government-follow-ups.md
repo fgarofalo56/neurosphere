@@ -1,6 +1,8 @@
 ---
 name: PRP-59-deploy-and-government-follow-ups
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 307
 priority: P3
 order: 43
 review: none
@@ -33,22 +35,22 @@ Out of scope: the real deploy apply path, durable plan approvals and the ARM pro
 - `confine_evidence_dir` is duplicated byte for byte in `g01_analytics_live.py:140` and `g01_deploy_smoke.py:103` and there is no `.snyk` file, so Snyk Code keeps resurfacing the path-traversal lows (#214).
 
 ## Acceptance criteria
-- [ ] Given a plan request with a body `scan`, when posted, then it is refused with 422 `invalid_schema` reason `scan_body_not_accepted` before any planning; given `scan_id` of a scan this caller ran, planning works as today; given another caller's `scan_id`, 403 as today (#36).
-- [ ] The deploy UI plans from the stored scan: `PlanStep` sends `scan_id` from the scan response and never the scan body; when the scan response has no `scan_id` (store not configured) the UI shows the existing "scan unavailable" error state instead of posting (#36 follow-through).
-- [ ] The mock API refuses a body `scan` the same way and echoes `scan_id` flows in tests and e2e (#36).
-- [ ] Every top-level `provider/type` declared as `resource ... '<Type>@<version>'` under `infra/bicep/**`, `infra/demo/**` and `infra/appservice/**` has an entry in `_API_VERSIONS` or is listed in an explicit `NOT_DELETED_DIRECTLY` allow-list (child and extension types such as `roleAssignments`, `diagnosticSettings`, `sqlDatabases`) with a one-line reason; a new Bicep type with neither fails the test naming it (#38).
-- [ ] Each `_API_VERSIONS` value is not older than the newest version the Bicep tree uses for that type, or a test comment records why; `api_version_for` still refuses an unknown type (#38).
-- [ ] Given a scan request, when it succeeds, then the consent audit record carries the authenticated principal pseudonym as `consented_by` and the hash of the client text as `attestation`; the raw client string is not stored; the request model and UI keep accepting `consented_by` as the attestation reference (#133).
-- [ ] Given a copilot region `usdod*`, empty, or malformed, `_evaluate` returns a disabled `AdapterAvailability` with reason `capability_unavailable` instead of raising `ValidationError` (#212 copilot).
-- [ ] `ui_adapters/capabilities.py` derives Government regions from `GOVERNMENT_DEPLOYABLE_REGIONS`; a `usdod*` region is not Government there; the mock `GOV_REGION` matches only the three deployable regions (#212 display and mock).
-- [ ] A worker test shows `fabric_unavailable_reason(GOVERNMENT, "usdodeast")` returns `invalid_region` (#212 workers).
-- [ ] The known-host list in `tests/unit/government_profile/test_sovereign_hosts.py` is derived from `CloudProfile` and `sovereign-profile.yaml`, and a host in the manifest that no suffix covers fails with the host name (#212 `GOV_SUFFIX`).
-- [ ] A `KeyboardInterrupt` raised inside `profile.deploy` still tears down, writes an evidence file with `result: FAIL` and `interrupted: true`, then re-raises (#213 item 1).
-- [ ] Before the group delete, `_delete_group` re-lists the group's resources and refuses to delete when any resource lacks this run's tag, recording the refusal in `teardown` (#213 item 2).
-- [ ] The AKS cleanup catches the recoverable tuple only; any other exception propagates after the evidence write (#213 item 4).
-- [ ] `confine_evidence_dir` lives once in `scripts/gates/_evidence_paths.py` and both G01 scripts import it; the existing path-confinement tests pass unchanged; `--help` and docs state that analytics evidence is confined to `docs/evidence/G01/analytics` (#214).
+- [x] Given a plan request with a body `scan`, when posted, then it is refused with 422 `invalid_schema` reason `scan_body_not_accepted` before any planning; given `scan_id` of a scan this caller ran, planning works as today; given another caller's `scan_id`, 403 as today (#36).
+- [x] The deploy UI plans from the stored scan: `PlanStep` sends `scan_id` from the scan response and never the scan body; when the scan response has no `scan_id` (store not configured) the UI shows the existing "scan unavailable" error state instead of posting (#36 follow-through).
+- [x] The mock API refuses a body `scan` the same way and echoes `scan_id` flows in tests and e2e (#36).
+- [x] Every top-level `provider/type` declared as `resource ... '<Type>@<version>'` under `infra/bicep/**`, `infra/demo/**` and `infra/appservice/**` has an entry in `_API_VERSIONS` or is listed in an explicit `NOT_DELETED_DIRECTLY` allow-list (child and extension types such as `roleAssignments`, `diagnosticSettings`, `sqlDatabases`) with a one-line reason; a new Bicep type with neither fails the test naming it (#38).
+- [x] Each `_API_VERSIONS` value is not older than the newest version the Bicep tree uses for that type, or a test comment records why; `api_version_for` still refuses an unknown type (#38).
+- [x] Given a scan request, when it succeeds, then the consent audit record carries the authenticated principal pseudonym as `consented_by` and the hash of the client text as `attestation`; the raw client string is not stored; the request model and UI keep accepting `consented_by` as the attestation reference (#133).
+- [x] Given a copilot region `usdod*`, empty, or malformed, `_evaluate` returns a disabled `AdapterAvailability` with reason `capability_unavailable` instead of raising `ValidationError` (#212 copilot).
+- [x] `ui_adapters/capabilities.py` derives Government regions from `GOVERNMENT_DEPLOYABLE_REGIONS`; a `usdod*` region is not Government there; the mock `GOV_REGION` matches only the three deployable regions (#212 display and mock).
+- [x] A worker test shows `fabric_unavailable_reason(GOVERNMENT, "usdodeast")` returns `invalid_region` (#212 workers).
+- [x] The known-host list in `tests/unit/government_profile/test_sovereign_hosts.py` is derived from `CloudProfile` and `sovereign-profile.yaml`, and a host in the manifest that no suffix covers fails with the host name (#212 `GOV_SUFFIX`).
+- [x] A `KeyboardInterrupt` raised inside `profile.deploy` still tears down, writes an evidence file with `result: FAIL` and `interrupted: true`, then re-raises (#213 item 1).
+- [x] Before the group delete, `_delete_group` re-lists the group's resources and refuses to delete when any resource lacks this run's tag, recording the refusal in `teardown` (#213 item 2).
+- [x] The AKS cleanup catches the recoverable tuple only; any other exception propagates after the evidence write (#213 item 4).
+- [x] `confine_evidence_dir` lives once in `scripts/gates/_evidence_paths.py` and both G01 scripts import it; the existing path-confinement tests pass unchanged; `--help` and docs state that analytics evidence is confined to `docs/evidence/G01/analytics` (#214).
 - [ ] `snyk_code_scan` over the touched Python shows no new findings; the remaining path-traversal lows are justified in `docs/security/snyk-justifications.md` naming `confine_evidence_dir`, with a `.snyk` ignore added only if Snyk Code supports one for the finding (UNVERIFIED), else reported as an operator Snyk-UI action (#214).
-- [ ] PRP exit: targeted suites, `ruff`, `pyright`, frontend lint/typecheck/test, `verify-gates.ps1 -Mode full` pass; live runs reported OPEN.
+- [x] PRP exit: targeted suites, `ruff`, `pyright`, frontend lint/typecheck/test, `verify-gates.ps1 -Mode full` pass; live runs reported OPEN.
 
 ## Clarifications (decided)
 | # | Question | Options offered | Decision |
@@ -243,19 +245,19 @@ Real apply or durable approvals (PRP-55); signature scheme for scan bodies; anal
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | after 1 for the shared mock file |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 2 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 3 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 4 | merged | prp-59-deploy-gov-followups | done after item 1 |
+| 5 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 6 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 7 | merged | prp-59-deploy-gov-followups | close-out done |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
-- Deviations from the blueprint:
-- Descoped items:
-- OPEN gates (G02 live, G01 live, live uninstall, #213 item 3, Snyk UI ignore):
-- Env vars for the operator (none):
-- Follow-up issue numbers:
-- Issue state (#36, #38, #133, #212, #213, #214):
+- Date, PR, merge commit: 2026-11-16, PR #307, squash merge (commit recorded by GitHub).
+- Deviations from the blueprint: none. No `.snyk` file was added (UNVERIFIED that Snyk Code accepts one for these findings); the justification lives in `docs/security/snyk-justifications.md`. No `openapi.json` or `docs/reference/**` regeneration was needed (drift tests pass).
+- Descoped items: #213 item 3 (what-if noise allow-list, needs a Government subscription; PRP-64).
+- OPEN gates (G02 live, G01 live, live uninstall, #213 item 3, Snyk UI ignore): all OPEN, none ran (no `NS_LIVE_APPROVED`). The acceptance box for a clean `snyk_code_scan` is left unticked: the scan was not re-run at close-out.
+- Env vars for the operator (none): none.
+- Follow-up issue numbers: none new.
+- Issue state (#36, #38, #133, #212, #213, #214): #36, #38, #133, #212 closed by this PR; #213 stays open (item 3); #214 stays open (Snyk UI ignore is operator-only); #249 is the tracking issue and is closed.

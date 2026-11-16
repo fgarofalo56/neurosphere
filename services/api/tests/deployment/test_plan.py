@@ -428,7 +428,6 @@ def test_manifest_with_disabled_option_is_planned() -> None:
 def _body() -> dict[str, Any]:
     return PlanRequest(
         profile=COMMERCIAL,
-        scan=_scan(KV),
         consents=[_consent(KV.id)],
         deployment_id="dep-test-01",
     ).model_dump(mode="json")
@@ -453,4 +452,4 @@ def test_route_admin_gets_plan_and_valid_manifest(
     assert data["manifest"]["deployment_id"] == "dep-test-01"
     assert [e.message for e in schema_errors(SCHEMA, data["manifest"])] == []
     kv = next(i for i in data["plan"]["items"] if i["service"] == "key_vault")
-    assert kv["status"] == "reuse"
+    assert kv["status"] == "create"  # no scan_id, nothing discovered (body scans are refused)

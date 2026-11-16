@@ -133,7 +133,11 @@ export function PlanStep({ scan, draft, onPlanned }: PlanStepProps): ReactElemen
   const mutation = usePlan();
   const result: PlanResponse | undefined = mutation.data;
 
+  const scanId = scan?.scan_id ?? null;
+  const scanUnavailable = scanId === null || scanId === "";
+
   function build(): void {
+    if (scanId === null || scanId === "") return;
     const request: PlanRequest = {
       profile: {
         cloud: draft.profile.cloud,
@@ -143,7 +147,7 @@ export function PlanStep({ scan, draft, onPlanned }: PlanStepProps): ReactElemen
         features: [],
         allow_preview: false,
       },
-      scan,
+      scan_id: scanId,
       choices: buildChoices(draft.services),
       consents: draft.consents,
     };
@@ -157,12 +161,15 @@ export function PlanStep({ scan, draft, onPlanned }: PlanStepProps): ReactElemen
         <Button
           appearance="primary"
           onClick={build}
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || scanUnavailable}
           data-testid="plan-build"
         >
           {STRINGS.planButton}
         </Button>
       </div>
+      {scanUnavailable ? (
+        <ErrorState title={STRINGS.scanUnavailable} testId="plan-scan-unavailable" />
+      ) : null}
       {error === null ? null : error instanceof ForbiddenError ? (
         <ForbiddenState
           workspace={STRINGS.forbiddenWorkspace}

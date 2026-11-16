@@ -52,14 +52,6 @@ on a red `main`.
 
 ## Waves and merge order
 
-### W17
-
-| Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
-|---|---|---|---|---|---|---|---|
-| 1 | [PRP-59: Deploy and Government follow-ups](backlog/PRP-59-deploy-and-government-follow-ups.md) | sonnet | none | none | - | - | `prp-59-deploy-gov-followups` |
-
-Gate before the next wave: An operator can assign a role and read the first-run checklist in the UI; a write target is enabled from configuration.
-
 ### W18
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
@@ -104,9 +96,6 @@ Gate before the next wave: Every gate has evidence or is recorded OPEN with its 
 
 ```mermaid
 flowchart LR
-  subgraph W17
-    P59["PRP-59"]
-  end
   subgraph W18
     P57["PRP-57"]
     P55["PRP-55"]
@@ -157,14 +146,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 ## Kickoff prompts
 
 Paste one into a fresh Claude Code session started at the repo root.
-
-### PRP-59 (W17)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-59-deploy-and-government-follow-ups.md
-
-Context for this run: wave W17 of PRPs/EXECUTION-PLAN.md, branch prp-59-deploy-gov-followups cut from origin/main, implementer model sonnet, review none. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
 
 ### PRP-57 (W18)
 

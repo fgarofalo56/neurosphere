@@ -29,7 +29,6 @@ from neurosphere_api.deploy.plan import PlanRequest
 from neurosphere_api.deploy.plan import build_router as build_plan_router
 from neurosphere_api.deploy.scan import (
     SCAN_QUERY,
-    ScanResponse,
     ScanService,
     configure_scan,
 )
@@ -125,9 +124,9 @@ def test_scan_result_feeds_plan_and_unconsented_shared_service_needs_consent(
     assert reader.queried == [[SUB_A, SUB_B]]  # C is never queried
     assert all(r["subscription_id"] != SUB_C for s in scan["subscriptions"] for r in s["resources"])
 
-    body = PlanRequest(
-        profile=COMMERCIAL, scan=ScanResponse.model_validate(scan), consents=[]
-    ).model_dump(mode="json")
+    body = PlanRequest(profile=COMMERCIAL, scan_id=scan["scan_id"], consents=[]).model_dump(
+        mode="json"
+    )
     plan_resp = h.client.post("/v1/deploy/plan", json=body, headers=h.auth(BOB))
     assert plan_resp.status_code == 200, plan_resp.text
     items = plan_resp.json()["plan"]["items"]
