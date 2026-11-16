@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "recommendation_id": "commercial:contoso:neurosphere:recommendation:det-0002",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:catalog:domain:operations",
+  "kind": "unregistered_ai_resource",
+  "subject_ids": [
+    "commercial:contoso:azure_resource_graph:ai_account:shadow-aoai-1a2b3c4d"
+  ],
+  "method": "rule",
+  "generator": {
+    "generator_id": "detect.shadow_ai_account",
+    "generator_version": "1.0.0"
+  },
+  "evidence_status": "sufficient",
+  "evidence_window": {
+    "start": "2026-10-10T05:00:00Z",
+    "end": "2026-10-10T06:00:00Z"
+  },
+  "evidence_ids": [],
+  "coverage": {
+    "method": "full",
+    "observed_fraction": 1
+  },
+  "uncertainty": {
+    "method": "rule_bound",
+    "lower": 1,
+    "upper": 1
+  },
+  "prerequisites": [],
+  "owner": {
+    "resolution": "unresolved",
+    "owner_id": null
+  },
+  "advisory": true,
+  "created_at": "2026-10-10T06:00:00Z",
+  "expires_at": "2026-10-10T08:00:00Z"
+}

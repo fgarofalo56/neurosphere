@@ -1,6 +1,8 @@
 ---
 name: PRP-61-configuration-detections-and-shadow-ai-discovery
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 318
 priority: P2
 order: 49
 review: required
@@ -32,16 +34,16 @@ Out of scope: the control library and bundles (PRP-56, whose control ids are cit
 - A worker role is a bounded `PeriodicTick` that idles when unconfigured (`services/workers/neurosphere_workers/runtime/factories.py:1240-1257`, `build_billing_export`), so a new role cannot break a deployment that has not configured it.
 
 ## Acceptance criteria
-- [ ] Contract: the recommendation `kind` enum gains `configuration_finding` and `unregistered_ai_resource`; for those kinds `advisory` is `true`, `method` is `rule`, and `evidence_status: sufficient` is valid without a `score` (decided in item 1 and recorded); every existing example and test passes unchanged; `generate.py --check` is clean; the API `Kind` literal and the frontend kind labels accept the new values.
-- [ ] Content-filter check: given settings that list the Foundry accounts to inspect and, optionally, the acceptable policy names, When a deployment has no `raiPolicyName` or a name outside the list, Then one finding per deployment is stored with the deployment's canonical id as subject and the observed policy name (or `unset`); when no acceptable list is configured only `unset` is reported and the rule says so in its `generator` id; a deployment that cannot be read is `unknown` coverage, never a pass.
-- [ ] Gateway check: given a declared list of required APIM policy-fragment names (for example a PII-redaction or content-safety fragment the operator uses), When a registered gateway's latest inventory lacks any of them, Then a finding names the gateway and the missing fragment names; with no declared list the rule is `not_evaluated` and emits nothing; no policy XML, key or subscription value is read or stored.
-- [ ] Shadow-AI: given a Resource Graph read of AI accounts (kind `OpenAI` or `AIServices`) in the configured subscriptions, When an account name is not referenced by any catalog `model_deployment` entity's project attribute or a configured discovery target, Then an `unregistered_ai_resource` finding is stored with a synthetic canonical subject id derived from cloud, customer and account name, the ARM resource id digest, location and tags keys only; matching rules and the assumption are documented in the runbook.
-- [ ] Idempotence: a re-run with unchanged configuration upserts the same recommendation ids (stable hash of rule id, subject and observed value) and does not duplicate; a finding that no longer applies expires (`expires_at` is two intervals ahead and is not extended) rather than being deleted.
-- [ ] Metadata only: a test feeds readers whose payloads contain prompt-like text, a key and policy XML and asserts none reaches a stored recommendation, a log line or an audit record; the Resource Graph query is a fixed constant with a column allowlist.
-- [ ] Cloud rules: a Government deployment uses the Government ARM and Resource Graph hosts from `CloudProfile`, never a Commercial host; a subscription or account of another cloud is refused with a reason code; where the capability matrix says a read is unavailable the rule reports `capability_unavailable` coverage and emits nothing.
-- [ ] Role: `NS_WORKER_ROLES` accepts `detections`; with no `NS_WORKER_DETECT_*` configuration the role idles with an info log; bad configuration fails the role with a machine reason (`detections_domain_id_invalid`, ...), not the process; the role is read-only (no ARM PUT/POST except the Resource Graph query POST).
-- [ ] Evidence: a `configuration_findings` evidence source (counts of open findings per kind, window, truncation) is registered with PRP-56 and mapped to the content-filter, monitoring and inventory controls the PRP-56 library already contains, using its status vocabulary; no sentence claims compliance.
-- [ ] Review path: an `unregistered_ai_resource` finding appears in `GET /api/v1/recommendations?kind=unregistered_ai_resource` for a steward of the configured domain and not for another domain (existing scope filter, test).
+- [x] Contract: the recommendation `kind` enum gains `configuration_finding` and `unregistered_ai_resource`; for those kinds `advisory` is `true`, `method` is `rule`, and `evidence_status: sufficient` is valid without a `score` (decided in item 1 and recorded); every existing example and test passes unchanged; `generate.py --check` is clean; the API `Kind` literal and the frontend kind labels accept the new values.
+- [x] Content-filter check: given settings that list the Foundry accounts to inspect and, optionally, the acceptable policy names, When a deployment has no `raiPolicyName` or a name outside the list, Then one finding per deployment is stored with the deployment's canonical id as subject and the observed policy name (or `unset`); when no acceptable list is configured only `unset` is reported and the rule says so in its `generator` id; a deployment that cannot be read is `unknown` coverage, never a pass.
+- [x] Gateway check: given a declared list of required APIM policy-fragment names (for example a PII-redaction or content-safety fragment the operator uses), When a registered gateway's latest inventory lacks any of them, Then a finding names the gateway and the missing fragment names; with no declared list the rule is `not_evaluated` and emits nothing; no policy XML, key or subscription value is read or stored.
+- [x] Shadow-AI: given a Resource Graph read of AI accounts (kind `OpenAI` or `AIServices`) in the configured subscriptions, When an account name is not referenced by any catalog `model_deployment` entity's project attribute or a configured discovery target, Then an `unregistered_ai_resource` finding is stored with a synthetic canonical subject id derived from cloud, customer and account name, the ARM resource id digest, location and tags keys only; matching rules and the assumption are documented in the runbook.
+- [x] Idempotence: a re-run with unchanged configuration upserts the same recommendation ids (stable hash of rule id, subject and observed value) and does not duplicate; a finding that no longer applies expires (`expires_at` is two intervals ahead and is not extended) rather than being deleted.
+- [x] Metadata only: a test feeds readers whose payloads contain prompt-like text, a key and policy XML and asserts none reaches a stored recommendation, a log line or an audit record; the Resource Graph query is a fixed constant with a column allowlist.
+- [x] Cloud rules: a Government deployment uses the Government ARM and Resource Graph hosts from `CloudProfile`, never a Commercial host; a subscription or account of another cloud is refused with a reason code; where the capability matrix says a read is unavailable the rule reports `capability_unavailable` coverage and emits nothing.
+- [x] Role: `NS_WORKER_ROLES` accepts `detections`; with no `NS_WORKER_DETECT_*` configuration the role idles with an info log; bad configuration fails the role with a machine reason (`detections_domain_id_invalid`, ...), not the process; the role is read-only (no ARM PUT/POST except the Resource Graph query POST).
+- [x] Evidence: a `configuration_findings` evidence source (counts of open findings per kind, window, truncation) is registered with PRP-56 and mapped to the content-filter, monitoring and inventory controls the PRP-56 library already contains, using its status vocabulary; no sentence claims compliance.
+- [x] Review path: an `unregistered_ai_resource` finding appears in `GET /api/v1/recommendations?kind=unregistered_ai_resource` for a steward of the configured domain and not for another domain (existing scope filter, test).
 - PRP exit: with fakes for ARM, Resource Graph and the gateway store, the role stores one finding per rule violation, the recommendations API lists them, and a live read is written OPEN (PRP-64).
 
 ## Clarifications (decided)
@@ -224,19 +226,19 @@ Content or prompt inspection; PII detection in data; policy XML parsing; auto-re
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-61-detections | schema kinds + if/then, examples, Kind literal, UI labels |
+| 2 | merged | prp-61-detections | core rules, mapper, fakes, capability gate |
+| 3 | merged | prp-61-detections | ARM, Resource Graph, gateway, catalog readers |
+| 4 | merged | prp-61-detections | role, settings, registration; NS_WORKER_DETECT_* |
+| 5 | merged | prp-61-detections | evidence source + 4 library mappings; also touched models.py id list, contract enum, API deps line, golden |
+| 6 | merged | prp-61-detections | e2e test + runbook + mkdocs nav |
+| 7 | merged | prp-61-detections | close-out at landing: openapi and docs/reference regenerated, changelog fragment |
 
-## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
-- Operator product check (can an operator use this without editing files or calling raw APIs?):
+## Completion note
+- Date, PR number, merge commit: 2026-11-16, PR #318 (squash merge on main by the unattended landing run).
+- Deviations: item 5 also touched the compliance models id list, the evidence-bundle and control-mapping contract enums (`configuration_findings` source id, list max raised from 5 to 6) and one registration line in `services/api/neurosphere_api/compliance/dependencies.py`, plus four mappings in the library and the NIST AI RMF golden bundle.
+- Descoped items: none. The live Resource Graph and ARM read is OPEN (PRP-64).
+- OPEN gates: live read against a real subscription (needs `NS_LIVE_APPROVED=1` and operator approval). Findings state that configuration differs from the declared expectation; nothing here claims a deployment is safe or compliant. Frontend typecheck and vitest were left to CI at landing.
+- Env vars for the operator: add `detections` to `NS_WORKER_ROLES`; settings prefix `NS_WORKER_DETECT_`: `ENABLED`, `DOMAIN_ID`, `INTERVAL_SECONDS`, `FOUNDRY_ACCOUNTS`, `ACCEPTABLE_RAI_POLICIES`, `REQUIRED_APIM_FRAGMENTS`, `SUBSCRIPTIONS`, `MAX_ITEMS`. See `docs/runbooks/detections.md`. With none set the role idles.
+- Follow-up issues filed: none. Hosted role wiring (Bicep/Helm) is carried by PRP-58 and PRP-63.
+- Operator product check: findings are visible in the existing recommendations list and review path; configuring the role needs environment variables (no admin console page yet); gap noted, no issue filed.

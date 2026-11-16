@@ -17,6 +17,7 @@ from neurosphere_core.compliance import ControlLibrary, LibraryLoadError, load_l
 from neurosphere_core.compliance.sources import (
     AuditChainSource,
     CatalogOwnershipSource,
+    ConfigurationFindingsSource,
     CostAttributionSource,
     EvaluationResultsSource,
     EvidenceSource,
@@ -60,4 +61,5 @@ def get_sources(request: Request) -> list[EvidenceSource]:
         HitlDecisionsSource(getattr(hitl_service, "store", None)),
         EvaluationResultsSource(getattr(state, "evaluation_store", None)),
         CostAttributionSource(getattr(state, "ledger_store", None)),
+        ConfigurationFindingsSource(getattr(state, "recommendation_store", None)),
     ]

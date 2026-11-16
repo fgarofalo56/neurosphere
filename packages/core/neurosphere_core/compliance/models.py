@@ -48,7 +48,12 @@ SUPPORT_STATUSES: Final[tuple[str, ...]] = (
 PATH_REQUIRED_STATUSES: Final[frozenset[str]] = frozenset({"designed", "implemented_tested"})
 
 EvidenceSourceId = Literal[
-    "catalog_ownership", "audit_chain", "hitl_decisions", "evaluation_results", "cost_attribution"
+    "catalog_ownership",
+    "audit_chain",
+    "hitl_decisions",
+    "evaluation_results",
+    "cost_attribution",
+    "configuration_findings",
 ]
 EVIDENCE_SOURCE_IDS: Final[tuple[str, ...]] = (
     "catalog_ownership",
@@ -56,6 +61,7 @@ EVIDENCE_SOURCE_IDS: Final[tuple[str, ...]] = (
     "hitl_decisions",
     "evaluation_results",
     "cost_attribution",
+    "configuration_findings",
 )
 
 ObservationStatus = Literal["observed", "partial", "unavailable", "not_collected"]

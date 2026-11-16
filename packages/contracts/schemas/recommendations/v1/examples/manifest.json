@@ -92,6 +92,27 @@
         "keyword": "pattern"
       },
       "reason": "timestamps are RFC 3339 UTC"
+    },
+    {
+      "file": "valid/recommendation.configuration-finding.json",
+      "schema": "recommendation.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/recommendation.unregistered-ai-resource.json",
+      "schema": "recommendation.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/recommendation.finding-not-advisory.json",
+      "schema": "recommendation.schema.json",
+      "valid": false,
+      "derived_from": "valid/recommendation.configuration-finding.json",
+      "expected_error": {
+        "instance_path": "/advisory",
+        "keyword": "const"
+      },
+      "reason": "deterministic findings are advisory only"
     }
   ]
 }

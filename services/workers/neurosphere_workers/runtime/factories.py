@@ -161,6 +161,7 @@ from neurosphere_workers.connector_config import (
     resolve_foundry_discovery_settings,
     resolve_gateway_poll_settings,
 )
+from neurosphere_workers.detections.role import build_detections
 from neurosphere_workers.evaluation.budget import BudgetLedger, BudgetLimits
 from neurosphere_workers.evaluation.labels import (
     HitlLabelSource,
@@ -1942,6 +1943,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "gateway_poll": build_gateway_poll,
     "foundry_discovery": build_foundry_discovery,
     "billing_export": build_billing_export,
+    "detections": build_detections,
 }
 
 
