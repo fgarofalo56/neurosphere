@@ -243,13 +243,13 @@ Real apply or durable approvals (PRP-55); signature scheme for scan bodies; anal
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | after 1 for the shared mock file |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 2 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 3 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 4 | merged | prp-59-deploy-gov-followups | done after item 1 |
+| 5 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 6 | merged | prp-59-deploy-gov-followups | done in this branch |
+| 7 | todo | | merge step: Tier 3 regeneration, changelog fragment, close-out |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit:

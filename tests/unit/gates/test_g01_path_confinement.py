@@ -6,6 +6,7 @@ call) is reached; every case is refused before a runner or az command could star
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
 import uuid
@@ -63,6 +64,21 @@ def _approved(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 SCRIPTS = ["g01_analytics_live", "g01_deploy_smoke"]
+
+
+def test_both_scripts_share_one_confine_helper() -> None:
+    shared = importlib.import_module("_evidence_paths") if _on_path() else None
+    assert shared is not None
+    for script in SCRIPTS:
+        mod = _load(script)
+        assert mod.confine_evidence_dir is shared.confine_evidence_dir
+        assert mod.RefusedError is shared.RefusedError
+
+
+def _on_path() -> bool:
+    if str(GATES) not in sys.path:
+        sys.path.insert(0, str(GATES))
+    return True
 
 
 @pytest.mark.parametrize("script", SCRIPTS)

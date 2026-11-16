@@ -41,6 +41,10 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # pyright: ignore[reportAttributeAccessIssue]
 
 REPO = Path(__file__).resolve().parents[2]
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _evidence_paths import RefusedError, confine_evidence_dir  # noqa: E402
+
 EVIDENCE_ROOT = REPO / "docs" / "evidence" / "G01"
 SCRIPT_VERSION = "1.0.0"
 GATE = "G01"
@@ -94,22 +98,6 @@ class SubprocessAzRunner:
 
 class AzError(RuntimeError):
     pass
-
-
-class RefusedError(RuntimeError):
-    """A precondition failed before anything was changed."""
-
-
-def confine_evidence_dir(raw: str, allowed_roots: Sequence[Path]) -> Path:
-    """Resolve a CLI-supplied evidence dir and require it inside an allowed root.
-
-    Refuses (RefusedError) traversal and absolute out-of-root paths before anything is written.
-    """
-    resolved = Path(raw).resolve()
-    for root in allowed_roots:
-        if resolved.is_relative_to(Path(root).resolve()):
-            return resolved
-    raise RefusedError("--evidence-dir must resolve inside the G01 evidence directory.")
 
 
 # --------------------------------------------------------------------------- scrubber
@@ -257,7 +245,11 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--apim-publisher-email", default="", help="required when creating APIM")
     ap.add_argument("--apim-publisher-name", default="", help="required when creating APIM")
     ap.add_argument("--keep", action="store_true", help="skip teardown (default: tear down)")
-    ap.add_argument("--evidence-dir", default=str(EVIDENCE_ROOT))
+    ap.add_argument(
+        "--evidence-dir",
+        default=str(EVIDENCE_ROOT),
+        help="evidence output; confined to docs/evidence/G01 (anything else is refused)",
+    )
     return ap
 
 
