@@ -66,6 +66,13 @@ param apimMcpBackendUrl string = ''
 @description('Token audience (MCP app registration) the gateway accepts. Required when enableApimMcpFront.')
 param apimMcpAudience string = ''
 
+@description('UI-to-API ingress rate limit (calls per caller IP per minute) on a created APIM service. 0 applies no policy; a reused APIM is never modified (PRP-52, #69).')
+@minValue(0)
+param uiApiRateLimitCalls int = 0
+
+@description('Address space of the virtual network created by the network module.')
+param vnetAddressPrefix string = '10.40.0.0/16'
+
 var isGovernment = environment().name == 'AzureUSGovernment'
 var isV2Sku = endsWith(apimSkuName, 'V2')
 // Deliberate deploy-time failure: looking up a missing key fails the deployment, because the
@@ -158,6 +165,7 @@ module apim 'apim.bicep' = {
     publisherName: '${apimPublisherName}${v2GovernmentGuard}'
     skuName: apimSkuName
     skuCapacity: apimSkuCapacity
+    uiApiRateLimitCalls: uiApiRateLimitCalls
   }
 }
 
@@ -189,6 +197,7 @@ module network 'network/main.bicep' = {
     namePrefix: namePrefix
     location: location
     tags: tags
+    vnetAddressPrefix: vnetAddressPrefix
     // Reuse mode must not touch shared resources: only created services get a private endpoint.
     cosmosId: cosmos.outputs.created ? cosmos.outputs.id : ''
     eventHubsId: eventHubs.outputs.created ? eventHubs.outputs.id : ''

@@ -260,7 +260,18 @@ def test_bicep_sets_the_search_provider_on_the_api_site_only() -> None:
 def test_registry_is_required() -> None:
     helm = _helm()
     client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"
-    proc = _run([helm, "template", "neurosphere", str(CHART), "--set", client])
+    proc = _run(
+        [
+            helm,
+            "template",
+            "neurosphere",
+            str(CHART),
+            "--set",
+            client,
+            "--set",
+            "env.NS_CLOUD=commercial",
+        ]
+    )
     assert proc.returncode != 0
     assert "image.registry is required" in proc.stderr
 
@@ -318,3 +329,19 @@ def test_extension_points_left_to_later_prps() -> None:
     assert (CHART / "templates" / "networkpolicy.yaml").exists()
     values = yaml.safe_load((CHART / "values.yaml").read_text(encoding="utf-8"))
     assert values["networkPolicy"]["enabled"] is True
+
+
+def test_chart_requires_ns_cloud() -> None:
+    """PRP-52: no NS_CLOUD means no render; a value outside the allowed set fails too."""
+    helm = _helm()
+    base = [helm, "template", "neurosphere", str(CHART)]
+    client = "serviceAccount.workloadIdentity.clientId=00000000-0000-0000-0000-000000000000"
+    no_cloud = _run([*base, "--set", "image.registry=registry.example.invalid", "--set", client])
+    assert no_cloud.returncode != 0
+    assert "env.NS_CLOUD is required" in no_cloud.stderr
+    bad = _run([*base, "-f", str(CI_VALUES), "--set", "env.NS_CLOUD=moon"])
+    assert bad.returncode != 0
+    assert "commercial or government" in bad.stderr
+    for cloud in ("commercial", "government"):
+        ok = _run([*base, "-f", str(CI_VALUES), "--set", f"env.NS_CLOUD={cloud}"])
+        assert ok.returncode == 0, ok.stderr

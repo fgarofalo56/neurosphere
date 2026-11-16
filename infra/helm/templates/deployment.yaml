@@ -1,3 +1,8 @@
+{{- /* PRP-52: the cloud is never defaulted. NS_CLOUD selects the sovereign profile (commercial or government). */}}
+{{- $nsCloud := required "env.NS_CLOUD is required (commercial or government); set it in your values file" $.Values.env.NS_CLOUD }}
+{{- if not (has $nsCloud (list "commercial" "government")) }}
+{{- fail (printf "env.NS_CLOUD must be commercial or government, got %q" $nsCloud) }}
+{{- end }}
 {{- range $name := list "api" "workers" "frontend" }}
 {{- $c := index $.Values $name }}
 ---

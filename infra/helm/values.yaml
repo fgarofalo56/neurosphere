@@ -39,6 +39,8 @@ containerSecurityContext:
 
 # Non-secret environment only. Credentials come from vault references
 # (secretProviderClass below), never from values.
+# env.NS_CLOUD is REQUIRED (commercial or government): the chart refuses to render without it so
+# a deployment never silently assumes a cloud. Example: `--set env.NS_CLOUD=commercial`.
 env: {}
 
 # Ingest producer registry (sha256 digests only, never plaintext secrets). Off by default: ingest
@@ -136,6 +138,26 @@ networkPolicy:
   # Egress allowlist: list of {name, cidr, ports: [{port, protocol}]}. Typical entry is the
   # private-endpoint subnet range from the network Bicep module (443/TCP). Empty = DNS and
   # intra-release traffic only.
+  #
+  # Egress that workload identity and Azure Monitor need (NetworkPolicy cannot match FQDNs, so
+  # resolve the endpoints for your cloud and region and list their CIDRs):
+  #   - the Microsoft Entra ID token endpoint of your cloud (Commercial or Government; look it up
+  #     with `az cloud show`) on 443/TCP, for workload identity token exchange;
+  #   - Azure Monitor / Application Insights ingestion and the Log Analytics workspace
+  #     (the AzureMonitor service tag ranges) on 443/TCP, or the private-endpoint subnet when Azure
+  #     Monitor Private Link is used.
+  # Copy-paste example (replace the placeholder CIDRs with your own):
+  #   egressAllowlist:
+  #     - name: entra-id
+  #       cidr: 203.0.113.0/24   # documentation range; use the Entra ID service tag CIDRs
+  #       ports:
+  #         - port: 443
+  #           protocol: TCP
+  #     - name: azure-monitor
+  #       cidr: 198.51.100.0/24  # documentation range; use the AzureMonitor service tag CIDRs
+  #       ports:
+  #         - port: 443
+  #           protocol: TCP
   egressAllowlist: []
 
 api:
