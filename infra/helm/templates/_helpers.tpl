@@ -14,3 +14,8 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version }}
 {{- define "neurosphere.serviceAccountName" -}}
 {{- printf "%s-sa" .Release.Name -}}
 {{- end -}}
+
+{{- /* workers.roles is a comma string (historical) or a list of role names. */ -}}
+{{- define "neurosphere.workerRoles" -}}
+{{- if kindIs "slice" . }}{{ join "," . }}{{ else }}{{ . }}{{ end -}}
+{{- end -}}

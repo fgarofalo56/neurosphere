@@ -107,6 +107,21 @@ param searchService string = ''
 @description('Region for the ai_search.base capability lookup (NS_SEARCH_REGION). Used when searchProvider is azure.')
 param searchRegion string = ''
 
+@description('PRP-58: read ingest producers from the admin store (NS_INGEST_PRODUCER_STORE on the API site). Off by default. Same meaning as ingest.producerStore in the Helm chart. Do not also set the key in apiAppSettings.')
+param ingestProducerStore bool = false
+
+@description('PRP-58: worker roles (NS_WORKER_ROLES on the workers site). Empty (default) leaves the key to workersAppSettings. Connector roles gateway_poll, foundry_discovery and billing_export are never on by default. Same meaning as workers.roles in the Helm chart. Do not also set the key in workersAppSettings.')
+param workerRoles array = []
+
+@description('PRP-58: NS_WORKER_CONNECTOR_CONFIG_SOURCE on the workers site (auto reads stored connector config). Empty (default) leaves it unset. Same meaning as workers.connectorConfigSource.')
+param workerConnectorConfigSource string = ''
+
+@description('PRP-58: NS_API_BASE_URL on the workers site, where connector roles post telemetry. Empty (default) leaves it unset. Same meaning as workers.apiBaseUrl.')
+param workerApiBaseUrl string = ''
+
+@description('PRP-58: NS_WORKER_REC_SOURCE on the workers site (archive reads the lakehouse archive). Empty (default) leaves it unset. Same meaning as workers.recommendations.source.')
+param recommendationsSource string = ''
+
 @description('Resource tags.')
 param tags object = {}
 
@@ -148,6 +163,15 @@ var searchSettings = concat(
   [{ name: 'NS_SEARCH_PROVIDER', value: searchProvider }],
   empty(searchService) ? [] : [{ name: 'NS_SEARCH_SERVICE', value: searchService }],
   empty(searchRegion) ? [] : [{ name: 'NS_SEARCH_REGION', value: searchRegion }]
+)
+var ingestStoreSettings = ingestProducerStore ? [{ name: 'NS_INGEST_PRODUCER_STORE', value: 'true' }] : []
+var workerDataPathSettings = concat(
+  empty(workerRoles) ? [] : [{ name: 'NS_WORKER_ROLES', value: join(workerRoles, ',') }],
+  empty(workerConnectorConfigSource)
+    ? []
+    : [{ name: 'NS_WORKER_CONNECTOR_CONFIG_SOURCE', value: workerConnectorConfigSource }],
+  empty(workerApiBaseUrl) ? [] : [{ name: 'NS_API_BASE_URL', value: workerApiBaseUrl }],
+  empty(recommendationsSource) ? [] : [{ name: 'NS_WORKER_REC_SOURCE', value: recommendationsSource }]
 )
 var apiExtraSettings = [for item in items(apiAppSettings): { name: item.key, value: string(item.value) }]
 var workersExtraSettings = [for item in items(workersAppSettings): { name: item.key, value: string(item.value) }]
@@ -198,6 +222,7 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
         scanSettings,
         deployApplySettings,
         searchSettings,
+        ingestStoreSettings,
         apiExtraSettings
       )
     }
@@ -233,6 +258,7 @@ resource workers 'Microsoft.Web/sites@2023-12-01' = {
         ],
         plainSettings,
         kvSettings,
+        workerDataPathSettings,
         workersExtraSettings
       )
     }

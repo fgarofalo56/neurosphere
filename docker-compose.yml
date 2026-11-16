@@ -161,6 +161,8 @@ services:
       NS_PROBE_TIMEOUT_SECONDS: "2"
       # Dev producer registry (sha256 digests only, see docs/runbooks/ingest.md).
       NS_INGEST_PRODUCERS_FILE: /etc/neurosphere/ingest-producers.json
+      # PRP-58 parity with the hosted profiles: producers from the admin store (PRP-41). Off here.
+      NS_INGEST_PRODUCER_STORE: ${NS_INGEST_PRODUCER_STORE:-false}
       # Per-domain admission control (PRP-21): off unless NS_ADMISSION_ENABLED=true; dev quotas.
       NS_ADMISSION_ENABLED: ${NS_ADMISSION_ENABLED:-true}
       NS_ADMISSION_POLICY_FILE: /etc/neurosphere/admission-quotas.json
@@ -229,6 +231,10 @@ services:
       NS_ARCHIVE_CONTAINER: ns-archive
       # Read-only sandbox data for the recommendations and evaluation roles (see volumes).
       NS_WORKER_REC_DATA_DIR: /data/sandbox
+      # PRP-58 parity with the hosted profiles; the defaults are the code defaults (inert).
+      NS_WORKER_REC_SOURCE: ${NS_WORKER_REC_SOURCE:-sandbox}
+      NS_WORKER_CONNECTOR_CONFIG_SOURCE: ${NS_WORKER_CONNECTOR_CONFIG_SOURCE:-auto}
+      NS_API_BASE_URL: ${NS_API_BASE_URL:-}
       NS_WORKER_EVAL_DATA_DIR: /data/evaluation
       # Offline pilot (PRP-16): fixture judge, synthetic dataset. The domain and subject are
       # canonical ids from the seeded sandbox world (customer synthco, commercial); the seed
