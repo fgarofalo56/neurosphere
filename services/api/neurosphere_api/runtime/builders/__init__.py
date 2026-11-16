@@ -72,6 +72,8 @@ Key                        Object                                               
 ``CATALOG_REPOSITORY``     the catalog repository installed on ``app.state``          data
 ``ACTION_SERVICE``         the ONE ``ActionService`` (buttons, chat and MCP share it)  planes
 ``SIEM_SINK_HEALTH``       ``SiemSinkHealth`` of the audit SIEM sink (PRP-40)          data
+``REVIEW_POLICIES``        ``LoadableReviewPolicyRegistry`` (PRP-44; stored policy)    data
+``DOMAIN_REGISTRY``        ``DomainRegistry`` (PRP-44; identity domain check)          admin_plat.
 ``AUDIT_SEARCH_STORE``     ``AuditSearchStore`` over the ``audit`` container (PRP-40)  data
 
 A builder may declare further keys in its own module; later builders import them from there.
@@ -103,6 +105,7 @@ from neurosphere_api.runtime.status import ComponentRegistry
 
 if TYPE_CHECKING:
     from neurosphere_core.actions import ActionService
+    from neurosphere_core.admin.platform import DomainRegistry, LoadableReviewPolicyRegistry
     from neurosphere_core.audit import AuditRepository
     from neurosphere_core.audit.siem_health import SiemSinkHealth
     from neurosphere_core.auth.revocation import (
@@ -129,9 +132,11 @@ __all__ = [
     "AUTHENTICATOR",
     "AUTH_SETTINGS",
     "CATALOG_REPOSITORY",
+    "DOMAIN_REGISTRY",
     "HITL_SERVICE",
     "POLICY_REPOSITORY",
     "PSEUDONYMIZER",
+    "REVIEW_POLICIES",
     "REVOCATION_CHECKER",
     "REVOCATION_HOOKS",
     "REVOCATION_STORE",
@@ -183,6 +188,8 @@ CATALOG_REPOSITORY: Final[SharedKey[object]] = SharedKey("catalog_repository")
 ACTION_SERVICE: Final[SharedKey[ActionService]] = SharedKey("action_service")
 SIEM_SINK_HEALTH: Final[SharedKey[SiemSinkHealth]] = SharedKey("siem_sink_health")
 AUDIT_SEARCH_STORE: Final[SharedKey[AuditSearchStore]] = SharedKey("audit_search_store")
+REVIEW_POLICIES: Final[SharedKey[LoadableReviewPolicyRegistry]] = SharedKey("review_policies")
+DOMAIN_REGISTRY: Final[SharedKey[DomainRegistry]] = SharedKey("domain_registry")
 
 
 @dataclass(frozen=True, slots=True)
@@ -363,6 +370,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
     from neurosphere_api.runtime.builders import (
         admin,
         admin_connectors,
+        admin_platform,
         admission,
         analytics,
         authz,
@@ -386,6 +394,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         lifecycle.BUILDER,
         admission.BUILDER,
         admin_connectors.BUILDER,
+        admin_platform.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
     )

@@ -8,7 +8,7 @@ Generated reference pages. They are rebuilt from committed inputs and checked fo
 
 | Page | Contents | Count |
 |---|---|---|
-| [API reference](api.md) | Every REST operation plus the error taxonomy | 182 operations |
+| [API reference](api.md) | Every REST operation plus the error taxonomy | 197 operations |
 | [Connector SDK (Python)](sdk-python.md) | Public symbols of the Python SDK | 29 symbols |
 | [Connector SDK (TypeScript)](sdk-ts.md) | Exports of the TypeScript SDK | 41 symbols |
 | [MCP reference](mcp.md) | Tools with scope requirements, and resources | 7 tools |

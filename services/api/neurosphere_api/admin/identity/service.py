@@ -233,6 +233,25 @@ class IdentityAdminService:
                 message="administrators cannot change their own access",
             )
 
+    async def _check_registered(self, domains: Iterable[str]) -> None:
+        """PRP-44: a domain an ADD names must be registered once the registry holds a domain.
+
+        Removals never call this (a retired domain's access can always be cleaned up). Without
+        the platform plane, or while the registry is empty, behaviour is as before.
+        """
+        plane = getattr(self._request.app.state, "admin_platform", None)
+        if plane is None:
+            return
+        missing = await plane.admin.registry.unregistered(
+            self._actor.customer_id, sorted(set(domains))
+        )
+        if missing:
+            raise InvalidSchemaError(
+                "a named domain is not registered",
+                errors=[ValidationIssue("/domain_ids", "domain is not registered")],
+                reason="domain_not_registered",
+            )
+
     async def _check_domains(self, domains: Iterable[str], *, privileged: bool) -> None:
         named = sorted(set(domains))
         managed = self.managed_domains()
@@ -467,6 +486,7 @@ class IdentityAdminService:
             domains.extend(old.domain_ids)
             roles.add(old.role.value)
         await self._check_domains(domains, privileged=bool(roles & PRIVILEGED_ROLES))
+        await self._check_registered(d.root for d in change.domain_ids or ())
         updated = apply_role_change(
             current, change, customer_id=self._actor.customer_id, now=self._now
         )
@@ -509,6 +529,8 @@ class IdentityAdminService:
         if change.op == "remove" and current is None:
             raise NotFoundError("no such domain membership", reason="membership_not_found")
         await self._check_domains([domain_id], privileged=False)
+        if change.op == "add":
+            await self._check_registered([domain_id])
         updated = apply_membership_change(current, change, customer_id=self._actor.customer_id)
         operation = OP_MEMBERSHIP_ADD if change.op == "add" else OP_MEMBERSHIP_REMOVE
         new_etag = await self._write(operation, [domain_id], current, etag, updated)
@@ -532,6 +554,7 @@ class IdentityAdminService:
             resources.append(old.resource_id)
         domains = await self._owning_domains(resources)
         await self._check_domains(domains, privileged=False)
+        await self._check_registered(domains[:1])  # the new resource's owning domain
         updated = apply_grant_change(
             current, change, customer_id=self._actor.customer_id, now=self._now
         )

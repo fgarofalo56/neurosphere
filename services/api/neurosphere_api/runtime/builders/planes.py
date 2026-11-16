@@ -91,6 +91,7 @@ from neurosphere_api.runtime.builders import (
     CATALOG_REPOSITORY,
     HITL_SERVICE,
     POLICY_REPOSITORY,
+    REVIEW_POLICIES,
     REVOCATION_CHECKER,
     SCOPE_DERIVER,
     BuildContext,
@@ -238,7 +239,11 @@ def _action_plane(ctx: BuildContext) -> ActionService:
     intents = _intent_store(ctx)
     control = _execution_control(ctx)
     targets = _write_targets(ctx)
-    policies = _backend(ctx, "review_policies", ReviewPolicyRegistry) or ReviewPolicyRegistry()
+    policies = (
+        _backend(ctx, "review_policies", ReviewPolicyRegistry)
+        or ctx.maybe_shared(REVIEW_POLICIES)
+        or ReviewPolicyRegistry()
+    )
     directory = _reviewer_directory(ctx)
     extra: dict[str, Any] = {} if clock is None else {"clock": clock}
     service = ActionService(

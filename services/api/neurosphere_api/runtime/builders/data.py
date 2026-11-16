@@ -54,6 +54,7 @@ from typing import Annotated, Any, Final
 import httpx
 from azure.identity.aio import DefaultAzureCredential
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker
+from neurosphere_core.admin.platform import LoadableReviewPolicyRegistry
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
 from neurosphere_core.audit import AuditRepository
@@ -78,7 +79,7 @@ from neurosphere_core.errors import (
 )
 from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
 from neurosphere_core.evaluation.store import EvaluationStore
-from neurosphere_core.hitl import DecisionLog, HitlService, ReviewPolicyRegistry
+from neurosphere_core.hitl import DecisionLog, HitlService
 from neurosphere_core.hitl_cosmos.store import CosmosDecisionStore, CosmosHitlStore
 from neurosphere_core.ledger import LedgerStore
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
@@ -117,6 +118,7 @@ from neurosphere_api.runtime.builders import (
     HITL_SERVICE,
     POLICY_REPOSITORY,
     PSEUDONYMIZER,
+    REVIEW_POLICIES,
     REVOCATION_CHECKER,
     REVOCATION_HOOKS,
     SCOPE_SOURCE,
@@ -533,11 +535,15 @@ def _hitl_service(ctx: BuildContext) -> HitlService:
         revocation_checker=revocation,
         clock=now,
     )
+    # PRP-44: one loadable registry, shared with the action plane; the admin_platform builder
+    # applies the stored review policy to it at startup (defaults until then).
+    review_policies = LoadableReviewPolicyRegistry()
+    ctx.publish(REVIEW_POLICIES, review_policies)
     return HitlService(
         CosmosHitlStore.from_client(client, database=database),
         DecisionLog(audit, CosmosDecisionStore.from_client(client, database=database)),
         audit,
-        ReviewPolicyRegistry(),
+        review_policies,
         RecheckerReviewerAuthorizer(rechecker),
     )
 

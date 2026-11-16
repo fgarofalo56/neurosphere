@@ -4,7 +4,7 @@
 > Source commit: `1aa8eb5a69fb06b99fa3067f6d56a9013a06a9c9`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 182 operations on 155 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 197 operations on 164 paths.
 
 ## Status and verification
 
@@ -61,6 +61,21 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Lift Revocation |
 | admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Put Role Assignment |
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Delete Role Assignment |
+| admin-platform-budgets | GET | `/api/v1/admin/platform/budgets` | List Budgets |
+| admin-platform-budgets | POST | `/api/v1/admin/platform/budgets` | Create Budget |
+| admin-platform-budgets | GET | `/api/v1/admin/platform/budgets/{budget_id}` | Get Budget |
+| admin-platform-budgets | PUT | `/api/v1/admin/platform/budgets/{budget_id}` | Replace Budget |
+| admin-platform-budgets | DELETE | `/api/v1/admin/platform/budgets/{budget_id}` | Delete Budget |
+| admin-platform-domains | GET | `/api/v1/admin/platform/domains` | List Domains |
+| admin-platform-domains | POST | `/api/v1/admin/platform/domains` | Create Domain |
+| admin-platform-domains | GET | `/api/v1/admin/platform/domains/{domain_id}` | Get Domain |
+| admin-platform-domains | POST | `/api/v1/admin/platform/domains/{domain_id}/retire` | Retire Domain |
+| admin-platform-price-sheets | GET | `/api/v1/admin/platform/price-sheets` | List Price Sheets |
+| admin-platform-price-sheets | POST | `/api/v1/admin/platform/price-sheets` | Upload Price Sheet |
+| admin-platform-price-sheets | GET | `/api/v1/admin/platform/price-sheets/{snapshot_id}` | Get Price Sheet |
+| admin-platform-price-sheets | GET | `/api/v1/admin/platform/price-sheets/{snapshot_id}/coverage` | Get Price Sheet Coverage |
+| admin-platform-review-policy | GET | `/api/v1/admin/platform/review-policy` | Get Review Policy |
+| admin-platform-review-policy | PUT | `/api/v1/admin/platform/review-policy` | Put Review Policy |
 | admin-producers | GET | `/api/v1/admin/sources/producers` | List Producers |
 | admin-producers | POST | `/api/v1/admin/sources/producers` | Create Producer |
 | admin-producers | GET | `/api/v1/admin/sources/producers/{producer_id}` | Get Producer |
@@ -420,6 +435,119 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Delete Role Assignment
 - Parameters: `principal_id` (path, required), `assignment_id` (path, required), `reason` (query), `If-Match` (header)
 - Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+### Tag: admin-platform-budgets
+
+#### GET `/api/v1/admin/platform/budgets`
+
+- Operation id: `list_budgets_api_v1_admin_platform_budgets_get`
+- Summary: List Budgets
+- Parameters: `include_retired` (query), `limit` (query)
+- Responses: `200` `BudgetPage`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/platform/budgets`
+
+- Operation id: `create_budget_api_v1_admin_platform_budgets_post`
+- Summary: Create Budget
+- Request body: application/json: `SpendBudget` (required)
+- Responses: `201` `BudgetView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/platform/budgets/{budget_id}`
+
+- Operation id: `get_budget_api_v1_admin_platform_budgets__budget_id__get`
+- Summary: Get Budget
+- Parameters: `budget_id` (path, required)
+- Responses: `200` `BudgetView`; `422` `HTTPValidationError`
+
+#### PUT `/api/v1/admin/platform/budgets/{budget_id}`
+
+- Operation id: `replace_budget_api_v1_admin_platform_budgets__budget_id__put`
+- Summary: Replace Budget
+- Parameters: `budget_id` (path, required), `If-Match` (header, required)
+- Request body: application/json: `SpendBudget` (required)
+- Responses: `200` `BudgetView`; `422` `HTTPValidationError`
+
+#### DELETE `/api/v1/admin/platform/budgets/{budget_id}`
+
+- Operation id: `delete_budget_api_v1_admin_platform_budgets__budget_id__delete`
+- Summary: Delete Budget
+- Parameters: `budget_id` (path, required), `If-Match` (header, required)
+- Responses: `200` `BudgetView`; `422` `HTTPValidationError`
+
+### Tag: admin-platform-domains
+
+#### GET `/api/v1/admin/platform/domains`
+
+- Operation id: `list_domains_api_v1_admin_platform_domains_get`
+- Summary: List Domains
+- Parameters: `include_retired` (query), `limit` (query)
+- Responses: `200` `DomainPage`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/platform/domains`
+
+- Operation id: `create_domain_api_v1_admin_platform_domains_post`
+- Summary: Create Domain
+- Request body: application/json: `DomainDefinition` (required)
+- Responses: `201` `neurosphere_api__admin__platform__models__DomainView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/platform/domains/{domain_id}`
+
+- Operation id: `get_domain_api_v1_admin_platform_domains__domain_id__get`
+- Summary: Get Domain
+- Parameters: `domain_id` (path, required)
+- Responses: `200` `neurosphere_api__admin__platform__models__DomainView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/admin/platform/domains/{domain_id}/retire`
+
+- Operation id: `retire_domain_api_v1_admin_platform_domains__domain_id__retire_post`
+- Summary: Retire Domain
+- Parameters: `domain_id` (path, required), `If-Match` (header, required)
+- Responses: `200` `neurosphere_api__admin__platform__models__DomainView`; `422` `HTTPValidationError`
+
+### Tag: admin-platform-price-sheets
+
+#### GET `/api/v1/admin/platform/price-sheets`
+
+- Operation id: `list_price_sheets_api_v1_admin_platform_price_sheets_get`
+- Summary: List Price Sheets
+- Responses: `200` `PriceSheetPage`
+
+#### POST `/api/v1/admin/platform/price-sheets`
+
+- Operation id: `upload_price_sheet_api_v1_admin_platform_price_sheets_post`
+- Summary: Upload Price Sheet
+- Request body: application/json: `PriceSheetUpload` (required)
+- Responses: `201` `PriceSheetUploadView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/platform/price-sheets/{snapshot_id}`
+
+- Operation id: `get_price_sheet_api_v1_admin_platform_price_sheets__snapshot_id__get`
+- Summary: Get Price Sheet
+- Parameters: `snapshot_id` (path, required)
+- Responses: `200` `PriceSheetView`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/platform/price-sheets/{snapshot_id}/coverage`
+
+- Operation id: `get_price_sheet_coverage_api_v1_admin_platform_price_sheets__snapshot_id__coverage_get`
+- Summary: Get Price Sheet Coverage
+- Parameters: `snapshot_id` (path, required)
+- Responses: `200` `CoverageView`; `422` `HTTPValidationError`
+
+### Tag: admin-platform-review-policy
+
+#### GET `/api/v1/admin/platform/review-policy`
+
+- Operation id: `get_review_policy_api_v1_admin_platform_review_policy_get`
+- Summary: Get Review Policy
+- Responses: `200` `ReviewPolicyView`
+
+#### PUT `/api/v1/admin/platform/review-policy`
+
+- Operation id: `put_review_policy_api_v1_admin_platform_review_policy_put`
+- Summary: Put Review Policy
+- Parameters: `If-Match` (header, required)
+- Request body: application/json: `ReviewPolicyDocument` (required)
+- Responses: `200` `ReviewPolicyWriteView`; `422` `HTTPValidationError`
 
 ### Tag: admin-producers
 

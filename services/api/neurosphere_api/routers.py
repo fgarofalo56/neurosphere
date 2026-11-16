@@ -253,6 +253,12 @@ def _register_admin_producers(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_admin_platform(registry: RouterRegistry) -> None:
+    from neurosphere_api.admin.platform import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -287,6 +293,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_admin,
     _register_admin_connectors,
     _register_admin_producers,
+    _register_admin_platform,
 )
 
 

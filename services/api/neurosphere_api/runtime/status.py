@@ -63,6 +63,7 @@ OPTIONAL_COMPONENTS: Final = (
     "revocation_service",
     "admin_connectors",
     "admin_producers",
+    "admin_platform",
     "audit_siem",
 )
 #: Startup steps that are not components but still gate readiness when they fail.
