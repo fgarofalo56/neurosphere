@@ -223,13 +223,21 @@ None run here. A stored copilot or judge endpoint pointing at a real model is on
 | 3 | verifying | prp-45-system-status-settings | settings GET/PUT, If-Match, diff, audit |
 | 4 | verifying | prp-45-system-status-settings | snapshot before builders; copilot, search, mcp, scan read it |
 | 5 | verifying | prp-45-system-status-settings | build_evaluation reads stored judge; cross-cloud keeps evaluation_judge_* reason |
-| 6 | todo | | |
+| 6 | in-progress | prp-45-system-status-settings | Tier-2 appends, runbooks and mkdocs nav done on the branch; Tier-3 regeneration (openapi.json, docs/reference, status table, INDEX, EXECUTION-PLAN, changelog fragment) and the move to shipped/ are left for the merge step |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-15, PR to be recorded at merge.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+  - Checklist statuses follow the shipped contract `FirstRunChecklistItem` (`complete | missing | disabled | not_applicable | error`), not the `done | todo | blocked | not_applicable` wording in the acceptance criteria (`packages/contracts/**` is must-not-touch).
+  - The contract's `setting_key` member for write targets is `write_target`; the API key stays `write_targets` and holds one document per `target_kind` (`system.write_target.<kind>`).
+  - Stored fields map onto the existing settings classes only where a field exists: copilot endpoint/deployment/API version (region, model feature, SKU, scope stay env; an enabled stored value keeps the env mode or uses `approved_endpoint`); search service (from the endpoint host) and index; MCP resource URL; scan `enabled` only (interval and scopes are stored for a scheduler); judge endpoint/deployment/API version. Credential references are validated and stored; the runtime keeps the workload identity (`DefaultAzureCredential`), and `copilot`/`judge` refuse a Key Vault reference (`managed_identity_required`).
+  - No DELETE route: the store never reuses a retired id, so "turn off" is `PUT` with `enabled: false` and a restart (runbook).
+  - A create uses `If-Match: "absent"` (the ETag `GET` returns when nothing is stored).
+  - Refused writes (422) are not audited; accepted writes and their failures after validation are.
+  - `services/api/tests/runtime_api/test_readiness.py` gained `admin_system` in its two pinned builder lists (the PRP's gotcha asked for it; the file is outside the Ownership block).
+  - The worker opens a short-lived Cosmos client for the read at evaluation role start (a second client next to `_cosmos`).
+- Descoped items: none.
+- OPEN gates: a stored copilot or judge endpoint against a real model (PRP-64 G16 judge item and a hosted copilot check, `NS_LIVE_APPROVED=1`); compose-stack checks not run in this session.
+- Env vars for the operator: none new.
+- Follow-up issues: none filed yet.
+- Product check: an operator with the deployment-scoped admin can read status and the checklist and change copilot, judge, search, scan and MCP server settings through the API, restart and see them applied; there is no UI yet (PRP-53 status/checklist, PRP-57 settings), so today it needs raw API calls.
