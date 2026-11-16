@@ -223,7 +223,7 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | verifying | prp-55-real-deploy-apply | core approvals store + container; tests green |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
