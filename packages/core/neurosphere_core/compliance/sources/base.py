@@ -57,7 +57,9 @@ class EvidenceSource(Protocol):
 
     source_id: str
 
-    async def observe(self, request: SourceRequest) -> EvidenceObservation: ...
+    async def observe(self, request: SourceRequest) -> EvidenceObservation:
+        """Return one observation for the request window."""
+        raise NotImplementedError
 
 
 def format_utc(instant: datetime) -> str:

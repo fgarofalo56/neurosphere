@@ -83,7 +83,7 @@ test("an auditor picks a domain, opens a control and downloads the bundle", asyn
     .getByRole("link", { name: "nist-ai-rmf.govern-2" })
     .click();
   await expect(page.getByTestId("control-detail")).toBeVisible();
-  await expect(page.getByRole("link", { name: /airc\.nist\.gov/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "airc.nist.gov" })).toBeVisible();
   await expect(page.getByTestId("observation-catalog_ownership")).toBeVisible();
 });
 

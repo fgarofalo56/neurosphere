@@ -14,6 +14,11 @@ from neurosphere_core.compliance.claims import DISCLAIMER
 
 __all__ = ["render_markdown"]
 
+_CLOSING_NOTE = (
+    "It is metadata only: counts, timestamps and ids. It holds no prompts, responses or "
+    "entity bodies, gives no score and makes no finding. Controls marked "
+    "customer_responsibility stay with the customer. See docs/runbooks/compliance-evidence.md."
+)
 _ESCAPE = re.compile(r"([\\`*\[\]<>|])")
 
 
@@ -73,9 +78,7 @@ def render_markdown(bundle: EvidenceBundle) -> str:
         "",
         "## What this bundle does not say",
         "",
-        "It is metadata only: counts, timestamps and ids. It holds no prompts, responses or "
-        "entity bodies, gives no score and makes no finding. Controls marked "
-        "customer_responsibility stay with the customer. See docs/runbooks/compliance-evidence.md.",
+        _CLOSING_NOTE,
         "",
     ]
     return "\n".join(lines)
