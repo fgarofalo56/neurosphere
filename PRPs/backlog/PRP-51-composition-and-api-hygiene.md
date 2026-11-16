@@ -225,8 +225,8 @@ Alias deletion before the Sunset date; worker identity validation; `/readyz` aut
 |---|---|---|---|
 | 1 | merged | prp-51-composition-hygiene | commit on branch |
 | 2 | merged | prp-51-composition-hygiene | commit on branch |
-| 3 | todo | | after 2 |
-| 4 | todo | | |
+| 3 | merged | prp-51-composition-hygiene | commit on branch; openapi.json regen pending (Tier 3) |
+| 4 | merged | prp-51-composition-hygiene | commit on branch |
 | 5 | todo | | |
 
 ## Completion note (filled at ship)

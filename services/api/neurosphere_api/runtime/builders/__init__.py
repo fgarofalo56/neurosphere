@@ -74,6 +74,7 @@ Key                        Object                                               
 ``SIEM_SINK_HEALTH``       ``SiemSinkHealth`` of the audit SIEM sink (PRP-40)          data
 ``REVIEW_POLICIES``        ``LoadableReviewPolicyRegistry`` (PRP-44; stored policy)    data
 ``DOMAIN_REGISTRY``        ``DomainRegistry`` (PRP-44; identity domain check)          admin_plat.
+``RECOMMENDATION_STORE``   ``RecommendationStore`` (also on ``app.state``, PRP-51)         data
 ``AUDIT_SEARCH_STORE``     ``AuditSearchStore`` over the ``audit`` container (PRP-40)  data
 
 A builder may declare further keys in its own module; later builders import them from there.
@@ -116,6 +117,7 @@ if TYPE_CHECKING:
     from neurosphere_core.auth.scope import PolicyRepository, PrincipalPseudonymizer, ScopeDeriver
     from neurosphere_core.clients import ClientLifetime
     from neurosphere_core.hitl import HitlService
+    from neurosphere_core.recommendations import RecommendationStore
 
     from neurosphere_api.audit.search_store import AuditSearchStore
     from neurosphere_api.authz import ScopeSource, TokenAuthenticator
@@ -136,6 +138,7 @@ __all__ = [
     "HITL_SERVICE",
     "POLICY_REPOSITORY",
     "PSEUDONYMIZER",
+    "RECOMMENDATION_STORE",
     "REVIEW_POLICIES",
     "REVOCATION_CHECKER",
     "REVOCATION_HOOKS",
@@ -190,6 +193,7 @@ SIEM_SINK_HEALTH: Final[SharedKey[SiemSinkHealth]] = SharedKey("siem_sink_health
 AUDIT_SEARCH_STORE: Final[SharedKey[AuditSearchStore]] = SharedKey("audit_search_store")
 REVIEW_POLICIES: Final[SharedKey[LoadableReviewPolicyRegistry]] = SharedKey("review_policies")
 DOMAIN_REGISTRY: Final[SharedKey[DomainRegistry]] = SharedKey("domain_registry")
+RECOMMENDATION_STORE: Final[SharedKey[RecommendationStore]] = SharedKey("recommendation_store")
 
 
 @dataclass(frozen=True, slots=True)
