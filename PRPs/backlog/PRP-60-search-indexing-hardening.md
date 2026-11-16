@@ -223,7 +223,7 @@ Items 5 and 6 add `services/workers/tests/search_wiring` to the pytest line when
 |------|--------|-----------------|-------|
 | 1 | merged | prp-60-search-indexing-hardening | |
 | 2 | merged | prp-60-search-indexing-hardening | |
-| 3 | todo | | |
+| 3 | merged | prp-60-search-indexing-hardening | |
 | 4 | todo | | |
 | 5 | todo | | serial-after PRP-44 |
 | 6 | todo | | serial-after PRP-55 |

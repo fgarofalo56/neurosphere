@@ -15,15 +15,25 @@ no component and no entry to the fixed builder order.
 ``NS_SEARCH_INDEX``     index name (default ``neurosphere-catalog``; created by IaC/operator).
 ``NS_SEARCH_REGION``    deployment region used for the capability lookup.
 ``NS_SEARCH_REFRESH_SECONDS``  per-scope re-index interval (default 30).
+``NS_SEARCH_ENSURE_INDEX``  default false. When true and Azure serves, the catalog index
+                        (``catalog_index_definition()``) is created or updated once at startup;
+                        needs index-write RBAC (Search Service Contributor). False creates
+                        nothing; an operator script may use the same definition.
 ======================  ===========================================================================
 
 Stored setting (PRP-45): a ``search`` setting in the startup snapshot beats ``NS_SEARCH_*``
 (provider ``azure`` on the stored service and index; ``enabled false`` composes no search);
 the region and refresh interval stay env. Restart to apply.
 
+Document keys: Azure keys are URL-safe base64 of the canonical id (``entity_id`` holds the
+canonical id and is what grants filter on); see ``neurosphere_core.search.azure.schema``.
+
 Government guard: with ``azure`` in a Government cloud, a disabled capability row or a missing
 region/service never falls back to the in-process fixture; the catalog component fails with
 reason ``search_<cause>`` (visible on ``/readyz``). Commercial keeps the fixture fallback.
+
+Concurrency: refreshes are single-flight **per scope** (a bounded table of per-scope locks);
+one scope's slow refresh never delays another scope's search.
 
 Freshness: the indexer enumerates the catalog only **with the calling principal's own scope**
 (there is no unscoped listing), so the index is refreshed lazily at search time, per scope, at most
@@ -44,6 +54,7 @@ from dataclasses import dataclass
 from typing import Any, Final, Literal
 
 from azure.identity.aio import DefaultAzureCredential
+from azure.search.documents.indexes.aio import SearchIndexClient
 from neurosphere_core.admin.runtime import search_init_args
 from neurosphere_core.capabilities import CapabilityResult
 from neurosphere_core.catalog import CatalogRepository
@@ -57,6 +68,7 @@ from neurosphere_core.search.azure import (
     azure_search_capability,
 )
 from neurosphere_core.search.azure.client import create_search_client
+from neurosphere_core.search.azure.schema import catalog_index_definition, ensure_index
 from neurosphere_core.search.indexer import (
     AzureIndexSink,
     CatalogIndexer,
@@ -75,6 +87,7 @@ __all__ = [
     "SearchRuntime",
     "SearchSettings",
     "build_catalog_graph",
+    "wrap_catalog_for_search",
 ]
 
 _log = logging.getLogger("neurosphere_api.runtime.search")
@@ -91,6 +104,7 @@ class SearchSettings(BaseSettings):
     index: str = "neurosphere-catalog"
     region: str | None = None
     refresh_seconds: float = 30.0
+    ensure_index: bool = False
 
     @field_validator("provider", "service", "region", mode="before")
     @classmethod
@@ -133,18 +147,25 @@ class IndexedGraphQuery(RepositoryGraphQuery):
         self._refresh_seconds = refresh_seconds
         self._clock = clock
         self._fresh_until: dict[str, float] = {}
-        self._lock = asyncio.Lock()
+        self._locks: dict[str, asyncio.Lock] = {}
 
     def invalidate(self) -> None:
         self._fresh_until.clear()
 
+    def _lock_for(self, key: str) -> asyncio.Lock:
+        lock = self._locks.get(key)
+        if lock is None:
+            if len(self._locks) >= _SCOPE_CACHE_LIMIT:  # bounded: drop locks nobody holds
+                self._locks = {k: v for k, v in self._locks.items() if v.locked()}
+            lock = self._locks[key] = asyncio.Lock()
+        return lock
+
     async def _sync(self, scope: IdentityScope) -> None:
         # scope_hash is a content hash in production; the domains make the key explicit.
         key = f"{scope.scope_hash}|{'|'.join(sorted(scope.allowed_domains))}"
-        now = self._clock()
-        if self._fresh_until.get(key, -1.0) > now:
+        if self._fresh_until.get(key, -1.0) > self._clock():
             return
-        async with self._lock:
+        async with self._lock_for(key):  # single-flight per scope, never a global lock
             if self._fresh_until.get(key, -1.0) > self._clock():
                 return
             try:
@@ -171,23 +192,52 @@ def _azure_capability(ctx: BuildContext, settings: SearchSettings) -> Capability
         return "search_region_invalid"
 
 
-def _azure_backend(ctx: BuildContext, settings: SearchSettings) -> Any | None:
-    override = ctx.overrides.backend("search_client")
-    if override is not None:
-        return override
-    if not settings.service:
-        return None
+def _credential(ctx: BuildContext) -> DefaultAzureCredential:
     credential = DefaultAzureCredential(
         authority=ctx.settings.cloud_profile.login_host,
         exclude_environment_credential=ctx.settings.env != "local",
     )
     ctx.lifetime.register(credential)  # type: ignore[arg-type]  # closes via close()
+    return credential
+
+
+def _azure_backend(
+    ctx: BuildContext, settings: SearchSettings, credential: DefaultAzureCredential | None = None
+) -> Any | None:
+    override = ctx.overrides.backend("search_client")
+    if override is not None:
+        return override
+    if not settings.service:
+        return None
+    credential = credential or _credential(ctx)
     try:
         client = create_search_client(
             ctx.settings.cloud_profile,
             service=settings.service,
             index_name=settings.index,
             credential=credential,
+        )
+    except (ValueError, InvalidSchemaError):
+        raise ComponentUnavailableError("search_service_invalid") from None
+    ctx.on_shutdown(client.close)
+    return client
+
+
+def _index_admin_client(
+    ctx: BuildContext, settings: SearchSettings, credential: DefaultAzureCredential | None
+) -> Any | None:
+    """The index-management client (override ``search_index_client`` in tests), or ``None``."""
+    override = ctx.overrides.backend("search_index_client")
+    if override is not None:
+        return override
+    if not settings.service:
+        return None
+    profile = ctx.settings.cloud_profile
+    audience = "https://search.azure.us" if profile.cloud.value == "government" else None
+    kwargs: dict[str, Any] = {"audience": audience} if audience else {}
+    try:
+        client = SearchIndexClient(
+            profile.search_endpoint(settings.service), credential or _credential(ctx), **kwargs
         )
     except (ValueError, InvalidSchemaError):
         raise ComponentUnavailableError("search_service_invalid") from None
@@ -209,6 +259,32 @@ def _search_settings(ctx: BuildContext) -> SearchSettings:
     return SearchSettings(**args)
 
 
+def _register_ensure_index(
+    ctx: BuildContext, settings: SearchSettings, credential: DefaultAzureCredential | None
+) -> None:
+    """Create or update the catalog index once at startup (opt-in, needs index-write RBAC)."""
+    admin = _index_admin_client(ctx, settings, credential)
+    if admin is None:
+        return
+    definition = catalog_index_definition(settings.index)
+
+    async def _ensure() -> None:
+        await ensure_index(admin, definition)
+
+    ctx.on_startup(_ensure)
+
+
+def wrap_catalog_for_search(
+    ctx: BuildContext, repository: CatalogRepository
+) -> tuple[CatalogRepository, GraphQuery | None]:
+    """Compose search for ``repository``: ``(repository to publish, graph or None)``.
+
+    The single call the data builder makes. The repository is returned unchanged when no
+    provider is configured.
+    """
+    return repository, build_catalog_graph(ctx, repository)
+
+
 def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> GraphQuery | None:
     """The catalog graph with search composed from ``NS_SEARCH_*``; ``None`` when unset."""
     try:
@@ -227,13 +303,15 @@ def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> Gra
     if settings.provider == "azure":
         capability = _azure_capability(ctx, settings)
         backend = None
+        credential: DefaultAzureCredential | None = None
         if isinstance(capability, str):
             reason = capability
         elif capability.status != "supported":
             reason = capability.reason_code or "capability_unavailable"
         else:
             # Only a supported row may construct a client; nothing is requested otherwise.
-            backend = _azure_backend(ctx, settings)
+            credential = None if ctx.overrides.backend("search_client") else _credential(ctx)
+            backend = _azure_backend(ctx, settings, credential)
             if backend is None:
                 reason = "search_service_missing"
         if backend is not None and not isinstance(capability, str):
@@ -244,6 +322,8 @@ def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> Gra
             search = wrapper
             if azure_enabled:
                 sink = CompositeIndexSink(store, AzureIndexSink(backend))
+                if settings.ensure_index:
+                    _register_ensure_index(ctx, settings, credential)
         if reason is not None and ctx.settings.cloud_profile.cloud.value == "government":
             # Never answer a Government caller from an empty in-process fixture in place of
             # Azure: the catalog component reports the reason on /readyz instead.
