@@ -244,7 +244,7 @@ FINRA mapping; attestations, sign-off, history or scheduled bundles; auto-remedi
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-56-compliance-evidence | five schemas, examples, bindings, tests/contracts green |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
