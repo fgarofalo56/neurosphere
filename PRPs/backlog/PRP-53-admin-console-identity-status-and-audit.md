@@ -238,14 +238,14 @@ Producers, connectors, gateway registration, catalog import, pricing, budgets, f
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 2 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 3 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 4 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 5 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 6 | verifying | prp-53-admin-console-core | PR open; CI pending |
+| 7 | verifying | prp-53-admin-console-core | specs, registries, 20 Docker baselines; real-stack walk OPEN |
+| 8 | todo | | merge step: rebase, Tier-3 regeneration, changelog fragment, completion note |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit:
