@@ -137,6 +137,12 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
     ContainerSpec(
         "deploy_register", ("/deployment_id",), "neurosphere_core.deploy.register.cosmos_store"
     ),
+    ContainerSpec(
+        "deploy_plan_approvals",
+        _CUSTOMER,
+        "neurosphere_core.deploy.approvals.cosmos_store",
+        notes="one row per (customer, plan id); id is the plan id; create-only, expiry on read",
+    ),
     # --- new in PRP-29 (items 2 and 3 implement the stores) ------------------------------
     ContainerSpec(
         "recommendations", _CUSTOMER_DOMAIN, "neurosphere_core.recommendations.cosmos_store"

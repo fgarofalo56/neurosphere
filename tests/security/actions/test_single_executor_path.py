@@ -33,6 +33,11 @@ APPLY_EXCEPTIONS: Final = {
         "operator-approved G05 live gate; exercises the connector itself and refuses without "
         "NS_LIVE_APPROVED=1; never reached from the API or the action plane"
     ),
+    "scripts/gates/deploy_apply_live.py": (
+        "operator-approved PRP-55/PRP-64 live deploy apply; exercises the deploy connector "
+        "itself and refuses without NS_LIVE_APPROVED=1; never reached from the API or the "
+        "action plane"
+    ),
 }
 WRITE_PATH: Final = frozenset({"apply", "rollback"})
 API_FORBIDDEN_ATTRS: Final = WRITE_PATH | {"verify"}

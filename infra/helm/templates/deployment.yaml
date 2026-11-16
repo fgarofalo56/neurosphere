@@ -69,11 +69,13 @@ spec:
           {{- end }}
           {{- end }}
           {{- $scan := and (eq $name "api") $.Values.scan.enabled }}
-          {{- $deployApply := and (eq $name "api") $.Values.deployApply.enabled }}
+          {{- $deployApply := and (or (eq $name "api") (eq $name "workers")) $.Values.deployApply.enabled }}
           {{- $search := and (eq $name "api") $.Values.search.provider }}
           {{- $evalApi := and (eq $name "api") $.Values.evaluation.pilotDatasetIds }}
           {{- $evalWorker := and (eq $name "workers") (or $.Values.workers.roles $.Values.evaluation.dataDir) }}
-          {{- if or $.Values.env $apimFront $ingestFile $admissionFile $scan $deployApply $search $evalApi $evalWorker }}
+          {{- $producerStore := and (eq $name "api") $.Values.ingest.producerStore }}
+          {{- $workerData := and (eq $name "workers") (or $.Values.workers.connectorConfigSource $.Values.workers.apiBaseUrl $.Values.workers.recommendations.source) }}
+          {{- if or $.Values.env $apimFront $ingestFile $admissionFile $scan $deployApply $search $evalApi $evalWorker $producerStore $workerData }}
           env:
             {{- range $k, $v := $.Values.env }}
             - name: {{ $k }}
@@ -83,6 +85,11 @@ spec:
             # Producer registry (digests only). Unset: ingest stays 503 ingest_not_configured.
             - name: NS_INGEST_PRODUCERS_FILE
               value: {{ $ingestFile | quote }}
+            {{- end }}
+            {{- if $producerStore }}
+            # PRP-41: producers come from the admin store. Off (default): file-only or 503.
+            - name: NS_INGEST_PRODUCER_STORE
+              value: "true"
             {{- end }}
             {{- if $admissionFile }}
             # Per-domain admission control (PRP-21). Unset: admission stays off.
@@ -184,6 +191,20 @@ spec:
             {{- if eq $name "workers" }}
             {{- with $.Values.workers.roles }}
             - name: NS_WORKER_ROLES
+              value: {{ include "neurosphere.workerRoles" . | quote }}
+            {{- end }}
+            {{- with $.Values.workers.connectorConfigSource }}
+            # PRP-42: where connector roles read stored connector configuration.
+            - name: NS_WORKER_CONNECTOR_CONFIG_SOURCE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.workers.apiBaseUrl }}
+            # Connector roles post telemetry to the API at this base URL.
+            - name: NS_API_BASE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $.Values.workers.recommendations.source }}
+            - name: NS_WORKER_REC_SOURCE
               value: {{ . | quote }}
             {{- end }}
             {{- with $.Values.evaluation.dataDir }}

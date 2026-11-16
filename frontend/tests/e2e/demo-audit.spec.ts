@@ -61,6 +61,12 @@ const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
   "/admin/identity",
   "/admin/identity/principal",
   "/admin/system",
+  // PRP-57: sources, pricing, features and review policy need config.manage / deployment admin.
+  "/admin/features",
+  "/admin/pricing",
+  "/admin/review-policy",
+  "/admin/sources/connectors",
+  "/admin/sources/producers",
   "/audit",
   // PRP-56: compliance evidence needs evidence.read, held by the Security Auditor only.
   "/compliance",
@@ -141,7 +147,7 @@ async function assertForbidden(page: Page, route: string): Promise<void> {
   await settle(page);
   await expect
     .soft(page.locator('[data-testid="forbidden-state"]'), `${route}: expected forbidden`)
-    .toHaveCount(1);
+    .not.toHaveCount(0); // PRP-57: a page with one card per setting or sheet shows one state per card
 }
 
 test.describe("demo route audit", () => {

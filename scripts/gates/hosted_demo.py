@@ -80,7 +80,9 @@ _ARM_ID_ARGS = (
     "webapps_zone_id",
     "keyvault_zone_id",
     "foundry_account_id",
+    "billing_export_storage_account_id",
 )
+CONNECTOR_ROLES = ("gateway_poll", "foundry_discovery", "billing_export")
 _NOT_FOUND = ("notfound", "not found", "could not be found", "does not exist", "was not found")
 _ARM_API = "https://management.azure.com"
 _BUDGET_API = "2023-05-01"
@@ -266,6 +268,34 @@ def build_parser() -> argparse.ArgumentParser:
             default="",
             help="Foundry account ARM id (bound into the plan hash when given)",
         )
+        # PRP-58: the hosted data path. Every default leaves the deployment as it was.
+        p.add_argument(
+            "--connector-roles",
+            default="",
+            help=f"comma list of connector worker roles to start ({', '.join(CONNECTOR_ROLES)})",
+        )
+        p.add_argument(
+            "--foundry-account-ids",
+            default="",
+            help="comma list of Foundry account ARM ids foundry_discovery may read",
+        )
+        p.add_argument(
+            "--billing-export-storage-account-id",
+            default="",
+            help="ARM id of the storage account holding the Cost Management export",
+        )
+        p.add_argument(
+            "--recommendations",
+            action="store_true",
+            help="recommendationsEnabled: start the recommendations role on the archive source",
+        )
+        p.add_argument("--evaluation-pilot-domain-id", default="", help="evaluationPilotDomainId")
+        p.add_argument("--evaluation-pilot-subject-id", default="", help="evaluationPilotSubjectId")
+        p.add_argument(
+            "--evaluation-pilot-dataset-ids",
+            default="sbx-groundedness-pilot",
+            help="evaluationPilotDatasetIds, comma separated",
+        )
 
     p = sub.add_parser("preflight", parents=[common], help="read-only checks")
     infra(p)
@@ -417,6 +447,10 @@ def _need(args: argparse.Namespace, names: Sequence[str]) -> None:
         raise RefusedError(f"missing required argument(s): {flags}")
 
 
+def _csv(value: str) -> list[str]:
+    return [p.strip() for p in str(value or "").split(",") if p.strip()]
+
+
 def infra_values(ctx: Ctx) -> dict[str, Any]:
     a = ctx.args
     _need(a, _DEPLOY_REQUIRED)
@@ -425,6 +459,17 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
         amount = int(a.budget_amount)
     except ValueError as exc:
         raise RefusedError("--budget-amount must be a whole number") from exc
+    roles = _csv(a.connector_roles)
+    unknown = [r for r in roles if r not in CONNECTOR_ROLES]
+    if unknown:
+        raise RefusedError(
+            f"--connector-roles: unknown role(s) {','.join(unknown)}; "
+            f"valid: {','.join(CONNECTOR_ROLES)}. No changes made."
+        )
+    foundry_ids = _csv(a.foundry_account_ids)
+    bad = [i for i in foundry_ids if not cm.is_arm_id(i)]
+    if bad:
+        raise RefusedError("--foundry-account-ids entries must be /subscriptions/... resource ids")
     return {
         "prefix": a.prefix,
         "location": a.location.strip().lower(),
@@ -444,6 +489,13 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
         "copilotEndpoint": a.copilot_endpoint,
         "copilotDeployment": a.copilot_deployment,
         "copilotMode": a.copilot_mode,
+        "evaluationPilotDomainId": a.evaluation_pilot_domain_id,
+        "evaluationPilotSubjectId": a.evaluation_pilot_subject_id,
+        "evaluationPilotDatasetIds": a.evaluation_pilot_dataset_ids,
+        "connectorRoles": roles,
+        "recommendationsEnabled": bool(a.recommendations),
+        "foundryAccountIds": foundry_ids,
+        "billingExportStorageAccountId": a.billing_export_storage_account_id,
         "budgetAmount": amount,
         "budgetStartDate": a.budget_start_date or cm.default_budget_start(),
         "budgetContactEmails": emails,

@@ -254,6 +254,31 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ApiCall("/api/v1/admin/system/checklist"),
         ApiCall("/api/v1/admin/system/settings"),
     ),
+    # PRP-57: the admin console, data sources, pricing and feature settings. No row requires data
+    # (a fresh stack has none); writes need a user action and are not listed.
+    # The producers list is not listed: the composed test app has no producer store and the route
+    # answers 503 admin_producers_unconfigured there (a backend wiring gap, not the page's). The
+    # page's own call is covered by the mock-API tests until the composed stack serves it.
+    "/admin/sources/producers": _SHELL,
+    "/admin/sources/connectors": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/sources/connectors", q(include_retired="false", limit=200)),
+    ),
+    "/admin/gateways": _SHELL,
+    "/admin/catalog-import": _SHELL,
+    "/admin/pricing": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/platform/price-sheets"),
+        ApiCall("/api/v1/admin/platform/budgets", q(include_retired="false", limit=200)),
+    ),
+    "/admin/features": (
+        *_SHELL,
+        *(
+            ApiCall(f"/api/v1/admin/system/settings/{key}")
+            for key in ("copilot", "judge", "search", "scan", "mcp_server", "write_targets")
+        ),
+    ),
+    "/admin/review-policy": (*_SHELL, ApiCall("/api/v1/admin/platform/review-policy")),
     "/audit": (
         *_SHELL,
         ApiCall("/api/v1/audit/domains"),
