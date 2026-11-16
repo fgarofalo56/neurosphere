@@ -59,9 +59,11 @@ class CostLedgerSink:
             reason = dropped_reason(event)
             if reason is not None:
                 self._dropped.add(1, {"reason": reason})
-                if reason not in self._logged_reasons:  # reason code only, never the record
+                if (
+                    reason not in self._logged_reasons
+                ):  # once per sink; literal text, never the record
                     self._logged_reasons.add(reason)
-                    _log.warning("outbox dropped cost records", extra={"reason": reason})
+                    _log.warning("outbox dropped non-billing invoiced cost records")
         if isinstance(mapped, RequestObservation):
             change = await self._ledger.record(
                 mapped.customer_id, mapped.request_id, mapped.cost_category, mapped.observation
