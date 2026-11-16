@@ -120,6 +120,11 @@ const ENTRIES: readonly Entry[] = [
         pathPrefix: "/api/v1/admin/sources/",
         why: "ingest producers need config.manage, which the operator may not hold",
       },
+      {
+        status: 503,
+        pathPrefix: "/api/v1/admin/sources/",
+        why: "the producer registry answers 503 when the composed stack has no producer store wired",
+      },
     ],
   },
   {

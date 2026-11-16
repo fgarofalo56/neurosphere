@@ -725,7 +725,8 @@ async function settingRoutes(ctx: FeatureMockContext, key: string): Promise<void
   const member = (body[key] ?? {}) as Record<string, unknown>;
   if (
     typeof member["endpoint"] === "string" &&
-    member["endpoint"].startsWith(SOURCES_BAD_ENDPOINT)
+    URL.canParse(member["endpoint"]) &&
+    new URL(member["endpoint"]).origin === new URL(SOURCES_BAD_ENDPOINT).origin
   ) {
     return problem(
       ctx,

@@ -61,6 +61,12 @@ const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
   "/admin/identity",
   "/admin/identity/principal",
   "/admin/system",
+  // PRP-57: sources, pricing, features and review policy need config.manage / deployment admin.
+  "/admin/features",
+  "/admin/pricing",
+  "/admin/review-policy",
+  "/admin/sources/connectors",
+  "/admin/sources/producers",
   "/audit",
   // PRP-56: compliance evidence needs evidence.read, held by the Security Auditor only.
   "/compliance",
