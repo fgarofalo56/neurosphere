@@ -23,9 +23,10 @@ controls:
   - control_id: omb-m-25-21.3.b.v
     title: Update AI use case inventories
     support_status: implemented_tested
-    evidence_sources: [catalog_ownership]
+    evidence_sources: [catalog_ownership, configuration_findings]
     repo_paths:
       - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/neurosphere_core/detections/evidence.py
       - packages/core/tests/compliance_lib/test_sources.py
   - control_id: omb-m-25-21.4.b.i
     title: Pre-deployment testing for high-impact AI
@@ -42,10 +43,11 @@ controls:
   - control_id: omb-m-25-21.4.b.iii
     title: Ongoing monitoring for performance and potential adverse impacts
     support_status: implemented_tested
-    evidence_sources: [evaluation_results, audit_chain]
+    evidence_sources: [evaluation_results, audit_chain, configuration_findings]
     repo_paths:
       - packages/core/neurosphere_core/compliance/sources/evaluation.py
       - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/neurosphere_core/detections/evidence.py
       - packages/core/tests/compliance_lib/test_sources.py
   - control_id: omb-m-25-21.4.b.iv
     title: Human training and assessment for operators of AI

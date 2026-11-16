@@ -21,7 +21,8 @@ export interface EvidenceObservation {
     | "audit_chain"
     | "hitl_decisions"
     | "evaluation_results"
-    | "cost_attribution";
+    | "cost_attribution"
+    | "configuration_findings";
   status: "observed" | "partial" | "unavailable" | "not_collected";
   /**
    * snake_case machine reason; null when status is observed.

@@ -15,6 +15,7 @@ JSON. The shared core ``Settings`` (``NS_ENV``/``NS_CLOUD``) is not extended her
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Any, Final, Literal, Self
 from urllib.parse import urlsplit
@@ -25,6 +26,7 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 __all__ = [
+    "COSMOS_ACCOUNT_PATTERN",
     "LOCAL_DEFAULT_CUSTOMER_ID",
     "AdmissionSettings",
     "AuditSiemSettings",
@@ -36,6 +38,8 @@ __all__ = [
 #: ``NS_ENV=local`` customer binding when ``NS_AUTH_CUSTOMER_ID`` is unset; equals the synthetic
 #: sandbox customer (``sandbox/config.py`` ``DEFAULT_CUSTOMER``; a test pins the equality).
 LOCAL_DEFAULT_CUSTOMER_ID: Final = "synthco"
+#: Azure Cosmos DB account naming: 3 to 44 characters, lowercase letters, digits and hyphens.
+COSMOS_ACCOUNT_PATTERN: Final = re.compile(r"[a-z0-9][a-z0-9-]{1,42}[a-z0-9]")
 
 
 def _split_commas(value: Any) -> Any:
@@ -80,11 +84,27 @@ class AuthSettings(BaseSettings):
 class StoreSettings(BaseSettings):
     """``NS_STORE_*``: where the composed Cosmos stores live."""
 
-    model_config = SettingsConfigDict(env_prefix="NS_STORE_", frozen=True, extra="forbid")
+    model_config = SettingsConfigDict(
+        env_prefix="NS_STORE_", frozen=True, extra="forbid", hide_input_in_errors=True
+    )
 
     database: str = Field(default=DEFAULT_DATABASE, min_length=1, max_length=255)
-    #: Outside ``NS_ENV=local`` only: the Cosmos account name (managed identity, no key).
+    #: Outside ``NS_ENV=local`` only: the Cosmos account NAME (managed identity, no key). A URL,
+    #: connection string or key is refused at load without echoing it (PRP-51).
     cosmos_account: str | None = None
+
+    @field_validator("cosmos_account", mode="before")
+    @classmethod
+    def _cosmos_account(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            if COSMOS_ACCOUNT_PATTERN.fullmatch(value):
+                return value
+        raise ValueError("NS_STORE_COSMOS_ACCOUNT must be a Cosmos account name, not a URL or key")
 
 
 def _exact_origin(origin: str) -> str:

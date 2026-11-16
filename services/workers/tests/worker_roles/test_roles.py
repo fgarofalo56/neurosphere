@@ -22,6 +22,7 @@ def test_all_expands_to_the_wire_contract_list() -> None:
         "gateway_poll",
         "foundry_discovery",
         "billing_export",
+        "detections",
     )
     assert parse_roles("all") == ROLE_NAMES
     assert parse_roles("ALL") == ROLE_NAMES

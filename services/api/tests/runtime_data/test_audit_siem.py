@@ -386,6 +386,10 @@ def _non_local(monkeypatch: pytest.MonkeyPatch, cloud: str) -> None:
     """Compose the REAL producer path outside local (no network: the client is lazy)."""
     monkeypatch.setenv("NS_ENV", "dev")
     monkeypatch.setenv("NS_CLOUD", cloud)
+    # PRP-51 refuses overrides outside local; these tests inject a fake Cosmos client on purpose.
+    monkeypatch.setattr(
+        "neurosphere_api.runtime.compose.refuse_overrides_outside_local", lambda *_: None
+    )
 
 
 def test_government_profile_refuses_a_commercial_host(monkeypatch: pytest.MonkeyPatch) -> None:
