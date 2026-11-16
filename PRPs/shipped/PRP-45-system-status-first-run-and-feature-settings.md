@@ -1,6 +1,8 @@
 ---
 name: PRP-45-system-status-first-run-and-feature-settings
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 303
 priority: P0
 order: 36
 review: required
@@ -33,16 +35,16 @@ Out of scope: `/readyz` probe defaults and `probe_unconfigured` (#143) are PRP-5
 - Lane 4 section 5: the operator "cannot choose or change the copilot model, evaluator model, search provider, or write targets" and "cannot see a single system status screen" (`docs/validation/lane4-identity-docs-operator-setup.md:268-283`).
 
 ## Acceptance criteria
-- [ ] Given a deployment-scoped admin, When `GET /api/v1/admin/system/status` is called, Then it returns every component of the composition registry with state, required flag and reason code, plus the environment probe results, and never a configuration value, host or secret (test asserts the body against a registry with failed, disabled and not_built components).
-- [ ] Given a caller without the deployment-scoped admin permission (including `config.manage` in an ordinary domain only), When any `/api/v1/admin/system/*` route is called, Then it is 403 and the denial is recorded by the denial recorder.
-- [ ] `GET /api/v1/admin/system/checklist` returns one item per checklist entry (optional components, ingest producers, write targets, stored-settings store reachable, auth customer binding) with state `done | todo | blocked | not_applicable`, a reason code and a docs anchor; the item ids are stable and listed in the runbook.
-- [ ] `GET /api/v1/admin/system/settings` lists the six setting keys (`copilot`, `judge`, `search`, `scan`, `mcp_server`, `write_targets`) with source `stored | env | default`, stored revision, applied revision and `restart_required`.
-- [ ] `PUT /api/v1/admin/system/settings/{key}` validates the body through the same settings class the builder uses, needs `If-Match` (missing is `invalid_schema`, stale is `stale_version`, the catalog convention), stores through the PRP-37/PRP-65 `admin-config` repository with an audit record, and returns the diff and the new revision.
-- [ ] A stored value that names a credential (any field matching the copilot `KEY|SECRET|PASSWORD` markers) or a value in another cloud than the deployment's is refused with 422 and nothing is stored; references only (A7 vocabulary from PRP-37/PRP-65).
-- [ ] Given stored `copilot`, `search`, `mcp_server` or `scan` settings, When the API starts, Then the builders use them over env (A1) and status reports source `stored`; Given the store unreachable at startup, Then builders use env and the checklist shows `stored_settings_unavailable`.
-- [ ] Given a stored `judge` setting, When the evaluation worker role starts, Then `_evaluation_judge` builds from it; a Commercial endpoint in a Government deployment fails the role with the existing `evaluation_judge_*` reason, never a cross-cloud call.
-- [ ] Stored `write_targets` entries are validated and listed but not registered by this PRP (PRP-54 consumes them); status says so.
-- [ ] Route inventory has no undeclared route; OpenAPI drift test passes after regeneration.
+- [x] Given a deployment-scoped admin, When `GET /api/v1/admin/system/status` is called, Then it returns every component of the composition registry with state, required flag and reason code, plus the environment probe results, and never a configuration value, host or secret (test asserts the body against a registry with failed, disabled and not_built components).
+- [x] Given a caller without the deployment-scoped admin permission (including `config.manage` in an ordinary domain only), When any `/api/v1/admin/system/*` route is called, Then it is 403 and the denial is recorded by the denial recorder.
+- [x] `GET /api/v1/admin/system/checklist` returns one item per checklist entry (optional components, ingest producers, write targets, stored-settings store reachable, auth customer binding) with state `done | todo | blocked | not_applicable`, a reason code and a docs anchor; the item ids are stable and listed in the runbook.
+- [x] `GET /api/v1/admin/system/settings` lists the six setting keys (`copilot`, `judge`, `search`, `scan`, `mcp_server`, `write_targets`) with source `stored | env | default`, stored revision, applied revision and `restart_required`.
+- [x] `PUT /api/v1/admin/system/settings/{key}` validates the body through the same settings class the builder uses, needs `If-Match` (missing is `invalid_schema`, stale is `stale_version`, the catalog convention), stores through the PRP-37/PRP-65 `admin-config` repository with an audit record, and returns the diff and the new revision.
+- [x] A stored value that names a credential (any field matching the copilot `KEY|SECRET|PASSWORD` markers) or a value in another cloud than the deployment's is refused with 422 and nothing is stored; references only (A7 vocabulary from PRP-37/PRP-65).
+- [x] Given stored `copilot`, `search`, `mcp_server` or `scan` settings, When the API starts, Then the builders use them over env (A1) and status reports source `stored`; Given the store unreachable at startup, Then builders use env and the checklist shows `stored_settings_unavailable`.
+- [x] Given a stored `judge` setting, When the evaluation worker role starts, Then `_evaluation_judge` builds from it; a Commercial endpoint in a Government deployment fails the role with the existing `evaluation_judge_*` reason, never a cross-cloud call.
+- [x] Stored `write_targets` entries are validated and listed but not registered by this PRP (PRP-54 consumes them); status says so.
+- [x] Route inventory has no undeclared route; OpenAPI drift test passes after regeneration.
 - PRP exit: an operator with a deployment-scoped admin assignment can read status and checklist and change the copilot, judge, search, scan and MCP server settings through the API, restart, and see them applied, with every write audited.
 
 ## Clarifications (decided)
@@ -218,18 +220,33 @@ None run here. A stored copilot or judge endpoint pointing at a real model is on
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | verifying | prp-45-system-status-settings | core snapshot + validators; 30 tests |
+| 2 | verifying | prp-45-system-status-settings | status + checklist routes; contract checklist statuses |
+| 3 | verifying | prp-45-system-status-settings | settings GET/PUT, If-Match, diff, audit |
+| 4 | verifying | prp-45-system-status-settings | snapshot before builders; copilot, search, mcp, scan read it |
+| 5 | verifying | prp-45-system-status-settings | build_evaluation reads stored judge; cross-cloud keeps evaluation_judge_* reason |
+| 6 | merged | prp-45-system-status-settings | Tier-2 appends, runbooks and mkdocs nav done on the branch; Tier-3 regeneration (openapi.json, docs/reference, status table, INDEX, EXECUTION-PLAN, changelog fragment) and the move to shipped/ are left for the merge step |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-15, PR #303.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+  - Checklist statuses follow the shipped contract `FirstRunChecklistItem` (`complete | missing | disabled | not_applicable | error`), not the `done | todo | blocked | not_applicable` wording in the acceptance criteria (`packages/contracts/**` is must-not-touch).
+  - The contract's `setting_key` member for write targets is `write_target`; the API key stays `write_targets` and holds one document per `target_kind` (`system.write_target.<kind>`).
+  - Stored fields map onto the existing settings classes only where a field exists: copilot endpoint/deployment/API version (region, model feature, SKU, scope stay env; an enabled stored value keeps the env mode or uses `approved_endpoint`); search service (from the endpoint host) and index; MCP resource URL; scan `enabled` only (interval and scopes are stored for a scheduler); judge endpoint/deployment/API version. Credential references are validated and stored; the runtime keeps the workload identity (`DefaultAzureCredential`), and `copilot`/`judge` refuse a Key Vault reference (`managed_identity_required`).
+  - No DELETE route: the store never reuses a retired id, so "turn off" is `PUT` with `enabled: false` and a restart (runbook).
+  - A create uses `If-Match: "absent"` (the ETag `GET` returns when nothing is stored).
+  - Refused writes (422) are not audited; accepted writes and their failures after validation are.
+  - `services/api/tests/runtime_api/test_readiness.py` gained `admin_system` in its two pinned builder lists (the PRP's gotcha asked for it; the file is outside the Ownership block).
+  - The worker opens a short-lived Cosmos client for the read at evaluation role start (a second client next to `_cosmos`).
+- Descoped items: none.
+- OPEN gates: a stored copilot or judge endpoint against a real model (PRP-64 G16 judge item and a hosted copilot check, `NS_LIVE_APPROVED=1`); compose-stack checks not run in this session.
+- Env vars for the operator: none new.
+- Follow-ups (reviewer; not filed as issues, the first is done in this PR):
+  - Done: `admin/system/service.py` docstring now says 422 refusals are not audited.
+  - `runtime/builders/copilot.py` `_runtime_settings` builds `CopilotRuntimeSettings()` from env first, so an env ValidationError fails copilot as MISCONFIGURED even when a valid stored setting would replace those fields; consider the `env_mode='disabled'` fallback `check_runtime_settings` uses.
+  - Enabled stored copilot on env mode `disabled` becomes `approved_endpoint` and still needs env region, model feature and SKU (now in the runbook).
+  - `PUT /api/v1/admin/system/settings/{key}` takes `dict[str, Any]`: type it as the SystemSetting contract model so PRP-57 generated TS clients get a schema.
+  - `StoredSettingsCache` caches an `unavailable` snapshot for the process lifetime (A1; now in the runbook).
+  - Worker `build_evaluation` opens a second Cosmos client for the judge read; reuse the role client factory once PRP-54 or later refactors `factories.py`.
+- Serial-after items: none in the blueprint.
+- Product check: an operator with the deployment-scoped admin can read status and the checklist and change copilot, judge, search, scan and MCP server settings through the API, restart and see them applied; there is no UI yet (PRP-53 status/checklist, PRP-57 settings), so today it needs raw API calls.

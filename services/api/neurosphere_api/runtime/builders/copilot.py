@@ -30,6 +30,10 @@ inspected, never values). It derives from ``BaseException`` on purpose: the comp
 turns every ``Exception`` from a builder into a readiness failure, but a credential in
 configuration is a hard refusal, like a CORS wildcard, not a degraded component.
 
+Stored setting (PRP-45): a ``copilot`` setting in the startup snapshot (``STORED_SETTINGS``) is
+passed as init arguments (endpoint, deployment, API version; ``enabled false`` is ``disabled``),
+so it beats ``NS_COPILOT_*``; region, model feature, SKU and scope stay env. Restart to apply.
+
 Tests pass a prebuilt adapter through ``CompositionOverrides.model_adapter`` (never a live
 endpoint) and a conversation store through ``ctx.overrides.backend("copilot_conversation_store")``.
 """
@@ -43,6 +47,7 @@ from typing import Any, Final, Literal
 
 from azure.identity.aio import DefaultAzureCredential
 from fastapi import Request
+from neurosphere_core.admin.runtime import copilot_init_args
 from neurosphere_core.copilot.models import (
     AdapterConfig,
     ModelAdapter,
@@ -54,6 +59,7 @@ from neurosphere_core.errors import CapabilityUnavailableError, DependencyTransi
 from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from neurosphere_api.admin.system.stored import STORED_SETTINGS
 from neurosphere_api.copilot import CosmosConversationStore, configure_copilot
 from neurosphere_api.copilot.dependencies import get_copilot
 from neurosphere_api.copilot.evidence import StoreEvidenceReader
@@ -240,6 +246,17 @@ def _environs(ctx: BuildContext) -> Iterable[Mapping[str, str]]:
     return (os.environ, ctx.environ)
 
 
+def _runtime_settings(ctx: BuildContext) -> CopilotRuntimeSettings:
+    """``NS_COPILOT_*``, overlaid with the stored ``copilot`` setting when one applies (PRP-45:
+    stored fields are init arguments, so they beat env and the same validation runs)."""
+    env = CopilotRuntimeSettings()
+    snapshot = ctx.maybe_shared(STORED_SETTINGS)
+    stored = None if snapshot is None else snapshot.setting("copilot")
+    if stored is None:
+        return env
+    return CopilotRuntimeSettings(**copilot_init_args(stored, env_mode=env.mode))
+
+
 def build(ctx: BuildContext) -> None:
     refuse_credential_shaped_env(*_environs(ctx))
     override = ctx.overrides.model_adapter
@@ -250,7 +267,7 @@ def build(ctx: BuildContext) -> None:
         ctx.attempt("copilot", lambda: _install(ctx, override))
         return
     try:
-        settings = CopilotRuntimeSettings()
+        settings = _runtime_settings(ctx)
     except ValidationError:
         ctx.failed("copilot", MISCONFIGURED)
         return

@@ -65,6 +65,7 @@ OPTIONAL_COMPONENTS: Final = (
     "admin_producers",
     "admin_platform",
     "audit_siem",
+    "admin_system",
 )
 #: Startup steps that are not components but still gate readiness when they fail.
 STARTUP_STEPS: Final = ("cosmos_containers",)

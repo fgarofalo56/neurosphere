@@ -1,5 +1,8 @@
 """Opt-in construction of the scan service from settings (called from ``main.create``).
 
+A stored ``scan`` setting (PRP-45, ``/api/v1/admin/system/settings/scan``) decides ``enabled``
+over ``NS_SCAN_ENABLED``; it is read from the same process-cached snapshot as the composition.
+
 ``NS_SCAN_ENABLED`` unset/false: nothing is configured and ``POST /v1/deploy/scan`` keeps failing
 closed with 503 (``scan_not_configured``). True: a keyless credential, an ``httpx`` client and the
 ``HttpxResourceGraphReader`` (management host from the ``CloudProfile``) are built and attached
@@ -12,9 +15,11 @@ import httpx
 from azure.core.credentials_async import AsyncTokenCredential
 from azure.identity.aio import DefaultAzureCredential
 from fastapi import FastAPI
+from neurosphere_core.admin.runtime import StoredSettingsSnapshot, scan_init_args
 from neurosphere_core.clients import ClientLifetime
 from neurosphere_core.cloud import Settings
 
+from neurosphere_api.admin.system.stored import load_from_settings
 from neurosphere_api.deploy.scan.graph import HttpxResourceGraphReader
 from neurosphere_api.deploy.scan.router import configure_scan
 from neurosphere_api.deploy.scan.service import ScanService
@@ -47,11 +52,29 @@ def _credential(settings: Settings) -> AsyncTokenCredential:
     )
 
 
+def _settings(settings: Settings, snapshot: StoredSettingsSnapshot | None) -> ScanSettings:
+    """``NS_SCAN_*`` overlaid with the stored ``scan`` setting (PRP-45): ``enabled`` comes from
+    the store when a value is stored; the stored interval and scopes are kept for a scheduler."""
+    current = load_from_settings(settings) if snapshot is None else snapshot
+    stored = current.setting("scan")
+    if stored is None:
+        return ScanSettings()
+    return ScanSettings(**scan_init_args(stored))
+
+
 def configure_scan_from_settings(
-    app: FastAPI, settings: Settings, scan_settings: ScanSettings | None = None
+    app: FastAPI,
+    settings: Settings,
+    scan_settings: ScanSettings | None = None,
+    *,
+    stored: StoredSettingsSnapshot | None = None,
 ) -> bool:
-    """Wire the scan service when ``NS_SCAN_ENABLED`` is set. True when configured."""
-    conf = scan_settings or ScanSettings()
+    """Wire the scan service when enabled (stored ``scan`` setting, else ``NS_SCAN_ENABLED``).
+
+    ``stored`` is for tests; ``main.create`` passes nothing and the process-cached snapshot
+    ``compose_app`` also uses is read (one bounded read per process).
+    """
+    conf = scan_settings or _settings(settings, stored)
     if not conf.enabled:
         return False
     lifetime = ClientLifetime()

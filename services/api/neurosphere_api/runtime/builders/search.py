@@ -17,6 +17,10 @@ no component and no entry to the fixed builder order.
 ``NS_SEARCH_REFRESH_SECONDS``  per-scope re-index interval (default 30).
 ======================  ===========================================================================
 
+Stored setting (PRP-45): a ``search`` setting in the startup snapshot beats ``NS_SEARCH_*``
+(provider ``azure`` on the stored service and index; ``enabled false`` composes no search);
+the region and refresh interval stay env. Restart to apply.
+
 Government guard: with ``azure`` in a Government cloud, a disabled capability row or a missing
 region/service never falls back to the in-process fixture; the catalog component fails with
 reason ``search_<cause>`` (visible on ``/readyz``). Commercial keeps the fixture fallback.
@@ -40,6 +44,7 @@ from dataclasses import dataclass
 from typing import Any, Final, Literal
 
 from azure.identity.aio import DefaultAzureCredential
+from neurosphere_core.admin.runtime import search_init_args
 from neurosphere_core.capabilities import CapabilityResult
 from neurosphere_core.catalog import CatalogRepository
 from neurosphere_core.catalog.graph import RepositoryGraphQuery
@@ -62,6 +67,7 @@ from neurosphere_core.search.indexer import (
 from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from neurosphere_api.admin.system.stored import STORED_SETTINGS
 from neurosphere_api.runtime.builders import BuildContext, ComponentUnavailableError
 
 __all__ = [
@@ -189,10 +195,24 @@ def _azure_backend(ctx: BuildContext, settings: SearchSettings) -> Any | None:
     return client
 
 
+def _search_settings(ctx: BuildContext) -> SearchSettings:
+    """``NS_SEARCH_*`` overlaid with the stored ``search`` setting (PRP-45, init arguments)."""
+    snapshot = ctx.maybe_shared(STORED_SETTINGS)
+    stored = None if snapshot is None else snapshot.setting("search")
+    if stored is None:
+        return SearchSettings()
+    cloud = ctx.settings.cloud_profile.cloud.value
+    try:
+        args = search_init_args(stored, cloud=cloud)  # type: ignore[arg-type]
+    except InvalidSchemaError:
+        raise ComponentUnavailableError("search_settings_invalid") from None
+    return SearchSettings(**args)
+
+
 def build_catalog_graph(ctx: BuildContext, repository: CatalogRepository) -> GraphQuery | None:
     """The catalog graph with search composed from ``NS_SEARCH_*``; ``None`` when unset."""
     try:
-        settings = SearchSettings()
+        settings = _search_settings(ctx)
     except ValidationError:
         raise ComponentUnavailableError("search_settings_invalid") from None
     if settings.provider is None:
