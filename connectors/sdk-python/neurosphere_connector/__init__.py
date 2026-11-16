@@ -12,6 +12,7 @@ from neurosphere_connector.health import (
     HealthState,
     HealthTracker,
     RateLimitStatus,
+    tracked,
 )
 from neurosphere_connector.manifest import build_manifest, manifest_issues, validate_manifest
 from neurosphere_connector.vault import (
@@ -39,5 +40,6 @@ __all__ = [
     "build_manifest",
     "check_connector_contract",
     "manifest_issues",
+    "tracked",
     "validate_manifest",
 ]

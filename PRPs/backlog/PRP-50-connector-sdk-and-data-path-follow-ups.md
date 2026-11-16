@@ -237,7 +237,7 @@ No data or schema migration. `poll_status` gains one more string value (`stalled
 | 3 | merged | prp-50-connector-followups | restated counter |
 | 4 | merged | prp-50-connector-followups | collisions, domain check |
 | 5 | merged | prp-50-connector-followups | |
-| 6 | todo | | |
+| 6 | merged | prp-50-connector-followups | drain_rotation_hooks: no host calls it (tests only); follow-up needed |
 | 7 | todo | | |
 
 ## Completion note (filled at ship)
