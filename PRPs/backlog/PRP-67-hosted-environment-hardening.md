@@ -11,7 +11,7 @@ implementer_model: sonnet
 phase: 6
 ns: NS-10, NS-01
 depends_on: [PRP-58-hosted-data-path-and-environment-hardening]
-wave: W20
+wave: W19
 branch: prp-67-hosted-hardening
 allow_parallel: true
 issues: [266, 136, 143, 144]

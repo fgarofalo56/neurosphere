@@ -10,8 +10,8 @@ orchestrator_model: sonnet
 implementer_model: sonnet
 phase: 6
 ns: NS-01, NS-05, NS-06, NS-07, NS-08
-depends_on: [PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector]
-wave: W21
+depends_on: [PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector, PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-80-copilot-docs-retrieval-and-groundedness]
+wave: W30
 branch: prp-64-live-gates
 allow_parallel: true
 issues: [258, 57]
@@ -51,7 +51,7 @@ Out of scope: building anything the gates exercise (the scripts and features com
 | 5 | Items needing a script that does not exist | Write one; do it by hand | SIEM sink check has no script: run the documented manual procedure; adding a script under `scripts/gates/` is allowed only as a gate-script addition recorded as a deviation. ASSUMPTION |
 | 6 | Running agent versus operator | Agent runs all; operator runs billable steps | The agent prepares `temp/campaign/*.ps1` or `.sh` command files with placeholders filled from operator-supplied names; the operator or the agent runs them only after approval; interactive logins and credential installs are the operator's |
 | 7 | Evidence spill | One file; per item | One file per run under the gate's directory, never overwriting an earlier run |
-| 8 | Split with PRP-66 | Keep one PRP; two PRPs | Two PRPs in W21 (17 items were too many for one sitting). Evidence directories are disjoint (see Ownership); both edit `docs/RESEARCH-AND-GATES.md`, so PRP-66's register edits are its final item and run after this PRP's. The G17 observe run also answers #179 item 4 and #148 item 6; PRP-66 posts those answers from this PRP's evidence file |
+| 8 | Split with PRP-66 | Keep one PRP; two PRPs | Two PRPs, both W30 (17 items were too many for one sitting). Evidence directories are disjoint (see Ownership); both edit `docs/RESEARCH-AND-GATES.md`, so PRP-66's register edits are its final item and run after this PRP's. The G17 observe run also answers #179 item 4 and #148 item 6; PRP-66 posts those answers from this PRP's evidence file |
 | 9 | Changelog entry | Edit `CHANGELOG.md`; fragment file | ASSUMPTION: PRP-68 (W11) ships the `changelog.d/` fragment convention first, so this PRP writes `changelog.d/PRP-64.md` (new) and never edits `CHANGELOG.md` |
 
 ## Context manifest
@@ -96,6 +96,9 @@ owns:
   - docs/evidence/G12/ingestion/**
   - docs/evidence/G16/**
   - docs/evidence/G17/**
+  - docs/evidence/G07/copilot/live-*
+  - docs/evidence/G07/copilot/first-token-live-*
+  - docs/evidence/copilot-groundedness/live-*
   - changelog.d/PRP-64.md
 tier1: []
 tier2_appends:
@@ -178,7 +181,25 @@ Every item is independent and operator-attended: the dependency noted is a shipp
 - Command per adapter: `NS_LIVE_APPROVED=1 NS_G01A_OPERATOR=<name> NS_G01A_DATABRICKS_HOST=<host> NS_G01A_DATABRICKS_WAREHOUSE_ID=<id> NS_G01A_DATABRICKS_CATALOG=<catalog> NS_G01A_DATABRICKS_REGION=<region> uv run python scripts/gates/g01_analytics_live.py --adapter databricks --evidence-dir docs/evidence/G01/analytics`. Fabric and Synapse stay `OPEN (not run)`: they need an approved TDS driver (ADR-0002 row) that no PRP adds.
 - Approval: create and drop one run schema on a serverless 2X-Small warehouse (Entra only; Commercial only). Spend cap: USD 10. Register row: G01 (analytics sentence). Ends OPEN when no warehouse is approved.
 
-### Item 10 - Integration and close-out
+### Item 10 - Copilot first live model turn (PRP-78)
+- Depends on: PRP-78 shipped (the three new tools and the progress events), an operator-approved Foundry deployment in Limitlessdata (Commercial only; never an account another team owns).
+- Procedure (no script exists; ASSUMPTION: manual through the composed API): the operator sets `NS_COPILOT_MODE=approved_endpoint` with the approved endpoint and deployment on the hosted or composed API (values only in the operator's shell), signs in as a steward, and asks the five demo questions from PRP-78 once each in the dock; the agent reads `GET /api/v1/copilot/status`, the SSE `progress` events and the `copilot.tool_call` audit records and records, per question, tools called, citations that resolved, refusals and outcome. `NS_LIVE_APPROVED=1` is set for the session.
+- Approval: five paid model turns on an approved account. Spend cap (proposal, operator sets): USD 5. Evidence: `docs/evidence/G07/copilot/live-turn-<UTC>.md` (status body with ids tokenised, per-question table, no prompt or answer text beyond the question ids). Register row: G07 (one sentence on the live copilot turn).
+- Ends OPEN when no endpoint is approved; the recorded demo adapter (if the owner approved it in PRP-78) never counts as a live turn.
+
+### Item 11 - Copilot live groundedness run (PRP-80)
+- Depends on: PRP-80 shipped; Item 10 not failed.
+- Command: `NS_LIVE_APPROVED=1 uv run pytest -q -m live tests/evals/copilot_groundedness/test_live_groundedness.py` with the approved endpoint and deployment exported by the operator (the test refuses without approval and writes `results.json` and a README with model, region, date, pass rate, per-category rates and failures).
+- Approval: 100 questions through the real model and judge on an approved account. Spend cap (proposal, operator sets): USD 25. Evidence: `docs/evidence/copilot-groundedness/live-<UTC>/{results.json,README.md}` (new dated directory; PRP-80's offline files stay untouched). Register row: G16 (one sentence: pass rate against the 90 percent target; the row choice is an ASSUMPTION confirmed at the item).
+- A rate below 90 percent is FAIL with the failures listed, not edited away. Ends OPEN when no endpoint is approved.
+
+### Item 12 - Copilot first-token timing against a provider (PRP-78, PRP-80)
+- Depends on: Item 10 (same endpoint and session).
+- Procedure: with progress events from PRP-78 in place, the operator runs the first-token measurement (the live variant of `tests/e2e/copilot/test_first_token.py`; if no live variant exists the item records the time from request to first `progress` event and to first text event from the browser network log, and says it is a manual measurement) for at least 20 turns; the existing 119-140 ms figure excluded provider time and is not reused.
+- Approval: about 20 paid model turns. Spend cap (proposal, operator sets): USD 5. Evidence: `docs/evidence/G07/copilot/first-token-live-<UTC>.md` (p50, p95, n, provider region, deployment kind, whether the judge delay is included). Register row: G07 (copilot first-token sentence). Target `docs/PRD.md:50` is 3 s; report MET or NOT MET.
+- Ends OPEN when no endpoint is approved.
+
+### Item 13 - Integration and close-out
 - Deliverable: edit only the register rows this PRP's evidence supports (one close-out commit); write `changelog.d/PRP-64.md`; regenerate `PRPs/INDEX.md` and the status table (`python scripts/prp_status.py --write`); fill the completion note table (item, outcome, evidence, spend, row); file follow-up issues (ADR-0005, matrix rows, coverage doc, scripts needed); tell the operator which issues may be closed (#57 only on PASS).
 - Owned files: `docs/RESEARCH-AND-GATES.md` (rows listed under Ownership only), `changelog.d/PRP-64.md` (new), this PRP file.
 - Acceptance criteria: every item has an outcome row; no register row outside this PRP's list is touched; the GUID grep in Validation gates is clean.
@@ -223,6 +244,9 @@ Product code, new gate scripts beyond a fix needed to finish a run, new infrastr
 | 8 | todo | | |
 | 9 | todo | | |
 | 10 | todo | | |
+| 11 | todo | | |
+| 12 | todo | | |
+| 13 | todo | | |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit:

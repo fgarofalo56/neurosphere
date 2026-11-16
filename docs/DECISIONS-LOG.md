@@ -4,6 +4,13 @@ Operator decisions that bind the build but are not architecture (those are ADRs
 in `docs/adr/`). Newest first. Each entry: date, decision, options considered,
 why, and what it changes.
 
+## 2026-11-16
+
+| # | Decision | Options considered | Why | Effect |
+|---|---|---|---|---|
+| D13 | **Restore the original product scope alongside v1.2.** The 2026-10-02 PRD (`git show 9fbf5f4c:docs/PRD.md`) is build authority again for the features v1.2 removed or demoted | original vision only; v1.2 plus the dropped pieces; a new description | The owner (Frank Garofalo) judged that the build "missed the mark": no task-to-agent recommendation, no graph questions, a map without filters or incident view, a copilot that never ran, anonymous seed data, features off by default | The v1.2 governance platform stays as built. PRP-70 to PRP-84 add back: agent/tool recommendation for a task with explanation and feedback (5c), graph questions on access, sensitivity and residency (5b/5d), catalog registration completeness and version history (5b), the live map with filters, search and incident view (5d), copilot graph, timeline and recommender tools with retrieval (5e), an agent SDK and ingest scale (5a), SOC 2 / ISO 27001 / GDPR mappings and data-subject requests (5g), a realistic seeded demo and a hosted profile with everything on. `docs/PRD.md` section 5 records it. "Add back" means the capabilities, not the original technology picks; the hard constraints in `CLAUDE.md` stay |
+| D14 | **Multi-cloud hosting restored: all four targets** (Azure, AWS, GCP, on-prem Kubernetes) | adapter boundary only; one portable backend set; all four targets | Original PRD 5f; the owner chose the full version | PRP-85 to PRP-98. Carried as assumptions for the owner to confirm before PRP-85 executes: a `DeploymentTarget` axis beside the cloud class, and one portable backend set (PostgreSQL, Kafka API, S3 API, generic OIDC, OTLP) on each cloud's managed service rather than a native adapter per cloud. Overrides `docs/PRD.md` ("AWS/GCP hosting ... outside the initial baseline") and `PRP.md` ("Terraform is not a second mandatory implementation") for non-Azure targets. No paid cloud run without operator approval; every real AWS/GCP run is recorded OPEN |
+
 ## 2026-11-03
 
 | # | Decision | Options considered | Why | Effect |
