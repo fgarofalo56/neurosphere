@@ -120,8 +120,9 @@ controls:
   - control_id: nist-ai-rmf.manage-4
     title: Documenting and monitoring risk treatment, response and communication plans
     support_status: implemented_tested
-    evidence_sources: [audit_chain, hitl_decisions]
+    evidence_sources: [audit_chain, hitl_decisions, configuration_findings]
     repo_paths:
       - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/neurosphere_core/detections/evidence.py
       - packages/core/neurosphere_core/compliance/sources/hitl.py
       - packages/core/tests/compliance_lib/test_sources.py

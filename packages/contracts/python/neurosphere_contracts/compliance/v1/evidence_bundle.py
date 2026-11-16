@@ -49,5 +49,5 @@ class EvidenceBundle(BaseModel):
     window_start: evidence_observation.UtcTimestamp
     window_end: evidence_observation.UtcTimestamp
     controls: Annotated[list[ControlSummary], Field(max_length=200)]
-    observations: Annotated[list[evidence_observation.EvidenceObservation], Field(max_length=5)]
+    observations: Annotated[list[evidence_observation.EvidenceObservation], Field(max_length=6)]
     digest: Annotated[StrictStr, Field(pattern="^sha256:[0-9a-f]{64}$")]

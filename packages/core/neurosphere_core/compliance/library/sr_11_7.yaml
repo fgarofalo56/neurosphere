@@ -48,9 +48,10 @@ controls:
   - control_id: sr-11-7.vi.inventory
     title: Governance, model inventory
     support_status: implemented_tested
-    evidence_sources: [catalog_ownership]
+    evidence_sources: [catalog_ownership, configuration_findings]
     repo_paths:
       - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/neurosphere_core/detections/evidence.py
       - packages/core/tests/compliance_lib/test_sources.py
   - control_id: sr-11-7.vi.documentation
     title: Governance, documentation

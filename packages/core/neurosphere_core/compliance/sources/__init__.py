@@ -10,11 +10,13 @@ from neurosphere_core.compliance.sources.catalog import CatalogOwnershipSource
 from neurosphere_core.compliance.sources.cost import CostAttributionSource
 from neurosphere_core.compliance.sources.evaluation import EvaluationResultsSource
 from neurosphere_core.compliance.sources.hitl import HitlDecisionsSource
+from neurosphere_core.detections.evidence import ConfigurationFindingsSource
 
 __all__ = [
     "DEFAULT_CAP",
     "AuditChainSource",
     "CatalogOwnershipSource",
+    "ConfigurationFindingsSource",
     "CostAttributionSource",
     "EvaluationResultsSource",
     "EvidenceSource",

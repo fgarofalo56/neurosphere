@@ -37,6 +37,7 @@ class EvidenceSourceId(
             "hitl_decisions",
             "evaluation_results",
             "cost_attribution",
+            "configuration_findings",
         ]
     ]
 ):
@@ -46,11 +47,12 @@ class EvidenceSourceId(
         "hitl_decisions",
         "evaluation_results",
         "cost_attribution",
+        "configuration_findings",
     ]
 
 
 class EvidenceSources(RootModel[list[EvidenceSourceId]]):
-    root: Annotated[list[EvidenceSourceId], Field(max_length=5)]
+    root: Annotated[list[EvidenceSourceId], Field(max_length=6)]
 
 
 class ControlMapping(BaseModel):
