@@ -1,6 +1,8 @@
 ---
 name: PRP-53-admin-console-identity-status-and-audit
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 309
 priority: P0
 order: 40
 review: required
@@ -32,16 +34,16 @@ Out of scope: producers, connectors, gateway registration, catalog import, price
 - `route-manifest.test.ts` and `routes.a11y.spec.ts` fail a route that has no manifest entry or axe sample (`frontend/tests/e2e/a11y/route-samples.ts:15-17`), so the registries must move in the same PR as the pages.
 
 ## Acceptance criteria
-- [ ] Given an admin, When `/workspaces/admin` opens, Then it still probes `/api/v1/workspaces/admin` (a non-admin sees the existing forbidden state) and shows the console landing: links to the four areas, the first-run checklist summary and the `restart_required` count; the "Placeholder" text is gone and `workspaces.test.tsx` asserts that.
-- [ ] Identity: `/admin/identity` lists principals (bounded page, cursor); `/admin/identity/principal?principal_id=` shows memberships, role assignments with expiry, grants and revocation state. Assign and remove a role, add and remove a domain membership, put and remove a grant (expiry and reason required) each open `ChangeConfirmDialog` with exact target, ETag/version and diff, send the PRP-39 route, and show the result or the typed error (403, 409 `stale_version`, 422).
-- [ ] Revoke and lift: the revoke action shows mode (`issued_before` or `until_lifted`) and a required reason; a revoked principal shows a persistent banner with a lift action; both call the PRP-39 revocation route.
-- [ ] Domains: `/admin/domains` lists the PRP-44 domain registry (display name, classification, residency region, status, control-domain flag) and creates or retires a domain through the confirm dialog; a reserved name (PRP-48 `is_reserved_chain_name`) shows the API's 422 text unchanged.
-- [ ] System: `/admin/system` shows every composition component with state, required flag and reason code, the first-run checklist (`done | todo | blocked | not_applicable`, reason, docs anchor) and the six stored-setting keys with source (`stored | env | default`) and `restart_required`; it never renders a configuration value, host or secret (a test feeds a body with such a field and asserts it is not in the DOM).
-- [ ] Audit: `/admin/audit` filters by domain, operation, kind, outcome, actor pseudonym, correlation id and a required, capped time range; pages with the server cursor; a denials tab (customer-wide) and a SIEM status panel (last success, consecutive failures, last reason code); export offers NDJSON and CSV, is disabled with an explanation when the API answers 403, and shows the row cap and the audit notice the API returns.
-- [ ] Empty, loading, error and forbidden states exist for every list; "unknown" is shown as unknown, never 0; no pseudonym is joined to a name.
-- [ ] Mock handlers `frontend/tests/mock-api/features/admin-core.ts` serve every route above (including 403, 409 and 422 cases keyed by fixture ids) and are listed in the registry test.
-- [ ] Vitest covers each page's states; Playwright `frontend/tests/e2e/admin-core/**` runs the happy path and a forbidden path per area on the mock API; the a11y suite has a sample for every new manifest pattern with zero serious or critical axe violations in light, dark and high-contrast; Docker-only visual baselines exist for the new pages.
-- [ ] `pnpm --filter @neurosphere/frontend lint`, `typecheck`, `test`, `format` and `test:e2e` pass; `python scripts/validate_planning.py` passes.
+- [x] Given an admin, When `/workspaces/admin` opens, Then it still probes `/api/v1/workspaces/admin` (a non-admin sees the existing forbidden state) and shows the console landing: links to the four areas, the first-run checklist summary and the `restart_required` count; the "Placeholder" text is gone and `workspaces.test.tsx` asserts that.
+- [x] Identity: `/admin/identity` lists principals (bounded page, cursor); `/admin/identity/principal?principal_id=` shows memberships, role assignments with expiry, grants and revocation state. Assign and remove a role, add and remove a domain membership, put and remove a grant (expiry and reason required) each open `ChangeConfirmDialog` with exact target, ETag/version and diff, send the PRP-39 route, and show the result or the typed error (403, 409 `stale_version`, 422).
+- [x] Revoke and lift: the revoke action shows mode (`issued_before` or `until_lifted`) and a required reason; a revoked principal shows a persistent banner with a lift action; both call the PRP-39 revocation route.
+- [x] Domains: `/admin/domains` lists the PRP-44 domain registry (display name, classification, residency region, status, control-domain flag) and creates or retires a domain through the confirm dialog; a reserved name (PRP-48 `is_reserved_chain_name`) shows the API's 422 text unchanged.
+- [x] System: `/admin/system` shows every composition component with state, required flag and reason code, the first-run checklist (the shipped PRP-45 statuses `complete | missing | error | disabled | not_applicable`, reason, docs anchor) and the six stored-setting keys with source (`stored | env | default`) and `restart_required`; it never renders a configuration value, host or secret (a test feeds a body with such a field and asserts it is not in the DOM).
+- [x] Audit: `/admin/audit` filters by domain, operation, kind, outcome, actor pseudonym, correlation id and a required, capped time range; pages with the server cursor; a denials tab (customer-wide) and a SIEM status panel (last success, consecutive failures, last reason code); export offers NDJSON and CSV, is disabled with an explanation when the API answers 403, and shows the row cap and the audit notice the API returns.
+- [x] Empty, loading, error and forbidden states exist for every list; "unknown" is shown as unknown, never 0; no pseudonym is joined to a name.
+- [x] Mock handlers `frontend/tests/mock-api/features/admin-core.ts` serve every route above (including 403, 409 and 422 cases keyed by fixture ids) and are listed in the registry test.
+- [x] Vitest covers each page's states; Playwright `frontend/tests/e2e/admin-core/**` runs the happy path and a forbidden path per area on the mock API; the a11y suite has a sample for every new manifest pattern with zero serious or critical axe violations in light, dark and high-contrast; Docker-only visual baselines exist for the new pages.
+- [x] `pnpm --filter @neurosphere/frontend lint`, `typecheck`, `test`, `format` and `test:e2e` pass; `python scripts/validate_planning.py` passes.
 - PRP exit: an operator signed in as a deployment administrator can assign a role, revoke a principal, create a domain, read system status and search and export audit records without a script or raw API call, on the mock API; the real-stack run is OPEN until PRP-38's job covers these pages.
 
 ## Clarifications (decided)
@@ -238,20 +240,21 @@ Producers, connectors, gateway registration, catalog import, pricing, budgets, f
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 2 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 3 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 4 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 5 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 6 | verifying | prp-53-admin-console-core | PR open; CI pending |
-| 7 | verifying | prp-53-admin-console-core | specs, registries, 20 Docker baselines; real-stack walk OPEN |
-| 8 | todo | | merge step: rebase, Tier-3 regeneration, changelog fragment, completion note |
+| 1 | done | prp-53-admin-console-core | merged in PR 309 |
+| 2 | done | prp-53-admin-console-core | merged in PR 309 |
+| 3 | done | prp-53-admin-console-core | merged in PR 309 |
+| 4 | done | prp-53-admin-console-core | merged in PR 309 |
+| 5 | done | prp-53-admin-console-core | merged in PR 309 |
+| 6 | done | prp-53-admin-console-core | merged in PR 309 |
+| 7 | done | prp-53-admin-console-core | merged in PR 309 |
+| 8 | done | prp-53-admin-console-core | close-out: changelog fragment, completion note, Tier-3 regeneration |
 
 ## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
-- Operator product check (can an operator use this without editing files or calling raw APIs?):
+- Date, PR number, merge commit: 2026-11-16, PR 309, merge commit recorded by the squash merge.
+- Deviations: `frontend/tests/e2e/demo-audit.spec.ts` and `frontend/tests/mock-api/features/registry.test.ts` are not in the Ownership block; both received small appends the new routes require. The spec listed checklist statuses as done|todo|blocked; the UI follows the shipped PRP-45 contract (complete|missing|error|disabled|not_applicable) and the acceptance wording is corrected. No `serial-after` items existed in this PRP.
+- Descoped items: none.
+- OPEN gates: the real-stack Playwright walk of the admin pages is OPEN (needs PRP-38's job and an operator run; `NS_LIVE_APPROVED` not set). The real-stack manifest rows in `services/api/tests/runtime_routes/manifest_calls.py` carry no `non_empty` requirement, so an empty list is tolerated by design, but this was not exercised against a composed stack. Audit denials and SIEM status are not in the manifest calls (they need control-domain audit.read). The 20 visual baselines were generated in Docker earlier in this PR and not regenerated at close-out.
+- Env vars for the operator: none (no new NS_* variables).
+- Follow-up issues filed: none filed by this close-out; PRP-57 owns producers, connectors, pricing and feature-setting edits.
+- Operator product check (can an operator use this without editing files or calling raw APIs?): on the mock API yes (assign role, revoke, create domain, system status, audit search and export through the UI). Against a real stack it is unverified until the real-stack walk runs.
+- Local evidence at close-out: frontend lint, typecheck and format clean; vitest 98 files / 1155 tests passed; Playwright admin-core and a11y suites 587 passed (one /mcp-admin keyboard sweep timeout under load passed on rerun); runtime_routes, tests/docs and openapi drift 131 passed.
