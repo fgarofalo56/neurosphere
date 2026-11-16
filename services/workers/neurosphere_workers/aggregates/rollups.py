@@ -12,6 +12,7 @@ currency's series, so a total is never presented as complete while they exist.
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, datetime
@@ -31,12 +32,17 @@ from neurosphere_core.aggregates import (
     PriceVersionRef,
     ReconciliationPoint,
     SourceRollup,
+    SubjectKind,
+    SubjectPoint,
     aggregate_doc_id,
     format_bucket,
+    subject_series_key,
 )
 from neurosphere_core.aggregates.models import AllocationFact, CostKind, Granularity, SourceName
+from neurosphere_core.aggregates.subject import MAX_SUBJECT_SERIES_PER_BUCKET
 from neurosphere_core.ledger.models import UNKNOWN_CURRENCY, quantize
 
+logger = logging.getLogger(__name__)
 ERROR_OUTCOMES: Final = frozenset({"error", "timeout"})
 _COARSENESS: Final[dict[Granularity, int]] = {"request": 0, "vendor": 1, "unknown": 2}
 
@@ -84,6 +90,7 @@ def rollup_bucket(
     docs: list[AggregateDoc] = [
         *_cost(ctx, ordered, price_dates or {}),
         *_latency_and_errors(ctx, ordered),
+        *_subjects(ctx, ordered),
         *_coverage(ctx, ordered),
         *_reconciliation(ctx, ordered),
     ]
@@ -182,6 +189,74 @@ def _latency_and_errors(ctx: _Ctx, contributions: Sequence[Contribution]) -> lis
             error_rate=errors / len(known) if known else None,
         ),
     ]
+
+
+# --------------------------------------------------------------------------- subjects
+
+
+def _subject_point(
+    ctx: _Ctx, key: str, kind: SubjectKind, events: Sequence[Contribution]
+) -> SubjectPoint:
+    facts = [c.event for c in events if c.event is not None]
+    durations = sorted(f.duration_ms for f in facts if f.duration_ms is not None)
+    missing = len(facts) - len(durations)
+    known = [f for f in facts if f.outcome != "unknown"]
+    unknown_outcomes = len(facts) - len(known)
+    errors = sum(1 for f in known if f.outcome in ERROR_OUTCOMES)
+    ins = [f.input_tokens for f in facts if f.input_tokens is not None]
+    outs = [f.output_tokens for f in facts if f.output_tokens is not None]
+    tokens_known = sum(
+        1 for f in facts if f.input_tokens is not None or f.output_tokens is not None
+    )
+    return SubjectPoint(
+        **ctx.base(
+            "subject",
+            key,
+            _watermark(events),
+            missing == 0 and unknown_outcomes == 0 and tokens_known == len(facts),
+        ),
+        subject_kind=kind,
+        subject_key=key,
+        event_count=len(facts),
+        missing_duration_count=missing,
+        unknown_outcome_count=unknown_outcomes,
+        error_count=errors if known else None,
+        error_rate=errors / len(known) if known else None,
+        p50_ms=percentile(durations, 50),
+        p95_ms=percentile(durations, 95),
+        input_tokens=sum(ins) if ins else None,
+        output_tokens=sum(outs) if outs else None,
+        tokens_known_count=tokens_known,
+    )
+
+
+def _subjects(ctx: _Ctx, contributions: Sequence[Contribution]) -> list[AggregateDoc]:
+    """One point per agent (``agent:<id>``) and per model (``model:<provider>/<model>``).
+
+    Events with no agent id add to no agent series; events without both provider and model add to
+    no model series (they still count in the domain-level latency and error series).
+    """
+    groups: dict[str, tuple[SubjectKind, list[Contribution]]] = {}
+    for c in contributions:
+        fact = c.event
+        if fact is None:
+            continue
+        keys: list[tuple[str, SubjectKind]] = []
+        if fact.agent_id:
+            keys.append((subject_series_key("agent", fact.agent_id), "agent"))
+        if fact.provider and fact.model:
+            keys.append((subject_series_key("model", fact.provider, fact.model), "model"))
+        for key, kind in keys:
+            groups.setdefault(key, (kind, []))[1].append(c)
+    ordered = sorted(groups)
+    if len(ordered) > MAX_SUBJECT_SERIES_PER_BUCKET:
+        # Deterministic: the first keys in sorted order survive. Count only, never the keys.
+        logger.warning(
+            "subject series over the per-bucket cap",
+            extra={"dropped": len(ordered) - MAX_SUBJECT_SERIES_PER_BUCKET},
+        )
+        ordered = ordered[:MAX_SUBJECT_SERIES_PER_BUCKET]
+    return [_subject_point(ctx, key, groups[key][0], groups[key][1]) for key in ordered]
 
 
 # --------------------------------------------------------------------------- coverage

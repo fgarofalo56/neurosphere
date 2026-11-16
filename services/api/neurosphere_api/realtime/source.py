@@ -5,17 +5,20 @@
 adapter). Authorization is NOT this module's job: the gateway checks ``data.read`` on the domain
 against the session's current scope before every call, and passes the customer from that scope.
 
-The hot aggregates are domain-level rollups, so a delta carries one ``cluster`` node for the
-domain with the metrics the aggregates can support (``frequency`` and ``latency_p95_ms`` from the
-latest hour; ``health`` from the error rate). ``tokens`` and ``context_size`` are not aggregated
-at this grain and stay ``None``. Unknown is ``None``, never 0. ``edges`` is empty: edges come from
+A delta carries one ``cluster`` node for the domain with the domain-level metrics (``frequency``
+and ``latency_p95_ms`` from the latest hour; ``health`` from the error rate; ``tokens`` and
+``context_size`` stay ``None``). When the reader implements ``SubjectMetricsReader`` (PRP-49) it
+also carries up to ``MAX_DELTA_SUBJECT_NODES`` agent and model nodes with the newest subject
+points; a reader without it yields the one-node delta unchanged.
+Unknown is ``None``, never 0. ``edges`` is empty: edges come from
 the viewport API (item 2), not from aggregates. Coverage and lag come from the aggregate status
 and document completeness; a gap is labelled, never smoothed over.
 """
 
+import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Literal, Protocol, runtime_checkable
+from typing import Final, Literal, Protocol, runtime_checkable
 
 from neurosphere_core.aggregates import (
     AggregateReader,
@@ -24,6 +27,9 @@ from neurosphere_core.aggregates import (
     ErrorPoint,
     LatencyPoint,
     QueryResult,
+    SubjectLookup,
+    SubjectMetricsReader,
+    SubjectPoint,
     bucket_start,
 )
 from pydantic import BaseModel, ConfigDict
@@ -31,6 +37,7 @@ from pydantic import BaseModel, ConfigDict
 from neurosphere_api.realtime.settings import RealtimeSettings
 
 __all__ = [
+    "MAX_DELTA_SUBJECT_NODES",
     "AggregateDeltaSource",
     "Coverage",
     "DeltaEdge",
@@ -39,6 +46,10 @@ __all__ = [
     "DeltaSource",
     "NodeMetrics",
 ]
+
+MAX_DELTA_SUBJECT_NODES: Final = 50
+"""At most this many agent and model nodes (those with the newest points) per delta (PRP-49)."""
+logger = logging.getLogger(__name__)
 
 Health = Literal["ok", "degraded", "failing", "unknown"]
 CoverageState = Literal["complete", "partial", "delayed", "unknown"]
@@ -131,12 +142,44 @@ class AggregateDeltaSource:
             customer_id, domain_id, "errors", "hour", window, max_series=1, max_points=2
         )
         status = await self._reader.status(customer_id)
-        payload = self._build(domain_id, latency, errors, status, now)
+        subjects = await self._subjects(customer_id, domain_id, window)
+        payload = self._build(domain_id, latency, errors, status, now, subjects)
         self._cache.pop(key, None)
         self._cache[key] = (started, payload)
         while len(self._cache) > _CACHE_MAX_ENTRIES:
             del self._cache[next(iter(self._cache))]
         return payload
+
+    async def _subjects(
+        self, customer_id: str, domain_id: str, window: AggregateWindow
+    ) -> SubjectLookup | None:
+        reader = self._reader
+        if not isinstance(reader, SubjectMetricsReader):
+            return None
+        try:
+            return await reader.newest_subject_points(
+                customer_id, domain_id, window, MAX_DELTA_SUBJECT_NODES
+            )
+        except Exception:
+            logger.warning("subject read failed; delta carries the domain node only")
+            return None
+
+    def _subject_node(self, point: SubjectPoint) -> DeltaNode:
+        tokens = [t for t in (point.input_tokens, point.output_tokens) if t is not None]
+        raw = point.series_key.split(":", 1)[1]
+        # Agents: label is the last segment of the canonical id. Models: the model name.
+        label = raw.rsplit("/", 1)[-1] if point.subject_kind == "model" else raw.rsplit(":", 1)[-1]
+        return DeltaNode(
+            id=raw,
+            kind=point.subject_kind,
+            label=label,
+            metrics=NodeMetrics(
+                tokens=sum(tokens) if tokens else None,
+                frequency=point.event_count,
+                latency_p95_ms=point.p95_ms,
+                health=self._health(point.error_rate),
+            ),
+        )
 
     def _build(
         self,
@@ -145,6 +188,7 @@ class AggregateDeltaSource:
         errors: QueryResult,
         status: AggregateStatus | None,
         now: datetime,
+        subjects: SubjectLookup | None = None,
     ) -> DeltaPayload:
         latest_latency = _latest(latency, LatencyPoint)
         latest_errors = _latest(errors, ErrorPoint)
@@ -180,7 +224,12 @@ class AggregateDeltaSource:
             lag_seconds=lag,
             as_of=status.watermark if status is not None else None,
         )
-        return DeltaPayload(nodes=(node,), coverage=coverage)
+        extra = (
+            tuple(self._subject_node(p) for _, p in sorted(subjects.points.items()))
+            if subjects is not None
+            else ()
+        )
+        return DeltaPayload(nodes=(node, *extra), coverage=coverage)
 
     def _health(self, error_rate: float | None) -> Health:
         if error_rate is None:

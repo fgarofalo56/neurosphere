@@ -101,6 +101,11 @@ def event_doc(
     outcome: str | None = "success",
     domain: str | None = DOMAIN,
     span_kind: str = "model_call",
+    agent: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
 ) -> LoadedEvent:
     body: dict[str, Any] = {
         "schema_version": "1.0.0",
@@ -116,6 +121,15 @@ def event_doc(
         body["duration_ms"] = duration_ms
     if domain is not None:
         body["domain_id"] = domain
+    if agent is not None:
+        body["canonical_agent_id"] = agent
+    if provider is not None:
+        body["provider"] = provider
+    if model is not None:
+        body["model"] = model
+    tokens = {"input": input_tokens, "output": output_tokens}
+    if any(v is not None for v in tokens.values()):
+        body["token_breakdown"] = {k: v for k, v in tokens.items() if v is not None}
     event = TelemetryEvent.model_validate(body)
     return LoadedEvent(doc_id=f"ev-{event_id}", event=event)
 

@@ -4,8 +4,10 @@
 ``neurosphere_api.main.create`` calls :func:`compose_app` on it. Composition:
 
 1. installs the CORS allow-list when ``NS_CORS_ALLOWED_ORIGINS`` is set (a wildcard raises);
-2. runs every builder in order (``runtime/builders``), recording one status per component,
-   then ``verify_route_permissions`` (PRP-06): a route without a declared permission or an
+2. loads the stored-settings snapshot once (PRP-45, ``admin/system/stored.py``: bounded, env on
+   any failure) and publishes it as ``STORED_SETTINGS``, then runs every builder in order
+   (``runtime/builders``), recording one status per component, then
+   ``verify_route_permissions`` (PRP-06): a route without a declared permission or an
    allowlist entry raises ``InvalidSchemaError`` here, so the app never boots with it;
 3. sets ``app.state.health_probes`` to the environment probes plus ``composition`` and
    ``app.state.composition`` to the status registry;
@@ -187,6 +189,14 @@ def compose_app(
         lifetime=ClientLifetime(),
     )
     state.cosmos_factory = lambda: _cosmos_from_settings(state)
+    # PRP-45: the ONE network read before the builders (bounded; env on any failure, A5).
+    # Imported here: ``admin.system.stored`` imports ``runtime.builders`` (import cycle).
+    from neurosphere_api.admin.system.stored import STORED_SETTINGS, snapshot_for_composition
+
+    stored = snapshot_for_composition(settings, overrides)
+    state.shared[STORED_SETTINGS.name] = stored
+    if stored.status != "loaded":
+        _log.info("stored settings %s: builders use env", stored.status)
     _run_builders(state, tuple(default_builders() if builders is None else builders))
     # Every route (including builder-appended ones such as ``/mcp`` and WebSocket routes) is now
     # mounted and ``configure_authz`` has installed the allowlist: an undeclared route fails boot.

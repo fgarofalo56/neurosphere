@@ -13,6 +13,10 @@
   the exact-path ``Route("/mcp")`` is appended to ``app.router.routes`` and the existing app
   lifespan runs the SDK session manager.
 
+Stored setting (PRP-45): a ``mcp_server`` setting in the startup snapshot replaces the
+``NS_MCP_RESOURCE_SERVER_URL`` decision (its endpoint is the resource URL; ``enabled false`` is
+``disabled``). Restart to apply.
+
 The route is appended only here, at composition time: ``create_app`` (and so the exported
 ``openapi.json``) never has it, and a Starlette ``Route`` is not an OpenAPI operation anyway.
 MCP tools reach the PRP-17 action plane through ``app.state`` (``StatePorts.action_plane``),
@@ -29,11 +33,14 @@ from datetime import UTC, datetime
 from typing import Final
 
 import httpx
+from neurosphere_core.admin.runtime import mcp_server_init_args
 from neurosphere_core.auth.jwt import JwtValidator, create_jwt_validator
 from neurosphere_core.auth.jwt.config import normalize_tenant_id
 from neurosphere_core.auth.jwt.jwks import DEFAULT_FETCH_TIMEOUT_SECONDS
 from neurosphere_core.errors import InvalidSchemaError
+from pydantic import ValidationError
 
+from neurosphere_api.admin.system.stored import STORED_SETTINGS
 from neurosphere_api.mcp.server import (
     McpServerSettings,
     create_mcp_server,
@@ -115,9 +122,28 @@ def _mount(ctx: BuildContext, settings: McpServerSettings) -> None:
     ctx.app.router.routes.append(mount.route())
 
 
+def _stored_settings(ctx: BuildContext) -> tuple[bool, McpServerSettings | None]:
+    """``(applies, settings)`` from the stored ``mcp_server`` setting (PRP-45): the stored
+    endpoint is the resource URL (init argument, beats ``NS_MCP_RESOURCE_SERVER_URL``);
+    audiences, scope and hosts stay env; ``enabled false`` disables the server."""
+    snapshot = ctx.maybe_shared(STORED_SETTINGS)
+    stored = None if snapshot is None else snapshot.setting("mcp_server")
+    if stored is None:
+        return False, None
+    args = mcp_server_init_args(stored)
+    if args is None:
+        return True, None
+    try:
+        return True, McpServerSettings(**args)
+    except ValidationError:
+        raise InvalidSchemaError("invalid stored MCP server setting", reason="config") from None
+
+
 def build(ctx: BuildContext) -> None:
     try:
-        settings = load_mcp_server_settings()
+        applies, settings = _stored_settings(ctx)
+        if not applies:
+            settings = load_mcp_server_settings()
     except InvalidSchemaError:
         ctx.failed("mcp_server", "mcp_settings_invalid")
         return

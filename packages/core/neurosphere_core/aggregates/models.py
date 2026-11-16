@@ -38,7 +38,7 @@ UNASSIGNED_DOMAIN: Final = "_unassigned"
 TIME_FORMAT: Final = "%Y-%m-%dT%H:%M:%SZ"
 FINE_TIME_FORMAT: Final = "%Y-%m-%dT%H:%M:%S.%fZ"  # the ledger's fixed-width format
 
-Metric = Literal["cost", "latency", "errors", "coverage", "reconciliation"]
+Metric = Literal["cost", "latency", "errors", "coverage", "reconciliation", "subject"]
 Grain = Literal["day", "hour"]
 CostKind = Literal["estimated", "invoiced"]
 SourceName = Literal["gateway", "app", "billing"]
@@ -74,6 +74,7 @@ __all__ = [
     "ReconciliationPoint",
     "SourceFact",
     "SourceRollup",
+    "SubjectPoint",
     "aggregate_doc_id",
     "bucket_start",
     "format_bucket",
@@ -127,10 +128,19 @@ class _Frozen(BaseModel):
 
 
 class EventFact(_Frozen):
-    """A ``model_call`` span: latency and outcome. ``None`` duration is unknown, never 0."""
+    """A ``model_call`` span: latency and outcome. ``None`` duration is unknown, never 0.
+
+    PRP-49 adds the optional agent and model dimension and token counts (all default ``None`` =
+    unknown, so contributions stored before the change keep validating).
+    """
 
     duration_ms: int | None = Field(default=None, ge=0)
     outcome: Outcome = "unknown"
+    agent_id: str | None = None
+    provider: str | None = None
+    model: str | None = None
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
 
 
 class CostFact(_Frozen):
@@ -255,6 +265,29 @@ class CoveragePoint(_AggregateBase):
     amount: Money | None = None  # the authoritative total of the known entries
 
 
+class SubjectPoint(_AggregateBase):
+    """Per-agent or per-model rollup of ``model_call`` spans (PRP-49).
+
+    Series keys are ``agent:<canonical id>`` and ``model:<provider>/<model>`` (lower case).
+    Everything unknown stays ``None`` or is counted, never 0: ``error_count`` and ``error_rate``
+    are ``None`` when no outcome is known, tokens are ``None`` when no count is known.
+    """
+
+    metric: Literal["subject"] = "subject"
+    subject_kind: Literal["agent", "model"]
+    subject_key: str
+    event_count: int
+    missing_duration_count: int
+    unknown_outcome_count: int
+    error_count: int | None = None
+    error_rate: float | None = None
+    p50_ms: int | None = None
+    p95_ms: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    tokens_known_count: int = 0
+
+
 class SourceRollup(_Frozen):
     source: SourceName
     granularity: Granularity
@@ -276,7 +309,7 @@ class ReconciliationPoint(_AggregateBase):
 
 
 AggregateDoc = Annotated[
-    CostPoint | LatencyPoint | ErrorPoint | CoveragePoint | ReconciliationPoint,
+    CostPoint | LatencyPoint | ErrorPoint | CoveragePoint | ReconciliationPoint | SubjectPoint,
     Field(discriminator="metric"),
 ]
 AGGREGATE_ADAPTER: Final[TypeAdapter[AggregateDoc]] = TypeAdapter(AggregateDoc)
