@@ -17,7 +17,7 @@ from neurosphere_core.errors import CapabilityUnavailableError
 
 from neurosphere_connector.health import CoverageReport, FreshnessReport, HealthReport
 from neurosphere_connector.manifest import manifest_issues
-from neurosphere_connector.write.write_registry import _check_capable
+from neurosphere_connector.write.write_registry import check_capable
 
 __all__ = ["Violation", "check_connector_contract", "check_write_connector_contract"]
 
@@ -86,12 +86,14 @@ _WRITE_REASONS = {
 def _check_write_shape(connector: Any) -> list[Violation]:
     """Reuse the write registry's capability check; map its refusal to a kit violation."""
     try:
-        _check_capable(connector)
+        check_capable(connector)
     except CapabilityUnavailableError as exc:
         code = _WRITE_REASONS.get(exc.reason or "", "write_protocol_missing")
         return [Violation(code, str(exc.detail))]
-    except AttributeError:
-        return [Violation("write_protocol_missing", "connector lacks a WriteConnector member")]
+    except AttributeError as exc:  # a member read outside check_capable's own guard
+        return [
+            Violation("write_protocol_missing", f"connector lacks WriteConnector member {exc.name}")
+        ]
     return []
 
 

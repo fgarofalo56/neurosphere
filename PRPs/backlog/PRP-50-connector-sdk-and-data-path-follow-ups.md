@@ -236,7 +236,7 @@ No data or schema migration. `poll_status` gains one more string value (`stalled
 | 2 | todo | | blocked on PRP-46 merge |
 | 3 | merged | prp-50-connector-followups | restated counter |
 | 4 | merged | prp-50-connector-followups | collisions, domain check |
-| 5 | todo | | |
+| 5 | merged | prp-50-connector-followups | |
 | 6 | todo | | |
 | 7 | todo | | |
 
