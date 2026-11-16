@@ -39,6 +39,14 @@ const PAGES = [
   { slug: "admin-domains", pattern: "/admin/domains" },
   { slug: "admin-system", pattern: "/admin/system" },
   { slug: "admin-audit", pattern: "/admin/audit" },
+  // PRP-57: the data-source, pricing and feature pages (the one-time secret dialog is not baselined).
+  { slug: "admin-producers", pattern: "/admin/sources/producers" },
+  { slug: "admin-connectors", pattern: "/admin/sources/connectors" },
+  { slug: "admin-gateways", pattern: "/admin/gateways" },
+  { slug: "admin-catalog-import", pattern: "/admin/catalog-import" },
+  { slug: "admin-pricing", pattern: "/admin/pricing" },
+  { slug: "admin-features", pattern: "/admin/features" },
+  { slug: "admin-review-policy", pattern: "/admin/review-policy" },
 ] as const;
 
 function sampleFor(pattern: string) {

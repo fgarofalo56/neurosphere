@@ -5,6 +5,15 @@ import {
   ADMIN_IDENTITY_ROUTE,
   ADMIN_SYSTEM_ROUTE,
 } from "./adminPaths";
+import {
+  ADMIN_CATALOG_IMPORT_ROUTE,
+  ADMIN_CONNECTORS_ROUTE,
+  ADMIN_FEATURES_ROUTE,
+  ADMIN_GATEWAYS_ROUTE,
+  ADMIN_PRICING_ROUTE,
+  ADMIN_PRODUCERS_ROUTE,
+  ADMIN_REVIEW_POLICY_ROUTE,
+} from "../sources/apiPaths";
 
 export interface AdminArea {
   readonly id: string;
@@ -47,5 +56,55 @@ export const ADMIN_AREAS: readonly AdminArea[] = [
     to: `/${ADMIN_AUDIT_ROUTE}`,
     description: "Search, denials, SIEM sink status and export.",
     roles: ["Admin", "Auditor"],
+  },
+  // PRP-57: data sources, pricing and feature settings.
+  {
+    id: "producers",
+    label: "Producers",
+    to: `/${ADMIN_PRODUCERS_ROUTE}`,
+    description: "Ingest producers: create, rotate the secret once, disable.",
+    roles: ["Admin"],
+  },
+  {
+    id: "connectors",
+    label: "Connectors",
+    to: `/${ADMIN_CONNECTORS_ROUTE}`,
+    description: "Connector configurations with credential references.",
+    roles: ["Admin"],
+  },
+  {
+    id: "gateways",
+    label: "Gateways",
+    to: `/${ADMIN_GATEWAYS_ROUTE}`,
+    description: "Register an API Management gateway.",
+    roles: ["Admin"],
+  },
+  {
+    id: "catalog-import",
+    label: "Catalog import",
+    to: `/${ADMIN_CATALOG_IMPORT_ROUTE}`,
+    description: "Import catalog entities, dry run first.",
+    roles: ["Admin"],
+  },
+  {
+    id: "pricing",
+    label: "Pricing",
+    to: `/${ADMIN_PRICING_ROUTE}`,
+    description: "Price sheets and budgets.",
+    roles: ["Admin"],
+  },
+  {
+    id: "features",
+    label: "Features",
+    to: `/${ADMIN_FEATURES_ROUTE}`,
+    description: "Models and feature settings.",
+    roles: ["Admin"],
+  },
+  {
+    id: "review-policy",
+    label: "Review policy",
+    to: `/${ADMIN_REVIEW_POLICY_ROUTE}`,
+    description: "Approval rules, SLAs and escalation for human review.",
+    roles: ["Admin"],
   },
 ];

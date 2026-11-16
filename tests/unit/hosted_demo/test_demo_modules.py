@@ -20,6 +20,7 @@ from .conftest import (
 
 EXPECTED_MODULES = {
     "budget",
+    "connector-rbac",
     "cosmos-data",
     "cosmos-rbac",
     "hub-private-endpoint",

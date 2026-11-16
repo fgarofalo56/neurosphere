@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handle as adminCore } from "./admin-core.ts";
+import { handle as adminSources } from "./admin-sources.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
@@ -27,6 +28,7 @@ describe("feature mock registry", () => {
       evaluations,
       executionControl,
       compliance,
+      adminSources,
       adminCore,
     ]);
     expect(new Set(FEATURE_HANDLERS).size).toBe(FEATURE_HANDLERS.length);

@@ -1,0 +1,2 @@
+### Added
+- PRP-58: hosted data-path switches for the demo Bicep (`connectorRoles`, `recommendationsEnabled`, `foundryAccountIds`, `billingExportStorageAccountId`, evaluation pilot parameters), the App Service profile and the Helm chart, with least-privilege connector role assignments for the workers identity (`connector-rbac.bicep`), `NS_INGEST_PRODUCER_STORE` and `NS_WORKER_CONNECTOR_CONFIG_SOURCE` set in hosted profiles, and `scripts/gates/g04_connectors_live.py` (refusal-first live gate; the live run is OPEN, PRP-64). See `docs/deploy/hosted-demo.md` (PR #312).

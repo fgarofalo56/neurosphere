@@ -540,3 +540,58 @@ Evidence: `<date>-teardown`. Afterwards restore your default `az` subscription a
 - Key Vault: a purge-protected vault may remain soft-deleted; that is expected.
 
 Record the result in the teardown evidence.
+
+## 8. Hosted data path (PRP-58)
+
+The hosted profile can run the real data path built by PRP-41, 42, 44 and 15. Everything below is
+IaC and scripts only: **the redeploy with these parameters, the G04 run and the hosted ingest
+smoke are OPEN** (PRP-64 runs them, each with `NS_LIVE_APPROVED=1` and your per-step approval).
+
+### Parameters (`infra/demo/main.bicep`, `hosted_demo.py plan` and `deploy` flags)
+
+| Parameter | Flag | Default | Effect |
+|---|---|---|---|
+| `connectorRoles` | `--connector-roles gateway_poll,foundry_discovery,billing_export` | none | Adds the named roles to `NS_WORKER_ROLES` and sets `NS_API_BASE_URL` on the workers to the API upstream |
+| `recommendationsEnabled` | `--recommendations` | off | Adds the `recommendations` role with `NS_WORKER_REC_SOURCE=archive` |
+| `foundryAccountIds` | `--foundry-account-ids <arm-id>,...` | none | Foundry User role for the workers identity on each account, at that account's scope only |
+| `billingExportStorageAccountId` | `--billing-export-storage-account-id <arm-id>` | none | Storage Blob Data Reader for the workers identity on that storage account only |
+| `evaluationPilotDomainId`, `evaluationPilotSubjectId`, `evaluationPilotDatasetIds` | `--evaluation-pilot-*` | idle | The offline evaluation pilot (PRP-16) |
+
+With defaults the deployed settings change only by two store switches: `NS_INGEST_PRODUCER_STORE=true`
+(API) and `NS_WORKER_CONNECTOR_CONFIG_SOURCE=auto` (workers). They are inert until the producer
+registry and connector configuration (PRP-41, 42) are deployed. No profile turns a connector role
+on by default. Connector details (what each role polls) are never IaC: they live in stored
+connector configuration. The Key Vault Secrets User role for producer secrets already exists.
+
+The Foundry User role (formerly named Azure AI User; the role definition id is in connector-rbac.bicep,
+verified against Microsoft Learn on 2026-11-16) is assigned per account. If the deploying principal
+cannot write role assignments on an account in another subscription, run once by an owner of that
+account (OPEN, operator action):
+
+```
+az role assignment create --assignee-object-id <workers-principal-id> \
+  --assignee-principal-type ServicePrincipal \
+  --role <foundry-user-role-definition-id> --scope <foundry-account-arm-id>
+```
+
+The Cost Management export and the Foundry project are operator-created prerequisites.
+
+### Connector onboarding order (every live step is OPEN)
+
+1. Deploy with the parameters above (OPEN, PRP-64).
+2. Grant yourself the admin role (S6 `seed-access` pattern or your Entra group).
+3. Create the producer in the admin console (PRP-41 and PRP-57); note that its secret is shown once.
+4. Put the producer secret in Key Vault under the reference name the connector config will use (P2S VPN needed).
+5. Create the connector configuration in the admin console (PRP-42); the role starts reading it within one refresh interval.
+6. Run the G04 gate against a Commercial target (OPEN):
+
+```
+MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/g04_connectors_live.py \
+  --operator <handle> --budget-cap-usd 5 \
+  --approve-step azure-monitor --monitor-workspace-id <workspace-guid> \
+  --approve-step foundry-discovery --foundry-project-endpoint <project-endpoint> \
+  --approve-step billing-export --billing-account-url <blob-endpoint> \
+  --billing-container <container> --billing-manifest-blob <manifest-blob>
+```
+
+Exit 2 refused, 3 open, 1 failed, 0 only after a real run. Evidence goes to `docs/evidence/G04/`.

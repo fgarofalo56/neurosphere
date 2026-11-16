@@ -26,6 +26,7 @@ import { federationRoutes } from "../features/federation/routes";
 import { finopsRoutes } from "../features/finops/routes";
 import { complianceRoutes } from "../features/compliance/routes";
 import { adminCoreRoutes } from "../features/admin/routes";
+import { adminSourcesRoutes } from "../features/admin/sources/routes";
 
 /**
  * Every feature route the app registers as a child of the shell layout. The route manifest test
@@ -59,4 +60,5 @@ export const appRoutes: readonly RouteObject[] = [
   ...executionControlRoutes,
   ...complianceRoutes,
   ...adminCoreRoutes,
+  ...adminSourcesRoutes,
 ];

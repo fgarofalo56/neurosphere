@@ -1,4 +1,5 @@
 import { handle as adminCore } from "./admin-core.ts";
+import { handle as adminSources } from "./admin-sources.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
@@ -27,6 +28,8 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   evaluations,
   executionControl,
   compliance,
+  // Before adminCore: it answers `/admin/system/**`, and this module owns `/settings/{key}`.
+  adminSources,
   adminCore,
 ];
 
