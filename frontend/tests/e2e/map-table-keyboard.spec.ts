@@ -44,15 +44,15 @@ test.describe("map table keyboard", () => {
       page.evaluate(() => document.activeElement?.matches("tr[data-row-key]") ?? false),
     );
     await expect(grid.locator("tr[data-row-key][tabindex='0']")).toHaveCount(1);
-    expect(await focusedRowLabel(page)).toBe("Agents");
+    await expect.poll(() => focusedRowLabel(page)).toBe("Agents");
 
     // Arrow keys move between rows; Home returns to the first.
     await page.keyboard.press("ArrowDown");
-    expect(await focusedRowLabel(page)).toBe("Models");
+    await expect.poll(() => focusedRowLabel(page)).toBe("Models");
     await page.keyboard.press("ArrowDown");
-    expect(await focusedRowLabel(page)).toBe("support-agent");
+    await expect.poll(() => focusedRowLabel(page)).toBe("support-agent");
     await page.keyboard.press("Home");
-    expect(await focusedRowLabel(page)).toBe("Agents");
+    await expect.poll(() => focusedRowLabel(page)).toBe("Agents");
 
     // Enter expands the cluster; focus stays on the row.
     const clusterRow = grid.locator("tr[data-row-key]").first();

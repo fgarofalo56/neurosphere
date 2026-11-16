@@ -35,6 +35,7 @@ from neurosphere_core.auth.scope import (
     PolicyHead,
     PrincipalPolicy,
     Role,
+    customer_control_domain_id,
     principal_document_id,
 )
 from neurosphere_core.gateway import InMemoryGatewayStore
@@ -62,6 +63,7 @@ from runtime_routes.manifest_calls import (  # pyright: ignore[reportMissingImpo
 MANIFEST: Final = (
     Path(__file__).resolve().parents[4] / "frontend" / "src" / "app" / "route-manifest.json"
 )
+CONTROL: Final = customer_control_domain_id("commercial", CUSTOMER)
 ALL_ROLES: Final = (
     Role.VIEWER,
     Role.ANALYST,
@@ -96,8 +98,12 @@ def _operator_policy() -> InMemoryPolicyRepository:
             id=principal_document_id(pid),
             customer_id=CUSTOMER,
             principal_id=pid,
-            domain_memberships=(FINANCE, OPERATIONS),
-            role_assignments=tuple(role(r, FINANCE, OPERATIONS) for r in ALL_ROLES),
+            domain_memberships=(FINANCE, OPERATIONS, CONTROL),
+            # Plus the deployment-scoped admin (PRP-48 item 3): admin on the control domain.
+            role_assignments=(
+                *(role(r, FINANCE, OPERATIONS) for r in ALL_ROLES),
+                role(Role.ADMIN, CONTROL),
+            ),
         )
     )
     return repo
@@ -183,7 +189,9 @@ def test_the_shell_domain_list_is_served(monkeypatch: pytest.MonkeyPatch) -> Non
     with composed.client() as client:
         response = client.get(DOMAINS_CALL.path, headers=composed.auth(ALICE))
     assert response.status_code == 200, response.text
-    assert {item["domain_id"] for item in response.json()["items"]} == {FINANCE, OPERATIONS}
+    # The deployment-scoped admin assignment (PRP-48) makes the control domain readable too.
+    domains = {item["domain_id"] for item in response.json()["items"]}
+    assert domains == {FINANCE, OPERATIONS, CONTROL}
 
 
 def test_the_copilot_dock_is_served_with_a_scripted_adapter(

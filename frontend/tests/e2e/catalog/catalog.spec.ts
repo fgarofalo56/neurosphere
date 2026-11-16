@@ -105,12 +105,26 @@ test("an administrator confirms the stale-agent plan and sees per-item outcomes"
   await expect(rows.nth(1)).toContainText("Failed");
 });
 
-/** The stub caller lists Finance with data.read only; add catalog.curate on the wire. */
+/** The mock lists Finance with catalog.curate since PRP-47; add it on the wire (idempotent). */
 async function grantCurate(page: Page): Promise<void> {
   await page.route("**/api/v1/me/domains", async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as { items: { permissions: string[] }[] };
-    for (const item of body.items) item.permissions = [...item.permissions, "catalog.curate"];
+    for (const item of body.items) {
+      item.permissions = [...new Set([...item.permissions, "catalog.curate"])];
+    }
+    await route.fulfill({ response, json: body });
+  });
+}
+
+/** Take catalog.curate away on the wire, to exercise the read-only view. */
+async function revokeCurate(page: Page): Promise<void> {
+  await page.route("**/api/v1/me/domains", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { items: { permissions: string[] }[] };
+    for (const item of body.items) {
+      item.permissions = item.permissions.filter((p) => p !== "catalog.curate");
+    }
     await route.fulfill({ response, json: body });
   });
 }
@@ -144,7 +158,16 @@ test("a curator creates an agent, lands on its page and edits it", async ({ page
   await expect(page.getByTestId("entity-etag")).not.toHaveText(before);
 });
 
+test("the demo's Finance domain already holds catalog.curate, so New entity shows", async ({
+  page,
+}) => {
+  await page.goto(`/catalog?domain_id=${D}`);
+  await expect(page.getByTestId("entity-row").first()).toBeVisible();
+  await expect(page.getByTestId("new-entity")).toBeVisible();
+});
+
 test("without catalog.curate there is no New entity action", async ({ page }) => {
+  await revokeCurate(page);
   await page.goto(`/catalog?domain_id=${D}`);
   await expect(page.getByTestId("entity-row").first()).toBeVisible();
   await expect(page.getByTestId("new-entity")).toHaveCount(0);

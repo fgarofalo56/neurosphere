@@ -18,10 +18,35 @@ e.g. commercial:contoso:neurosphere:domain:customer-control
 The caller must hold the `admin` role on that domain (and be a member of it). `admin` is a
 privileged role, so the assignment is time-bound and expires like any other.
 
+### The deployment-scoped admin (PRP-48)
+
+The same assignment is the **deployment-scoped admin** for every route that changes
+deployment-wide state. One dependency, `require_deployment_admin` in
+`services/api/neurosphere_api/authz/deployment_scope.py`, checks it for:
+
+| Route group | Paths |
+|---|---|
+| Execution kill switch | `PUT /api/v1/actions/emergency-disable` |
+| MCP server administration | every route under `/api/v1/mcp/admin/` (reads included) |
+| Deploy discovery scan | `POST /api/v1/deploy/scan` (and the `/v1/deploy/scan` alias) |
+| Deploy plan | `POST /api/v1/deploy/plan` (and the `/v1/deploy/plan` alias) |
+| Connector and producer configuration | `/api/v1/admin/sources/connectors/**`, `/api/v1/admin/sources/producers/**` |
+| Data-lifecycle management | lifecycle routes needing `lifecycle.manage` |
+
+Sandbox reset stays on ordinary `config.manage` (it is local-only and answers 503 elsewhere).
+
+**Migration (PRP-48).** An operator who held `config.manage` only in ordinary domains could
+previously register MCP servers and run deploy scan and plan; after PRP-48 those calls answer 403
+`customer_scope_required`. Grant the control domain as below (the sandbox grant script already does
+for `--role admin`), or with the identity admin API (`/api/v1/admin/identity`, see
+`docs/runbooks/identity-admin.md`). No data is
+rewritten and nothing else changes for holders of the control-domain assignment.
+
 ## 403 `customer_scope_required`
 
 The caller passed the normal `config.manage` check (some domain) but not the control-domain check.
-The denial is audited. Fix by granting the control domain, not by widening ordinary domains.
+The denial is audited (target: the control domain id). If the denial audit write itself fails the
+answer is 503 `audit_write_failed` on every method, never an allow. Fix by granting the control domain, not by widening ordinary domains.
 
 ## Granting it
 

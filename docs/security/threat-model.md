@@ -129,7 +129,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 |---|---|---|---|---|
 | S | Adapter pointed at an attacker host or, in Government, at a Commercial workspace | Hosts come from config validated against per-cloud suffixes (for example `packages/core/neurosphere_core/analytics/fabric/config.py`); `create_adapter` resolves the backend through the capability matrix before importing vendor code; a disabled backend raises `capability_unavailable` with the matrix reason and nothing is routed to another cloud (`analytics/base/registry.py`) | In repo | PRP-11, PRP-02 |
 | T | SQL injection, or LLM-generated SQL reaching the engine | No method accepts query text; requests are closed enums, bounded numbers and pattern-checked short values (`analytics/base/models.py`); identifiers come from a closed column whitelist and every value is a bound parameter (`analytics/base/dialect.py`) | In repo | PRP-11 |
-| R | Analytics reads cannot be tied to a principal | Denials are recorded only through the optional `services/api/neurosphere_api/authz/recorder.py` hook, which the app now wires to an audit-backed `AuditDenialRecorder` (`runtime/builders/authz.py`); allowed reads carry the correlation id in logs only; the adapter receives the same scope object | In repo (denial recorder) / Gap (allowed-read audit, owner PRP-48) | PRP-06, PRP-11 |
+| R | Analytics reads cannot be tied to a principal | Denials are recorded only through the optional `services/api/neurosphere_api/authz/recorder.py` hook, which the app now wires to an audit-backed `AuditDenialRecorder` (`runtime/builders/authz.py`); allowed dashboard reads append one `allow` record through `authz/read_audit.py` (`audited_read`: actor pseudonym, operation, domain, result count bound by the subject digest; no query, no rows; a failed write is logged and counted, never blocks the read, decision 3 of PRP-48); the adapter receives the same scope object | In repo (denial recorder; allowed-read audit on dashboards, PRP-48) / Gap (other analytics reads such as FinOps and copilot charts) | PRP-06, PRP-11, PRP-48 |
 | I | Rows from other customers, domains or clouds returned | `scope` is a required keyword-only argument, never a request field; customer, cloud and allowed domains are always the first predicates and caller filters only narrow (`analytics/base/plan.py`); a scope whose cloud differs from the adapter's is `forbidden` (`cloud_mismatch`) | In repo | PRP-11 |
 | D | Unbounded scans exhaust capacity units, DBUs or concurrency | `run_budgeted` enforces time, rows scanned, cost units and returned rows; breach raises `rate_limited` (`analytics/base/enforcement.py`). **G12**: the sqlite stub cannot reproduce throttling, capacity units, DWU or DBU sizing (`G12_PARITY_GAPS` per adapter); live behaviour is OPEN until `g01_analytics_live.py` runs | In repo (stub only) | PRP-11 |
 | E | Adapter identity holds write or admin rights on the workspace | Managed identity with a read role on the serving tables; role assignment is deployment configuration recorded in the evidence manifest | Planned | PRP-08, PRP-20 |
@@ -208,7 +208,7 @@ The nine required boundaries map 1:1 to the edges of the ARCHITECTURE section 1 
 |---|---|---|---|---|
 | S | Key-based access to the search service | `disableLocalAuth: true` (`infra/bicep/modules/search.bicep`); managed identity via the client factory | In repo | PRP-08, PRP-05 |
 | T | Query syntax injection from a model or user | The term is only tokenized, never parsed or evaluated; filters are allowlisted (`packages/core/neurosphere_core/search/protocol.py`) | In repo | PRP-03, PRP-10 |
-| R | Search access not attributable | Denials are recorded only through the optional `services/api/neurosphere_api/authz/recorder.py` hook, which the app now wires to an audit-backed `AuditDenialRecorder` (`runtime/builders/authz.py`); allowed reads carry the correlation id in logs only | In repo (denial recorder) / Gap (allowed-read audit, owner PRP-48) | PRP-06 |
+| R | Search access not attributable | Denials are recorded only through the optional `services/api/neurosphere_api/authz/recorder.py` hook, which the app now wires to an audit-backed `AuditDenialRecorder` (`runtime/builders/authz.py`); allowed catalog searches (`POST /api/v1/catalog/search` and `POST /api/v1/catalog/domains/{domain}/search`) append one `allow` record through `authz/read_audit.py` (no search term, no rows; log-and-count on audit failure) | In repo (PRP-48) | PRP-06, PRP-48 |
 | I | Out-of-scope documents influence results or scores | Scope applied before ranking; `tests/security/authz/test_search_paths.py` | In repo | PRP-10, PRP-06 |
 | D | Expensive searches | `Budget` on every request | In repo | PRP-10 |
 | E | Index admin rights on the query identity | Query identity holds index-reader role only; index management is deployment-time | Planned | PRP-08 |
@@ -393,10 +393,15 @@ these production behaviours, so the affected rows above rely on live gates for t
   a recorder failure never turns a deny into an allow (B1 R, B3 R, B5 R, A3 R). The rows that
   still say the app does not wire the hook (analytics and search R rows) are superseded by this
   entry for denials.
-- **Allowed-read audit for analytics and search, Gap** (owner PRP-48): only mutations are
-  audited; nothing under
-  `services/api/neurosphere_api/search` or `analytics` writes audit for allowed reads (B5 R, A3 R).
-  Tracked by PRP-48 (`PRPs/backlog/PRP-48-authorization-and-audit-chain-hardening.md`).
+- **Allowed-read audit for analytics and search, In repo** (PRP-48 item 4): both catalog search
+  routes and the dashboards route use `audited_read` (`services/api/neurosphere_api/authz/read_audit.py`)
+  and append one `allow` record per read on the domain chain (several domains:
+  `<customer>.read-audit`, a reserved chain name). The record carries the actor pseudonym,
+  operation, domain and the result count bound by the subject state digest (the `AuditRecord`
+  contract has no count field); never the query text or rows. Decision 3: an audit failure on a
+  read is logged and counted (`app.state.read_audit_stats`), not a 503; mutations still fail
+  closed. Remaining gap: other read surfaces (FinOps, copilot charts, map) are not covered (B5 R,
+  A3 R).
 - **Consent audit wiring, In repo** (updated 2026-11-14): `ConsentSinkAdapter` adapts
   `ConsentAuditSink` to the deploy auditor
   (`services/api/neurosphere_api/deploy/scan/audit.py:134`); the core default stays a no-op

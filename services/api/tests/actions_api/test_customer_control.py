@@ -151,3 +151,19 @@ def test_dependency_still_declares_config_manage_for_the_route_inventory() -> No
     entries = {(e.path, e.methods): e.permissions for e in route_inventory(api.h.app)}
     assert entries[("/api/v1/actions/emergency-disable", ("PUT",))] == ("config.manage",)
     assert entries[("/api/v1/actions/emergency-disable", ("GET",))] == ("data.read",)
+
+
+def test_customer_control_is_the_shared_deployment_scope_check() -> None:
+    """PRP-48 item 3 (#114): one deployment-scoped dependency; same domain and reason code."""
+    from neurosphere_api.authz.deployment_scope import (
+        CUSTOMER_SCOPE_REQUIRED as SHARED_REASON,
+    )
+    from neurosphere_api.authz.deployment_scope import (
+        DEPLOYMENT_ADMIN_MARKER,
+    )
+    from neurosphere_core.auth.scope import customer_control_domain_id
+
+    dependency = require_customer_control(Permission.CONFIG_MANAGE)
+    assert getattr(dependency, DEPLOYMENT_ADMIN_MARKER, None) is Permission.CONFIG_MANAGE
+    assert SHARED_REASON == CUSTOMER_SCOPE_REQUIRED
+    assert CONTROL == customer_control_domain_id("commercial", CUSTOMER)

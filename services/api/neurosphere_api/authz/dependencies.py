@@ -10,7 +10,8 @@ Outcomes are exactly three, all through ``neurosphere_core.errors``:
 
 * ``unauthorized`` (401): missing, malformed, ambiguous or invalid token (item 1 reasons).
 * ``forbidden`` (403): the derived scope lacks the permission on the target, or the principal is
-  revoked. Reasons: ``permission_missing``, ``target_out_of_scope``, ``target_unresolved``.
+  revoked. Reasons: ``permission_missing``, ``target_out_of_scope``, ``target_unresolved``, and
+  ``role_not_held`` for a role-gated route (:func:`require_role`, PRP-48 item 1).
 * ``dependency_transient`` (503/502): policy store, revocation or key infrastructure failed or
   timed out, or authorization is not configured. Never an allow.
 
@@ -31,6 +32,7 @@ from neurosphere_core.admission import TokenBucketLimiter, derive_limiter_key
 from neurosphere_core.auth.jwt import VerifiedClaims
 from neurosphere_core.auth.scope import (
     Permission,
+    Role,
     ScopeDerivation,
     domains_with_permission,
     permits,
@@ -40,6 +42,7 @@ from neurosphere_core.errors import (
     ForbiddenError,
     InvalidSchemaError,
     NeuroSphereError,
+    NotFoundError,
     UnauthorizedError,
 )
 from neurosphere_core.observability import get_logger
@@ -52,19 +55,29 @@ from neurosphere_api.middleware import correlation_id_of
 __all__ = [
     "PERMISSION_MARKER",
     "PRESCOPE_AUDIT_ATTRIBUTE",
+    "ROLE_MARKER",
+    "ROLE_NOT_HELD",
     "AuthzTarget",
     "PermissionDependency",
     "PrescopeAudit",
     "ResourceResolver",
+    "RoleResolver",
     "current_derivation",
     "current_scope",
     "domain_from_path",
+    "holds_role",
     "require",
+    "require_role",
     "resource_from_path",
 ]
 
 #: Attribute set on every dependency built by :func:`require`; the route inventory reads it.
 PERMISSION_MARKER: Final = "__ns_permission__"
+#: Attribute set on every dependency built by :func:`require_role` (role-gated route category,
+#: ``authz.routes.ROLE_GATED_PATHS``); the route inventory reads it.
+ROLE_MARKER: Final = "__ns_role_gate__"
+#: 403 reason of a role-gated route whose caller holds no in-scope assignment of the role.
+ROLE_NOT_HELD: Final = "role_not_held"
 #: ``app.state`` attribute of the optional pre-scope audit hook (PRP-40 item 5).
 PRESCOPE_AUDIT_ATTRIBUTE: Final = "prescope_audit"
 
@@ -89,6 +102,9 @@ class AuthzTarget:
 
 
 ResourceResolver = Callable[[Request, IdentityScope], AuthzTarget | None]
+#: Maps a request to the backend role a role-gated route requires; ``None`` means "no such
+#: role-gated resource" (404). Reads only path parameters, never a role named by the caller.
+RoleResolver = Callable[[Request], Role | None]
 PermissionDependency = Callable[..., Awaitable[IdentityScope]]
 
 
@@ -262,6 +278,74 @@ def require(
     return require_permission
 
 
+# --------------------------------------------------------------------------- require_role
+
+
+def holds_role(scope: IdentityScope, role: Role, now: datetime) -> bool:
+    """True when ``scope`` has an unexpired ``role`` assignment naming a domain of its tenancy.
+
+    Derivation already keeps only the assignment domains the principal is a member of and that
+    belong to the deployment's cloud and customer, and drops an assignment left with none. This
+    re-checks it on the scope itself: a domain counts only when it is a canonical domain id of the
+    scope's own cloud and customer, so an assignment naming only another customer's (or cloud's)
+    domain never opens a role-gated route (#91).
+    """
+    prefix = f"{scope.cloud}:{scope.customer_id}:"
+    for assignment in scope.to_contract().roles:
+        if Role(assignment.role) is not role:
+            continue
+        expiry = assignment.expires_at
+        if expiry is not None and now >= datetime.fromisoformat(expiry.root.replace("Z", "+00:00")):
+            continue
+        for domain in assignment.domain_ids:
+            parts = domain.root.split(":")
+            if domain.root.startswith(prefix) and len(parts) == 5 and parts[3] == "domain":
+                return True
+    return False
+
+
+def require_role(role: Role | str | RoleResolver) -> PermissionDependency:
+    """Dependency factory for the role-gated route category (PRP-48 item 1, #91).
+
+    Some routes are gated by holding a role rather than a permission (no single permission is
+    held by every role; the auditor holds no ``data.read``). ``role`` is a fixed backend role or
+    a :data:`RoleResolver` reading the route's path. The check is :func:`holds_role` on the
+    server-derived scope; a miss is 403 ``role_not_held`` recorded through the denial recorder
+    like every other denial (operation ``role.<role>``). A resolver returning ``None`` is 404.
+
+    The dependency carries :data:`ROLE_MARKER`, not :data:`PERMISSION_MARKER`: the route claims
+    no permission. Only a path listed in ``authz.routes.ROLE_GATED_PATHS`` is compliant with this
+    marker alone, so a role gate cannot silently replace a permission elsewhere.
+    """
+    fixed: Role | None = None
+    if isinstance(role, str):
+        try:
+            fixed = Role(role)
+        except ValueError:
+            raise InvalidSchemaError("unknown role in route declaration", reason="config") from None
+    resolver: RoleResolver | None = None if isinstance(role, str) else role
+
+    def wanted_role(request: Request) -> Role | None:
+        return fixed if resolver is None else resolver(request)
+
+    async def require_held_role(
+        request: Request,
+        scope: Annotated[IdentityScope, Depends(current_scope)],
+        state: Annotated[AuthzState, Depends(get_authz_state)],
+    ) -> IdentityScope:
+        wanted = wanted_role(request)
+        if wanted is None:
+            raise NotFoundError("no such role-gated resource")
+        now = datetime.fromtimestamp(state.clock(), UTC)
+        if holds_role(scope, wanted, now) is not True:
+            raise await _denial(state, request, scope, f"role.{wanted.value}", None, ROLE_NOT_HELD)
+        _admit(request, scope, None)
+        return scope
+
+    setattr(require_held_role, ROLE_MARKER, True)
+    return require_held_role
+
+
 def _admit(request: Request, scope: IdentityScope, route_domain: str | None) -> None:
     """Charge the per-domain admission limiter (PRP-21), once per request, after the permission
     check passed. A no-op when ``app.state.admission`` is absent (admission off).
@@ -311,16 +395,20 @@ async def _denial(
     state: AuthzState,
     request: Request,
     scope: IdentityScope,
-    perm: Permission,
+    perm: Permission | str,
     target: AuthzTarget | None,
     reason: str,
 ) -> ForbiddenError:
-    """Record the denied attempt (if a recorder is installed) and return the 403 to raise."""
+    """Record the denied attempt (if a recorder is installed) and return the 403 to raise.
+
+    ``perm`` is the permission checked, or the ``role.<role>`` operation of a role gate.
+    """
+    operation = perm.value if isinstance(perm, Permission) else perm
     recorder = state.denial_recorder
     if recorder is not None:
         attempt = DeniedAttempt(
             scope=scope,
-            permission=perm.value,
+            permission=operation,
             reason=reason,
             method=request.method,
             path=request.url.path,
@@ -337,6 +425,6 @@ async def _denial(
                 ) from exc
             _LOG.warning(
                 "denied-attempt audit record failed",
-                extra={"permission": perm.value, "deny_reason": reason},
+                extra={"permission": operation, "deny_reason": reason},
             )
     return ForbiddenError("insufficient scope for this operation", reason=reason)

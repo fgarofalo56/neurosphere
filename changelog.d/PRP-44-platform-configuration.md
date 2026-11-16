@@ -1,0 +1,4 @@
+### Added
+- PRP-44: platform configuration under `/api/v1/admin/platform` (customer-level `config.manage`): domain registry (create, list, get, retire; reserved `customer-control` domain), budgets (stored, not evaluated), price-sheet upload that appends a content-hashed `PriceSnapshot` with a coverage report, and the review policy (`GET`/`PUT`).
+- PRP-44: the ingestion worker merges stored price snapshots into its ledger price table at startup, and the API and the `actions`, `hitl_timers` and `evaluation` workers load the stored review policy at startup; with nothing stored behaviour is unchanged.
+- PRP-44: identity routes return 422 `domain_not_registered` for an unregistered domain once at least one domain is registered; domain names that collide with a customer-wide audit chain (`is_reserved_chain_name`) are refused.

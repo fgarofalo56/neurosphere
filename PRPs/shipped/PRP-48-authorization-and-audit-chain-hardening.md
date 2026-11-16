@@ -1,6 +1,8 @@
 ---
 name: PRP-48-authorization-and-audit-chain-hardening
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 299
 priority: P1
 order: 35
 review: required
@@ -33,16 +35,16 @@ Out of scope: the SIEM sink, audit search and export, the auditor-readable denia
 - `tests/security/injection/stubs.py:143-145` answers `comply` to an `Escalate` of an already-held permission without explanation; `README.md:34-40` lacks the consumer-location and vacuous-abstain notes (#70).
 
 ## Acceptance criteria
-- [ ] #91: `authz/routes.py` has a role-gated category; `GET /api/v1/workspaces/{role}` is listed in it and no longer claims `data.read`; `undeclared_routes` stays empty.
-- [ ] #91: Given a viewer assignment that names only another customer's domain, When `/workspaces/viewer` is called, Then 403 `role_not_held`; the 403 is recorded by the denial recorder (test asserts one `denied` record).
-- [ ] #91: `/me/domains` for a caller whose only `data.read` comes from a resource grant returns 200 with an empty list and the OpenAPI description says so; exceeding `_MAX_CATALOG_PAGES` logs one warning with the domain count only.
-- [ ] #114: Given `config.manage` only in an ordinary domain, When the caller registers an MCP server, runs a deploy scan or plan, or sets emergency-disable, Then 403 `deployment_scope_required` (or the existing `customer_scope_required` code if PRP-37/PRP-65 keeps it) and a denial record; Given the PRP-37/PRP-65 deployment-scoped admin assignment, Then each route succeeds as before.
-- [ ] #114: the deployment-scoped check is one dependency under `services/api/neurosphere_api/authz/`, used by all four route groups; `require_customer_control` delegates to it; no unrestricted bypass is introduced (security case added to `tests/security/authz`).
-- [ ] #69: an allowed catalog search (both routes) and an allowed dashboard read append one `allowed` audit record with actor pseudonym, operation, domain and result count only (no query text, no rows); a failed audit write on these reads is logged and counted, never blocks the read (read path, not mutation) - decision row 3.
-- [ ] #206.1: API start with a dotted `NS_AUTH_CUSTOMER_ID` fails the `authz` component with reason `customer_id_invalid`.
-- [ ] #206.2: a denial targeting a member domain whose chain cannot be encoded is recorded on `<customer>.authz-denials`, never a 503.
-- [ ] #206.3: `neurosphere_core.audit.chains` exports the reserved customer-level chain names and `is_reserved_chain_name`; `domain_audit_chain_id` refuses a catalog domain named like a reserved chain with `invalid_chain_id`; a test pins the reserved set against the three constants above.
-- [ ] #70: README states where consumer suites must live and that the stub's 13 `follow_instruction` abstains are vacuous until a real adapter; the stub comment explains `Escalate` of a held permission.
+- [x] #91: `authz/routes.py` has a role-gated category; `GET /api/v1/workspaces/{role}` is listed in it and no longer claims `data.read`; `undeclared_routes` stays empty.
+- [x] #91: Given a viewer assignment that names only another customer's domain, When `/workspaces/viewer` is called, Then 403 `role_not_held`; the 403 is recorded by the denial recorder (test asserts one `denied` record).
+- [x] #91: `/me/domains` for a caller whose only `data.read` comes from a resource grant returns 200 with an empty list and the OpenAPI description says so; exceeding `_MAX_CATALOG_PAGES` logs one warning with the domain count only.
+- [x] #114: Given `config.manage` only in an ordinary domain, When the caller registers an MCP server, runs a deploy scan or plan, or sets emergency-disable, Then 403 `deployment_scope_required` (or the existing `customer_scope_required` code if PRP-37/PRP-65 keeps it) and a denial record; Given the PRP-37/PRP-65 deployment-scoped admin assignment, Then each route succeeds as before.
+- [x] #114: the deployment-scoped check is one dependency under `services/api/neurosphere_api/authz/`, used by all four route groups; `require_customer_control` delegates to it; no unrestricted bypass is introduced (security case added to `tests/security/authz`).
+- [x] #69: an allowed catalog search (both routes) and an allowed dashboard read append one `allowed` audit record with actor pseudonym, operation, domain and result count only (no query text, no rows); a failed audit write on these reads is logged and counted, never blocks the read (read path, not mutation) - decision row 3.
+- [x] #206.1: API start with a dotted `NS_AUTH_CUSTOMER_ID` fails the `authz` component with reason `customer_id_invalid`.
+- [x] #206.2: a denial targeting a member domain whose chain cannot be encoded is recorded on `<customer>.authz-denials`, never a 503.
+- [x] #206.3: `neurosphere_core.audit.chains` exports the reserved customer-level chain names and `is_reserved_chain_name`; `domain_audit_chain_id` refuses a catalog domain named like a reserved chain with `invalid_chain_id`; a test pins the reserved set against the three constants above.
+- [x] #70: README states where consumer suites must live and that the stub's 13 `follow_instruction` abstains are vacuous until a real adapter; the stub comment explains `Escalate` of a held permission.
 - PRP exit: every route that changes deployment-wide state requires the deployment-scoped permission, and every authorization decision on the touched routes leaves an audit record.
 
 ## Clarifications (decided)
@@ -227,19 +229,19 @@ None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | done | prp-48-authz-audit-hardening | `require_role` + `ROLE_GATED_PATHS`; workspaces role-gated, tenancy-bound, denial-audited |
+| 2 | done | prp-48-authz-audit-hardening | page-cap warning (count only); OpenAPI description of the empty 200 |
+| 3 | done | prp-48-authz-audit-hardening | `authz/deployment_scope.py` `require_deployment_admin` (reason kept `customer_scope_required`); MCP admin (all routes), deploy scan/plan, kill switch; `require_customer_control` delegates; fixtures in mcp_api, deployment, runtime_routes and integration/deploy grant the control domain |
+| 4 | done | prp-48-authz-audit-hardening | `authz/read_audit.py` `audited_read`; catalog search (both routes) and dashboards; multi-domain reads on reserved `<customer>.read-audit`; count bound by subject digest (contract has no count field); threat-model rows updated |
+| 5 | done | prp-48-authz-audit-hardening | `RESERVED_CHAIN_NAMES` (7 names, pinned), `is_reserved_chain_name`, `is_chain_customer_id`; boot `customer_id_invalid`; `_chain` falls back to `<customer>.authz-denials` |
+| 6 | done | prp-48-authz-audit-hardening | README: consumer-suite locations and vacuous `follow_instruction` abstains; stub comment on `Escalate` of a held permission; `test_readme_claims.py` keeps both true |
+| 7 | done | prp-48-authz-audit-hardening | Tier-3 regenerated, changelog fragment, issues closed |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: 2026-11-15, PR #299.
+- Deviations: the deployment-scoped reason code stays `customer_scope_required` (not `deployment_scope_required`), per the PRP's allowance. Edits outside the Ownership block (fixture or pin updates forced by the route change, none a Tier-1 file of another PRP): `packages/core/tests/admin/test_customer_wide.py` (PRP-65 pin test, now asserts `customer_control.py` imports the core names), `services/api/tests/deployment/conftest.py`, `services/api/tests/mcp_api/admin_fixtures.py`, `services/api/tests/mcp_api/test_admin.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, `tests/integration/deploy/test_scan_to_plan.py`. Every MCP admin GET route (list, detail, tools) now needs the deployment-scoped admin, a behaviour change for ordinary-domain admins of the MCP admin UI. `holds_role` treats an assignment domain as in-tenancy by the `cloud:customer:` prefix plus a 5-segment shape rather than membership in `scope.allowed_domains`.
+- Descoped items: none. The #69 Bicep rate-limit bullet is PRP-52, the threat-model stale-row rewrite is PRP-36, and #206 item 4 is accepted.
+- OPEN gates: live Entra sign-in with the new assignment (PRP-64 hosted operator checks, needs `NS_LIVE_APPROVED=1`); hosted check that no catalog domain is named like a reserved chain; hosted operators re-run `scripts/sandbox/sbx_grant_operator.py` before PRP-64's hosted checks.
+- Env vars for the operator: none new.
+- Follow-up issues: check `domain.root in scope.allowed_domains` directly in `holds_role`; cap or count-only form for the `ReadAudit.allowed` subject digest on very large scopes; an operator holding the control-domain admin assignment sees the customer-control domain in `/me/domains`; PRP-44 domain creation must call `is_reserved_chain_name`. Issue #69 stays open for the PRP-52 Bicep bullet.
+- Product check: enforcement is on API routes. The deployment-scoped assignment is granted by `sbx_grant_operator.py` (a script, not a UI) until the PRP-39 identity admin routes are used; documented in the kill-switch runbook.

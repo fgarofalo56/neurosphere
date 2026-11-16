@@ -58,3 +58,34 @@ test("overview has no axe violations", async ({ page }) => {
   await expect(page.getByTestId("reports-count")).toBeVisible();
   expect(await axeViolationsIgnoringTabster(page)).toEqual([]);
 });
+
+test("the incomplete-total badge text stays inside its box on the cost tile at 1440px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(HOME);
+  const tile = page.getByTestId("tile-cost");
+  const marker = tile.getByTestId("incomplete-marker").first();
+  await expect(marker).toBeVisible();
+  const pill = marker.locator('[data-slot="status-pill"]');
+  const box = await pill.boundingBox();
+  // The text box: a Range over the pill's contents, measured in the page.
+  const text = await pill.evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const r = range.getBoundingClientRect();
+    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+  });
+  expect(box).not.toBeNull();
+  if (box === null) return;
+  const slack = 1;
+  expect(text.left).toBeGreaterThanOrEqual(box.x - slack);
+  expect(text.right).toBeLessThanOrEqual(box.x + box.width + slack);
+  expect(text.top).toBeGreaterThanOrEqual(box.y - slack);
+  expect(text.bottom).toBeLessThanOrEqual(box.y + box.height + slack);
+  // And the badge itself stays within its tile.
+  const tileBox = await tile.boundingBox();
+  expect(tileBox).not.toBeNull();
+  if (tileBox === null) return;
+  expect(box.x + box.width).toBeLessThanOrEqual(tileBox.x + tileBox.width + slack);
+});

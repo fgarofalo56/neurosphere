@@ -92,8 +92,11 @@ export function ChartFrame({
     };
     requestRef.current = message.request_id;
     setStatus("loading");
-    // An opaque-origin target can only be addressed with "*"; the sandbox accepts messages
-    // solely from its parent window and the payload is already-governed chart data.
+    // Why "*" (scanner rule TooPermissiveCorsPostMessage, accepted): the iframe is
+    // sandbox="allow-scripts" WITHOUT allow-same-origin, so its origin is opaque ("null") and no
+    // concrete target origin can match it. The call is addressed to iframeRef.current.contentWindow
+    // only (never window or window.parent), the sandbox accepts messages solely from its parent
+    // window, and the payload is already-governed chart data. Tests: charts.test.tsx.
     target.postMessage(message, "*");
   }, [plan, rejected]);
 

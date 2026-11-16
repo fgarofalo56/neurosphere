@@ -1,6 +1,8 @@
 ---
 name: PRP-44-platform-configuration
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 297
 priority: P0
 order: 32
 review: required
@@ -32,15 +34,15 @@ Out of scope: budget alert delivery (email, webhook) and anything that evaluates
 - Review policy is hard-coded defaults: `ReviewPolicyRegistry()` at `runtime/builders/data.py:377`, `runtime/builders/planes.py:241` and `services/workers/neurosphere_workers/runtime/factories.py:514`; SLA, escalation and expiry (`hitl/policy.py:37-60`) cannot be changed without a code change (lane-d step 1, "HITL SLA / escalation / expiry").
 
 ## Acceptance criteria
-- [ ] Given customer-level `config.manage`, When an admin creates, lists and retires a domain through `/api/v1/admin/platform/domains`, Then the id must be canonical for the deployment cloud and customer, a duplicate is 409, the reserved `customer-control` domain is created with `is_control_domain=true` and can never be retired, every write is audited, and a retired domain keeps its record.
-- [ ] Given at least one registered domain, When PRP-39's identity routes assign a role, membership or grant naming an unregistered domain, Then they return 422 `domain_not_registered`; given no registered domain at all, they behave as before (so an existing deployment keeps working until it registers domains).
-- [ ] Budgets: a budget for a registered domain with `period`, a decimal-string `amount`, `currency`, and `thresholds_percent` (strictly increasing, 1 to 200) is stored and listed; an unknown domain, a float amount or a duplicate threshold is 422; nothing is evaluated or sent.
-- [ ] Price sheets: `POST /api/v1/admin/platform/price-sheets` converts a `PriceSheetUpload` to a `PriceSnapshot` with a computed content hash and appends it to `price_snapshots`; the same `snapshot_id` with a different hash is 409 (`SnapshotConflictError`), the same hash is an idempotent 200; a sheet that does not apply to the deployment cloud is 422; `synthetic: true` is refused outside `NS_ENV=local`; an `azure_retail_prices` sheet for Government is refused by the existing model rule.
-- [ ] Each upload returns a coverage report: models priced (input and output present), models incomplete (only one side, which `to_price_version` would drop), and rows without a token meter; incomplete models are a warning, not a rejection.
-- [ ] Given a stored sheet, When the ingestion worker starts, Then its ledger price table contains the snapshot's `PriceVersion` (id = `snapshot_id`) merged with any file table (equal ids with identical content collapse to one; equal ids with different content refuse startup with `price_version_conflict`), and an estimated observation then cites a stored price version (the forecast precondition at `finops/service.py:219-269`).
-- [ ] Review policy: `PUT /api/v1/admin/platform/review-policy` validates a `ReviewPolicyDocument` into `ReviewPolicy` objects (positive durations, `sla` at least 60 s, `expiry` at most 90 days, `max_escalations` 0 to 10, known `approver_permission`), refuses any change that sets `self_approval_forbidden=false` or an approver other than `action.approve` for `maker_checker`, bumps `policy_version`, and returns a before and after diff; missing `If-Match` is `invalid_schema`, stale is `stale_version`.
-- [ ] Given a stored review policy, When the API or the worker roles `actions`, `hitl_timers` and `evaluation` start, Then `HitlService` and the action plane resolve their policies from it (stored over defaults, applied at startup, no hot reload, A1); with no stored policy `ReviewPolicyRegistry` behaviour is identical to today (`packages/core/tests/hitl` and `services/api/tests/hitl_api` pass unchanged).
-- [ ] Callers without customer-level `config.manage` get 403 and a denial record on every route; every route is in the route inventories; no price value or policy body appears in a log line; `openapi.json` regenerated.
+- [x] Given customer-level `config.manage`, When an admin creates, lists and retires a domain through `/api/v1/admin/platform/domains`, Then the id must be canonical for the deployment cloud and customer, a duplicate is 409, the reserved `customer-control` domain is created with `is_control_domain=true` and can never be retired, every write is audited, and a retired domain keeps its record.
+- [x] Given at least one registered domain, When PRP-39's identity routes assign a role, membership or grant naming an unregistered domain, Then they return 422 `domain_not_registered`; given no registered domain at all, they behave as before (so an existing deployment keeps working until it registers domains).
+- [x] Budgets: a budget for a registered domain with `period`, a decimal-string `amount`, `currency`, and `thresholds_percent` (strictly increasing, 1 to 200) is stored and listed; an unknown domain, a float amount or a duplicate threshold is 422; nothing is evaluated or sent.
+- [x] Price sheets: `POST /api/v1/admin/platform/price-sheets` converts a `PriceSheetUpload` to a `PriceSnapshot` with a computed content hash and appends it to `price_snapshots`; the same `snapshot_id` with a different hash is 409 (`SnapshotConflictError`), the same hash is an idempotent 200; a sheet that does not apply to the deployment cloud is 422; `synthetic: true` is refused outside `NS_ENV=local`; an `azure_retail_prices` sheet for Government is refused by the existing model rule.
+- [x] Each upload returns a coverage report: models priced (input and output present), models incomplete (only one side, which `to_price_version` would drop), and rows without a token meter; incomplete models are a warning, not a rejection.
+- [x] Given a stored sheet, When the ingestion worker starts, Then its ledger price table contains the snapshot's `PriceVersion` (id = `snapshot_id`) merged with any file table (equal ids with identical content collapse to one; equal ids with different content refuse startup with `price_version_conflict`), and an estimated observation then cites a stored price version (the forecast precondition at `finops/service.py:219-269`).
+- [x] Review policy: `PUT /api/v1/admin/platform/review-policy` validates a `ReviewPolicyDocument` into `ReviewPolicy` objects (positive durations, `sla` at least 60 s, `expiry` at most 90 days, `max_escalations` 0 to 10, known `approver_permission`), refuses any change that sets `self_approval_forbidden=false` or an approver other than `action.approve` for `maker_checker`, bumps `policy_version`, and returns a before and after diff; missing `If-Match` is `invalid_schema`, stale is `stale_version`.
+- [x] Given a stored review policy, When the API or the worker roles `actions`, `hitl_timers` and `evaluation` start, Then `HitlService` and the action plane resolve their policies from it (stored over defaults, applied at startup, no hot reload, A1); with no stored policy `ReviewPolicyRegistry` behaviour is identical to today (`packages/core/tests/hitl` and `services/api/tests/hitl_api` pass unchanged).
+- [x] Callers without customer-level `config.manage` get 403 and a denial record on every route; every route is in the route inventories; no price value or policy body appears in a log line; `openapi.json` regenerated.
 - PRP exit: touched suites, `tests/security/authz`, ruff, pyright, `validate_planning.py` pass; PR open with CI green.
 
 ## Clarifications (decided)
@@ -238,14 +240,14 @@ Budget evaluation, alerts or notifications; fetching or scraping prices; a price
 | 3 | merged | prp-44-platform-config | price sheet and review policy routes; price_sheet metadata kept in `price_snapshots` only (see deviations) |
 | 4 | merged | prp-44-platform-config | builder; data.py publishes shared `REVIEW_POLICIES`, planes.py consumes it |
 | 5 | merged | prp-44-platform-config | worker `admin_platform` package, `price_table` parameter, `_hitl_service` loads stored policy |
-| 6 | in-progress | prp-44-platform-config | identity domain check and authz/secrecy suites done; `[serial-after: PRP-48]` reserved-chain call waits (local reserved-name set used meanwhile) |
-| 7 | todo | | merge step: Tier-3 regeneration, changelog fragment, close-out, completion note |
+| 6 | merged | prp-44-platform-config | identity domain check and authz/secrecy suites; PRP-48 shipped, domain create now calls `is_reserved_chain_name` |
+| 7 | merged | prp-44-platform-config | Tier-3 regeneration, changelog fragment, close-out, completion note |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-15, PR #297.
+- Deviations: `price_sheet` metadata is kept in `price_snapshots` only (not an `admin_config` kind). The `[serial-after: PRP-48]` step was done at merge: domain create calls `is_reserved_chain_name`, and `RESERVED_DOMAIN_NAMES` is now an alias of `RESERVED_CHAIN_NAMES` (more names are refused than before: authz-denials, deploy, mcp-admin, identity-admin, read-audit).
+- Descoped items: none beyond the NOT building list. The contracts `generate.py --check` could not run locally (json-schema-to-typescript not installed); the CI contracts job is the proof.
+- OPEN gates: real provider price sheet upload on a hosted stack and its effect on a live forecast (PRP-58, PRP-64); Government price sheets are customer-supplied and unverified (G01, G04). Cosmos emulator snapshot-store test is `integration`, local only. No live gate was run.
+- Env vars for the operator: none new (the existing `NS_LEDGER_PRICE_TABLE_FILE` is still honoured and merged with stored snapshots).
+- Follow-up issues: reviewer follow-ups, not yet filed as issues: (1) worker `ledger_price_table` (`services/workers/neurosphere_workers/admin_platform/prices.py`) falls back silently to the file table when the snapshot store read fails, so on a hosted stack estimates go `price_unresolved` until restart; fail startup outside local or retry. (2) `DomainAdmin.create` registers the control domain before creating the requested domain; a 409 duplicate on the second create leaves the control domain registered and the registry non-empty, which enables enforcement. (3) `policies_from_document` resolves duplicate `(review_kind)` or `(review_kind, action_kind)` entries last-wins; enforce uniqueness in `validate_review_policy`. (4) A stored review policy that omits a review kind leaves it failing closed with `review_policy_missing`; the PUT route gives no warning, so require all default kinds or return a warning. (5) Whether the contract's maker_checker requirement is checked when the maker_checker kind is missing was not verified. Also: catalog-wide price coverage view (#209 item 2) and the dev seed stay with PRP-38.
+- Product check (can an operator use it without editing files): API only. Operators can configure domains, budgets, price sheets and the review policy through the admin platform routes without editing files, but there is no console page yet (console pages are in NOT building); gap tracked for the console PRPs.

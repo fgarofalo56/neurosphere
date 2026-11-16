@@ -30,6 +30,7 @@ from neurosphere_contracts.admin.v1.domain_definition import DomainDefinition
 
 from neurosphere_core.admin.models import CloudName
 from neurosphere_core.admin.store import DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT, AdminConfigRepository
+from neurosphere_core.audit.chains import RESERVED_CHAIN_NAMES, is_reserved_chain_name
 from neurosphere_core.auth.scope.permissions import customer_control_domain_id
 from neurosphere_core.errors import InvalidSchemaError, StaleVersionError, ValidationIssue
 
@@ -43,8 +44,8 @@ __all__ = [
 
 DOMAIN_KIND: Final = "domain"
 #: Names the customer-wide audit chains use (``<customer>.<name>``); a domain of this name would
-#: decode to the same chain id (see ``neurosphere_core.admin.chains``).
-RESERVED_DOMAIN_NAMES: Final = frozenset({"admin-config", "gateway", "execution-control"})
+#: decode to the same chain id. Owned by PRP-48 (``neurosphere_core.audit.chains``).
+RESERVED_DOMAIN_NAMES: Final = RESERVED_CHAIN_NAMES
 _CANONICAL_PARTS: Final = 5
 
 
@@ -133,7 +134,7 @@ class DomainAdmin:
                 "control_domain_flag_mismatch",
             )
         name = _name_of(domain_id)
-        if name in RESERVED_DOMAIN_NAMES:
+        if is_reserved_chain_name(name):
             raise _issue("/domain_id", "domain name is reserved", "reserved_domain_name")
         if body.status != "active":
             raise _issue("/status", "a new domain is created active", "domain_status_invalid")

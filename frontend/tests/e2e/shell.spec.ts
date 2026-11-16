@@ -113,3 +113,16 @@ test("shell has no axe violations", async ({ page }) => {
   await expect(page.getByRole("option", { name: "Finance" })).toBeVisible();
   expect(await axeViolationsIgnoringTabster(page)).toEqual([]);
 });
+
+test("ArrowDown and ArrowUp move focus between navigation links", async ({ page }) => {
+  await page.goto("/");
+  const links = page.getByRole("navigation", { name: "Primary" }).getByRole("link");
+  await expect(links.first()).toBeVisible();
+  await links.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(links.nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(links.nth(2)).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(links.nth(1)).toBeFocused();
+});

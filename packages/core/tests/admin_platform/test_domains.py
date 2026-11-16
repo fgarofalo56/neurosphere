@@ -45,6 +45,9 @@ async def test_duplicate_is_409_stale_version() -> None:
         ("commercial:other:neurosphere:domain:x", "cross_customer"),
         ("commercial:contoso:neurosphere:domain:admin-config", "reserved_domain_name"),
         ("commercial:contoso:neurosphere:domain:gateway", "reserved_domain_name"),
+        ("commercial:contoso:neurosphere:domain:authz-denials", "reserved_domain_name"),
+        ("commercial:contoso:neurosphere:domain:read-audit", "reserved_domain_name"),
+        ("commercial:contoso:neurosphere:domain:identity-admin", "reserved_domain_name"),
     ],
 )
 async def test_non_canonical_or_reserved_ids_are_refused(domain_id: str, reason: str) -> None:

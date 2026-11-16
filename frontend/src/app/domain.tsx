@@ -159,6 +159,19 @@ export function DomainProvider({ children }: { readonly children: ReactNode }): 
     };
   }, [homeAccountId]);
 
+  // The account disappeared (menu sign-out, sign-out in another tab, MSAL dropping the account):
+  // remove the last-domain key of the user who was just here. A switch to a different account
+  // keeps the previous user's key, and an unavailable store key is never guessed at.
+  const lastUserKey = useRef<string | null>(null);
+  useEffect(() => {
+    const previous = lastUserKey.current;
+    lastUserKey.current = userKey;
+    if (previous !== null && userKey === null && homeAccountId === "") {
+      removeStored(lastDomainStorageKey(previous));
+      setStored(null);
+    }
+  }, [userKey, homeAccountId]);
+
   const query = useMeDomains({});
   const domains = useMemo(() => query.data?.items ?? [], [query.data]);
   const status: DomainsStatus = query.isPending
