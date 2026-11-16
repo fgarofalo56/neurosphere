@@ -1,7 +1,7 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `b45b14330095452614c93a24e60feb99b39269f1`. Generated: 2026-11-15.
+> Source commit: `1aa8eb5a69fb06b99fa3067f6d56a9013a06a9c9`. Generated: 2026-11-15.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
 NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 182 operations on 155 paths.
@@ -1383,6 +1383,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 - Operation id: `my_domains_api_v1_me_domains_get`
 - Summary: My Domains
+- Description: The domains the caller may read (an unexpired role conferring `data.read`, in the caller's own cloud and customer), with display names from the catalog. A caller whose only `data.read` comes from a resource-scoped grant gets **200 with an empty `items` list**: the grant covers one resource, never a domain. A caller holding `data.read` nowhere gets 403.
 - Responses: `200` `MeDomains`
 
 ### Tag: recommendations

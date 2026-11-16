@@ -56,9 +56,8 @@ on a red `main`.
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-46: Cost-center attribution and ingest follow-ups](backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md) | sonnet | required | none | - | - | `prp-46-cost-center` |
-| 2 | [PRP-48: Authorization and audit-chain hardening](backlog/PRP-48-authorization-and-audit-chain-hardening.md) | opus | required | none | - | - | `prp-48-authz-audit-hardening` |
-| 3 | [PRP-44: Platform configuration (domains, budgets, price sheets, review policy)](backlog/PRP-44-platform-configuration.md) | sonnet | required | none | PRP-39, PRP-48 | - | `prp-44-platform-config` |
+| 1 | [PRP-44: Platform configuration (domains, budgets, price sheets, review policy)](backlog/PRP-44-platform-configuration.md) | sonnet | required | none | PRP-39, PRP-48 | - | `prp-44-platform-config` |
+| 2 | [PRP-46: Cost-center attribution and ingest follow-ups](backlog/PRP-46-cost-center-attribution-and-ingest-follow-ups.md) | sonnet | required | none | - | - | `prp-46-cost-center` |
 
 Gate before the next wave: Authz and audit-chain suites green; cost-center attribution visible in the ledger.
 
@@ -66,7 +65,7 @@ Gate before the next wave: Authz and audit-chain suites green; cost-center attri
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-45: System status, first-run checklist and stored feature settings](backlog/PRP-45-system-status-first-run-and-feature-settings.md) | opus | required | PRP-48 | - | - | `prp-45-system-status-settings` |
+| 1 | [PRP-45: System status, first-run checklist and stored feature settings](backlog/PRP-45-system-status-first-run-and-feature-settings.md) | opus | required | none | - | - | `prp-45-system-status-settings` |
 | 2 | [PRP-49: Per-agent aggregates and map metrics](backlog/PRP-49-per-agent-aggregates-and-map-metrics.md) | sonnet | required | none | - | - | `prp-49-per-agent-aggregates` |
 | 3 | [PRP-50: Connector SDK and data-path follow-ups](backlog/PRP-50-connector-sdk-and-data-path-follow-ups.md) | sonnet | required | none | PRP-46 | - | `prp-50-connector-followups` |
 | 4 | [PRP-52: CI and infrastructure hardening](backlog/PRP-52-ci-and-infrastructure-hardening.md) | sonnet | required | none | PRP-11 | - | `prp-52-ci-infra-hardening` |
@@ -131,7 +130,6 @@ flowchart LR
   subgraph W15
     P44["PRP-44"]
     P46["PRP-46"]
-    P48["PRP-48"]
   end
   subgraph W16
     P45["PRP-45"]
@@ -165,7 +163,6 @@ flowchart LR
     P64["PRP-64"]
     P66["PRP-66"]
   end
-  P48 --> P45
   P44 --> P53
   P45 --> P53
   P45 --> P54
@@ -196,7 +193,6 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
 | W15 | PRP-44 | `services/api/neurosphere_api/runtime/builders/data.py`<br>`services/api/neurosphere_api/runtime/builders/planes.py`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
-| W15 | PRP-48 | `services/api/neurosphere_api/authz/dependencies.py` |
 | W16 | PRP-45 | `services/api/neurosphere_api/runtime/compose.py`<br>`services/api/neurosphere_api/runtime/builders/copilot.py`<br>`services/api/neurosphere_api/runtime/builders/mcp.py`<br>`services/api/neurosphere_api/runtime/builders/search.py`<br>`services/api/neurosphere_api/runtime/builders/write_targets.py`<br>`services/api/neurosphere_api/runtime/status.py`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
 | W16 | PRP-52 | `.github/workflows/ci.yml`<br>`.github/workflows/security.yml`<br>`.github/workflows/contracts.yml`<br>`infra/bicep/modules/**`<br>`infra/helm/**`<br>`services/api/Dockerfile`<br>`services/workers/Dockerfile`<br>`services/docs-assistant/Dockerfile`<br>`.grype.yaml` |
 | W17 | PRP-54 | `docker-compose.yml`<br>`infra/helm/**`<br>`infra/demo/main.bicep`<br>`services/workers/neurosphere_workers/runtime/factories.py`<br>`services/api/neurosphere_api/runtime/planes.py` |
@@ -230,20 +226,12 @@ Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-44-platform
 Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-46-cost-center cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
-### PRP-48 (W15)
-
-```text
-/prp:prp-execute PRPs/backlog/PRP-48-authorization-and-audit-chain-hardening.md
-
-Context for this run: wave W15 of PRPs/EXECUTION-PLAN.md, branch prp-48-authz-audit-hardening cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
 ### PRP-45 (W16)
 
 ```text
 /prp:prp-execute PRPs/backlog/PRP-45-system-status-first-run-and-feature-settings.md
 
-Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-45-system-status-settings cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-48 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W16 of PRPs/EXECUTION-PLAN.md, branch prp-45-system-status-settings cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-49 (W16)
