@@ -1,6 +1,8 @@
 ---
 name: PRP-57-admin-console-sources-pricing-and-features
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 313
 priority: P0
 order: 44
 review: required
@@ -32,14 +34,14 @@ Out of scope: identity, domains, system status and audit pages (PRP-53); any bac
 - The route manifest, the axe samples and the real-stack walk fail any route without an entry (`frontend/tests/e2e/a11y/route-samples.ts:15-17`), so registration is part of the work.
 
 ## Acceptance criteria
-- [ ] Producers (`/admin/sources/producers`): list with status and `rotated_at`; create returns the secret once in a modal with a copy button and an explicit "I stored it" confirm; closing the modal clears it from component state and the query cache, and a reload cannot show it again; rotate repeats the same flow; disable and enable use `ChangeConfirmDialog` and `If-Match`. The secret never appears in a URL, a toast, a console log, a snapshot or a visual baseline.
-- [ ] Connectors (`/admin/sources/connectors`): create and replace a `ConnectorConfig` for `gateway_poll`, `foundry_discovery`, `billing_export` and `otel` with `domain_ids`, bounded scalar settings and a credential reference; the credential field accepts only a Key Vault secret URI or a managed-identity client id, rejects anything that does not look like a reference before sending (the API stays the authority and its 422 field pointer is shown), and shows `warnings` such as `producer_not_in_store`; enable, disable and retire work; a note explains restart-to-apply and the Key Vault role the operator must grant.
-- [ ] Gateways (`/admin/gateways`): a register form for `RegisterGatewayBody` (ARM resource id, optional workspace id) per readable domain that posts to the existing route, shows the 201 and links to `/gateways/detail`; a 403, 409 or 422 is shown with its code.
-- [ ] Catalog import (`/admin/catalog-import`): paste or upload JSON, client-side limit of 100 items, a required dry run that renders per-item `valid | created | rejected | failed | skipped` with codes, then a commit that is enabled only after a clean dry run of the same payload (digest compared); `committed` false after commit lists what was created.
-- [ ] Pricing (`/admin/pricing`): upload a versioned price sheet (source, retrieval date, cloud applicability, rows) and list versions with the active one marked; budgets list, create and edit per domain with thresholds; amounts are decimal strings, never floats; an unknown price shows unknown, not 0.
-- [ ] Features (`/admin/features`): one card per stored setting key (`copilot`, `judge`, `search`, `scan`, `mcp_server`, `write_targets`) showing source (`stored | env | default`), revision, `restart_required` and the validation error text on a 422; a save sends `If-Match`, shows the returned diff and the "applies after restart" notice; secret-looking fields are not offered at all (references only); `write_targets` states that registration needs PRP-54 until it ships.
-- [ ] Review policy (`/admin/review-policy`): edit kind defaults and action overrides (SLA, escalation and expiry in whole seconds shown as hours and minutes), with a preview of the effective policy and the API's validation text.
-- [ ] Every list has loading, empty, error and forbidden states; a 409 `stale_version` offers reload; no page enables a control the API will refuse by hiding the 403.
+- [x] Producers (`/admin/sources/producers`): list with status and `rotated_at`; create returns the secret once in a modal with a copy button and an explicit "I stored it" confirm; closing the modal clears it from component state and the query cache, and a reload cannot show it again; rotate repeats the same flow; disable and enable use `ChangeConfirmDialog` and `If-Match`. The secret never appears in a URL, a toast, a console log, a snapshot or a visual baseline.
+- [x] Connectors (`/admin/sources/connectors`): create and replace a `ConnectorConfig` for `gateway_poll`, `foundry_discovery`, `billing_export` and `otel` with `domain_ids`, bounded scalar settings and a credential reference; the credential field accepts only a Key Vault secret URI or a managed-identity client id, rejects anything that does not look like a reference before sending (the API stays the authority and its 422 field pointer is shown), and shows `warnings` such as `producer_not_in_store`; enable, disable and retire work; a note explains restart-to-apply and the Key Vault role the operator must grant.
+- [x] Gateways (`/admin/gateways`): a register form for `RegisterGatewayBody` (ARM resource id, optional workspace id) per readable domain that posts to the existing route, shows the 201 and links to `/gateways/detail`; a 403, 409 or 422 is shown with its code.
+- [x] Catalog import (`/admin/catalog-import`): paste or upload JSON, client-side limit of 100 items, a required dry run that renders per-item `valid | created | rejected | failed | skipped` with codes, then a commit that is enabled only after a clean dry run of the same payload (digest compared); `committed` false after commit lists what was created.
+- [x] Pricing (`/admin/pricing`): upload a versioned price sheet (source, retrieval date, cloud applicability, rows) and list versions with the active one marked; budgets list, create and edit per domain with thresholds; amounts are decimal strings, never floats; an unknown price shows unknown, not 0.
+- [x] Features (`/admin/features`): one card per stored setting key (`copilot`, `judge`, `search`, `scan`, `mcp_server`, `write_targets`) showing source (`stored | env | default`), revision, `restart_required` and the validation error text on a 422; a save sends `If-Match`, shows the returned diff and the "applies after restart" notice; secret-looking fields are not offered at all (references only); `write_targets` states that registration needs PRP-54 until it ships.
+- [x] Review policy (`/admin/review-policy`): edit kind defaults and action overrides (SLA, escalation and expiry in whole seconds shown as hours and minutes), with a preview of the effective policy and the API's validation text.
+- [x] Every list has loading, empty, error and forbidden states; a 409 `stale_version` offers reload; no page enables a control the API will refuse by hiding the 403.
 - [ ] `frontend/tests/mock-api/features/admin-sources.ts` serves every route above with 403, 409 and 422 fixtures; vitest covers each page; Playwright `frontend/tests/e2e/admin-sources/**` covers create-producer (secret shown once), create-connector, dry-run-then-import, upload-price-sheet and save-setting; the a11y suite has a sample for each new pattern with zero serious or critical violations; Docker-only visual baselines exist.
 - [ ] `pnpm --filter @neurosphere/frontend lint`, `typecheck`, `test`, `format`, `test:e2e` pass; `python scripts/validate_planning.py` passes.
 - PRP exit: an operator can register a producer, a connector, a gateway and a price sheet, import catalog entities and change a feature setting from the UI on the mock API with no file edit; the same walk against the composed stack is OPEN until PRP-38's real-stack job covers these pages.
@@ -235,20 +237,20 @@ Backend routes, contracts or permissions; identity, domain, status and audit pag
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 2 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 3 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 4 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 5 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 6 | verifying | prp-57-admin-console-sources | done on branch, PR pending |
-| 7 | verifying | prp-57-admin-console-sources | e2e, a11y, real-stack rows done; visual baselines generated in Docker |
-| 8 | todo | | merge step: rebase, Tier-3 regeneration, close-out |
+| 1 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 2 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 3 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 4 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 5 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 6 | done | prp-57-admin-console-sources | done on branch, PR pending |
+| 7 | done | prp-57-admin-console-sources | e2e, a11y, real-stack rows done; visual baselines generated in Docker |
+| 8 | done | land-prp-57 | close-out on PR 313 |
 
 ## Completion note (filled at ship)
-- Date, PR number, merge commit:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues filed:
-- Operator product check (can an operator use this without editing files or calling raw APIs?):
+- Date, PR number, merge commit: 2026-11-16, PR 313 (squash merge commit is the PR's merge commit on main).
+- Deviations: item 8 asked for a `CHANGELOG.md` entry; the current convention is the fragment `changelog.d/PRP-57-admin-console-sources-pricing-and-features.md`, which was written instead. The integrator worked from branch `land-prp-57` and pushed to `prp-57-admin-console-sources` because another worktree held the branch name. No openapi.json or docs/reference regeneration was needed (frontend only, no API or SDK change).
+- Descoped items: none. No `[serial-after]` items exist in this PRP. The "Models" half of the features criterion is covered only by the copilot and judge endpoint cards; no model catalog or model-swap UI is in this PRP.
+- OPEN gates: the composed-stack (real-stack) walk of these pages is OPEN until PRP-38's real-stack job covers them; hosted verification belongs to PRP-58 and PRP-64. The e2e, a11y and visual acceptance boxes are left unticked here and rest on the PR's CI shards (frontend-e2e); local close-out ran lint, typecheck, vitest (1219 passed) and prettier only.
+- Env vars for the operator: none new.
+- Follow-up issues filed: none filed by the integrator. Reviewer follow-ups: the review was a partial read of the roughly 6,700-line diff (pricing, review-policy, gateway-register and mock-API code were not read, no tests were run by the reviewer). The import digest in `importPayload.ts` is a non-cryptographic cyrb53 hash; it only compares what the same operator pasted so it is acceptable, and SubtleCrypto SHA-256 would be a cheap hardening step. Price sheet versions have no `active` flag in the API: `apiPaths.ts` documents that the UI marks the newest effective date as active, and that rule should be confirmed against the backend semantics.
+- Operator product check (can an operator use this without editing files or calling raw APIs?): yes on the mock API for producers, connectors, gateway registration, catalog import, price sheets, feature settings and review policy; against the composed stack it is unverified (OPEN above).
