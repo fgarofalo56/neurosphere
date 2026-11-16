@@ -228,7 +228,7 @@ The settings API or UI for entries; the deploy connector and apply (PRP-55); rol
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
+| 1 | merged | prp-54-write-targets | keyed registry + resolve helpers (PRP-50 shipped) |
 | 2 | todo | | |
 | 3 | todo | | |
 | 4 | todo | | |
