@@ -248,7 +248,7 @@ FINRA mapping; attestations, sign-off, history or scheduled bundles; auto-remedi
 | 2 | merged | prp-56-compliance-evidence | library: nist_ai_rmf 19, sr_11_7 8, hipaa 13, omb 8 controls |
 | 3 | merged | prp-56-compliance-evidence | five sources + claims scanner |
 | 4 | merged | prp-56-compliance-evidence | bundle, renderer, golden |
-| 5 | todo | | |
+| 5 | merged | prp-56-compliance-evidence | router, deps, 17 API tests; audit record names domain + control count (see deviations) |
 | 6 | todo | | |
 | 7 | todo | | |
 | 8 | todo | | |
