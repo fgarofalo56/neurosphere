@@ -192,6 +192,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "admission",
         "admin_connectors",
         "admin_platform",
+        "admin_system",
         "admin",
         "analytics",
     ]
@@ -228,6 +229,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "admission",
         "admin_connectors",
         "admin_platform",
+        "admin_system",
         "admin",
         "analytics",
     ]

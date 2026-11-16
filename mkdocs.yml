@@ -130,6 +130,7 @@ nav:
       - runbooks/identity-admin.md
       - runbooks/connector-config.md
       - runbooks/platform-config.md
+      - runbooks/system-settings.md
       - runbooks/audit-siem.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
