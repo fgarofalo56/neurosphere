@@ -110,6 +110,65 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  // PRP-57: admin console part 2. OPEN until PRP-38's job covers these pages; the operator may
+  // not hold the deployment-admin scope, and each data page then shows its forbidden state.
+  {
+    route: "/admin/sources/producers",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/sources/",
+        why: "ingest producers need config.manage, which the operator may not hold",
+      },
+      {
+        status: 503,
+        pathPrefix: "/api/v1/admin/sources/",
+        why: "the producer registry answers 503 when the composed stack has no producer store wired",
+      },
+    ],
+  },
+  {
+    route: "/admin/sources/connectors",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/sources/",
+        why: "connector configurations need config.manage, which the operator may not hold",
+      },
+    ],
+  },
+  { route: "/admin/gateways" },
+  { route: "/admin/catalog-import" },
+  {
+    route: "/admin/pricing",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/platform/",
+        why: "price sheets and budgets need the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
+  {
+    route: "/admin/features",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/system/",
+        why: "stored settings need the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
+  {
+    route: "/admin/review-policy",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/admin/platform/",
+        why: "the review policy needs the deployment-admin scope, which the operator may not hold",
+      },
+    ],
+  },
   { route: "/actions", rows: "action-row" },
   {
     route: "/actions/detail",
