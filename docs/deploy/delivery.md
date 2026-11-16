@@ -26,7 +26,7 @@ flowchart LR
     apply -->|"any red check"| red(["run red, release stays draft"])
 ```
 
-The diagram source was rendered locally with `@mermaid-js/mermaid-cli@12.0.0` (see
+The diagram source was rendered locally with the mermaid-cli package (version 12.0.0) (see
 `docs/dev/diagram-rendering.md`) before this page claimed it renders.
 
 | Job | Environment | Permissions | What it does |
