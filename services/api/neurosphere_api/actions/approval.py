@@ -74,7 +74,7 @@ Decision = Literal["approved", "rejected"]
 
 def refuse_advisory(plane: ActionPlane, stored: StoredIntent) -> None:
     """Advisory intents (no supported write connector) never confirm or approve."""
-    if stored.advisory or plane.connector_for(stored.intent.action_kind) is None:
+    if stored.advisory or plane.connector_for(stored.intent.action_kind, stored.domain_id) is None:
         raise CapabilityUnavailableError(
             ADVISORY_CONNECTOR, "the write connector is advisory; nothing can execute"
         )
@@ -194,7 +194,7 @@ async def decide_maker_checker(
     try:
         current = stored.intent.target_version
         if approved:
-            connector = plane.connector_for(stored.intent.action_kind)
+            connector = plane.connector_for(stored.intent.action_kind, stored.domain_id)
             if connector is None:
                 refuse_advisory(plane, stored)
             else:
