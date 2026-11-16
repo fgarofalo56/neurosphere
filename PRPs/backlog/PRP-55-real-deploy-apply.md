@@ -230,13 +230,13 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 | 5 | verifying | prp-55-real-deploy-apply | connector customer binding (customer_mismatch), allowlist pre-check, tagged create; verify mismatch -> executor rollback path -> failed (no delete) |
 | 6 | verifying | prp-55-real-deploy-apply | unmarked in-memory e2e (API approve -> worker executor -> fake ARM -> verify -> register) green; integration twin written, collected, NOT run (no compose stack in this session); live runner refuses without NS_LIVE_APPROVED=1 |
 | 7 | todo | | serial-after PRP-58 (not shipped on origin/main at 2026-11-16): done at merge time |
-| 8 | todo | | |
+| 8 | todo | | merge step: Tier-3 regeneration, changelog fragment, completion note, move to shipped |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: (merge step)
+- Deviations: (draft, branch prp-55-real-deploy-apply) two additive one-line edits outside the Ownership block: `packages/core/tests/stores_registry/test_registry.py` (wire-contract row + constant pin for the new container, required by the Tier-1 `containers.py` change) and `tests/security/actions/test_single_executor_path.py` (`APPLY_EXCEPTIONS` entry for `scripts/gates/deploy_apply_live.py`, same pattern as G05). API apply routes and `PlanApprovalStore.approve/record` are now async. The API's deploy connector gets plan-only provisioners (`PlanOnlyArmProvisioner`, refusing Fabric transport) so its dry-run mirrors the worker allowlist with no transport; the worker transport is imported lazily by `factories._deploy_sources` (test proves the API never loads it). ARM resource names now follow the per-service rule (`neurosphere_core.deploy.arm.arm_resource_name`). Verify mismatch runs the executor rollback path, which the deploy connector refuses (no automatic delete), so the intent ends `failed` / `rollback_failed` with operator attention.
+- Descoped items: none; item 7 waits on PRP-58.
+- OPEN gates: live apply into a throwaway RG (`scripts/gates/deploy_apply_live.py`, PRP-64); `-m integration tests/integration/deploy_apply` (emulator twin) not run in the implementing session (no compose slot); live uninstall #40, Government Fabric #39, G01 Government, G02.
+- Env vars for the operator: `NS_DEPLOY_APPLY_ENABLED` and `NS_DEPLOY_APPLY_REGISTER_CONTAINER` now also on the WORKERS (actions role), same names as the API. The `deploy_plan_approvals` container must exist (hosted redeploy before the image boots; non-local boot checks registry containers). Re-approve plans after upgrade (in-memory approvals are lost).
+- Follow-up issues: ARM services beyond the decision-2 allowlist; runbook for enabling apply (no runbook owned here).
+- Product check: (merge step)
