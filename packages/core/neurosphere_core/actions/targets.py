@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Final, Protocol, runtime_checkable
+from typing import Final, Protocol, cast, runtime_checkable
 
 __all__ = [
     "ACTION_CONNECTORS",
@@ -31,6 +31,7 @@ __all__ = [
     "DEPLOY_CONNECTOR",
     "FOUNDRY_SWAP_CONNECTOR",
     "TARGET_KIND_CONNECTORS",
+    "KeyedWriteTargetSource",
     "WriteTargetSource",
     "connector_name_for",
     "connector_names_for",
@@ -83,13 +84,23 @@ TARGET_KIND_CONNECTORS: Final[Mapping[str, str]] = MappingProxyType(
 class WriteTargetSource[T](Protocol):
     """Registry of connectors accepted as action targets, keyed by manifest name."""
 
-    def supports(self, name: str, action: str, *, target_key: str | None = None) -> bool:
+    def supports(self, name: str, action: str) -> bool:
         """True when ``name`` is registered and its manifest declares ``action``."""
         ...
 
-    def get(self, name: str, *, target_key: str | None = None) -> T:
+    def get(self, name: str) -> T:
         """The registered connector; raises when ``name`` is not registered."""
         ...
+
+
+@runtime_checkable
+class KeyedWriteTargetSource[T](Protocol):
+    """A :class:`WriteTargetSource` that also selects by ``target_key`` (the intent's domain id,
+    PRP-54); ``WriteTargetRegistry`` is one. Only consulted when a key is given."""
+
+    def supports(self, name: str, action: str, *, target_key: str | None = None) -> bool: ...
+
+    def get(self, name: str, *, target_key: str | None = None) -> T: ...
 
 
 def connector_name_for(action_kind: str, target_kind: str | None = None) -> str | None:
@@ -138,9 +149,10 @@ def _resolve_named[T](
     if target_key is None:
         # Call shape unchanged for sources that predate the key (PRP-54).
         return source.get(name) if source.supports(name, action_kind) else None
-    if not source.supports(name, action_kind, target_key=target_key):
+    keyed = cast(KeyedWriteTargetSource[T], source)
+    if not keyed.supports(name, action_kind, target_key=target_key):
         return None
-    return source.get(name, target_key=target_key)
+    return keyed.get(name, target_key=target_key)
 
 
 def resolve_write_targets[T](

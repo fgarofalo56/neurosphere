@@ -6,8 +6,8 @@ import logging
 from typing import Any
 
 import pytest
-from action_executor.apim_support import ARM_ID, GW, registration
-from action_executor.executor_support import CUSTOMER, DOMAIN, FakeCredential
+from action_executor.apim_support import ARM_ID, GW, registration  # pyright: ignore[reportMissingImports]
+from action_executor.executor_support import CUSTOMER, DOMAIN, FakeCredential  # pyright: ignore[reportMissingImports]
 from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_connector_apim_gateway import ApimGatewayConnector, ApplyRecord, InMemoryApim
 from neurosphere_core.clients import ClientLifetime

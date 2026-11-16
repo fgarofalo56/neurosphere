@@ -20,7 +20,7 @@ from neurosphere_core.gateway import (
     InMemoryGatewayStore,
 )
 from neurosphere_core.gateway.mode import evaluate_permissions
-from runtime_planes.planes_helpers import (
+from runtime_planes.planes_helpers import (  # pyright: ignore[reportMissingImports]
     CUSTOMER,
     FINANCE,
     OPERATIONS,
