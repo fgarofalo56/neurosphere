@@ -261,14 +261,14 @@ Keyed stale-agent digest; moving the search `cache_key` helper (PRP-60); connect
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-43-catalog-hardening | quarantine collision + Cosmos sink + threshold warning done, tests green |
-| 2 | done | prp-43-catalog-hardening | container spec, regenerated cosmos-containers.json (Bicep reads it), worker setting `CatalogProjectionSettings.quarantine_warn`, emulator test written (not run). `build_projections` now passes `CosmosCandidateQuarantine` and `quarantine_warn` (PRP-42 shipped). Emulator test not run. |
-| 3 | done | prp-43-catalog-hardening | bounded concurrency 16, scope-filtered fan-out, `catalog/auditor.py`; rebased on PRP-18 main |
-| 4 | done | prp-43-catalog-hardening | provenance on PresentedEdge, Cosmos open marker, emulator tests written (not run: no compose) |
-| 5 | done | prp-43-catalog-hardening | per-route pre-parse Content-Length guard via route class, pinned tests |
-| 6 | done | prp-43-catalog-hardening | list + resolve routes, `ReviewQueueGuard` (`review_queue_guard`), audit, tests |
-| 7 | done | prp-43-catalog-hardening | dialog `controls`/`reasonMode`, ReviewQueuePage, nav, mock, vitest, e2e + a11y green |
-| 8 | done | prp-43-catalog-hardening | runbook + mkdocs nav + Tier-2 lines done; Tier-3 regeneration, factories wiring and close-out done at merge |
+| 1 | merged | prp-43-catalog-hardening | quarantine collision + Cosmos sink + threshold warning done, tests green |
+| 2 | merged | prp-43-catalog-hardening | container spec, regenerated cosmos-containers.json (Bicep reads it), worker setting `CatalogProjectionSettings.quarantine_warn`, emulator test written (not run). `build_projections` now passes `CosmosCandidateQuarantine` and `quarantine_warn` (PRP-42 shipped). Emulator test not run. |
+| 3 | merged | prp-43-catalog-hardening | bounded concurrency 16, scope-filtered fan-out, `catalog/auditor.py`; rebased on PRP-18 main |
+| 4 | merged | prp-43-catalog-hardening | provenance on PresentedEdge, Cosmos open marker, emulator tests written (not run: no compose) |
+| 5 | merged | prp-43-catalog-hardening | per-route pre-parse Content-Length guard via route class, pinned tests |
+| 6 | merged | prp-43-catalog-hardening | list + resolve routes, `ReviewQueueGuard` (`review_queue_guard`), audit, tests |
+| 7 | merged | prp-43-catalog-hardening | dialog `controls`/`reasonMode`, ReviewQueuePage, nav, mock, vitest, e2e + a11y green |
+| 8 | merged | prp-43-catalog-hardening | runbook + mkdocs nav + Tier-2 lines done; Tier-3 regeneration, factories wiring and close-out done at merge |
 
 ## Completion note (filled at ship)
 - Date, PR, merge commit: 2026-11-15, PR #292, merge commit set by the squash merge.
