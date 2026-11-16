@@ -228,8 +228,8 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 | 3 | verifying | prp-55-real-deploy-apply | core ARM allowlist table; worker BearerDeployHttp + HttpArmProvisioner; MockTransport tests green |
 | 4 | verifying | prp-55-real-deploy-apply | DeployWriteSettings.register_container; actions role builds durable approvals + Cosmos register + ARM/Fabric (deploy_wiring, lazy import); API gets plan-only provisioners |
 | 5 | verifying | prp-55-real-deploy-apply | connector customer binding (customer_mismatch), allowlist pre-check, tagged create; verify mismatch -> executor rollback path -> failed (no delete) |
-| 6 | todo | | |
-| 7 | todo | | |
+| 6 | verifying | prp-55-real-deploy-apply | unmarked in-memory e2e (API approve -> worker executor -> fake ARM -> verify -> register) green; integration twin written, collected, NOT run (no compose stack in this session); live runner refuses without NS_LIVE_APPROVED=1 |
+| 7 | todo | | serial-after PRP-58 (not shipped on origin/main at 2026-11-16): done at merge time |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)

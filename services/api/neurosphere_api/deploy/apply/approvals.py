@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Final
 
-from neurosphere_contracts.deployment.v1.deploy_action_plan import ResourceSpec
+from neurosphere_contracts.deployment.v1.deploy_action_plan import DeployActionPlan, ResourceSpec
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.deploy.approvals import (
     InMemoryPlanApprovalRepository,
@@ -179,6 +179,17 @@ class ApprovalRecord:
     approver: str
     approved_at: datetime
     expires_at: datetime
+
+    def action_plan(self) -> DeployActionPlan:
+        """The executable snapshot the apply intent carries (its diff is built from this)."""
+        return DeployActionPlan(
+            schema_version="1.0.0",
+            plan_id=self.approved.plan_id,
+            plan_hash=self.approved.plan_hash,
+            deployment_id=self.approved.deployment_id,
+            cloud=self.cloud,  # type: ignore[arg-type]
+            resources=list(self.resources),
+        )
 
     @classmethod
     def of(cls, record: PlanApprovalRecord) -> ApprovalRecord:
