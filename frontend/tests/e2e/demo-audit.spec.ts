@@ -55,6 +55,12 @@ const POPULATED_DIRECT_URL: Readonly<Record<string, string>> = {
  * data, so this list cannot rot silently.
  */
 const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
+  // PRP-53: the admin console needs the deployment-admin scope (audit search: audit.read).
+  "/admin/audit",
+  "/admin/domains",
+  "/admin/identity",
+  "/admin/identity/principal",
+  "/admin/system",
   "/audit",
   "/mcp-admin",
   "/mcp-admin/server",
@@ -66,6 +72,7 @@ const EXPECTED_FORBIDDEN: ReadonlySet<string> = new Set([
 
 /** The detail page needs an id in the URL; the denied list page has no link to follow. */
 const FORBIDDEN_DIRECT_URL: Readonly<Record<string, string>> = {
+  "/admin/identity/principal": "/admin/identity/principal?principal_id=p-demo",
   "/mcp-admin/server": "/mcp-admin/server?server_id=srv-demo",
 };
 
