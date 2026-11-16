@@ -7,7 +7,6 @@ see ZERO calls: the API only drafts, and the executor worker applies. Nothing li
 
 from __future__ import annotations
 
-import logging
 import sys
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -491,17 +490,21 @@ async def test_preview_sees_only_the_callers_rows_of_a_shared_deployment_id(setu
     assert "theirs" not in response.text
 
 
-def test_approval_store_logs_eviction_without_secrets(
-    setup: Setup, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
-) -> None:
-    from neurosphere_api.deploy.apply import approvals as approvals_module
+async def test_approvals_are_never_evicted_and_survive_a_new_store_instance(setup: Setup) -> None:
+    """PRP-55: the store delegates to a durable repository; a second store instance on the same
+    repository (another process on the same container) reads the approval; nothing is evicted."""
+    ids = [f"plan-0123456789abcdef0123456789ab{i:04x}" for i in range(3)]
+    for plan_id in ids:
+        assert setup.approve(_plan(plan_id=plan_id)).status_code == 201
+    other_process = PlanApprovalStore(setup.approvals.repository, clock=lambda: NOW)
+    for plan_id in ids:
+        found = await other_process.get(CUSTOMER, plan_id)
+        assert found is not None and found.plan_id == plan_id
+    assert await other_process.get("fabrikam", ids[0]) is None
 
-    monkeypatch.setattr(approvals_module, "_MAX_ENTRIES", 1)
-    first, second = "plan-0123456789abcdef0123456789abcde1", "plan-0123456789abcdef0123456789abcde2"
-    with caplog.at_level(logging.WARNING, logger="neurosphere_api.deploy.apply"):
-        assert setup.approve(_plan(plan_id=first)).status_code == 201
-        assert setup.approve(_plan(plan_id=second)).status_code == 201
-    evictions = [r for r in caplog.records if getattr(r, "event", "") == "deploy.approval_evicted"]
-    assert len(evictions) == 1
-    assert evictions[0].plan_id == first  # type: ignore[attr-defined]  # pyright: ignore
-    assert SUB not in caplog.text and CUSTOMER not in caplog.text
+
+def test_reapproving_the_same_plan_is_idempotent(setup: Setup) -> None:
+    first = setup.approve()
+    again = setup.approve()
+    assert first.status_code == again.status_code == 201
+    assert first.json()["expires_at"] == again.json()["expires_at"]

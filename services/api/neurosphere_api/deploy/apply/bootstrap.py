@@ -10,11 +10,11 @@ register: the approval store and a Cosmos register store are built and attached 
 intent resolves a connector. Enabled but incomplete (no register container, no Cosmos account
 outside local, no customer binding) is logged by reason and leaves everything unconfigured.
 
-The approval store is per process and in memory, so the executor worker (a separate process)
-cannot read it: the worker skips the deploy connector (``deploy_sources_unconfigured``) until a
-durable ``PlanApprovals`` exists. That is fail closed: an intent approved here does not execute
-elsewhere. No Fabric/ARM provisioner is wired, so an apply that needs one stays
-``capability_unavailable``; uninstall is dry-run only. No secret is read.
+Approvals are durable (PRP-55): production stores them in the Cosmos ``deploy_plan_approvals``
+container (partition ``/customer_id``) that the executor worker reads too, so an intent approved
+here executes in the worker process. The API stays on the dry-run path: the connector it
+registers holds no ARM or Fabric provisioner (an apply drafted here is executed by the worker,
+which wires them behind the same opt-in); uninstall is dry-run only. No secret is read.
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ from fastapi import FastAPI
 from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_core.clients import ClientLifetime, create_cosmos_client
 from neurosphere_core.cloud import Settings
+from neurosphere_core.deploy.approvals import InMemoryPlanApprovalRepository, PlanApprovalRepository
+from neurosphere_core.deploy.approvals.cosmos_store import CosmosPlanApprovalRepository
 from neurosphere_core.deploy.register import RegisterStore
 from neurosphere_core.deploy.register.cosmos_store import CosmosRegisterStore
 from neurosphere_workers.runtime.factories import (
@@ -101,11 +103,14 @@ def configure_apply_from_settings(
     apply_settings: DeployApplySettings | None = None,
     *,
     register: RegisterStore | None = None,
+    approvals: PlanApprovalRepository | None = None,
 ) -> bool:
     """Wire apply/preview when ``NS_DEPLOY_APPLY_ENABLED`` is set. True when configured.
 
-    ``register`` is a test seam; production builds a ``CosmosRegisterStore`` from
-    ``NS_DEPLOY_APPLY_REGISTER_CONTAINER`` and the ``NS_STORE_*`` database.
+    ``register`` and ``approvals`` are test seams; production builds a ``CosmosRegisterStore``
+    from ``NS_DEPLOY_APPLY_REGISTER_CONTAINER`` and a ``CosmosPlanApprovalRepository`` on the
+    ``deploy_plan_approvals`` container, both in the ``NS_STORE_*`` database. A ``register``
+    seam without an ``approvals`` seam uses a per-process repository.
     """
     conf = apply_settings or DeployApplySettings()
     if not conf.enabled:
@@ -132,9 +137,13 @@ def configure_apply_from_settings(
         register = CosmosRegisterStore.from_client(
             client, database=database, container=conf.register_container
         )
-    approvals = PlanApprovalStore(ttl_seconds=conf.approval_ttl_seconds)
-    configure_apply(app, approvals=approvals, register=register)
-    _register_on_startup(app, settings, approvals, register)
+        if approvals is None:
+            approvals = CosmosPlanApprovalRepository.from_client(client, database=database)
+    store = PlanApprovalStore(
+        approvals or InMemoryPlanApprovalRepository(), ttl_seconds=conf.approval_ttl_seconds
+    )
+    configure_apply(app, approvals=store, register=register)
+    _register_on_startup(app, settings, store, register)
     if lifetime is not None:
         app.state.deploy_apply_lifetime = lifetime
         _close_on_shutdown(app, lifetime)

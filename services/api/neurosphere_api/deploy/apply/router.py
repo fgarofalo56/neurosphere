@@ -167,7 +167,7 @@ def build_router() -> APIRouter:
         auditor = _auditor(request, scope)  # fails closed when audit is not configured
         store = _approvals(request)
         try:
-            record = store.approve(scope, body.plan, body.target)
+            record = await store.approve(scope, body.plan, body.target)
         except NeuroSphereError as exc:
             await auditor.refused_for(
                 OP_APPROVE, exc, kind="plan", ident=body.plan.plan_id, entity=ENTITY_PLAN
@@ -207,7 +207,7 @@ def build_router() -> APIRouter:
     ) -> ApplyView:
         auditor = _auditor(request, scope)
         try:
-            record = _approvals(request).record(scope, body.plan_id)
+            record = await _approvals(request).record(scope, body.plan_id)
             if body.plan_hash != record.approved.plan_hash:
                 raise InvalidSchemaError(
                     "the plan changed since it was approved", reason="plan_hash_mismatch"

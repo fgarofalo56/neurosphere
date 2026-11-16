@@ -18,6 +18,7 @@ from neurosphere_api.deploy.apply.bootstrap import (
 )
 from neurosphere_connector.write import WriteTargetRegistry
 from neurosphere_core.cloud import CloudName, Settings
+from neurosphere_core.deploy.approvals import InMemoryPlanApprovalRepository
 from neurosphere_core.deploy.register import CustomerScopedRegister, InMemoryRegisterStore
 
 LOCAL = Settings(env="local", cloud=CloudName.COMMERCIAL)
@@ -123,6 +124,30 @@ def test_startup_without_an_action_plane_registers_nothing_and_does_not_crash(
         with TestClient(app):
             pass
     assert "action plane unavailable" in caplog.text
+
+
+def test_enabled_uses_the_approvals_repository_seam() -> None:
+    """PRP-55 item 2: approvals land in the injected (in production: Cosmos) repository, which
+    is what the worker reads; a second store on that repository sees them."""
+    shared = InMemoryPlanApprovalRepository()
+    app = create_app(LOCAL)
+    assert configure_apply_from_settings(
+        app,
+        LOCAL,
+        DeployApplySettings(enabled=True),
+        register=InMemoryRegisterStore(),
+        approvals=shared,
+    )
+    store = app.state.deploy_plan_approvals
+    assert isinstance(store, PlanApprovalStore) and store.repository is shared
+
+
+def test_a_register_seam_alone_keeps_a_per_process_repository() -> None:
+    app = create_app(LOCAL)
+    assert configure_apply_from_settings(
+        app, LOCAL, DeployApplySettings(enabled=True), register=InMemoryRegisterStore()
+    )
+    assert isinstance(app.state.deploy_plan_approvals.repository, InMemoryPlanApprovalRepository)
 
 
 def test_no_secret_bearing_setting_exists() -> None:

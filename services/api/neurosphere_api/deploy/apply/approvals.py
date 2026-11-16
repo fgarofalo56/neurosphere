@@ -1,4 +1,4 @@
-"""Plan approval: the server-side record an apply is checked against (PRP-08 item 12).
+"""Plan approval: the server-side record an apply is checked against (PRP-08 item 12, PRP-55).
 
 A plan is approved once by a ``config.manage`` holder who supplies the plan and its target. The
 server hashes exactly what it was given (:func:`plan_hash`), derives the executable resource list
@@ -6,15 +6,15 @@ server hashes exactly what it was given (:func:`plan_hash`), derives the executa
 whose hash differs, and the executor's connector re-checks the same record at execution time
 through :class:`~neurosphere_workers.actions.deploy.PlanApprovals` (``get``).
 
-In-memory and per process, like the scan store: wire a durable implementation of
-``PlanApprovals`` for a worker running in another process (open item recorded in the PRP). The
-planner does not sign or persist plans, so the approval attests to the approver's input, not to
-planner provenance.
+The records live in a :class:`~neurosphere_core.deploy.approvals.PlanApprovalRepository`
+(PRP-55): production uses the Cosmos ``deploy_plan_approvals`` container, which the executor
+worker reads too, so an approval made here is honoured by a worker in another process. Approve
+is create-only per ``(customer, plan_id)``; nothing is evicted. The planner does not sign or
+persist plans, so the approval attests to the approver's input, not to planner provenance.
 """
 
 from __future__ import annotations
 
-import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -23,6 +23,12 @@ from typing import Final
 
 from neurosphere_contracts.deployment.v1.deploy_action_plan import ResourceSpec
 from neurosphere_core.audit.canonical import sha256_digest
+from neurosphere_core.deploy.approvals import (
+    InMemoryPlanApprovalRepository,
+    PlanApprovalRecord,
+    PlanApprovalRepository,
+)
+from neurosphere_core.deploy.arm import arm_resource_name
 from neurosphere_core.errors import ForbiddenError, InvalidSchemaError
 from neurosphere_core.scope import IdentityScope
 from neurosphere_workers.actions.deploy import ApprovedPlan, resources_digest
@@ -39,8 +45,6 @@ __all__ = [
 ]
 
 DEFAULT_APPROVAL_TTL_SECONDS: Final = 24 * 3600
-_MAX_ENTRIES: Final = 1000
-_log = logging.getLogger("neurosphere_api.deploy.apply")
 _DEPLOYMENT_ID: Final = re.compile(DEPLOYMENT_ID_PATTERN)
 _FABRIC_SERVICE: Final = "analytics_workspace"
 _NAME_LIMIT: Final = 63
@@ -64,7 +68,8 @@ def derive_resources(plan: DeploymentPlan, target: ApplyTarget) -> list[Resource
 
     ``needs_consent`` items, failed checks on a create, a reuse without its id and consent, and a
     target region outside the plan profile all refuse the whole plan. ``skip``/``disabled`` items
-    and plan-only ``feature`` items produce nothing.
+    and plan-only ``feature`` items produce nothing. ARM resource names follow the provisioner's
+    per-service name rule (``neurosphere_core.deploy.arm.arm_resource_name``).
     """
     if not _DEPLOYMENT_ID.fullmatch(plan.deployment_id):
         raise InvalidSchemaError("invalid deployment id", reason="invalid_deployment_id")
@@ -130,7 +135,7 @@ def derive_resources(plan: DeploymentPlan, target: ApplyTarget) -> list[Resource
                     item.service,
                     "arm_resource",
                     "create",
-                    _bounded(f"{item.service}-{plan.deployment_id}"),
+                    arm_resource_name(item.service, plan.deployment_id),
                     target,
                 )
             )
@@ -175,75 +180,77 @@ class ApprovalRecord:
     approved_at: datetime
     expires_at: datetime
 
+    @classmethod
+    def of(cls, record: PlanApprovalRecord) -> ApprovalRecord:
+        return cls(
+            approved=_approved(record),
+            cloud=record.cloud,
+            resources=record.resources,
+            approver=record.approver,
+            approved_at=record.approved_at,
+            expires_at=record.expires_at,
+        )
+
+
+def _approved(record: PlanApprovalRecord) -> ApprovedPlan:
+    return ApprovedPlan(
+        customer_id=record.customer_id,
+        plan_id=record.plan_id,
+        plan_hash=record.plan_hash,
+        resources_digest=record.resources_digest,
+        deployment_id=record.deployment_id,
+    )
+
 
 class PlanApprovalStore:
-    """In-memory approvals keyed by ``(customer, plan_id)``; implements ``PlanApprovals``."""
+    """Approvals keyed by ``(customer, plan_id)`` over a durable repository; implements
+    ``PlanApprovals``. Without a repository it is per process (tests and local seams only)."""
 
     def __init__(
         self,
+        repository: PlanApprovalRepository | None = None,
+        *,
         ttl_seconds: float = DEFAULT_APPROVAL_TTL_SECONDS,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._ttl = timedelta(seconds=ttl_seconds)
         self._clock = clock
-        self._records: dict[tuple[str, str], ApprovalRecord] = {}
+        self._repository = repository or InMemoryPlanApprovalRepository(clock)
 
-    def approve(
+    @property
+    def repository(self) -> PlanApprovalRepository:
+        return self._repository
+
+    async def approve(
         self, scope: IdentityScope, plan: DeploymentPlan, target: ApplyTarget
     ) -> ApprovalRecord:
-        """Approve exactly ``plan``; a different plan under the same id is refused."""
+        """Approve exactly ``plan``; a different plan under the same live id is refused
+        (``plan_id_conflict``); approving the same plan again returns the live approval."""
         if plan.profile.cloud != scope.cloud:
             raise ForbiddenError("the plan is for another cloud", reason="cloud_mismatch")
         resources = tuple(derive_resources(plan, target))
         now = self._clock()
-        key = (scope.customer_id, plan.plan_id)
-        digest = plan_hash(plan)
-        existing = self._records.get(key)
-        if existing is not None and existing.expires_at > now:
-            if existing.approved.plan_hash != digest:
-                raise InvalidSchemaError(
-                    "another plan was already approved under this plan id",
-                    reason="plan_id_conflict",
-                )
-        while len(self._records) >= _MAX_ENTRIES:
-            evicted = next(iter(self._records))
-            del self._records[evicted]
-            # An evicted approval makes its apply fail closed (plan_not_approved): say so. The
-            # plan id is an opaque token, never a secret; no customer id is logged.
-            _log.warning(
-                "plan approval evicted (store at capacity)",
-                extra={
-                    "event": "deploy.approval_evicted",
-                    "plan_id": evicted[1],
-                    "capacity": _MAX_ENTRIES,
-                },
-            )
-        record = ApprovalRecord(
-            approved=ApprovedPlan(
-                customer_id=scope.customer_id,
-                plan_id=plan.plan_id,
-                plan_hash=digest,
-                resources_digest=resources_digest(resources),
-                deployment_id=plan.deployment_id,
-            ),
+        record = PlanApprovalRecord(
+            customer_id=scope.customer_id,
+            plan_id=plan.plan_id,
+            plan_hash=plan_hash(plan),
+            resources_digest=resources_digest(resources),
+            deployment_id=plan.deployment_id,
             cloud=plan.profile.cloud,
             resources=resources,
             approver=scope.to_contract().principal.principal_pseudonym,
             approved_at=now,
             expires_at=now + self._ttl,
         )
-        self._records[key] = record
-        return record
+        return ApprovalRecord.of(await self._repository.create(record))
 
-    def record(self, scope: IdentityScope, plan_id: str) -> ApprovalRecord:
+    async def record(self, scope: IdentityScope, plan_id: str) -> ApprovalRecord:
         """The live approval for the caller's customer, or ``plan_not_approved`` (fail closed)."""
-        found = self._records.get((scope.customer_id, plan_id))
-        if found is None or found.expires_at <= self._clock():
+        found = await self._repository.get(scope.customer_id, plan_id)
+        if found is None:
             raise ForbiddenError("the plan is not approved", reason="plan_not_approved")
-        return found
+        return ApprovalRecord.of(found)
 
     async def get(self, customer_id: str, plan_id: str) -> ApprovedPlan | None:
-        found = self._records.get((customer_id, plan_id))
-        if found is None or found.expires_at <= self._clock():
-            return None
-        return found.approved
+        found = await self._repository.get(customer_id, plan_id)
+        return None if found is None else _approved(found)
