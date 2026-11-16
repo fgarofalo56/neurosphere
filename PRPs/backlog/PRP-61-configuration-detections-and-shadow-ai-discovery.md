@@ -226,7 +226,7 @@ Content or prompt inspection; PII detection in data; policy XML parsing; auto-re
 |---|---|---|---|
 | 1 | merged | prp-61-detections | schema kinds + if/then, examples, Kind literal, UI labels |
 | 2 | merged | prp-61-detections | core rules, mapper, fakes, capability gate |
-| 3 | todo | | |
+| 3 | merged | prp-61-detections | ARM, Resource Graph, gateway, catalog readers |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
