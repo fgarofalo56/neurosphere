@@ -65,6 +65,7 @@ from neurosphere_contracts.deployment.v1.deploy_action_plan import DeployActionP
 from neurosphere_core.audit.canonical import sha256_digest
 from neurosphere_core.capabilities import CapabilityMatrix, DeploymentProfile, validate_profile
 from neurosphere_core.cloud import CloudName
+from neurosphere_core.deploy.arm import creation_tags
 from neurosphere_core.deploy.fabric import FabricEndpoints, FabricHttp, FabricProvisioner
 from neurosphere_core.deploy.fabric.provisioner import ARM_API_VERSION
 from neurosphere_core.deploy.register import (
@@ -94,6 +95,7 @@ __all__ = [
     "DEPLOY_CONNECTOR",
     "PLAN_ENTITY",
     "UNINSTALL_KIND",
+    "AllowlistArmProvisioner",
     "ApprovedPlan",
     "ArmProvisioner",
     "DeployConnector",
@@ -136,6 +138,7 @@ PLAN_NOT_APPROVED: Final = "plan_not_approved"
 PLAN_HASH_MISMATCH: Final = "plan_hash_mismatch"
 RESOURCES_NOT_APPROVED: Final = "resources_not_approved"
 CLOUD_MISMATCH: Final = "cloud_mismatch"
+CUSTOMER_MISMATCH: Final = "customer_mismatch"
 EXISTS_NOT_OWNED: Final = "resource_exists_not_owned"
 UNINSTALL_DRY_RUN_ONLY: Final = "uninstall_dry_run_only"
 ROLLBACK_NOT_SUPPORTED: Final = "rollback_not_supported"
@@ -180,6 +183,23 @@ class ArmProvisioner(Protocol):
     """Creates a non-Fabric resource through ARM (idempotent: reports ``created=False``)."""
 
     async def ensure(self, spec: ResourceSpec) -> ProvisionedResource: ...
+
+    async def exists(self, spec: ResourceSpec) -> bool: ...
+
+
+@runtime_checkable
+class AllowlistArmProvisioner(Protocol):
+    """An :class:`ArmProvisioner` that declares which services it creates and stamps tags.
+
+    When the injected provisioner implements this, an item it does not support is refused
+    ``capability_unavailable`` before ANY network call, and created resources carry the
+    deployment and plan tags (``neurosphere_core.deploy.arm.creation_tags``)."""
+
+    def supports(self, spec: ResourceSpec) -> bool: ...
+
+    async def ensure_tagged(
+        self, spec: ResourceSpec, tags: Mapping[str, str]
+    ) -> ProvisionedResource: ...
 
     async def exists(self, spec: ResourceSpec) -> bool: ...
 
@@ -419,10 +439,17 @@ class _Checked:
 class DeployConnector:
     """Write connector for ``deploy_plan_apply`` and the dry-run-only ``deploy_uninstall``.
 
-    ``cloud`` binds the connector to one cloud. ``fabric``/``observer`` are required to apply
-    Fabric items and ``arm`` to apply any other service; a missing one makes such an item
-    ``capability_unavailable`` (fail closed). ``inventory`` is the read-only live listing used to
-    verify resource groups in an uninstall preview. There is deliberately no deleter.
+    ``cloud`` binds the connector to one cloud and ``customer_id`` (when given) to one customer:
+    a target of another customer is refused ``customer_mismatch`` before any read or call.
+    ``fabric``/``observer`` are required to apply Fabric items and ``arm`` to apply any other
+    service; a missing one, or an ``arm`` that does not support the service
+    (:class:`AllowlistArmProvisioner`), makes such an item ``capability_unavailable`` (fail
+    closed). ``inventory`` is the read-only live listing used to verify resource groups in an
+    uninstall preview. There is deliberately no deleter.
+
+    Verify-by-change: ``verify`` reads every created resource back (ARM GET / Fabric observer);
+    one that is missing is a verify mismatch, so the executor runs its rollback path, which here
+    refuses (``rollback_not_supported``) and leaves the intent ``failed`` for operator attention.
     """
 
     def __init__(
@@ -430,6 +457,7 @@ class DeployConnector:
         *,
         cloud: CloudName,
         approvals: PlanApprovals,
+        customer_id: str | None = None,
         register: RegisterStore,
         fabric: FabricProvisioner | None = None,
         observer: FabricObserver | None = None,
@@ -438,6 +466,7 @@ class DeployConnector:
         matrix: CapabilityMatrix | None = None,
     ) -> None:
         self._cloud = cloud
+        self._customer_id = customer_id
         self._approvals = approvals
         self._register = register
         self._fabric = fabric
@@ -493,6 +522,7 @@ class DeployConnector:
 
     async def verify(self, request: WriteRequest) -> VerifyResult:
         if request.target.entity_type == DEPLOYMENT_ENTITY:
+            self._check_customer(_split_target(request.target, DEPLOYMENT_ENTITY)[1])
             rows = await self._register.list_rows(self._deployment(request))
             # What is still registered: a ``remove`` operation only matches once the row is gone,
             # so an uninstall intent can never read back as applied while its rows remain.
@@ -528,6 +558,7 @@ class DeployConnector:
         parsed = _parse_apply(request.proposed_diff)
         if cloud != self._cloud.value:
             raise ForbiddenError("the plan is for another cloud", reason=CLOUD_MISMATCH)
+        self._check_customer(customer_id)
         if request.target_version != parsed.plan_hash:
             raise ForbiddenError("the plan hash changed", reason=PLAN_HASH_MISMATCH)
         if resources_digest(parsed.resources) != parsed.digest:
@@ -546,6 +577,13 @@ class DeployConnector:
         self._check_capabilities(parsed.resources)
         return _Checked(customer_id, plan_id, parsed)
 
+    def _check_customer(self, customer_id: str) -> None:
+        if self._customer_id is not None and customer_id != self._customer_id:
+            raise ForbiddenError(
+                "the target belongs to another customer than this connector's",
+                reason=CUSTOMER_MISMATCH,
+            )
+
     def _check_capabilities(self, resources: Sequence[ResourceSpec]) -> None:
         """Refuse before any network call when one item cannot be provisioned here."""
         for spec in resources:
@@ -559,6 +597,8 @@ class DeployConnector:
             if spec.kind == "arm_resource":
                 if self._arm is None:
                     raise _unavailable("no ARM provisioner is configured for this service")
+                if isinstance(self._arm, AllowlistArmProvisioner) and not self._arm.supports(spec):
+                    raise _unavailable(f"the {spec.service} service is not provisioned here")
                 continue
             reason = fabric_unavailable_reason(self._cloud, spec.region, self._matrix)
             if reason is not None:
@@ -602,7 +642,11 @@ class DeployConnector:
             # uninstall leaves it untouched (the safe direction).
         else:
             assert self._arm is not None
-            provisioned = await self._arm.ensure(spec)
+            if isinstance(self._arm, AllowlistArmProvisioner):
+                tags = creation_tags(checked.parsed.deployment_id, checked.plan_id)
+                provisioned = await self._arm.ensure_tagged(spec, tags)
+            else:
+                provisioned = await self._arm.ensure(spec)
             if not provisioned.created:
                 raise ForbiddenError(
                     "the resource already exists and was not created by this plan",
@@ -649,9 +693,10 @@ class DeployConnector:
         return _split_target(request.target, DEPLOYMENT_ENTITY)[2]
 
     async def _uninstall_dry_run(self, request: WriteRequest) -> DryRunResult:
-        cloud, _customer, deployment_id = _split_target(request.target, DEPLOYMENT_ENTITY)
+        cloud, customer_id, deployment_id = _split_target(request.target, DEPLOYMENT_ENTITY)
         if cloud != self._cloud.value:
             raise ForbiddenError("the deployment is in another cloud", reason=CLOUD_MISMATCH)
+        self._check_customer(customer_id)
         rows = await self._register.list_rows(deployment_id)
         digest = register_digest(rows)
         if request.target_version != digest:

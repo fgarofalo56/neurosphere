@@ -227,7 +227,7 @@ New container `deploy_plan_approvals`: created by the emulator bootstrap locally
 | 2 | verifying | prp-55-real-deploy-apply | PlanApprovalStore over core repository (async), eviction removed, bootstrap builds Cosmos repo; ARM names from core table |
 | 3 | verifying | prp-55-real-deploy-apply | core ARM allowlist table; worker BearerDeployHttp + HttpArmProvisioner; MockTransport tests green |
 | 4 | todo | | |
-| 5 | todo | | |
+| 5 | verifying | prp-55-real-deploy-apply | connector customer binding (customer_mismatch), allowlist pre-check, tagged create; verify mismatch -> executor rollback path -> failed (no delete) |
 | 6 | todo | | |
 | 7 | todo | | |
 | 8 | todo | | |
