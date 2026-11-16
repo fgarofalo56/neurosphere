@@ -16,6 +16,7 @@ import { evaluationsNavItems } from "../features/evaluations/routes";
 import { executionControlNavItems } from "../features/execution-control/routes";
 import { federationNavItems } from "../features/federation/routes";
 import { finopsNavItems } from "../features/finops/routes";
+import { complianceNavItems } from "../features/compliance/routes";
 import { gatewaysNavItems } from "../features/gateways/routes";
 import { MAP_PATH } from "../features/map/paths";
 import { MAP_TABLE_PATH } from "../features/map-table/paths";
@@ -75,6 +76,7 @@ export function buildAppNavItems(): readonly NavItem[] {
       ...catalogGovernanceNavItems(),
       ...reviewQueueNavItems(),
       ...auditNavItems(),
+      ...complianceNavItems(),
       ...deployNavItems(),
       ...executionControlNavItems(),
       ...adminCoreNavItems(),

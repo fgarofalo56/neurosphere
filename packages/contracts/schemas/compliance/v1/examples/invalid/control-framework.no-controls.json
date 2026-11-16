@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "framework_id": "nist_ai_rmf",
+  "title": "NIST AI Risk Management Framework",
+  "framework_version": "1.0",
+  "source_url": "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/",
+  "source_retrieved": "2026-11-16",
+  "controls": []
+}

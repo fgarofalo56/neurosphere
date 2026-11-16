@@ -208,6 +208,20 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     persona: "auditor",
   },
   {
+    pattern: "/compliance",
+    name: "compliance evidence",
+    url: `/compliance?compliance_domain=${encodeURIComponent(AUDIT_DOMAIN_FINANCE)}&framework=nist_ai_rmf`,
+    ready: "[data-testid='bundle-body']",
+    persona: "auditor",
+  },
+  {
+    pattern: "/compliance/control",
+    name: "compliance control",
+    url: `/compliance/control?compliance_domain=${encodeURIComponent(AUDIT_DOMAIN_FINANCE)}&framework=nist_ai_rmf&control=nist-ai-rmf.govern-2`,
+    ready: "[data-testid='control-detail']",
+    persona: "auditor",
+  },
+  {
     pattern: "/finops/forecast",
     name: "finops forecast",
     url: `/finops/forecast?${q()}`,

@@ -8,6 +8,7 @@ import { handle as evaluations } from "./evaluations.ts";
 import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
+import { handle as compliance } from "./compliance.ts";
 
 export type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
 
@@ -25,6 +26,7 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   deploy,
   evaluations,
   executionControl,
+  compliance,
   adminCore,
 ];
 

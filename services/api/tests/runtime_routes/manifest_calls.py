@@ -259,6 +259,16 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         ApiCall("/api/v1/audit/domains"),
         ApiCall("/api/v1/audit/domains/{domain}/records", q(page_size=50)),
     ),
+    "/compliance": (
+        *_SHELL,
+        ApiCall("/api/v1/audit/domains"),
+        ApiCall("/api/v1/compliance/frameworks"),
+        ApiCall(
+            "/api/v1/compliance/domains/{domain}/bundle",
+            q(framework_id="hipaa_technical_safeguards"),
+        ),
+    ),
+    "/compliance/control": _SHELL,
     "/catalog": (
         *_SHELL,
         ApiCall("/api/v1/catalog/domains/{domain}/entities", q(page_size=50)),

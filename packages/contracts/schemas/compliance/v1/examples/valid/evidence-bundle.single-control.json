@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "framework_id": "nist_ai_rmf",
+  "framework_version": "1.0",
+  "library_version": "1.0.0",
+  "domain_id": "commercial:contoso:catalog:domain:hr",
+  "generated_at": "2026-11-16T12:00:00Z",
+  "window_start": "2026-10-17T00:00:00Z",
+  "window_end": "2026-11-16T00:00:00Z",
+  "controls": [
+    {
+      "control": {
+        "schema_version": "1.0.0",
+        "control_id": "nist-ai-rmf.govern-2",
+        "framework_id": "nist_ai_rmf",
+        "title": "Accountable, trained teams and individuals for AI risk work",
+        "source_url": "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/",
+        "source_retrieved": "2026-11-16",
+        "framework_version": "1.0"
+      },
+      "support_status": "implemented_tested",
+      "evidence_sources": [
+        "catalog_ownership"
+      ],
+      "summary": "evidence_present"
+    }
+  ],
+  "observations": [
+    {
+      "schema_version": "1.0.0",
+      "source_id": "catalog_ownership",
+      "status": "observed",
+      "reason_code": null,
+      "window_start": "2026-10-17T00:00:00Z",
+      "window_end": "2026-11-16T00:00:00Z",
+      "latest_at": "2026-11-10T09:30:00Z",
+      "truncated": false,
+      "measures": [
+        {
+          "name": "owners",
+          "value": 4
+        },
+        {
+          "name": "owners_overdue",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

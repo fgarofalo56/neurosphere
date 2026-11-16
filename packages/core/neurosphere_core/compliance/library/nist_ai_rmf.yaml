@@ -1,0 +1,127 @@
+# NIST AI Risk Management Framework 1.0, Core categories (PRP-56 item 2).
+# Category ids and titles were read from the official AI RMF Core page on source_retrieved;
+# titles are short paraphrases, not copied text. A mapping row says what NeuroSphere can observe
+# for a control. It is not an assessment and never says an estate meets a control.
+framework_id: nist_ai_rmf
+title: NIST AI Risk Management Framework (Core categories)
+framework_version: "1.0"
+source_url: https://airc.nist.gov/airmf-resources/airmf/5-sec-core/
+source_retrieved: "2026-11-16"
+controls:
+  - control_id: nist-ai-rmf.govern-1
+    title: Policies and processes for AI risk are in place and used
+    support_status: implemented_tested
+    evidence_sources: [audit_chain, hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.govern-2
+    title: Accountable, trained teams and individuals for AI risk work
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.govern-3
+    title: Diversity, equity, inclusion and accessibility in AI risk decisions
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.govern-4
+    title: Organizational culture that considers and communicates AI risk
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.govern-5
+    title: Structured engagement with relevant AI actors
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.govern-6
+    title: AI risks from third-party software, data and supply chains
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.map-1
+    title: Understanding the context of the AI system
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.map-2
+    title: Classifying the AI system
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.map-3
+    title: Weighing capabilities, goals and benefits against costs and benchmarks
+    support_status: implemented_tested
+    evidence_sources: [cost_attribution, evaluation_results]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/cost.py
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.map-4
+    title: Mapping risks and benefits across all components, including third-party ones
+    support_status: customer
+    evidence_sources: [catalog_ownership]
+    repo_paths: []
+  - control_id: nist-ai-rmf.map-5
+    title: Characterizing impacts on people, communities, organizations and society
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.measure-1
+    title: Selecting and applying suitable methods and metrics
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.measure-2
+    title: Evaluating AI systems for trustworthy characteristics
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.measure-3
+    title: Tracking identified AI risks over time
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results, audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.measure-4
+    title: Gathering and assessing feedback on measurement effectiveness
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.manage-1
+    title: Prioritizing and responding to assessed AI risks
+    support_status: implemented_tested
+    evidence_sources: [hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: nist-ai-rmf.manage-2
+    title: Maximizing AI benefits and minimizing negative impacts
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.manage-3
+    title: Managing risks and benefits from third-party entities
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: nist-ai-rmf.manage-4
+    title: Documenting and monitoring risk treatment, response and communication plans
+    support_status: implemented_tested
+    evidence_sources: [audit_chain, hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py

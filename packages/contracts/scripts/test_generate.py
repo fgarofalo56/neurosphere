@@ -47,6 +47,7 @@ EXPECTED_AREAS = {
     "audit",
     "catalog",
     "chart",
+    "compliance",
     "connectors",
     "cost",
     "deployment",

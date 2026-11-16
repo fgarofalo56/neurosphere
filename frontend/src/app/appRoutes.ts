@@ -24,6 +24,7 @@ import { evaluationsRoutes } from "../features/evaluations/routes";
 import { executionControlRoutes } from "../features/execution-control/routes";
 import { federationRoutes } from "../features/federation/routes";
 import { finopsRoutes } from "../features/finops/routes";
+import { complianceRoutes } from "../features/compliance/routes";
 import { adminCoreRoutes } from "../features/admin/routes";
 
 /**
@@ -56,5 +57,6 @@ export const appRoutes: readonly RouteObject[] = [
   ...deployRoutes,
   ...evaluationsRoutes,
   ...executionControlRoutes,
+  ...complianceRoutes,
   ...adminCoreRoutes,
 ];

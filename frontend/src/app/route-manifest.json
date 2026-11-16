@@ -18,6 +18,8 @@
     "/catalog/recertifications",
     "/catalog/review-queue",
     "/catalog/stale-agents",
+    "/compliance",
+    "/compliance/control",
     "/dashboards/cost",
     "/dashboards/coverage",
     "/dashboards/latency",
