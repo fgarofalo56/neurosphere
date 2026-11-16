@@ -154,11 +154,11 @@ def test_denied_search_writes_no_allowed_record(world: World) -> None:
 def test_failed_audit_write_is_logged_and_counted_never_blocks(
     world: World, read_log: pytest.LogCaptureFixture
 ) -> None:
-    from neurosphere_core.audit import AuditRepository
+    from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
 
     class Failing(AuditRepository):
-        def __init__(self) -> None:  # no store needed: append always fails
-            pass
+        def __init__(self) -> None:
+            super().__init__(InMemoryAuditStore())
 
         async def append(self, chain_id: str, draft: Any) -> Any:  # type: ignore[override]
             raise ConnectionError("audit store down")
