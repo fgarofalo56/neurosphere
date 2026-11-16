@@ -25358,6 +25358,7 @@
     },
     "/api/v1/me/domains": {
       "get": {
+        "description": "The domains the caller may read (an unexpired role conferring `data.read`, in the caller's own cloud and customer), with display names from the catalog. A caller whose only `data.read` comes from a resource-scoped grant gets **200 with an empty `items` list**: the grant covers one resource, never a domain. A caller holding `data.read` nowhere gets 403.",
         "operationId": "my_domains_api_v1_me_domains_get",
         "responses": {
           "200": {

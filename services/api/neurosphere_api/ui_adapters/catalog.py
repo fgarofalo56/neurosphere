@@ -4,7 +4,7 @@
 | Method | Path                    | Permission                    |
 |--------|-------------------------|-------------------------------|
 | GET    | ``/{domain}/entities``  | ``data.read`` on ``{domain}`` |
-| POST   | ``/{domain}/search``    | ``data.read`` on ``{domain}`` |
+| POST   | ``/{domain}/search``    | ``data.read`` on ``{domain}`` (allowed read audited) |
 | GET    | ``/{domain}/export``    | ``data.export`` on ``{domain}`` |
 
 The PRP-10 collection routes take the domain as a ``domain_id`` query key, which the browser
@@ -31,6 +31,7 @@ from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.authz import domain_from_path, require
+from neurosphere_api.authz.read_audit import ReadAudit, audited_read
 from neurosphere_api.catalog.dependencies import get_graph, get_repository, get_service
 from neurosphere_api.catalog.models import ExportPage
 from neurosphere_api.catalog.router import clamp_budget
@@ -44,6 +45,13 @@ PREFIX: Final = "/api/v1/catalog/domains"
 DomainPath = Annotated[str, Path(min_length=1, max_length=512)]
 ReadScope = Annotated[
     IdentityScope, Depends(require(Permission.DATA_READ, domain_from_path("domain")))
+]
+#: ``data.read`` on ``{domain}`` plus the allowed-read audit (PRP-48 item 4, #69).
+SearchAudit = Annotated[
+    ReadAudit,
+    Depends(
+        audited_read(Permission.DATA_READ, "catalog.domain_search", domain_from_path("domain"))
+    ),
 ]
 ExportScope = Annotated[
     IdentityScope, Depends(require(Permission.DATA_EXPORT, domain_from_path("domain")))
@@ -84,14 +92,17 @@ def build_router() -> APIRouter:
 
     @router.post("/{domain}/search", response_model=GraphResult)
     async def search_domain(
-        domain: DomainPath, body: CatalogDomainSearchRequest, scope: ReadScope, graph: Graph
+        domain: DomainPath, body: CatalogDomainSearchRequest, audit: SearchAudit, graph: Graph
     ) -> GraphResult:
         request = GraphSearchRequest(
             term=body.term,
             filters=EntityFilter(entity_types=body.entity_types, domain_ids=[domain]),
             budget=clamp_budget(body.budget),
         )
-        return await graph.search(scope, request)
+        result = await graph.search(audit.scope, request)
+        # Allowed-read audit (PRP-48 item 4): the domain and result count, never the term.
+        await audit.allowed([domain], len(result.nodes))
+        return result
 
     @router.get("/{domain}/export", response_model=ExportPage)
     async def export_domain(

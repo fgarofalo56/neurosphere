@@ -30,7 +30,13 @@ from neurosphere_core.audit.chain import (
     seal,
     verify_chain,
 )
-from neurosphere_core.audit.chains import domain_audit_chain_id, domain_from_audit_chain
+from neurosphere_core.audit.chains import (
+    RESERVED_CHAIN_NAMES,
+    domain_audit_chain_id,
+    domain_from_audit_chain,
+    is_chain_customer_id,
+    is_reserved_chain_name,
+)
 from neurosphere_core.audit.content_guard import assert_metadata_only, find_sensitive_content
 from neurosphere_core.audit.repository import (
     AuditRepository,
@@ -54,6 +60,7 @@ from neurosphere_core.audit.store import (
 
 __all__ = [
     "ALLOW_DETAIL",
+    "RESERVED_CHAIN_NAMES",
     "AuditContext",
     "AuditDraft",
     "AuditRepository",
@@ -80,6 +87,8 @@ __all__ = [
     "domain_from_audit_chain",
     "find_sensitive_content",
     "is_allow_record",
+    "is_chain_customer_id",
+    "is_reserved_chain_name",
     "make_subject",
     "run_audited_mutation",
     "seal",

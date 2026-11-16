@@ -54,6 +54,30 @@ An adapter returns an `Observation` (or the bare outcome string). An exception o
 return value is recorded as a failed case, never a pass. `arun_corpus` takes an async adapter and
 runs cases sequentially. `CorpusReport.summary()` lists every failing id with its category.
 
+### Where consumer suites live
+
+A consumer suite lives with the system it tests, never in this folder (this folder holds the
+corpus, the harness and the offline stubs only):
+
+| Consumer | Suite |
+|---|---|
+| Copilot (PRP-19) | `services/api/tests/copilot_api/test_orchestrator_injection.py` |
+| MCP server (PRP-22) | `tests/security/mcp/test_injection_via_tool_output.py` |
+
+Under `tests/` the import works as shown above. A suite under `services/api/tests/` must put the
+repo-root `tests/` directory on `sys.path` in its own `conftest.py` (see
+`services/api/tests/copilot_api/conftest.py`) and import `security.injection`; it must not copy
+the corpus. A new consumer adds its row here in the same pull request.
+
+### The stub's `follow_instruction` abstains are vacuous
+
+`reference_adapter` in `stubs.py` answers `abstain` to every `follow_instruction` case (13 of the
+78 cases) without looking at the input: there is no model behind it, so nothing can be followed.
+Those 13 passes prove the harness and the expected outcomes are wired, not that any assistant
+resists the instruction. They mean something only when a consumer runs the corpus through a real
+adapter (the copilot orchestrator or the MCP server) that could have obeyed. Do not count the
+stub's pass rate as evidence of injection resistance.
+
 ## Extension rule
 
 Consumers add cases **by pull request to this folder** and never fork or copy the corpus into

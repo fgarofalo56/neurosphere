@@ -26,12 +26,15 @@ from authz import authz_helpers as helpers  # pyright: ignore[reportMissingImpor
 from neurosphere_api.mcp.admin import McpAdminPlane, configure_mcp_admin
 from neurosphere_contracts.audit.v1.audit_record import AuditRecord
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
-from neurosphere_core.auth.scope import Role
+from neurosphere_core.auth.scope import Role, customer_control_domain_id
 
 ADMIN = "9f4a5b6c-7d8e-4f90-a1b2-c3d4e5f6a7b8"
 STEWARD = helpers.ALICE
 VIEWER = helpers.CAROL
 FINANCE = helpers.FINANCE
+#: Holds config.manage only in FINANCE (an ordinary domain), never deployment-wide.
+DOMAIN_ADMIN = "a1b2c3d4-0000-4000-8000-0000000000aa"
+CONTROL: str = customer_control_domain_id("commercial", helpers.CUSTOMER)
 PREFIX = "/api/v1/mcp/admin"
 SERVER_URL: str = client_fixtures.SERVER_URL
 PUBLIC_V4: str = client_fixtures.PUBLIC_V4
@@ -41,7 +44,14 @@ AUDIT_CHAIN = "contoso.mcp-admin"
 
 def people() -> tuple[Any, ...]:
     return (
-        helpers.policy(ADMIN, helpers.role(Role.ADMIN, FINANCE)),
+        # Deployment-scoped admin (PRP-48 item 3, #114): config.manage on the control domain.
+        helpers.policy(
+            ADMIN,
+            helpers.role(Role.ADMIN, FINANCE, CONTROL),
+            memberships=(FINANCE, helpers.OPERATIONS, helpers.HR, CONTROL),
+        ),
+        # config.manage in an ordinary domain only: denied every admin route.
+        helpers.policy(DOMAIN_ADMIN, helpers.role(Role.ADMIN, FINANCE)),
         helpers.policy(STEWARD, helpers.role(Role.DOMAIN_STEWARD, FINANCE)),
         helpers.policy(VIEWER, helpers.role(Role.VIEWER, FINANCE)),
     )

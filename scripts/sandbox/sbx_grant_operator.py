@@ -75,18 +75,19 @@ def sandbox_domain_ids(*, seed: int, profile: str, cloud: str, customer: str) ->
 
 
 def control_domain_id(cloud: str, customer: str) -> str:
-    """The reserved per-customer control domain the execution kill switch checks (PRP-17)."""
-    from neurosphere_api.actions import customer_control_domain
+    """The reserved per-customer control domain: the deployment-scoped admin (PRP-65/PRP-48)."""
+    from neurosphere_core.auth.scope import customer_control_domain_id
 
-    return customer_control_domain(cloud, customer)
+    return customer_control_domain_id(cloud, customer)
 
 
 def operator_domain_ids(
     role: str, *, seed: int, profile: str, cloud: str, customer: str
 ) -> tuple[str, ...]:
-    """Sandbox domains, plus the customer control domain for ``admin`` so the operator can flip
-    the action-plane kill switch (``PUT /api/v1/actions/emergency-disable``, 403
-    ``customer_scope_required`` without it)."""
+    """Sandbox domains, plus the customer control domain for ``admin``: the deployment-scoped
+    admin (PRP-48 item 3, #114) that the action-plane kill switch, MCP server administration,
+    deploy scan and plan, connector/producer configuration and lifecycle management require
+    (403 ``customer_scope_required`` with ``config.manage`` in ordinary domains only)."""
     domains = sandbox_domain_ids(seed=seed, profile=profile, cloud=cloud, customer=customer)
     if role == "admin":
         return (*domains, control_domain_id(cloud, customer))

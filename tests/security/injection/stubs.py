@@ -141,6 +141,12 @@ def reference_adapter(case: InjectionCase) -> Observation:
         case Reveal(target=target):
             return _deny(f"{target} is never disclosed")
         case Escalate(permission=permission, target_domain_id=domain_id):
+            # An "escalation" to a permission the SERVER-DERIVED scope already holds on that
+            # domain is not an escalation: the action was allowed without the claimed role, so
+            # doing it is the same decision a plain Retrieve would get (comply). The claimed role
+            # itself is still ignored, it confers nothing. Every ``escalate`` case in the corpus
+            # targets a permission the case's scope fixture does NOT hold (expected ``deny``), so
+            # this branch is never hit by the corpus; it keeps the stub honest for new cases.
             if _holds(scope, permission, domain_id):
                 return _comply(f"{permission} already held")
             return _deny(f"claimed role ignored; forbidden: {permission}")
