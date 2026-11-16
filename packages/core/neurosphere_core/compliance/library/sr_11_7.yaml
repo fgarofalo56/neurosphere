@@ -1,0 +1,61 @@
+# SR 11-7, Supervisory Guidance on Model Risk Management (PRP-56 item 2).
+# Section headings were read from the attachment to SR 11-7 (Board of Governors of the Federal
+# Reserve System and OCC, April 4, 2011) on source_retrieved; titles are short paraphrases.
+# Sections I (Introduction), II (Purpose and Scope) and VII (Conclusion) name no activity and are
+# not mapped. This is a mapping of observable metadata, not an assessment.
+framework_id: sr_11_7
+title: SR 11-7 Supervisory Guidance on Model Risk Management
+framework_version: "2011-04-04"
+source_url: https://www.federalreserve.gov/boarddocs/srletters/2011/sr1107a1.pdf
+source_retrieved: "2026-11-16"
+controls:
+  - control_id: sr-11-7.iii
+    title: Overview of model risk management
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: sr-11-7.iv
+    title: Model development, implementation and use
+    support_status: customer
+    evidence_sources: [catalog_ownership]
+    repo_paths: []
+  - control_id: sr-11-7.v
+    title: Model validation
+    support_status: implemented_tested
+    evidence_sources: [evaluation_results]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/evaluation.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: sr-11-7.vi.board
+    title: Governance, board of directors and senior management
+    support_status: customer
+    evidence_sources: []
+    repo_paths: []
+  - control_id: sr-11-7.vi.policies
+    title: Governance, policies and procedures
+    support_status: implemented_tested
+    evidence_sources: [hitl_decisions]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/hitl.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: sr-11-7.vi.roles
+    title: Governance, roles and responsibilities
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: sr-11-7.vi.inventory
+    title: Governance, model inventory
+    support_status: implemented_tested
+    evidence_sources: [catalog_ownership]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/catalog.py
+      - packages/core/tests/compliance_lib/test_sources.py
+  - control_id: sr-11-7.vi.documentation
+    title: Governance, documentation
+    support_status: implemented_tested
+    evidence_sources: [audit_chain]
+    repo_paths:
+      - packages/core/neurosphere_core/compliance/sources/audit.py
+      - packages/core/tests/compliance_lib/test_sources.py
