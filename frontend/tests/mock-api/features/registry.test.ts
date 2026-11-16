@@ -8,6 +8,7 @@ import { handle as evaluations } from "./evaluations.ts";
 import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
+import { handle as compliance } from "./compliance.ts";
 import { FEATURE_HANDLERS, dispatchFeatureMocks } from "./index.ts";
 
 // Placeholders never touch the context, so an empty object stands in for a request.
@@ -24,6 +25,7 @@ describe("feature mock registry", () => {
       deploy,
       evaluations,
       executionControl,
+      compliance,
     ]);
     expect(new Set(FEATURE_HANDLERS).size).toBe(FEATURE_HANDLERS.length);
     expect(FEATURE_HANDLERS.indexOf(curation)).toBeLessThan(FEATURE_HANDLERS.indexOf(catalog));

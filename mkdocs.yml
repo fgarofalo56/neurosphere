@@ -132,6 +132,7 @@ nav:
       - runbooks/platform-config.md
       - runbooks/system-settings.md
       - runbooks/audit-siem.md
+      - runbooks/compliance-evidence.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md

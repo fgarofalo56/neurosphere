@@ -249,9 +249,9 @@ FINRA mapping; attestations, sign-off, history or scheduled bundles; auto-remedi
 | 3 | merged | prp-56-compliance-evidence | five sources + claims scanner |
 | 4 | merged | prp-56-compliance-evidence | bundle, renderer, golden |
 | 5 | merged | prp-56-compliance-evidence | router, deps, 17 API tests; audit record names domain + control count (see deviations) |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 6 | merged | prp-56-compliance-evidence | pages, hooks, strings, mock, 14 vitest tests |
+| 7 | merged | prp-56-compliance-evidence | Tier-2 lines added; compliance e2e 8 passed, a11y/keyboard/aria rows for both routes passed on the mock API; visual baselines OPEN (Docker only) |
+| 8 | in-progress | prp-56-compliance-evidence | runbook and mkdocs nav done; Tier-3 regeneration, changelog fragment and close-out left for the merge step |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit:

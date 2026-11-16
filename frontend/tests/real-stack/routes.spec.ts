@@ -75,6 +75,17 @@ const ENTRIES: readonly Entry[] = [
       },
     ],
   },
+  {
+    route: "/compliance",
+    expected: [
+      {
+        status: 403,
+        pathPrefix: "/api/v1/",
+        why: "the compliance evidence page needs the Auditor role (evidence.read and audit.read), which the operator may not hold; the page then shows its forbidden state",
+      },
+    ],
+  },
+  { route: "/compliance/control" },
   { route: "/catalog", rows: "entity-row" },
   {
     // Two hops: catalog list -> entity -> a relationship link on the entity page. An entity with
