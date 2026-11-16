@@ -42,6 +42,10 @@ PARAMETERS = [
     "evaluationPilotDomainId",
     "evaluationPilotSubjectId",
     "evaluationPilotDatasetIds",
+    "connectorRoles",
+    "recommendationsEnabled",
+    "foundryAccountIds",
+    "billingExportStorageAccountId",
     "searchProvider",
     "searchService",
     "budgetAmount",
@@ -349,8 +353,16 @@ def test_workers_get_their_identity_in_a_second_pass(arm: dict[str, Any]) -> Non
     base = str(arm["variables"]["workersBaseSettings"])
     # recommendations needs a compose-mounted data dir the hosted image lacks; evaluation runs
     # from the synthetic registry baked into the workers image, with the fixture judge.
-    roles = "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation"
-    assert f"'NS_WORKER_ROLES', '{roles}'" in base
+    # PRP-58: the role list is composed (base + recommendations + connector roles); the base list
+    # stays exactly the pre-PRP-58 one and the opt-in roles are empty by default.
+    roles = ["ingestion", "projections", "aggregates", "actions", "hitl_timers", "lifecycle"]
+    roles.append("evaluation")
+    assert "'NS_WORKER_ROLES', join(variables('workerRoles'), ',')" in base
+    worker_roles = str(arm["variables"]["workerRoles"])
+    assert ", ".join(f"'{r}'" for r in roles) in worker_roles
+    assert arm["parameters"]["connectorRoles"]["defaultValue"] == []
+    assert arm["parameters"]["recommendationsEnabled"]["defaultValue"] is False
+    assert "'NS_WORKER_CONNECTOR_CONFIG_SOURCE', 'auto'" in base
     assert "'NS_WORKER_EVAL_DATA_DIR', '/app/evaluation-data'" in base
     assert "'NS_WORKER_EVAL_JUDGE', 'fixture'" in base
     assert "'NS_WORKER_TENANT_ID', parameters('entraTenantId')" in base

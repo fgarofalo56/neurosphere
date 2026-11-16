@@ -9,7 +9,15 @@ cites a documented API here; otherwise it is a documented gap.
 **G04 (provider/API/license coverage) remains OPEN.** This file is the coverage inventory. No
 live contract run against Azure Monitor, Foundry, or Azure Cost Management exports has happened
 (live runs need `NS_LIVE_APPROVED=1` and an approved environment), so there is no evidence under
-`docs/evidence/G04/`. Unbuilt targets stay open by design. Nothing here claims FedRAMP
+`docs/evidence/G04/`. Unbuilt targets stay open by design.
+
+`scripts/gates/g04_connectors_live.py` (PRP-58) is the operator gate script. A run proves, for each
+approved connector (`azure-monitor`, `foundry-discovery`, `billing-export`), that the connector
+contract kit passes and that one bounded read against an operator-named Commercial target
+completes. It writes scrubbed counts and violation codes only, and does not prove end-to-end
+ingest. It refuses without `NS_LIVE_APPROVED=1`, a budget cap and a per-connector `--approve-step`,
+and refuses Government. **It has not been run: G04 stays OPEN** until an operator run writes
+evidence (handed to PRP-64). Nothing here claims FedRAMP
 authorization, ATO, or Commercial/Government parity: availability, feature maturity, and
 authorization are separate gates.
 

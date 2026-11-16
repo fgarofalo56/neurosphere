@@ -50,9 +50,12 @@ env: {}
 #     secretProviderClass at /mnt/vault/<object name> (add the object to secretProviderClass.objects);
 #   ingest.producersConfigMap: name of an operator-created ConfigMap with key producers.json,
 #     mounted read-only into the api pod.
+#   ingest.producerStore: true (PRP-41, NS_INGEST_PRODUCER_STORE) also reads producers created in
+#     the admin console from the store; it can be combined with either source above.
 ingest:
   producersFile: ""
   producersConfigMap: ""
+  producerStore: false
 
 # Per-domain admission control (PRP-21). Off by default (no env set). Set exactly one source and the
 # api gets NS_ADMISSION_ENABLED=true plus NS_ADMISSION_POLICY_FILE (see docs/runbooks/admission-and-federation.md):
@@ -197,7 +200,20 @@ workers:
   # NS_WORKER_ROLES. Empty = unset (idle), the chart's historical default; set it explicitly to run
   # roles, e.g. the hosted demo list
   # "ingestion,projections,aggregates,actions,hitl_timers,lifecycle,evaluation".
+  # PRP-58: a YAML list of role names is accepted too (joined with commas). The connector roles
+  # gateway_poll, foundry_discovery and billing_export are never on by default; add them here
+  # once stored connector configuration (PRP-42) and the workload identity roles exist.
   roles: ""
+  # NS_WORKER_CONNECTOR_CONFIG_SOURCE (PRP-42): "auto" reads stored connector config through the
+  # API. Empty = unset (the worker default).
+  connectorConfigSource: ""
+  # NS_API_BASE_URL: where connector roles post telemetry, e.g. the in-cluster API service URL.
+  # Empty = unset.
+  apiBaseUrl: ""
+  recommendations:
+    # NS_WORKER_REC_SOURCE (PRP-15): "archive" reads the lakehouse archive. Empty = unset
+    # (sandbox files via NS_WORKER_REC_DATA_DIR). The role itself is enabled through workers.roles.
+    source: ""
   probes:
     readiness: /healthz
     liveness: /healthz

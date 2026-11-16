@@ -1,6 +1,8 @@
 ---
 name: PRP-58-hosted-data-path-and-environment-hardening
-status: backlog
+status: shipped
+shipped: 2026-11-16
+pr: 312
 priority: P1
 order: 46
 review: required
@@ -32,12 +34,12 @@ Out of scope: the producer, connector and platform APIs themselves (PRP-41, 42, 
 - No G04 evidence exists and no gate script exists for it (`docs/evidence/G04/` absent; lane-d gate register, #220).
 
 ## Acceptance criteria
-- [ ] `infra/demo/main.bicep` gains `connectorRoles` (subset of the three connector role names, default empty), `recommendationsEnabled` (default false), `foundryAccountIds` (array, default empty), `billingExportStorageAccountId` (default empty); `NS_WORKER_ROLES` is composed from the base list plus these, `NS_INGEST_PRODUCER_STORE=true` and `NS_WORKER_CONNECTOR_CONFIG_SOURCE=auto` are set on the right sites, `NS_API_BASE_URL` points the workers at `apiUpstream`, and `NS_WORKER_REC_SOURCE=archive` is set when recommendations are on; `az bicep build` passes and defaults leave the deployed settings unchanged except the two store switches.
-- [ ] A new module `infra/demo/modules/connector-rbac.bicep` assigns, to the workers identity only: `Storage Blob Data Reader` on `billingExportStorageAccountId`, and the Foundry reader role (`Azure AI User`; role definition id verified against Microsoft Learn at session start) on each `foundryAccountIds` entry, at those scopes and nothing wider; the vault role already exists (`keyvault-rbac.bicep`); a template test asserts no subscription-scope or resource-group-scope assignment is created for these.
-- [ ] The Helm chart documents and renders the same switches for the workers (`workers.roles` list helper, `workers.recommendations.source`, ingest store switch, API base URL) and the App Service profile exposes them as parameters; all three profiles pass a parity test that every new `NS_*` name appears in compose, Helm and Bicep; no profile defaults a connector role on.
-- [ ] `GENERATED_PARAMS` in `scripts/gates/_hosted_demo_common.py` lists every new `infra/demo/main.bicep` parameter (including the hosted evaluation pilot params `evaluationPilotDomainId`, `evaluationPilotSubjectId`, `evaluationPilotDatasetIds`, PRP-16 leftover) and the existing check against the template passes; `plan` accepts the matching CLI flags.
-- [ ] `scripts/gates/g04_connectors_live.py` refuses without `NS_LIVE_APPROVED=1` before any import of Azure code, requires a budget cap and per-connector `--approve-step`, runs the contract kit read paths for `azure-monitor`, `foundry-discovery` and `billing-export` only against an operator-named Commercial target, writes scrubbed evidence under `docs/evidence/G04/`, and exits `2` refused, `3` open, `0` only after a real run; offline tests cover refusal, argument handling, scrubbing and the Government refusal. No live run happens in this PRP.
-- [ ] `docs/deploy/hosted-demo.md` describes the new parameters, the connector onboarding order (deploy, grant yourself admin, create producer, put its secret in Key Vault, create connector config) and marks every live step OPEN.
+- [x] `infra/demo/main.bicep` gains `connectorRoles` (subset of the three connector role names, default empty), `recommendationsEnabled` (default false), `foundryAccountIds` (array, default empty), `billingExportStorageAccountId` (default empty); `NS_WORKER_ROLES` is composed from the base list plus these, `NS_INGEST_PRODUCER_STORE=true` and `NS_WORKER_CONNECTOR_CONFIG_SOURCE=auto` are set on the right sites, `NS_API_BASE_URL` points the workers at `apiUpstream`, and `NS_WORKER_REC_SOURCE=archive` is set when recommendations are on; `az bicep build` passes and defaults leave the deployed settings unchanged except the two store switches.
+- [x] A new module `infra/demo/modules/connector-rbac.bicep` assigns, to the workers identity only: `Storage Blob Data Reader` on `billingExportStorageAccountId`, and the Foundry reader role (`Azure AI User`; role definition id verified against Microsoft Learn at session start) on each `foundryAccountIds` entry, at those scopes and nothing wider; the vault role already exists (`keyvault-rbac.bicep`); a template test asserts no subscription-scope or resource-group-scope assignment is created for these.
+- [x] The Helm chart documents and renders the same switches for the workers (`workers.roles` list helper, `workers.recommendations.source`, ingest store switch, API base URL) and the App Service profile exposes them as parameters; all three profiles pass a parity test that every new `NS_*` name appears in compose, Helm and Bicep; no profile defaults a connector role on.
+- [x] `GENERATED_PARAMS` in `scripts/gates/_hosted_demo_common.py` lists every new `infra/demo/main.bicep` parameter (including the hosted evaluation pilot params `evaluationPilotDomainId`, `evaluationPilotSubjectId`, `evaluationPilotDatasetIds`, PRP-16 leftover) and the existing check against the template passes; `plan` accepts the matching CLI flags.
+- [x] `scripts/gates/g04_connectors_live.py` refuses without `NS_LIVE_APPROVED=1` before any import of Azure code, requires a budget cap and per-connector `--approve-step`, runs the contract kit read paths for `azure-monitor`, `foundry-discovery` and `billing-export` only against an operator-named Commercial target, writes scrubbed evidence under `docs/evidence/G04/`, and exits `2` refused, `3` open, `0` only after a real run; offline tests cover refusal, argument handling, scrubbing and the Government refusal. No live run happens in this PRP.
+- [x] `docs/deploy/hosted-demo.md` describes the new parameters, the connector onboarding order (deploy, grant yourself admin, create producer, put its secret in Key Vault, create connector config) and marks every live step OPEN.
 - PRP exit: touched suites, `az bicep build` for both templates, `helm template` tests, ruff, pyright, `validate_planning.py` pass; PR open with CI green including `helm`; live items written OPEN.
 
 ## Clarifications (decided)
@@ -203,17 +205,17 @@ A deploy workflow (PRP-63); connector or producer logic; Key Vault secret creati
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
+| 1 | done | prp-58-hosted-data-path | demo Bicep, connector-rbac module, GENERATED_PARAMS, plan flags, runbook section 8 |
+| 2 | done | prp-58-hosted-data-path | App Service params, Helm values+template; goldens unchanged (defaults inert) |
+| 3 | done | prp-58-hosted-data-path | compose pass-through, parity test; compose stack not run |
+| 4 | done | prp-58-hosted-data-path | G04 script + offline tests; live run OPEN |
+| 5 | done | prp-58-hosted-data-path | close-out: Tier-3 regeneration, completion note, changelog fragment |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can an operator use it without editing files):
+- Date and PR: 2026-11-16, PR #312.
+- Deviations: none from the blueprint. No `[serial-after]` item existed. `az bicep build` could not be run locally (a copy of the template in temp/ broke its relative module paths), so the Bicep was read by hand and the CI `bicep` and `helm` jobs are the build check. No `openapi.json` or `docs/reference/**` change (no API or SDK change).
+- Descoped items: none. `/readyz` probe settings, hosted-script review fixes and live-run follow-ups stay in PRP-67 and PRP-66 as planned.
+- OPEN gates: hosted redeploy with these parameters; the G04 live run (Azure Monitor, Foundry discovery, billing export) against Limitlessdata; hosted ingest smoke with a created producer. All handed to PRP-64 and need `NS_LIVE_APPROVED=1`. `docs/evidence/G04/` stays absent until an operator run.
+- Env vars for the operator: new pass-through names in compose, Helm and Bicep (all default inert): `NS_INGEST_PRODUCER_STORE`, `NS_WORKER_REC_SOURCE`, `NS_WORKER_CONNECTOR_CONFIG_SOURCE`, `NS_API_BASE_URL`; `NS_WORKER_ROLES` is now composed from `connectorRoles`. `.env.example` is not edited (agent-blocked). Hosted parameters: `connectorRoles`, `recommendationsEnabled`, `foundryAccountIds`, `billingExportStorageAccountId`, `evaluationPilotDomainId`, `evaluationPilotSubjectId`, `evaluationPilotDatasetIds`. The G04 script needs `NS_LIVE_APPROVED=1`, a budget cap and per-connector `--approve-step`.
+- Follow-up issues: reviewer follow-ups, not yet filed. (1) `infra/demo/main.bicep` `connectorRoles` has no `@allowed`; the CLI validates role names but a direct `az deployment` call could pass any name, so add `@allowed` on the array items or a template-level check. (2) `g04_connectors_live.py`: `--operator` is not covered by GUID or URL scrubbing (its regex already rejects emails) and `--billing-basis` is written unscrubbed (harmless enum). (3) PRP-64 should confirm a connector role with no stored config idles and does not crash-loop (roles start through `NS_WORKER_ROLES`; PRP-42 stored config decides what they poll). #220 stays open for the G04 run.
+- Product check (can an operator use it without editing files): partly. Producers and connector config are created through the admin API (PRP-41, 42); enabling the roles in a hosted environment still needs a redeploy with the new parameters, which is OPEN (PRP-64).
