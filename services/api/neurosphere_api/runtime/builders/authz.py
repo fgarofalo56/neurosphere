@@ -47,6 +47,7 @@ from neurosphere_core.audit import (
     find_sensitive_content,
     make_subject,
 )
+from neurosphere_core.audit.chains import is_chain_customer_id
 from neurosphere_core.auth.jwt import Clock, JwtConfig, create_jwt_validator
 from neurosphere_core.auth.jwt.config import normalize_tenant_id
 from neurosphere_core.auth.jwt.jwks import DEFAULT_FETCH_TIMEOUT_SECONDS
@@ -109,6 +110,9 @@ DENIAL_CHAIN_NAME: Final = "authz-denials"
 _REASON_CODE: Final = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_")
 #: ``AuditRecord.correlation_id`` pattern (contracts ``audit/v1/audit-record.schema.json``).
 _CORRELATION_ID: Final = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+#: ``ScopeDerivationConfig.customer_id`` pattern: a slug that may contain ``.``. A customer id that
+#: matches it but not the audit-chain rule (a dotted customer) is ``customer_id_invalid`` (#206.1).
+_DERIVATION_CUSTOMER: Final = re.compile(r"^[a-z0-9._-]{1,128}$")
 #: Prefix ``audit_correlation_id`` adds; also used for a generated id.
 _CORRELATION_PREFIX: Final = "corr-"
 
@@ -177,8 +181,17 @@ def _reason_code(reason: str) -> str:
 
 
 def _chain(scope: IdentityScope, domain_id: str | None) -> str:
+    """The member domain's chain, else ``<customer>.authz-denials``.
+
+    A member domain whose chain cannot be encoded (a name outside the chain pattern, too long, or
+    a reserved customer-level name; #206.2) falls back to the customer denial chain: the denial
+    is always recorded, never turned into a 503 by the chain name.
+    """
     if domain_id is not None and domain_id in scope.allowed_domains:
-        return audit_chain_for(scope.customer_id, domain_id)
+        try:
+            return audit_chain_for(scope.customer_id, domain_id)
+        except InvalidSchemaError:
+            pass  # unencodable member domain: record on the customer denial chain instead
     return f"{scope.customer_id}.{DENIAL_CHAIN_NAME}"
 
 
@@ -321,6 +334,19 @@ def _authenticator(
     return create_jwt_validator(config, client, clock=clock)
 
 
+def _check_customer_id(ctx: BuildContext, auth: AuthSettings) -> None:
+    """Refuse a customer id that cannot name audit chains (#206.1: a dotted customer).
+
+    Every audited write would otherwise fail one by one with ``invalid_chain_id``; failing the
+    ``authz`` component at boot (``customer_id_invalid``) keeps protected routes at 503 instead.
+    """
+    customer_id = auth.resolved_customer_id(ctx.settings.env)
+    if customer_id is None or not _DERIVATION_CUSTOMER.fullmatch(customer_id):
+        return  # missing or not a slug at all: the deriver reports it (customer_id_missing, ...)
+    if not is_chain_customer_id(customer_id):
+        raise ComponentUnavailableError("customer_id_invalid")
+
+
 def _authz(
     ctx: BuildContext,
     auth: AuthSettings,
@@ -329,6 +355,7 @@ def _authz(
     hooks: RevocationHookRegistry | None,
     clock: Clock,
 ) -> None:
+    _check_customer_id(ctx, auth)
     tenant_id = _tenant(auth)
     scope_source: ScopeSource
     if ctx.overrides.scope_source is not None:

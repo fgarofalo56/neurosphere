@@ -1,6 +1,8 @@
 ---
 name: PRP-47-frontend-shell-and-test-infrastructure
-status: backlog
+status: shipped
+shipped: 2026-11-15
+pr: 298
 priority: P2
 order: 34
 review: none
@@ -33,16 +35,16 @@ Out of scope: any real-stack spec or `frontend/tests/real-stack/**` (PRP-38); th
 - `frontend/src/features/charts/ChartFrame.tsx:101` posts with target origin `"*"` (Snyk `TooPermissiveCorsPostMessage`, #133 bullet); the iframe is `sandbox="allow-scripts"` (`:169`), an opaque origin, and both directions already check the message source (`:103`; `sandbox/main.ts:29`).
 
 ## Acceptance criteria
-- [ ] MSW: an unhandled request in any Vitest test fails that test (`onUnhandledFrame` set to error). Every test that starts failing is fixed with an explicit handler, none with a broad catch-all. `tsc` accepts `tests/setup.ts` (#92).
-- [ ] Flakes: the Vitest config sets a bounded retry (at most 1) in CI only and a documented `asyncUtilTimeout`; the three named Playwright specs are made deterministic (explicit waits on a signal, not longer sleeps) and pass 10 times in a row locally with parallel workers (#92). Show the loop output.
-- [ ] Nav: Given focus in the navigation, when the user presses ArrowDown or ArrowUp, then focus moves between nav links; axe `aria-hidden-focus` stays clean on the specs that failed before (the nav axe specs under `tests/e2e/a11y` pass) (#94).
-- [ ] Sign-out: Given a stored `ns.lastDomain.<key>`, when the account disappears for any reason (menu sign-out, token expiry, sign-out in another tab), then the key is removed; a Vitest test covers each path that can be exercised without `frontend/src/auth/**` changes (#94).
-- [ ] Badge: the cost-tile "incomplete total" badge no longer overflows at 1440px; a Playwright check measures the text box inside the badge box. If the overflow cannot be reproduced, say so and keep the test (#94).
-- [ ] Theme: Given runtime config with `defaultThemePack` and `defaultThemeMode`, when the app renders the config-loaded sign-in redirect screen (before the shell), then the default theme is applied; a saved user choice still wins (#125). A test renders `Providers` without `Shell`.
-- [ ] `ChartFrame`: the `"*"` target stays only because the sandbox origin is opaque; the code comment states the reason, and a test asserts the message is posted only to `iframeRef.current.contentWindow` and that a message from another source is ignored (#133 bullet).
-- [ ] Demo hardening: the prod-exclusion test also builds with `mode: "demo"` and asserts the demo markers are present (positive control), loads the real `vite.config.ts` with the bundle-report plugin off, and finds the frontend directory through `import.meta.dirname` (#93). The `'"demo"'` marker is dropped.
-- [ ] `paths.ts` exists in `dashboards`, `actions` and `review`; `overview/data.ts` imports from them; `no-native-controls.test.ts` anchors on `import.meta.url` and also scans `.ts` for `createElement("button")`; `ROLE_TILES` has a test tying each tile permission to a name in the API permission list available to the frontend (#95).
-- [ ] Mock API: the Finance demo domain holds `catalog.curate`, so catalog create and edit actions show in `pnpm demo`; the demo's first domain is a healthy one (#209 item 1, #93).
+- [x] MSW: an unhandled request in any Vitest test fails that test (`onUnhandledFrame` set to error). Every test that starts failing is fixed with an explicit handler, none with a broad catch-all. `tsc` accepts `tests/setup.ts` (#92).
+- [x] Flakes: the Vitest config sets a bounded retry (at most 1) in CI only and a documented `asyncUtilTimeout`; the three named Playwright specs are made deterministic (explicit waits on a signal, not longer sleeps) and pass 10 times in a row locally with parallel workers (#92). Show the loop output.
+- [x] Nav: Given focus in the navigation, when the user presses ArrowDown or ArrowUp, then focus moves between nav links; axe `aria-hidden-focus` stays clean on the specs that failed before (the nav axe specs under `tests/e2e/a11y` pass) (#94).
+- [x] Sign-out: Given a stored `ns.lastDomain.<key>`, when the account disappears for any reason (menu sign-out, token expiry, sign-out in another tab), then the key is removed; a Vitest test covers each path that can be exercised without `frontend/src/auth/**` changes (#94).
+- [x] Badge: the cost-tile "incomplete total" badge no longer overflows at 1440px; a Playwright check measures the text box inside the badge box. If the overflow cannot be reproduced, say so and keep the test (#94).
+- [x] Theme: Given runtime config with `defaultThemePack` and `defaultThemeMode`, when the app renders the config-loaded sign-in redirect screen (before the shell), then the default theme is applied; a saved user choice still wins (#125). A test renders `Providers` without `Shell`.
+- [x] `ChartFrame`: the `"*"` target stays only because the sandbox origin is opaque; the code comment states the reason, and a test asserts the message is posted only to `iframeRef.current.contentWindow` and that a message from another source is ignored (#133 bullet).
+- [x] Demo hardening: the prod-exclusion test also builds with `mode: "demo"` and asserts the demo markers are present (positive control), loads the real `vite.config.ts` with the bundle-report plugin off, and finds the frontend directory through `import.meta.dirname` (#93). The `'"demo"'` marker is dropped.
+- [x] `paths.ts` exists in `dashboards`, `actions` and `review`; `overview/data.ts` imports from them; `no-native-controls.test.ts` anchors on `import.meta.url` and also scans `.ts` for `createElement("button")`; `ROLE_TILES` has a test tying each tile permission to a name in the API permission list available to the frontend (#95).
+- [x] Mock API: the Finance demo domain holds `catalog.curate`, so catalog create and edit actions show in `pnpm demo`; the demo's first domain is a healthy one (#209 item 1, #93).
 - [ ] `pnpm --filter @neurosphere/frontend lint`, `typecheck`, `test` and `test:e2e` pass; visual baselines are regenerated in Docker only if a baseline legitimately changed (state which).
 
 PRP exit: all boxes ticked, `verify-gates.ps1` full run green, PR open, CI green including the non-required `frontend-e2e` shards.
@@ -240,20 +242,20 @@ No live run, no `NS_LIVE_APPROVED=1`, no paid call. The human accessibility sign
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | prp-47-shell-test-infra | nav arrows, last-domain cleanup, theme in Providers; badge overflow not reproducible, Playwright check added |
+| 2 | merged | prp-47-shell-test-infra | comment + tests |
+| 3 | merged | prp-47-shell-test-infra | onUnhandledFrame + afterEach rethrow, CI retry 1; flakes not reproducible locally (20x30 pass), hardened map-table focus polls and approve click |
+| 4 | merged | prp-47-shell-test-infra | demo positive control, real config, import.meta.dirname |
+| 5 | merged | prp-47-shell-test-infra | paths.ts x3, overview imports, createElement scan, import.meta.dirname anchor (import.meta.url is a jsdom URL), TILE_PERMISSION test; no __fixtures__ UI (actions has one JSON) |
+| 6 | merged | prp-47-shell-test-infra | Finance holds catalog.curate; catalog.spec negative test now revokes on the wire (one file outside Ownership, test-only) |
+| 7 | merged | prp-47-shell-test-infra | PRP-18 shipped; removed domainLabel and domainSubmit from map/strings.ts |
+| 8 | merged | prp-47-shell-test-infra | close-out |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check:
+- Date and PR: 2026-11-15, PR #298.
+- Deviations: item 6 also edited `frontend/tests/e2e/catalog/catalog.spec.ts` (test only, outside the Ownership block) because the negative test now revokes the permission on the wire. Arrow keys use a roving handler on the plain nav container (clarification 1 assumption). The `ChartFrame` `"*"` target stays with a documented opaque-origin reason and tests (clarification 2 assumption). `no-native-controls` anchors on `import.meta.dirname` because `import.meta.url` is a jsdom URL under Vitest.
+- Descoped items: the cost-tile badge overflow could not be reproduced at 1440px; the Playwright measurement check was kept. The three named Playwright flakes did not reproduce locally (20 x 30 passes); the map-table focus polls and the approve click were hardened instead. Sign-out paths that need `frontend/src/auth/**` changes are not covered (clarification 3).
+- OPEN gates: human accessibility sign-off (#124, PRP-64); Snyk `postMessage` dismissal (PRP-59); no live gate applies. Visual baselines were not regenerated (Docker only). The Playwright e2e acceptance box is left to the CI frontend-e2e shards.
+- Env vars for the operator: none.
+- Follow-up issues: #209 stays open for PRP-38 items 2 and 3.
+- Product check: shell and test-infrastructure fixes only; no operator capability is added or needed.

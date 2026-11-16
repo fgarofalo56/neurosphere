@@ -116,13 +116,15 @@ def test_customer_wide_refuses_non_scope_objects() -> None:
         permits_customer_wide({"customer_id": "contoso"}, P.CONFIG_MANAGE, now=at(0))  # type: ignore[arg-type]
 
 
-def test_api_kill_switch_constants_are_unchanged() -> None:
-    """customer_control.py keeps its own copy until PRP-48; core and API must agree."""
+def test_api_kill_switch_uses_the_core_names() -> None:
+    """Since PRP-48 customer_control.py has no copy: it imports these names from core."""
     from pathlib import Path
 
     source = (
         Path(__file__).resolve().parents[4]
         / "services/api/neurosphere_api/actions/customer_control.py"
     ).read_text(encoding="utf-8")
-    assert f'CUSTOMER_CONTROL_SOURCE: Final = "{CUSTOMER_CONTROL_SOURCE}"' in source
-    assert f'CUSTOMER_CONTROL_DOMAIN_NAME: Final = "{CUSTOMER_CONTROL_DOMAIN_NAME}"' in source
+    assert "CUSTOMER_CONTROL_SOURCE: Final" not in source
+    assert "CUSTOMER_CONTROL_DOMAIN_NAME: Final" not in source
+    assert "from neurosphere_core.auth.scope import" in source
+    assert "customer_control_domain_id(cloud, customer_id)" in source

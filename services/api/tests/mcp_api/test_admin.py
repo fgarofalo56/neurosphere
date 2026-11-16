@@ -609,7 +609,8 @@ def test_route_inventory_with_the_mcp_server_mounted() -> None:
     assert not any(e.public or e.self_authenticated for e in admin)
     for e in entries:
         if e.path not in (MCP_METADATA_PATH, MCP_PATH):
-            assert e.public or e.producer_authenticated or e.permissions, e.path
+            # role_gated: PRP-48 item 1's role-gated category (/workspaces/{role}).
+            assert e.public or e.producer_authenticated or e.permissions or e.role_gated, e.path
 
 
 def test_self_authenticated_is_exact_plain_route_only() -> None:

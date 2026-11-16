@@ -12,6 +12,11 @@ WebSocket route is compliant only when its exact path is in :data:`GATEWAY_AUTHE
 declares that entry's permission marker. The HTTP public, producer and self-authenticated
 allowlists never apply to a WebSocket route.
 
+Role-gated routes (PRP-48 item 1, #91) are a fourth HTTP category: a route whose exact path is in
+:data:`ROLE_GATED_PATHS`, served for safe methods only, that carries a :func:`require_role`
+dependency (``ROLE_MARKER``) is compliant without claiming a permission. The marker alone is not
+enough anywhere else, and the path alone is not enough without the marker.
+
 :func:`undeclared_routes` lists violations; ``compose_app`` calls
 :func:`verify_route_permissions` after every builder ran, so an undeclared route fails app boot.
 Public routes get no blanket allow; they simply do not call ``require``.
@@ -31,7 +36,7 @@ from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import InvalidSchemaError
 from starlette.routing import BaseRoute, Mount, WebSocketRoute
 
-from neurosphere_api.authz.dependencies import PERMISSION_MARKER
+from neurosphere_api.authz.dependencies import PERMISSION_MARKER, ROLE_MARKER
 from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 
 __all__ = [
@@ -40,6 +45,7 @@ __all__ = [
     "MCP_MOUNT_STATE_ATTRIBUTE",
     "PRODUCER_AUTHENTICATED_PATHS",
     "PUBLIC_PATHS",
+    "ROLE_GATED_PATHS",
     "SELF_AUTHENTICATED_PATHS",
     "RouteEntry",
     "WebSocketGuard",
@@ -86,6 +92,18 @@ PRODUCER_AUTHENTICATED_PATHS: Final = frozenset(
     }
 )
 
+#: Exact paths gated by holding a role (``require_role``) instead of a permission. Each entry is
+#: a read whose answer depends only on which role the caller holds; it must also carry the role
+#: marker and serve safe methods only (``GET``/``HEAD``).
+ROLE_GATED_PATHS: Final = frozenset(
+    {
+        # PRP-28 item 1 / PRP-48 item 1: persona workspace; the role comes from the path through
+        # the explicit ROLE_MAP, the assignment must name an in-scope domain.
+        "/api/v1/workspaces/{role}",
+    }
+)
+_ROLE_GATED_METHODS: Final = frozenset({"GET", "HEAD"})
+
 _WEBSOCKET: Final = ("WEBSOCKET",)
 
 
@@ -122,6 +140,7 @@ class RouteEntry:
     producer_authenticated: bool = False
     self_authenticated: bool = False
     gateway_authenticated: bool = False
+    role_gated: bool = False
 
     @property
     def websocket(self) -> bool:
@@ -137,6 +156,7 @@ class RouteEntry:
             or bool(self.permissions)
             or self.producer_authenticated
             or self.self_authenticated
+            or self.role_gated
         )
 
 
@@ -173,6 +193,12 @@ def _permissions(dependant: Dependant) -> Iterator[str]:
         yield from _permissions(child)
 
 
+def _role_gated(dependant: Dependant) -> bool:
+    if getattr(dependant.call, ROLE_MARKER, None) is True:
+        return True
+    return any(_role_gated(child) for child in dependant.dependencies)
+
+
 def _mounted_mcp_endpoint(app: FastAPI) -> object | None:
     """The ASGI app of the MCP server mount ``create_mcp_server`` stored on ``app.state``.
 
@@ -206,7 +232,8 @@ def _entry(
     dependant = getattr(source, "dependant", None)
     if not isinstance(dependant, Dependant):
         dependant = getattr(original, "dependant", None)
-    perms = tuple(sorted(set(_permissions(dependant)))) if isinstance(dependant, Dependant) else ()
+    has_dependant = isinstance(dependant, Dependant)
+    perms = tuple(sorted(set(_permissions(dependant)))) if has_dependant else ()
     websocket = isinstance(original, APIWebSocketRoute | WebSocketRoute)
     if websocket:
         methods: tuple[str, ...] = _WEBSOCKET
@@ -224,6 +251,14 @@ def _entry(
         and path in SELF_AUTHENTICATED_PATHS
         and _is_mcp_endpoint(original, source, mcp_endpoint)
     )
+    role_gated = (
+        http
+        and path in ROLE_GATED_PATHS
+        and bool(methods)
+        and set(methods) <= _ROLE_GATED_METHODS
+        and has_dependant
+        and _role_gated(dependant)
+    )
     guard = GATEWAY_AUTHENTICATED_WEBSOCKETS.get(path) if websocket else None
     gateway = guard is not None and guard.permission.value in perms
     return RouteEntry(
@@ -234,6 +269,7 @@ def _entry(
         producer_authenticated=producer,
         self_authenticated=self_authenticated,
         gateway_authenticated=gateway,
+        role_gated=role_gated,
     )
 
 

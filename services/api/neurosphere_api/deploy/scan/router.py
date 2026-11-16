@@ -1,7 +1,8 @@
 """Thin HTTP handler for the resource scan. Logic lives in :class:`ScanService`.
 
 The service lives on ``app.state.scan_service`` (set with :func:`configure_scan`); until it is
-configured the route fails closed with 503. The route is gated by ``config.manage``.
+configured the route fails closed with 503. The route is gated by the deployment-scoped
+``config.manage`` (``require_deployment_admin``, PRP-48 item 3, #114).
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import require
+from neurosphere_api.authz.deployment_scope import require_deployment_admin
 from neurosphere_api.deploy.scan.audit import DeployAuditor, correlation_for
 from neurosphere_api.deploy.scan.models import ScanRequest, ScanResponse
 from neurosphere_api.deploy.scan.service import ScanService
@@ -55,7 +56,9 @@ def build_router() -> APIRouter:
     async def scan(
         body: ScanRequest,
         request: Request,
-        scope: Annotated[IdentityScope, Depends(require(Permission.CONFIG_MANAGE))],
+        scope: Annotated[
+            IdentityScope, Depends(require_deployment_admin(Permission.CONFIG_MANAGE))
+        ],
     ) -> ScanResponse:
         return await _service(request).scan_for(scope, body, auditor_for(request, scope))
 

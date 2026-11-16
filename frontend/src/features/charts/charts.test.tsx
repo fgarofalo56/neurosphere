@@ -97,6 +97,23 @@ describe("ChartFrame postMessage handshake", () => {
     expect(message["spec"]).toEqual(plan().spec);
   });
 
+  it("posts only to the iframe's own window with the opaque-origin target, never elsewhere", () => {
+    render(<ChartFrame plan={plan()} />);
+    const win = frameWindow();
+    const framePost = vi.spyOn(win, "postMessage");
+    const ownPost = vi.spyOn(window, "postMessage");
+    const parentPost = vi.spyOn(window.parent, "postMessage");
+    const iframe = document.querySelector("iframe") as HTMLIFrameElement;
+    // "*" is the only addressable target of a sandbox without allow-same-origin (opaque origin).
+    expect(iframe.getAttribute("sandbox")).toBe("allow-scripts");
+
+    fromSandbox({ type: MSG_READY, version: PROTOCOL_VERSION }, win);
+    expect(framePost).toHaveBeenCalledTimes(1);
+    expect(framePost.mock.calls[0]?.[1]).toBe("*");
+    expect(ownPost).not.toHaveBeenCalled();
+    expect(parentPost).not.toHaveBeenCalled();
+  });
+
   it("ignores messages that do not come from the iframe window or have a real origin", () => {
     render(<ChartFrame plan={plan()} />);
     const win = frameWindow();

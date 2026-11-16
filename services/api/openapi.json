@@ -477,7 +477,7 @@
             ]
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -1309,6 +1309,11 @@
         "title": "ApprovedPlanView",
         "type": "object"
       },
+      "ArmRegionName": {
+        "pattern": "^[a-z][a-z0-9]{1,31}$",
+        "title": "ArmRegionName",
+        "type": "string"
+      },
       "AssignmentBody": {
         "additionalProperties": false,
         "description": "``null`` claims the item for the caller; a principal id assigns another reviewer.",
@@ -1921,6 +1926,100 @@
         "title": "Budget",
         "type": "object"
       },
+      "BudgetPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BudgetPage",
+        "type": "object"
+      },
+      "BudgetView": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "budget_id": {
+            "title": "Budget Id",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tags_filter": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags Filter"
+          },
+          "thresholds_percent": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Thresholds Percent",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "budget_id",
+          "domain_id",
+          "period",
+          "amount",
+          "currency",
+          "thresholds_percent",
+          "tags_filter",
+          "status",
+          "version",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "BudgetView",
+        "type": "object"
+      },
       "Calibration": {
         "additionalProperties": false,
         "properties": {
@@ -2527,6 +2626,26 @@
           "records_checked"
         ],
         "title": "ChainVerification",
+        "type": "object"
+      },
+      "ChangeView": {
+        "additionalProperties": false,
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "ChangeView",
         "type": "object"
       },
       "CircuitBreakerRule": {
@@ -3192,6 +3311,21 @@
         "title": "CostImplication",
         "type": "object"
       },
+      "CostTags": {
+        "patternProperties": {
+          "^[a-z][a-z0-9_.-]{0,62}$": {
+            "$ref": "#/components/schemas/CostTags1"
+          }
+        },
+        "title": "CostTags",
+        "type": "object"
+      },
+      "CostTags1": {
+        "maxLength": 128,
+        "minLength": 1,
+        "title": "CostTags1",
+        "type": "string"
+      },
       "CostTotal": {
         "additionalProperties": false,
         "properties": {
@@ -3280,6 +3414,51 @@
           "coverage_fraction"
         ],
         "title": "CoveragePoint",
+        "type": "object"
+      },
+      "CoverageView": {
+        "additionalProperties": false,
+        "properties": {
+          "models_incomplete": {
+            "items": {
+              "$ref": "#/components/schemas/IncompleteModelView"
+            },
+            "title": "Models Incomplete",
+            "type": "array"
+          },
+          "models_priced": {
+            "title": "Models Priced",
+            "type": "integer"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "rows_without_token_meter": {
+            "title": "Rows Without Token Meter",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "rows",
+          "models_priced",
+          "models_incomplete",
+          "rows_without_token_meter",
+          "warnings"
+        ],
+        "title": "CoverageView",
         "type": "object"
       },
       "CredentialReference": {
@@ -3661,9 +3840,19 @@
         "title": "Dataset",
         "type": "object"
       },
+      "Date-Input": {
+        "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
+        "title": "Date",
+        "type": "string"
+      },
       "Decimal": {
         "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,12})?$",
         "title": "Decimal",
+        "type": "string"
+      },
+      "DecimalAmount": {
+        "pattern": "^(0|[1-9][0-9]{0,17})(\\.[0-9]{1,12})?$",
+        "title": "DecimalAmount",
         "type": "string"
       },
       "DecisionResult": {
@@ -4076,7 +4265,13 @@
         "title": "DiscoveredResource",
         "type": "object"
       },
-      "DisplayName": {
+      "DisplayName-Input": {
+        "maxLength": 128,
+        "minLength": 1,
+        "title": "DisplayName",
+        "type": "string"
+      },
+      "DisplayName-Output": {
         "maxLength": 256,
         "minLength": 1,
         "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
@@ -4124,7 +4319,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "entity_type": {
             "const": "domain",
@@ -4189,6 +4384,60 @@
         "title": "Domain",
         "type": "object"
       },
+      "DomainDefinition": {
+        "additionalProperties": false,
+        "description": "Operator definition of one domain (PRP-44): the authorization scope anchor every role, grant, connector and budget names. residency_region is the ARM region the domain's data is held in (Government domains use usgov*/usdod* regions; data is never bridged across clouds). The control domain is the reserved per-customer domain that holds platform configuration actions; at most one exists per customer (checked by the PRP-44 handler). A retired domain keeps its id for audit and accepts no new data.",
+        "properties": {
+          "classification": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted",
+              "unknown"
+            ],
+            "title": "Classification",
+            "type": "string"
+          },
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName-Input"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "is_control_domain": {
+            "title": "Is Control Domain",
+            "type": "boolean"
+          },
+          "residency_region": {
+            "pattern": "^[a-z][a-z0-9]{1,31}$",
+            "title": "Residency Region",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "domain_id",
+          "display_name",
+          "classification",
+          "residency_region",
+          "status",
+          "is_control_domain"
+        ],
+        "title": "DomainDefinition",
+        "type": "object"
+      },
       "DomainId": {
         "maxLength": 512,
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._/=-]+$",
@@ -4228,6 +4477,23 @@
           "reason"
         ],
         "title": "DomainMembershipChange",
+        "type": "object"
+      },
+      "DomainPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/neurosphere_api__admin__platform__models__DomainView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DomainPage",
         "type": "object"
       },
       "DomainSummary": {
@@ -4289,51 +4555,6 @@
           "domain_id"
         ],
         "title": "DomainSummary",
-        "type": "object"
-      },
-      "DomainView": {
-        "additionalProperties": false,
-        "properties": {
-          "cloud": {
-            "enum": [
-              "commercial",
-              "government"
-            ],
-            "title": "Cloud",
-            "type": "string"
-          },
-          "display_name": {
-            "title": "Display Name",
-            "type": "string"
-          },
-          "display_name_source": {
-            "enum": [
-              "catalog",
-              "derived"
-            ],
-            "title": "Display Name Source",
-            "type": "string"
-          },
-          "domain_id": {
-            "title": "Domain Id",
-            "type": "string"
-          },
-          "permissions": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Permissions",
-            "type": "array"
-          }
-        },
-        "required": [
-          "domain_id",
-          "display_name",
-          "display_name_source",
-          "cloud",
-          "permissions"
-        ],
-        "title": "DomainView",
         "type": "object"
       },
       "DraftIntentBody": {
@@ -4430,6 +4651,12 @@
         ],
         "title": "DriftAlertOut",
         "type": "object"
+      },
+      "DurationSeconds": {
+        "maximum": 7776000.0,
+        "minimum": 1.0,
+        "title": "DurationSeconds",
+        "type": "integer"
       },
       "EdgeFilter": {
         "additionalProperties": false,
@@ -7091,7 +7318,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -7357,6 +7584,12 @@
         "title": "HoldView",
         "type": "object"
       },
+      "HttpsUrl": {
+        "maxLength": 512,
+        "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%-]{1,128})*/?$",
+        "title": "HttpsUrl",
+        "type": "string"
+      },
       "IdField": {
         "enum": [
           "id",
@@ -7543,6 +7776,45 @@
           "items"
         ],
         "title": "ImportResult",
+        "type": "object"
+      },
+      "IncompleteModelView": {
+        "additionalProperties": false,
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "model_version",
+          "missing"
+        ],
+        "title": "IncompleteModelView",
         "type": "object"
       },
       "InferenceVersion": {
@@ -7872,6 +8144,12 @@
         ],
         "title": "KeywordFilter",
         "type": "object"
+      },
+      "Label": {
+        "maxLength": 256,
+        "minLength": 1,
+        "title": "Label",
+        "type": "string"
       },
       "LifecycleOutcome": {
         "additionalProperties": false,
@@ -8432,7 +8710,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -8596,7 +8874,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/DomainView"
+              "$ref": "#/components/schemas/neurosphere_api__me__models__DomainView"
             },
             "title": "Items",
             "type": "array"
@@ -10408,7 +10686,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "document_ref": {
             "anyOf": [
@@ -10896,6 +11174,320 @@
         "title": "PriceReference",
         "type": "object"
       },
+      "PriceSheetPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PriceSheetView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PriceSheetPage",
+        "type": "object"
+      },
+      "PriceSheetRow": {
+        "additionalProperties": false,
+        "description": "One price (core PriceRow; Retail Prices API Items[] field names in snake_case).",
+        "properties": {
+          "arm_region_name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArmRegionName"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "effective_start_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Date-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meter_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Label"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meter_name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Label"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "price_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Label"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retail_price": {
+            "$ref": "#/components/schemas/DecimalAmount"
+          },
+          "service_name": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "sku_name": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "token_meter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PriceSheetTokenMeter"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit_of_measure": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecimalAmount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "service_name",
+          "sku_name",
+          "unit_of_measure",
+          "retail_price"
+        ],
+        "title": "PriceSheetRow",
+        "type": "object"
+      },
+      "PriceSheetTokenMeter": {
+        "additionalProperties": false,
+        "description": "Maps a price row to a model token price (core TokenMeter).",
+        "properties": {
+          "kind": {
+            "enum": [
+              "input",
+              "output",
+              "cached"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "model": {
+            "$ref": "#/components/schemas/Label"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Label"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "$ref": "#/components/schemas/Label"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "kind"
+        ],
+        "title": "PriceSheetTokenMeter",
+        "type": "object"
+      },
+      "PriceSheetUpload": {
+        "additionalProperties": false,
+        "description": "An operator-uploaded price sheet (PRP-44). Maps one to one onto core pricing PriceSnapshot minus content_hash: the server builds the snapshot with build_snapshot, which stamps the hash, so an upload can never assert its own hash. Money is a decimal string, never a float. azure_retail_prices sheets apply to commercial only and their source_url host is prices.azure.com; Commercial prices are never a fallback for Government (both enforced again by PriceSnapshot). Rules JSON Schema cannot express are checked by tests/contracts/validators.py::check_price_sheet_upload: token price rows are unique per (provider, model, model_version, kind) and a token row's unit_of_measure is 1K or 1M.",
+        "properties": {
+          "clouds": {
+            "items": {
+              "$ref": "#/components/schemas/Cloud"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Clouds",
+            "type": "array"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "effective_date": {
+            "$ref": "#/components/schemas/Date-Input"
+          },
+          "notes": {
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "retrieval_date": {
+            "$ref": "#/components/schemas/Date-Input"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PriceSheetRow"
+            },
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Rows",
+            "type": "array"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "snapshot_id": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "source": {
+            "enum": [
+              "azure_retail_prices",
+              "provider_price_sheet"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "$ref": "#/components/schemas/HttpsUrl"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "snapshot_id",
+          "source",
+          "source_url",
+          "retrieval_date",
+          "effective_date",
+          "currency",
+          "clouds",
+          "synthetic",
+          "notes",
+          "rows"
+        ],
+        "title": "PriceSheetUpload",
+        "type": "object"
+      },
+      "PriceSheetUploadView": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/CoverageView"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "sheet": {
+            "$ref": "#/components/schemas/PriceSheetView"
+          }
+        },
+        "required": [
+          "sheet",
+          "coverage",
+          "created"
+        ],
+        "title": "PriceSheetUploadView",
+        "type": "object"
+      },
+      "PriceSheetView": {
+        "additionalProperties": false,
+        "properties": {
+          "clouds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Clouds",
+            "type": "array"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_date": {
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "retrieval_date": {
+            "title": "Retrieval Date",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "synthetic": {
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "source",
+          "source_url",
+          "retrieval_date",
+          "effective_date",
+          "currency",
+          "clouds",
+          "synthetic",
+          "content_hash",
+          "row_count",
+          "notes"
+        ],
+        "title": "PriceSheetView",
+        "type": "object"
+      },
       "PriceTable": {
         "additionalProperties": false,
         "description": "Versioned static price input. No live pricing call is ever made.",
@@ -10954,7 +11546,7 @@
           "display": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DisplayName"
+                "$ref": "#/components/schemas/DisplayName-Output"
               },
               {
                 "type": "null"
@@ -12813,6 +13405,29 @@
         "title": "ResultsList",
         "type": "object"
       },
+      "ReviewActionOverride": {
+        "additionalProperties": false,
+        "properties": {
+          "action_kind": {
+            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+            "title": "Action Kind",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/ReviewPolicySettings"
+          },
+          "review_kind": {
+            "$ref": "#/components/schemas/ReviewKind"
+          }
+        },
+        "required": [
+          "review_kind",
+          "action_kind",
+          "policy"
+        ],
+        "title": "ReviewActionOverride",
+        "type": "object"
+      },
       "ReviewDecisionBody": {
         "additionalProperties": false,
         "description": "Maker-checker decisions carry the confirmation hash; insight decisions must not.",
@@ -13148,6 +13763,193 @@
           "superseded_decision_ids"
         ],
         "title": "ReviewItemView",
+        "type": "object"
+      },
+      "ReviewKind": {
+        "enum": [
+          "maker_checker",
+          "relationship",
+          "evaluation_dispute",
+          "recommendation",
+          "policy_exception"
+        ],
+        "title": "ReviewKind",
+        "type": "string"
+      },
+      "ReviewKindDefault": {
+        "additionalProperties": false,
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/ReviewPolicySettings"
+          },
+          "review_kind": {
+            "$ref": "#/components/schemas/ReviewKind"
+          }
+        },
+        "required": [
+          "review_kind",
+          "policy"
+        ],
+        "title": "ReviewKindDefault",
+        "type": "object"
+      },
+      "ReviewPolicyDocument": {
+        "additionalProperties": false,
+        "description": "Operator review policy (PRP-44), mapping onto core HITL ReviewPolicyRegistry: kind_defaults become the per-review-kind defaults and action_overrides the (review_kind, action_kind) overrides. Durations are integer seconds (core ReviewPolicy timedeltas). A kind missing from kind_defaults has no policy and fails closed (capability_unavailable), so maker_checker is required. Self-approval stays forbidden unless an override says otherwise. Rules JSON Schema cannot express are checked by tests/contracts/validators.py::check_review_policy_document: review kinds in kind_defaults and (review_kind, action_kind) pairs in action_overrides are unique.",
+        "properties": {
+          "action_overrides": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewActionOverride"
+            },
+            "maxItems": 64,
+            "title": "Action Overrides",
+            "type": "array"
+          },
+          "kind_defaults": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewKindDefault"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "title": "Kind Defaults",
+            "type": "array"
+          },
+          "policy_version": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "policy_version",
+          "kind_defaults",
+          "action_overrides"
+        ],
+        "title": "ReviewPolicyDocument",
+        "type": "object"
+      },
+      "ReviewPolicySettings": {
+        "additionalProperties": false,
+        "description": "One core ReviewPolicy. Every duration is positive.",
+        "properties": {
+          "approver_permission": {
+            "enum": [
+              "action.approve",
+              "catalog.curate"
+            ],
+            "title": "Approver Permission",
+            "type": "string"
+          },
+          "assignment_timeout_seconds": {
+            "$ref": "#/components/schemas/DurationSeconds"
+          },
+          "escalation_step_seconds": {
+            "$ref": "#/components/schemas/DurationSeconds"
+          },
+          "expiry_seconds": {
+            "$ref": "#/components/schemas/DurationSeconds"
+          },
+          "max_escalations": {
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Max Escalations",
+            "type": "integer"
+          },
+          "self_approval_forbidden": {
+            "title": "Self Approval Forbidden",
+            "type": "boolean"
+          },
+          "sla_seconds": {
+            "$ref": "#/components/schemas/DurationSeconds"
+          }
+        },
+        "required": [
+          "self_approval_forbidden",
+          "approver_permission",
+          "assignment_timeout_seconds",
+          "sla_seconds",
+          "escalation_step_seconds",
+          "max_escalations",
+          "expiry_seconds"
+        ],
+        "title": "ReviewPolicySettings",
+        "type": "object"
+      },
+      "ReviewPolicyView": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "additionalProperties": true,
+            "title": "Document",
+            "type": "object"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "version",
+          "policy_version",
+          "document"
+        ],
+        "title": "ReviewPolicyView",
+        "type": "object"
+      },
+      "ReviewPolicyWriteView": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "additionalProperties": true,
+            "title": "Before",
+            "type": "object"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "document": {
+            "additionalProperties": true,
+            "title": "Document",
+            "type": "object"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "version",
+          "policy_version",
+          "document",
+          "before"
+        ],
+        "title": "ReviewPolicyWriteView",
         "type": "object"
       },
       "ReviewQueuePage": {
@@ -14275,7 +15077,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -14796,6 +15598,66 @@
         "minimum": 0.0,
         "title": "SpanCount",
         "type": "integer"
+      },
+      "SpendBudget": {
+        "additionalProperties": false,
+        "description": "A spend budget for one domain and period (PRP-44; evaluated against the cost ledger by PRP-46). Titled SpendBudget because query/v1 already exports a Budget (the query execution budget). amount is a decimal string in currency, never a float. thresholds_percent are alert points as integer percentages of amount (strictly ascending, so 50, 80, 100, 120). tags_filter narrows the budget to CostRecord rows whose tags contain every listed key and value; absent means every row of the domain. Rules JSON Schema cannot express (thresholds strictly ascending) are checked by tests/contracts/validators.py::check_budget_thresholds_ascending.",
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/DecimalAmount"
+          },
+          "budget_id": {
+            "$ref": "#/components/schemas/Slug"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "period": {
+            "enum": [
+              "monthly",
+              "quarterly",
+              "annual"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "tags_filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostTags"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thresholds_percent": {
+            "items": {
+              "$ref": "#/components/schemas/ThresholdsPercentItem"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Thresholds Percent",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema_version",
+          "budget_id",
+          "domain_id",
+          "period",
+          "amount",
+          "currency",
+          "thresholds_percent"
+        ],
+        "title": "SpendBudget",
+        "type": "object"
       },
       "StaleAgentConfirm": {
         "additionalProperties": false,
@@ -15476,6 +16338,12 @@
         ],
         "title": "TargetRef",
         "type": "object"
+      },
+      "ThresholdsPercentItem": {
+        "maximum": 1000.0,
+        "minimum": 1.0,
+        "title": "ThresholdsPercentItem",
+        "type": "integer"
       },
       "TimeField": {
         "enum": [
@@ -16766,6 +17634,65 @@
         "title": "DecisionBody",
         "type": "object"
       },
+      "neurosphere_api__admin__platform__models__DomainView": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "title": "Classification",
+            "type": "string"
+          },
+          "control_registered": {
+            "default": false,
+            "title": "Control Registered",
+            "type": "boolean"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "is_control_domain": {
+            "title": "Is Control Domain",
+            "type": "boolean"
+          },
+          "residency_region": {
+            "title": "Residency Region",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "title": "Updated By",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "domain_id",
+          "display_name",
+          "classification",
+          "residency_region",
+          "status",
+          "is_control_domain",
+          "version",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "DomainView",
+        "type": "object"
+      },
       "neurosphere_api__copilot__models__TimeRange": {
         "additionalProperties": false,
         "properties": {
@@ -16916,6 +17843,51 @@
           "state"
         ],
         "title": "Coverage",
+        "type": "object"
+      },
+      "neurosphere_api__me__models__DomainView": {
+        "additionalProperties": false,
+        "properties": {
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "display_name_source": {
+            "enum": [
+              "catalog",
+              "derived"
+            ],
+            "title": "Display Name Source",
+            "type": "string"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "domain_id",
+          "display_name",
+          "display_name_source",
+          "cloud",
+          "permissions"
+        ],
+        "title": "DomainView",
         "type": "object"
       },
       "neurosphere_api__reconciliation__models__MetricValue": {
@@ -17201,7 +18173,7 @@
           "display_name": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DisplayName"
+                "$ref": "#/components/schemas/DisplayName-Output"
               },
               {
                 "type": "null"
@@ -17340,7 +18312,7 @@
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CustomerId"
           },
           "display_name": {
-            "$ref": "#/components/schemas/DisplayName"
+            "$ref": "#/components/schemas/DisplayName-Output"
           },
           "domain_id": {
             "$ref": "#/components/schemas/DomainId"
@@ -19065,6 +20037,669 @@
         "summary": "Put Role Assignment",
         "tags": [
           "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/budgets": {
+      "get": {
+        "operationId": "list_budgets_api_v1_admin_platform_budgets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Budgets",
+        "tags": [
+          "admin-platform-budgets"
+        ]
+      },
+      "post": {
+        "operationId": "create_budget_api_v1_admin_platform_budgets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpendBudget"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Budget",
+        "tags": [
+          "admin-platform-budgets"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/budgets/{budget_id}": {
+      "delete": {
+        "operationId": "delete_budget_api_v1_admin_platform_budgets__budget_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Budget",
+        "tags": [
+          "admin-platform-budgets"
+        ]
+      },
+      "get": {
+        "operationId": "get_budget_api_v1_admin_platform_budgets__budget_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Budget",
+        "tags": [
+          "admin-platform-budgets"
+        ]
+      },
+      "put": {
+        "operationId": "replace_budget_api_v1_admin_platform_budgets__budget_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpendBudget"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace Budget",
+        "tags": [
+          "admin-platform-budgets"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/domains": {
+      "get": {
+        "operationId": "list_domains_api_v1_admin_platform_domains_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_retired",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Retired",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DomainPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Domains",
+        "tags": [
+          "admin-platform-domains"
+        ]
+      },
+      "post": {
+        "operationId": "create_domain_api_v1_admin_platform_domains_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DomainDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/neurosphere_api__admin__platform__models__DomainView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Domain",
+        "tags": [
+          "admin-platform-domains"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/domains/{domain_id}": {
+      "get": {
+        "operationId": "get_domain_api_v1_admin_platform_domains__domain_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._=-]+$",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/neurosphere_api__admin__platform__models__DomainView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Domain",
+        "tags": [
+          "admin-platform-domains"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/domains/{domain_id}/retire": {
+      "post": {
+        "operationId": "retire_domain_api_v1_admin_platform_domains__domain_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:domain:[a-z0-9._=-]+$",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/neurosphere_api__admin__platform__models__DomainView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retire Domain",
+        "tags": [
+          "admin-platform-domains"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/price-sheets": {
+      "get": {
+        "operationId": "list_price_sheets_api_v1_admin_platform_price_sheets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceSheetPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Price Sheets",
+        "tags": [
+          "admin-platform-price-sheets"
+        ]
+      },
+      "post": {
+        "operationId": "upload_price_sheet_api_v1_admin_platform_price_sheets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceSheetUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceSheetUploadView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Price Sheet",
+        "tags": [
+          "admin-platform-price-sheets"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/price-sheets/{snapshot_id}": {
+      "get": {
+        "operationId": "get_price_sheet_api_v1_admin_platform_price_sheets__snapshot_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceSheetView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Price Sheet",
+        "tags": [
+          "admin-platform-price-sheets"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/price-sheets/{snapshot_id}/coverage": {
+      "get": {
+        "operationId": "get_price_sheet_coverage_api_v1_admin_platform_price_sheets__snapshot_id__coverage_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Price Sheet Coverage",
+        "tags": [
+          "admin-platform-price-sheets"
+        ]
+      }
+    },
+    "/api/v1/admin/platform/review-policy": {
+      "get": {
+        "operationId": "get_review_policy_api_v1_admin_platform_review_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPolicyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Review Policy",
+        "tags": [
+          "admin-platform-review-policy"
+        ]
+      },
+      "put": {
+        "operationId": "put_review_policy_api_v1_admin_platform_review_policy_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "maxLength": 300,
+              "minLength": 1,
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPolicyDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPolicyWriteView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Review Policy",
+        "tags": [
+          "admin-platform-review-policy"
         ]
       }
     },
@@ -25358,6 +26993,7 @@
     },
     "/api/v1/me/domains": {
       "get": {
+        "description": "The domains the caller may read (an unexpired role conferring `data.read`, in the caller's own cloud and customer), with display names from the catalog. A caller whose only `data.read` comes from a resource-scoped grant gets **200 with an empty `items` list**: the grant covers one resource, never a domain. A caller holding `data.read` nowhere gets 403.",
         "operationId": "my_domains_api_v1_me_domains_get",
         "responses": {
           "200": {

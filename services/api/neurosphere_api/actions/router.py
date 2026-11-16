@@ -14,8 +14,8 @@
 |        |                                                       | (customer-level)   |
 
 ``PUT /emergency-disable`` acts on the whole customer: beyond ``config.manage`` in some domain it
-requires ``config.manage`` on the customer's reserved control domain
-(:mod:`neurosphere_api.actions.customer_control`), else 403 ``customer_scope_required``.
+requires the deployment-scoped ``config.manage`` (on the customer's reserved control domain,
+:mod:`neurosphere_api.authz.deployment_scope`, PRP-48), else 403 ``customer_scope_required``.
 
 The path ``{domain}`` is the authorization TARGET, checked against the server-derived
 ``IdentityScope`` (403 outside it, 503 on a policy-store outage). ``customer_id``, ``domain_id``
@@ -36,7 +36,6 @@ from neurosphere_core.paging.models import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from neurosphere_core.scope import IdentityScope
 
 from neurosphere_api.actions.common import audit_correlation_id
-from neurosphere_api.actions.customer_control import require_customer_control
 from neurosphere_api.actions.dependencies import ActionPlane, get_action_plane
 from neurosphere_api.actions.emergency import read_control, set_control
 from neurosphere_api.actions.models import (
@@ -50,6 +49,7 @@ from neurosphere_api.actions.models import (
 )
 from neurosphere_api.actions.service import ActionApi
 from neurosphere_api.authz import domain_from_path, require
+from neurosphere_api.authz.deployment_scope import require_deployment_admin
 from neurosphere_api.middleware import correlation_id_of
 from neurosphere_api.routers import RouterRegistry
 
@@ -83,7 +83,7 @@ ApproveScope = Annotated[
 ]
 AnyReadScope = Annotated[IdentityScope, Depends(require(Permission.DATA_READ))]
 CustomerConfigScope = Annotated[
-    IdentityScope, Depends(require_customer_control(Permission.CONFIG_MANAGE))
+    IdentityScope, Depends(require_deployment_admin(Permission.CONFIG_MANAGE))
 ]
 Plane = Annotated[ActionPlane, Depends(get_action_plane)]
 DomainPath = Annotated[str, Path(min_length=1, max_length=512)]

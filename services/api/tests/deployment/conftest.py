@@ -15,7 +15,10 @@ import pytest
 from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     ALICE,
     BOB,
+    CUSTOMER,
     FINANCE,
+    HR,
+    OPERATIONS,
     Harness,
     harness,
     policy,
@@ -24,10 +27,12 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
 from azure.core.credentials import AccessToken
 from fastapi import APIRouter
 from neurosphere_core.audit import AuditRepository, InMemoryAuditStore
-from neurosphere_core.auth.scope import Role
+from neurosphere_core.auth.scope import Role, customer_control_domain_id
 
-#: Holds ``config.manage`` (admin role).
+#: Holds ``config.manage`` (admin role), including on the control domain (deployment-scoped).
 ADMIN = BOB
+#: The customer's reserved control domain (PRP-65 / PRP-48 deployment-scoped admin).
+CONTROL = customer_control_domain_id("commercial", CUSTOMER)
 #: Read-only role: no ``config.manage``.
 VIEWER = ALICE
 
@@ -61,7 +66,13 @@ def mount() -> Callable[[dict[str, APIRouter]], Harness]:
 
     def build(routers: dict[str, APIRouter]) -> Harness:
         h = harness(
-            policy(ADMIN, role(Role.ADMIN, FINANCE)),
+            # Deploy scan and plan need the deployment-scoped admin (PRP-48 item 3, #114):
+            # config.manage on the customer's reserved control domain.
+            policy(
+                ADMIN,
+                role(Role.ADMIN, FINANCE, CONTROL),
+                memberships=(FINANCE, OPERATIONS, HR, CONTROL),
+            ),
             policy(VIEWER, role(Role.VIEWER, FINANCE)),
             routers=routers,
         )

@@ -191,6 +191,7 @@ def test_default_builders_cover_every_component_exactly_once() -> None:
         "lifecycle",
         "admission",
         "admin_connectors",
+        "admin_platform",
         "admin",
         "analytics",
     ]
@@ -226,6 +227,7 @@ def test_stub_builders_only_replace_placeholders() -> None:
         "lifecycle",
         "admission",
         "admin_connectors",
+        "admin_platform",
         "admin",
         "analytics",
     ]

@@ -148,8 +148,13 @@ async def build_pipeline_deps(
     ledger: LedgerSettings | None = None,
     archive: ArchiveSettings | None = None,
     quarantine: QuarantineSettings | None = None,
+    price_table: PriceTable | None = None,
 ) -> PipelineDeps:
-    """Construct every sink and store. Raises a ``config`` error for missing infrastructure."""
+    """Construct every sink and store. Raises a ``config`` error for missing infrastructure.
+
+    ``price_table`` (PRP-44: stored snapshots merged with the file table) replaces the file table
+    ``NS_LEDGER_PRICE_TABLE_FILE`` names when given.
+    """
     cloud = require_sink_cloud(settings)  # fail closed before any resource is touched
     ingestion = ingestion or IngestionSettings()
     ledger = ledger or LedgerSettings()
@@ -182,7 +187,7 @@ async def build_pipeline_deps(
     ledger_sink = CostLedgerSink(
         CostLedger(CosmosLedgerStore(database.get_container_client(ledger.ledger_container))),
         OutboxWriter(CosmosOutboxStore(database.get_container_client(ledger.outbox_container))),
-        load_price_table(ledger.price_table_file),
+        price_table if price_table is not None else load_price_table(ledger.price_table_file),
     )
     return PipelineDeps(
         quarantine=BlobQuarantineSink(

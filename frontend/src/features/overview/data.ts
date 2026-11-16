@@ -1,8 +1,11 @@
 import { createQueryHook } from "../../api/index.js";
 import type { NsRole } from "../../auth/roles";
+import { ACTIONS_PATH } from "../actions/paths";
+import { COST_DASHBOARD_PATH } from "../dashboards/paths";
 import type { Series } from "../dashboards/types";
 import { MAP_PATH } from "../map/paths";
 import { REPORTS_LIST_ROUTE, reportsPath } from "../reports/paths";
+import { REVIEW_PATH } from "../review/paths";
 
 /**
  * Data layer of the overview tiles. Each tile has its OWN query so one failing or forbidden
@@ -34,6 +37,19 @@ export const ROLE_TILES: Readonly<Record<NsRole, readonly TileId[]>> = {
   Admin: ["cost", "review", "awaiting", "map", "reports"],
 };
 
+/**
+ * The API permission each tile's read endpoint needs (the GET routes behind the tile hooks all
+ * require `data.read`). Display metadata for tests: overview.test.tsx ties every value to a name
+ * in the API permission list. Hiding a tile is not authorization.
+ */
+export const TILE_PERMISSION: Readonly<Record<TileId, string>> = {
+  cost: "data.read",
+  review: "data.read",
+  awaiting: "data.read",
+  map: "data.read",
+  reports: "data.read",
+};
+
 export function tilesForRoles(roles: readonly NsRole[]): readonly TileId[] {
   const source: readonly NsRole[] = roles.length === 0 ? ["Viewer"] : roles;
   const wanted = new Set<TileId>();
@@ -52,10 +68,6 @@ export const TILE_CALLS: Readonly<Record<TileId, number>> = {
 export const MAX_OVERVIEW_CALLS = 7;
 
 // ---- Links into each feature (route paths; the domain rides in `?domain_id=`).
-
-const COST_DASHBOARD_PATH = "/dashboards/cost";
-const REVIEW_PATH = "/review";
-const ACTIONS_PATH = "/actions";
 
 export function tileHref(tile: TileId, domainId: string): string {
   const base: Record<TileId, string> = {
