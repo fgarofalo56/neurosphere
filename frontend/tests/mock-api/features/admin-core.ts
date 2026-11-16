@@ -445,6 +445,12 @@ async function platformDomains(ctx: FeatureMockContext, rest: string): Promise<v
     }
     return json(ctx, 405, { error: "method not allowed" });
   }
+  const single = /^\/([^/]+)$/.exec(rest);
+  if (single !== null && method === "GET") {
+    const found = domains.find((d) => d.domain_id === decodeURIComponent(single[1] ?? ""));
+    if (found === undefined) return problem(ctx, 404, "not_found", "domain_not_found");
+    return json(ctx, 200, domainView(found), { etag: `"domain-${found.version}"` });
+  }
   const match = /^\/([^/]+)\/retire$/.exec(rest);
   if (match === null || method !== "POST") return problem(ctx, 404, "not_found", "unknown_route");
   const domain = domains.find((d) => d.domain_id === decodeURIComponent(match[1] ?? ""));

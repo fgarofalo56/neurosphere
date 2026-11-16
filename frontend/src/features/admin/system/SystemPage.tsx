@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { ForbiddenError, type ApiError } from "../../../api/index.js";
 import {
   DataTable,
   EmptyState,
@@ -46,6 +47,21 @@ function Loading({ label }: { readonly label: string }): ReactElement {
 /** Reasons are codes from the API (never a host or a secret); they render as the code. */
 function Reason({ value }: { readonly value: string | null }): ReactElement {
   return value === null ? <span>{S.noReason}</span> : <code>{value}</code>;
+}
+
+/**
+ * A secondary panel that is denied shows one line, so the page has a single forbidden state (the
+ * components panel owns it). Any other failure is still a retryable error, never an empty list.
+ */
+function SecondaryError({
+  error,
+  onRetry,
+}: {
+  readonly error: ApiError;
+  readonly onRetry: () => void;
+}): ReactElement {
+  if (error instanceof ForbiddenError) return <p data-testid="panel-denied">{S.panelDenied}</p>;
+  return <QueryErrorState error={error} onRetry={onRetry} />;
 }
 
 function ComponentsPanel(): ReactElement {
@@ -100,7 +116,7 @@ function ComponentsPanel(): ReactElement {
 function ChecklistPanel(): ReactElement {
   const query = useChecklist({});
   if (query.isError) {
-    return <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
+    return <SecondaryError error={query.error} onRetry={() => void query.refetch()} />;
   }
   if (query.isPending) return <Loading label={S.loadingChecklist} />;
   const items = asList(query.data.items);
@@ -141,7 +157,7 @@ function ChecklistPanel(): ReactElement {
 function SettingsPanel(): ReactElement {
   const query = useSettings({});
   if (query.isError) {
-    return <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
+    return <SecondaryError error={query.error} onRetry={() => void query.refetch()} />;
   }
   if (query.isPending) return <Loading label={S.loadingSettings} />;
   const items = asList(query.data.items);

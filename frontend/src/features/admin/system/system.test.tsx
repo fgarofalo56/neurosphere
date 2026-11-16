@@ -174,7 +174,7 @@ describe("SystemPage", () => {
       <SystemPage />,
       fakeFetch(() => problem(403, "forbidden", "deployment_scope_required")).impl,
     );
-    await waitFor(() => expect(screen.getAllByTestId("forbidden-state")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByTestId("panel-denied")).toHaveLength(2));
     cleanup();
     renderAdmin(<SystemPage />, fakeFetch(() => problem(503, "dependency_transient", "down")).impl);
     await waitFor(() => expect(screen.getAllByTestId("unavailable-state")).toHaveLength(3));

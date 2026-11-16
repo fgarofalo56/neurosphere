@@ -174,7 +174,8 @@ export async function adminDownload(
   if (!response.ok) throw await failure(response, correlationId);
   const blob = await response.blob();
   const disposition = response.headers.get("Content-Disposition") ?? "";
-  const named = /filename="?([^";]+)"?/.exec(disposition)?.[1];
+  // Only a plain file name is accepted from the header; anything else uses the fallback.
+  const named = /filename="?([A-Za-z0-9._-]{1,100})"?/.exec(disposition)?.[1];
   const rowsHeader = response.headers.get("X-NeuroSphere-Export-Rows");
   const rows = rowsHeader === null ? undefined : Number(rowsHeader);
   return {

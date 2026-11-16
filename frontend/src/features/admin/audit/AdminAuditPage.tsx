@@ -54,7 +54,7 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-/** `datetime-local` text for a Date, in local time. */
+/** `YYYY-MM-DDTHH:mm` text for a Date, in local time. */
 function toLocalInput(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -224,7 +224,13 @@ function SiemPanel(): ReactElement {
   const query = useSiemStatus({});
   let body: ReactElement;
   if (query.isError) {
-    body = <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
+    // Denied: one line, so the results table owns the page's single forbidden state.
+    body =
+      query.error instanceof ForbiddenError ? (
+        <p data-testid="siem-denied">{S.siem.denied}</p>
+      ) : (
+        <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />
+      );
   } else if (query.isPending) {
     body = (
       <div aria-busy="true" data-testid="siem-loading">
@@ -366,14 +372,16 @@ function FilterForm({
           hint={S.rangeHint}
         >
           <Input
-            type="datetime-local"
+            type="text"
+            placeholder="YYYY-MM-DDTHH:mm"
             value={form.sinceLocal}
             onChange={(_e, d) => set({ sinceLocal: d.value })}
           />
         </Field>
         <Field label={S.fields.until} required>
           <Input
-            type="datetime-local"
+            type="text"
+            placeholder="YYYY-MM-DDTHH:mm"
             value={form.untilLocal}
             onChange={(_e, d) => set({ untilLocal: d.value })}
           />

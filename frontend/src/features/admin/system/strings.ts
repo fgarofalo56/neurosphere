@@ -10,6 +10,7 @@ export const SYSTEM_STRINGS = {
   loadingStatus: "Loading system status",
   loadingChecklist: "Loading the checklist",
   loadingSettings: "Loading settings",
+  panelDenied: "Access to this panel was denied by the service.",
   noComponents: "No components were reported.",
   noChecklist: "The checklist has no items.",
   noSettings: "No settings were reported.",

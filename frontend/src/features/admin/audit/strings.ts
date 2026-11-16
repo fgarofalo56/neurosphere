@@ -18,7 +18,7 @@ export const AUDIT_STRINGS = {
   },
   any: "Any",
   apply: "Search",
-  rangeHint: `Search and export cover at most ${MAX_RANGE_DAYS} days at a time.`,
+  rangeHint: `Local time, YYYY-MM-DDTHH:mm. Search and export cover at most ${MAX_RANGE_DAYS} days at a time.`,
   headers: {
     time: "Recorded",
     domain: "Domain",
@@ -35,6 +35,7 @@ export const AUDIT_STRINGS = {
   siem: {
     title: "SIEM sink",
     loading: "Loading SIEM status",
+    denied: "SIEM status: access was denied by the service.",
     sink: "Sink",
     state: "State",
     lastSuccess: "Last success",

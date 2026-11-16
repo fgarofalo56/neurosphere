@@ -191,6 +191,9 @@ describe("admin-core mock", () => {
       },
     });
     expect(created.status).toBe(201);
+    const one = await call("GET", `${base}/${encodeURIComponent(ADMIN_DOMAIN_FINANCE)}`);
+    expect(one.headers["etag"]).toBe('"domain-1"');
+    expect((await call("GET", `${base}/missing`)).status).toBe(404);
     const reserved = await call("POST", base, { body: { domain_id: ADMIN_DOMAIN_RESERVED } });
     expect(reserved.status).toBe(422);
     expect(reserved.body["detail"]).toBe(ADMIN_RESERVED_TEXT);
