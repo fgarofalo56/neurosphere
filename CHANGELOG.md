@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-rc.4] - 2026-11-17
+
+Same product content as 0.1.0-rc.3. Use this candidate instead: v0.1.0-rc.3 was never
+completed (three of its four images are unsigned and no release was created) and must not
+be deployed.
+
+### Fixed
+- **release:** the image signing job no longer stops on the SBOM attestation payload; the
+  verify steps keep the exit status and discard the payload output.
+
 ## [0.1.0-rc.3] - 2026-11-16
 
 ### Added
