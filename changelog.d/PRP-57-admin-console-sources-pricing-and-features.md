@@ -1,3 +1,0 @@
-### Added
-- PRP-57: admin console part 2 under `/admin`: ingest producers with a show-once secret (`/admin/sources/producers`), connector configurations with credential references only (`/admin/sources/connectors`), gateway registration (`/admin/gateways`), catalog import with a required dry run and payload digest gate (`/admin/catalog-import`), price sheets and budgets (`/admin/pricing`), feature settings with restart-required notices (`/admin/features`) and the HITL review policy (`/admin/review-policy`).
-- PRP-57: mock API module `frontend/tests/mock-api/features/admin-sources.ts`, Playwright specs under `frontend/tests/e2e/admin-sources/`, axe samples and visual baselines for the new pages.
