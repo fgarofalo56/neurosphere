@@ -16,7 +16,7 @@ fail unless allowlisted with a reason (ADR-0002, PRP-00 Clarification 10).
 
 Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002)
 
-## Python (uv.lock) - 143 packages
+## Python (uv.lock) - 150 packages
 
 | Package | Version | Licence | Scope | Support note |
 | --- | --- | --- | --- | --- |
@@ -41,6 +41,8 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | azure-storage-blob | 12.31.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | boolean-py | 5.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
+| boto3 | 1.44.3 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
+| botocore | 1.44.3 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | cachecontrol | 0.14.4 | Apache-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
 | certifi | 2026.10.19 | MPL-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | cffi | 2.1.1 | MIT-0 | runtime | no EOL published locally; Dependabot tracks releases |
@@ -68,6 +70,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | isodate | 0.7.2 | BSD | runtime | 0.x: minor releases may break; no support window recorded |
 | isort | 8.0.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | jinja2 | 3.1.6 | BSD | dev-only | no EOL published locally; Dependabot tracks releases |
+| jmespath | 1.1.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | jsonschema | 4.26.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | jsonschema-specifications | 2025.9.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | license-expression | 30.4.4 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -86,6 +89,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | neurosphere-api | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-apim-gateway | 0.0.0 | first-party | first-party | workspace member |
+| neurosphere-connector-aws-bedrock | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-azure-billing | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-azure-monitor | 0.0.0 | first-party | first-party | workspace member |
 | neurosphere-connector-foundry | 0.0.0 | first-party | first-party | workspace member |
@@ -138,6 +142,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | pyright | 1.1.414 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | pytest | 9.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | pytest-asyncio | 1.4.1.post1 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
+| python-dateutil | 2.9.0.post0 | Apache-2.0 AND BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | python-dotenv | 1.2.4 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | python-multipart | 0.0.32 | Apache-2.0 | runtime | 0.x: minor releases may break; no support window recorded |
 | pytokens | 0.4.1 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
@@ -149,7 +154,9 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | respx | 0.23.1 | BSD-3-Clause | dev-only | 0.x: minor releases may break; no support window recorded |
 | rich | 15.0.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | rpds-py | 2026.9.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| ruff | 0.17.5 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| ruff | 0.17.3 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
+| s3transfer | 0.19.3 | Apache-2.0 | runtime | 0.x: minor releases may break; no support window recorded |
+| six | 1.17.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | sortedcontainers | 2.4.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | sse-starlette | 3.5.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | starlette | 1.7.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |

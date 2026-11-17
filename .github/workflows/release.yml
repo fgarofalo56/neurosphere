@@ -10,6 +10,11 @@ name: release
 #   pull_request       path-filtered, always dry run: builds, SBOMs, lints and packages,
 #                      pushes and signs nothing
 #
+# Release policy (PRP-63): a tag release stays a DRAFT until the hosted smoke is green.
+# `deploy-hosted.yml` listens for the completion of this workflow (`name: release` must stay
+# stable for its workflow_run trigger), deploys the tag after a reviewer approves it, runs the
+# smoke and only then publishes the draft. This workflow never publishes a release itself.
+#
 # Fails closed: no step suppresses a failing exit code. Binaries are installed by version
 # and sha256 (same pattern as security.yml); no third-party docker, cosign or syft action.
 # Only the `sign` job holds id-token: write; only `release-notes` holds contents: write.
@@ -253,14 +258,19 @@ jobs:
             echo "== ${svc}: ${ref}"
             cosign sign --yes "$ref"
             cosign attest --yes --type cyclonedx --predicate "$sbom" "$ref"
+            # Keep only the exit status and the checks cosign prints on stderr. The verified
+            # payload goes to stdout as ONE line; for verify-attestation that line is the whole
+            # SBOM (about 1.25 MB for the api image), and the v0.1.0-rc.3 run stopped making
+            # progress right there twice until the job timeout cancelled it.
             cosign verify \
               --certificate-identity "$identity" \
               --certificate-oidc-issuer "$OIDC_ISSUER" \
-              "$ref"
+              "$ref" > /dev/null
             cosign verify-attestation --type cyclonedx \
               --certificate-identity "$identity" \
               --certificate-oidc-issuer "$OIDC_ISSUER" \
-              "$ref"
+              "$ref" > /dev/null
+            echo "verified signature and attestation: ${svc}"
           done
 
   chart:

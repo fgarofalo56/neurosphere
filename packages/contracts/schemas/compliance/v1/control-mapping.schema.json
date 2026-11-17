@@ -44,12 +44,13 @@
         "audit_chain",
         "hitl_decisions",
         "evaluation_results",
-        "cost_attribution"
+        "cost_attribution",
+        "configuration_findings"
       ]
     },
     "evidence_sources": {
       "type": "array",
-      "maxItems": 5,
+      "maxItems": 6,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/evidence_source_id" }
     }

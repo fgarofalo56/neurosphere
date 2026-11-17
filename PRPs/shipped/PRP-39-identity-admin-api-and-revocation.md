@@ -209,12 +209,12 @@ Console UI, Entra group sync, Graph lookups of display names, bulk import of ass
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
-| 2 | done | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
-| 3 | done | prp-39-identity-admin | list/detail + role/membership/grant PUT/DELETE with If-Match; scope, self, customer-wide checks; multi-chain audit; replica cache invalidation via REVOCATION_HOOKS.invalidate_caches; route inventory pin added |
-| 4 | done | prp-39-identity-admin | POST/GET/DELETE revocation through the composed RevocationService; issued_before and until_lifted proven on the composed app with a fake clock; push closer called once per revoke |
-| 5 | done | prp-39-identity-admin | tests/security/authz/test_admin_identity{,_revocation}.py: 76 cases over the 11 routes (cross-customer, cross-cloud, cross-domain, self, privileged, expired, revoked); harness files untouched |
-| 6 | done | prp-39-identity-admin | done on branch: routers.py hook, route inventory pin, runbook docs/runbooks/identity-admin.md, mkdocs nav. Left for the merge step: rebase, regenerate openapi.json (drift test fails until then), docs/reference, status table, INDEX, changelog fragment, completion note, CI green |
+| 1 | merged | prp-39-identity-admin | mode, merge_entries, lift on both stores, RevocationService.lift/status; 103 revocation tests pass |
+| 2 | merged | prp-39-identity-admin | builders/admin.py (policy_admin, revocation_service; disabled without authz), admin + identity package roots, plane; admin ordered before analytics (test_readiness pin +1 line) |
+| 3 | merged | prp-39-identity-admin | list/detail + role/membership/grant PUT/DELETE with If-Match; scope, self, customer-wide checks; multi-chain audit; replica cache invalidation via REVOCATION_HOOKS.invalidate_caches; route inventory pin added |
+| 4 | merged | prp-39-identity-admin | POST/GET/DELETE revocation through the composed RevocationService; issued_before and until_lifted proven on the composed app with a fake clock; push closer called once per revoke |
+| 5 | merged | prp-39-identity-admin | tests/security/authz/test_admin_identity{,_revocation}.py: 76 cases over the 11 routes (cross-customer, cross-cloud, cross-domain, self, privileged, expired, revoked); harness files untouched |
+| 6 | merged | prp-39-identity-admin | done on branch: routers.py hook, route inventory pin, runbook docs/runbooks/identity-admin.md, mkdocs nav. Left for the merge step: rebase, regenerate openapi.json (drift test fails until then), docs/reference, status table, INDEX, changelog fragment, completion note, CI green |
 
 ## Completion note (filled at ship)
 - Date and PR: 2026-11-15, PR #283

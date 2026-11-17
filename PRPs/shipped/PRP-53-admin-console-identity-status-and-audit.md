@@ -240,14 +240,14 @@ Producers, connectors, gateway registration, catalog import, pricing, budgets, f
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-53-admin-console-core | merged in PR 309 |
-| 2 | done | prp-53-admin-console-core | merged in PR 309 |
-| 3 | done | prp-53-admin-console-core | merged in PR 309 |
-| 4 | done | prp-53-admin-console-core | merged in PR 309 |
-| 5 | done | prp-53-admin-console-core | merged in PR 309 |
-| 6 | done | prp-53-admin-console-core | merged in PR 309 |
-| 7 | done | prp-53-admin-console-core | merged in PR 309 |
-| 8 | done | prp-53-admin-console-core | close-out: changelog fragment, completion note, Tier-3 regeneration |
+| 1 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 2 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 3 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 4 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 5 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 6 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 7 | merged | prp-53-admin-console-core | merged in PR 309 |
+| 8 | merged | prp-53-admin-console-core | close-out: changelog fragment, completion note, Tier-3 regeneration |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit: 2026-11-16, PR 309, merge commit recorded by the squash merge.

@@ -20,9 +20,10 @@ export type EvidenceSourceId =
   | "audit_chain"
   | "hitl_decisions"
   | "evaluation_results"
-  | "cost_attribution";
+  | "cost_attribution"
+  | "configuration_findings";
 /**
- * @maxItems 5
+ * @maxItems 6
  *
  * This interface was referenced by `ControlMapping`'s JSON-Schema
  * via the `definition` "evidence_sources".

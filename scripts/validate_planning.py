@@ -27,7 +27,7 @@ DOCS = [
     "README.md",
     "docs/RESEARCH-AND-GATES.md",
 ]
-PRP_FILE_RE = re.compile(r"^PRP-(\d{2})-[a-z0-9-]+\.md$")
+PRP_FILE_RE = re.compile(r"^PRP-(\d{2,3})-[a-z0-9-]+\.md$")
 FRONTMATTER_KEYS = ("name", "status", "review", "created", "model", "phase", "ns", "depends_on")
 CREDENTIAL_PATH_RE = re.compile(
     r"(^|/)\.env($|\.)|\.pem$|\.key$|\.pfx$|\.p12$|credentials\.json$|service-account.*\.json$|(^|/)secrets/",
@@ -143,7 +143,7 @@ def check_prps(texts: dict[str, str]) -> None:
         fail("missing PRPs/PRP-MASTER-neurosphere.md")
         return
     master = MASTER.read_text(encoding="utf-8")
-    index_ids = set(re.findall(r"\bPRP-(\d{2})\b", master))
+    index_ids = set(re.findall(r"\bPRP-(\d{2,3})\b", master))
     if not index_ids:
         fail("master index lists no PRP ids")
     backlog = {}

@@ -122,7 +122,6 @@ owns:
   - services/api/neurosphere_api/health/router.py
   - services/api/neurosphere_api/health/__init__.py
   - services/workers/neurosphere_workers/runtime/settings.py
-  - scripts/sandbox/sbx_grant_operator.py
   - tests/unit/sandbox_stack/test_grant_operator_cloud.py
   - services/api/tests/path_aliases/**
   - services/api/tests/runtime_api/test_startup_refusal.py
@@ -137,6 +136,7 @@ tier1:
   - services/api/neurosphere_api/runtime/builders/__init__.py
   - services/api/neurosphere_api/routers.py
 tier2_appends:
+  - scripts/sandbox/sbx_grant_operator.py
   - services/api/tests/runtime_routes/manifest_calls.py
   - mkdocs.yml
 must_not_touch:
@@ -180,7 +180,8 @@ Parallelization map: Items 1, 2, 3 all edit `runtime/compose.py` and are sequent
 - Tests: `uv run pytest -q services/api/tests/runtime_api services/api/tests/health services/api/tests/runtime_routes services/workers/tests/runtime`.
 - Pattern references: `compose.py:99-160`, `status.py:57-96`.
 
-### Item 4 - Small composition and script fixes  [P]
+### Item 4 - Small composition and script fixes  [serial-after: PRP-67]
+- Ordering: PRP-67 item 5 also edits `scripts/sandbox/sbx_grant_operator.py` in W19; the grant-script line here merges after PRP-67 and rebases on it (the file is a Tier-2 append for this PRP).
 - Deliverable: `--cloud government` refused in `sbx_grant_operator.py` (choices narrowed with a message); `PolicyReviewerDirectory` docstring pointer; `RECOMMENDATION_STORE` `SharedKey` declared in `builders/__init__.py` and published from `_recommendations`.
 - Owned files: `scripts/sandbox/sbx_grant_operator.py`, `tests/unit/sandbox_stack/test_grant_operator_cloud.py`, `runtime/builders/planes.py` (docstring), `runtime/builders/data.py` (`_recommendations`), `runtime/builders/__init__.py` (one `SharedKey` line, Tier 1 for this wave).
 - Must NOT touch: any other builder, PRP-48's changes in the script.

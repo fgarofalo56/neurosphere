@@ -6,6 +6,189 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-rc.4] - 2026-11-17
+
+Same product content as 0.1.0-rc.3. Use this candidate instead: v0.1.0-rc.3 was never
+completed (three of its four images are unsigned and no release was created) and must not
+be deployed.
+
+### Fixed
+- **release:** the image signing job no longer stops on the SBOM attestation payload; the
+  verify steps keep the exit status and discard the payload output.
+
+## [0.1.0-rc.3] - 2026-11-16
+
+### Added
+- **prp-62:** AWS Bedrock reference connector (metadata only) (#317)
+- **prp-61:** configuration detections and shadow-AI discovery (#318)
+- **prp-63:** delivery pipeline to the hosted environment (#316)
+- **prp-51:** composition and API hygiene (#319)
+- **prp-60:** search indexing hardening (#311)
+- **prp-55:** real deploy apply through the action executor (#314)
+- **prp-58:** hosted data path switches, connector RBAC and G04 gate script (#312)
+- **prp-57:** admin console data sources, pricing and feature settings (#313)
+- **prp-59:** deploy and Government follow-ups (#307)
+- **prp-56:** compliance control library and evidence bundles (#308)
+- **prp-54:** write targets from stored configuration (#310)
+- **prp-53:** admin console identity, domains, system status and audit search (#309)
+- **prp-52:** CI and infrastructure hardening (#302)
+- **prp-50:** connector SDK and data-path follow-ups (#300)
+- **prp-49:** per-agent aggregates and map node metrics (#301)
+- **prp-45:** system status, first-run checklist and stored feature settings (#303)
+- **prp-46:** cost-center attribution and ingest follow-ups (#296)
+- **prp-44:** platform configuration (domains, budgets, price sheets, review policy) (#297)
+- **prp-48:** authorization and audit-chain hardening (#299)
+- **prp-47:** frontend shell fixes and test infrastructure (#298)
+- **prp-43:** catalog hardening and relationship review queue (#292)
+- **prp-42:** connector configuration with credential references (#293)
+- **prp-41:** ingest producer registry with show-once secrets (#290)
+- **prp-40:** audit search, export, denials view and Event Hubs SIEM sink (#291)
+- **prp-18:** bulk map edges, replay guard, gateway cadence, map nits (#280)
+- **prp-21:** admission wiring, federation hardening, FinOps t-band, pilot re-run (#282)
+- **prp-15:** archive series source, held-out measurement and #133 race fixes (#281)
+- **prp-39:** identity admin API and block-until-lifted revocation (#283)
+- **prp-65:** admin permissions, policy write repository and admin_config store (#277)
+- **prp-23:** data lifecycle runtime, dry-run by default (#276)
+- **prp-11:** analytics adapters runtime, product executor, Synapse windowed quantile (#275)
+- **prp-38:** real stack stack-up order, seed fixes and real-stack CI workflow (#278)
+- **prp-68:** changelog fragments and INDEX freshness check (#270)
+- **prp-37:** admin v1 contracts, cost tags, query entities, error codes and manifest caps (#273)
+- **docs-assistant:** publish image on release, compose profile and operator runbook
+- **docs-assistant:** Azure OpenAI model client with abstention and 503 model_unavailable
+- **connector-sdk:** write-connector contract-kit profile (PRP-09 r2 item 14)
+- **workers:** billing_export role feeds reconciliation (PRP-09 r2 item 12)
+- **workers:** foundry_discovery role (PRP-09 r2 item 11)
+- **otel-connector:** harden otel-generic (#49) and compose the collector (PRP-09 item 10)
+- **catalog:** reason-code picker, shared stale confirm, entity create and edit (PRP-31 item 10)
+- **catalog:** optional closed reason_code on deprecate and recertify (PRP-31 item 9)
+- **ui-adapters:** domain-path catalog entity create and update (PRP-31 item 13)
+- **evaluation:** point-read get_result on evaluation stores (PRP-19 r2 item 16)
+- **runtime:** close PRP-05 audit gaps (telemetry, worker roles, readiness) (#184)
+- **gates:** G17 --tag option for resource group tag policies
+- **frontend:** gateway observe UI and Grant/McpServer catalog renderers (PRP-33 item 7, closes #147)
+- **prp-33:** wire NS_GATEWAY_POLL_METRICS_APP_ID into gateway_poll
+- **prp-33:** query App Insights customMetrics for gateway cost-center attribution
+- **workers:** gateway_poll joins all as a safe no-op when unconfigured
+- **actions:** run review-reconcile sweep in the actions role; scope kill switch to control domain
+- **actions:** review-reconcile sweep for stale and orphan maker-checker items
+- **auth:** close PRP-06 composed-app audit gaps (D1-D5) (#172)
+- **ingest:** wire compose workers for ingestion and add synthetic price table
+- **runtime:** compose search/write env, runtime-composition runbook and smoke test (PRP-35 item 5)
+- **actions:** register write targets from settings in API and workers (PRP-35 item 4)
+- **seed:** compose catalog seeder, local-only and idempotent (PRP-35 item 2)
+- **search:** NS_SEARCH_PROVIDER catalog search backend and indexer (PRP-35 item 3)
+- **ingest:** dev producers file for compose, Helm producers mount, runbook (PRP-35 item 1)
+- **video:** PRP-27 captioned explainer video render (local, zero cost) (#163)
+- **marketing:** local zero-cost render backend for the explainer video (PRP-27)
+- **video:** guarded render entry point with stub backend, captions, spend cap
+- **marketing:** add asset manifest and path test (PRP-26 item 4)
+- **marketing:** PRP-26 item 1 walking deck source, PPTX and claims lint
+- **marketing:** persona demo scripts and feature-to-persona map (PRP-26 item 2)
+- **marketing:** explainer video storyboard, script and claims source (PRP-26 item 3)
+- **docs-assistant:** public docs assistant service (PRP-25 item 4)
+- **docs:** PRP-25 item 1 docs site (ADR-0008, mkdocs.yml, Pages workflow)
+- PRP-31 missing UI surfaces (12 routes + UI adapters) (#150)
+- **apim:** PRP-34 item 10 wiring and hand-offs
+- **frontend:** PRP-34 item 8 manage UI (plan preview, mode switch, publish buttons)
+- **gates:** PRP-34 item 9 G17 manage live gate script (not run, OPEN)
+- **apim:** PRP-34 item 6 MCP server publish and unpublish
+- **prp-34:** item 3 model swap via APIM backend, canary probe, worker wiring
+- **prp-34:** grant publish and unpublish (item 5)
+- **apim:** PRP-34 item 4 budget_cap_change on grant targets
+- **gateway:** PRP-34 item 2 manage-mode switch and write preflight
+- **contracts:** admit gateway write action kinds in connector manifests (PRP-34 item 1b)
+- **connectors:** PRP-34 item 1 APIM gateway write connector core
+- **infra:** PRP-34 item 7 APIM v2 SKUs, created-only diagnostics, optional MCP front
+- **api:** gateway plane builder in the runtime composition (PRP-33 item 9)
+- **workers:** gateway_poll role feeds APIM gateway logs through the ingest API (PRP-33 item 4)
+- **gates:** G17 APIM observe live gate script, evidence README and gate row (PRP-33 item 8)
+- **gateway:** observe-mode APIM gateway registry, preflight and inventory (PRP-33 item 6)
+- **contracts:** Grant and McpServer catalog contracts, grants_access_to relation, grant permissions (PRP-33 item 5)
+- **connectors:** APIM gateway and MCP log source kinds in the Azure Monitor connector (PRP-33 item 3)
+- **core:** APIM gateway suffix and ARM client factories (PRP-33 item 2)
+- **capabilities:** APIM tier and feature matrix rows (PRP-33 item 1)
+- **gates:** hosted_demo deploy --resume-failed recovers ownership after a failed S3
+
+### Changed
+- **catalog:** type the service reason_code as the closed ReasonCode literal
+
+### Fixed
+- **docs:** publish the theme assets and brand the docs site
+- **docs:** keep the release DoD checklist internal
+- **images:** copy foundry and azure-billing connectors into every uv --frozen image
+- **connectors:** keep _tracked type-transparent so write connectors satisfy WriteConnector
+- **workers:** billing_export posts closed billing months only (PRP-09 r2 item 15)
+- **connector-sdk:** harden Python and TS SDKs (PRP-09 r2 item 9, #48, #50)
+- **connector-sdk:** strict write-verify semantics (PRP-09 r2 item 8, #47)
+- **azure-monitor:** hold watermark on truncated slices, keep slices on 429 (PRP-09 r2 item 7, #46)
+- **egress:** absolute nslookup names; label-based audience check (PRP-20 r2 item 7)
+- **capabilities:** refuse Government regions outside the evidence-backed set (PRP-20 item 5)
+- **gates:** confine G01 --evidence-dir to the evidence root (#101)
+- **gates:** G02 profile teardown survives timeouts and bad JSON; add approved-path tests (#99)
+- **frontend:** forecast 409 unavailable state and real-stack spec fixes (PRP-31 item 15)
+- **audit:** source-qualified per-domain audit chains (PRP-31 item 14b)
+- **copilot:** evidence reader fails closed on store errors (PRP-19 r2 item 9 rework)
+- **deploy:** regenerate API reference, keep apply prompts out of empty-state audit (#188)
+- **gates:** G17 live-run defects found across eight real attempts; record partial result
+- **prp-33:** register /gateways/detail in route-count test, call map and demo audit
+- **deps:** bump oauthlib 4.0.0 to 4.0.1 for CVE-2026-49272 (HIGH)
+- **mcp-client:** harden SSRF, host normalisation, credential headers and auth errors (#112)
+- **mcp:** scope-derive MCP listings, answer metadata preflight, window derived draft keys
+- **mcp:** audit sync revocations and blocked names, bound admin list, bind /mcp exemption (#113)
+- **workers:** actions role sweep must be customer-scoped, never unscoped
+- **actions:** customer-level kill switch and resumable rejections (PRP-17 close-out)
+- **ingest:** regenerate API reference, pin price-table mount, document v2 id upgrade
+- **ingest:** restrict invoiced to billing sources, collision-safe ledger ids, request id check
+- **ingest:** harden normalizer ids, watermark, cloud default and duplicate metric
+- **prp-35:** satisfy single-executor-path and no-commercial-host guards
+- **prp-35:** copy foundry-actions into production api and workers images
+- **frontend:** drop entrance motion on the governed-change confirm dialog
+- **prp-26:** do not attribute reconciliation demo to Auditor role
+- **marketing:** make storyboard pass the shared claims lint (PRP-26)
+- **prp-25:** CI findings - image build context, CodeQL, gitleaks fixture
+- **docs-assistant:** clear pyright errors and refresh licence register (PRP-25)
+- **codeql:** clear the three PRP-34 error alerts
+- **prp-34:** close the three full-suite regressions found by verify-gates
+- **apim:** judge the pool canary within the priority group; pass mode in grant tests
+- **gateway:** mode route needs only scoped action.propose (PRP-34 item 2 rework)
+- **apim:** restore found resources after a lost update or delete response
+- **infra:** PRP-34 item 7 rework: diagnostics dependsOn apim, keep Authorization on own MCP front
+- resolve CodeQL error and warnings on PRP-33 code
+- **ci:** PRP-33 CI follow-ups: copy azure-monitor connector into images, gitleaks fixtures, viewer grant.read
+- **api:** gateways container in the registry and one meaning for auto (PRP-33 item 9)
+- **gates:** keep G17 evidence dir inside the repo unless overridden (Snyk CWE-23)
+- **demo:** point the API /readyz probes at the real private hosts
+- **gates:** deploy passes copilotMode via --copilot-mode (default disabled)
+- **demo:** copilotMode param defaults to disabled; smoke uses PT5M and reports az errors
+- **gates:** live-run fixes for hosted demo (role ids, KV ref refresh, register-bound revoke)
+- **frontend:** let trace tree items take their accessible name from content
+- **gates:** resume NIC ownership requires the exact <pe>.nic. prefix
+- **infra:** demo endpoint outputs read module outputs, not out-of-template references
+
+### Security
+- **security:** gitleaksignore the OTel collector endpoint false positive
+- **security:** ignore four unfixable sqlite-libs High CVEs in the Alpine base (#170)
+- **security:** allow the two APIM child modules without a publicNetworkAccess switch (PRP-34 item 7 follow-up)
+
+### Unclassified
+- PRP-19 round 2 item 15: loop test cites a seeded evaluation result via get_result
+- PRP-19 round 2 item 15: copilot real-stack loop test and G12 evidence
+- PRP-19 r2 item 12: harden outbound redaction (phones, addresses, credentials, call ids)
+- PRP-19 round 2 item 8: Commercial copilot matrix rows, compose passthrough, copilot runbook
+- PRP-19 r2 item 13: chat UI fixes (error terminal, first-token clock, selection provider, status)
+- PRP-19 round 2 item 11: reports hardening
+- PRP-19 round 2 item 10: query_spec on chart events and GET /copilot/status
+- PRP-19 round 2 item 9: store-backed copilot EvidenceReader wired in the builder
+- PRP-19 r2 item 14: propose_action evidence refs must resolve; empty in filters refused
+- PRP-16 round 2: evaluation audit gap closure (items 7-15) (#200)
+- PRP-10 round 2: catalog audit gap closure (items 8-13) (#192)
+- PRP-34 audit gap closure: recorder wiring, plan steps in confirmation dialog (#191)
+- PRP-08 audit gap closure: scan enablement, audit/consent, apply + uninstall preview, UI step (#186)
+
+_177 maintenance commits omitted._
+
+### Release notes by change (curated entries moved from Unreleased)
+
 ### Added
 - Contracts revision for the control plane (PRP-37, PR #273): new `admin/v1` schema family (credential reference, admin config documents, role, domain and grant change requests, revocation, producer, connector, domain, spend budget, price sheet, review policy, system setting, first-run checklist) with generated bindings and a no-credential-values walker; `CostRecord.tags`; structured query entities `grant`, `mcp_server` and relation `grants_access_to`; error taxonomy 1.1.0 (`not_found`, `method_not_allowed`, `payload_too_large`, `internal_error`) with core error classes; connector manifest caps; additive-only baseline test. API emission of the new codes is tracked in #272.
 - Tracker and docs truth-up (PRP-36, PR #271): README, decision D1 and the master index now say the repository is public and cover waves W11 to W21; gate register, threat-model rows and test paths corrected; new `docs/dev/env-example-process.md`; the pre-commit hook regenerates `PRPs/INDEX.md`.
@@ -357,10 +540,110 @@ All notable changes to this project are documented here. The format follows
 
   Smoke 11/11 and the hosted browser spec 1/1. Teardown and the 403-on-hidden-route check stay
   OPEN (#144). No FedRAMP, ATO or SLA claim is made about the environment.
+- PRP-11: the API selects an analytics adapter from `NS_ANALYTICS_BACKEND` (`runtime/builders/analytics.py`), reports it as the optional component `analytics_adapter` and sets `app.state.analytics_adapter`. The product Databricks Statement Execution executor now lives in `neurosphere_core.analytics.databricks.executor`, PR #275.
+- PRP-11: Synapse windowed `PERCENTILE_CONT` path for approximate quantiles (#59).
+- PRP-15: `NS_WORKER_REC_SOURCE=archive` makes the recommendations worker read telemetry and cost from the redacted archive (`ArchiveSeriesSource`) and agents, owners and duplicate candidates from the live catalog, read-only. `NS_WORKER_REC_LOOKBACK_DAYS` sets the window. The default stays `sandbox`. Truncated or empty archives report unknown coverage and never emit `unused_agent` (PR #281).
+- PRP-21 (round 2): per-domain admission limiter wired into the API through `require_permission` (off by default, `NS_ADMISSION_ENABLED`, `NS_ADMISSION_POLICY_FILE`; 429 `rate_limited` with `Retry-After`), peer cells through `NS_FEDERATION_PEERS_FILE` over `HttpCellClient` with boundary host allowlists, https-only and serving-cloud checks, a configurable summary cache TTL ceiling (`NS_FEDERATION_CACHE_MAX_TTL_SECONDS`), a t-quantile FinOps forecast band for small samples, a `/otlp/metrics` load scenario, compose and Helm quota mounts, the `docs/runbooks/admission-and-federation.md` runbook and compose pilot evidence under `docs/evidence/G07/pilot/` (bounded feasibility, 1 of 3 thresholds passed; PR #282).
+- PRP-23: lifecycle API (`/api/v1/lifecycle/holds`, `/requests`, `/status`) behind the new `lifecycle.manage` permission, a Cosmos-backed lifecycle job store, and delete backends for the catalog, ledger and archive. The lifecycle worker now runs jobs, in dry-run by default (`NS_LIFECYCLE_MODE`, `NS_LIFECYCLE_POLICY_FILE`, `NS_LIFECYCLE_MAX_ATTEMPTS`), PR #276.
+- PRP-23: bounded retry of FAILED queued lifecycle outcomes with backoff, then `failed_final`.
+- PRP-38: `.github/workflows/real-stack.yml` runs the real-stack pytest suites against the compose emulators (job `real-stack`) and a headless Playwright run with the in-process dev issuer (job `real-stack-browser`), PR #278. Both are non-required until green for a week.
+- PRP-38: `sbx_seed_stack.py --grants-only`, a seeded gateway registration, and headless flow specs for catalog and curation, quality, actions and copilot under `frontend/tests/real-stack/flows/`.
+- PRP-39: audited identity admin API under `/api/v1/admin/identity` (list and detail principals, PUT/DELETE role assignments, domain memberships and resource-scoped grants with `If-Match`, scope, self-modification and customer-wide checks), principal revocation routes (POST, GET, DELETE) with `issued_before` and block-until-lifted (`until_lifted`) modes, a composed `RevocationService` with push fan-out, and the `docs/runbooks/identity-admin.md` runbook (PR #283).
+- PRP-40: audit search (`GET /api/v1/audit/search`, time range required and capped at 31 days, cursor paging, up to 500 rows), export (`GET /api/v1/audit/export?format=ndjson|csv`, 10000 row cap, `audit.export` permission on every domain read, an `audit.export` chain record per domain before streaming, CSV formula-injection escaping), readable denials (`GET /api/v1/audit/denials`, customer-wide `audit.read` only) and `GET /api/v1/audit/siem/status`. An Event Hubs SIEM sink (`NS_AUDIT_SIEM_SINK=eventhubs`, managed identity only outside `NS_ENV=local`, cloud-profile host suffix, no cross-cloud send) with an optional `audit_siem` component, and auditing of failures before a scope exists (identity-known failures write a `<customer>.authz-denials` record; 401s produce a SIEM signal and a counter only). Runbook: `docs/runbooks/audit-siem.md` (PR #291).
+- PRP-41: store-backed ingest producer registry. Admins create, rotate, disable and enable producers through audited routes under `/api/v1/admin/sources/producers` (secret returned once, only a SHA-256 digest stored, `If-Match` on mutations, customer-level `config.manage`). The ingest edge authenticates against the store layered over the producers file, which remains as a fallback; enable with `NS_INGEST_PRODUCER_STORE` and tune with `NS_INGEST_PRODUCER_REFRESH_SECONDS`. New optional readiness component `admin_producers` (PR #290).
+- PRP-42: admin API `/api/v1/admin/sources/connectors` to configure the `gateway_poll`, `foundry_discovery`, `billing_export` and `otel` connector roles. Credentials are stored as references only (Key Vault secret URI or managed identity); worker roles read the stored config (stored wins over env, applied on restart) and resolve producer secrets from Key Vault over REST at startup. `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` restores env-only behaviour. See `docs/runbooks/connector-config.md` (PR #293).
+- PRP-43: relationship review queue. `GET /api/v1/catalog/curation/review-queue` and `POST /api/v1/catalog/curation/review-queue/{item_id}/resolve` (needs `catalog.curate` on the item's domain, audited), and a `/catalog/review-queue` page under Governance. Projection candidates that are out of scope or collide with an entity id in another domain now go to a durable `catalog_quarantine` Cosmos container instead of memory; `NS_WORKER_CATALOG_QUARANTINE_WARN` (default 100) sets the one-time warning threshold. `PresentedEdge.provenance` is exposed on curation and map responses. See `docs/runbooks/catalog-review-queue.md` (PR #292).
+- PRP-44: platform configuration under `/api/v1/admin/platform` (customer-level `config.manage`): domain registry (create, list, get, retire; reserved `customer-control` domain), budgets (stored, not evaluated), price-sheet upload that appends a content-hashed `PriceSnapshot` with a coverage report, and the review policy (`GET`/`PUT`).
+- PRP-44: the ingestion worker merges stored price snapshots into its ledger price table at startup, and the API and the `actions`, `hitl_timers` and `evaluation` workers load the stored review policy at startup; with nothing stored behaviour is unchanged.
+- PRP-44: identity routes return 422 `domain_not_registered` for an unregistered domain once at least one domain is registered; domain names that collide with a customer-wide audit chain (`is_reserved_chain_name`) are refused.
+- PRP-45: deployment-scoped admin system plane under `/api/v1/admin/system`: `GET status` (every composition component with state, required flag and reason code, plus probe results, never a value), `GET checklist` (stable item ids, status, reason code, docs anchor) and `GET|PUT settings/{key}` for `copilot`, `judge`, `search`, `scan`, `mcp_server` and `write_targets`, with `If-Match` guarding, a returned diff, credential-name and cross-cloud refusal, and an audit record per accepted write.
+- PRP-45: the API builders (copilot, search, MCP server, scan bootstrap) and the evaluation worker judge read stored settings once at startup, stored value over env; a restart applies a change and `restart_required` reports the pending one. With nothing stored, or the store unreachable, behaviour is unchanged (env) and the checklist shows `stored_settings_unavailable`.
+- PRP-45: `admin_system` optional component in `/readyz` details; runbook `docs/runbooks/system-settings.md`.
+- PRP-46: the `nscostcenter` CloudEvent extension now survives ingest. `HubMessage.cost_center`, `Observation.cost_center`, `LedgerEntry.cost_center` and `LedgerFilters.cost_center` carry it to the ledger (sanitised, never rejects an event, a record's own `tags.cost_center` wins). Entries stored before the change still load.
+- PRP-46: `GatewayRegistration.poll_attribution` reports attributed, exact, subscription-only and unattributed rows and a failed metrics query per poll; the gateway detail API returns it.
+- PRP-46: ingest reason `observation_source_mismatch` (per-item); counters for dropped non-billing invoiced records (`ns.outbox.cost_dropped`).
+- PRP-48: role-gated route category (`require_role`), so `GET /api/v1/workspaces/{role}` is tenancy-bound and records a denial on `role_not_held`; `/me/domains` documents the empty-200 case and logs one count-only warning when the catalog page cap is hit.
+- PRP-48: `require_deployment_admin` (`authz/deployment_scope.py`) gates every MCP admin route, deploy scan and plan, and the emergency-disable kill switch on the deployment-scoped admin assignment; `config.manage` in an ordinary domain no longer reaches them (403 `customer_scope_required` plus a denial record). Operators re-run `scripts/sandbox/sbx_grant_operator.py` on hosted environments.
+- PRP-48: allowed catalog searches and dashboard reads append one `allowed` audit record (actor pseudonym, operation, domain, no query text); a failed audit write is logged and never blocks the read.
+- PRP-48: `RESERVED_CHAIN_NAMES` and `is_reserved_chain_name` in core audit; a dotted `NS_AUTH_CUSTOMER_ID` fails the `authz` component with `customer_id_invalid`; denials whose member chain cannot be encoded fall back to `<customer>.authz-denials`.
+- PRP-49: per-agent and per-model aggregate series. The aggregates worker rolls `model_call` events up per hour and day into a new `subject` metric (`SubjectPoint`, series keys `agent:<id>` and `model:<provider>/<model>`), and the aggregate stores gain a bounded batch read (`SubjectMetricsReader.latest_subject_points`), PR #301 (#243).
+- PRP-49: agent and model nodes on `/map` now carry `frequency`, `latency_p95_ms`, `tokens` and `health` from the latest subject point; unknown stays `null` and `unknown`. The realtime delta source also pushes changed agent and model nodes.
+- PRP-50: gateway poll records a distinct `stalled` status (with the stalled slice start in the log fields, watermark held) when a source reports `stalled_slice_start`.
+- PRP-50: billing export counts restated closed days in `last_status.restated` and logs `billing_export.restated` with counts only; the first posted amount still wins.
+- PRP-50: Foundry discovery counts deployment-name collisions between projects in `TickStats.collisions`.
+- PRP-50: connector SDK exports `check_capable` and a shared `tracked` health decorator; `move` and `copy` without `from_` return `verifiable=False` with reason `missing_from`; the contract kit names the missing write-protocol member.
+- PRP-52: `scripts/ci/install-scanners.sh` installs syft, trivy and grype by pinned version and sha256 for every security job; an aggregator check `images (all scans)` fails when images exist but a scan was skipped or failed.
+- PRP-52: `scripts/render_mermaid.py --source-dir` renders every block in `docs/security/dfd`, run by the `mermaid` CI job.
+- PRP-52: APIM module parameter `uiApiRateLimitCalls` (default 0, off) applies a service-level `rate-limit-by-key` policy, only when the service is created.
+- PRP-52: the network module allows `AzureLoadBalancerInbound`; `vnetAddressPrefix` is a root parameter of `modules/main.bicep`.
+- PRP-52: `licenses_report.py` resolves bumped platform-binary families from an installed sibling package and fails under `CI` when a row was carried forward and is not on the cited allowlist.
+- PRP-53: the Admin workspace is a real console. `/admin/identity` manages principals, role assignments, domain memberships, resource grants and revocation; `/admin/domains` lists, creates and retires domains; `/admin/system` shows component state, the first-run checklist and stored-setting sources; `/admin/audit` searches, pages and exports audit records with a denials tab and SIEM status. Every write goes through the confirm dialog and the API decides access.
+- PRP-54: with `NS_WRITE_TARGETS_FROM_STORE=true` the API and the `actions` worker register write targets from the stored `write_targets` entries (PRP-45) instead of only from `NS_FOUNDRY_*` and `NS_APIM_*` env; the env path is the fallback and the default.
+- PRP-54: `WriteTargetRegistry` gains an additive `target_key` (the intent's domain id) on `register`, `get`, `supports` and `target_keys`, so several connectors of one kind (for example two APIM gateways) coexist; `get(name)` with several keys and none given refuses with `target_ambiguous`.
+- PRP-54: compose, the Helm chart (`writeTargets.fromStore`, `writeTargets.{foundry,apim}`) and `infra/demo/main.bicep` (`writeTargetsFromStore`) carry the opt-in, default off; runbook `docs/runbooks/write-targets.md`.
+- PRP-55: real deploy apply behind `NS_DEPLOY_APPLY_ENABLED`. A durable plan-approval store (`deploy_plan_approvals` Cosmos container, shared by API and workers), an allowlisted ARM provisioner (storage, Event Hubs, Log Analytics) with `neurosphere:created-by` tags, bounded LRO polling and the deployment cloud's management host, a bearer Fabric transport gated by the capability matrix, verify-by-change with register rows, customer binding, and `scripts/gates/deploy_apply_live.py` (refuses without `NS_LIVE_APPROVED=1`; the live run is OPEN, PRP-64). The Helm chart and App Service profile now pass the apply opt-in to the workers too, still off by default (PR #314).
+- PRP-56: metadata-only compliance mapping. A versioned control library (NIST AI RMF, SR 11-7, HIPAA technical safeguards, OMB M-25-21) held as package data, five read-only evidence sources (catalog ownership, audit-chain integrity, HITL decisions, evaluation results, cost attribution) and a deterministic evidence bundle per domain and framework with a sha256 digest. It maps and collects evidence and never judges; no output says an estate is compliant or authorized.
+- PRP-56: `GET /api/v1/compliance/frameworks`, `/frameworks/{framework_id}`, `/domains/{domain}/bundle` and `/domains/{domain}/bundle/export` (JSON or Markdown), gated by `evidence.read` on the domain, with an allowed-read audit entry.
+- PRP-56: the `/compliance` and `/compliance/control` pages, the `compliance` contract family and runbook `docs/runbooks/compliance-evidence.md`.
+- PRP-57: admin console part 2 under `/admin`: ingest producers with a show-once secret (`/admin/sources/producers`), connector configurations with credential references only (`/admin/sources/connectors`), gateway registration (`/admin/gateways`), catalog import with a required dry run and payload digest gate (`/admin/catalog-import`), price sheets and budgets (`/admin/pricing`), feature settings with restart-required notices (`/admin/features`) and the HITL review policy (`/admin/review-policy`).
+- PRP-57: mock API module `frontend/tests/mock-api/features/admin-sources.ts`, Playwright specs under `frontend/tests/e2e/admin-sources/`, axe samples and visual baselines for the new pages.
+- PRP-58: hosted data-path switches for the demo Bicep (`connectorRoles`, `recommendationsEnabled`, `foundryAccountIds`, `billingExportStorageAccountId`, evaluation pilot parameters), the App Service profile and the Helm chart, with least-privilege connector role assignments for the workers identity (`connector-rbac.bicep`), `NS_INGEST_PRODUCER_STORE` and `NS_WORKER_CONNECTOR_CONFIG_SOURCE` set in hosted profiles, and `scripts/gates/g04_connectors_live.py` (refusal-first live gate; the live run is OPEN, PRP-64). See `docs/deploy/hosted-demo.md` (PR #312).
+- Azure AI Search index schema in code (`catalog_index_definition()`), an opt-in `NS_SEARCH_ENSURE_INDEX` startup create-or-update, and write-through indexing of catalog writes from the API and from the `projections` and `foundry_discovery` workers (PRP-60, PR #311).
+- PRP-61: `detections` worker role with content-filter policy, APIM policy-fragment and shadow-AI account checks; findings are stored as the new recommendation kinds `configuration_finding` and `unregistered_ai_resource` (always advisory), appear in the recommendations list and review path, and feed a `configuration_findings` compliance evidence source. Metadata only. See `docs/runbooks/detections.md` (PR #318).
+- PRP-62: read-only `aws-bedrock` reference connector (Bedrock inventory, CloudWatch usage, Cost Explorer daily cost, metadata only, Commercial AWS only) with a least-privilege IAM policy and a live-check script that refuses without `NS_LIVE_APPROVED=1`. Library only: no stored configuration or worker role yet (PR #317).
+- PRP-63: `deploy-hosted.yml` delivery pipeline to the hosted environment (OIDC login, plan, approval in the protected `hosted-demo` environment, deploy of the release tag, smoke via `scripts/gates/hosted_smoke.py`, then publish of the draft release); a tag release stays a draft until the hosted smoke is green. Inert until the operator creates the federated credential, environments and their values. See `docs/deploy/delivery.md` (PR #316).
+- PRP-65: `lifecycle.manage` (Admin) and `audit.export` (Security Auditor) permissions, `customer_control_domain_id` / `permits_customer_wide` for deployment-scoped authority, `PolicyAdminRepository` (in-memory and Cosmos, ETag preconditions, transactional `PolicyHead` bump) and the audited `admin_config` store (`neurosphere_core.admin`, new `admin_config` Cosmos container, monotonic version, If-Match replace, retire). Storage and authority layer only; routes and console arrive in PRP-39..57.
+- PRP-68: changelog fragments (`changelog.d/<PRP file stem>.md`) assembled into `CHANGELOG.md` at release time by `scripts/changelog_assemble.py` (`--check`, `--preview`, `--write`, standard library only), so parallel close-outs no longer conflict on `[Unreleased]`.
+- PRP-68: `scripts/prp_index_check.py`, a structural `PRPs/INDEX.md` freshness check run by `scripts/validate_planning.py`; the CI `planning` job also runs `prp_execution_plan.py --check` and the fragment check; `.githooks/pre-commit` blocks malformed staged fragments and warns on a stale execution plan.
+
+### Changed
+- PRP-11: the G01 live script imports the product executor and the shared equivalence workload, bounds setup and teardown with a time budget and uses plain `CREATE SCHEMA` (#60).
+- PRP-11: the adapter registry keeps the `capability_unavailable` reason for refused Government regions.
+- PRP-15: held-out recalibration of duplicate precision and pilot latency detection; the two targets are amended to the measured numbers in `docs/evidence/G12/recommendations/README.md`.
+- PRP-18 (round 2): the map viewport reads edges through one bulk `RepositoryGraphQuery.edges_among` call (new `EdgesAmongQuery` protocol, per-node walk kept as fallback) instead of one neighbour read per node; the realtime pump sleeps the smaller of the poll interval and the scope refresh interval; the map client ignores deltas after a 4403 revoke; replay gap detail for a missing parent is generic and no longer reveals another domain; gap badges have unique keys; the map table no longer steals focus on `Load more` and falls back to a tabbable row; the mock API answers an unknown replay trace with problem+json 404 (PR #280).
+- A federation cell that answers for another cell, cloud, boundary or customer is now reported `unavailable` instead of aborting the merge; the merged window is min start / max end; all cells `denied` returns 403.
+- PRP-23: compliance statement checker negation is clause-scoped, evidence collector checks resolved-path containment, CA-7, CP-2 and PM-5 control statuses upgraded (#120).
+- PRP-38: `make stack-up` now seeds the worker grants before the app profile starts, then runs the full seed (#205).
+- An invalid `NS_AUDIT_SIEM_*` setting no longer fails the `audit` component. It marks only the optional `audit_siem` component `failed` (`audit_siem_settings_invalid`), so a misconfigured SIEM export does not block readiness.
+- Graph traversal resolves endpoints with bounded concurrency (16) and reports `max_edges` only from in-scope edges; the entity write routes refuse a declared `Content-Length` over 64 KiB; `ChangeConfirmDialog` gains a `controls` slot and `reasonMode`.
+- PRP-46: `POST .../mcp-servers/{id}/publication-record` now requires `catalog.curate` (was `action.propose`), matching the grant route.
+- PRP-46: the APIM create step sends `If-None-Match: *` and refuses with `resource_appeared` when the resource appeared between plan and apply; grant publication records refuse a replayed older intent (`stale_intent`, 409).
+- PRP-47: shell navigation supports ArrowUp and ArrowDown, the last-domain key is cleared whenever the account disappears, and the deployment default theme applies before the shell renders (sign-in redirect screen). Finance demo domain now holds `catalog.curate`, PR #298.
+- PRP-47: Vitest fails on unhandled MSW frames, retries once in CI only, the demo build has a positive-control prod-exclusion test, and `paths.ts` exists for dashboards, actions and review.
+- PRP-48: injection corpus README states where consumer suites live and that the stub's `follow_instruction` abstains are vacuous until a real adapter exists.
+- PRP-49: `replace_bucket` skips unchanged documents, and the map client merges a metrics-only delta without overwriting labels; deltas for unknown agent, model and source ids are ignored.
+- PRP-50: `FoundryDiscoveryPoller` refuses a `domain_id` without the runtime `cloud:customer:` prefix (`InvalidSchemaError`) and logs discovered names at debug level only.
+- PRP-50: Azure Monitor slice halving works from the actual clipped span; the apim-gateway and foundry-actions connectors use the SDK `tracked`.
+- PRP-51: deprecated path aliases now send RFC 9745 `Deprecation: @<epoch>`, `Sunset` and `Link` headers on every response including errors; test-only `CompositionOverrides` are refused outside `NS_ENV=local`; copilot and CORS startup refusals share `StartupRefusedError`; `NS_STORE_COSMOS_ACCOUNT` is validated; the Cosmos container verify runs in the background with a `pending` readiness state; new `NS_READYZ_DETAIL=full|summary` (default `full`). See `docs/runbooks/api-path-aliases.md` (PR #319).
+- PRP-52: the Helm chart requires `env.NS_CLOUD` (`commercial` or `government`); values files that omit it no longer render. Set it in every values file.
+- PRP-52: `security.yml` passes matrix values through `env:` and runs `trivy fs --include-dev-deps`; the `egress-compose` job dumps bounded compose logs on failure; the four copies of `skip_or_fail` are one shared helper.
+- PRP-52: runtime images drop `sqlite-libs` and the four matching Grype ignore rules are removed; `neurosphere_core.analytics.base.stub` imports `sqlite3` lazily.
+- PRP-52: Dependabot ignores `datamodel-code-generator` updates (the pin is a deliberate contracts decision).
+- PRP-53: `/workspaces/admin` shows the console landing instead of the placeholder text.
+- PRP-54: `ActionPlane.connector_for` takes the intent's domain id and all call sites pass it; a domain with no registered target stays advisory. Duplicate targets in one domain are refused (`write_target_duplicate_domain`).
+- Deploy plan approvals are no longer held in API memory: approve is create-only per customer and plan, and apply routes are async. Re-approve plans after upgrading.
+- PRP-59: `POST /api/v1/deploy/plan` refuses a request-body `scan` (422 `scan_body_not_accepted`); plan from the server-issued `scan_id`. The deploy UI and mock API send `scan_id`.
+- PRP-59: the scan consent audit record carries the authenticated principal pseudonym as `consented_by` and a hash of the client attestation.
+- PRP-59: `infra/scripts/uninstall.py` knows every top-level ARM type the Bicep tree declares (coverage test added); DoD regions are no longer treated as Government in copilot gating, capabilities and the mock.
+- PRP-59: G02 profile teardown writes evidence on interrupt, re-checks resource tags before deleting the group and narrows the AKS cleanup exception; `confine_evidence_dir` is shared in `scripts/gates/_evidence_paths.py`.
+- Azure document keys are URL-safe base64 of the canonical id; the canonical id lives in a filterable `entity_id` field. Indexes built before this change must be recreated.
+- Catalog search refresh uses a bounded per-scope single-flight lock instead of one global lock.
 
 ### Removed
 - Legacy Kong / Data API Builder / Artemis procurement demo scaffold.
 - `pre-commit` framework config (replaced by `.githooks/`).
+- PRP-38: the unused `OPT_IN_ROLES` tuple in the worker role registry (#180).
+
+### Fixed
+- PRP-11: analytics suite assertions tightened (#61) and adapter nits fixed (#62), including a Fabric migration ledger lock that no longer leaks or reuses recycled executor ids.
+- PRP-15: two concurrent `HitlReviewRouter.route` calls for one recommendation now open exactly one review item (deterministic item id, create-only write), and a recommendation id converges on one copy across domain partitions in the Cosmos and in-memory stores (#133). A later `put` into a larger partition than an existing copy is silently discarded.
+- PRP-38: `make replay` wraps valid telemetry lines in the `HubMessage` envelope instead of quarantining them as `invalid_wire` (#162); the first-seed `skipped_existing` assertion no longer depends on timing (#211).
+- PRP-46: ARM ids with a `.`/`..`/trailing-dot resource group are refused; a failed gateway failure-record logs the exception type and never raises; a 403 on optional inventory lists degrades to empty with `unreadable`; the duplicates counter is created once per pipeline.
+- PRP-50: the OTel connector rejects `evilvault.azure.net` and other non-dot-bounded Key Vault hosts (`unrecognized_vault_host`); the span exporter's closed check and pending registration now share one lock, closing an export-versus-shutdown race.
+- The indexer deletes documents whose entity left every scope's enumeration (ref-counted), and no longer skips the re-upsert when a concurrent scope deletes the same id.
+
+### Security
+- The replay read-only import guard now also catches relative imports, `importlib.import_module` and `__import__` calls.
 
 ## [0.1.0-rc.2] - 2026-10-26
 

@@ -119,6 +119,7 @@ nav:
       - dev/diagram-rendering.md
       - runbooks/seeding.md
       - deploy/hosted-demo.md
+      - deploy/delivery.md
   - Runbooks:
       - runbooks/operations.md
       - runbooks/write-targets.md
@@ -135,6 +136,7 @@ nav:
       - runbooks/system-settings.md
       - runbooks/audit-siem.md
       - runbooks/compliance-evidence.md
+      - runbooks/detections.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md

@@ -27,6 +27,7 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "gateway_poll",
     "foundry_discovery",
     "billing_export",
+    "detections",
 )
 
 

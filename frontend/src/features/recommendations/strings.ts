@@ -53,6 +53,8 @@ export const KIND_LABELS: Record<RecommendationKind, string> = {
   unused_agent: "Unused agent",
   candidate_duplicate: "Candidate duplicate",
   model_right_sizing: "Model right-sizing",
+  configuration_finding: "Configuration finding",
+  unregistered_ai_resource: "Unregistered AI resource",
 };
 
 /** Null, undefined and blank all render the literal "unknown", never 0 or an empty cell. */

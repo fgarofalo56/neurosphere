@@ -229,13 +229,13 @@ None. Live Entra sign-in with the new assignment is exercised by PRP-64's hosted
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-48-authz-audit-hardening | `require_role` + `ROLE_GATED_PATHS`; workspaces role-gated, tenancy-bound, denial-audited |
-| 2 | done | prp-48-authz-audit-hardening | page-cap warning (count only); OpenAPI description of the empty 200 |
-| 3 | done | prp-48-authz-audit-hardening | `authz/deployment_scope.py` `require_deployment_admin` (reason kept `customer_scope_required`); MCP admin (all routes), deploy scan/plan, kill switch; `require_customer_control` delegates; fixtures in mcp_api, deployment, runtime_routes and integration/deploy grant the control domain |
-| 4 | done | prp-48-authz-audit-hardening | `authz/read_audit.py` `audited_read`; catalog search (both routes) and dashboards; multi-domain reads on reserved `<customer>.read-audit`; count bound by subject digest (contract has no count field); threat-model rows updated |
-| 5 | done | prp-48-authz-audit-hardening | `RESERVED_CHAIN_NAMES` (7 names, pinned), `is_reserved_chain_name`, `is_chain_customer_id`; boot `customer_id_invalid`; `_chain` falls back to `<customer>.authz-denials` |
-| 6 | done | prp-48-authz-audit-hardening | README: consumer-suite locations and vacuous `follow_instruction` abstains; stub comment on `Escalate` of a held permission; `test_readme_claims.py` keeps both true |
-| 7 | done | prp-48-authz-audit-hardening | Tier-3 regenerated, changelog fragment, issues closed |
+| 1 | merged | prp-48-authz-audit-hardening | `require_role` + `ROLE_GATED_PATHS`; workspaces role-gated, tenancy-bound, denial-audited |
+| 2 | merged | prp-48-authz-audit-hardening | page-cap warning (count only); OpenAPI description of the empty 200 |
+| 3 | merged | prp-48-authz-audit-hardening | `authz/deployment_scope.py` `require_deployment_admin` (reason kept `customer_scope_required`); MCP admin (all routes), deploy scan/plan, kill switch; `require_customer_control` delegates; fixtures in mcp_api, deployment, runtime_routes and integration/deploy grant the control domain |
+| 4 | merged | prp-48-authz-audit-hardening | `authz/read_audit.py` `audited_read`; catalog search (both routes) and dashboards; multi-domain reads on reserved `<customer>.read-audit`; count bound by subject digest (contract has no count field); threat-model rows updated |
+| 5 | merged | prp-48-authz-audit-hardening | `RESERVED_CHAIN_NAMES` (7 names, pinned), `is_reserved_chain_name`, `is_chain_customer_id`; boot `customer_id_invalid`; `_chain` falls back to `<customer>.authz-denials` |
+| 6 | merged | prp-48-authz-audit-hardening | README: consumer-suite locations and vacuous `follow_instruction` abstains; stub comment on `Escalate` of a held permission; `test_readme_claims.py` keeps both true |
+| 7 | merged | prp-48-authz-audit-hardening | Tier-3 regenerated, changelog fragment, issues closed |
 
 ## Completion note (filled at ship)
 - Date and PR: 2026-11-15, PR #299.

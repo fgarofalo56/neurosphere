@@ -237,14 +237,14 @@ Backend routes, contracts or permissions; identity, domain, status and audit pag
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 2 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 3 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 4 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 5 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 6 | done | prp-57-admin-console-sources | done on branch, PR pending |
-| 7 | done | prp-57-admin-console-sources | e2e, a11y, real-stack rows done; visual baselines generated in Docker |
-| 8 | done | land-prp-57 | close-out on PR 313 |
+| 1 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 2 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 3 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 4 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 5 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 6 | merged | prp-57-admin-console-sources | done on branch, PR pending |
+| 7 | merged | prp-57-admin-console-sources | e2e, a11y, real-stack rows done; visual baselines generated in Docker |
+| 8 | merged | land-prp-57 | close-out on PR 313 |
 
 ## Completion note (filled at ship)
 - Date, PR number, merge commit: 2026-11-16, PR 313 (squash merge commit is the PR's merge commit on main).

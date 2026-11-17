@@ -22,6 +22,7 @@ COPY connectors/reference/apim-gateway ./connectors/reference/apim-gateway
 COPY connectors/reference/foundry-actions ./connectors/reference/foundry-actions
 COPY connectors/reference/foundry ./connectors/reference/foundry
 COPY connectors/reference/azure-billing ./connectors/reference/azure-billing
+COPY connectors/reference/aws-bedrock ./connectors/reference/aws-bedrock
 RUN uv sync --frozen --no-dev --package neurosphere-api --package neurosphere-workers
 
 COPY sandbox ./sandbox
