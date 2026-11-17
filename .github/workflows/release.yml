@@ -258,14 +258,19 @@ jobs:
             echo "== ${svc}: ${ref}"
             cosign sign --yes "$ref"
             cosign attest --yes --type cyclonedx --predicate "$sbom" "$ref"
+            # Keep only the exit status and the checks cosign prints on stderr. The verified
+            # payload goes to stdout as ONE line; for verify-attestation that line is the whole
+            # SBOM (about 1.25 MB for the api image), and the v0.1.0-rc.3 run stopped making
+            # progress right there twice until the job timeout cancelled it.
             cosign verify \
               --certificate-identity "$identity" \
               --certificate-oidc-issuer "$OIDC_ISSUER" \
-              "$ref"
+              "$ref" > /dev/null
             cosign verify-attestation --type cyclonedx \
               --certificate-identity "$identity" \
               --certificate-oidc-issuer "$OIDC_ISSUER" \
-              "$ref"
+              "$ref" > /dev/null
+            echo "verified signature and attestation: ${svc}"
           done
 
   chart:
