@@ -1,2 +1,0 @@
-### Added
-- PRP-42: admin API `/api/v1/admin/sources/connectors` to configure the `gateway_poll`, `foundry_discovery`, `billing_export` and `otel` connector roles. Credentials are stored as references only (Key Vault secret URI or managed identity); worker roles read the stored config (stored wins over env, applied on restart) and resolve producer secrets from Key Vault over REST at startup. `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` restores env-only behaviour. See `docs/runbooks/connector-config.md` (PR #293).

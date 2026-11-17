@@ -1,5 +1,0 @@
-### Added
-- PRP-40: audit search (`GET /api/v1/audit/search`, time range required and capped at 31 days, cursor paging, up to 500 rows), export (`GET /api/v1/audit/export?format=ndjson|csv`, 10000 row cap, `audit.export` permission on every domain read, an `audit.export` chain record per domain before streaming, CSV formula-injection escaping), readable denials (`GET /api/v1/audit/denials`, customer-wide `audit.read` only) and `GET /api/v1/audit/siem/status`. An Event Hubs SIEM sink (`NS_AUDIT_SIEM_SINK=eventhubs`, managed identity only outside `NS_ENV=local`, cloud-profile host suffix, no cross-cloud send) with an optional `audit_siem` component, and auditing of failures before a scope exists (identity-known failures write a `<customer>.authz-denials` record; 401s produce a SIEM signal and a counter only). Runbook: `docs/runbooks/audit-siem.md` (PR #291).
-
-### Changed
-- An invalid `NS_AUDIT_SIEM_*` setting no longer fails the `audit` component. It marks only the optional `audit_siem` component `failed` (`audit_siem_settings_invalid`), so a misconfigured SIEM export does not block readiness.
