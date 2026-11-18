@@ -327,10 +327,10 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 |---|---|---|---|
 | 1 | merged | worktree-agent-aeeac7001ca09a4f8 (opus) | 479 passed on branch (auth_claim_mapping + auth), ruff and pyright clean; commit c3aad0fc, merge 1fd99ecb; 2026-11-18 |
 | 2 | merged | worktree-agent-a2d0f3c11b0ff26fd (opus) | 382 passed (auth_claim_mapping + auth), ruff and pyright clean; commit 7e7933bc, merge ab419ace; 2026-11-18 |
-| 3 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
-| 4 | todo | | |
+| 3 | merged | worktree-agent-ae3a9054b9c79913f (opus) | 533 passed (auth_claim_mapping + auth), 1049 passed (api authz + workers), repo-wide pyright 0 errors, ruff clean; orchestrator added the four constructor names to the pinned set in packages/core/tests/auth/scope/test_derivation.py (outside ownership; the PRP requires the arguments); commit 78bdc504, merge 9006c8bf; 2026-11-18 |
+| 4 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 5 | todo | | |
-| 6 | merged | worktree-agent-a1ab8bd545856db2f (opus) | lint, typecheck, prettier on changed files clean; 198 passed across admin, catalog, curation, governed-change, mock-api, static; full vitest run had 10 load timeouts with a backend lane running, to be re-run before the PR; orchestrator appended roleMapping to tests/mock-api/features/registry.test.ts (outside ownership, registry list); visual baseline admin-identity will differ (PRP-140 regenerates); commit e395f329, merge ce70e7a1; 2026-11-18 |
+| 6 | merged | worktree-agent-a1ab8bd545856db2f (opus) | lint, typecheck, prettier on changed files clean; 198 passed across admin, catalog, curation, governed-change, mock-api, static; full vitest run had 10 load timeouts with a backend lane running, to be re-run before the PR; orchestrator appended roleMapping to tests/mock-api/features/registry.test.ts (outside ownership, registry list); visual:check in Docker after merge: 82 passed, admin-identity baselines unchanged; commit e395f329, merge ce70e7a1; 2026-11-18 |
 | 7 | todo | | |
 | 8 | merged | worktree-agent-a8b01008cf196bba9 (opus) | 150 passed (test_entra_admin_mapping + tests/docs), ruff and pyright clean, az stubbed, no live call; commit f9fb085c, merge b0693dad; 2026-11-18 |
 | 9 | todo | | second pull request, after PRP-139 has merged |
