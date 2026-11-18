@@ -386,6 +386,9 @@ def _deriver(
         observer = ClaimGrantAuditObserver(lambda: ctx.maybe_shared(AUDIT_REPOSITORY), stats=stats)
         install_claim_mapping_stats(ctx.app.state, stats)
         ctx.publish(CLAIM_ROLE_MAPPING, mapping)
+        # Routers read ``app.state`` at request time (the shared dict is build-time only): the
+        # read-only role-mapping view answers from this attribute.
+        setattr(ctx.app.state, CLAIM_ROLE_MAPPING.name, mapping)
     deriver = ScopeDeriver(
         config,
         policy_repository=policy,

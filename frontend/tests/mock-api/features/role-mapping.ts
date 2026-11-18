@@ -14,7 +14,7 @@ export const ROLE_MAPPING_PATH = "/api/v1/admin/identity/role-mapping";
 export const ROLE_MAPPING_TENANT = "11111111-1111-1111-1111-111111111111";
 export const ROLE_MAPPING_AUDIENCE = "22222222-2222-2222-2222-222222222222";
 export const ROLE_MAPPING_DENIED_DETAIL =
-  "this change applies to the whole deployment and needs deployment-scoped policy.manage";
+  "this operation needs `policy.manage` on the whole deployment (the customer control domain)";
 
 /** Persona (fake token role) to the NeuroSphere role the stored policy gives it. */
 const PERSONA_ROLES: Record<string, string> = {

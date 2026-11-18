@@ -22,6 +22,7 @@ from authz.authz_helpers import (  # pyright: ignore[reportMissingImports]
     FakeClock,
     dev_issuer,
 )
+from neurosphere_api.admin.identity.role_mapping import claim_role_mapping_of
 from neurosphere_api.authz import ClaimGrantAuditObserver, claim_mapping_stats
 from neurosphere_api.authz.claim_audit import deriver_mapping_options
 from neurosphere_api.runtime.builders import (
@@ -202,6 +203,7 @@ def test_unset_or_blank_setting_composes_exactly_as_without_it(
     assert composed.registry.get("authz").state == "ok"
     assert captured.mapping is None
     assert claim_mapping_stats(composed.app.state) is None
+    assert claim_role_mapping_of(composed.app.state) is None
     deriver = _deriver(composed)
     # The deriver was built with its defaults: no mapping, directory, observer or dev issuer.
     assert deriver._claim_mapping is None  # pyright: ignore[reportPrivateUsage]
@@ -245,6 +247,8 @@ def test_valid_mapping_is_published_and_passed_to_the_deriver(
     assert isinstance(deriver._observer, ClaimGrantAuditObserver)  # pyright: ignore[reportPrivateUsage]
     assert deriver._allow_dev_issuer is True  # pyright: ignore[reportPrivateUsage]
     assert claim_mapping_stats(composed.app.state) is not None
+    # The role-mapping view reads the parsed mapping from ``app.state`` at request time.
+    assert claim_role_mapping_of(composed.app.state) is captured.mapping
 
 
 def test_mapped_token_is_applied_and_audited_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
