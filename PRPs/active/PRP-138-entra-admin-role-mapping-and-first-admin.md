@@ -332,7 +332,7 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 | 5 | todo | | |
 | 6 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 7 | todo | | |
-| 8 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
+| 8 | merged | worktree-agent-a8b01008cf196bba9 (opus) | 150 passed (test_entra_admin_mapping + tests/docs), ruff and pyright clean, az stubbed, no live call; commit f9fb085c, merge b0693dad; 2026-11-18 |
 | 9 | todo | | second pull request, after PRP-139 has merged |
 | 10 | todo | | |
 
