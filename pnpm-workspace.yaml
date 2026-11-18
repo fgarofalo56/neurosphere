@@ -7,3 +7,10 @@ allowBuilds:
 overrides:
   # GHSA-xjj6-f33q-929c (high): jsdom 30.1.2 resolves undici 8.11.2 (test-only path).
   "undici@<8.12.2": "^8.12.2"
+auditConfig:
+  ignoreGhsas:
+    # Accepted until 2026-12-17 (owner decision 2026-11-17): picomatch <= 4.0.7 ReDoS, no fixed
+    # version published. Dev tooling only (eslint, vite, vitest via tinyglobby); patterns come
+    # from our own config, not user input. The expiry is enforced by .trivyignore (exp:), which
+    # fails the dependency audit again after that date. Remove this entry when a fix ships.
+    - GHSA-fc5q-39xc-vjpf

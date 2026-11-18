@@ -6,4 +6,16 @@
 # lazy and removes the sqlite-libs apk from the final stage of the api, workers and
 # docs-assistant images, so the package is not in the images any more. Do not re-add a
 # sqlite-libs rule: if sqlite3 is needed again, fix it in the image, not here.
-ignore: []
+#
+# picomatch <= 4.0.7 ReDoS, accepted 2026-11-17 by the owner until 2026-12-17: no fixed version
+# exists; dev tooling only (eslint, vite, vitest via tinyglobby), not in any image. Grype has no
+# expiry field: the expiry is enforced by .trivyignore (exp:2026-12-17), which fails the same
+# job again after that date. Re-check when picomatch publishes a fix, then delete both rules,
+# the .trivyignore line and the pnpm auditConfig entry.
+ignore:
+  - vulnerability: GHSA-fc5q-39xc-vjpf
+    package:
+      name: picomatch
+  - vulnerability: CVE-2026-112366
+    package:
+      name: picomatch
