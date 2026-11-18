@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `6d33a7bb0e07ee581039a8400f5a70e8932d09bb`. Generated: 2026-11-16.
+> Source commit: `367f1421efceeab1848cde2faacd269afb1124c7`. Generated: 2026-11-16.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 206 operations on 172 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 208 operations on 174 paths.
 
 ## Status and verification
 
@@ -61,6 +61,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/revocation` | Lift Revocation |
 | admin-identity | PUT | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Put Role Assignment |
 | admin-identity | DELETE | `/api/v1/admin/identity/principals/{principal_id}/role-assignments/{assignment_id}` | Delete Role Assignment |
+| admin-identity | GET | `/api/v1/admin/identity/role-mapping` | Get Role Mapping |
 | admin-platform-budgets | GET | `/api/v1/admin/platform/budgets` | List Budgets |
 | admin-platform-budgets | POST | `/api/v1/admin/platform/budgets` | Create Budget |
 | admin-platform-budgets | GET | `/api/v1/admin/platform/budgets/{budget_id}` | Get Budget |
@@ -203,6 +204,7 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | mcp-admin | GET | `/api/v1/mcp/admin/servers/{server_id}/tools` | List Tools |
 | mcp-admin | POST | `/api/v1/mcp/admin/servers/{server_id}/tools/{tool_name}/approval` | Approve Tool |
 | mcp-admin | DELETE | `/api/v1/mcp/admin/servers/{server_id}/tools/{tool_name}/approval` | Revoke Tool |
+| me | GET | `/api/v1/me/access` | My Access |
 | me | GET | `/api/v1/me/domains` | My Domains |
 | recommendations | GET | `/api/v1/recommendations/domains/{domain}` | List Recommendations |
 | recommendations | POST | `/api/v1/recommendations/domains/{domain}/executions` | Refuse Execution |
@@ -444,6 +446,13 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Delete Role Assignment
 - Parameters: `principal_id` (path, required), `assignment_id` (path, required), `reason` (query), `If-Match` (header)
 - Responses: `200` `PrincipalAccessSummary`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/admin/identity/role-mapping`
+
+- Operation id: `get_role_mapping_api_v1_admin_identity_role_mapping_get`
+- Summary: Get Role Mapping
+- Description: The effective Entra claim to role mapping of this deployment, read only: the bound tenant, audience and cloud, and each entry's id, claim kind (`roles` or `groups`), claim value, role, domain mode (`all` or `explicit`) and customer control flag. `active` is false and `entries` empty when no mapping is configured. The mapping is deployment configuration (`NS_AUTH_ROLE_MAPPINGS`) and cannot be changed through the API. Needs `policy.manage` on the whole deployment (the customer control domain).
+- Responses: `200` `RoleMappingView`
 
 ### Tag: admin-platform-budgets
 
@@ -1581,6 +1590,13 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Responses: `200` `ToolList`; `422` `HTTPValidationError`
 
 ### Tag: me
+
+#### GET `/api/v1/me/access`
+
+- Operation id: `my_access_api_v1_me_access_get`
+- Summary: My Access
+- Description: The caller's own role assignments and where each came from: `entra_app_role` or `entra_group` (applied from the deployment's Entra claim role mapping, with the mapping entry id) or `policy_store`. Per role: domain count, whether it covers the customer control domain, and its expiry. Any authenticated caller may read it, including one with no role (**200 with an empty `roles` list**). Never returns domain ids, claim values, group object ids, the mapping itself or anything about another principal.
+- Responses: `200` `MeAccess`
 
 #### GET `/api/v1/me/domains`
 

@@ -30,6 +30,8 @@ from .authz_helpers import FakeClock
 _PREFIXES = ("NS_AUTH_", "NS_STORE_", "NS_CORS_", "NS_COSMOS_", "NS_REVOCATION_", "NS_COPILOT_")
 _NAMES = ("NS_CLOUD", "NS_INGEST_PRODUCERS_FILE", "NS_SCAN_ENABLED", "NS_MCP_RESOURCE_SERVER_URL")
 REALTIME_WS = "/api/v1/realtime/ws"
+ME_ACCESS = "/api/v1/me/access"
+ROLE_MAPPING = "/api/v1/admin/identity/role-mapping"
 
 
 @pytest.fixture(autouse=True)
@@ -90,6 +92,9 @@ def test_main_create_boots_clean_with_the_check_on() -> None:
     entries = {(e.path, e.methods): e for e in route_inventory(app)}
     assert all(e.compliant for e in entries.values())
     assert entries[(REALTIME_WS, ("WEBSOCKET",))].gateway_authenticated
+    # PRP-138 item 5: the two read views boot under the check.
+    assert entries[(ME_ACCESS, ("GET",))].authenticated_self
+    assert entries[(ROLE_MAPPING, ("GET",))].permissions == ("policy.manage",)
 
 
 def test_configured_composition_boots_clean(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,3 +105,5 @@ def test_configured_composition_boots_clean(monkeypatch: pytest.MonkeyPatch) -> 
     websockets = {e.path for e in route_inventory(composed.app) if e.websocket}
     # Every WebSocket the real app mounts is a reasoned gateway entry, and nothing else is.
     assert websockets == set(GATEWAY_AUTHENTICATED_WEBSOCKETS) == {REALTIME_WS}
+    paths = {(e.path, e.methods) for e in route_inventory(composed.app) if e.compliant}
+    assert {(ME_ACCESS, ("GET",)), (ROLE_MAPPING, ("GET",))} <= paths

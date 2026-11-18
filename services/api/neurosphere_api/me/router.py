@@ -1,4 +1,9 @@
-"""``GET /api/v1/me/domains`` (PRP-28 item 1): the domains the caller may read.
+"""``GET /api/v1/me/domains`` (PRP-28 item 1) and ``GET /api/v1/me/access`` (PRP-138 item 5).
+
+``/me/access`` is the authenticated-self route (``AUTHENTICATED_SELF_PATHS``): any caller with a
+valid token, no permission, answered from the caller's own derivation only (``me.access``).
+
+``/me/domains``: the domains the caller may read.
 
 The list is derived from the server-side ``IdentityScope`` only: exactly the domains where an
 unexpired role confers ``data.read`` (``domains_with_permission``), further restricted to the
@@ -22,15 +27,28 @@ from datetime import UTC, datetime
 from typing import Annotated, Final, Literal, cast
 
 from fastapi import APIRouter, Depends, Request
-from neurosphere_core.auth.scope import Permission, domains_with_permission, role_permissions
+from neurosphere_core.auth.scope import (
+    Permission,
+    ScopeDerivation,
+    domains_with_permission,
+    role_permissions,
+)
 from neurosphere_core.catalog import CatalogRepository, EntityFilter
 from neurosphere_core.errors import DependencyTransientError
 from neurosphere_core.observability import get_logger
 from neurosphere_core.paging import PageRequest
 from neurosphere_core.scope import IdentityScope
 
-from neurosphere_api.authz import AuthzState, get_authz_state, require
-from neurosphere_api.me.models import DomainView, MeDomains
+from neurosphere_api.admin.identity.role_mapping import mapping_configured
+from neurosphere_api.authz import (
+    AuthzState,
+    get_authz_state,
+    groups_overage_of,
+    require,
+    require_authenticated,
+)
+from neurosphere_api.me.access import access_view
+from neurosphere_api.me.models import DomainView, MeAccess, MeDomains
 from neurosphere_api.routers import RouterRegistry
 
 __all__ = ["PREFIX", "build_router", "derived_label", "register"]
@@ -48,7 +66,17 @@ _DOMAINS_DESCRIPTION: Final = (
     "grant covers one resource, never a domain. A caller holding `data.read` nowhere gets 403."
 )
 
+_ACCESS_DESCRIPTION: Final = (
+    "The caller's own role assignments and where each came from: `entra_app_role` or "
+    "`entra_group` (applied from the deployment's Entra claim role mapping, with the mapping "
+    "entry id) or `policy_store`. Per role: domain count, whether it covers the customer control "
+    "domain, and its expiry. Any authenticated caller may read it, including one with no role "
+    "(**200 with an empty `roles` list**). Never returns domain ids, claim values, group object "
+    "ids, the mapping itself or anything about another principal."
+)
+
 _read_anywhere = require(Permission.DATA_READ)
+_authenticated = require_authenticated()
 
 
 def derived_label(domain_id: str) -> str:
@@ -142,6 +170,17 @@ def build_router() -> APIRouter:
         ]
         items.sort(key=lambda v: (v.display_name, v.domain_id))
         return MeDomains(items=items)
+
+    @router.get("/access", response_model=MeAccess, description=_ACCESS_DESCRIPTION)
+    async def my_access(
+        request: Request,
+        derivation: Annotated[ScopeDerivation, Depends(_authenticated)],
+    ) -> MeAccess:
+        return access_view(
+            derivation,
+            mapping_configured=mapping_configured(request.app.state),
+            groups_overage=groups_overage_of(request),
+        )
 
     return router
 

@@ -238,7 +238,13 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         *_SHELL,
         ApiCall("/api/v1/admin/platform/domains", q(include_retired="false", limit=200)),
     ),
-    "/admin/identity": (*_SHELL, ApiCall("/api/v1/admin/identity/principals", q(limit=25))),
+    "/admin/identity": (
+        *_SHELL,
+        ApiCall("/api/v1/admin/identity/principals", q(limit=25)),
+        # PRP-138: the role mapping and own-access panels on the principals page.
+        ApiCall("/api/v1/admin/identity/role-mapping"),
+        ApiCall("/api/v1/me/access"),
+    ),
     "/admin/identity/principal": (
         *_SHELL,
         ApiCall(

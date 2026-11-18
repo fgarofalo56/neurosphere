@@ -1,6 +1,65 @@
 {
   "components": {
     "schemas": {
+      "AccessRoleView": {
+        "additionalProperties": false,
+        "description": "One role assignment of the caller's own derived scope. Counts and flags only: never a\ndomain id, a claim value or a group object id.",
+        "properties": {
+          "customer_control": {
+            "title": "Customer Control",
+            "type": "boolean"
+          },
+          "domain_count": {
+            "title": "Domain Count",
+            "type": "integer"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "mapping_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapping Entry Id"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "entra_app_role",
+              "entra_group",
+              "policy_store"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "source",
+          "mapping_entry_id",
+          "domain_count",
+          "customer_control",
+          "expires_at"
+        ],
+        "title": "AccessRoleView",
+        "type": "object"
+      },
       "AccessSummaryAssignment": {
         "additionalProperties": false,
         "description": "A stored role assignment. expires_at is null only for non-privileged roles.",
@@ -9465,6 +9524,34 @@
         "title": "McpUnpublishBody",
         "type": "object"
       },
+      "MeAccess": {
+        "additionalProperties": false,
+        "description": "``GET /api/v1/me/access`` body: the caller's own roles and where they came from.",
+        "properties": {
+          "groups_overage": {
+            "title": "Groups Overage",
+            "type": "boolean"
+          },
+          "mapping_configured": {
+            "title": "Mapping Configured",
+            "type": "boolean"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/AccessRoleView"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mapping_configured",
+          "groups_overage",
+          "roles"
+        ],
+        "title": "MeAccess",
+        "type": "object"
+      },
       "MeDomains": {
         "additionalProperties": false,
         "properties": {
@@ -14904,6 +14991,118 @@
           "reason"
         ],
         "title": "RoleAssignmentChange",
+        "type": "object"
+      },
+      "RoleMappingEntryView": {
+        "additionalProperties": false,
+        "description": "One mapping entry as configured.",
+        "properties": {
+          "claim": {
+            "enum": [
+              "roles",
+              "groups"
+            ],
+            "title": "Claim",
+            "type": "string"
+          },
+          "customer_control": {
+            "title": "Customer Control",
+            "type": "boolean"
+          },
+          "domain_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "domain_mode": {
+            "enum": [
+              "all",
+              "explicit"
+            ],
+            "title": "Domain Mode",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "claim",
+          "value",
+          "role",
+          "domain_mode",
+          "domain_ids",
+          "customer_control"
+        ],
+        "title": "RoleMappingEntryView",
+        "type": "object"
+      },
+      "RoleMappingView": {
+        "additionalProperties": false,
+        "description": "``GET /api/v1/admin/identity/role-mapping`` body.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "cloud": {
+            "enum": [
+              "commercial",
+              "government"
+            ],
+            "title": "Cloud",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/RoleMappingEntryView"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          }
+        },
+        "required": [
+          "active",
+          "tenant_id",
+          "audience",
+          "cloud",
+          "entries"
+        ],
+        "title": "RoleMappingView",
         "type": "object"
       },
       "Rubric": {
@@ -20985,6 +21184,29 @@
         },
         "summary": "Put Role Assignment",
         "tags": [
+          "admin-identity"
+        ]
+      }
+    },
+    "/api/v1/admin/identity/role-mapping": {
+      "get": {
+        "description": "The effective Entra claim to role mapping of this deployment, read only: the bound tenant, audience and cloud, and each entry's id, claim kind (`roles` or `groups`), claim value, role, domain mode (`all` or `explicit`) and customer control flag. `active` is false and `entries` empty when no mapping is configured. The mapping is deployment configuration (`NS_AUTH_ROLE_MAPPINGS`) and cannot be changed through the API. Needs `policy.manage` on the whole deployment (the customer control domain).",
+        "operationId": "get_role_mapping_api_v1_admin_identity_role_mapping_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleMappingView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Role Mapping",
+        "tags": [
+          "admin-identity",
           "admin-identity"
         ]
       }
@@ -28320,6 +28542,28 @@
         "summary": "Approve Tool",
         "tags": [
           "mcp-admin"
+        ]
+      }
+    },
+    "/api/v1/me/access": {
+      "get": {
+        "description": "The caller's own role assignments and where each came from: `entra_app_role` or `entra_group` (applied from the deployment's Entra claim role mapping, with the mapping entry id) or `policy_store`. Per role: domain count, whether it covers the customer control domain, and its expiry. Any authenticated caller may read it, including one with no role (**200 with an empty `roles` list**). Never returns domain ids, claim values, group object ids, the mapping itself or anything about another principal.",
+        "operationId": "my_access_api_v1_me_access_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeAccess"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Access",
+        "tags": [
+          "me"
         ]
       }
     },
