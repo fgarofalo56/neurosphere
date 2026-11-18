@@ -61,6 +61,9 @@ class AuthSettings(BaseSettings):
     #: The Key Vault secret URI the key was resolved from (``PseudonymKey`` requires it).
     pseudonym_key_reference: str | None = None
     policy_container: str = Field(default=DEFAULT_POLICY_CONTAINER, min_length=1, max_length=255)
+    #: ``NS_AUTH_ROLE_MAPPINGS``: the Entra claim to role mapping as a JSON object (PRP-138; not a
+    #: secret). Unset or blank means the mapping is off. Parsed and checked by the authz builder.
+    role_mappings: str | None = None
 
     @field_validator("audiences", mode="before")
     @classmethod
