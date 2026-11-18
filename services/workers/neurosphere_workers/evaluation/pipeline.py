@@ -245,7 +245,7 @@ async def run_pipeline(
     labels_for: LabelsFor | None = None,
     online: OnlineStage | None = None,
     drift_checks: Sequence[DriftCheck] = (),
-    calibration: CalibrationSettings = CalibrationSettings(),  # noqa: B008 - frozen value object
+    calibration: CalibrationSettings = CalibrationSettings(),
 ) -> PipelineSummary:
     """Run, calibrate and store. ``clock`` is the only time source (no wall clock here).
 

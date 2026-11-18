@@ -1,0 +1,8 @@
+# Trivy accepted-risk list. Every entry needs a reason, a date and an expiry (exp:YYYY-MM-DD);
+# an expired entry stops applying and the dependency audit fails again.
+#
+# picomatch <= 4.0.7 ReDoS (GHSA-fc5q-39xc-vjpf), accepted 2026-11-17 by the owner: no fixed
+# version exists, the package is dev tooling only (eslint, vite, vitest via tinyglobby) and is
+# not in any image. Re-check: when picomatch publishes a fix, bump it and delete this entry,
+# the pnpm auditConfig entry and the .grype.yaml rule.
+CVE-2026-112366 exp:2026-12-17
