@@ -325,9 +325,9 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
+| 1 | merged | worktree-agent-aeeac7001ca09a4f8 (opus) | 479 passed on branch (auth_claim_mapping + auth), ruff and pyright clean; commit c3aad0fc, merge 1fd99ecb; 2026-11-18 |
 | 2 | merged | worktree-agent-a2d0f3c11b0ff26fd (opus) | 382 passed (auth_claim_mapping + auth), ruff and pyright clean; commit 7e7933bc, merge ab419ace; 2026-11-18 |
-| 3 | todo | | |
+| 3 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
