@@ -131,6 +131,7 @@ nav:
       - runbooks/runtime-composition.md
       - runbooks/api-path-aliases.md
       - runbooks/identity-admin.md
+      - runbooks/entra-role-mapping.md
       - runbooks/connector-config.md
       - runbooks/platform-config.md
       - runbooks/system-settings.md
