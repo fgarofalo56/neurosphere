@@ -10,6 +10,7 @@ import { handle as executionControl } from "./execution-control.ts";
 import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
 import { handle as compliance } from "./compliance.ts";
+import { handle as roleMapping } from "./role-mapping.ts";
 
 export type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
 
@@ -28,6 +29,7 @@ export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   evaluations,
   executionControl,
   compliance,
+  roleMapping,
   // Before adminCore: it answers `/admin/system/**`, and this module owns `/settings/{key}`.
   adminSources,
   adminCore,

@@ -1,10 +1,14 @@
+import type { ProblemDetails } from "@neurosphere/contracts";
 import { renderHook, waitFor, cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import { StaleVersionError } from "../../../api/index.js";
+import { axe } from "vitest-axe";
+import { DependencyTransientError, ForbiddenError, StaleVersionError } from "../../../api/index.js";
 import { QueryProvider, createApiClient } from "../../../api/index.js";
+import { ME_ACCESS_PATH } from "../identity/hooks";
 import { ADMIN_AREAS } from "./areas";
 import { AdminConsoleHome } from "./AdminConsoleHome";
-import { changeErrorText } from "./AdminStates";
+import { QueryErrorState, changeErrorText } from "./AdminStates";
 import { ADMIN_STRINGS } from "./strings";
 import { fakeFetch, problem, renderAdmin, stubResizeObserver } from "./test-support";
 import { AdminTransportProvider, adminDownload, useEtagMutation } from "./transport";
@@ -63,6 +67,144 @@ describe("useEtagMutation", () => {
       ADMIN_STRINGS.stale,
     );
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe("QueryErrorState", () => {
+  function forbiddenError(detail: string | undefined, reason: string): ForbiddenError {
+    const body = problem(403, "forbidden", reason).body as Record<string, unknown>;
+    return new ForbiddenError({
+      status: 403,
+      retryable: false,
+      correlationId: "corr-test",
+      problem: { ...body, detail } as unknown as ProblemDetails,
+    });
+  }
+  const ACCESS = {
+    mapping_configured: true,
+    groups_overage: false,
+    roles: [
+      {
+        role: "viewer",
+        source: "policy_store",
+        mapping_entry_id: null,
+        domain_count: 1,
+        customer_control: false,
+        expires_at: null,
+      },
+      {
+        role: "admin",
+        source: "entra_app_role",
+        mapping_entry_id: "ns-admins",
+        domain_count: 4,
+        customer_control: true,
+        expires_at: "2026-11-18T15:00:00Z",
+      },
+    ],
+  };
+
+  it("names the permission and says when it is needed on the whole deployment", () => {
+    const { impl } = fakeFetch(() => undefined);
+    renderAdmin(
+      <QueryErrorState
+        error={forbiddenError(
+          "this change applies to the whole deployment and needs deployment-scoped policy.manage",
+          "customer_scope_required",
+        )}
+      />,
+      impl,
+    );
+    const state = screen.getByTestId("forbidden-state");
+    expect(state.textContent).toContain(ADMIN_STRINGS.forbidden);
+    expect(screen.getByTestId("forbidden-detail").textContent).toContain("policy.manage");
+    expect(screen.getByTestId("forbidden-scope").textContent).toBe(
+      ADMIN_STRINGS.forbiddenDeployment,
+    );
+    expect(state.textContent).toContain("(Reference corr-test)");
+    expect(screen.queryByTestId("forbidden-access-link")).toBeNull();
+  });
+
+  it("says a domain-level permission is not deployment-wide and links an access anchor", () => {
+    const { impl } = fakeFetch(() => undefined);
+    renderAdmin(
+      <QueryErrorState
+        error={forbiddenError("this operation needs `audit.read`", "insufficient_scope")}
+        accessAnchor="my-access"
+      />,
+      impl,
+    );
+    expect(screen.getByTestId("forbidden-detail").textContent).toBe(
+      "this operation needs `audit.read`. ",
+    );
+    expect(screen.getByTestId("forbidden-scope").textContent).toBe(ADMIN_STRINGS.forbiddenDomain);
+    expect(screen.getByTestId("forbidden-access-link").getAttribute("href")).toBe("#my-access");
+  });
+
+  it("keeps the old text when the problem has no detail", () => {
+    const { impl } = fakeFetch(() => undefined);
+    renderAdmin(<QueryErrorState error={forbiddenError(undefined, "x")} />, impl);
+    expect(screen.queryByTestId("forbidden-detail")).toBeNull();
+    expect(screen.getByTestId("forbidden-state").textContent).toContain(
+      ADMIN_STRINGS.forbiddenDetail,
+    );
+  });
+
+  it("loads the caller's own access only when the disclosure is opened", async () => {
+    const { impl, calls } = fakeFetch((req) =>
+      req.url.pathname === ME_ACCESS_PATH ? { body: ACCESS } : undefined,
+    );
+    const { container } = renderAdmin(
+      <QueryErrorState error={forbiddenError("this operation needs `policy.manage`", "x")} />,
+      impl,
+    );
+    const toggle = screen.getByRole("button", { name: "Your access", hidden: true });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(calls).toHaveLength(0);
+    await userEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    const items = await screen.findAllByTestId("access-disclosure-role");
+    expect(calls.map((c) => c.url.pathname)).toEqual([ME_ACCESS_PATH]);
+    expect(items.map((i) => i.textContent)).toEqual([
+      "viewer, Policy store, 1 domain, no expiry",
+      "admin, Entra app role, mapping entry ns-admins, 4 domains, Whole deployment, expires 2026-11-18T15:00:00Z",
+    ]);
+    expect(screen.queryByTestId("access-disclosure-overage")).toBeNull();
+    const violations = (await axe(container)).violations.map((v) => `${v.id}: ${v.help}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("shows no roles, the overage notice and a read failure in the disclosure", async () => {
+    const empty = fakeFetch(() => ({ body: { ...ACCESS, roles: [], groups_overage: true } }));
+    renderAdmin(<QueryErrorState error={forbiddenError("d", "x")} />, empty.impl);
+    await userEvent.click(screen.getByRole("button", { name: "Your access", hidden: true }));
+    expect((await screen.findByTestId("access-disclosure-none")).textContent).toBe(
+      ADMIN_STRINGS.access.none,
+    );
+    expect(screen.getByTestId("access-disclosure-overage").textContent).toBe(
+      ADMIN_STRINGS.access.overage,
+    );
+    cleanup();
+    const down = fakeFetch(() => problem(503, "dependency_transient", "down"));
+    renderAdmin(<QueryErrorState error={forbiddenError("d", "x")} />, down.impl);
+    await userEvent.click(screen.getByRole("button", { name: "Your access", hidden: true }));
+    await screen.findByTestId("access-disclosure-error");
+  });
+
+  it("keeps the retryable outage state without a disclosure", async () => {
+    const { impl } = fakeFetch(() => undefined);
+    let retried = 0;
+    const err = new DependencyTransientError({
+      status: 503,
+      retryable: true,
+      correlationId: "",
+    });
+    renderAdmin(<QueryErrorState error={err} onRetry={() => (retried += 1)} />, impl);
+    expect(screen.getByTestId("unavailable-state").textContent).toContain(
+      ADMIN_STRINGS.unavailableDetail,
+    );
+    expect(screen.queryByTestId("access-disclosure")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: ADMIN_STRINGS.retry, hidden: true }));
+    expect(retried).toBe(1);
   });
 });
 

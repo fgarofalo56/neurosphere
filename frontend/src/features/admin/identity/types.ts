@@ -62,3 +62,41 @@ export interface PrincipalListParams {
   readonly cursor: string;
   readonly limit: number;
 }
+
+/** PRP-138: where a role in the caller's own access came from. */
+export type AccessSource = "entra_app_role" | "entra_group" | "policy_store";
+
+export interface AccessRoleView {
+  readonly role: string;
+  readonly source: AccessSource;
+  readonly mapping_entry_id: string | null;
+  readonly domain_count: number;
+  readonly customer_control: boolean;
+  readonly expires_at: string | null;
+}
+
+/** `GET /api/v1/me/access`: the caller's own roles, for any authenticated caller. */
+export interface MyAccessView {
+  readonly mapping_configured: boolean;
+  readonly groups_overage: boolean;
+  readonly roles: readonly AccessRoleView[];
+}
+
+export interface RoleMappingEntryView {
+  readonly id: string;
+  readonly claim: "roles" | "groups";
+  readonly value: string;
+  readonly role: string;
+  readonly domain_mode: "all" | "explicit";
+  readonly domain_ids: readonly string[];
+  readonly customer_control: boolean;
+}
+
+/** `GET /api/v1/admin/identity/role-mapping`: the effective Entra role mapping, read only. */
+export interface RoleMappingView {
+  readonly active: boolean;
+  readonly tenant_id: string | null;
+  readonly audience: string | null;
+  readonly cloud: string | null;
+  readonly entries: readonly RoleMappingEntryView[];
+}
