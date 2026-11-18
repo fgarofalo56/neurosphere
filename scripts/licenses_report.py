@@ -90,6 +90,24 @@ PLATFORM_GATED: dict[tuple[str, str], tuple[str, str]] = {
         "2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22)",
     ),
 }
+# npm packages that no supported platform installs: exact (name, version) -> (licence, source).
+# Same rule as PLATFORM_GATED: an exact version, a cited registry source, re-verified on a bump
+# (a bump changes the version, the entry stops matching and the package is UNKNOWN again).
+_WASM32_NOTE = (
+    "npm registry `license` field, https://registry.npmjs.org/{name}/{version}, retrieved "
+    "2026-11-17; reached only through @rolldown/binding-wasm32-wasi (pnpm-lock.yaml, "
+    "cpu: [wasm32], optional), which pnpm installs on no CI runner or image platform"
+)
+NPM_PLATFORM_GATED: dict[tuple[str, str], tuple[str, str]] = {
+    (name, version): ("MIT", _WASM32_NOTE.format(name=name, version=version))
+    for name, version in (
+        ("@emnapi/core", "2.0.0-beta.2"),
+        ("@emnapi/runtime", "2.0.0-beta.2"),
+        ("@emnapi/wasi-threads", "2.2.0"),
+        ("@napi-rs/wasm-runtime", "1.2.6"),
+        ("@tybys/wasm-util", "0.10.4"),
+    )
+}
 # glob over the package name -> why one installed member can speak for the whole family.
 # Resolution needs an INSTALLED sibling at the SAME version whose own metadata gives the
 # licence; nothing is guessed and no network is used. A bump of the whole family therefore
@@ -535,6 +553,8 @@ def read_pnpm_lock(
             family = family_licence(name, version, index)
             if family is not None:
                 lic = family
+            elif (name, version) in NPM_PLATFORM_GATED:
+                lic = NPM_PLATFORM_GATED[(name, version)][0]
             else:
                 lic = carried.get(("npm", name, version), UNKNOWN)
                 was_carried = lic != UNKNOWN
