@@ -350,6 +350,11 @@ def test_derivation_api_accepts_only_verified_claims() -> None:
         "pseudonymizer",
         "revocation_checker",
         "clock",
+        # PRP-138: deployment configuration set where the deriver is built, never per request.
+        "claim_mapping",
+        "domain_directory",
+        "claim_grant_observer",
+        "allow_dev_issuer",
     }
 
 

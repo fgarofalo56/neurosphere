@@ -494,3 +494,29 @@ def test_role_gated_path_without_the_role_marker_is_flagged() -> None:
     app.include_router(router, prefix="/api/v1/workspaces")
     flagged = undeclared_routes(app, public_paths=frozenset())
     assert [(e.path, e.role_gated) for e in flagged] == [("/api/v1/workspaces/{role}", False)]
+
+
+def test_identity_role_mapping_view_declares_policy_manage() -> None:
+    """PRP-138 item 5: the effective role mapping is a GET-only policy.manage read."""
+    app = create_app(Settings(env="local"))
+    path = "/api/v1/admin/identity/role-mapping"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path == path
+        for m in e.methods
+    }
+    assert found == {(path, "GET"): ("policy.manage",)}
+
+
+def test_authenticated_self_routes_are_exactly_the_declared_set() -> None:
+    """PRP-138 item 5: ``/api/v1/me/access`` is the only authenticated-self route, GET only."""
+    from neurosphere_api.authz import AUTHENTICATED_SELF_PATHS
+
+    app = create_app(Settings(env="local"))
+    found = {
+        (e.path, e.methods, e.permissions) for e in route_inventory(app) if e.authenticated_self
+    }
+    assert found == {("/api/v1/me/access", ("GET",), ())}
+    assert AUTHENTICATED_SELF_PATHS == {"/api/v1/me/access"}
+    assert all(e.compliant for e in route_inventory(app) if e.authenticated_self)

@@ -66,6 +66,7 @@ Key                        Object                                               
 ``REVOCATION_STORE``       ``RevocationStore`` (Cosmos ``revocations``)               authz
 ``REVOCATION_CHECKER``     ``CachedRevocationChecker`` used by the deriver            authz
 ``REVOCATION_HOOKS``       ``RevocationHookRegistry`` (checker + deriver invalidators) authz
+``CLAIM_ROLE_MAPPING``     parsed ``ClaimRoleMapping`` (absent when unset, PRP-138)    authz
 ``AUDIT_REPOSITORY``       ``AuditRepository`` (Cosmos ``audit``/``audit_tail``)      data
 ``HITL_SERVICE``           ``HitlService`` (HITL store + decision log)                data
 ``AGGREGATE_READER``       the aggregate reader installed on ``app.state``            data
@@ -114,7 +115,12 @@ if TYPE_CHECKING:
         RevocationHookRegistry,
         RevocationStore,
     )
-    from neurosphere_core.auth.scope import PolicyRepository, PrincipalPseudonymizer, ScopeDeriver
+    from neurosphere_core.auth.scope import (
+        ClaimRoleMapping,
+        PolicyRepository,
+        PrincipalPseudonymizer,
+        ScopeDeriver,
+    )
     from neurosphere_core.clients import ClientLifetime
     from neurosphere_core.hitl import HitlService
     from neurosphere_core.recommendations import RecommendationStore
@@ -134,6 +140,7 @@ __all__ = [
     "AUTHENTICATOR",
     "AUTH_SETTINGS",
     "CATALOG_REPOSITORY",
+    "CLAIM_ROLE_MAPPING",
     "DOMAIN_REGISTRY",
     "HITL_SERVICE",
     "POLICY_REPOSITORY",
@@ -194,6 +201,7 @@ AUDIT_SEARCH_STORE: Final[SharedKey[AuditSearchStore]] = SharedKey("audit_search
 REVIEW_POLICIES: Final[SharedKey[LoadableReviewPolicyRegistry]] = SharedKey("review_policies")
 DOMAIN_REGISTRY: Final[SharedKey[DomainRegistry]] = SharedKey("domain_registry")
 RECOMMENDATION_STORE: Final[SharedKey[RecommendationStore]] = SharedKey("recommendation_store")
+CLAIM_ROLE_MAPPING: Final[SharedKey[ClaimRoleMapping]] = SharedKey("claim_role_mapping")
 
 
 @dataclass(frozen=True, slots=True)

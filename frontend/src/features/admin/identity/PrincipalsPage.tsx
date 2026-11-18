@@ -11,6 +11,8 @@ import { principalHref } from "../shared/adminPaths";
 import { AdminTabs } from "../shared/AdminTabs";
 import { CopyableId, CursorPager, QueryErrorState } from "../shared/AdminStates";
 import { usePrincipals } from "./hooks";
+import { MY_ACCESS_ID, MyAccessPanel } from "./MyAccessPanel";
+import { RoleMappingPanel } from "./RoleMappingPanel";
 import { IDENTITY_STRINGS as S } from "./strings";
 
 const PAGE_SIZE = 25;
@@ -22,7 +24,13 @@ function ListBody(): ReactElement {
   const query = usePrincipals({ cursor, limit: PAGE_SIZE });
 
   if (query.isError) {
-    return <QueryErrorState error={query.error} onRetry={() => void query.refetch()} />;
+    return (
+      <QueryErrorState
+        error={query.error}
+        onRetry={() => void query.refetch()}
+        accessAnchor={MY_ACCESS_ID}
+      />
+    );
   }
   if (query.isPending) {
     return (
@@ -94,6 +102,8 @@ export function PrincipalsPage(): ReactElement {
     <PageTemplate title={S.listTitle} description={S.listDescription}>
       <AdminTabs />
       <ListBody />
+      <RoleMappingPanel />
+      <MyAccessPanel />
     </PageTemplate>
   );
 }

@@ -109,7 +109,8 @@ def require_deployment_admin(
         target = customer_control_domain_id(str(scope.cloud), scope.customer_id)
         await _record_denial(state, request, scope, perm, target)
         raise ForbiddenError(
-            f"this change applies to the whole deployment and needs deployment-scoped {perm.value}",
+            f"this operation needs `{perm.value}` on the whole deployment"
+            " (the customer control domain)",
             reason=CUSTOMER_SCOPE_REQUIRED,
         )
 

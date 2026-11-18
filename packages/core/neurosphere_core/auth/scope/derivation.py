@@ -4,7 +4,13 @@
 ``IdentityScope`` (PRP-06 C8). Its sole per-request input is a ``VerifiedClaims`` built by the JWT
 validator; request headers, query strings, bodies, cookies and model output are not parameters and
 cannot reach it. Of the claims it reads only cloud, tenant id, object id, identity type, issued-at
-and expiry; Entra role, group and scope claims are never authority (C5).
+and expiry; Entra role, group and scope claims are never authority (C5), with exactly one
+exception (PRP-138): when the deployment configures an explicit ``ClaimRoleMapping``, a token whose
+issuer is Entra (the dev issuer only when the deployment allows it, local only), whose tenant and
+audience equal the ones the mapping is bound to, and which is a delegated user token (not
+app-only, ``scp`` present) receives the mapped role for each matching ``roles`` value or
+``groups`` object id (never on group overage). Such a role is time-bound to the token's expiry,
+is never stored, and with no mapping configured no role or group claim is read at all.
 
 Derivation, in order (any failure denies; nothing returns a partial or empty scope on error):
 
@@ -13,16 +19,26 @@ Derivation, in order (any failure denies; nothing returns a partial or empty sco
 2. Principal id = HMAC pseudonym of tenant id + object id (C15).
 3. Revocation hook (item 5): revoked -> ``forbidden``; checker failure -> ``dependency_transient``.
 4. Policy head (version) and the principal's policy document, through the TTL cache (C14).
-   Missing head or document = no grants (deny). Store error or timeout = ``dependency_transient``.
-5. Role assignments: unexpired only, clipped to the principal's domain memberships, and only
-   domains of this cloud and customer. Grants: unexpired only, one named non-domain resource of
-   this cloud and customer. Grants narrow; they never add a role or a domain (C7).
+   Missing head or document = no stored grants. Store error or timeout = ``dependency_transient``.
+5. Claim role mapping (only when configured, after 3 and 4): one assignment ``entra.<entry id>``
+   per matched entry, on the entry's explicit domains or, for ``domains: "all"``, every active
+   domain of the domain directory (TTL cache), plus the customer control domain when the entry
+   says so. Directory missing or failing -> ``domain_directory_unavailable``; 1000 or more active
+   domains -> ``role_mapping_domain_overflow`` (never truncated). An entry left with no domain
+   grants nothing.
+6. Role assignments: unexpired only, clipped to the principal's domain memberships (mapped
+   assignments are not clipped: the mapping is the membership), and only domains of this cloud
+   and customer. Grants: unexpired only, one named non-domain resource of this cloud and
+   customer. Grants narrow; they never add a role or a domain (C7).
+7. When mapped roles were applied and an observer is configured, it is awaited before the
+   derivation is returned; its failure denies with ``audit_write_failed``.
 """
 
 from __future__ import annotations
 
 import asyncio
 import functools
+import re
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -42,9 +58,22 @@ from pydantic import (
 from neurosphere_core.auth.jwt import Clock, VerifiedClaims
 from neurosphere_core.auth.jwt.config import normalize_tenant_id
 from neurosphere_core.auth.scope.cache import TtlCache
+from neurosphere_core.auth.scope.claim_mapping import (
+    MAX_ENTRY_DOMAINS,
+    ClaimGrant,
+    ClaimGrantObserver,
+    ClaimRoleMapping,
+    DomainDirectory,
+    matching_entries,
+)
 from neurosphere_core.auth.scope.hashing import compute_scope_hash
-from neurosphere_core.auth.scope.permissions import Permission, role_permissions
+from neurosphere_core.auth.scope.permissions import (
+    Permission,
+    customer_control_domain_id,
+    role_permissions,
+)
 from neurosphere_core.auth.scope.policy import (
+    CANONICAL_ID_PATTERN,
     NO_POLICY_VERSION,
     PolicyHead,
     PolicyRepository,
@@ -65,6 +94,8 @@ __all__ = [
     "DEFAULT_POLICY_CACHE_TTL_SECONDS",
     "DEFAULT_SCOPE_TTL_SECONDS",
     "DEFAULT_STORE_TIMEOUT_SECONDS",
+    "MAPPED_ASSIGNMENT_PREFIX",
+    "MAX_ALL_DOMAINS",
     "SCOPE_SCHEMA_VERSION",
     "ScopeDerivation",
     "ScopeDerivationConfig",
@@ -75,6 +106,13 @@ SCOPE_SCHEMA_VERSION: Final = "1.0.0"
 DEFAULT_SCOPE_TTL_SECONDS: Final = 300
 DEFAULT_POLICY_CACHE_TTL_SECONDS: Final = 30.0
 DEFAULT_STORE_TIMEOUT_SECONDS: Final = 2.0
+#: Assignment id prefix of a role applied from the claim role mapping (``entra.<entry id>``).
+MAPPED_ASSIGNMENT_PREFIX: Final = "entra."
+#: An ``all`` entry denies at this many active registry domains instead of truncating
+#: (PRP-138 clarification 4; the registry lists at most 1000).
+MAX_ALL_DOMAINS: Final = 1000
+_CANONICAL = re.compile(CANONICAL_ID_PATTERN)
+_MAX_CANONICAL_LENGTH: Final = 512
 
 
 class ScopeDerivationConfig(BaseModel):
@@ -103,6 +141,8 @@ class ScopeDerivation:
     scope: IdentityScope
     assignment_ids: tuple[str, ...]
     grant_ids: tuple[str, ...]
+    #: Roles applied from the claim role mapping (PRP-138); empty when none matched or off.
+    claim_grants: tuple[ClaimGrant, ...] = ()
 
 
 def _ts(value: datetime) -> str:
@@ -119,6 +159,29 @@ def _invalid_policy(detail: str) -> DependencyTransientError:
     return DependencyTransientError(detail, reason="policy_document_invalid", upstream_invalid=True)
 
 
+def _directory_unavailable(*, upstream_invalid: bool = False) -> DependencyTransientError:
+    return DependencyTransientError(
+        "domain directory unavailable",
+        reason="domain_directory_unavailable",
+        upstream_invalid=upstream_invalid,
+    )
+
+
+def _domain_overflow() -> DependencyTransientError:
+    return DependencyTransientError(
+        "too many domains for a mapped role", reason="role_mapping_domain_overflow"
+    )
+
+
+def _is_domain_id(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) <= _MAX_CANONICAL_LENGTH
+        and _CANONICAL.fullmatch(value) is not None
+        and _segments(value)[3] == "domain"
+    )
+
+
 class ScopeDeriver:
     def __init__(
         self,
@@ -128,6 +191,10 @@ class ScopeDeriver:
         pseudonymizer: PrincipalPseudonymizer,
         revocation_checker: RevocationChecker,
         clock: Clock = time.time,
+        claim_mapping: ClaimRoleMapping | None = None,
+        domain_directory: DomainDirectory | None = None,
+        claim_grant_observer: ClaimGrantObserver | None = None,
+        allow_dev_issuer: bool = False,
     ) -> None:
         # Required on purpose: ``None`` would silently skip revocation. Opting out is
         # ``NoRevocationCheck()`` so it is visible where the deriver is built.
@@ -135,11 +202,25 @@ class ScopeDeriver:
             raise TypeError(
                 "revocation_checker is required; pass a RevocationChecker or NoRevocationCheck()"
             )
+        if claim_mapping is not None and not isinstance(claim_mapping, ClaimRoleMapping):
+            raise TypeError("claim_mapping must be a parsed ClaimRoleMapping or None")
+        if domain_directory is not None and not isinstance(domain_directory, DomainDirectory):
+            raise TypeError("domain_directory must implement DomainDirectory or be None")
+        if claim_grant_observer is not None and not isinstance(
+            claim_grant_observer, ClaimGrantObserver
+        ):
+            raise TypeError("claim_grant_observer must implement ClaimGrantObserver or be None")
+        if not isinstance(allow_dev_issuer, bool):
+            raise TypeError("allow_dev_issuer must be a bool")
         self._config = config
         self._repo = policy_repository
         self._pseudonymizer = pseudonymizer
         self._revocation = revocation_checker
         self._clock = clock
+        self._claim_mapping = claim_mapping
+        self._directory = domain_directory
+        self._observer = claim_grant_observer
+        self._allow_dev_issuer = allow_dev_issuer
         cache_args: dict[str, Any] = {
             "ttl_seconds": config.policy_cache_ttl_seconds,
             "max_entries": config.cache_max_entries,
@@ -149,6 +230,9 @@ class ScopeDeriver:
         self._principals: TtlCache[tuple[str, str, str], PrincipalPolicy | None] = TtlCache(
             **cache_args
         )
+        # Active registry domains per customer, for ``domains: "all"`` entries. Same TTL as the
+        # policy cache; only successful, validated loads are cached.
+        self._domains: TtlCache[str, tuple[str, ...]] = TtlCache(**cache_args)
 
     @property
     def config(self) -> ScopeDerivationConfig:
@@ -201,7 +285,14 @@ class ScopeDeriver:
             policy.customer_id != customer or policy.principal_id != principal_id
         ):
             raise _invalid_policy("policy document belongs to another principal")
-        return self._build(claims, principal_id, kind, version, policy, now)
+        if self._claim_mapping is None:
+            return self._build(claims, principal_id, kind, version, policy, now)
+        mapped = await self._claim_grants(self._claim_mapping, claims)
+        derivation = self._build(claims, principal_id, kind, version, policy, now, mapped)
+        observer = self._observer
+        if mapped and observer is not None:
+            await self._notify(observer, derivation.scope, mapped, claims)
+        return derivation
 
     def invalidate_principal(self, principal_id: str) -> int:
         """Drop cached policy documents for one principal (revocation cache hook, item 5)."""
@@ -210,6 +301,7 @@ class ScopeDeriver:
     def invalidate_all(self) -> None:
         self._heads.clear()
         self._principals.clear()
+        self._domains.clear()
 
     # ------------------------------------------------------------------ internals
 
@@ -252,6 +344,80 @@ class ScopeDeriver:
             return False
         return (type_ == "domain") is domain
 
+    async def _claim_grants(
+        self, mapping: ClaimRoleMapping, claims: VerifiedClaims
+    ) -> tuple[ClaimGrant, ...]:
+        """Roles the mapping confers on ``claims`` (issuer, tenant, audience: the matcher's)."""
+        entries = matching_entries(mapping, claims, allow_dev_issuer=self._allow_dev_issuer)
+        if not entries:
+            return ()
+        cfg = self._config
+        registry: tuple[str, ...] = ()
+        if any(entry.domains == "all" for entry in entries):
+            registry = await self._active_domains()
+        control = customer_control_domain_id(cfg.cloud.value, cfg.customer_id)
+        grants: list[ClaimGrant] = []
+        for entry in entries:
+            candidates = set(registry if entry.domains == "all" else entry.domains)
+            if entry.customer_control:
+                candidates.add(control)
+            domains = sorted(d for d in candidates if self._owned(d, domain=True))
+            if not domains:
+                continue  # grants nothing; never an assignment without a domain
+            if len(domains) > MAX_ENTRY_DOMAINS:
+                raise _domain_overflow()
+            grants.append(
+                ClaimGrant(
+                    entry_id=entry.id,
+                    claim=entry.claim,
+                    role=entry.role,
+                    domain_ids=tuple(domains),
+                    customer_control=entry.customer_control,
+                    expires_at=claims.expires_at,
+                )
+            )
+        return tuple(grants)
+
+    async def _active_domains(self) -> tuple[str, ...]:
+        directory = self._directory
+        if directory is None:
+            raise _directory_unavailable()
+        customer = self._config.customer_id
+        domains = await self._domains.get_or_load(
+            customer, functools.partial(self._load_domains, directory, customer)
+        )
+        if len(domains) >= MAX_ALL_DOMAINS:
+            raise _domain_overflow()
+        return domains
+
+    async def _load_domains(self, directory: DomainDirectory, customer: str) -> tuple[str, ...]:
+        try:
+            async with asyncio.timeout(self._config.store_timeout_seconds):
+                raw: object = await directory.active_domain_ids(customer)
+        except Exception as exc:
+            raise _directory_unavailable() from exc
+        if not isinstance(raw, (tuple, list)):
+            raise _directory_unavailable(upstream_invalid=True)
+        items: list[object] = list(raw)  # pyright: ignore[reportUnknownArgumentType]
+        if not all(_is_domain_id(item) for item in items):
+            raise _directory_unavailable(upstream_invalid=True)
+        return tuple(sorted({str(item) for item in items}))
+
+    async def _notify(
+        self,
+        observer: ClaimGrantObserver,
+        scope: IdentityScope,
+        grants: tuple[ClaimGrant, ...],
+        claims: VerifiedClaims,
+    ) -> None:
+        try:
+            async with asyncio.timeout(self._config.store_timeout_seconds):
+                await observer.on_claim_grants(scope, grants, claims.issued_at, claims.expires_at)
+        except Exception as exc:
+            raise DependencyTransientError(
+                "claim role audit unavailable", reason="audit_write_failed"
+            ) from exc
+
     def _build(
         self,
         claims: VerifiedClaims,
@@ -260,6 +426,7 @@ class ScopeDeriver:
         version: str,
         policy: PrincipalPolicy | None,
         now: datetime,
+        mapped: tuple[ClaimGrant, ...] = (),
     ) -> ScopeDerivation:
         cfg = self._config
         expiries: list[datetime] = [
@@ -301,6 +468,22 @@ class ScopeDeriver:
                 expiries.append(grant.expires_at)
                 grant_ids.append(grant.grant_id)
 
+        # Claim-mapped roles (PRP-138): already filtered by ``_owned``; not clipped to the stored
+        # memberships (the mapping is the membership); time-bound to the token.
+        for mapped_grant in mapped:
+            domains = list(mapped_grant.domain_ids)
+            roles.append(
+                {
+                    "role": mapped_grant.role.value,
+                    "domain_ids": domains,
+                    "expires_at": _ts(mapped_grant.expires_at),
+                }
+            )
+            expiries.append(mapped_grant.expires_at)
+            assignment_ids.append(MAPPED_ASSIGNMENT_PREFIX + mapped_grant.entry_id)
+            if Permission.DATA_READ in role_permissions(mapped_grant.role):
+                readable.update(domains)
+
         doc: dict[str, Any] = {
             "schema_version": SCOPE_SCHEMA_VERSION,
             "cloud": cfg.cloud.value,
@@ -326,6 +509,7 @@ class ScopeDeriver:
             scope=IdentityScope._from_verified_contract(contract),
             assignment_ids=tuple(sorted(assignment_ids)),
             grant_ids=tuple(sorted(grant_ids)),
+            claim_grants=mapped,
         )
 
 

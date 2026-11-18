@@ -37,6 +37,10 @@ class VerifiedClaims(BaseModel):
     roles: tuple[str, ...] = Field(default=(), max_length=MAX_LIST_CLAIM_ITEMS)
     scopes: tuple[str, ...] = Field(default=(), max_length=MAX_LIST_CLAIM_ITEMS)
     groups: tuple[str, ...] = Field(default=(), max_length=MAX_LIST_CLAIM_ITEMS)
+    # True when Entra signalled group overage (``hasgroups: true`` or ``_claim_names.groups``).
+    # ``groups`` is then always empty: an overage token's group list must not be relied on
+    # (PRP-138 clarification 11; no Microsoft Graph lookup is made).
+    groups_overage: bool = False
 
     def is_expired_at(self, now: datetime) -> bool:
         return now >= self.expires_at

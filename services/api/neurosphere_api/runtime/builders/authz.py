@@ -18,6 +18,15 @@ Production wiring (no other path exists from ``main``):
   ``NS_AUTH_AUDIENCES``; no other key source is configured) and a ``ScopeDeriver`` over the two
   stores above plus the ``PrincipalPseudonymizer`` from :func:`resolve_pseudonym_key`, bound
   to ``NS_AUTH_CUSTOMER_ID``; then ``configure_authz``.
+* ``CLAIM_ROLE_MAPPING`` (PRP-138): ``NS_AUTH_ROLE_MAPPINGS`` parsed with
+  ``parse_claim_role_mapping``. Unset means off and the composition is exactly as without it. A
+  malformed mapping, or an explicit domain id of another cloud or customer, fails ``authz`` with
+  ``role_mapping_invalid``; a mapping whose tenant is not ``NS_AUTH_TENANT_ID`` or whose audience
+  is not one of ``NS_AUTH_AUDIENCES`` fails it with ``role_mapping_binding_mismatch``. A valid
+  mapping is published and handed to the deriver with a domain directory that resolves the
+  ``DOMAIN_REGISTRY`` per call (the admin_platform builder publishes it later), the
+  :class:`ClaimGrantAuditObserver` (audit repository resolved per call); the local token
+  issuer is accepted for mapping only in ``NS_ENV=local`` (``deriver_mapping_options``).
 * ``denial_recorder``: :class:`AuditDenialRecorder`, appending a ``denied`` record to the
   ``AUDIT_REPOSITORY`` for every refused ``require`` check (PRP-06: a denied attempt is audited
   too). The data builder publishes that repository AFTER this builder runs, so the recorder
@@ -39,7 +48,9 @@ from collections.abc import Callable
 from typing import Final
 
 import httpx
+from neurosphere_contracts.admin.v1.domain_definition import DomainDefinition
 from neurosphere_contracts.audit.v1.audit_record import Subject
+from neurosphere_core.admin.platform import DomainRegistry
 from neurosphere_core.audit import (
     AuditContext,
     AuditRepository,
@@ -60,11 +71,15 @@ from neurosphere_core.auth.revocation import (
     load_revocation_settings,
 )
 from neurosphere_core.auth.scope import (
+    ClaimRoleMapping,
+    ClaimRoleMappingError,
     CosmosPolicyRepository,
     PolicyRepository,
     PrincipalPseudonymizer,
     ScopeDerivationConfig,
     ScopeDeriver,
+    customer_control_domain_id,
+    parse_claim_role_mapping,
 )
 from neurosphere_core.errors import DependencyTransientError, InvalidSchemaError
 from neurosphere_core.hitl.auditing import audit_chain_for
@@ -73,16 +88,24 @@ from pydantic import ValidationError
 
 from neurosphere_api.actions.common import audit_correlation_id
 from neurosphere_api.authz import (
+    ClaimGrantAuditObserver,
+    ClaimMappingStats,
     DenialRecorder,
     DeniedAttempt,
     ScopeSource,
     TokenAuthenticator,
     configure_authz,
 )
+from neurosphere_api.authz.claim_audit import (
+    deriver_mapping_options,
+    install_claim_mapping_stats,
+)
 from neurosphere_api.runtime.builders import (
     AUDIT_REPOSITORY,
     AUTH_SETTINGS,
     AUTHENTICATOR,
+    CLAIM_ROLE_MAPPING,
+    DOMAIN_REGISTRY,
     POLICY_REPOSITORY,
     PSEUDONYMIZER,
     REVOCATION_CHECKER,
@@ -97,7 +120,14 @@ from neurosphere_api.runtime.builders import (
 from neurosphere_api.runtime.pseudonym import resolve_pseudonym_key
 from neurosphere_api.runtime.settings import AuthSettings
 
-__all__ = ["BUILDER", "COMPONENTS", "DENIAL_CHAIN_NAME", "AuditDenialRecorder", "build"]
+__all__ = [
+    "BUILDER",
+    "COMPONENTS",
+    "DENIAL_CHAIN_NAME",
+    "AuditDenialRecorder",
+    "RegistryDomainDirectory",
+    "build",
+]
 
 COMPONENTS: Final = ("authz", "policy_store", "revocation")
 
@@ -265,6 +295,58 @@ def _tenant(auth: AuthSettings) -> str:
         raise ComponentUnavailableError("tenant_id_invalid") from None
 
 
+class RegistryDomainDirectory:
+    """``DomainDirectory`` over the ``DOMAIN_REGISTRY``, resolved on every call (PRP-138).
+
+    The admin_platform builder publishes the registry after this builder ran, so it cannot be
+    captured at build time. Not published (or failing) raises; the deriver denies with
+    ``domain_directory_unavailable`` and never falls back to the control domain alone. The
+    reserved control domain is left out: an ``all`` entry reaches it only through its own
+    ``customer_control`` flag (PRP-138 clarification 2).
+    """
+
+    def __init__(self, registry: Callable[[], DomainRegistry | None], *, cloud: str) -> None:
+        self._registry = registry
+        self._cloud = cloud
+
+    async def active_domain_ids(self, customer_id: str) -> tuple[str, ...]:
+        registry = self._registry()
+        if registry is None:
+            raise DependencyTransientError(
+                "domain registry is not configured", reason="domain_directory_unavailable"
+            )
+        # DomainRegistry has no public listing yet; ``_all`` is its own active-domain read.
+        documents = await registry._all(customer_id, include_retired=False)
+        control = customer_control_domain_id(self._cloud, customer_id)
+        domains: list[str] = []
+        for document in documents:
+            if document.status != "active" or not isinstance(document.body, DomainDefinition):
+                continue
+            domain_id = document.body.domain_id.root
+            if domain_id != control:
+                domains.append(domain_id)
+        return tuple(domains)
+
+
+def _claim_mapping(
+    auth: AuthSettings, tenant_id: str, config: ScopeDerivationConfig
+) -> ClaimRoleMapping | None:
+    """Parse and check ``NS_AUTH_ROLE_MAPPINGS``; ``None`` when unset (mapping off)."""
+    try:
+        mapping = parse_claim_role_mapping(auth.role_mappings)
+    except ClaimRoleMappingError:
+        raise ComponentUnavailableError("role_mapping_invalid") from None
+    if mapping is None:
+        return None
+    prefix = f"{config.cloud.value}:{config.customer_id}:"
+    for entry in mapping.entries:
+        if entry.domains != "all" and not all(d.startswith(prefix) for d in entry.domains):
+            raise ComponentUnavailableError("role_mapping_invalid")
+    if mapping.tenant_id != tenant_id or mapping.audience not in auth.audiences:
+        raise ComponentUnavailableError("role_mapping_binding_mismatch")
+    return mapping
+
+
 def _deriver(
     ctx: BuildContext,
     auth: AuthSettings,
@@ -287,17 +369,35 @@ def _deriver(
         )
     except ValidationError:
         raise ComponentUnavailableError("scope_config_invalid") from None
+    mapping = _claim_mapping(auth, tenant_id, config)
     try:
         key = resolve_pseudonym_key(auth, env=ctx.settings.env)
     except InvalidSchemaError as exc:
         raise ComponentUnavailableError(exc.reason or "pseudonym_key_invalid") from None
     pseudonymizer = PrincipalPseudonymizer(key)
+    # Mapping off: no mapping argument is passed, so the deriver keeps every default.
+    directory: RegistryDomainDirectory | None = None
+    observer: ClaimGrantAuditObserver | None = None
+    if mapping is not None:
+        stats = ClaimMappingStats(mapping)
+        directory = RegistryDomainDirectory(
+            lambda: ctx.maybe_shared(DOMAIN_REGISTRY), cloud=config.cloud.value
+        )
+        observer = ClaimGrantAuditObserver(lambda: ctx.maybe_shared(AUDIT_REPOSITORY), stats=stats)
+        install_claim_mapping_stats(ctx.app.state, stats)
+        ctx.publish(CLAIM_ROLE_MAPPING, mapping)
+        # Routers read ``app.state`` at request time (the shared dict is build-time only): the
+        # read-only role-mapping view answers from this attribute.
+        setattr(ctx.app.state, CLAIM_ROLE_MAPPING.name, mapping)
     deriver = ScopeDeriver(
         config,
         policy_repository=policy,
         pseudonymizer=pseudonymizer,
         revocation_checker=checker,
         clock=clock,
+        **deriver_mapping_options(
+            mapping, domain_directory=directory, observer=observer, env=ctx.settings.env
+        ),
     )
     ctx.publish(PSEUDONYMIZER, pseudonymizer)
     ctx.publish(SCOPE_DERIVER, deriver)

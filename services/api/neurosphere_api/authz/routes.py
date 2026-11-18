@@ -17,6 +17,12 @@ Role-gated routes (PRP-48 item 1, #91) are a fourth HTTP category: a route whose
 dependency (``ROLE_MARKER``) is compliant without claiming a permission. The marker alone is not
 enough anywhere else, and the path alone is not enough without the marker.
 
+Authenticated-self routes (PRP-138 clarification 14) are a fifth HTTP category: a ``GET`` route
+whose exact path is in :data:`AUTHENTICATED_SELF_PATHS` and that carries a
+:func:`require_authenticated` dependency (``AUTHENTICATED_MARKER``) is compliant without claiming
+a permission; it answers with the caller's own data only. The marker on any other path or method,
+or the path without the marker, is not compliant.
+
 :func:`undeclared_routes` lists violations; ``compose_app`` calls
 :func:`verify_route_permissions` after every builder ran, so an undeclared route fails app boot.
 Public routes get no blanket allow; they simply do not call ``require``.
@@ -36,10 +42,11 @@ from neurosphere_core.auth.scope import Permission
 from neurosphere_core.errors import InvalidSchemaError
 from starlette.routing import BaseRoute, Mount, WebSocketRoute
 
-from neurosphere_api.authz.dependencies import PERMISSION_MARKER, ROLE_MARKER
+from neurosphere_api.authz.dependencies import AUTHENTICATED_MARKER, PERMISSION_MARKER, ROLE_MARKER
 from neurosphere_api.authz.state import STATE_ATTRIBUTE, AuthzState
 
 __all__ = [
+    "AUTHENTICATED_SELF_PATHS",
     "GATEWAY_AUTHENTICATED_WEBSOCKETS",
     "MCP_METADATA_PATH",
     "MCP_MOUNT_STATE_ATTRIBUTE",
@@ -104,6 +111,18 @@ ROLE_GATED_PATHS: Final = frozenset(
 )
 _ROLE_GATED_METHODS: Final = frozenset({"GET", "HEAD"})
 
+#: Exact paths any authenticated caller may read, gated by ``require_authenticated`` (a valid
+#: token and a derived scope, no permission). Each answers with the caller's OWN data only, and is
+#: compliant only for ``GET`` with the authenticated marker.
+AUTHENTICATED_SELF_PATHS: Final = frozenset(
+    {
+        # PRP-138: the caller's own roles and where they came from (Entra mapping or policy
+        # store), so a caller with no role yet can see why they are denied.
+        "/api/v1/me/access",
+    }
+)
+_AUTHENTICATED_SELF_METHODS: Final = frozenset({"GET"})
+
 _WEBSOCKET: Final = ("WEBSOCKET",)
 
 
@@ -141,6 +160,7 @@ class RouteEntry:
     self_authenticated: bool = False
     gateway_authenticated: bool = False
     role_gated: bool = False
+    authenticated_self: bool = False
 
     @property
     def websocket(self) -> bool:
@@ -157,6 +177,7 @@ class RouteEntry:
             or self.producer_authenticated
             or self.self_authenticated
             or self.role_gated
+            or self.authenticated_self
         )
 
 
@@ -197,6 +218,12 @@ def _role_gated(dependant: Dependant) -> bool:
     if getattr(dependant.call, ROLE_MARKER, None) is True:
         return True
     return any(_role_gated(child) for child in dependant.dependencies)
+
+
+def _authenticated_self(dependant: Dependant) -> bool:
+    if getattr(dependant.call, AUTHENTICATED_MARKER, None) is True:
+        return True
+    return any(_authenticated_self(child) for child in dependant.dependencies)
 
 
 def _mounted_mcp_endpoint(app: FastAPI) -> object | None:
@@ -259,6 +286,14 @@ def _entry(
         and has_dependant
         and _role_gated(dependant)
     )
+    authenticated_self = (
+        http
+        and path in AUTHENTICATED_SELF_PATHS
+        and bool(methods)
+        and set(methods) <= _AUTHENTICATED_SELF_METHODS
+        and has_dependant
+        and _authenticated_self(dependant)
+    )
     guard = GATEWAY_AUTHENTICATED_WEBSOCKETS.get(path) if websocket else None
     gateway = guard is not None and guard.permission.value in perms
     return RouteEntry(
@@ -270,6 +305,7 @@ def _entry(
         self_authenticated=self_authenticated,
         gateway_authenticated=gateway,
         role_gated=role_gated,
+        authenticated_self=authenticated_self,
     )
 
 

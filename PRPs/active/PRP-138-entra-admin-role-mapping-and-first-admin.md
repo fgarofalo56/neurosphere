@@ -1,10 +1,11 @@
 ---
 name: PRP-138-entra-admin-role-mapping-and-first-admin
-status: backlog
+status: active
 priority: P0
 order: 138
 review: required
 created: 2026-11-17
+started: 2026-11-18
 model: opus
 orchestrator_model: opus
 implementer_model: opus
@@ -14,7 +15,7 @@ depends_on: []
 wave: W18b
 branch: prp-138-entra-admin-role-mapping
 allow_parallel: true
-issues: []
+issues: [331, 332, 333, 334, 335, 336, 337, 338, 339]
 ---
 
 # PRP-138: Entra admin role mapping and first admin (app roles and groups to NeuroSphere roles)
@@ -319,26 +320,45 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 3, 4, 5, 10, 13 and 14 are ASSUMPTIONS for plan approval; row 16 needs the orchestrator to confirm who edits the hosted Bicep)
+- [x] All clarification questions are decided, not guessed (owner accepted assumption rows 3, 4, 5, 10, 13 and 14 as written on 2026-11-18; row 16: PRP-138 edits the hosted Bicep in item 9, as a second pull request after PRP-139)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
-| 8 | todo | | |
+| 1 | merged | worktree-agent-aeeac7001ca09a4f8 (opus) | 479 passed on branch (auth_claim_mapping + auth), ruff and pyright clean; commit c3aad0fc, merge 1fd99ecb; 2026-11-18 |
+| 2 | merged | worktree-agent-a2d0f3c11b0ff26fd (opus) | 382 passed (auth_claim_mapping + auth), ruff and pyright clean; commit 7e7933bc, merge ab419ace; 2026-11-18 |
+| 3 | merged | worktree-agent-ae3a9054b9c79913f (opus) | 533 passed (auth_claim_mapping + auth), 1049 passed (api authz + workers), repo-wide pyright 0 errors, ruff clean; orchestrator added the four constructor names to the pinned set in packages/core/tests/auth/scope/test_derivation.py (outside ownership; the PRP requires the arguments); commit 78bdc504, merge 9006c8bf; 2026-11-18 |
+| 4 | merged | worktree-agent-a761f40e7761c60d1 (opus) | on branch: 377 passed (authz_claim_mapping, authz, runtime_api, runtime_routes), 1228 passed (tests/security/authz), 2437 passed (whole API suite), pyright 0 errors; after merge: 548 passed incl. core auth_claim_mapping, ruff and pyright clean; control-domain audit chain proof passes; no existing assertion edited; for review: allow_dev_issuer is set in authz/claim_audit.py because runtime_api/test_no_dev_issuer.py forbids the string in runtime files; commit 3d589682, merge 99c08fd2; 2026-11-18 |
+| 5 | merged | worktree-agent-a038807be6f6758f6 (opus) | on branch: 417 passed (touched suites + openapi drift + reference coverage), 1228 passed (tests/security/authz), 1045 passed (tests/docs + tests/unit), pyright 0 errors; openapi.json additions only; after merge the orchestrator installed the parsed mapping on app.state in runtime/builders/authz.py (the view answered 503 with a mapping set) with builder-test assertions, and aligned the mock 403 text: 417 passed, 56 frontend passed; commit 5241ce1b, merge d6291211; 2026-11-18 |
+| 6 | merged | worktree-agent-a1ab8bd545856db2f (opus) | lint, typecheck, prettier on changed files clean; 198 passed across admin, catalog, curation, governed-change, mock-api, static; full vitest run had 10 load timeouts with a backend lane running, to be re-run before the PR; orchestrator appended roleMapping to tests/mock-api/features/registry.test.ts (outside ownership, registry list); visual:check in Docker after merge: 82 passed, admin-identity baselines unchanged; commit e395f329, merge ce70e7a1; 2026-11-18 |
+| 7 | merged | worktree-agent-a94d0fa5de8ee1628 (opus) | on branch: 51 passed (test_claim_role_mapping), 1279 passed (tests/security/authz); mutation check: removing the tenant check or the audience check in matching_entries each fails one test; after merge: 51 passed; real-stack test on the local emulators: 1 passed after the orchestrator added a wait for the background container bootstrap and an unquoted If-Match in cleanup (emulator ETag quirk, follow-up); commit 878e32fb, merge 0af29e03; 2026-11-18 |
+| 8 | merged | worktree-agent-a8b01008cf196bba9 (opus) | 150 passed (test_entra_admin_mapping + tests/docs), ruff and pyright clean, az stubbed, no live call; commit f9fb085c, merge b0693dad; 2026-11-18 |
 | 9 | todo | | second pull request, after PRP-139 has merged |
-| 10 | todo | | |
+| 10 | merged | prp-138-entra-admin-role-mapping | review: APPROVE, no blockers (independent reviewer, opus). CI on PR #330: first run red on a cross-test (mcp_api route inventory), the real-stack cleanup and the image scans; the two tests were fixed in bec55440; the image scans were four new Alpine OpenSSL advisories unrelated to this PRP, handled by the owner-approved time-boxed exception in PR #340 (expires 2026-12-02). CI green on 460c0d72: 34 pass, 1 skipped (Pages deploy). Merged through PR #330; 2026-11-18 |
 
 ## Completion note (filled at ship)
-- Date, PR:
+Interim, first pull request (items 1 to 8 and 10). The PRP stays active until item 9 merges.
+- Date, PR: 2026-11-18, first PR #330 (CI green on 460c0d72, 34 checks pass). Item 9 follows in a second PR after PRP-139.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
+  - Two pinned tests outside the declared ownership were extended: `packages/core/tests/auth/scope/test_derivation.py` (constructor parameter set gained the four mapping arguments) and `frontend/tests/mock-api/features/registry.test.ts` (handler list gained `roleMapping`). The reviewer judged both additive.
+  - `allow_dev_issuer = (env == "local")` is set in `services/api/neurosphere_api/authz/claim_audit.py` (`deriver_mapping_options`), not in the builder, because `runtime_api/test_no_dev_issuer.py` forbids the string in runtime files. The composed app still installs only the Entra validator.
+  - `RegistryDomainDirectory` calls the private `DomainRegistry._all`; core's platform package is outside this PRP's ownership.
+  - The audit record is built with `build_after` (not `build_allowed`), with a machine-code detail of counts, epochs and entry ids.
+  - The builder also installs the parsed mapping on `app.state` so the read view can reach it at request time.
+  - The operator script adds only the `admin` app role and checks cloud and tenant on every subcommand.
+  - `openapi.json` and `docs/reference/**` were regenerated in item 5, not item 10.
+  - Visual baselines were not regenerated and did not need to be: `visual:check` passes with the new Identity panels (PRP-140 has nothing to redo).
+- Descoped items: none. Item 9 is deferred, not descoped.
+- OPEN gates: G-138 Commercial (operator runs `entra_admin_mapping.py apply` and `verify` with `NS_LIVE_APPROVED=1`, deploys with `entraRoleMappings`, signs in); G-138 Government (separate, never satisfied by Commercial). Neither ran. UNVERIFIED until then: that `az account get-access-token` can get a token for the API app; the Graph error text for the P1 licence refusal; the about-one-hour default token lifetime.
+- Env vars for the operator: `NS_AUTH_ROLE_MAPPINGS` (JSON object, not a secret; unset = mapping off). `.env.example` could not be edited by an agent; add it by hand.
+- Follow-up issues (filed 2026-11-18):
+  - #331 Resolve group overage through Microsoft Graph with a managed identity.
+  - #332 Helm and `infra/appservice` parameter for `NS_AUTH_ROLE_MAPPINGS`.
+  - #333 List claim-mapped principals in the principals table.
+  - #334 Public `DomainRegistry.active_domain_ids` to replace the private `_all` call.
+  - #335 Audit once-per-token key: add expiry or a token id hash (two tokens issued in the same second share a key).
+  - #336 `applied` counter counts mapped requests, not grants.
+  - #337 Extend the `test_no_dev_issuer` guard to `authz/claim_audit.py`, or pin `allow_dev_issuer` false outside local in a composition test.
+  - #338 Local emulator: unquoted Cosmos ETags are answered quoted and then refused as stale on `If-Match` writes (seen on domain retire; believed emulator-only, not confirmed on a real account).
+  - #339 Snyk High (DOM XSS) on `frontend/src/features/admin/audit/AdminAuditPage.tsx` download helper, not touched by this PRP; likely a false positive, needs triage.
+- Product check: on the local emulators, with the mapping set and an empty policy store, a token carrying the mapped role opened the Admin status route, registered a domain and saw it in `/me/domains`, with no script and nothing written to the policy store (`tests/integration/real_stack/test_entra_role_mapping.py`). Not yet shown on a hosted deployment with a real Entra sign-in (G-138).

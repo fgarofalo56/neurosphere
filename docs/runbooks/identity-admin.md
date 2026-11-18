@@ -20,6 +20,11 @@ make grant-operator OPERATOR_OID=<object-id> OPERATOR_ROLE=admin
 The script needs `NS_AUTH_TENANT_ID` (see [operations.md](operations.md)). Run it once per new
 deployment, or to recover when no admin is left. Everything after this uses the API.
 
+Without a script: since PRP-138 an Entra app role (or group) can make someone an administrator
+through the deployment setting `NS_AUTH_ROLE_MAPPINGS`, with nothing written to the policy
+store. See [entra-role-mapping.md](entra-role-mapping.md) for the setting, the Entra step,
+revocation and the first-admin walkthrough.
+
 ## 2. Routes
 
 All routes are under `/api/v1/admin/identity`. Principals are named only by their pseudonymous

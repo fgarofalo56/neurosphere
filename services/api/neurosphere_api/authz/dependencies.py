@@ -11,7 +11,8 @@ Outcomes are exactly three, all through ``neurosphere_core.errors``:
 * ``unauthorized`` (401): missing, malformed, ambiguous or invalid token (item 1 reasons).
 * ``forbidden`` (403): the derived scope lacks the permission on the target, or the principal is
   revoked. Reasons: ``permission_missing``, ``target_out_of_scope``, ``target_unresolved``, and
-  ``role_not_held`` for a role-gated route (:func:`require_role`, PRP-48 item 1).
+  ``role_not_held`` for a role-gated route (:func:`require_role`, PRP-48 item 1). The detail
+  names what was missing ("this operation needs `<permission>`", PRP-138 clarification 15).
 * ``dependency_transient`` (503/502): policy store, revocation or key infrastructure failed or
   timed out, or authorization is not configured. Never an allow.
 
@@ -48,11 +49,14 @@ from neurosphere_core.errors import (
 from neurosphere_core.observability import get_logger
 from neurosphere_core.scope import IdentityScope
 
+from neurosphere_api.authz.claim_audit import claim_mapping_stats
 from neurosphere_api.authz.recorder import SAFE_METHODS, DeniedAttempt
 from neurosphere_api.authz.state import AuthzState, get_authz_state
 from neurosphere_api.middleware import correlation_id_of
 
 __all__ = [
+    "AUTHENTICATED_MARKER",
+    "GROUPS_OVERAGE_ATTRIBUTE",
     "PERMISSION_MARKER",
     "PRESCOPE_AUDIT_ATTRIBUTE",
     "ROLE_MARKER",
@@ -65,8 +69,10 @@ __all__ = [
     "current_derivation",
     "current_scope",
     "domain_from_path",
+    "groups_overage_of",
     "holds_role",
     "require",
+    "require_authenticated",
     "require_role",
     "resource_from_path",
 ]
@@ -78,6 +84,12 @@ PERMISSION_MARKER: Final = "__ns_permission__"
 ROLE_MARKER: Final = "__ns_role_gate__"
 #: 403 reason of a role-gated route whose caller holds no in-scope assignment of the role.
 ROLE_NOT_HELD: Final = "role_not_held"
+#: Attribute set on the dependency built by :func:`require_authenticated` (authenticated-self
+#: route category, ``authz.routes.AUTHENTICATED_SELF_PATHS``); the route inventory reads it.
+AUTHENTICATED_MARKER: Final = "__ns_authenticated_self__"
+#: ``request.state`` attribute holding the verified token's group overage flag (PRP-138), set
+#: by :func:`current_derivation` once a scope was derived. Read with :func:`groups_overage_of`.
+GROUPS_OVERAGE_ATTRIBUTE: Final = "ns_groups_overage"
 #: ``app.state`` attribute of the optional pre-scope audit hook (PRP-40 item 5).
 PRESCOPE_AUDIT_ATTRIBUTE: Final = "prescope_audit"
 
@@ -144,7 +156,20 @@ async def current_derivation(
         raise DependencyTransientError(
             "scope source returned an invalid scope", reason="authz_invalid_scope"
         )
+    overage = getattr(claims, "groups_overage", False) is True
+    setattr(request.state, GROUPS_OVERAGE_ATTRIBUTE, overage)
+    stats = claim_mapping_stats(request.app.state)
+    if stats is not None:
+        stats.observe_claims(claims)  # counts only (PRP-138); never raises, never decides
     return derivation
+
+
+def groups_overage_of(request: Request) -> bool:
+    """True when this request's verified token signalled a group overage (PRP-138).
+
+    Only meaningful after :func:`current_derivation` ran for the request; ``False`` otherwise.
+    """
+    return getattr(request.state, GROUPS_OVERAGE_ATTRIBUTE, False) is True
 
 
 @runtime_checkable
@@ -346,6 +371,30 @@ def require_role(role: Role | str | RoleResolver) -> PermissionDependency:
     return require_held_role
 
 
+# --------------------------------------------------------------------------- authenticated
+
+
+def require_authenticated() -> Callable[..., Awaitable[ScopeDerivation]]:
+    """Dependency factory for the authenticated-self route category (PRP-138 clarification 14).
+
+    Requires a valid bearer token and a server-derived scope, and NO permission: 401 / 503 exactly
+    as :func:`current_derivation`. Returns the caller's own :class:`ScopeDerivation` (with
+    ``claim_grants``), so the route can answer from it and nothing else.
+
+    The dependency carries :data:`AUTHENTICATED_MARKER`, not :data:`PERMISSION_MARKER`. Only a GET
+    route whose exact path is in ``authz.routes.AUTHENTICATED_SELF_PATHS`` is compliant with this
+    marker alone; anywhere else the route inventory fails app boot.
+    """
+
+    async def require_authenticated_caller(
+        derivation: Annotated[ScopeDerivation, Depends(current_derivation)],
+    ) -> ScopeDerivation:
+        return derivation
+
+    setattr(require_authenticated_caller, AUTHENTICATED_MARKER, True)
+    return require_authenticated_caller
+
+
 def _admit(request: Request, scope: IdentityScope, route_domain: str | None) -> None:
     """Charge the per-domain admission limiter (PRP-21), once per request, after the permission
     check passed. A no-op when ``app.state.admission`` is absent (admission off).
@@ -427,4 +476,4 @@ async def _denial(
                 "denied-attempt audit record failed",
                 extra={"permission": operation, "deny_reason": reason},
             )
-    return ForbiddenError("insufficient scope for this operation", reason=reason)
+    return ForbiddenError(f"this operation needs `{operation}`", reason=reason)

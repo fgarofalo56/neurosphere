@@ -7,6 +7,9 @@
 | PUT/DELETE | ``/principals/{principal_id}/role-assignments/{assignment_id}`` | ``policy.manage`` |
 | PUT/DELETE | ``/principals/{principal_id}/domain-memberships/{domain_id}`` | ``policy.manage`` |
 | PUT/DELETE | ``/principals/{principal_id}/grants/{grant_id}``             | ``policy.manage`` |
+| GET        | ``/role-mapping`` (PRP-138, read only, ``role_mapping``)       | ``policy.manage`` |
+
+``/role-mapping`` is deployment-scoped: ``policy.manage`` on the customer control domain.
 
 ``require(policy.manage)`` (held in at least one domain) is only the first gate: the service
 then checks every domain the change names, self-modification and customer-wide authority (see
@@ -36,6 +39,7 @@ from neurosphere_api.admin.identity.models import (
     PrincipalPage,
 )
 from neurosphere_api.admin.identity.plane import IdentityAdminPlane, get_plane
+from neurosphere_api.admin.identity.role_mapping import build_role_mapping_router
 from neurosphere_api.admin.identity.service import IdentityAdminService, PolicyWriteResult
 from neurosphere_api.authz import AuthzState, get_authz_state, require
 
@@ -208,4 +212,6 @@ def build_router() -> APIRouter:
         result = await service.remove_grant(principal_id, grant_id, if_match=if_match)
         return _respond(response, result)
 
+    # PRP-138 item 5: the effective Entra role mapping, read only, deployment-scoped.
+    router.include_router(build_role_mapping_router())
     return router

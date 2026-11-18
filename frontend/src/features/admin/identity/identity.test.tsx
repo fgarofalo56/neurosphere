@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { axe } from "vitest-axe";
 import { identityPaths } from "../shared/adminPaths";
 import {
   fakeFetch,
@@ -13,8 +14,9 @@ import {
 } from "../shared/test-support";
 import { buildRequest, EMPTY_FORM, diffOf, formValid, isExpired, toTimestamp } from "./changes";
 import { PrincipalDetailPage } from "./PrincipalDetailPage";
+import { ME_ACCESS_PATH, ROLE_MAPPING_PATH } from "./hooks";
 import { PrincipalsPage } from "./PrincipalsPage";
-import type { PrincipalSummary } from "./types";
+import type { MyAccessView, PrincipalSummary, RoleMappingView } from "./types";
 
 beforeAll(stubResizeObserver);
 afterEach(cleanup);
@@ -109,6 +111,48 @@ function submitButton(): HTMLElement {
   return dialog().getByRole("button", { name: "Confirm change", hidden: true });
 }
 
+const OWN_ACCESS: MyAccessView = {
+  mapping_configured: true,
+  groups_overage: false,
+  roles: [
+    {
+      role: "admin",
+      source: "entra_app_role",
+      mapping_entry_id: "ns-admins",
+      domain_count: 4,
+      customer_control: true,
+      expires_at: "2026-11-18T15:00:00Z",
+    },
+  ],
+};
+
+const ROLE_MAPPING: RoleMappingView = {
+  active: true,
+  tenant_id: "11111111-1111-1111-1111-111111111111",
+  audience: "22222222-2222-2222-2222-222222222222",
+  cloud: "commercial",
+  entries: [
+    {
+      id: "ns-admins",
+      claim: "roles",
+      value: "admin",
+      role: "admin",
+      domain_mode: "all",
+      domain_ids: [],
+      customer_control: true,
+    },
+  ],
+};
+
+/** The PRP-138 panels on the Identity page read their own routes; the list handler gets the rest. */
+function withPanels(handler: FakeHandler): FakeHandler {
+  return (req) => {
+    if (req.url.pathname === ME_ACCESS_PATH) return { body: OWN_ACCESS };
+    if (req.url.pathname === ROLE_MAPPING_PATH) return { body: ROLE_MAPPING };
+    return handler(req);
+  };
+}
+
 describe("PrincipalsPage", () => {
   const page = (items: PrincipalSummary[], next: string | null = null): FakeReply => ({
     body: { items, next_cursor: next, truncated: false },
@@ -116,7 +160,7 @@ describe("PrincipalsPage", () => {
 
   it("lists principals by id with a revoked state and no names", async () => {
     const other = { ...REVOKED, principal: { principal_id: PID2, principal_kind: "user" } };
-    const { impl } = fakeFetch(() => page([summary(), other]));
+    const { impl } = fakeFetch(withPanels(() => page([summary(), other])));
     renderAdmin(<PrincipalsPage />, impl);
     expect(await screen.findAllByTestId("principal-row")).toHaveLength(2);
     expect(screen.getAllByText(PID).length).toBeGreaterThan(0);
@@ -127,28 +171,33 @@ describe("PrincipalsPage", () => {
   });
 
   it("pages with the server cursor", async () => {
-    const { impl, calls } = fakeFetch((req) =>
-      req.url.searchParams.get("cursor") === "next-1"
-        ? page([REVOKED])
-        : page([summary()], "next-1"),
+    const { impl, calls } = fakeFetch(
+      withPanels((req) =>
+        req.url.searchParams.get("cursor") === "next-1"
+          ? page([REVOKED])
+          : page([summary()], "next-1"),
+      ),
     );
     renderAdmin(<PrincipalsPage />, impl);
     await userEvent.click(await screen.findByRole("button", { name: "Next page" }));
     await waitFor(() => expect(screen.getAllByTestId("principal-row")).toHaveLength(1));
-    expect(calls.at(-1)?.url.searchParams.get("cursor")).toBe("next-1");
-    expect(calls.at(-1)?.url.searchParams.get("limit")).toBe("25");
+    const lastList = calls.filter((c) => c.url.pathname === identityPaths.principals()).at(-1);
+    expect(lastList?.url.searchParams.get("cursor")).toBe("next-1");
+    expect(lastList?.url.searchParams.get("limit")).toBe("25");
   });
 
   it("shows empty, forbidden and error states, never an empty list for a failure", async () => {
-    const empty = fakeFetch(() => page([]));
+    const empty = fakeFetch(withPanels(() => page([])));
     renderAdmin(<PrincipalsPage />, empty.impl);
     await screen.findByTestId("empty-state");
     cleanup();
-    const denied = fakeFetch(() => problem(403, "forbidden", "deployment_scope_required"));
+    const denied = fakeFetch(
+      withPanels(() => problem(403, "forbidden", "deployment_scope_required")),
+    );
     renderAdmin(<PrincipalsPage />, denied.impl);
     await screen.findByTestId("forbidden-state");
     cleanup();
-    const down = fakeFetch(() => problem(503, "dependency_transient", "down"));
+    const down = fakeFetch(withPanels(() => problem(503, "dependency_transient", "down")));
     renderAdmin(<PrincipalsPage />, down.impl);
     await screen.findByTestId("unavailable-state");
     expect(screen.queryByTestId("empty-state")).toBeNull();
@@ -157,6 +206,46 @@ describe("PrincipalsPage", () => {
   it("shows a loading state first", () => {
     renderAdmin(<PrincipalsPage />, (() => new Promise<Response>(() => undefined)) as typeof fetch);
     expect(screen.getByTestId("loading-state")).toBeTruthy();
+  });
+
+  it("renders the role mapping and own-access panels after the list, read only", async () => {
+    const { impl, calls } = fakeFetch(withPanels(() => page([summary()])));
+    const { container } = renderAdmin(<PrincipalsPage />, impl);
+    await screen.findAllByTestId("principal-row");
+    await screen.findAllByTestId("role-mapping-row");
+    await screen.findAllByTestId("my-access-row");
+    const list = screen.getAllByTestId("principal-row")[0] as HTMLElement;
+    const mappingPanel = screen.getByTestId("role-mapping-panel");
+    const accessPanel = screen.getByTestId("my-access-panel");
+    const follows = (a: Node, b: Node): boolean =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(list, mappingPanel)).toBe(true);
+    expect(follows(mappingPanel, accessPanel)).toBe(true);
+    expect(screen.getByTestId("my-access-source").textContent).toBe("Entra app role");
+    for (const panel of [mappingPanel, accessPanel]) {
+      expect(panel.querySelectorAll("input, select, textarea, form, button")).toHaveLength(0);
+    }
+    expect(calls.every((c) => c.method === "GET")).toBe(true);
+    const violations = (await axe(container)).violations.map((v) => `${v.id}: ${v.help}`);
+    expect(violations).toEqual([]);
+  });
+
+  it("links a denied list to the own-access panel, which still loads", async () => {
+    const { container } = renderAdmin(
+      <PrincipalsPage />,
+      fakeFetch((req) => {
+        if (req.url.pathname === ME_ACCESS_PATH) return { body: { ...OWN_ACCESS, roles: [] } };
+        return problem(403, "forbidden", "this operation needs `policy.manage`");
+      }).impl,
+    );
+    await screen.findByTestId("forbidden-state");
+    expect(screen.getByTestId("forbidden-detail").textContent).toContain("policy.manage");
+    expect(screen.getByTestId("forbidden-access-link").getAttribute("href")).toBe("#my-access");
+    await screen.findByTestId("role-mapping-forbidden-state");
+    await screen.findByTestId("my-access-empty");
+    expect(container.querySelector("#my-access")).not.toBeNull();
+    const violations = (await axe(container)).violations.map((v) => `${v.id}: ${v.help}`);
+    expect(violations).toEqual([]);
   });
 });
 
