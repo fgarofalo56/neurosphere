@@ -168,11 +168,12 @@ def test_mapped_entra_role_is_the_first_admin(
                 ("admin", "entra_app_role")
             ]
         finally:
-            # Cleanup. The emulator stores unquoted ETags while the API answers them quoted, and
-            # the quoted form is refused as stale here; send the stored (unquoted) value.
-            retired = fresh.post(
-                f"{DOMAINS}/{domain}/retire", headers={**headers, "If-Match": etag.strip('"')}
-            )
+            # Cleanup. Emulator builds differ in whether the stored ETag is quoted (issue #338):
+            # one accepts the ETag header as answered, another only its unquoted form.
+            retire_url = f"{DOMAINS}/{domain}/retire"
+            retired = fresh.post(retire_url, headers={**headers, "If-Match": etag})
+            if retired.status_code == 409:
+                retired = fresh.post(retire_url, headers={**headers, "If-Match": etag.strip('"')})
             assert retired.status_code == 200, retired.text
 
     # No script ran and nothing was written to the policy store.
