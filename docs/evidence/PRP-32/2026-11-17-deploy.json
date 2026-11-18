@@ -1,0 +1,67 @@
+{
+  "approvals": [
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-subnet",
+      "utc": "2026-11-17T17:11:24Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-pe",
+      "utc": "2026-11-17T17:11:24Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-dns",
+      "utc": "2026-11-17T17:11:24Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "budget",
+      "utc": "2026-11-17T17:11:24Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "plan-hash",
+      "utc": "2026-11-17T17:11:46Z"
+    }
+  ],
+  "command": "deploy",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "change_counts": {
+      "Create": 4,
+      "Modify": 54,
+      "NoChange": 5,
+      "Unsupported": 70
+    },
+    "plan_sha256": "790b37a9b175e300a1b55d4f5f171e652c487a4703fdca49713d625a34cfc810"
+  },
+  "errors": [
+    "az deployment group create failed: WARNING: A new Bicep release is available: v0.49.2. Upgrade now by running \"az bicep upgrade\". ERROR: {\"status\":\"Failed\",\"error\":{\"code\":\"DeploymentFailed\",\"target\":\"/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-demo/providers/Microsoft.Resources/deployments/hosted-demo\",\"message\":\"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details. Correlation ID: <guid:5a766d17>\",\"details\":[{\"code\":\"ResourceDeploymentFailure\",\"target\":\"/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-demo/providers/Microsoft.Resources/deployments/nsdemo-budget\",\"message\":\"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.\",\"details\":[{\"code\":\"DeploymentFailed\",\"target\":\"/subscriptions/<subscription:bc2c0815>/resourceGroups/rg-neurosphere-demo/providers/Microsoft.Resources/deployments/nsdemo-budget\",\"message\":\"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details. Correlation ID: <guid:5a766d17>\",\"details\":[{\"code\":\"400\",\"message\":\"Start date of budgets cannot be updated. Please delete and create a new budget.\\r\\n (Request ID: <guid:ce2809bc>)\"}]}]}]}}"
+  ],
+  "finished_utc": "2026-11-17T17:18:33Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-11-17T17:11:21Z",
+  "steps": [
+    {
+      "detail": "133 change(s) {'Modify': 54, 'NoChange': 5, 'Create': 4, 'Unsupported': 70}",
+      "status": "ok",
+      "step": "what-if"
+    },
+    {
+      "detail": "AzError; see the evidence errors",
+      "status": "failed",
+      "step": "deploy"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}

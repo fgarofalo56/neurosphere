@@ -1,0 +1,124 @@
+{
+  "approvals": [
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-subnet",
+      "utc": "2026-11-17T18:05:52Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-pe",
+      "utc": "2026-11-17T18:05:52Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "hub-dns",
+      "utc": "2026-11-17T18:05:52Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "budget",
+      "utc": "2026-11-17T18:05:52Z"
+    },
+    {
+      "operator": "fgarofalo56",
+      "token": "plan-hash",
+      "utc": "2026-11-17T18:06:15Z"
+    }
+  ],
+  "command": "deploy",
+  "deployment_id": "hosted-rg-neurosphere-demo",
+  "details": {
+    "change_counts": {
+      "Modify": 55,
+      "NoChange": 8,
+      "Unsupported": 70
+    },
+    "output_names": [
+      "apiHostName",
+      "apiPrincipalId",
+      "apiSiteName",
+      "archiveContainerName",
+      "cosmosAccountName",
+      "cosmosDatabaseName",
+      "cosmosEndpoint",
+      "eventHubName",
+      "eventHubsFqdn",
+      "eventHubsNamespaceName",
+      "frontendHostName",
+      "frontendSiteName",
+      "keyVaultName",
+      "privateEndpointIds",
+      "pseudonymSecretName",
+      "storageAccountName",
+      "workersPrincipalId",
+      "workersSiteName"
+    ],
+    "plan_sha256": "a7a58a8df06c6a51b2163e3c1c1909e1eb466fbdce9e22e8b265e390c2e963d6",
+    "register_created_count": 21,
+    "register_not_ours_count": 1
+  },
+  "errors": [
+    "Cosmos register write failed (ForbiddenError)",
+    "az keyvault secret list failed: ERROR: (Forbidden) Public network access is disabled and request is not from a trusted service nor via an approved private link. Caller: appid=<guid:a2d8fd37>;oid=<guid:b8c33dc7>;iss=https://sts.windows.net/<guid:0db0287a>/ Vault: nsdemokvnuhniz2ug2pq6;location=centralus Code: Forbidden Message: Public network access is disabled and request is not from a trusted service nor via an approved private link. Caller: appid=<guid:a2d8fd37>;oid=<guid:b8c33dc7>;iss=https://sts.windows.net/<guid:0db0287a>/ Vault: nsdemokvnuhniz2ug2pq6;location=centralus Inner error: { \"code\": \"ForbiddenByConnection\" }"
+  ],
+  "finished_utc": "2026-11-17T18:07:54Z",
+  "gate": "PRP-32",
+  "location": "centralus",
+  "operator": "fgarofalo56",
+  "redactions": [
+    "subscription ids replaced with <subscription:sha256-8> (first 8 hex of the SHA-256 of the lowercase id); the repository is public"
+  ],
+  "resource_group": "rg-neurosphere-demo",
+  "result": "FAIL",
+  "script_version": "1.0.0",
+  "started_utc": "2026-11-17T18:05:51Z",
+  "steps": [
+    {
+      "detail": "133 change(s) {'Modify': 55, 'NoChange': 8, 'Unsupported': 70}",
+      "status": "ok",
+      "step": "what-if"
+    },
+    {
+      "detail": "Succeeded",
+      "status": "ok",
+      "step": "deployment-create"
+    },
+    {
+      "detail": "1 pre-existing resource(s) recorded as not ours; resource group created by this deployment; teardown will refuse while foreign resources remain",
+      "status": "ok",
+      "step": "ownership"
+    },
+    {
+      "detail": "29 rows; Cosmos register write failed (ForbiddenError)",
+      "status": "failed",
+      "step": "register"
+    },
+    {
+      "detail": "registration.json",
+      "status": "ok",
+      "step": "registration"
+    },
+    {
+      "detail": "Key Vault call failed; see the evidence errors",
+      "status": "failed",
+      "step": "pseudonym-key"
+    },
+    {
+      "detail": "publicNetworkAccess=Enabled image_match=True",
+      "status": "ok",
+      "step": "post-check:web"
+    },
+    {
+      "detail": "publicNetworkAccess=Disabled image_match=True",
+      "status": "ok",
+      "step": "post-check:api"
+    },
+    {
+      "detail": "publicNetworkAccess=Disabled image_match=True",
+      "status": "ok",
+      "step": "post-check:workers"
+    }
+  ],
+  "subscription_id": "<subscription:bc2c0815>"
+}
