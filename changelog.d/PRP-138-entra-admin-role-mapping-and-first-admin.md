@@ -1,5 +1,5 @@
 ### Added
-- Entra role mapping (PRP-138): the deployment setting `NS_AUTH_ROLE_MAPPINGS` maps Entra app role values (the `roles` claim) and, optionally, group object ids (the `groups` claim) to NeuroSphere roles at request time, so the first administrator needs no script. The mapping is off by default, bound to one tenant and audience, applies to delegated user tokens only, and each mapped role expires with the token. Nothing is written to the policy store.
+- Entra role mapping (PRP-138, PR #330): the deployment setting `NS_AUTH_ROLE_MAPPINGS` maps Entra app role values (the `roles` claim) and, optionally, group object ids (the `groups` claim) to NeuroSphere roles at request time, so the first administrator needs no script. The mapping is off by default, bound to one tenant and audience, applies to delegated user tokens only, and each mapped role expires with the token. Nothing is written to the policy store.
 - `GET /api/v1/me/access`: any signed-in caller sees their own roles and whether each came from an Entra app role, an Entra group or the policy store.
 - `GET /api/v1/admin/identity/role-mapping`: read-only view of the effective mapping for holders of deployment-wide `policy.manage`.
 - Admin console: read-only "Entra role mapping" and "Your access" panels on the Identity page.
