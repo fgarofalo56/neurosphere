@@ -105,8 +105,9 @@ yet, the script stops and tells you; it does not create one.
 ### By hand (Entra admin center)
 
 1. App registrations, open the API app, App roles: make sure a role with value `admin` is enabled
-   with allowed member types "Users/Groups" (Graph value `User`, the one the script sets; that
-   this value also admits group assignment is UNVERIFIED here). Create it if missing.
+   with allowed member types "Users/Groups" (Graph value `User`, the one the script sets; Microsoft
+   Graph documents `User` as assignable to users and groups, and only direct members of an
+   assigned group get the role). Create it if missing.
 2. Enterprise applications, open the same app, Users and groups, Add user/group: pick the person
    (or group) and the `admin` role, then Assign.
 3. Put the mapping value from section 2 on the API, with your tenant id and API app id, and
