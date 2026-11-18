@@ -330,7 +330,7 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 | 3 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 4 | todo | | |
 | 5 | todo | | |
-| 6 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
+| 6 | merged | worktree-agent-a1ab8bd545856db2f (opus) | lint, typecheck, prettier on changed files clean; 198 passed across admin, catalog, curation, governed-change, mock-api, static; full vitest run had 10 load timeouts with a backend lane running, to be re-run before the PR; orchestrator appended roleMapping to tests/mock-api/features/registry.test.ts (outside ownership, registry list); visual baseline admin-identity will differ (PRP-140 regenerates); commit e395f329, merge ce70e7a1; 2026-11-18 |
 | 7 | todo | | |
 | 8 | merged | worktree-agent-a8b01008cf196bba9 (opus) | 150 passed (test_entra_admin_mapping + tests/docs), ruff and pyright clean, az stubbed, no live call; commit f9fb085c, merge b0693dad; 2026-11-18 |
 | 9 | todo | | second pull request, after PRP-139 has merged |
