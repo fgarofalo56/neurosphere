@@ -15,6 +15,28 @@ export const ADMIN_STRINGS = {
   forbidden: "Access denied",
   forbiddenDetail:
     "The service declined this request. If you need access, contact your administrator.",
+  forbiddenDeployment:
+    "This permission is needed on the whole deployment (the customer control domain), not on a single domain.",
+  forbiddenDomain: "This permission is needed on the domain or resource this view reads.",
+  forbiddenAccessLink: "See your access",
+  access: {
+    disclosure: "Your access",
+    loading: "Loading your access",
+    failed: "Your access could not be read.",
+    none: "You hold no NeuroSphere role.",
+    overage:
+      "Group-based roles were not applied: your token did not list your groups (group overage). Roles from Entra app roles and the policy store still apply.",
+    sources: {
+      entra_app_role: "Entra app role",
+      entra_group: "Entra group",
+      policy_store: "Policy store",
+    },
+    wholeDeployment: "Whole deployment",
+    domains: (n: number): string => (n === 1 ? "1 domain" : `${n} domains`),
+    expires: (at: string): string => `expires ${at}`,
+    noExpiry: "no expiry",
+    entry: (id: string): string => `mapping entry ${id}`,
+  },
   unavailable: "Could not load this view",
   unavailableDetail: "The request failed. This is not an empty result. Try again later.",
   reference: "Reference",

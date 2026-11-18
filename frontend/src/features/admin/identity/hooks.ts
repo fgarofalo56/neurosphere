@@ -1,9 +1,32 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { createQueryHook } from "../../../api/index.js";
-import { identityPaths } from "../shared/adminPaths";
+import { ADMIN_IDENTITY_API, identityPaths } from "../shared/adminPaths";
 import { useAdminGet, useEtagMutation, type AdminRequest } from "../shared/transport";
-import type { PrincipalListParams, PrincipalPageView, PrincipalSummary } from "./types";
+import type {
+  MyAccessView,
+  PrincipalListParams,
+  PrincipalPageView,
+  PrincipalSummary,
+  RoleMappingView,
+} from "./types";
+
+/** PRP-138 read views. Both are GET only; nothing in the console writes the mapping. */
+export const ME_ACCESS_PATH = "/api/v1/me/access";
+export const ROLE_MAPPING_PATH = `${ADMIN_IDENTITY_API}/role-mapping`;
+
+/** The caller's own roles and where each came from. Pass `enabled` false to defer the read. */
+export const useMyAccess = createQueryHook<null, MyAccessView>({
+  key: "me-access",
+  fetcher: (client, _p, signal) => client.get<MyAccessView>(ME_ACCESS_PATH, undefined, signal),
+});
+
+/** The effective Entra role mapping (needs deployment-scoped `policy.manage`). */
+export const useRoleMapping = createQueryHook<null, RoleMappingView>({
+  key: "admin-role-mapping",
+  fetcher: (client, _p, signal) =>
+    client.get<RoleMappingView>(ROLE_MAPPING_PATH, undefined, signal),
+});
 
 export const usePrincipals = createQueryHook<PrincipalListParams, PrincipalPageView>({
   key: "admin-principals",
