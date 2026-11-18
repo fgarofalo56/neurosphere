@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from collections.abc import Callable
 from typing import Final
@@ -69,6 +70,24 @@ def _mapping() -> str:
     )
 
 
+def _wait_for_containers(client: TestClient, timeout_seconds: float = 90.0) -> None:
+    """Block until the background container bootstrap of this composition has finished.
+
+    The API creates its Cosmos containers in the background after startup; until then the domain
+    registry's container may not exist and a mapped ``all`` entry correctly denies with 503
+    ``domain_directory_unavailable`` (it never grants a partial scope).
+    """
+    deadline = time.monotonic() + timeout_seconds
+    pending: list[str] = []
+    while time.monotonic() < deadline:
+        deps = client.get("/readyz").json().get("dependencies", {})
+        pending = sorted(k for k in deps if k.startswith("composition.cosmos_containers."))
+        if not pending:
+            return
+        time.sleep(0.5)
+    raise AssertionError(f"container bootstrap did not finish: {pending}")
+
+
 def _compose(validator: JwtValidator) -> FastAPI:
     settings = Settings()
     app = create_app(settings)
@@ -112,6 +131,7 @@ def test_mapped_entra_role_is_the_first_admin(
     domain = f"commercial:{customer}:catalog:domain:prp138-finance"
 
     with TestClient(_compose(stand_in_validator), raise_server_exceptions=False) as client:
+        _wait_for_containers(client)
         status = client.get(STATUS, headers=headers)
         assert status.status_code == 200, status.text
         # Without the role the same deployment grants nothing.
@@ -138,6 +158,7 @@ def test_mapped_entra_role_is_the_first_admin(
     # A fresh composition (no directory cache from the first app) sees the new domain at once.
     with TestClient(_compose(stand_in_validator), raise_server_exceptions=False) as fresh:
         try:
+            _wait_for_containers(fresh)
             mine = fresh.get(ME_DOMAINS, headers=headers)
             assert mine.status_code == 200, mine.text
             assert domain in {item["domain_id"] for item in mine.json()["items"]}
@@ -147,8 +168,10 @@ def test_mapped_entra_role_is_the_first_admin(
                 ("admin", "entra_app_role")
             ]
         finally:
+            # Cleanup. The emulator stores unquoted ETags while the API answers them quoted, and
+            # the quoted form is refused as stale here; send the stored (unquoted) value.
             retired = fresh.post(
-                f"{DOMAINS}/{domain}/retire", headers={**headers, "If-Match": etag}
+                f"{DOMAINS}/{domain}/retire", headers={**headers, "If-Match": etag.strip('"')}
             )
             assert retired.status_code == 200, retired.text
 
