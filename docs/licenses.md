@@ -35,8 +35,8 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | azure-eventhub | 5.15.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-eventhub-checkpointstoreblob-aio | 1.2.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-identity | 1.27.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| azure-monitor-opentelemetry | 1.8.11 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| azure-monitor-opentelemetry-exporter | 1.0.0b58 | MIT | runtime | pre-release version; no support window recorded |
+| azure-monitor-opentelemetry | 1.8.12 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| azure-monitor-opentelemetry-exporter | 1.0.0b59 | MIT | runtime | pre-release version; no support window recorded |
 | azure-search-documents | 12.0.0 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | azure-storage-blob | 12.31.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | black | 26.10.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -53,7 +53,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | cyclonedx-python-lib | 11.12.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | datamodel-code-generator | 0.86.0 | MIT | dev-only | 0.x: minor releases may break; no support window recorded |
 | defusedxml | 0.7.1 | PSF-2.0 | dev-only | 0.x: minor releases may break; no support window recorded |
-| fastapi | 0.149.0 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
+| fastapi | 0.162.2 | MIT | runtime | 0.x: minor releases may break; no support window recorded |
 | filelock | 4.2.4 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | frozenlist | 1.8.0 | Apache-2.0 | runtime | no EOL published locally; Dependabot tracks releases |
 | genson | 1.4.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -63,7 +63,7 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | httpx | 0.28.1 | BSD-3-Clause | runtime | 0.x: minor releases may break; no support window recorded |
 | httpx2 | 2.16.0 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | httpx2-jsfetch | 1.0 | BSD-3-Clause | runtime | PyPI license_expression, https://pypi.org/project/httpx2-jsfetch/1.0/, retrieved 2026-10-22; locked only for sys_platform == 'emscripten' (mcp -> httpx2, PRP-22) |
-| hypothesis | 6.170.14 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
+| hypothesis | 6.170.15 | MPL-2.0 | dev-only | dev-only: MPL-2.0 is file-level copyleft (ADR-0002) |
 | idna | 3.20 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | inflect | 7.5.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | iniconfig | 2.3.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
@@ -133,14 +133,14 @@ Always denied: `@cosmograph/*` (CC-BY-NC (non-commercial); forbidden by ADR-0002
 | psutil | 7.2.2 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | py-serializable | 2.1.0 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | pycparser | 3.11 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic | 2.14.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic-core | 2.50.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
-| pydantic-settings | 2.16.2 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic | 2.14.3 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic-core | 2.50.4 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
+| pydantic-settings | 2.16.3 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pygments | 2.21.0 | BSD-2-Clause | dev-only | no EOL published locally; Dependabot tracks releases |
 | pyjwt | 2.15.1 | MIT | runtime | no EOL published locally; Dependabot tracks releases |
 | pyparsing | 3.3.3 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | pyright | 1.1.414 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
-| pytest | 9.1.1 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
+| pytest | 9.2.0 | MIT | dev-only | no EOL published locally; Dependabot tracks releases |
 | pytest-asyncio | 1.4.1.post1 | Apache-2.0 | dev-only | no EOL published locally; Dependabot tracks releases |
 | python-dateutil | 2.9.0.post0 | Apache-2.0 AND BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
 | python-dotenv | 1.2.4 | BSD-3-Clause | runtime | no EOL published locally; Dependabot tracks releases |
