@@ -1,10 +1,11 @@
 ---
 name: PRP-138-entra-admin-role-mapping-and-first-admin
-status: backlog
+status: active
 priority: P0
 order: 138
 review: required
 created: 2026-11-17
+started: 2026-11-18
 model: opus
 orchestrator_model: opus
 implementer_model: opus
@@ -319,19 +320,19 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 3, 4, 5, 10, 13 and 14 are ASSUMPTIONS for plan approval; row 16 needs the orchestrator to confirm who edits the hosted Bicep)
+- [x] All clarification questions are decided, not guessed (owner accepted assumption rows 3, 4, 5, 10, 13 and 14 as written on 2026-11-18; row 16: PRP-138 edits the hosted Bicep in item 9, as a second pull request after PRP-139)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
+| 2 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
-| 6 | todo | | |
+| 6 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 7 | todo | | |
-| 8 | todo | | |
+| 8 | in-progress | worktree (implementer, opus) | dispatched 2026-11-18 |
 | 9 | todo | | second pull request, after PRP-139 has merged |
 | 10 | todo | | |
 

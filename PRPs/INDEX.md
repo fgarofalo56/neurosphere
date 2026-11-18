@@ -4,7 +4,9 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-138-entra-admin-role-mapping-and-first-admin](active/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 0/10 (0%) | todo 6, in-progress 4 | opus / opus | required |
 
 ## Backlog
 
@@ -31,7 +33,6 @@ _none_
 | [PRP-108-agent-approval-gate-and-platform-control-actions](backlog/PRP-108-agent-approval-gate-and-platform-control-actions.md) | P0 | 108 | PRP-99-governance-contracts-a, PRP-105-policy-engine-core, PRP-103-interaction-capture-policy-and-edge | PRP-99-governance-contracts-a (backlog); PRP-105-policy-engine-core (backlog); PRP-103-interaction-capture-policy-and-edge (backlog) | opus / opus | required |
 | [PRP-109-north-star-scenario-acceptance](backlog/PRP-109-north-star-scenario-acceptance.md) | P0 | 109 | PRP-100-telemetry-tool-service-identity-and-aggregates, PRP-101-sensitive-information-detectors-and-redaction, PRP-102-encrypted-interaction-store-and-retention, PRP-103-interaction-capture-policy-and-edge, PRP-104-interaction-explorer-and-export, PRP-105-policy-engine-core, PRP-106-policy-violations-and-exceptions-ui, PRP-107-notification-channels-and-subscriptions, PRP-108-agent-approval-gate-and-platform-control-actions, PRP-82-hosted-profile-everything-on, PRP-63-delivery-pipeline-to-hosted, PRP-71-realistic-seeded-world-and-demo-profile | PRP-100-telemetry-tool-service-identity-and-aggregates (backlog); PRP-101-sensitive-information-detectors-and-redaction (backlog); PRP-102-encrypted-interaction-store-and-retention (backlog); PRP-103-interaction-capture-policy-and-edge (backlog); PRP-104-interaction-explorer-and-export (backlog); PRP-105-policy-engine-core (backlog); PRP-106-policy-violations-and-exceptions-ui (backlog); PRP-107-notification-channels-and-subscriptions (backlog); PRP-108-agent-approval-gate-and-platform-control-actions (backlog); PRP-82-hosted-profile-everything-on (backlog); PRP-71-realistic-seeded-world-and-demo-profile (backlog) | opus / sonnet | required |
 | [PRP-137-telemetry-agent-identity-resolution](backlog/PRP-137-telemetry-agent-identity-resolution.md) | P0 | 137 | - | - | sonnet / sonnet | required |
-| [PRP-138-entra-admin-role-mapping-and-first-admin](backlog/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 138 | - | - | opus / opus | required |
 | [PRP-139-hosted-environment-real-tenant-data](backlog/PRP-139-hosted-environment-real-tenant-data.md) | P0 | 139 | - | - | sonnet / sonnet | required |
 | [PRP-141-azure-monitor-ai-call-telemetry-reader](backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 141 | PRP-139-hosted-environment-real-tenant-data, PRP-137-telemetry-agent-identity-resolution | PRP-139-hosted-environment-real-tenant-data (backlog); PRP-137-telemetry-agent-identity-resolution (backlog) | sonnet / sonnet | required |
 | [PRP-64-live-gates-campaign](backlog/PRP-64-live-gates-campaign.md) | P1 | 52 | PRP-11-analytics-adapters, PRP-40-audit-search-export-and-siem-sink, PRP-58-hosted-data-path-and-environment-hardening, PRP-62-aws-bedrock-reference-connector, PRP-78-copilot-graph-timeline-and-recommender-tools, PRP-80-copilot-docs-retrieval-and-groundedness | PRP-78-copilot-graph-timeline-and-recommender-tools (backlog); PRP-80-copilot-docs-retrieval-and-groundedness (backlog) | sonnet / sonnet | required |
