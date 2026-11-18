@@ -12,6 +12,18 @@
 # expiry field: the expiry is enforced by .trivyignore (exp:2026-12-17), which fails the same
 # job again after that date. Re-check when picomatch publishes a fix, then delete both rules,
 # the .trivyignore line and the pnpm auditConfig entry.
+#
+# OpenSSL in the Alpine base images (libcrypto3 and libssl3 3.5.9-r0): CVE-2026-95692,
+# CVE-2026-107496, CVE-2026-95691 and CVE-2026-88823, accepted 2026-11-18 by the owner until
+# 2026-12-02. Grype began reporting them as High on 2026-11-18 with no fixed version; the image
+# builds already run `apk upgrade`, so there is nothing newer to install, and Trivy (which reads
+# Alpine's own security data) does not report them as High for the same images. Their
+# exploitability in these images has not been assessed. Scoped to the two packages so the same
+# CVE in any other package still fails. Grype has no expiry field and Trivy does not report these
+# findings, so .trivyignore cannot enforce the date: tests/unit/infra/test_scan_exception_expiry.py
+# reads the marker below and fails the python job after it. Re-check when Alpine publishes a
+# fixed openssl package (rebuild, then delete these eight rules and the marker), or on expiry.
+# expires: 2026-12-02 openssl-alpine
 ignore:
   - vulnerability: GHSA-fc5q-39xc-vjpf
     package:
@@ -19,3 +31,27 @@ ignore:
   - vulnerability: CVE-2026-112366
     package:
       name: picomatch
+  - vulnerability: CVE-2026-95692
+    package:
+      name: libcrypto3
+  - vulnerability: CVE-2026-95692
+    package:
+      name: libssl3
+  - vulnerability: CVE-2026-107496
+    package:
+      name: libcrypto3
+  - vulnerability: CVE-2026-107496
+    package:
+      name: libssl3
+  - vulnerability: CVE-2026-95691
+    package:
+      name: libcrypto3
+  - vulnerability: CVE-2026-95691
+    package:
+      name: libssl3
+  - vulnerability: CVE-2026-88823
+    package:
+      name: libcrypto3
+  - vulnerability: CVE-2026-88823
+    package:
+      name: libssl3
