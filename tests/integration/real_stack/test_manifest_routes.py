@@ -276,3 +276,19 @@ def test_sandbox_status_is_200_with_data(stack: Stack) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert isinstance(body, dict) and body, body
+
+
+def test_own_access_and_role_mapping_views_are_served(stack: Stack) -> None:
+    """PRP-138 item 5: no mapping on this stack, so every operator role is a policy store role."""
+    access = stack.client.get("/api/v1/me/access", headers=stack.tokens["operator"])
+    assert access.status_code == 200, access.text
+    body = access.json()
+    assert body["mapping_configured"] is False
+    assert body["roles"], body
+    assert {r["source"] for r in body["roles"]} == {"policy_store"}
+    assert any(r["role"] == "admin" and r["customer_control"] for r in body["roles"]), body
+    mapping = stack.client.get(
+        "/api/v1/admin/identity/role-mapping", headers=stack.tokens["operator"]
+    )
+    assert mapping.status_code == 200, mapping.text
+    assert mapping.json()["active"] is False
