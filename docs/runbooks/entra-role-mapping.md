@@ -54,6 +54,9 @@ Limits and failures:
   domains registered later are covered and retired ones drop out. A domain that exists only in
   catalog data and was never registered is not covered. At 1000 or more active domains an `all`
   entry is refused (503 `role_mapping_domain_overflow`) rather than granting a partial scope.
+- An explicit list of domain ids is not checked against the domain registry: a listed domain
+  stays in the mapped role after it is retired, until the list is edited. Use `"all"` when the
+  role should follow the registry.
 - The mapping is bound to the tenant and audience it names. A token of another tenant, another
   audience, an app-only token (no `scp`) or a development issuer outside local mode maps
   nothing. A copy of the setting on another deployment grants nothing there.
