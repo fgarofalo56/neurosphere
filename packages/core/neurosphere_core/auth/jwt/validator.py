@@ -192,6 +192,8 @@ class JwtValidator:
         if nbf > now + leeway or iat > now + leeway:
             raise _reject("token_not_yet_valid")
 
+        overage = _groups_overage(payload)
+        groups = () if overage else _str_list(payload, "groups")
         try:
             return VerifiedClaims(
                 issuer_kind=kind,
@@ -209,7 +211,8 @@ class JwtValidator:
                 identity_type=_identity_type(payload),
                 roles=_str_list(payload, "roles"),
                 scopes=_scopes(payload),
-                groups=_str_list(payload, "groups"),
+                groups=groups,
+                groups_overage=overage,
             )
         except ValidationError:
             raise _reject("malformed_token") from None
@@ -271,6 +274,15 @@ def _identity_type(payload: Mapping[str, Any]) -> Literal["user", "app"] | None:
     if value in ("user", "app"):
         return value
     return None
+
+
+def _groups_overage(payload: Mapping[str, Any]) -> bool:
+    """Entra's group overage indicator: ``hasgroups`` is boolean true (implicit flow) or
+    ``_claim_names`` is an object with a ``groups`` member. Any other shape is ignored."""
+    if payload.get("hasgroups") is True:
+        return True
+    claim_names = payload.get("_claim_names")
+    return isinstance(claim_names, dict) and "groups" in claim_names
 
 
 def create_jwt_validator(
