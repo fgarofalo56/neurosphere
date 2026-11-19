@@ -1,15 +1,17 @@
 """PRP-71 item 6: the demo check against a local stack seeded with ``demo-world``.
 
 Needs the demo stack: ``make demo-up`` (profile ``demo-world`` + ``infra/dev/demo-profile.env``),
-the API reachable on loopback and the seeded operator's bearer token in a file:
+the API reachable on loopback and the two Entra ids exported (``NS_ENTRA_TENANT_ID``,
+``NS_ENTRA_CLIENT_ID``) with an ``az login`` session whose user was granted by ``make demo-up``:
 
-    NS_DEMO_CHECK_TOKEN_FILE=temp/demo-check.token MSYS_NO_PATHCONV=1 uv run pytest -q \
-        -m integration tests/integration/real_stack/test_demo_profile.py
+    uv run pytest -q -m integration tests/integration/real_stack/test_demo_profile.py
 
+The token is resolved as ``make demo-check`` does: ``NS_DEMO_CHECK_TOKEN_FILE``, then
+``NS_STAND_IN_TOKEN_FILE``, then the Azure CLI (in memory, never written to disk).
 (``NS_DEMO_CHECK_API_URL`` overrides the default ``http://127.0.0.1:8000``.)
 
-This suite never starts or stops compose. It skips cleanly (with the reason) when no token file is
-configured, the API is not reachable, or the stack was not seeded with ``demo-world`` (the default
+This suite never starts or stops compose. It skips cleanly (with the reason shown) when no token can
+be obtained, the API is not reachable, or the stack was not seeded with ``demo-world`` (the default
 real-stack job seeds the ``small`` profile, so it skips there). The token is never printed.
 """
 
@@ -51,13 +53,12 @@ def demo() -> ModuleType:
 @pytest.fixture(scope="module")
 def client(demo: ModuleType) -> Iterator[Any]:
     environ = dict(os.environ)
-    if not (environ.get("NS_DEMO_CHECK_TOKEN_FILE") or environ.get("NS_STAND_IN_TOKEN_FILE")):
-        pytest.skip("no operator token file: set NS_DEMO_CHECK_TOKEN_FILE (see the module doc)")
     try:
         base = demo.guard_environment(
             environ.get("NS_DEMO_CHECK_API_URL") or demo.DEFAULT_BASE_URL, environ
         )
-        token = demo.read_token(None, environ)
+        # Same resolution as `make demo-check`: token file, CI stand-in file, then the Azure CLI.
+        token = demo.resolve_token(None, environ)
     except demo.GuardError as exc:
         pytest.skip(str(exc))
     http = demo.HttpClient(base, token)

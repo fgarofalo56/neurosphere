@@ -539,3 +539,216 @@ def test_the_http_client_repr_hides_the_token() -> None:
 
 def test_an_empty_report_is_not_ok() -> None:
     assert not check.Report().ok
+
+
+# -- token resolution (no test calls the real Azure CLI) --------------------------------------
+
+IDS = {
+    "NS_ENTRA_TENANT_ID": "tenant-0000",
+    "NS_ENTRA_CLIENT_ID": "client-1111",
+}
+CLI_TOKEN = "cli-SENTINEL-token-9876543210"
+
+
+class _Proc:
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode, self.stdout, self.stderr = returncode, stdout, stderr
+
+
+def _provider(calls: list[Any]) -> Any:
+    def provide(environ: Any) -> str:
+        calls.append(dict(environ))
+        return CLI_TOKEN
+
+    return provide
+
+
+def test_a_token_file_flag_wins_over_everything(tmp_path: Path) -> None:
+    calls: list[Any] = []
+    env = {"NS_DEMO_CHECK_TOKEN_FILE": "nope", "NS_STAND_IN_TOKEN_FILE": "nope", **IDS}
+    token = check.resolve_token(str(_token_file(tmp_path)), env, _provider(calls))
+    assert token == TOKEN
+    assert calls == []
+
+
+def test_the_demo_env_file_beats_the_stand_in_file_and_the_cli(tmp_path: Path) -> None:
+    other = tmp_path / "stand-in.token"
+    other.write_text("stand-in-token", encoding="utf-8")
+    calls: list[Any] = []
+    env = {
+        "NS_DEMO_CHECK_TOKEN_FILE": str(_token_file(tmp_path)),
+        "NS_STAND_IN_TOKEN_FILE": str(other),
+        **IDS,
+    }
+    assert check.resolve_token(None, env, _provider(calls)) == TOKEN
+    assert calls == []
+
+
+def test_the_stand_in_file_beats_the_cli(tmp_path: Path) -> None:
+    calls: list[Any] = []
+    env = {"NS_STAND_IN_TOKEN_FILE": str(_token_file(tmp_path)), **IDS}
+    assert check.resolve_token(None, env, _provider(calls)) == TOKEN
+    assert calls == []
+
+
+def test_the_cli_is_used_only_when_no_file_is_set() -> None:
+    calls: list[Any] = []
+    assert check.resolve_token(None, IDS, _provider(calls)) == CLI_TOKEN
+    assert len(calls) == 1
+
+
+def test_an_unreadable_or_empty_token_file_does_not_fall_back_to_the_cli(tmp_path: Path) -> None:
+    empty = tmp_path / "empty.token"
+    empty.write_text("  ", encoding="utf-8")
+    calls: list[Any] = []
+    for path in (str(empty), str(tmp_path / "missing.token")):
+        with pytest.raises(check.GuardError):
+            check.resolve_token(path, IDS, _provider(calls))
+    assert calls == []
+
+
+def test_az_token_asks_for_the_api_audience_and_tenant() -> None:
+    seen: list[list[str]] = []
+
+    def run(argv: list[str], **_kw: Any) -> _Proc:
+        seen.append(argv)
+        return _Proc(stdout=f"{CLI_TOKEN}\n")
+
+    token = check.az_token(IDS, which=lambda _n: "/bin/az", run=run)
+    assert token == CLI_TOKEN
+    argv = seen[0]
+    assert argv[0] == "/bin/az"
+    assert argv[1:5] == ["account", "get-access-token", "--resource", "client-1111"]
+    assert argv[argv.index("--tenant") + 1] == "tenant-0000"
+
+
+def test_az_token_prefers_the_first_configured_audience() -> None:
+    seen: list[list[str]] = []
+
+    def run(argv: list[str], **_kw: Any) -> _Proc:
+        seen.append(argv)
+        return _Proc(stdout=CLI_TOKEN)
+
+    env = {**IDS, "NS_AUTH_AUDIENCES": " api://custom , other"}
+    check.az_token(env, which=lambda _n: "/bin/az", run=run)
+    assert seen[0][seen[0].index("--resource") + 1] == "api://custom"
+
+
+def test_az_token_without_ids_exits_before_running_the_cli() -> None:
+    def run(*_a: Any, **_k: Any) -> _Proc:
+        pytest.fail("the CLI must not run without the ids")
+
+    for env in ({}, {"NS_ENTRA_TENANT_ID": "t"}, {"NS_ENTRA_CLIENT_ID": "c"}):
+        with pytest.raises(check.GuardError) as raised:
+            check.az_token(env, which=lambda _n: "/bin/az", run=run)
+        text = str(raised.value)
+        assert "NS_ENTRA_TENANT_ID" in text
+        assert "NS_ENTRA_CLIENT_ID" in text
+        assert "az login" in text
+
+
+def test_az_token_failures_are_actionable_and_never_echo_cli_output() -> None:
+    def failing(*_a: Any, **_k: Any) -> _Proc:
+        return _Proc(returncode=1, stdout=CLI_TOKEN, stderr=f"ERROR bearer {CLI_TOKEN}")
+
+    def broken(*_a: Any, **_k: Any) -> _Proc:
+        raise OSError(f"cannot run {CLI_TOKEN}")
+
+    def silent(*_a: Any, **_k: Any) -> _Proc:
+        return _Proc(stdout="")
+
+    def on_path(_name: str) -> str:
+        return "/bin/az"
+
+    cases: list[tuple[Any, Any]] = [
+        (lambda _n: None, failing),
+        (on_path, failing),
+        (on_path, broken),
+        (on_path, silent),
+    ]
+    for which, run in cases:
+        with pytest.raises(check.GuardError) as raised:
+            check.az_token(IDS, which=which, run=run)
+        text = str(raised.value)
+        assert CLI_TOKEN not in text
+        assert "NS_ENTRA_CLIENT_ID" in text
+        assert "az login" in text
+
+
+def test_az_command_runs_the_bundled_python_for_az_cmd(tmp_path: Path) -> None:
+    bin_dir = tmp_path / "wbin"
+    bin_dir.mkdir()
+    (tmp_path / "python.exe").write_text("", encoding="utf-8")
+    cmd = str(bin_dir / "az.cmd")
+    assert check.az_command(cmd) == [str(tmp_path / "python.exe"), "-IBm", "azure.cli"]
+    assert check.az_command("/usr/bin/az") == ["/usr/bin/az"]
+
+
+def test_main_uses_the_provider_when_no_file_is_set_and_never_prints_the_token(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    seen: list[str] = []
+    for as_json in (False, True):
+        argv = ["--wait-seconds", "1", *(["--json"] if as_json else [])]
+        code = check.main(
+            argv,
+            env=IDS,
+            client_factory=lambda _b, token: _PassingClient(seen, token),
+            token_provider=_provider([]),
+        )
+        out = capsys.readouterr()
+        assert code == 0, out.out
+        assert CLI_TOKEN not in out.out + out.err
+    assert seen == [CLI_TOKEN, CLI_TOKEN]
+
+
+def test_main_with_a_failing_cli_exits_2_with_the_message_and_no_token(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def failing(*_a: Any, **_k: Any) -> _Proc:
+        return _Proc(returncode=1, stderr=f"AADSTS {CLI_TOKEN}")
+
+    monkeypatch.setattr(check.shutil, "which", lambda _n: "/bin/az")
+    monkeypatch.setattr(check.subprocess, "run", failing)
+    code = check.main(
+        [], env=IDS, client_factory=lambda *_: pytest.fail("the client must not be built")
+    )
+    err = capsys.readouterr().err
+    assert code == check.EXIT_REFUSED
+    assert CLI_TOKEN not in err
+    assert "az login" in err
+
+
+def test_main_with_missing_ids_exits_2_naming_the_variables(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code = check.main([], env={}, token_provider=check.az_token)
+    err = capsys.readouterr().err
+    assert code == check.EXIT_REFUSED
+    assert "NS_ENTRA_TENANT_ID" in err
+    assert "az login" in err
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_a_401_or_403_gives_the_grant_message_and_exit_2(
+    status: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    class Refusing(FakeClient):
+        def get(
+            self, path: str, query: Sequence[tuple[str, str]] = (), persona: str | None = None
+        ) -> Any:
+            return check.Reply(status, {"reason": "forbidden"})
+
+    code = check.main(
+        ["--wait-seconds", "1"],
+        env=IDS,
+        client_factory=lambda *_: Refusing(),
+        token_provider=_provider([]),
+    )
+    err = capsys.readouterr().err
+    assert code == check.EXIT_REFUSED
+    assert "not granted" in err
+    assert "make demo-up OPERATOR_OID=" in err
+    assert "make grant-operator" in err
+    assert str(status) in err
+    assert CLI_TOKEN not in err

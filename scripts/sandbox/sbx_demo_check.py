@@ -1,7 +1,7 @@
 """Demo check: every page of the local demo has data behind its API, or a reasoned empty (PRP-71).
 
     python scripts/sandbox/sbx_demo_check.py [--base-url http://127.0.0.1:8000]
-        [--token-file temp/demo-check.token] [--json] [--wait-seconds 120]
+        [--token-file PATH] [--json] [--wait-seconds 120]
 
 Run it against a local stack seeded with ``make demo-up`` (``make demo-check``). It reads
 ``frontend/src/app/route-manifest.json`` and, for every route, calls the page's backing API as the
@@ -25,13 +25,26 @@ pass nor failure) while ``NS_DEMO_COPILOT_MODE`` is ``disabled``. A few demo-wor
 read the catalog and the map (curated agents, the four telemetry-only agents as discovered drafts,
 the outage service's downstream agents degraded).
 
-Credentials: the bearer token of the seeded operator is read from ``--token-file`` /
-``NS_DEMO_CHECK_TOKEN_FILE`` (or the CI stand-in's ``NS_STAND_IN_TOKEN_FILE``) and is never
-printed. Loopback only: the API URL (and ``NS_COSMOS_ENDPOINT`` when set) must be a loopback
-address written as an IP (``127.0.0.1``, never ``localhost``); there is no override.
+Credentials: the bearer token of the seeded operator is resolved in this order, first hit wins:
+
+1. ``--token-file`` / ``NS_DEMO_CHECK_TOKEN_FILE``;
+2. ``NS_STAND_IN_TOKEN_FILE`` (the CI stand-in API's token file);
+3. the default for a developer: ``az account get-access-token`` for the API audience (the first of
+   ``NS_AUTH_AUDIENCES`` when set, else ``NS_ENTRA_CLIENT_ID``; tenant ``NS_ENTRA_TENANT_ID``), so
+   ``make demo-up`` followed by ``make demo-check`` is two commands for an operator who exported
+   the two Entra ids and ran ``az login``. The token lives in memory only: it is never written to
+   disk, printed, logged, put in ``--json`` output, or echoed in an error (the CLI's stderr is
+   never surfaced).
+
+The signed-in user must be granted in the seeded stack (``make demo-up OPERATOR_OID=<object id>``
+or ``make grant-operator OPERATOR_OID=<object id>``); an HTTP 401/403 says so.
+
+Loopback only: the API URL (and ``NS_COSMOS_ENDPOINT`` when set) must be a loopback address
+written as an IP (``127.0.0.1``, never ``localhost``); there is no override.
 
 Exit 0 only when every route is data-or-allow-listed and no feature is disabled; 1 = the check
-failed; 2 = refused (non-loopback endpoint, no token, bad arguments); 3 = the API is unreachable.
+failed; 2 = refused (non-loopback endpoint, no token, operator not granted, bad arguments); 3 = the
+API is unreachable.
 """
 
 from __future__ import annotations
@@ -40,6 +53,8 @@ import argparse
 import importlib.util
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -127,6 +142,17 @@ demo_expected_empty: Final[dict[str, AllowedEmpty]] = {}
 
 class CheckError(RuntimeError):
     """The check could not run (no domains, API unreachable). Messages never hold a credential."""
+
+
+class NotGrantedError(CheckError):
+    """The API refused the operator's token (401/403): the user is not granted in the stack."""
+
+
+GRANT_HINT: Final = (
+    "the operator token's user is not granted in the seeded stack (the API answered {status}): "
+    "re-run `make demo-up OPERATOR_OID=<your object id>` (or `make grant-operator "
+    "OPERATOR_OID=<your object id>`); a token for another audience is refused the same way"
+)
 
 
 @dataclass(frozen=True)
@@ -261,12 +287,17 @@ class CachedClient:
 def discover_domains(client: Client) -> list[str]:
     """The domains the operator reads, minus the reserved customer control domain."""
     reply = client.get(DOMAINS_PATH)
+    if reply.status in (401, 403):
+        raise NotGrantedError(GRANT_HINT.format(status=reply.status))
     if reply.status != 200 or not isinstance(reply.body, dict):
         raise CheckError(f"GET {DOMAINS_PATH} answered {reply.status}{_reason(reply)}")
     listed = [str(i["domain_id"]) for i in reply.body.get("items", [])]
     domains = [d for d in listed if d != customer_control_domain(*d.split(":")[:2])]
     if not domains:
-        raise CheckError("the operator reads no domain: seed the stack and grant the operator")
+        raise CheckError(
+            "the operator reads no domain: seed the stack and grant the operator "
+            "(`make demo-up OPERATOR_OID=<your object id>`)"
+        )
     return domains
 
 
@@ -617,15 +648,83 @@ def guard_environment(base_url: str, environ: Mapping[str, str]) -> str:
     return require_loopback_url(base_url)
 
 
-def read_token(path: str | None, environ: Mapping[str, str]) -> str:
+TokenProvider = Callable[[Mapping[str, str]], str]
+
+AZ_HINT: Final = (
+    "no operator token: export NS_ENTRA_TENANT_ID and NS_ENTRA_CLIENT_ID (the ids `make demo-up` "
+    "used) and run `az login`, or pass --token-file / set NS_DEMO_CHECK_TOKEN_FILE"
+)
+
+
+def az_command(exe: str) -> list[str]:
+    """The argv prefix that runs ``az`` (as ``scripts/gates/p29_entra_local.py`` does).
+
+    On Windows ``az`` is ``az.cmd``; run its bundled ``python.exe -IBm azure.cli`` directly so no
+    cmd.exe argument parsing is involved.
+    """
+    path = Path(exe)
+    if path.suffix.lower() in {".cmd", ".bat"}:
+        bundled = path.parent.parent / "python.exe"
+        if bundled.is_file():
+            return [str(bundled), "-IBm", "azure.cli"]
+    return [exe]
+
+
+def api_audience(environ: Mapping[str, str]) -> str:
+    """The audience the API accepts: the first ``NS_AUTH_AUDIENCES`` entry, else the client id."""
+    listed = [a.strip() for a in (environ.get("NS_AUTH_AUDIENCES") or "").split(",") if a.strip()]
+    return listed[0] if listed else (environ.get("NS_ENTRA_CLIENT_ID") or "").strip()
+
+
+def az_token(
+    environ: Mapping[str, str],
+    *,
+    which: Callable[[str], str | None] = shutil.which,
+    run: Callable[..., Any] = subprocess.run,
+) -> str:
+    """Ask the Azure CLI for an access token for the API audience. In memory only.
+
+    Never surfaces the CLI's stderr or stdout in an error (either could carry a credential).
+    """
+    tenant = (environ.get("NS_ENTRA_TENANT_ID") or "").strip()
+    audience = api_audience(environ)
+    if not tenant or not audience:
+        raise GuardError(AZ_HINT)
+    exe = which("az")
+    if exe is None:
+        raise GuardError("the Azure CLI (az) was not found on PATH; " + AZ_HINT)
+    argv = [
+        *az_command(exe),
+        "account",
+        "get-access-token",
+        "--resource",
+        audience,
+        "--tenant",
+        tenant,
+        "--query",
+        "accessToken",
+        "--output",
+        "tsv",
+    ]
+    try:
+        done = run(argv, capture_output=True, text=True, timeout=120, check=False)
+    except (OSError, subprocess.SubprocessError):
+        raise GuardError("the Azure CLI could not be run; " + AZ_HINT) from None
+    token = (done.stdout or "").strip() if done.returncode == 0 else ""
+    if not token:
+        raise GuardError("the Azure CLI returned no token (is `az login` current?); " + AZ_HINT)
+    return token
+
+
+def resolve_token(
+    path: str | None, environ: Mapping[str, str], provider: TokenProvider | None = None
+) -> str:
+    """Token file (flag or env), then the CI stand-in's file, then the Azure CLI. First hit wins."""
     chosen = (
         path or environ.get("NS_DEMO_CHECK_TOKEN_FILE") or environ.get("NS_STAND_IN_TOKEN_FILE")
     )
     if not chosen:
-        raise GuardError(
-            "no operator token: pass --token-file or set NS_DEMO_CHECK_TOKEN_FILE "
-            "(NS_STAND_IN_TOKEN_FILE under the CI stand-in API)"
-        )
+        return (provider or az_token)(environ)
     try:
         token = Path(chosen).read_text(encoding="utf-8").strip()
     except OSError:
@@ -731,7 +830,11 @@ def render(report: Report) -> str:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0] if __doc__ else None)
     parser.add_argument("--base-url", help=f"API base URL (default {DEFAULT_BASE_URL})")
-    parser.add_argument("--token-file", help="file holding the operator's bearer token")
+    parser.add_argument(
+        "--token-file",
+        help="file holding the operator's bearer token (default: NS_DEMO_CHECK_TOKEN_FILE, then "
+        "NS_STAND_IN_TOKEN_FILE, then a token from `az account get-access-token`, kept in memory)",
+    )
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     parser.add_argument("--wait-seconds", type=float, default=DEFAULT_WAIT_SECONDS)
     parser.add_argument("--poll-seconds", type=float, default=DEFAULT_POLL_SECONDS)
@@ -746,6 +849,7 @@ def main(
     *,
     env: Mapping[str, str] | None = None,
     client_factory: ClientFactory | None = None,
+    token_provider: TokenProvider | None = None,
 ) -> int:
     environ = os.environ if env is None else env
     args = _parser().parse_args(argv)
@@ -753,7 +857,7 @@ def main(
         base = guard_environment(
             args.base_url or environ.get("NS_DEMO_CHECK_API_URL") or DEFAULT_BASE_URL, environ
         )
-        token = read_token(args.token_file, environ)
+        token = resolve_token(args.token_file, environ, token_provider)
     except GuardError as exc:
         print(f"sbx_demo_check: {exc}", file=sys.stderr)
         return EXIT_REFUSED
@@ -765,6 +869,9 @@ def main(
             wait_seconds=args.wait_seconds,
             poll_seconds=args.poll_seconds,
         )
+    except NotGrantedError as exc:
+        print(f"sbx_demo_check: {exc}", file=sys.stderr)
+        return EXIT_REFUSED
     except CheckError as exc:
         print(f"sbx_demo_check: {exc}", file=sys.stderr)
         return EXIT_UNREACHABLE
