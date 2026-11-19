@@ -20,3 +20,11 @@ CVE-2026-121810 exp:2026-11-26
 CVE-2026-123007 exp:2026-11-26
 CVE-2026-123633 exp:2026-11-26
 CVE-2026-123634 exp:2026-11-26
+#
+# CVE-2026-118899 (High, nginx 1.30.6-r1, fixed in 1.30.7): same package, cause and re-check
+# trigger as the five above; accepted 2026-11-19 by the owner until the same date. Rechecked
+# 2026-11-19: the newest nginx-unprivileged:stable-alpine digest still ships and pins
+# nginx=1.30.6-r1. The advisory concerns a listen directive with the ssl parameter;
+# frontend/nginx/templates/default.conf.template has only a plain listen 8080 (TLS ends at the
+# platform ingress), so the affected listener is not configured in this image.
+CVE-2026-118899 exp:2026-11-26
