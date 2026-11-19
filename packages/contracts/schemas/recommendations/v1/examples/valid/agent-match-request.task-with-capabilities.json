@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "task_text": "Summarize the quarterly vendor contracts and flag renewal dates.",
+  "candidate_types": ["agent"],
+  "required_capabilities": ["document.summarize"],
+  "preferred_tags": ["contracts"],
+  "context_entity_ids": ["commercial:contoso:foundry:agent:legacy-faq"],
+  "environment": "production",
+  "limit": 10,
+  "max_graph_depth": 2
+}
