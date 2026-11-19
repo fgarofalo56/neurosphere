@@ -266,8 +266,8 @@ Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), o
 | 1 | merged | worktree-agent-aabdf031f856e5395 | sonnet | orchestrator re-run: generate --check OK (104 py, 74 ts), pytest tests/contracts + scripts 2724 passed, ruff, pyright 0 errors, ts 168 passed; dc344adb, merge 3dd87616. Deviation: duplicate-category invalid example is an inline JSON Schema test (Pydantic ignores uniqueItems) | 2026-11-19 |
 | 2 | merged | worktree-agent-aadd67d2f248f0069 | sonnet | orchestrator re-run: generate --check OK (106 py, 76 ts), pytest 2804 passed, ruff, pyright 0 errors, ts 171 passed; fd56a191, merge b0cd84d6. Deviations: wrong-body-type case is an inline JSON Schema test (if/then yields several errors, one per invalid file is required); diff before/after typed scalar, array or null, no object (nested changes are deeper paths); examples manifest is index.json | 2026-11-19 |
 | 3 | merged | worktree-agent-a88d8be4de11ea9f3 | sonnet | orchestrator re-run: generate --check OK (110 py, 80 ts), pytest 2901 passed, ruff, pyright 0 errors, ts 176 passed, frontend typecheck clean; 8b2421d2, merge c9c26ca4. Finding kinds verified on main (PRP-61), not re-shipped. Extra invalid example for stored feedback (suite needs one per schema) | 2026-11-19 |
-| 4 | in-progress | | sonnet | | 2026-11-19 |
-| 7 | todo | | sonnet | | |
+| 4 | merged | worktree-agent-a67575ab3efac9132 | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest contracts + scripts + compliance_lib 3028 passed, ruff, pyright 0 errors, ts 185 passed; d53b1942, merge ebd4dcc5. Claims scan (tests/marketing/claims_rules.py) covers valid compliance examples only; MapNodeFacets has no required member; entity_ids uniqueItems added | 2026-11-19 |
+| 7 | in-progress | | sonnet | | 2026-11-19 |
 | 5 | todo | | | | |
 | 6 | todo | | | | |
 
