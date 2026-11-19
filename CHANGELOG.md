@@ -6,6 +6,48 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0-rc.5] - 2026-11-18
+
+Entra-based administrators (PRP-138, decision D20). Contracts are unchanged; no migration.
+
+### Added
+- **auth:** Entra role mapping. The deployment setting `NS_AUTH_ROLE_MAPPINGS` maps Entra app
+  role values (the `roles` claim) and, optionally, group object ids (the `groups` claim) to
+  NeuroSphere roles at request time, so the first administrator needs no script. Off by default,
+  bound to one tenant and audience, delegated user tokens only; each mapped role expires with the
+  token and nothing is written to the policy store (#330).
+- **api:** `GET /api/v1/me/access` shows a signed-in caller their own roles and whether each came
+  from an Entra app role, an Entra group or the policy store (#330).
+- **api:** `GET /api/v1/admin/identity/role-mapping`, a read-only view of the effective mapping
+  for holders of deployment-wide `policy.manage` (#330).
+- **admin:** read-only "Entra role mapping" and "Your access" panels on the Identity page (#330).
+- **audit:** operation `identity.claim_role_applied`, written once per token when a mapped role
+  is applied; a failed audit write refuses the request (#330).
+- **gates:** operator script `scripts/gates/entra_admin_mapping.py` (`plan`, `apply`, `verify`)
+  and runbook `docs/runbooks/entra-role-mapping.md` (#330).
+- **infra:** hosted demo parameter `entraRoleMappings` and `hosted_demo.py
+  --entra-role-mappings-file`, validated before any Azure call (#341).
+- **ci:** `deploy-hosted` passes the mapping when the environment variable
+  `NS_HOSTED_ENTRA_ADMIN_APP_ROLE` is set; unset leaves the mapping off (#341).
+
+### Changed
+- **authz:** a 403 for a missing permission now names it ("this operation needs
+  `<permission>`"); the Admin console forbidden state shows that text and the caller's own
+  access (#330).
+- **auth:** group overage tokens (`hasgroups` or `_claim_names.groups`) are flagged on the
+  verified claims and their group list is ignored; no Microsoft Graph call is made (#330).
+
+### Security
+- **auth:** token role and group claims remain non-authoritative unless a mapping is
+  configured. Startup fails closed on an invalid mapping (`role_mapping_invalid`) or one bound to
+  another tenant or audience (`role_mapping_binding_mismatch`) (#330).
+- **security:** time-boxed scanner exception for four OpenSSL advisories in the Alpine base
+  images (CVE-2026-95692, CVE-2026-107496, CVE-2026-95691, CVE-2026-88823 on `libcrypto3` and
+  `libssl3`), accepted by the owner until 2026-12-02; no fixed package existed and their
+  exploitability in these images has not been assessed (#340).
+- **security:** time-boxed exception for the picomatch ReDoS advisory, dev tooling only, until
+  2026-12-17 (#325).
+
 ## [0.1.0-rc.4] - 2026-11-17
 
 Same product content as 0.1.0-rc.3. Use this candidate instead: v0.1.0-rc.3 was never

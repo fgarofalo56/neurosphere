@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-138-entra-admin-role-mapping-and-first-admin](active/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 9/10 (90%) | verifying 1, merged 9 | opus / opus | required |
+| [PRP-138-entra-admin-role-mapping-and-first-admin](active/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 10/10 (100%) | merged 10 | opus / opus | required |
 
 ## Backlog
 
