@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "match_id": "match-0001",
+  "domain_id": "commercial:contoso:catalog:domain:operations",
+  "generated_at": "2026-11-19T10:00:00Z",
+  "ranker": { "ranker_id": "weighted-signals", "ranker_version": "1.0.0" },
+  "cold_start": true,
+  "signals_unavailable": ["historical_success"],
+  "candidates": [
+    {
+      "rank": 1,
+      "entity_id": "commercial:contoso:foundry:agent:contract-summarizer",
+      "entity_type": "agent",
+      "display_name": "Contract summarizer",
+      "lifecycle_status": "active",
+      "score": 0.62,
+      "signals": [
+        {
+          "signal": "capability_match",
+          "value": 1,
+          "weight": 0.5,
+          "contribution": 0.5,
+          "detail_code": null,
+          "evidence_ids": []
+        },
+        {
+          "signal": "historical_success",
+          "value": null,
+          "weight": 0.3,
+          "contribution": 0,
+          "detail_code": "no_history",
+          "evidence_ids": []
+        }
+      ],
+      "matched_capabilities": ["document.summarize"],
+      "matched_tags": [],
+      "relations": [],
+      "evidence_ids": []
+    }
+  ],
+  "truncated": false,
+  "partial_reason": null
+}

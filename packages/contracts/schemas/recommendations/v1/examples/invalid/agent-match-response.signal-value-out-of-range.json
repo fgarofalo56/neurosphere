@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "match_id": "match-0002",
+  "domain_id": "commercial:contoso:catalog:domain:operations",
+  "generated_at": "2026-11-19T10:05:00Z",
+  "ranker": {
+    "ranker_id": "weighted-signals",
+    "ranker_version": "1.0.0"
+  },
+  "cold_start": false,
+  "signals_unavailable": [],
+  "candidates": [
+    {
+      "rank": 1,
+      "entity_id": "commercial:contoso:foundry:agent:contract-summarizer",
+      "entity_type": "agent",
+      "display_name": "Contract summarizer",
+      "lifecycle_status": "active",
+      "score": 0.84,
+      "signals": [
+        {
+          "signal": "capability_match",
+          "value": 1.2,
+          "weight": 0.4,
+          "contribution": 0.4,
+          "detail_code": null,
+          "evidence_ids": []
+        },
+        {
+          "signal": "historical_success",
+          "value": 0.8,
+          "weight": 0.3,
+          "contribution": 0.24,
+          "detail_code": null,
+          "evidence_ids": [
+            "trace:synthetic-0001"
+          ]
+        },
+        {
+          "signal": "graph_proximity",
+          "value": 0.5,
+          "weight": 0.2,
+          "contribution": 0.1,
+          "detail_code": "depth_2",
+          "evidence_ids": []
+        }
+      ],
+      "matched_capabilities": [
+        "document.summarize"
+      ],
+      "matched_tags": [
+        "contracts"
+      ],
+      "relations": [
+        {
+          "relation_type": "uses_model",
+          "entity_id": "commercial:contoso:foundry:model_deployment:gpt-synthetic",
+          "direction": "outgoing"
+        }
+      ],
+      "evidence_ids": [
+        "trace:synthetic-0001"
+      ]
+    },
+    {
+      "rank": 2,
+      "entity_id": "commercial:contoso:foundry:agent:legacy-faq",
+      "entity_type": "agent",
+      "display_name": "Legacy FAQ",
+      "lifecycle_status": "deprecated",
+      "score": 0.31,
+      "signals": [
+        {
+          "signal": "text_match",
+          "value": 0.3,
+          "weight": 0.3,
+          "contribution": 0.09,
+          "detail_code": null,
+          "evidence_ids": []
+        }
+      ],
+      "matched_capabilities": [],
+      "matched_tags": [],
+      "relations": [],
+      "evidence_ids": []
+    }
+  ],
+  "truncated": false,
+  "partial_reason": null
+}

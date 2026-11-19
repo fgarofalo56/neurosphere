@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "feedback_id": "fb-0001",
+  "cloud": "commercial",
+  "customer_id": "contoso",
+  "domain_id": "commercial:contoso:catalog:domain:operations",
+  "match_id": "match-0002",
+  "entity_id": "commercial:contoso:foundry:agent:contract-summarizer",
+  "entity_type": "agent",
+  "decision": "accepted",
+  "reason_code": null,
+  "rank_at_decision": 1,
+  "score_at_decision": 0.84,
+  "task_digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "required_capabilities": ["document.summarize"],
+  "ranker": { "ranker_id": "weighted-signals", "ranker_version": "1.0.0" },
+  "decided_by": "commercial:contoso:entra:person:steward-0001",
+  "decided_at": "2026-11-19T10:10:00Z",
+  "expires_at": null,
+  "comment": "free text"
+}

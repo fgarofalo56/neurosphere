@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "match_id": "match-0002",
+  "entity_id": "commercial:contoso:foundry:agent:legacy-faq",
+  "decision": "rejected",
+  "reason_code": "unavailable",
+  "comment": "free text"
+}

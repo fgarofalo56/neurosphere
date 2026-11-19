@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/recommendations/v1/agent-match-request.schema.json",
+  "title": "AgentMatchRequest",
+  "description": "Task-to-agent match request (PRP-70 item 3). task_text is tokenized for ranking only: it is never executed, never sent to an LLM for explanation and never stored (feedback keeps only a digest). The request carries no scope field: cloud, customer and domain scope come from the server-derived IdentityScope, so domain_id and customer_id are rejected as unknown keys. Nullable fields are optional and default to null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_text"],
+  "properties": {
+    "schema_version": { "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version" },
+    "task_text": {
+      "description": "Natural-language task description, 3 to 2000 characters. Control characters other than tab and newline are rejected. Tokenized only, never executed or stored.",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 2000,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]+$"
+    },
+    "candidate_types": {
+      "description": "Entity types to rank.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "default": ["agent"],
+      "items": { "type": "string", "enum": ["agent", "tool"] }
+    },
+    "required_capabilities": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "default": [],
+      "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/capability" }
+    },
+    "preferred_tags": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "default": [],
+      "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/tag" }
+    },
+    "context_entity_ids": {
+      "description": "Canonical IDs of entities the task relates to; used as graph-proximity anchors.",
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "default": [],
+      "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" }
+    },
+    "environment": {
+      "description": "Restrict candidates to one environment; null means any.",
+      "default": null,
+      "oneOf": [
+        { "$ref": "../../catalog/v1/common.schema.json#/$defs/environment" },
+        { "type": "null" }
+      ]
+    },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 },
+    "max_graph_depth": { "type": "integer", "minimum": 0, "maximum": 3, "default": 2 }
+  }
+}
