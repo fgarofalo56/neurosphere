@@ -238,8 +238,8 @@ New contract fields or vocabularies (PRP-70); map, recommender or graph-question
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-71-item-1-demo-world-data | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, sandbox/tests 55 passed) at 417ebe38; review APPROVED; merged 0c90a172 |
-| 2 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-19 |
-| 3 | todo | | |
+| 2 | merged | prp-71-item-2b-delegation | sonnet; two rounds (d7ab3cb7 telemetry and incident, 0e1fec4e delegation pairs and spans); verify PASS 2026-11-19 (ruff, format, pyright, sandbox/tests 72 passed); review APPROVED; merged edc4e015 |
+| 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-19 |
 | 4 | merged | prp-71-item-4-demo-profile | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, 133 passed across demo_profile, compose, hosted_data_path, sandbox_stack, write_targets_profiles) at a4f58c79; NS_WORKER_ROLES not in profile (compose pins all); review APPROVED; merged 877d8fee |
 | 5 | todo | | |
 | 6 | todo | | |
