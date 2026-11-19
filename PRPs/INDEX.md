@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-70-contracts-revision-restored-scope](active/PRP-70-contracts-revision-restored-scope.md) | P0 | 2/7 (28%) | todo 4, in-progress 1, merged 2 | opus / sonnet | required |
+| [PRP-70-contracts-revision-restored-scope](active/PRP-70-contracts-revision-restored-scope.md) | P0 | 3/7 (42%) | todo 3, in-progress 1, merged 3 | opus / sonnet | required |
 | [PRP-138-entra-admin-role-mapping-and-first-admin](active/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 10/10 (100%) | merged 10 | opus / opus | required |
 
 ## Backlog
