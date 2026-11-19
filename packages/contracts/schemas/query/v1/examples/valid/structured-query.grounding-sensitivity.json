@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "operation": "list",
+  "entity": "grounding_source",
+  "filters": [
+    {
+      "field": "sensitivity_category",
+      "op": "in",
+      "values": [
+        "pii",
+        "phi"
+      ]
+    },
+    {
+      "field": "residency_geography",
+      "op": "eq",
+      "value": "eu_eea"
+    },
+    {
+      "field": "contains_personal_data",
+      "op": "eq",
+      "value": true
+    }
+  ],
+  "fields": [
+    "id",
+    "classification",
+    "residency_geography"
+  ],
+  "sort": [
+    {
+      "field": "updated_at",
+      "direction": "desc"
+    }
+  ],
+  "budget": {
+    "timeout_ms": 5000,
+    "limit": 50,
+    "max_depth": 0
+  },
+  "cursor": "eyJvIjo1MH0"
+}

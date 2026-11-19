@@ -777,6 +777,39 @@
       "instance_path": "/source_id",
       "reason": "GRANTS_ACCESS_TO starts at a Grant",
       "derived_from": "valid/grants_access_to.asserted.json"
+    },
+    {
+      "file": "valid/agent.tagged-capabilities-environment.json",
+      "schema": "agent.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/tool.capabilities.json",
+      "schema": "tool.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grounding_source.sensitivity-residency.json",
+      "schema": "grounding_source.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/agent.uppercase-tag.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/tags/0",
+      "reason": "tags are lowercase tokens without spaces",
+      "derived_from": "valid/agent.tagged-capabilities-environment.json"
+    },
+    {
+      "file": "invalid/agent.unknown-environment.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/environment",
+      "reason": "environment is a closed vocabulary",
+      "derived_from": "valid/agent.tagged-capabilities-environment.json"
     }
   ]
 }

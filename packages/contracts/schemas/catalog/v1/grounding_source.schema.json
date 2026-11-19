@@ -107,6 +107,29 @@
       ],
       "default": null,
       "description": "null when not assessed."
+    },
+    "tags": {
+      "$ref": "common.schema.json#/$defs/tags",
+      "default": []
+    },
+    "environment": {
+      "$ref": "common.schema.json#/$defs/environment"
+    },
+    "sensitivity_categories": {
+      "$ref": "common.schema.json#/$defs/sensitivity_categories",
+      "default": []
+    },
+    "residency_geography": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/residency_geography"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Coarse geography of the authoritative copy; null when not declared (consumers derive it from residency_region)."
     }
   },
   "required": [

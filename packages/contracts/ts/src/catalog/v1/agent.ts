@@ -6,6 +6,23 @@
  */
 
 /**
+ * Free-form lowercase labels; at most 32, no duplicates.
+ *
+ * @maxItems 32
+ *
+ * Items: Lowercase label token used for grouping and filtering catalog entities.
+ */
+export type Tags = string[];
+/**
+ * Declared capabilities; at most 64, no duplicates.
+ *
+ * @maxItems 64
+ *
+ * Items: Dot-namespaced capability token such as document.summarize (one to four segments). Open-ended: readers must tolerate unknown values. There is no closed taxonomy.
+ */
+export type Capabilities = string[];
+
+/**
  * AI agent as a logical, versioned catalog entity; concrete releases are AgentVersion. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).
  */
 export interface Agent {
@@ -78,6 +95,12 @@ export interface Agent {
    */
   external_agent_id?: string | null;
   current_version_id?: string | null;
+  tags?: Tags;
+  capabilities?: Capabilities;
+  /**
+   * Deployment environment; the same vocabulary as TelemetryEvent.environment.
+   */
+  environment?: "production" | "staging" | "development" | "test" | "sandbox" | "unknown";
 }
 /**
  * Extension point: scalar values only (string, number, boolean, null); keys are lowercase snake_case. Nested objects and arrays are rejected.

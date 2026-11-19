@@ -655,13 +655,50 @@ _CATALOG_FIELDS = _ALL_ID_FIELDS | {
     "locked",
     "has_owner",
 }
+# PRP-70 item 1: restored-scope fields apply only to the catalog entities that carry them.
+_RESTORED_TAGGED = ("agent", "agent_version", "tool", "service", "mcp_server", "model_deployment")
+_RESTORED_FIELDS: Mapping[str, frozenset[str]] = {
+    **{entity: frozenset({"tag"}) for entity in _RESTORED_TAGGED},
+    "agent": frozenset({"tag", "capability"}),
+    "agent_version": frozenset({"tag", "capability"}),
+    "tool": frozenset({"tag", "capability"}),
+    "grounding_source": frozenset(
+        {
+            "tag",
+            "sensitivity_category",
+            "residency_geography",
+            "contains_personal_data",
+        }
+    ),
+}
+# residency_region exists on every catalog entity except person.
+_RESIDENCY_REGION_ENTITIES = frozenset(
+    {
+        "agent",
+        "agent_version",
+        "model_deployment",
+        "grounding_source",
+        "tool",
+        "service",
+        "domain",
+        "owner",
+        "policy",
+        "run_reference",
+        "grant",
+        "mcp_server",
+    }
+)
 _RECOMMENDATION_EXTRA = frozenset({"score", "baseline_amount", "projected_amount", "advisory"})
 _TOKEN_FIELDS = frozenset(
     {"input_tokens", "output_tokens", "cached_tokens", "reasoning_tokens", "total_tokens"}
 )
 FIELD_APPLICABILITY: Mapping[str, frozenset[str]] = {
     **{
-        entity: frozenset(_CATALOG_FIELDS)
+        entity: frozenset(
+            _CATALOG_FIELDS
+            | _RESTORED_FIELDS.get(entity, frozenset())
+            | ({"residency_region"} if entity in _RESIDENCY_REGION_ENTITIES else set())
+        )
         for entity in (
             "person",
             "agent",
