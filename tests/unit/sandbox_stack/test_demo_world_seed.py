@@ -202,3 +202,25 @@ def test_the_hosted_seed_refuses_the_demo_world(capsys: pytest.CaptureFixture[st
     code = seed.main(["--profile", PROFILE, "--hosted", "registration.json"], env={})
     assert code == seed.EXIT_REFUSED
     assert "local and CI only" in capsys.readouterr().err
+
+
+def test_demo_world_stores_the_feature_settings_once(tmp_path: Path) -> None:
+    from neurosphere_core.admin import InMemoryAdminConfigRepository
+    from neurosphere_core.admin.runtime import SYSTEM_SETTING_KIND
+    from neurosphere_core.audit import AuditRepository
+    from neurosphere_core.audit.store import InMemoryAuditStore
+
+    stack = base.Stack()
+    repository = InMemoryAdminConfigRepository(cloud="commercial")
+    stack.backends.admin_config = repository
+    stack.backends.audit = AuditRepository(InMemoryAuditStore())
+
+    first = _run(stack, tmp_path / "one")
+    assert first["seeded"]["settings"] == 6
+    stored = asyncio.run(repository.list_by_kind("synthco", SYSTEM_SETTING_KIND))
+    assert len(stored) == 6
+
+    second = _run(stack, tmp_path / "two")
+    assert second["seeded"]["settings"] == 0
+    assert second["skipped_existing"] >= 6
+    assert len(asyncio.run(repository.list_by_kind("synthco", SYSTEM_SETTING_KIND))) == 6
