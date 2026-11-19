@@ -810,6 +810,39 @@
       "instance_path": "/environment",
       "reason": "environment is a closed vocabulary",
       "derived_from": "valid/agent.tagged-capabilities-environment.json"
+    },
+    {
+      "file": "valid/entity_revision.agent-update.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/entity_revision.grounding-source-create.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/entity_revision_diff.agent-capabilities.json",
+      "schema": "entity_revision_diff.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/entity_revision.missing-body-sha256.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "body_sha256 is required",
+      "derived_from": "valid/entity_revision.agent-update.json"
+    },
+    {
+      "file": "invalid/entity_revision_diff.too-many-changes.json",
+      "schema": "entity_revision_diff.schema.json",
+      "expect": "invalid",
+      "keyword": "maxItems",
+      "instance_path": "/changes",
+      "reason": "201 changes exceed the cap of 200",
+      "derived_from": "valid/entity_revision_diff.agent-capabilities.json"
     }
   ]
 }
