@@ -263,8 +263,8 @@ Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), o
 
 | Item | Status | Branch/worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
-| 1 | in-progress | | sonnet | | 2026-11-19 |
-| 2 | todo | | sonnet | | |
+| 1 | merged | worktree-agent-aabdf031f856e5395 | sonnet | orchestrator re-run: generate --check OK (104 py, 74 ts), pytest tests/contracts + scripts 2724 passed, ruff, pyright 0 errors, ts 168 passed; dc344adb, merge 3dd87616. Deviation: duplicate-category invalid example is an inline JSON Schema test (Pydantic ignores uniqueItems) | 2026-11-19 |
+| 2 | in-progress | | sonnet | | 2026-11-19 |
 | 3 | todo | | sonnet | | |
 | 4 | todo | | sonnet | | |
 | 7 | todo | | sonnet | | |
