@@ -1,0 +1,6 @@
+[
+  {"slug": "general-reasoning-model", "provider": "azure-openai", "model_name": "gpt-4o", "model_version": "2024-11-20", "deployment_name": "general-reasoning", "modalities": ["text", "image"], "tool_calling": true, "tags": ["general", "shared"], "environment": "production"},
+  {"slug": "fast-chat-model", "provider": "azure-openai", "model_name": "gpt-4o-mini", "model_version": "2024-07-18", "deployment_name": "fast-chat", "modalities": ["text"], "tool_calling": true, "tags": ["low-latency", "shared"], "environment": "production"},
+  {"slug": "embedding-model", "provider": "azure-openai", "model_name": "text-embedding-3-large", "model_version": "1", "deployment_name": "document-embeddings", "modalities": ["embedding"], "tool_calling": false, "tags": ["embeddings", "shared"], "environment": "production"},
+  {"slug": "small-private-model", "provider": "microsoft", "model_name": "phi-4", "model_version": "1", "deployment_name": "small-private", "modalities": ["text"], "tool_calling": false, "tags": ["small", "private"], "environment": "staging"}
+]
