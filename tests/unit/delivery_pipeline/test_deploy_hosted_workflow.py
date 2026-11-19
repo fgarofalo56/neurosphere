@@ -134,6 +134,19 @@ def test_plan_and_apply_build_identical_arguments(jobs: dict[str, Any]) -> None:
         assert jobs["plan"]["env"][key] == jobs["apply"]["env"][key]
 
 
+def test_role_mapping_is_opt_in_and_built_from_existing_ids(jobs: dict[str, Any]) -> None:
+    """PRP-138 item 9: the mapping is passed only when the variable is set, in both jobs."""
+    for name in ("plan", "apply"):
+        run = _steps_text(jobs[name])
+        assert 'if [ -n "$ENTRA_ADMIN_APP_ROLE" ]; then' in run, name
+        assert '--entra-role-mappings-file "$RUNNER_TEMP/role-mappings.json"' in run, name
+        assert '--arg tenant "$ENTRA_TENANT_ID" --arg audience "$ENTRA_CLIENT_ID"' in run, name
+        envs = [s.get("env", {}) for s in jobs[name]["steps"]]
+        values = {e["ENTRA_ADMIN_APP_ROLE"] for e in envs if "ENTRA_ADMIN_APP_ROLE" in e}
+        # A repository variable, never a secret and never an expression inside the run block.
+        assert values == {"${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}"}, name
+
+
 def test_live_approval_only_on_hosted_demo_steps(jobs: dict[str, Any]) -> None:
     for name, job in jobs.items():
         assert "NS_LIVE_APPROVED" not in job.get("env", {}), name

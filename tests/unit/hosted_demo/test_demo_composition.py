@@ -46,6 +46,7 @@ PARAMETERS = [
     "recommendationsEnabled",
     "foundryAccountIds",
     "billingExportStorageAccountId",
+    "entraRoleMappings",
     "searchProvider",
     "searchService",
     "budgetAmount",

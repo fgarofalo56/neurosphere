@@ -12,6 +12,12 @@ param copilotDeployment = 'mini'
 param copilotMode = 'disabled'
 param budgetAmount = 200
 
+// PRP-138: Entra claim to role mapping (NS_AUTH_ROLE_MAPPINGS). Off by default. The deploy script
+// fills it from --entra-role-mappings-file; the tenant and client ids in it are not committed.
+// Shape: { tenant_id: '<tenant guid>', audience: '<api app id>', entries: [ { id: 'ns-admins',
+//   claim: 'roles', value: 'admin', role: 'admin', domains: 'all', customer_control: true } ] }
+param entraRoleMappings = {}
+
 param integrationSubnetId = 'REPLACED-AT-DEPLOY'
 param privateEndpointSubnetId = 'REPLACED-AT-DEPLOY'
 param cosmosDnsZoneId = 'REPLACED-AT-DEPLOY'

@@ -68,7 +68,10 @@ Limits and failures:
     `NS_AUTH_TENANT_ID` / `NS_AUTH_AUDIENCES`.
 
 Where to set it: on the hosted demo deployment it is the Bicep parameter `entraRoleMappings`
-(the same object; wiring is PRP-138 item 9 and lands after PRP-139). For Helm and
+(the same object). Save the JSON object to a file under `temp/` and pass it to
+`scripts/gates/hosted_demo.py plan` and `deploy` with `--entra-role-mappings-file <path>`; the
+script refuses a file the API would not accept, or one whose `tenant_id` and `audience` differ
+from `--entra-tenant-id` and `--entra-client-id`, before any Azure call. For Helm and
 `infra/appservice` deployments the setting is documented here only; no chart value or
 template parameter exists yet, so set it as an API environment variable yourself.
 

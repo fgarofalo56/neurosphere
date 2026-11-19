@@ -552,6 +552,7 @@ smoke are OPEN** (PRP-64 runs them, each with `NS_LIVE_APPROVED=1` and your per-
 | Parameter | Flag | Default | Effect |
 |---|---|---|---|
 | `connectorRoles` | `--connector-roles gateway_poll,foundry_discovery,billing_export` | none | Adds the named roles to `NS_WORKER_ROLES` and sets `NS_API_BASE_URL` on the workers to the API upstream |
+| `entraRoleMappings` | `--entra-role-mappings-file temp/<file>.json` | empty (mapping off) | Sets `NS_AUTH_ROLE_MAPPINGS` on the API so an Entra app role or group grants a NeuroSphere role; see `docs/runbooks/entra-role-mapping.md` |
 | `recommendationsEnabled` | `--recommendations` | off | Adds the `recommendations` role with `NS_WORKER_REC_SOURCE=archive` |
 | `foundryAccountIds` | `--foundry-account-ids <arm-id>,...` | none | Foundry User role for the workers identity on each account, at that account's scope only |
 | `billingExportStorageAccountId` | `--billing-export-storage-account-id <arm-id>` | none | Storage Blob Data Reader for the workers identity on that storage account only |

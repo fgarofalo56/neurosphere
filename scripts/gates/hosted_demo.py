@@ -28,7 +28,8 @@ Parameters generated for ``infra/demo/main.bicep`` (D9; a test compares them to 
 prefix, location, imageRegistry, imageTag, appServiceSkuName, deployKeyVault,
 integrationSubnetId, privateEndpointSubnetId, cosmosDnsZoneId, eventHubsDnsZoneId, blobDnsZoneId,
 webAppsDnsZoneId, keyVaultDnsZoneId, entraTenantId, entraClientId, copilotEndpoint,
-copilotDeployment, budgetAmount, budgetStartDate, budgetContactEmails, tagOwner, tagDeleteAfter,
+copilotDeployment, entraRoleMappings (PRP-138, from ``--entra-role-mappings-file``),
+budgetAmount, budgetStartDate, budgetContactEmails, tagOwner, tagDeleteAfter,
 deploymentId, createdBy.
 
 Exit codes: 0 ok, 1 failed (evidence written), 2 refused (nothing changed).
@@ -289,6 +290,13 @@ def build_parser() -> argparse.ArgumentParser:
             action="store_true",
             help="recommendationsEnabled: start the recommendations role on the archive source",
         )
+        # PRP-138: the Entra claim to role mapping. Default: mapping off, setting unset.
+        p.add_argument(
+            "--entra-role-mappings-file",
+            default="",
+            help="JSON file with the NS_AUTH_ROLE_MAPPINGS object (keep it under temp/); "
+            "validated before any az call and bound to --entra-tenant-id / --entra-client-id",
+        )
         p.add_argument("--evaluation-pilot-domain-id", default="", help="evaluationPilotDomainId")
         p.add_argument("--evaluation-pilot-subject-id", default="", help="evaluationPilotSubjectId")
         p.add_argument(
@@ -429,6 +437,8 @@ def validate_static(args: argparse.Namespace) -> None:
                 f"--{attr.replace('_', '-')} must be a /subscriptions/... resource id. "
                 "No changes made."
             )
+    # PRP-138: a defective mapping file is refused here, before any az call.
+    role_mappings_value(args)
 
 
 def guard_cloud(ctx: Ctx) -> None:
@@ -449,6 +459,52 @@ def _need(args: argparse.Namespace, names: Sequence[str]) -> None:
 
 def _csv(value: str) -> list[str]:
     return [p.strip() for p in str(value or "").split(",") if p.strip()]
+
+
+def role_mappings_value(args: argparse.Namespace) -> dict[str, Any]:
+    """The ``entraRoleMappings`` parameter from ``--entra-role-mappings-file`` (PRP-138 item 9).
+
+    Empty (mapping off) when the flag is not given. Otherwise the file must hold a mapping the API
+    itself would accept (``parse_claim_role_mapping``) and it must be bound to the tenant and
+    client id being deployed, because the API fails closed at startup on any other binding.
+    Refusals name a reason code only: the file holds tenant and group identifiers.
+    """
+    raw_path = str(getattr(args, "entra_role_mappings_file", "") or "").strip()
+    if not raw_path:
+        return {}
+    path = Path(raw_path).resolve()
+    repo = Path(__file__).resolve().parents[2]
+    if path.is_relative_to(repo) and not path.is_relative_to(repo / "temp"):
+        raise RefusedError(
+            "--entra-role-mappings-file must not be inside the repository outside temp/ "
+            "(it holds tenant identifiers; temp/ is gitignored). No changes made."
+        )
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except OSError as exc:
+        raise RefusedError("--entra-role-mappings-file cannot be read. No changes made.") from exc
+    from neurosphere_core.auth.scope import ClaimRoleMappingError, parse_claim_role_mapping
+
+    try:
+        mapping = parse_claim_role_mapping(text)
+    except ClaimRoleMappingError as exc:
+        raise RefusedError(
+            f"--entra-role-mappings-file is not a valid mapping ({exc.reason}). No changes made."
+        ) from None
+    if mapping is None:
+        raise RefusedError("--entra-role-mappings-file is empty. No changes made.")
+    if mapping.tenant_id != str(args.entra_tenant_id).strip().lower():
+        raise RefusedError(
+            "--entra-role-mappings-file: tenant_id differs from --entra-tenant-id "
+            "(role_mapping_binding_mismatch). No changes made."
+        )
+    if mapping.audience != str(args.entra_client_id).strip():
+        raise RefusedError(
+            "--entra-role-mappings-file: audience differs from --entra-client-id "
+            "(role_mapping_binding_mismatch). No changes made."
+        )
+    value = json.loads(text)
+    return cast("dict[str, Any]", value)
 
 
 def infra_values(ctx: Ctx) -> dict[str, Any]:
@@ -496,6 +552,7 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
         "recommendationsEnabled": bool(a.recommendations),
         "foundryAccountIds": foundry_ids,
         "billingExportStorageAccountId": a.billing_export_storage_account_id,
+        "entraRoleMappings": role_mappings_value(a),
         "budgetAmount": amount,
         "budgetStartDate": a.budget_start_date or cm.default_budget_start(),
         "budgetContactEmails": emails,
