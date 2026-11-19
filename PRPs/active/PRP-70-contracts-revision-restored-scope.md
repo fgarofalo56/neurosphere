@@ -1,6 +1,7 @@
 ---
 name: PRP-70-contracts-revision-restored-scope
-status: backlog
+status: active
+started: 2026-11-19
 priority: P0
 order: 60
 review: required
@@ -255,18 +256,20 @@ Routes, stores, containers, seeds, UI, the matcher, the revision writer, the res
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 2 and 3 are ASSUMPTIONS for plan approval)
+- [x] All clarification questions are decided, not guessed (rows 2 and 3 confirmed by the owner at plan approval, 2026-11-19)
 
 ## Execution state
-| Item | Status | Branch/worktree | Notes |
-|---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), one review pass on the whole integration diff, close-out (6). Item 3's finding-kind part is already on main (PRP-61): verified, skipped; `strings.ts` is not edited.
+
+| Item | Status | Branch/worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 | in-progress | | sonnet | | 2026-11-19 |
+| 2 | todo | | sonnet | | |
+| 3 | todo | | sonnet | | |
+| 4 | todo | | sonnet | | |
+| 7 | todo | | sonnet | | |
+| 5 | todo | | | | |
+| 6 | todo | | | | |
 
 ## Completion note (filled at ship)
 - Date and PR:
