@@ -1,11 +1,13 @@
 ---
 name: PRP-138-entra-admin-role-mapping-and-first-admin
-status: active
+status: shipped
 priority: P0
 order: 138
 review: required
 created: 2026-11-17
 started: 2026-11-18
+shipped: 2026-11-19
+pr: 330
 model: opus
 orchestrator_model: opus
 implementer_model: opus
@@ -15,7 +17,7 @@ depends_on: []
 wave: W18b
 branch: prp-138-entra-admin-role-mapping
 allow_parallel: true
-issues: [331, 332, 333, 334, 335, 336, 337, 338, 339]
+issues: [331, 332, 333, 334, 335, 336, 337, 338, 339, 344, 345]
 ---
 
 # PRP-138: Entra admin role mapping and first admin (app roles and groups to NeuroSphere roles)
@@ -340,7 +342,7 @@ Writing claim-derived roles into the policy store; a wildcard, customer-wide rol
 All ten items are merged: PR #330 (items 1 to 8 and 10) and PR #341 (item 9). Released in v0.1.0-rc.5 and deployed to the hosted demo on 2026-11-19.
 - Hosted run (2026-11-19): G-138 Commercial PASS with one open point, `docs/evidence/PRP-138/2026-11-19-g138-commercial.md`. A real Entra sign-in showed the mapping active and an `admin` role with source "Entra app role" that expires with the token. Open point: the operator also holds a stored admin grant, so "the mapping alone opens the Admin pages" is not yet shown on hosted (needs a user with the app role and no stored grant). G-138 Government: OPEN, not run.
 - Later additions: PR #340 and #343 (time-boxed scanner exceptions for Alpine OpenSSL until 2026-12-02 and nginx until 2026-11-26, both owner-approved); item 9 was done ahead of PRP-139 at the owner's request; `deploy-hosted.yml` passes the mapping when `NS_HOSTED_ENTRA_ADMIN_APP_ROLE` is set; follow-ups #344 (deploy-hosted "release not found") and #345 (budget start date default).
-- Date, PR: 2026-11-18, first PR #330 (CI green on 460c0d72, 34 checks pass). Item 9 follows in a second PR after PRP-139.
+- Date, PR: shipped 2026-11-19. PR #330 (items 1 to 8 and 10, merge 03ef3ae0, 2026-11-18) and PR #341 (item 9, merge f864cbda, 2026-11-19). Release prep PR #342, tag v0.1.0-rc.5 on 316818a5. Evidence PR #346 (590fac3b).
 - Deviations:
   - Two pinned tests outside the declared ownership were extended: `packages/core/tests/auth/scope/test_derivation.py` (constructor parameter set gained the four mapping arguments) and `frontend/tests/mock-api/features/registry.test.ts` (handler list gained `roleMapping`). The reviewer judged both additive.
   - `allow_dev_issuer = (env == "local")` is set in `services/api/neurosphere_api/authz/claim_audit.py` (`deriver_mapping_options`), not in the builder, because `runtime_api/test_no_dev_issuer.py` forbids the string in runtime files. The composed app still installs only the Entra validator.
@@ -350,8 +352,8 @@ All ten items are merged: PR #330 (items 1 to 8 and 10) and PR #341 (item 9). Re
   - The operator script adds only the `admin` app role and checks cloud and tenant on every subcommand.
   - `openapi.json` and `docs/reference/**` were regenerated in item 5, not item 10.
   - Visual baselines were not regenerated and did not need to be: `visual:check` passes with the new Identity panels (PRP-140 has nothing to redo).
-- Descoped items: none. Item 9 is deferred, not descoped.
-- OPEN gates: G-138 Commercial (operator runs `entra_admin_mapping.py apply` and `verify` with `NS_LIVE_APPROVED=1`, deploys with `entraRoleMappings`, signs in); G-138 Government (separate, never satisfied by Commercial). Neither ran. UNVERIFIED until then: that `az account get-access-token` can get a token for the API app; the Graph error text for the P1 licence refusal; the about-one-hour default token lifetime.
+- Descoped items: none.
+- OPEN gates: G-138 Commercial is PASS with one open point (hosted run above): the mapping as the only source of admin is not shown, because the operator also holds a stored admin grant that expires 2026-12-18. G-138 Government: OPEN, not run, never satisfied by the Commercial one. UNVERIFIED still: that `az account get-access-token` can get a token for the API app (`verify` was replaced by a browser check); the Graph error text for the P1 licence refusal; the about-one-hour default token lifetime.
 - Env vars for the operator: `NS_AUTH_ROLE_MAPPINGS` (JSON object, not a secret; unset = mapping off). `.env.example` could not be edited by an agent; add it by hand.
 - Follow-up issues (filed 2026-11-18):
   - #331 Resolve group overage through Microsoft Graph with a managed identity.
