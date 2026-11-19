@@ -1,6 +1,8 @@
 ---
 name: PRP-70-contracts-revision-restored-scope
-status: active
+status: shipped
+shipped: 2026-11-19
+pr: 350
 started: 2026-11-19
 priority: P0
 order: 60
@@ -269,14 +271,31 @@ Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), o
 | 4 | merged | worktree-agent-a67575ab3efac9132 | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest contracts + scripts + compliance_lib 3028 passed, ruff, pyright 0 errors, ts 185 passed; d53b1942, merge ebd4dcc5. Claims scan (tests/marketing/claims_rules.py) covers valid compliance examples only; MapNodeFacets has no required member; entity_ids uniqueItems added | 2026-11-19 |
 | 7 | merged | worktree-agent-ad56ef17f9424d2ad | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest 2999 passed, ruff, pyright 0 errors, ts 186 passed; a4bd3f6c, merge e484a6fb. Deviation: empty tool/service object is rejected by JSON Schema only (Pydantic drops minProperties); inline test, no invalid example file. Minor bump = 1.1.0 note in descriptions + new example, cost-record precedent | 2026-11-19 |
 | 5 | merged | prp-70-contracts-restored-scope | orchestrator | gate run on 58d250a4: consumer pytest line 3821 passed, ruff format, pyright, generate --check, contracts TS 186 passed, frontend typecheck, frontend vitest 1233 passed, validate_planning all exit 0; only consumer failure was openapi drift, fixed by regenerating services/api/openapi.json (no product code changed). ruff check . is clean on the tracked tree; 41 findings are all in stale untracked .claude/worktrees | 2026-11-19 |
-| 6 | in-progress | prp-70-contracts-restored-scope | orchestrator | review (opus, whole diff): APPROVE, no blockers, follow-ups in #349; ADR-0004 amended, baseline refreshed, allowlist emptied, changelog fragment, Tier-3 regenerated | 2026-11-19 |
+| 6 | merged | prp-70-contracts-restored-scope | orchestrator | review (opus, whole diff): APPROVE, no blockers, follow-ups in #349; ADR-0004 amended, baseline refreshed, allowlist emptied, changelog fragment, Tier-3 regenerated; close-out 8fb80703; PR 350 CI 34 pass, 1 skipped (real-stack passed on attempt 2, flake filed as #351); merge 66470e8f | 2026-11-19 |
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Provided names (for PRP-71..83 and PRP-61 authors):
+- Date and PR: 2026-11-19, PR #350 (merge `66470e8f`). Item merges on the integration branch: 1 `3dd87616`, 2 `b0cd84d6`, 3 `c9c26ca4`, 4 `ebd4dcc5`, 7 with `58d250a4`, close-out `8fb80703`. Review: one independent pass on the whole diff, APPROVE, no blocking findings.
+- Provided names (for PRP-71..83 and PRP-61 authors), all as written in "Interfaces provided":
+  - Catalog `$defs` in `catalog/v1/common.schema.json`: `tag`, `tags`, `capability`, `capabilities`, `environment`, `sensitivity_category`, `sensitivity_categories`, `residency_geography`, `semver`.
+  - Entity properties: `Agent` and `Tool` have `tags`, `capabilities`, `environment`; `AgentVersion` has `tags`, `capabilities`, `semver`; `Service`, `McpServer`, `ModelDeployment` have `tags`, `environment`; `GroundingSource` has `tags`, `environment`, `sensitivity_categories`, `residency_geography`.
+  - `EntityRevision` (`catalog/v1/entity_revision.schema.json`) and `EntityRevisionDiff` (`entity_revision_diff.schema.json`); nested `EntityRevisionChange`, `EntityRevisionCapabilityChanges`, `EntityRevisionTagChanges`; validator `check_revision_version_order`.
+  - `AgentMatchRequest`, `AgentMatchResponse` (with `AgentMatchCandidate`, `AgentMatchSignal`), `AgentMatchFeedbackRequest`, `AgentMatchFeedback` in `recommendations/v1/agent-match-*.schema.json`.
+  - `StructuredQuery` keyword fields `tag`, `capability`, `sensitivity_category`, `residency_region`, `residency_geography`; boolean field `contains_personal_data`. Applicability: `tag` on agent, agent_version, tool, service, mcp_server, model_deployment, grounding_source; `capability` on agent, agent_version, tool; `sensitivity_category`, `residency_geography`, `contains_personal_data` on grounding_source only; `residency_region` on every catalog entity except person.
+  - `MapNodeFacets` and `MapTopologyChange` in the new `map/v1` area (fragments, no `schema_version`).
+  - For PRP-128 and PRP-81 authors (fold F2): `framework_id` values `soc2_tsc`, `iso_27001_annex_a`, `gdpr`, `nist_800_53_r5`, `eu_ai_act`, `iso_42001`.
+  - For PRP-99, PRP-100 and PRP-71 authors (fold F1): `TelemetryEvent.tool` {`external_tool_id`, `canonical_tool_id`, `tool_name`} (`TelemetryToolIdentity`), `TelemetryEvent.service` {`external_service_id`, `canonical_service_id`} (`TelemetryServiceIdentity`), `TelemetryEvent.mcp_server_ref`; caps 256 for external ids, 128 for `tool_name`, 512 for canonical ids and `mcp_server_ref`; new examples carry `schema_version` 1.1.0.
+  - PRP-61 had already shipped the two finding kinds and their labels; this PRP did not touch `recommendation.schema.json` or `strings.ts`.
 - Deviations:
-- Descoped items:
-- OPEN gates:
+  - Rules enforced by JSON Schema only, not by the generated Pydantic models: `uniqueItems` (tags, capabilities, sensitivity categories), `minProperties` (empty telemetry `tool` or `service`), the `EntityRevision` body pin. Acceptance criteria 4 and the F1 criterion say "JSON Schema and Pydantic" for the duplicate-category and empty-object cases; that clause is unmet for Pydantic and recorded in ADR-0004. Three spec'd invalid cases are inline tests, not example files.
+  - `EntityRevisionDiff` change `before`/`after` accept a string, number, boolean, array or null, not an object; nested differences are deeper paths.
+  - `MapNodeFacets` has no required member; `MapTopologyChange.entity_ids` has `uniqueItems`.
+  - Each `tags`, `capabilities` and `sensitivity_categories` property carries its own `default: []` so the generated models default to an empty list.
+  - The compliance no-claims scan covers valid examples only.
+  - `validators.py` insertion for `check_revision_version_order` is not strictly append-only.
+  - The telemetry test no longer diffs against the v1 baseline (the refreshed baseline contains the new properties).
+  - Gate not run: the `verify-gates.ps1 -Mode full` wrapper; its component commands were run directly. `uv run ruff check .` is clean on the tracked tree only (stale untracked `.claude/worktrees/` copies produce 41 local findings).
+- Descoped items: none. The cut line was not used.
+- OPEN gates: none; no live gate applies to contract work.
 - Env vars for the operator: none expected.
-- Follow-up issues:
+- Follow-up issues: #349 (review follow-ups: null-only identity objects, `semver` `\d`, C1 controls in `task_text`, schema-only rules), #351 (real-stack flake seen once on PR #350).
 - Product check (can an operator use it without editing files): no, by design; contracts only.
