@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "control_id": "nist-800-53.ac-2",
+  "framework_id": "nist_800_53_r5",
+  "title": "Management of system accounts",
+  "source_url": "https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final",
+  "source_retrieved": "2026-11-19",
+  "framework_version": "r5"
+}

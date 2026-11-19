@@ -37,8 +37,20 @@
       "pattern": "^1\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
     },
     "framework_id": {
+      "description": "External framework a control belongs to. Open-ended: readers must tolerate unknown values.",
       "type": "string",
-      "enum": ["nist_ai_rmf", "sr_11_7", "hipaa_technical_safeguards", "omb_m_25_21"]
+      "enum": [
+        "nist_ai_rmf",
+        "sr_11_7",
+        "hipaa_technical_safeguards",
+        "omb_m_25_21",
+        "soc2_tsc",
+        "iso_27001_annex_a",
+        "gdpr",
+        "nist_800_53_r5",
+        "eu_ai_act",
+        "iso_42001"
+      ]
     }
   }
 }

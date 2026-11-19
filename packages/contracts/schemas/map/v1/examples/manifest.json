@@ -1,0 +1,44 @@
+{
+  "description": "Examples for this area. Each invalid example is a valid example with exactly one mutation (derived_from); expected_error names a JSON Schema error (instance_path as a JSON Pointer, validator keyword) that must appear in the validation error tree. Consumed by tests/contracts (PRP-01 item 7).",
+  "examples": [
+    {
+      "file": "valid/map-node-facets.degraded-agent.json",
+      "schema": "map-node-facets.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/map-node-facets.cluster-unknown.json",
+      "schema": "map-node-facets.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/map-node-facets.error-rate-too-high.json",
+      "schema": "map-node-facets.schema.json",
+      "valid": false,
+      "derived_from": "valid/map-node-facets.degraded-agent.json",
+      "expected_error": { "instance_path": "/error_rate", "keyword": "oneOf" },
+      "reason": "error_rate is a share between 0 and 1"
+    },
+    {
+      "file": "invalid/map-node-facets.unknown-health.json",
+      "schema": "map-node-facets.schema.json",
+      "valid": false,
+      "derived_from": "valid/map-node-facets.degraded-agent.json",
+      "expected_error": { "instance_path": "/health", "keyword": "enum" },
+      "reason": "health is one of ok, degraded, failing, unknown"
+    },
+    {
+      "file": "valid/map-topology-change.node-and-edge.json",
+      "schema": "map-topology-change.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/map-topology-change.empty-change-kinds.json",
+      "schema": "map-topology-change.schema.json",
+      "valid": false,
+      "derived_from": "valid/map-topology-change.node-and-edge.json",
+      "expected_error": { "instance_path": "/change_kinds", "keyword": "minItems" },
+      "reason": "a change notice names at least one change kind"
+    }
+  ]
+}
