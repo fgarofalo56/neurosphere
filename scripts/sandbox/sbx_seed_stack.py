@@ -88,6 +88,7 @@ for _path in (HERE, REPO):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
+import sbx_demo_settings as demo_settings  # noqa: E402
 import sbx_grant_operator as grants  # noqa: E402
 from azure.cosmos import CosmosClient as SyncCosmosClient  # noqa: E402
 from azure.cosmos.aio import CosmosClient  # noqa: E402
@@ -109,6 +110,7 @@ from neurosphere_core.actions.cosmos_store import (  # noqa: E402
     CosmosIntentStore,
 )
 from neurosphere_core.actions.recheck import PolicyPermissionRechecker  # noqa: E402
+from neurosphere_core.admin import AdminConfigRepository  # noqa: E402
 from neurosphere_core.audit import AuditRepository  # noqa: E402
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore  # noqa: E402
 from neurosphere_core.auth.jwt.config import normalize_tenant_id  # noqa: E402
@@ -240,7 +242,7 @@ ENTITY_FILES: Final = (
 DEMO_SHIFT_GRID_SECONDS: Final = 300
 RELATIONS_FILE: Final = "relations.ndjson"
 #: Per-kind detail categories only the demo-world summary adds (``entities`` stays the total).
-DEMO_CATEGORIES: Final = ("services", "tools", "mcp_server_entities", "edges")
+DEMO_CATEGORIES: Final = ("services", "tools", "mcp_server_entities", "edges", "settings")
 _KIND_CATEGORY: Final = {
     "service": "services",
     "tool": "tools",
@@ -623,6 +625,10 @@ class Backends:
     reports: ReportStore
     mcp: McpServerStore
     gateways: GatewayStore
+    #: Stored feature settings (demo-world only; ``None`` skips them). Same store and audit chain
+    #: the settings PUT route writes through.
+    admin_config: AdminConfigRepository | None = None
+    audit: AuditRepository | None = None
 
 
 class Tally:
@@ -1155,6 +1161,27 @@ async def seed_mcp_servers(
         tally.record("mcp_servers", created=1, existing=0)
 
 
+# -- stored feature settings -----------------------------------------------------------------
+
+
+async def seed_demo_settings(
+    backends: Backends, scope: IdentityScope, environ: Mapping[str, str], tally: Tally
+) -> None:
+    """demo-world only: the stored feature settings, through the settings PUT route's audited
+    write (``sbx_demo_settings``). The loopback guard has already run in ``resolve_config``."""
+    if backends.admin_config is None or backends.audit is None:
+        log("no settings store configured: the demo feature settings are not stored")
+        return
+    created, existing = await demo_settings.apply_demo_settings(
+        backends.admin_config,
+        backends.audit,
+        scope,
+        environ=environ,
+        cloud=scope.cloud,
+    )
+    tally.record("settings", created=created, existing=existing)
+
+
 # -- gateway registration --------------------------------------------------------------------
 
 #: SYNTHETIC APIM service id (a fixture subscription GUID; nothing resolves it).
@@ -1505,6 +1532,8 @@ async def run_seed(
     await seed_reports(backends, world, principals, tally)
     await seed_mcp_servers(backends, config, principals, tally)
     await seed_gateways(backends, config, world, principals, tally)
+    if demo:
+        await seed_demo_settings(backends, scope, env, tally)
 
     log(f"waiting up to {config.wait_seconds:.0f}s for the workers to land the events")
     after = await wait_for_landing(
@@ -1676,6 +1705,7 @@ def assemble_backends(
     """The Cosmos-backed stores over already-built clients (local and hosted share this)."""
     from neurosphere_api.reports import CosmosReportStore
     from neurosphere_core.actions.cosmos_store import CosmosExecutionControl as Control
+    from neurosphere_core.admin import CosmosAdminConfigRepository
     from neurosphere_core.catalog.repo.cosmos import CosmosCatalogRepository
     from neurosphere_core.evaluation.cosmos_store import CosmosEvaluationStore
     from neurosphere_core.gateway import CosmosGatewayStore
@@ -1727,6 +1757,8 @@ def assemble_backends(
         reports=CosmosReportStore.from_client(cosmos, database=config.database),
         mcp=CosmosMcpServerStore.from_client(cosmos, database=config.database),
         gateways=CosmosGatewayStore.from_client(cosmos, database=config.database),
+        admin_config=CosmosAdminConfigRepository.from_client(cosmos, database=config.database),
+        audit=audit,
     )
 
 
