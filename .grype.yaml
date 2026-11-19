@@ -24,6 +24,14 @@
 # reads the marker below and fails the python job after it. Re-check when Alpine publishes a
 # fixed openssl package (rebuild, then delete these eight rules and the marker), or on expiry.
 # expires: 2026-12-02 openssl-alpine
+#
+# nginx 1.30.6-r1 in the frontend image: CVE-2026-113425, CVE-2026-121810, CVE-2026-123007,
+# CVE-2026-123633 and CVE-2026-123634 (fixed in nginx 1.30.7), accepted 2026-11-18 by the owner
+# until 2026-11-26. Reason, scope and re-check trigger are in .trivyignore, which enforces the
+# same date for Trivy (exp:); the marker below enforces it here. Whether Grype reports these at
+# all was not observed (the image job stopped at the Trivy step); the rules are scoped to the
+# nginx package and are harmless if it does not.
+# expires: 2026-11-26 nginx-base
 ignore:
   - vulnerability: GHSA-fc5q-39xc-vjpf
     package:
@@ -55,3 +63,18 @@ ignore:
   - vulnerability: CVE-2026-88823
     package:
       name: libssl3
+  - vulnerability: CVE-2026-113425
+    package:
+      name: nginx
+  - vulnerability: CVE-2026-121810
+    package:
+      name: nginx
+  - vulnerability: CVE-2026-123007
+    package:
+      name: nginx
+  - vulnerability: CVE-2026-123633
+    package:
+      name: nginx
+  - vulnerability: CVE-2026-123634
+    package:
+      name: nginx
