@@ -47,6 +47,11 @@ Entra-based administrators (PRP-138, decision D20). Contracts are unchanged; no 
   exploitability in these images has not been assessed (#340).
 - **security:** time-boxed exception for the picomatch ReDoS advisory, dev tooling only, until
   2026-12-17 (#325).
+- **security:** the frontend image ships nginx 1.30.6 with five known High advisories
+  (CVE-2026-113425, CVE-2026-121810, CVE-2026-123007, CVE-2026-123633, CVE-2026-123634; fixed in
+  nginx 1.30.7). The pinned `nginx-unprivileged` base image had not published the fix. Accepted
+  by the owner until 2026-11-26; which of them apply to the shipped nginx configuration has not
+  been assessed. 0.1.0-rc.4 carries the same nginx version.
 
 ## [0.1.0-rc.4] - 2026-11-17
 

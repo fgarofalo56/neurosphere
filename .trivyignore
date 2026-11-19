@@ -6,3 +6,17 @@
 # not in any image. Re-check: when picomatch publishes a fix, bump it and delete this entry,
 # the pnpm auditConfig entry and the .grype.yaml rule.
 CVE-2026-112366 exp:2026-12-17
+#
+# nginx 1.30.6-r1 in the frontend image (five High advisories, fixed in nginx 1.30.7), accepted
+# 2026-11-18 by the owner until 2026-11-26: the pinned base image
+# nginxinc/nginx-unprivileged:stable-alpine had not published 1.30.7 yet (the official
+# nginx:stable-alpine had), and the base image pins nginx=1.30.6-r1 so `apk upgrade` cannot pull
+# the fix. Which of the five apply to frontend/nginx.conf (a reverse proxy to the API) has not
+# been assessed. Trivy ignores by advisory id, not by package. Re-check: when nginx-unprivileged
+# 1.30.7 is published, bump the digest in frontend/Dockerfile and delete these five entries and
+# the nginx-base rules and marker in .grype.yaml.
+CVE-2026-113425 exp:2026-11-26
+CVE-2026-121810 exp:2026-11-26
+CVE-2026-123007 exp:2026-11-26
+CVE-2026-123633 exp:2026-11-26
+CVE-2026-123634 exp:2026-11-26

@@ -36,3 +36,18 @@ def test_openssl_alpine_rules_carry_an_expiry_marker() -> None:
     slugs = {slug for _, slug in _markers()}
     # The rules and their marker come and go together.
     assert has_openssl_rule == ("openssl-alpine" in slugs)
+
+
+def test_nginx_base_rules_carry_an_expiry_marker() -> None:
+    text = (ROOT / ".grype.yaml").read_text(encoding="utf-8")
+    rules = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+    has_nginx_rule = any(line.strip() == "name: nginx" for line in rules)
+    slugs = {slug for _, slug in _markers()}
+    assert has_nginx_rule == ("nginx-base" in slugs)
+
+
+def test_trivyignore_entries_all_carry_an_expiry() -> None:
+    lines = (ROOT / ".trivyignore").read_text(encoding="utf-8").splitlines()
+    entries = [line for line in lines if line.strip() and not line.startswith("#")]
+    assert entries
+    assert all(" exp:" in line for line in entries), entries
