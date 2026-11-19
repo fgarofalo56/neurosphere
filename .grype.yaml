@@ -31,6 +31,8 @@
 # same date for Trivy (exp:); the marker below enforces it here. Whether Grype reports these at
 # all was not observed (the image job stopped at the Trivy step); the rules are scoped to the
 # nginx package and are harmless if it does not.
+# CVE-2026-118899 (same package and fix version) was added 2026-11-19 under the same marker; its
+# reason is in .trivyignore.
 # expires: 2026-11-26 nginx-base
 ignore:
   - vulnerability: GHSA-fc5q-39xc-vjpf
@@ -76,5 +78,8 @@ ignore:
     package:
       name: nginx
   - vulnerability: CVE-2026-123634
+    package:
+      name: nginx
+  - vulnerability: CVE-2026-118899
     package:
       name: nginx
