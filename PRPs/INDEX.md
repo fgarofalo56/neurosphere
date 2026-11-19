@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-138-entra-admin-role-mapping-and-first-admin](active/PRP-138-entra-admin-role-mapping-and-first-admin.md) | P0 | 10/10 (100%) | merged 10 | opus / opus | required |
+_none_
 
 ## Backlog
 
@@ -96,6 +94,7 @@ _none_
 
 | PRP | Shipped | PR |
 |---|---|---|
+| [PRP-138-entra-admin-role-mapping-and-first-admin](shipped/PRP-138-entra-admin-role-mapping-and-first-admin.md) | 2026-11-19 | #330 |
 | [PRP-50-connector-sdk-and-data-path-follow-ups](shipped/PRP-50-connector-sdk-and-data-path-follow-ups.md) | 2026-11-16 | #300 |
 | [PRP-51-composition-and-api-hygiene](shipped/PRP-51-composition-and-api-hygiene.md) | 2026-11-16 | #319 |
 | [PRP-52-ci-and-infrastructure-hardening](shipped/PRP-52-ci-and-infrastructure-hardening.md) | 2026-11-16 | #302 |
