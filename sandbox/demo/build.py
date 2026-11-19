@@ -24,6 +24,7 @@ from typing import Any
 from neurosphere_contracts.catalog.v1 import (
     agent,
     agent_version,
+    delegates_to,
     depends_on,
     domain,
     grounded_by,
@@ -82,6 +83,7 @@ _RELATION_MODELS: dict[str, Any] = {
     "writes": writes.WritesRelation,
     "depends_on": depends_on.DependsOnRelation,
     "grounded_by": grounded_by.GroundedByRelation,
+    "delegates_to": delegates_to.DelegatesToRelation,
 }
 
 
@@ -119,6 +121,8 @@ class DemoWorld:
     outage_service_id: str = ""
     downstream_agent_ids: tuple[str, ...] = ()
     unrelated_agent_ids: tuple[str, ...] = ()
+    delegations: tuple[tuple[str, str], ...] = ()
+    """Curated (parent agent id, child agent id) hand-offs, sorted; also `delegates_to` edges."""
 
     def cid(self, type_: str, slug: str) -> str:
         return canonical_id(self.cloud, self.customer, CATALOG_SOURCE, type_, slug)
@@ -188,6 +192,7 @@ class _Builder:
         self._relations()
         self._undeclared()
         self._scenario()
+        self._delegations()
         return self.w
 
     def _domains(self) -> None:
@@ -459,6 +464,32 @@ class _Builder:
         self.w.downstream_agent_ids = tuple(down)
         self.w.unrelated_agent_ids = tuple(sorted(set(agent_ids) - set(down)))
 
+    def _delegations(self) -> None:
+        """Load the curated hand-offs, enforce the incident-integrity rule, emit the edges.
+
+        Rule: a parent outside the downstream set must never delegate to a downstream agent,
+        or the incident would spread to an agent that does not depend on the outage service.
+        """
+        agents = {a["id"] for a in self.w.agents}
+        down = set(self.w.downstream_agent_ids)
+        pairs: set[tuple[str, str]] = set()
+        for d in _load("scenario.json")["delegations"]:
+            parent = self.w.cid("agent", d["parent"])
+            child = self.w.cid("agent", d["child"])
+            if parent not in agents or child not in agents:
+                raise ValueError(f"delegation references an unknown agent: {d}")
+            if parent == child:
+                raise ValueError(f"agent cannot delegate to itself: {d}")
+            if parent not in down and child in down:
+                raise ValueError(f"delegation would spread the incident to a new agent: {d}")
+            if (parent, child) in pairs:
+                raise ValueError(f"duplicate delegation: {d}")
+            pairs.add((parent, child))
+            self.w.relations.append(
+                self._edge("delegates_to", d["parent"], d["child"], parent, child)
+            )
+        self.w.delegations = tuple(sorted(pairs))
+
 
 def build_demo_world(
     cloud: str,
@@ -492,6 +523,10 @@ def demo_manifest(world: DemoWorld) -> Doc:
         ],
         "outage_service_id": world.outage_service_id,
         "downstream_agent_ids": list(world.downstream_agent_ids),
+        "delegations": [
+            {"parent_agent_id": parent, "child_agent_id": child}
+            for parent, child in world.delegations
+        ],
     }
 
 

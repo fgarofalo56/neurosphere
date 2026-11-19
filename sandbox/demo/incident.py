@@ -62,6 +62,9 @@ P_INCIDENT_FAIL = 0.9
 INCIDENT_LATENCY_FACTOR = 8
 HEALTH_DEGRADED_ERROR_RATE = 0.05  # mirrors neurosphere_core.aggregates.subject
 HEALTH_FAILING_ERROR_RATE = 0.25
+P_DELEGATE = 0.5
+"""Share of a parent's traces that hand off to each of its paired children."""
+MAX_DELEGATION_DEPTH = 2
 _TRACE_TAIL_MS = 40_000  # a trace starts at least this long before the end of its phase
 
 # Synthetic price/latency per demo model name (USD per 1000 tokens; not real list prices).
@@ -82,6 +85,16 @@ class _Actor:
     tool_ids: tuple[str, ...]
     service_ids: tuple[str, ...]
     source_ids: tuple[str, ...]
+
+
+@dataclass(slots=True)
+class _Trace:
+    """Mutable state of one trace: its id, span counter and spans so far."""
+
+    trace: str
+    incident: bool
+    seq: int = 0
+    evs: list[Doc] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -148,6 +161,11 @@ class _Builder:
         self.events: list[Doc] = []
         self.costs: list[Doc] = []
         self._actors = self._build_actors()
+        self.actors = {a.agent_id: a for a in self._actors}
+        children: dict[str, list[str]] = {}
+        for parent, child in world.delegations:
+            children.setdefault(parent, []).append(child)
+        self.children = {p: tuple(sorted(c)) for p, c in children.items()}
 
     def _build_actors(self) -> list[_Actor]:
         rel: dict[tuple[str, str], list[str]] = {}
@@ -220,49 +238,80 @@ class _Builder:
 
     # ---- one trace -------------------------------------------------------------------
     def _trace(self, actor: _Actor, n: int, start: int, phase: str) -> None:
-        w = self.w
-        rng = rng_for(self.seed, "demo-trace", actor.agent_id, n)
         trace = digest_hex(f"{self.seed}:demo-tid:{actor.agent_id}:{n}", 16)
-        in_incident = phase == "incident" and actor.agent_id in self.downstream
+        ctx = _Trace(trace=trace, incident=phase == "incident")
+        root = self._span(ctx, actor, "request", None, start, 0)
+        end, outcome = self._run(ctx, actor, n, root["span_id"], start + 2, 0)
+        root["duration_ms"] = end - start + 1
+        root["outcome"] = outcome
+        for ev in ctx.evs:
+            self.events.append(
+                TelemetryEvent.model_validate(ev).model_dump(mode="json", exclude_none=True)
+            )
+
+    def _span(
+        self,
+        ctx: _Trace,
+        actor: _Actor,
+        kind: str,
+        parent: str | None,
+        t: int,
+        dur: int,
+        outcome: str = "success",
+        **extra: Any,
+    ) -> Doc:
+        ctx.seq += 1
+        trace = ctx.trace
+        ev: Doc = {
+            "schema_version": SCHEMA_VERSION,
+            "event_id": f"evt-{trace[:16]}-{ctx.seq:02d}",
+            "event_time": fmt_ts(t),
+            "cloud": self.w.cloud,
+            "customer_id": self.w.customer,
+            "domain_id": actor.domain_id,
+            "source_id": "sandbox-gateway",
+            "external_agent_id": actor.external_id,
+            "canonical_agent_id": actor.agent_id,
+            "request_id": "req-" + trace[:12],
+            "trace_id": trace,
+            "span_id": digest_hex(f"{trace}:{ctx.seq}", 8),
+            "span_kind": kind,
+            "environment": "sandbox",
+            "outcome": outcome,
+            "duration_ms": max(dur, 0),
+            "sampling": {"rate": 1.0, "method": "none"},
+        }
+        if parent is not None:
+            ev["parent_span_id"] = parent
+        ev.update(extra)
+        ctx.evs.append(ev)
+        return ev
+
+    def _run(
+        self,
+        ctx: _Trace,
+        actor: _Actor,
+        n: int,
+        parent_span: str,
+        start: int,
+        depth: int,
+        lineage: str = "",
+    ) -> tuple[int, str]:
+        """One agent_run (with its delegated children); returns (end time, outcome)."""
+        w = self.w
+        rng = rng_for(self.seed, "demo-trace", actor.agent_id, n, lineage)
+        in_incident = ctx.incident and actor.agent_id in self.downstream
         outage = w.outage_service_id
         spec = self.models[actor.model_id]
-        seq = 0
-        evs: list[Doc] = []
 
         def span(
             kind: str, parent: str | None, t: int, dur: int, outcome: str = "success", **extra: Any
         ) -> Doc:
-            nonlocal seq
-            seq += 1
-            ev: Doc = {
-                "schema_version": SCHEMA_VERSION,
-                "event_id": f"evt-{trace[:16]}-{seq:02d}",
-                "event_time": fmt_ts(t),
-                "cloud": w.cloud,
-                "customer_id": w.customer,
-                "domain_id": actor.domain_id,
-                "source_id": "sandbox-gateway",
-                "external_agent_id": actor.external_id,
-                "canonical_agent_id": actor.agent_id,
-                "request_id": "req-" + trace[:12],
-                "trace_id": trace,
-                "span_id": digest_hex(f"{trace}:{seq}", 8),
-                "span_kind": kind,
-                "environment": "sandbox",
-                "outcome": outcome,
-                "duration_ms": max(dur, 0),
-                "sampling": {"rate": 1.0, "method": "none"},
-            }
-            if parent is not None:
-                ev["parent_span_id"] = parent
-            ev.update(extra)
-            evs.append(ev)
-            return ev
+            return self._span(ctx, actor, kind, parent, t, dur, outcome, **extra)
 
-        root = span("request", None, start, 0)
-        run = span("agent_run", root["span_id"], start + 2, 0)
+        run = span("agent_run", parent_span, start, 0)
         run_id: str = run["span_id"]
-        cur = start + 5
+        cur = start + 3
         failed = False
 
         for src in actor.source_ids:
@@ -336,19 +385,35 @@ class _Builder:
             span("tool_call", run_id, cur, d, outcome, service=_service_identity(sid))
             cur += d
 
+        if depth < MAX_DELEGATION_DEPTH:
+            # Own RNG stream: delegation never shifts the draws above. A child's failure does not
+            # fail the parent, so the incident set is decided by the outage service alone.
+            drng = rng_for(self.seed, "demo-deleg", actor.agent_id, n, lineage)
+            for child_id in self.children.get(actor.agent_id, ()):
+                if drng.random() >= P_DELEGATE:
+                    continue
+                deleg = span("delegation", run_id, cur, 0)
+                end, child_outcome = self._run(
+                    ctx,
+                    self.actors[child_id],
+                    n,
+                    deleg["span_id"],
+                    cur + 2,
+                    depth + 1,
+                    f"{lineage}/{actor.agent_id}",
+                )
+                deleg["duration_ms"] = end - cur + 1
+                deleg["outcome"] = child_outcome
+                cur = end + 1
+
         run_outcome = "success"
         if failed:
             span("error", run_id, cur, 2, "error")
             cur += 2
             run_outcome = "error"
-        run["duration_ms"] = cur - start - 2 + 1
+        run["duration_ms"] = cur - start + 1
         run["outcome"] = run_outcome
-        root["duration_ms"] = cur - start + 2
-        root["outcome"] = run_outcome
-        for ev in evs:
-            self.events.append(
-                TelemetryEvent.model_validate(ev).model_dump(mode="json", exclude_none=True)
-            )
+        return cur + 1, run_outcome
 
     @staticmethod
     def _outage_effect(rng: random.Random, duration: int) -> tuple[int, str]:

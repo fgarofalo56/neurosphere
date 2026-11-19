@@ -91,6 +91,41 @@ def test_downstream_set_matches_manifest_and_world(world: DemoWorld, tele: DemoT
     )
 
 
+def test_delegation_spans_cover_every_pair_with_correct_linkage(
+    world: DemoWorld, tele: DemoTelemetry
+) -> None:
+    by_span = {(e["trace_id"], e["span_id"]): e for e in tele.events}
+    seen: set[tuple[str, str]] = set()
+    for e in tele.events:
+        if e["span_kind"] != "delegation":
+            continue
+        parent_run = by_span[(e["trace_id"], e["parent_span_id"])]
+        assert parent_run["span_kind"] == "agent_run"
+        assert parent_run["canonical_agent_id"] == e["canonical_agent_id"]
+        children = [
+            c
+            for c in tele.events
+            if c["trace_id"] == e["trace_id"] and c.get("parent_span_id") == e["span_id"]
+        ]
+        assert len(children) == 1
+        child = children[0]
+        assert child["span_kind"] == "agent_run"
+        assert (e["canonical_agent_id"], child["canonical_agent_id"]) in world.delegations
+        assert child["outcome"] == e["outcome"]
+        seen.add((e["canonical_agent_id"], child["canonical_agent_id"]))
+    assert seen == set(world.delegations)
+
+
+def test_delegation_never_spreads_the_incident(world: DemoWorld, tele: DemoTelemetry) -> None:
+    start, end = _window(tele.manifest)
+    down = set(world.downstream_agent_ids)
+    for e in tele.events:
+        if start <= e["event_time"] < end and e["span_kind"] == "agent_run":
+            if e["canonical_agent_id"] not in down:
+                assert e["outcome"] == "success"
+    assert len(tele.events) < 12_000
+
+
 def test_baseline_hour_is_healthy_for_everyone(tele: DemoTelemetry) -> None:
     b = tele.manifest["baseline_window"]
     rates = _rates(tele.events, b["start"], b["end"])

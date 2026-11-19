@@ -25,6 +25,30 @@ Per-agent relationships (`owned_by`, `uses_model`, `invokes` tools, `depends_on`
 `depends_on` in `data/tools.json`. An agent that invokes a tool must also list the tool's
 services (a test enforces this, so the downstream set is unambiguous).
 
+## Delegation pairs
+
+Parent agent slug to child agent slug (ids are `<cloud>:synthco:sandbox:agent:<slug>`):
+
+| Parent | Child | Scope |
+|---|---|---|
+| `payment-run-coordinator` | `card-settlement-reconciler` | finance |
+| `payment-approval-assistant` | `journal-entry-agent` | finance |
+| `billing-dispute-resolver` | `payment-approval-assistant` | cross-domain (support to finance) |
+| `billing-dispute-resolver` | `customer-reply-drafter` | support |
+| `expense-reimbursement-assistant` | `expense-policy-advisor` | cross-domain (HR to finance) |
+| `month-end-close-assistant` | `journal-entry-agent` | finance |
+| `treasury-cash-forecaster` | `budget-variance-analyst` | finance |
+| `support-triage-assistant` | `ticket-summarizer` | support |
+| `support-triage-assistant` | `escalation-router` | support |
+| `customer-reply-drafter` | `knowledge-answer-assistant` | support |
+| `alert-triage-assistant` | `incident-case-builder` | security-operations |
+| `alert-triage-assistant` | `threat-intel-enricher` | security-operations |
+
+Hard rule (incident integrity): no parent outside the downstream set may delegate to a
+downstream agent, so a delegation can never make an agent fail that does not depend on
+`payments-gateway`. `build_demo_world` raises on a violation, an unknown agent, a
+self-delegation or a duplicate; tests also check there are no cycles.
+
 ## Domains and teams
 
 | Domain slug | Teams (owner slug) |
@@ -148,6 +172,11 @@ write_incident_manifest(tele.manifest, out_dir / "incident-manifest.json")
   the tool's service (`service.*`) when it depends on one, and `mcp_server_ref` when the seeded
   tool has one. Direct service calls are `tool_call` spans with only `service.*`. All other
   spans leave these null.
-- No delegation spans: the curated data has no agent-to-agent edges.
+- Delegation: about half of a parent's traces hand off to each paired child (a `delegation`
+  span under the parent's `agent_run`, then the child's `agent_run` parented to it; structure
+  as in `sandbox/traces.py`). A child failure never fails its parent. Pairs are curated in
+  `data/scenario.json` (`delegations`), exposed as `world.delegations` and in the demo
+  manifest, and emitted as `delegates_to` catalog edges. Telemetry-only agents do not delegate
+  (a catalog edge cannot name them). See "Delegation pairs" below.
 - `incident-manifest.json`: service id and name, downstream/unrelated/undeclared agent ids,
   `window`, `baseline_window`, `effects` and `expected_health_transitions`.
