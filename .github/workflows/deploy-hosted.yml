@@ -167,6 +167,7 @@ jobs:
           EVAL_DOMAIN_ID: ${{ vars.NS_HOSTED_EVAL_DOMAIN_ID }}
           EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
           EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
+          ENTRA_ADMIN_APP_ROLE: ${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}
         run: |
           set -euo pipefail
           args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
@@ -201,6 +202,17 @@ jobs:
           add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
           add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
           add --evaluation-pilot-dataset-ids "$EVAL_DATASET_IDS"
+          # PRP-138: when the variable NS_HOSTED_ENTRA_ADMIN_APP_ROLE names an Entra app role
+          # value (for example admin), holders of that app role are NeuroSphere administrators.
+          # Unset (default) leaves the mapping off. The file stays in the runner temp directory.
+          if [ -n "$ENTRA_ADMIN_APP_ROLE" ]; then
+            jq -n --arg tenant "$ENTRA_TENANT_ID" --arg audience "$ENTRA_CLIENT_ID" \
+              --arg value "$ENTRA_ADMIN_APP_ROLE" \
+              '{tenant_id: $tenant, audience: $audience, entries: [{id: "ns-admins",
+                claim: "roles", value: $value, role: "admin", domains: "all",
+                customer_control: true}]}' > "$RUNNER_TEMP/role-mappings.json"
+            args+=(--entra-role-mappings-file "$RUNNER_TEMP/role-mappings.json")
+          fi
           if [ "$RECOMMENDATIONS" = "true" ]; then
             args+=(--recommendations)
           fi
@@ -318,6 +330,7 @@ jobs:
           EVAL_DOMAIN_ID: ${{ vars.NS_HOSTED_EVAL_DOMAIN_ID }}
           EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
           EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
+          ENTRA_ADMIN_APP_ROLE: ${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}
         run: |
           set -euo pipefail
           args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
@@ -352,6 +365,17 @@ jobs:
           add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
           add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
           add --evaluation-pilot-dataset-ids "$EVAL_DATASET_IDS"
+          # PRP-138: when the variable NS_HOSTED_ENTRA_ADMIN_APP_ROLE names an Entra app role
+          # value (for example admin), holders of that app role are NeuroSphere administrators.
+          # Unset (default) leaves the mapping off. The file stays in the runner temp directory.
+          if [ -n "$ENTRA_ADMIN_APP_ROLE" ]; then
+            jq -n --arg tenant "$ENTRA_TENANT_ID" --arg audience "$ENTRA_CLIENT_ID" \
+              --arg value "$ENTRA_ADMIN_APP_ROLE" \
+              '{tenant_id: $tenant, audience: $audience, entries: [{id: "ns-admins",
+                claim: "roles", value: $value, role: "admin", domains: "all",
+                customer_control: true}]}' > "$RUNNER_TEMP/role-mappings.json"
+            args+=(--entra-role-mappings-file "$RUNNER_TEMP/role-mappings.json")
+          fi
           if [ "$RECOMMENDATIONS" = "true" ]; then
             args+=(--recommendations)
           fi

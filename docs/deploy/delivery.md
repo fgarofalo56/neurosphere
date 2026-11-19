@@ -91,7 +91,11 @@ Optional environment **variables** (non-identifying; unset means the `hosted_dem
 `NS_HOSTED_RESOURCE_GROUP`, `NS_HOSTED_LOCATION`, `NS_HOSTED_PREFIX`, `NS_HOSTED_SKU`,
 `NS_HOSTED_COPILOT_MODE`, `NS_HOSTED_COPILOT_DEPLOYMENT`, `NS_HOSTED_CONNECTOR_ROLES`,
 `NS_HOSTED_RECOMMENDATIONS` (`true` to enable), `NS_HOSTED_EVAL_DOMAIN_ID`,
-`NS_HOSTED_EVAL_SUBJECT_ID`, `NS_HOSTED_EVAL_DATASET_IDS`.
+`NS_HOSTED_EVAL_SUBJECT_ID`, `NS_HOSTED_EVAL_DATASET_IDS`, `NS_HOSTED_ENTRA_ADMIN_APP_ROLE`
+(PRP-138: an Entra app role value such as `admin`; when set, the plan and apply jobs build the
+role mapping from the tenant and client id secrets and pass `--entra-role-mappings-file`, so
+holders of that app role are NeuroSphere administrators; unset leaves the mapping off and removes
+`NS_AUTH_ROLE_MAPPINGS` from the API on the next deploy; see `docs/runbooks/entra-role-mapping.md`).
 
 Set the variables and secrets to what the environment was last deployed with by hand. If a value is
 missing, the plan will show the difference as a change and you will see it before approving.
