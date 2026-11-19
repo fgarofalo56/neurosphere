@@ -114,3 +114,40 @@ Tools: `payment-initiation`, `ledger-lookup`, `invoice-parser`, `journal-entry-p
 
 `EntityRevision` history is not seeded here (the revision store is PRP-76); version history is
 carried by the two `AgentVersion` documents per agent above.
+
+## Telemetry and the scripted incident (`sandbox/demo/incident.py`)
+
+Telemetry and cost for the curated world, built directly from a `DemoWorld` with the contract
+models (the generic generator world cannot take curated entities). Deterministic for a seed,
+epoch and volume; every event validates as `TelemetryEvent`, every cost row as `CostRecord`.
+
+```python
+from sandbox.demo.build import build_demo_world
+from sandbox.demo.incident import (
+    build_demo_telemetry,
+    write_demo_telemetry,
+    incident_manifest,
+    write_incident_manifest,
+)
+
+world = build_demo_world("commercial")
+tele = build_demo_telemetry(world, seed=1)  # DemoTelemetry(events, costs, manifest)
+write_demo_telemetry(tele, out_dir)  # telemetry.ndjson + cost.ndjson (generator layout)
+write_incident_manifest(tele.manifest, out_dir / "incident-manifest.json")
+```
+
+- Volume parameters: `traces_per_agent_day` (2), `baseline_traces` (4, the hour before the
+  incident), `incident_traces` (6, the incident hour). Defaults give about 6k events for the 36
+  agents (32 curated plus the 4 telemetry-only ones) over 7 days.
+- The incident window is the last hour of the seeded window (`epoch + days`), so it stays
+  recent after the seed rebases the epoch. In it, spans bound to `payments-gateway` fail
+  (`error`/`timeout`) with 8x latency, and only its five downstream agents fail (hourly error
+  rate at or above 0.25, health `failing`); the other agents stay under 0.05. The baseline hour
+  before is healthy for all.
+- Tool-call spans carry `tool.external_tool_id`, `tool.canonical_tool_id`, `tool.tool_name`,
+  the tool's service (`service.*`) when it depends on one, and `mcp_server_ref` when the seeded
+  tool has one. Direct service calls are `tool_call` spans with only `service.*`. All other
+  spans leave these null.
+- No delegation spans: the curated data has no agent-to-agent edges.
+- `incident-manifest.json`: service id and name, downstream/unrelated/undeclared agent ids,
+  `window`, `baseline_window`, `effects` and `expected_health_transitions`.
