@@ -25,6 +25,30 @@ Per-agent relationships (`owned_by`, `uses_model`, `invokes` tools, `depends_on`
 `depends_on` in `data/tools.json`. An agent that invokes a tool must also list the tool's
 services (a test enforces this, so the downstream set is unambiguous).
 
+## Delegation pairs
+
+Parent agent slug to child agent slug (ids are `<cloud>:synthco:sandbox:agent:<slug>`):
+
+| Parent | Child | Scope |
+|---|---|---|
+| `payment-run-coordinator` | `card-settlement-reconciler` | finance |
+| `payment-approval-assistant` | `journal-entry-agent` | finance |
+| `billing-dispute-resolver` | `payment-approval-assistant` | cross-domain (support to finance) |
+| `billing-dispute-resolver` | `customer-reply-drafter` | support |
+| `expense-reimbursement-assistant` | `expense-policy-advisor` | cross-domain (HR to finance) |
+| `month-end-close-assistant` | `journal-entry-agent` | finance |
+| `treasury-cash-forecaster` | `budget-variance-analyst` | finance |
+| `support-triage-assistant` | `ticket-summarizer` | support |
+| `support-triage-assistant` | `escalation-router` | support |
+| `customer-reply-drafter` | `knowledge-answer-assistant` | support |
+| `alert-triage-assistant` | `incident-case-builder` | security-operations |
+| `alert-triage-assistant` | `threat-intel-enricher` | security-operations |
+
+Hard rule (incident integrity): no parent outside the downstream set may delegate to a
+downstream agent, so a delegation can never make an agent fail that does not depend on
+`payments-gateway`. `build_demo_world` raises on a violation, an unknown agent, a
+self-delegation or a duplicate; tests also check there are no cycles.
+
 ## Domains and teams
 
 | Domain slug | Teams (owner slug) |
@@ -114,3 +138,45 @@ Tools: `payment-initiation`, `ledger-lookup`, `invoice-parser`, `journal-entry-p
 
 `EntityRevision` history is not seeded here (the revision store is PRP-76); version history is
 carried by the two `AgentVersion` documents per agent above.
+
+## Telemetry and the scripted incident (`sandbox/demo/incident.py`)
+
+Telemetry and cost for the curated world, built directly from a `DemoWorld` with the contract
+models (the generic generator world cannot take curated entities). Deterministic for a seed,
+epoch and volume; every event validates as `TelemetryEvent`, every cost row as `CostRecord`.
+
+```python
+from sandbox.demo.build import build_demo_world
+from sandbox.demo.incident import (
+    build_demo_telemetry,
+    write_demo_telemetry,
+    incident_manifest,
+    write_incident_manifest,
+)
+
+world = build_demo_world("commercial")
+tele = build_demo_telemetry(world, seed=1)  # DemoTelemetry(events, costs, manifest)
+write_demo_telemetry(tele, out_dir)  # telemetry.ndjson + cost.ndjson (generator layout)
+write_incident_manifest(tele.manifest, out_dir / "incident-manifest.json")
+```
+
+- Volume parameters: `traces_per_agent_day` (2), `baseline_traces` (4, the hour before the
+  incident), `incident_traces` (6, the incident hour). Defaults give about 6k events for the 36
+  agents (32 curated plus the 4 telemetry-only ones) over 7 days.
+- The incident window is the last hour of the seeded window (`epoch + days`), so it stays
+  recent after the seed rebases the epoch. In it, spans bound to `payments-gateway` fail
+  (`error`/`timeout`) with 8x latency, and only its five downstream agents fail (hourly error
+  rate at or above 0.25, health `failing`); the other agents stay under 0.05. The baseline hour
+  before is healthy for all.
+- Tool-call spans carry `tool.external_tool_id`, `tool.canonical_tool_id`, `tool.tool_name`,
+  the tool's service (`service.*`) when it depends on one, and `mcp_server_ref` when the seeded
+  tool has one. Direct service calls are `tool_call` spans with only `service.*`. All other
+  spans leave these null.
+- Delegation: about half of a parent's traces hand off to each paired child (a `delegation`
+  span under the parent's `agent_run`, then the child's `agent_run` parented to it; structure
+  as in `sandbox/traces.py`). A child failure never fails its parent. Pairs are curated in
+  `data/scenario.json` (`delegations`), exposed as `world.delegations` and in the demo
+  manifest, and emitted as `delegates_to` catalog edges. Telemetry-only agents do not delegate
+  (a catalog edge cannot name them). See "Delegation pairs" below.
+- `incident-manifest.json`: service id and name, downstream/unrelated/undeclared agent ids,
+  `window`, `baseline_window`, `effects` and `expected_health_transitions`.

@@ -11,6 +11,7 @@ import pytest
 from neurosphere_contracts.catalog.v1 import (
     agent,
     agent_version,
+    delegates_to,
     depends_on,
     domain,
     grounded_by,
@@ -53,6 +54,7 @@ RELATION_MODELS: dict[str, type[BaseModel]] = {
     "writes": writes.WritesRelation,
     "depends_on": depends_on.DependsOnRelation,
     "grounded_by": grounded_by.GroundedByRelation,
+    "delegates_to": delegates_to.DelegatesToRelation,
 }
 SEMVER = re.compile(r"\d+\.\d+\.\d+")
 
@@ -146,6 +148,64 @@ def test_edge_endpoints_exist_and_never_target_telemetry_only_agents(world: Demo
         assert r["target_id"] in entities, r["id"]
         assert r["source_id"] not in shadow and r["target_id"] not in shadow
     assert {r["relation_type"] for r in world.relations} == set(RELATION_MODELS)
+
+
+def test_delegation_pairs_are_valid_and_keep_the_incident_contained(world: DemoWorld) -> None:
+    agents = {a["id"] for a in world.agents}
+    down = set(world.downstream_agent_ids)
+    pairs = world.delegations
+    assert 8 <= len(pairs) <= 12
+    assert len(set(pairs)) == len(pairs)
+    domain_of = {a["id"]: a["domain_id"] for a in world.agents}
+    assert any(domain_of[p] != domain_of[c] for p, c in pairs)
+    for parent, child in pairs:
+        assert parent in agents and child in agents
+        assert parent != child
+        assert not (parent not in down and child in down), (parent, child)
+    # the catalog carries exactly these pairs as delegates_to edges
+    edges = {
+        (r["source_id"], r["target_id"])
+        for r in world.relations
+        if r["relation_type"] == "delegates_to"
+    }
+    assert edges == set(pairs)
+    # no cycles (Kahn)
+    indeg: dict[str, int] = defaultdict(int)
+    out: dict[str, list[str]] = defaultdict(list)
+    for parent, child in pairs:
+        out[parent].append(child)
+        indeg[child] += 1
+    ready = [a for a in agents if indeg[a] == 0]
+    seen = 0
+    while ready:
+        node = ready.pop()
+        seen += 1
+        for nxt in out[node]:
+            indeg[nxt] -= 1
+            if indeg[nxt] == 0:
+                ready.append(nxt)
+    assert seen == len(agents)
+
+
+def test_delegation_validation_rejects_incident_spread(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sandbox.demo.build as build
+
+    real = build._load
+
+    def bad(name: str) -> Any:
+        data = real(name)
+        if name == "scenario.json":
+            data = {
+                **data,
+                "delegations": [
+                    {"parent": "journal-entry-agent", "child": "payment-run-coordinator"}
+                ],
+            }
+        return data
+
+    monkeypatch.setattr(build, "_load", bad)
+    with pytest.raises(ValueError, match="spread the incident"):
+        build_demo_world("commercial")
 
 
 def test_telemetry_only_agents_absent_from_catalog(world: DemoWorld, tmp_path: Path) -> None:
