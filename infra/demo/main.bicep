@@ -286,7 +286,10 @@ var roleMappingSettings = empty(entraRoleMappings)
   ? {}
   : { NS_AUTH_ROLE_MAPPINGS: string(entraRoleMappings) }
 
-var apiSettingsWithWriteTargets = union(apiSettings, writeTargetSettings, roleMappingSettings)
+var apiSettingsWithWriteTargets = union(
+  union(apiSettings, writeTargetSettings),
+  roleMappingSettings
+)
 
 
 // NS_WORKER_OBJECT_ID is the workers' own system-assigned principal id, which exists only after
