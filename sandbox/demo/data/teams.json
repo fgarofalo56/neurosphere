@@ -1,0 +1,12 @@
+[
+  {"slug": "treasury-operations", "name": "Treasury Operations", "domain": "finance"},
+  {"slug": "accounts-payable-automation", "name": "Accounts Payable Automation", "domain": "finance"},
+  {"slug": "general-accounting", "name": "General Accounting", "domain": "finance"},
+  {"slug": "support-platform", "name": "Customer Support Platform", "domain": "support"},
+  {"slug": "support-quality-engineering", "name": "Support Quality Engineering", "domain": "support"},
+  {"slug": "people-operations", "name": "People Operations", "domain": "human-resources"},
+  {"slug": "talent-acquisition-systems", "name": "Talent Acquisition Systems", "domain": "human-resources"},
+  {"slug": "security-operations-center", "name": "Security Operations Center", "domain": "security-operations"},
+  {"slug": "identity-protection", "name": "Identity Protection Team", "domain": "security-operations"},
+  {"slug": "platform-engineering", "name": "Platform Engineering", "domain": "security-operations"}
+]
