@@ -1,0 +1,15 @@
+{
+  "entity_type": null,
+  "environment": "unknown",
+  "cloud": null,
+  "tags": [],
+  "lifecycle_status": null,
+  "discovery": "unknown",
+  "health": "unknown",
+  "error_rate": null,
+  "error_count": null,
+  "request_count": null,
+  "last_error_at": null,
+  "sensitivity_categories": [],
+  "residency_geography": null
+}

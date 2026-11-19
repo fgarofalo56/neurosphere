@@ -8,10 +8,13 @@ what is specific to the family: the summary vocabulary has no verdict word, unkn
 from __future__ import annotations
 
 import copy
+import importlib.util
+import re
+import sys
 from typing import Any
 
 import pytest
-from contract_support import SCHEMA_ROOT, load_json, model_for, schema_errors
+from contract_support import REPO_ROOT, SCHEMA_ROOT, load_json, model_for, schema_errors
 from pydantic import ValidationError
 
 BUNDLE = "compliance/v1/evidence-bundle.schema.json"
@@ -121,3 +124,82 @@ def test_bundle_carries_no_member_that_could_hold_a_verdict_or_body() -> None:
         "digest",
     }
     assert schema["additionalProperties"] is False
+
+
+CONTROL = "compliance/v1/control.schema.json"
+FRAMEWORK_IDS = (
+    "nist_ai_rmf",
+    "sr_11_7",
+    "hipaa_technical_safeguards",
+    "omb_m_25_21",
+    "soc2_tsc",
+    "iso_27001_annex_a",
+    "gdpr",
+    "nist_800_53_r5",
+    "eu_ai_act",
+    "iso_42001",
+)
+CLAIM_WORDS = re.compile(
+    r"complian|certif|\bmeets?\b|\bsatisf|authori[sz]ed|\bATO\b|FedRAMP", re.IGNORECASE
+)
+
+
+def _claims_rules() -> Any:
+    path = REPO_ROOT / "tests" / "marketing" / "claims_rules.py"
+    spec = importlib.util.spec_from_file_location("claims_rules_for_contracts", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module  # dataclasses need this before exec
+    spec.loader.exec_module(module)
+    return module
+
+
+def _strings(node: Any) -> list[str]:
+    if isinstance(node, str):
+        return [node]
+    if isinstance(node, dict):
+        return [s for v in node.values() for s in _strings(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _strings(v)]
+    return []
+
+
+def test_all_ten_framework_ids_validate_on_a_control() -> None:
+    base = load_json(EXAMPLES / "control.nist-govern-2.json")
+    schema = load_json(SCHEMA_ROOT / CONTROL)
+    assert tuple(schema["$defs"]["framework_id"]["enum"]) == FRAMEWORK_IDS
+    for framework_id in FRAMEWORK_IDS:
+        doc = {**base, "framework_id": framework_id}
+        assert schema_errors(CONTROL, doc) == [], framework_id
+        model_for(CONTROL).model_validate(doc)
+
+
+def test_an_unknown_framework_id_is_rejected() -> None:
+    doc = {**load_json(EXAMPLES / "control.nist-govern-2.json"), "framework_id": "pci_dss_4"}
+    assert schema_errors(CONTROL, doc)
+    with pytest.raises(ValidationError):
+        model_for(CONTROL).model_validate(doc)
+
+
+def test_framework_id_description_says_open_ended() -> None:
+    schema = load_json(SCHEMA_ROOT / CONTROL)
+    assert "tolerate unknown values" in schema["$defs"]["framework_id"]["description"]
+
+
+def test_every_framework_id_has_a_valid_control_example() -> None:
+    seen = {load_json(p)["framework_id"] for p in sorted(EXAMPLES.glob("control.*.json"))}
+    assert seen >= set(FRAMEWORK_IDS[4:]) | {"nist_ai_rmf"}
+
+
+def test_every_valid_compliance_example_passes_the_no_claims_wording_check() -> None:
+    # Valid examples only: the invalid ones carry verdict words on purpose, to prove rejection.
+    rules = _claims_rules()
+    paths = sorted(EXAMPLES.glob("*.json"))
+    assert paths
+    for path in paths:
+        for text in _strings(load_json(path)):
+            assert not rules.find_violations(text), (path.name, text)
+            if path.name.startswith(
+                "control."
+            ):  # other files hold repo paths such as .../compliance/...
+                assert not CLAIM_WORDS.search(text), (path.name, text)

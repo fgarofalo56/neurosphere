@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "control_id": "soc2-tsc.cc6-1",
+  "framework_id": "soc2_tsc",
+  "title": "Logical access controls over protected information",
+  "source_url": "https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services",
+  "source_retrieved": "2026-11-19",
+  "framework_version": "2017 TSC (rev. 2022)"
+}

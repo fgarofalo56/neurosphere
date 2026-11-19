@@ -11,10 +11,22 @@
  */
 export type SchemaVersion = string;
 /**
+ * External framework a control belongs to. Open-ended: readers must tolerate unknown values.
+ *
  * This interface was referenced by `Control`'s JSON-Schema
  * via the `definition` "framework_id".
  */
-export type FrameworkId = "nist_ai_rmf" | "sr_11_7" | "hipaa_technical_safeguards" | "omb_m_25_21";
+export type FrameworkId =
+  | "nist_ai_rmf"
+  | "sr_11_7"
+  | "hipaa_technical_safeguards"
+  | "omb_m_25_21"
+  | "soc2_tsc"
+  | "iso_27001_annex_a"
+  | "gdpr"
+  | "nist_800_53_r5"
+  | "eu_ai_act"
+  | "iso_42001";
 
 /**
  * One control of an external framework held as library data (PRP-56). Metadata only: a short paraphrased title and a link to the official source, never copied text. A control record says what the framework names; it never says whether anyone meets it.

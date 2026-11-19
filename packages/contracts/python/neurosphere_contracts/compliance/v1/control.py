@@ -16,9 +16,36 @@ class SchemaVersion(RootModel[StrictStr]):
 
 
 class FrameworkId(
-    RootModel[Literal["nist_ai_rmf", "sr_11_7", "hipaa_technical_safeguards", "omb_m_25_21"]]
+    RootModel[
+        Literal[
+            "nist_ai_rmf",
+            "sr_11_7",
+            "hipaa_technical_safeguards",
+            "omb_m_25_21",
+            "soc2_tsc",
+            "iso_27001_annex_a",
+            "gdpr",
+            "nist_800_53_r5",
+            "eu_ai_act",
+            "iso_42001",
+        ]
+    ]
 ):
-    root: Literal["nist_ai_rmf", "sr_11_7", "hipaa_technical_safeguards", "omb_m_25_21"]
+    root: Literal[
+        "nist_ai_rmf",
+        "sr_11_7",
+        "hipaa_technical_safeguards",
+        "omb_m_25_21",
+        "soc2_tsc",
+        "iso_27001_annex_a",
+        "gdpr",
+        "nist_800_53_r5",
+        "eu_ai_act",
+        "iso_42001",
+    ]
+    """
+    External framework a control belongs to. Open-ended: readers must tolerate unknown values.
+    """
 
 
 class Control(BaseModel):
