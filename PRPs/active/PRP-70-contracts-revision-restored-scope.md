@@ -264,8 +264,8 @@ Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), o
 | Item | Status | Branch/worktree | Model | Evidence | Updated |
 |---|---|---|---|---|---|
 | 1 | merged | worktree-agent-aabdf031f856e5395 | sonnet | orchestrator re-run: generate --check OK (104 py, 74 ts), pytest tests/contracts + scripts 2724 passed, ruff, pyright 0 errors, ts 168 passed; dc344adb, merge 3dd87616. Deviation: duplicate-category invalid example is an inline JSON Schema test (Pydantic ignores uniqueItems) | 2026-11-19 |
-| 2 | in-progress | | sonnet | | 2026-11-19 |
-| 3 | todo | | sonnet | | |
+| 2 | merged | worktree-agent-aadd67d2f248f0069 | sonnet | orchestrator re-run: generate --check OK (106 py, 76 ts), pytest 2804 passed, ruff, pyright 0 errors, ts 171 passed; fd56a191, merge b0cd84d6. Deviations: wrong-body-type case is an inline JSON Schema test (if/then yields several errors, one per invalid file is required); diff before/after typed scalar, array or null, no object (nested changes are deeper paths); examples manifest is index.json | 2026-11-19 |
+| 3 | in-progress | | sonnet | | 2026-11-19 |
 | 4 | todo | | sonnet | | |
 | 7 | todo | | sonnet | | |
 | 5 | todo | | | | |
