@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/compliance/v1/control-mapping.schema.json",
+  "title": "ControlMapping",
+  "description": "How NeuroSphere relates to one control (PRP-56). support_status reuses the PRP-23 vocabulary (designed, implemented_tested, inherited, customer, planned, not_applicable); evidence_sources names the read-only sources whose observations are relevant to the control. designed and implemented_tested support must cite repo_paths that exist (checked by the library loader). The mapping collects and maps; it never judges.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "control_id",
+    "framework_id",
+    "support_status",
+    "evidence_sources",
+    "repo_paths"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "control.schema.json#/$defs/schema_version" },
+    "control_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,95}$" },
+    "framework_id": { "$ref": "control.schema.json#/$defs/framework_id" },
+    "support_status": { "$ref": "#/$defs/support_status" },
+    "evidence_sources": { "$ref": "#/$defs/evidence_sources" },
+    "repo_paths": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    }
+  },
+  "$defs": {
+    "support_status": {
+      "type": "string",
+      "enum": [
+        "designed",
+        "implemented_tested",
+        "inherited",
+        "customer",
+        "planned",
+        "not_applicable"
+      ]
+    },
+    "evidence_source_id": {
+      "type": "string",
+      "enum": [
+        "catalog_ownership",
+        "audit_chain",
+        "hitl_decisions",
+        "evaluation_results",
+        "cost_attribution",
+        "configuration_findings"
+      ]
+    },
+    "evidence_sources": {
+      "type": "array",
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/evidence_source_id" }
+    }
+  }
+}

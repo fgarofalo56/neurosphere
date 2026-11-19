@@ -268,8 +268,8 @@ Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), o
 | 3 | merged | worktree-agent-a88d8be4de11ea9f3 | sonnet | orchestrator re-run: generate --check OK (110 py, 80 ts), pytest 2901 passed, ruff, pyright 0 errors, ts 176 passed, frontend typecheck clean; 8b2421d2, merge c9c26ca4. Finding kinds verified on main (PRP-61), not re-shipped. Extra invalid example for stored feedback (suite needs one per schema) | 2026-11-19 |
 | 4 | merged | worktree-agent-a67575ab3efac9132 | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest contracts + scripts + compliance_lib 3028 passed, ruff, pyright 0 errors, ts 185 passed; d53b1942, merge ebd4dcc5. Claims scan (tests/marketing/claims_rules.py) covers valid compliance examples only; MapNodeFacets has no required member; entity_ids uniqueItems added | 2026-11-19 |
 | 7 | merged | worktree-agent-ad56ef17f9424d2ad | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest 2999 passed, ruff, pyright 0 errors, ts 186 passed; a4bd3f6c, merge e484a6fb. Deviation: empty tool/service object is rejected by JSON Schema only (Pydantic drops minProperties); inline test, no invalid example file. Minor bump = 1.1.0 note in descriptions + new example, cost-record precedent | 2026-11-19 |
-| 5 | in-progress | | orchestrator | | 2026-11-19 |
-| 6 | todo | | | | |
+| 5 | merged | prp-70-contracts-restored-scope | orchestrator | gate run on 58d250a4: consumer pytest line 3821 passed, ruff format, pyright, generate --check, contracts TS 186 passed, frontend typecheck, frontend vitest 1233 passed, validate_planning all exit 0; only consumer failure was openapi drift, fixed by regenerating services/api/openapi.json (no product code changed). ruff check . is clean on the tracked tree; 41 findings are all in stale untracked .claude/worktrees | 2026-11-19 |
+| 6 | in-progress | prp-70-contracts-restored-scope | orchestrator | review (opus, whole diff): APPROVE, no blockers, follow-ups in #349; ADR-0004 amended, baseline refreshed, allowlist emptied, changelog fragment, Tier-3 regenerated | 2026-11-19 |
 
 ## Completion note (filled at ship)
 - Date and PR:

@@ -134,15 +134,15 @@ def test_mcp_server_ref_at_cap_accepted() -> None:
     _accepted(event)
 
 
-def test_only_the_three_properties_added_and_none_required() -> None:
+def test_identity_properties_are_optional_and_default_to_null() -> None:
+    # Not a diff against the v1 baseline: the snapshot is refreshed once a change is accepted
+    # (ADR-0004), after which it already contains these properties.
     current = load_json(SCHEMA_ROOT / REL)
-    baseline = load_json(BASELINE)
-    added = set(current["properties"]) - set(baseline["properties"])
-    assert added == {"tool", "service", "mcp_server_ref"}
-    assert not added & set(current["required"])
-    assert current["required"] == baseline["required"]
-    assert set(baseline["properties"]) <= set(current["properties"])
-    for name in added:
+    identity = {"tool", "service", "mcp_server_ref"}
+    assert identity <= set(current["properties"])
+    assert not identity & set(current["required"])
+    assert set(load_json(BASELINE)["required"]) == set(current["required"])
+    for name in identity:
         assert current["properties"][name]["default"] is None
 
 

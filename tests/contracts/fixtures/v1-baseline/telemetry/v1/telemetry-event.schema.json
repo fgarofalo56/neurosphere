@@ -155,6 +155,23 @@
       "description": "Optional pointer to a separately stored, redacted prompt/response payload. Bodies are off by default (NS-01).",
       "anyOf": [{ "$ref": "#/$defs/payload_ref" }, { "type": "null" }],
       "default": null
+    },
+    "tool": {
+      "description": "Identity of the tool this span invoked or observed. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.",
+      "anyOf": [{ "$ref": "#/$defs/tool_identity" }, { "type": "null" }],
+      "default": null
+    },
+    "service": {
+      "description": "Identity of the service this span called or ran in. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.",
+      "anyOf": [{ "$ref": "#/$defs/service_identity" }, { "type": "null" }],
+      "default": null
+    },
+    "mcp_server_ref": {
+      "description": "MCP server this span went through: a canonical McpServer ID when resolved, otherwise the source-reported reference. Null when not reported. Added in schema_version 1.1.0; events without it stay valid.",
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 512,
+      "default": null
     }
   },
   "allOf": [
@@ -254,6 +271,49 @@
           "type": "string",
           "enum": ["read", "write", "unknown"],
           "default": "unknown"
+        }
+      }
+    },
+    "tool_identity": {
+      "title": "TelemetryToolIdentity",
+      "description": "Tool identity on a telemetry event. Identifiers and a name only; never an argument or result body.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "external_tool_id": {
+          "description": "Tool identifier as reported by the source. Null when not reported.",
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+          "default": null
+        },
+        "canonical_tool_id": {
+          "description": "Resolved canonical tool ID (cloud:customer:source:type:id). Null until resolution succeeds.",
+          "anyOf": [{ "$ref": "#/$defs/canonical_id" }, { "type": "null" }],
+          "default": null
+        },
+        "tool_name": {
+          "description": "Tool name as reported. Null when not reported.",
+          "anyOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }],
+          "default": null
+        }
+      }
+    },
+    "service_identity": {
+      "title": "TelemetryServiceIdentity",
+      "description": "Service identity on a telemetry event. Identifiers only.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "external_service_id": {
+          "description": "Service identifier as reported by the source. Null when not reported.",
+          "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }],
+          "default": null
+        },
+        "canonical_service_id": {
+          "description": "Resolved canonical service ID (cloud:customer:source:type:id). Null until resolution succeeds.",
+          "anyOf": [{ "$ref": "#/$defs/canonical_id" }, { "type": "null" }],
+          "default": null
         }
       }
     },

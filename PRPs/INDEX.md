@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-70-contracts-revision-restored-scope](active/PRP-70-contracts-revision-restored-scope.md) | P0 | 5/7 (71%) | todo 1, in-progress 1, merged 5 | opus / sonnet | required |
+| [PRP-70-contracts-revision-restored-scope](active/PRP-70-contracts-revision-restored-scope.md) | P0 | 6/7 (85%) | in-progress 1, merged 6 | opus / sonnet | required |
 
 ## Backlog
 

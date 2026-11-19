@@ -22,7 +22,7 @@ not be trusted by inspection.
 
 - Every schema is `packages/contracts/schemas/<area>/v<major>/<name>.schema.json`. Areas
   today: telemetry, cost, catalog, actions, audit, scope, query, chart, recommendations,
-  evaluation, deployment, connectors, errors. All are `v1`.
+  evaluation, deployment, connectors, errors, admin, compliance, map. All are `v1`.
 - `$id` is `https://neurosphere.invalid/schemas/<area>/v<major>/<name>.schema.json`, a
   reserved-domain placeholder that is never resolved. Every `$ref` is a relative file
   reference (`common.schema.json#/$defs/x`, `../../actions/v1/actor.schema.json`); remote
@@ -226,3 +226,43 @@ place left in a manifest where a secret could hide. `credential_ref.name` is unc
 (404), `method_not_allowed` (405), `payload_too_large` (413) and `internal_error` (500) in
 `error-codes.json` (table `schema_version` 1.1.0), `ProblemDetails` and the `AuditRecord`
 denial codes, with one `neurosphere_core.errors` class each.
+
+## Amendment note (2026-11-19, PRP-70)
+
+**Additive v1 revisions for the restored original scope.** No existing schema was tightened;
+the change was reviewed against the additive-only test before the snapshot moved.
+
+- `catalog/v1`: `$defs` `tag`, `tags`, `capability`, `capabilities`, `environment`,
+  `sensitivity_category`, `sensitivity_categories`, `residency_geography` and `semver`;
+  optional `tags`, `capabilities`, `environment`, `semver`, `sensitivity_categories` and
+  `residency_geography` properties on the entities that carry them; new schemas
+  `EntityRevision` and `EntityRevisionDiff`.
+- `query/v1`: `StructuredQuery` keyword fields `tag`, `capability`, `sensitivity_category`,
+  `residency_region`, `residency_geography` and boolean field `contains_personal_data`. On a
+  list-valued field `eq` means contains, `in` contains any, `ne` and `not_in` contain none.
+- `recommendations/v1`: `AgentMatchRequest`, `AgentMatchResponse`,
+  `AgentMatchFeedbackRequest` and `AgentMatchFeedback`. The `configuration_finding` and
+  `unregistered_ai_resource` kinds had already shipped with PRP-61.
+- `compliance/v1`: `framework_id` values `soc2_tsc`, `iso_27001_annex_a`, `gdpr`,
+  `nist_800_53_r5`, `eu_ai_act` and `iso_42001` (fold F2). A framework id names a mapping
+  target; it is not a statement that a deployment conforms to that framework.
+- `telemetry/v1`: optional nullable `tool`, `service` and `mcp_server_ref` on
+  `TelemetryEvent` (fold F1), documented as added in `schema_version` 1.1.0. No body-like
+  field; `payload_ref` is unchanged.
+- New area `map/v1` with the fragment schemas `MapNodeFacets` and `MapTopologyChange` (no
+  `schema_version`, like `actions/v1/target-ref`).
+
+**Open-ended enums.** `capability`, `sensitivity_category`, `residency_geography` and
+`framework_id` are described as open-ended: readers must tolerate unknown values, so a later
+value is an additive change and not a new major.
+
+**Rules JSON Schema enforces and the generated Pydantic models do not.** `uniqueItems` (tags,
+capabilities, sensitivity categories), `minProperties` (an empty telemetry `tool` or `service`
+object) and the `EntityRevision` body pin by `entity_type` are projected away by the Python
+generator, as conditionals already were. They are tested against the JSON Schema; a service
+that accepts these documents must validate against the schema or add its own check, not rely
+on the model alone.
+
+**Snapshot.** `tests/contracts/fixtures/v1-baseline/` was refreshed in this change and
+`ALLOWED_TIGHTENINGS` is empty. The three PRP-37 connector-manifest tightenings recorded above
+are now part of the baseline.

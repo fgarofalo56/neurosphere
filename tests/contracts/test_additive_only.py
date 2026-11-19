@@ -42,23 +42,7 @@ UPPER_BOUNDS = ("maxLength", "maxItems", "maxProperties", "maximum", "exclusiveM
 LOWER_BOUNDS = ("minLength", "minItems", "minProperties", "minimum", "exclusiveMinimum")
 
 # (schema, JSON Pointer, change kind) -> reason. Every entry is recorded in ADR-0004.
-ALLOWED_TIGHTENINGS: dict[tuple[str, str, str], str] = {
-    (
-        "connectors/v1/connector-manifest.schema.json",
-        "/properties/scopes/items",
-        "pattern",
-    ): "PRP-37: scope names capped at 128 characters (was 256); no manifest in the repo exceeds it",
-    (
-        "connectors/v1/connector-manifest.schema.json",
-        "/properties/documentation_url",
-        "maxLength",
-    ): "PRP-37: documentation_url capped at 512 characters (was 2048)",
-    (
-        "connectors/v1/connector-manifest.schema.json",
-        "/properties/documentation_url",
-        "pattern",
-    ): "PRP-37: documentation_url path segments capped at 128 characters",
-}
+ALLOWED_TIGHTENINGS: dict[tuple[str, str, str], str] = {}
 
 
 def _v1_files(root: Path) -> list[str]:

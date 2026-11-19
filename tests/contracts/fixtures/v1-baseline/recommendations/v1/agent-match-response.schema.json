@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/recommendations/v1/agent-match-response.schema.json",
+  "title": "AgentMatchResponse",
+  "description": "Ranked task-to-agent candidates (PRP-70 item 3). The explanation is a structured per-signal breakdown plus related entity ids; no model-written free text. score is a relative weighted score, not a probability. Unknown signal values are null, never 0. cold_start is true when history-based signals are unavailable; those signals are named in signals_unavailable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "match_id",
+    "domain_id",
+    "generated_at",
+    "ranker",
+    "cold_start",
+    "signals_unavailable",
+    "candidates",
+    "truncated"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version" },
+    "match_id": { "$ref": "#/$defs/opaque_id" },
+    "domain_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id" },
+    "generated_at": { "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp" },
+    "ranker": { "$ref": "#/$defs/ranker" },
+    "cold_start": { "type": "boolean" },
+    "signals_unavailable": {
+      "description": "Signals that could not be computed for this response.",
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/signal_name" }
+    },
+    "candidates": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "truncated": { "type": "boolean" },
+    "partial_reason": {
+      "description": "Why the result is partial; null when complete.",
+      "default": null,
+      "oneOf": [{ "type": "string", "enum": ["limit", "timeout_ms"] }, { "type": "null" }]
+    }
+  },
+  "$defs": {
+    "opaque_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$" },
+    "signal_name": {
+      "type": "string",
+      "enum": [
+        "capability_match",
+        "tag_match",
+        "text_match",
+        "graph_proximity",
+        "historical_success",
+        "latency",
+        "usage",
+        "feedback_prior"
+      ]
+    },
+    "ranker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ranker_id", "ranker_version"],
+      "properties": {
+        "ranker_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/token" },
+        "ranker_version": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" }
+      }
+    },
+    "signal": {
+      "title": "AgentMatchSignal",
+      "description": "One ranking signal. value null means unknown (never 0); weight is the signal's weight in the ranker; contribution is its signed share of the score.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "weight", "contribution"],
+      "properties": {
+        "signal": { "$ref": "#/$defs/signal_name" },
+        "value": {
+          "description": "Normalized signal value in [0,1]; null means unknown, never 0.",
+          "default": null,
+          "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }]
+        },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "contribution": { "type": "number", "minimum": -1, "maximum": 1 },
+        "detail_code": {
+          "description": "Machine-readable detail; null when none.",
+          "default": null,
+          "oneOf": [
+            { "$ref": "../../catalog/v1/common.schema.json#/$defs/token" },
+            { "type": "null" }
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "maxItems": 20,
+          "default": [],
+          "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/evidence_id" }
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation_type", "entity_id", "direction"],
+      "properties": {
+        "relation_type": { "$ref": "../../catalog/v1/common.schema.json#/$defs/relation_type" },
+        "entity_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" },
+        "direction": { "type": "string", "enum": ["outgoing", "incoming"] }
+      }
+    },
+    "candidate": {
+      "title": "AgentMatchCandidate",
+      "description": "One ranked candidate. score is a relative weighted score in [0,1], not a probability. signals is required so every ranking is explainable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rank",
+        "entity_id",
+        "entity_type",
+        "display_name",
+        "lifecycle_status",
+        "score",
+        "signals",
+        "matched_capabilities",
+        "matched_tags",
+        "relations",
+        "evidence_ids"
+      ],
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "entity_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" },
+        "entity_type": { "type": "string", "enum": ["agent", "tool"] },
+        "display_name": { "$ref": "../../catalog/v1/common.schema.json#/$defs/display_name" },
+        "lifecycle_status": {
+          "$ref": "../../catalog/v1/common.schema.json#/$defs/lifecycle_status"
+        },
+        "score": {
+          "description": "Relative weighted score in [0,1]; not a probability.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "signals": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/signal" }
+        },
+        "matched_capabilities": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/capability" }
+        },
+        "matched_tags": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/tag" }
+        },
+        "relations": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/$defs/relation" }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "maxItems": 50,
+          "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/evidence_id" }
+        }
+      }
+    }
+  }
+}
