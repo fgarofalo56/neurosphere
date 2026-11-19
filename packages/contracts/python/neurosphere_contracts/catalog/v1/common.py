@@ -348,3 +348,142 @@ class Curation(BaseModel):
     reason: Annotated[StrictStr, Field(max_length=2000, min_length=1)]
     override_id: OverrideId | None = None
     review_item_id: EvidenceId | None = None
+
+
+class Tag(RootModel[StrictStr]):
+    root: Annotated[StrictStr, Field(pattern="^[a-z0-9][a-z0-9._-]{0,62}$")]
+    """
+    Lowercase label token used for grouping and filtering catalog entities.
+    """
+
+
+class Tags(RootModel[list[Tag]]):
+    """
+    Free-form lowercase labels; at most 32, no duplicates.
+    """
+
+    root: Annotated[list[Tag], Field(max_length=32, validate_default=True)] = []
+    """
+    Free-form lowercase labels; at most 32, no duplicates.
+    """
+
+
+class Capability(RootModel[StrictStr]):
+    root: Annotated[
+        StrictStr,
+        Field(
+            max_length=128,
+            pattern="^[a-z][a-z0-9_]{0,31}(\\.[a-z][a-z0-9_]{0,31}){0,3}$",
+        ),
+    ]
+    """
+    Dot-namespaced capability token such as document.summarize (one to four segments). Open-ended: readers must tolerate unknown values. There is no closed taxonomy.
+    """
+
+
+class Capabilities(RootModel[list[Capability]]):
+    """
+    Declared capabilities; at most 64, no duplicates.
+    """
+
+    root: Annotated[list[Capability], Field(max_length=64, validate_default=True)] = []
+    """
+    Declared capabilities; at most 64, no duplicates.
+    """
+
+
+class Environment(
+    RootModel[Literal["production", "staging", "development", "test", "sandbox", "unknown"]]
+):
+    root: Literal["production", "staging", "development", "test", "sandbox", "unknown"] = "unknown"
+    """
+    Deployment environment; the same vocabulary as TelemetryEvent.environment.
+    """
+
+
+class SensitivityCategory(
+    RootModel[
+        Literal[
+            "pii",
+            "phi",
+            "cui",
+            "pci",
+            "financial",
+            "biometric",
+            "credentials",
+            "export_controlled",
+            "legal_privileged",
+            "other",
+        ]
+    ]
+):
+    root: Literal[
+        "pii",
+        "phi",
+        "cui",
+        "pci",
+        "financial",
+        "biometric",
+        "credentials",
+        "export_controlled",
+        "legal_privileged",
+        "other",
+    ]
+    """
+    Kind of sensitive data a data asset holds; sits beside classification, not instead of it. Open-ended: readers must tolerate unknown values.
+    """
+
+
+class SensitivityCategories(RootModel[list[SensitivityCategory]]):
+    """
+    Sensitivity categories of a data asset; empty when none are declared or not yet assessed.
+    """
+
+    root: Annotated[list[SensitivityCategory], Field(max_length=10, validate_default=True)] = []
+    """
+    Sensitivity categories of a data asset; empty when none are declared or not yet assessed.
+    """
+
+
+class ResidencyGeography(
+    RootModel[
+        Literal[
+            "eu_eea",
+            "uk",
+            "switzerland",
+            "united_states",
+            "canada",
+            "asia_pacific",
+            "latin_america",
+            "middle_east_africa",
+            "other",
+        ]
+    ]
+):
+    root: Literal[
+        "eu_eea",
+        "uk",
+        "switzerland",
+        "united_states",
+        "canada",
+        "asia_pacific",
+        "latin_america",
+        "middle_east_africa",
+        "other",
+    ]
+    """
+    Coarse geography of the data's authoritative copy; complements residency_region. Open-ended: readers must tolerate unknown values.
+    """
+
+
+class Semver(RootModel[StrictStr]):
+    root: Annotated[
+        StrictStr,
+        Field(
+            max_length=128,
+            pattern="^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+        ),
+    ]
+    """
+    Semantic Version 2.0.0 string (semver.org reference expression).
+    """

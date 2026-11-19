@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "control_id": "iso-27001.a-5-15",
+  "framework_id": "iso_27001_annex_a",
+  "title": "Rules for controlling access to information and assets",
+  "source_url": "https://www.iso.org/standard/27001",
+  "source_retrieved": "2026-11-19",
+  "framework_version": "2022"
+}

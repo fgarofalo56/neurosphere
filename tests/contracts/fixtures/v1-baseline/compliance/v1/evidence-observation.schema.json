@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/compliance/v1/evidence-observation.schema.json",
+  "title": "EvidenceObservation",
+  "description": "What one read-only evidence source saw for a domain in a window (PRP-56). Counts, timestamps and ids only: no entity bodies, no prompts, no principal names. status: observed (the source answered), partial (answered with a cap or a gap), unavailable (store missing or down; reason_code says why), not_collected (the source cannot count this). Unknown numbers are null, never 0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "status",
+    "reason_code",
+    "window_start",
+    "window_end",
+    "latest_at",
+    "truncated",
+    "measures"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "control.schema.json#/$defs/schema_version" },
+    "source_id": { "$ref": "control-mapping.schema.json#/$defs/evidence_source_id" },
+    "status": {
+      "type": "string",
+      "enum": ["observed", "partial", "unavailable", "not_collected"]
+    },
+    "reason_code": {
+      "description": "snake_case machine reason; null when status is observed.",
+      "type": ["string", "null"],
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "window_start": { "$ref": "#/$defs/utc_timestamp" },
+    "window_end": { "$ref": "#/$defs/utc_timestamp" },
+    "latest_at": {
+      "description": "Newest timestamp the source saw; null when none or unknown.",
+      "anyOf": [{ "$ref": "#/$defs/utc_timestamp" }, { "type": "null" }]
+    },
+    "truncated": { "type": "boolean" },
+    "measures": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "value"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+          "value": { "type": ["integer", "null"], "minimum": 0 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "utc_timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

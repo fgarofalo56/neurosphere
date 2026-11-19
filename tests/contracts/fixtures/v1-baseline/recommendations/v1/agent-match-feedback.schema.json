@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/recommendations/v1/agent-match-feedback.schema.json",
+  "title": "AgentMatchFeedback",
+  "description": "Stored feedback on one match candidate (PRP-70 item 3). It never carries task text: task_digest is the SHA-256 of the normalized task text. Reason codes only, no free text. Nullable fields are optional and default to null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feedback_id",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "match_id",
+    "entity_id",
+    "entity_type",
+    "decision",
+    "rank_at_decision",
+    "score_at_decision",
+    "task_digest",
+    "required_capabilities",
+    "ranker",
+    "decided_by",
+    "decided_at"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version" },
+    "feedback_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$" },
+    "cloud": { "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud" },
+    "customer_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/customer_id" },
+    "domain_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id" },
+    "match_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$" },
+    "entity_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" },
+    "entity_type": { "type": "string", "enum": ["agent", "tool"] },
+    "decision": { "type": "string", "enum": ["accepted", "rejected"] },
+    "reason_code": {
+      "default": null,
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "not_relevant",
+            "missing_capability",
+            "poor_quality",
+            "unavailable",
+            "policy",
+            "other"
+          ]
+        },
+        { "type": "null" }
+      ]
+    },
+    "rank_at_decision": { "type": "integer", "minimum": 1, "maximum": 50 },
+    "score_at_decision": { "type": "number", "minimum": 0, "maximum": 1 },
+    "task_digest": {
+      "description": "SHA-256 of the normalized task text; the text itself is never stored.",
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "required_capabilities": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/capability" }
+    },
+    "ranker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ranker_id", "ranker_version"],
+      "properties": {
+        "ranker_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/token" },
+        "ranker_version": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" }
+      }
+    },
+    "decided_by": { "$ref": "../../catalog/v1/common.schema.json#/$defs/person_id" },
+    "decided_at": { "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp" },
+    "expires_at": {
+      "default": null,
+      "oneOf": [
+        { "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

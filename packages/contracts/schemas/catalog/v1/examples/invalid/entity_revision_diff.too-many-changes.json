@@ -1,0 +1,1228 @@
+{
+  "schema_version": "1.0.0",
+  "entity_id": "commercial:contoso:foundry:agent:invoice-summarizer",
+  "entity_type": "agent",
+  "from_version": 2,
+  "to_version": 3,
+  "changes": [
+    {
+      "path": "/field_0",
+      "op": "added",
+      "before": null,
+      "after": 0
+    },
+    {
+      "path": "/field_1",
+      "op": "added",
+      "before": null,
+      "after": 1
+    },
+    {
+      "path": "/field_2",
+      "op": "added",
+      "before": null,
+      "after": 2
+    },
+    {
+      "path": "/field_3",
+      "op": "added",
+      "before": null,
+      "after": 3
+    },
+    {
+      "path": "/field_4",
+      "op": "added",
+      "before": null,
+      "after": 4
+    },
+    {
+      "path": "/field_5",
+      "op": "added",
+      "before": null,
+      "after": 5
+    },
+    {
+      "path": "/field_6",
+      "op": "added",
+      "before": null,
+      "after": 6
+    },
+    {
+      "path": "/field_7",
+      "op": "added",
+      "before": null,
+      "after": 7
+    },
+    {
+      "path": "/field_8",
+      "op": "added",
+      "before": null,
+      "after": 8
+    },
+    {
+      "path": "/field_9",
+      "op": "added",
+      "before": null,
+      "after": 9
+    },
+    {
+      "path": "/field_10",
+      "op": "added",
+      "before": null,
+      "after": 10
+    },
+    {
+      "path": "/field_11",
+      "op": "added",
+      "before": null,
+      "after": 11
+    },
+    {
+      "path": "/field_12",
+      "op": "added",
+      "before": null,
+      "after": 12
+    },
+    {
+      "path": "/field_13",
+      "op": "added",
+      "before": null,
+      "after": 13
+    },
+    {
+      "path": "/field_14",
+      "op": "added",
+      "before": null,
+      "after": 14
+    },
+    {
+      "path": "/field_15",
+      "op": "added",
+      "before": null,
+      "after": 15
+    },
+    {
+      "path": "/field_16",
+      "op": "added",
+      "before": null,
+      "after": 16
+    },
+    {
+      "path": "/field_17",
+      "op": "added",
+      "before": null,
+      "after": 17
+    },
+    {
+      "path": "/field_18",
+      "op": "added",
+      "before": null,
+      "after": 18
+    },
+    {
+      "path": "/field_19",
+      "op": "added",
+      "before": null,
+      "after": 19
+    },
+    {
+      "path": "/field_20",
+      "op": "added",
+      "before": null,
+      "after": 20
+    },
+    {
+      "path": "/field_21",
+      "op": "added",
+      "before": null,
+      "after": 21
+    },
+    {
+      "path": "/field_22",
+      "op": "added",
+      "before": null,
+      "after": 22
+    },
+    {
+      "path": "/field_23",
+      "op": "added",
+      "before": null,
+      "after": 23
+    },
+    {
+      "path": "/field_24",
+      "op": "added",
+      "before": null,
+      "after": 24
+    },
+    {
+      "path": "/field_25",
+      "op": "added",
+      "before": null,
+      "after": 25
+    },
+    {
+      "path": "/field_26",
+      "op": "added",
+      "before": null,
+      "after": 26
+    },
+    {
+      "path": "/field_27",
+      "op": "added",
+      "before": null,
+      "after": 27
+    },
+    {
+      "path": "/field_28",
+      "op": "added",
+      "before": null,
+      "after": 28
+    },
+    {
+      "path": "/field_29",
+      "op": "added",
+      "before": null,
+      "after": 29
+    },
+    {
+      "path": "/field_30",
+      "op": "added",
+      "before": null,
+      "after": 30
+    },
+    {
+      "path": "/field_31",
+      "op": "added",
+      "before": null,
+      "after": 31
+    },
+    {
+      "path": "/field_32",
+      "op": "added",
+      "before": null,
+      "after": 32
+    },
+    {
+      "path": "/field_33",
+      "op": "added",
+      "before": null,
+      "after": 33
+    },
+    {
+      "path": "/field_34",
+      "op": "added",
+      "before": null,
+      "after": 34
+    },
+    {
+      "path": "/field_35",
+      "op": "added",
+      "before": null,
+      "after": 35
+    },
+    {
+      "path": "/field_36",
+      "op": "added",
+      "before": null,
+      "after": 36
+    },
+    {
+      "path": "/field_37",
+      "op": "added",
+      "before": null,
+      "after": 37
+    },
+    {
+      "path": "/field_38",
+      "op": "added",
+      "before": null,
+      "after": 38
+    },
+    {
+      "path": "/field_39",
+      "op": "added",
+      "before": null,
+      "after": 39
+    },
+    {
+      "path": "/field_40",
+      "op": "added",
+      "before": null,
+      "after": 40
+    },
+    {
+      "path": "/field_41",
+      "op": "added",
+      "before": null,
+      "after": 41
+    },
+    {
+      "path": "/field_42",
+      "op": "added",
+      "before": null,
+      "after": 42
+    },
+    {
+      "path": "/field_43",
+      "op": "added",
+      "before": null,
+      "after": 43
+    },
+    {
+      "path": "/field_44",
+      "op": "added",
+      "before": null,
+      "after": 44
+    },
+    {
+      "path": "/field_45",
+      "op": "added",
+      "before": null,
+      "after": 45
+    },
+    {
+      "path": "/field_46",
+      "op": "added",
+      "before": null,
+      "after": 46
+    },
+    {
+      "path": "/field_47",
+      "op": "added",
+      "before": null,
+      "after": 47
+    },
+    {
+      "path": "/field_48",
+      "op": "added",
+      "before": null,
+      "after": 48
+    },
+    {
+      "path": "/field_49",
+      "op": "added",
+      "before": null,
+      "after": 49
+    },
+    {
+      "path": "/field_50",
+      "op": "added",
+      "before": null,
+      "after": 50
+    },
+    {
+      "path": "/field_51",
+      "op": "added",
+      "before": null,
+      "after": 51
+    },
+    {
+      "path": "/field_52",
+      "op": "added",
+      "before": null,
+      "after": 52
+    },
+    {
+      "path": "/field_53",
+      "op": "added",
+      "before": null,
+      "after": 53
+    },
+    {
+      "path": "/field_54",
+      "op": "added",
+      "before": null,
+      "after": 54
+    },
+    {
+      "path": "/field_55",
+      "op": "added",
+      "before": null,
+      "after": 55
+    },
+    {
+      "path": "/field_56",
+      "op": "added",
+      "before": null,
+      "after": 56
+    },
+    {
+      "path": "/field_57",
+      "op": "added",
+      "before": null,
+      "after": 57
+    },
+    {
+      "path": "/field_58",
+      "op": "added",
+      "before": null,
+      "after": 58
+    },
+    {
+      "path": "/field_59",
+      "op": "added",
+      "before": null,
+      "after": 59
+    },
+    {
+      "path": "/field_60",
+      "op": "added",
+      "before": null,
+      "after": 60
+    },
+    {
+      "path": "/field_61",
+      "op": "added",
+      "before": null,
+      "after": 61
+    },
+    {
+      "path": "/field_62",
+      "op": "added",
+      "before": null,
+      "after": 62
+    },
+    {
+      "path": "/field_63",
+      "op": "added",
+      "before": null,
+      "after": 63
+    },
+    {
+      "path": "/field_64",
+      "op": "added",
+      "before": null,
+      "after": 64
+    },
+    {
+      "path": "/field_65",
+      "op": "added",
+      "before": null,
+      "after": 65
+    },
+    {
+      "path": "/field_66",
+      "op": "added",
+      "before": null,
+      "after": 66
+    },
+    {
+      "path": "/field_67",
+      "op": "added",
+      "before": null,
+      "after": 67
+    },
+    {
+      "path": "/field_68",
+      "op": "added",
+      "before": null,
+      "after": 68
+    },
+    {
+      "path": "/field_69",
+      "op": "added",
+      "before": null,
+      "after": 69
+    },
+    {
+      "path": "/field_70",
+      "op": "added",
+      "before": null,
+      "after": 70
+    },
+    {
+      "path": "/field_71",
+      "op": "added",
+      "before": null,
+      "after": 71
+    },
+    {
+      "path": "/field_72",
+      "op": "added",
+      "before": null,
+      "after": 72
+    },
+    {
+      "path": "/field_73",
+      "op": "added",
+      "before": null,
+      "after": 73
+    },
+    {
+      "path": "/field_74",
+      "op": "added",
+      "before": null,
+      "after": 74
+    },
+    {
+      "path": "/field_75",
+      "op": "added",
+      "before": null,
+      "after": 75
+    },
+    {
+      "path": "/field_76",
+      "op": "added",
+      "before": null,
+      "after": 76
+    },
+    {
+      "path": "/field_77",
+      "op": "added",
+      "before": null,
+      "after": 77
+    },
+    {
+      "path": "/field_78",
+      "op": "added",
+      "before": null,
+      "after": 78
+    },
+    {
+      "path": "/field_79",
+      "op": "added",
+      "before": null,
+      "after": 79
+    },
+    {
+      "path": "/field_80",
+      "op": "added",
+      "before": null,
+      "after": 80
+    },
+    {
+      "path": "/field_81",
+      "op": "added",
+      "before": null,
+      "after": 81
+    },
+    {
+      "path": "/field_82",
+      "op": "added",
+      "before": null,
+      "after": 82
+    },
+    {
+      "path": "/field_83",
+      "op": "added",
+      "before": null,
+      "after": 83
+    },
+    {
+      "path": "/field_84",
+      "op": "added",
+      "before": null,
+      "after": 84
+    },
+    {
+      "path": "/field_85",
+      "op": "added",
+      "before": null,
+      "after": 85
+    },
+    {
+      "path": "/field_86",
+      "op": "added",
+      "before": null,
+      "after": 86
+    },
+    {
+      "path": "/field_87",
+      "op": "added",
+      "before": null,
+      "after": 87
+    },
+    {
+      "path": "/field_88",
+      "op": "added",
+      "before": null,
+      "after": 88
+    },
+    {
+      "path": "/field_89",
+      "op": "added",
+      "before": null,
+      "after": 89
+    },
+    {
+      "path": "/field_90",
+      "op": "added",
+      "before": null,
+      "after": 90
+    },
+    {
+      "path": "/field_91",
+      "op": "added",
+      "before": null,
+      "after": 91
+    },
+    {
+      "path": "/field_92",
+      "op": "added",
+      "before": null,
+      "after": 92
+    },
+    {
+      "path": "/field_93",
+      "op": "added",
+      "before": null,
+      "after": 93
+    },
+    {
+      "path": "/field_94",
+      "op": "added",
+      "before": null,
+      "after": 94
+    },
+    {
+      "path": "/field_95",
+      "op": "added",
+      "before": null,
+      "after": 95
+    },
+    {
+      "path": "/field_96",
+      "op": "added",
+      "before": null,
+      "after": 96
+    },
+    {
+      "path": "/field_97",
+      "op": "added",
+      "before": null,
+      "after": 97
+    },
+    {
+      "path": "/field_98",
+      "op": "added",
+      "before": null,
+      "after": 98
+    },
+    {
+      "path": "/field_99",
+      "op": "added",
+      "before": null,
+      "after": 99
+    },
+    {
+      "path": "/field_100",
+      "op": "added",
+      "before": null,
+      "after": 100
+    },
+    {
+      "path": "/field_101",
+      "op": "added",
+      "before": null,
+      "after": 101
+    },
+    {
+      "path": "/field_102",
+      "op": "added",
+      "before": null,
+      "after": 102
+    },
+    {
+      "path": "/field_103",
+      "op": "added",
+      "before": null,
+      "after": 103
+    },
+    {
+      "path": "/field_104",
+      "op": "added",
+      "before": null,
+      "after": 104
+    },
+    {
+      "path": "/field_105",
+      "op": "added",
+      "before": null,
+      "after": 105
+    },
+    {
+      "path": "/field_106",
+      "op": "added",
+      "before": null,
+      "after": 106
+    },
+    {
+      "path": "/field_107",
+      "op": "added",
+      "before": null,
+      "after": 107
+    },
+    {
+      "path": "/field_108",
+      "op": "added",
+      "before": null,
+      "after": 108
+    },
+    {
+      "path": "/field_109",
+      "op": "added",
+      "before": null,
+      "after": 109
+    },
+    {
+      "path": "/field_110",
+      "op": "added",
+      "before": null,
+      "after": 110
+    },
+    {
+      "path": "/field_111",
+      "op": "added",
+      "before": null,
+      "after": 111
+    },
+    {
+      "path": "/field_112",
+      "op": "added",
+      "before": null,
+      "after": 112
+    },
+    {
+      "path": "/field_113",
+      "op": "added",
+      "before": null,
+      "after": 113
+    },
+    {
+      "path": "/field_114",
+      "op": "added",
+      "before": null,
+      "after": 114
+    },
+    {
+      "path": "/field_115",
+      "op": "added",
+      "before": null,
+      "after": 115
+    },
+    {
+      "path": "/field_116",
+      "op": "added",
+      "before": null,
+      "after": 116
+    },
+    {
+      "path": "/field_117",
+      "op": "added",
+      "before": null,
+      "after": 117
+    },
+    {
+      "path": "/field_118",
+      "op": "added",
+      "before": null,
+      "after": 118
+    },
+    {
+      "path": "/field_119",
+      "op": "added",
+      "before": null,
+      "after": 119
+    },
+    {
+      "path": "/field_120",
+      "op": "added",
+      "before": null,
+      "after": 120
+    },
+    {
+      "path": "/field_121",
+      "op": "added",
+      "before": null,
+      "after": 121
+    },
+    {
+      "path": "/field_122",
+      "op": "added",
+      "before": null,
+      "after": 122
+    },
+    {
+      "path": "/field_123",
+      "op": "added",
+      "before": null,
+      "after": 123
+    },
+    {
+      "path": "/field_124",
+      "op": "added",
+      "before": null,
+      "after": 124
+    },
+    {
+      "path": "/field_125",
+      "op": "added",
+      "before": null,
+      "after": 125
+    },
+    {
+      "path": "/field_126",
+      "op": "added",
+      "before": null,
+      "after": 126
+    },
+    {
+      "path": "/field_127",
+      "op": "added",
+      "before": null,
+      "after": 127
+    },
+    {
+      "path": "/field_128",
+      "op": "added",
+      "before": null,
+      "after": 128
+    },
+    {
+      "path": "/field_129",
+      "op": "added",
+      "before": null,
+      "after": 129
+    },
+    {
+      "path": "/field_130",
+      "op": "added",
+      "before": null,
+      "after": 130
+    },
+    {
+      "path": "/field_131",
+      "op": "added",
+      "before": null,
+      "after": 131
+    },
+    {
+      "path": "/field_132",
+      "op": "added",
+      "before": null,
+      "after": 132
+    },
+    {
+      "path": "/field_133",
+      "op": "added",
+      "before": null,
+      "after": 133
+    },
+    {
+      "path": "/field_134",
+      "op": "added",
+      "before": null,
+      "after": 134
+    },
+    {
+      "path": "/field_135",
+      "op": "added",
+      "before": null,
+      "after": 135
+    },
+    {
+      "path": "/field_136",
+      "op": "added",
+      "before": null,
+      "after": 136
+    },
+    {
+      "path": "/field_137",
+      "op": "added",
+      "before": null,
+      "after": 137
+    },
+    {
+      "path": "/field_138",
+      "op": "added",
+      "before": null,
+      "after": 138
+    },
+    {
+      "path": "/field_139",
+      "op": "added",
+      "before": null,
+      "after": 139
+    },
+    {
+      "path": "/field_140",
+      "op": "added",
+      "before": null,
+      "after": 140
+    },
+    {
+      "path": "/field_141",
+      "op": "added",
+      "before": null,
+      "after": 141
+    },
+    {
+      "path": "/field_142",
+      "op": "added",
+      "before": null,
+      "after": 142
+    },
+    {
+      "path": "/field_143",
+      "op": "added",
+      "before": null,
+      "after": 143
+    },
+    {
+      "path": "/field_144",
+      "op": "added",
+      "before": null,
+      "after": 144
+    },
+    {
+      "path": "/field_145",
+      "op": "added",
+      "before": null,
+      "after": 145
+    },
+    {
+      "path": "/field_146",
+      "op": "added",
+      "before": null,
+      "after": 146
+    },
+    {
+      "path": "/field_147",
+      "op": "added",
+      "before": null,
+      "after": 147
+    },
+    {
+      "path": "/field_148",
+      "op": "added",
+      "before": null,
+      "after": 148
+    },
+    {
+      "path": "/field_149",
+      "op": "added",
+      "before": null,
+      "after": 149
+    },
+    {
+      "path": "/field_150",
+      "op": "added",
+      "before": null,
+      "after": 150
+    },
+    {
+      "path": "/field_151",
+      "op": "added",
+      "before": null,
+      "after": 151
+    },
+    {
+      "path": "/field_152",
+      "op": "added",
+      "before": null,
+      "after": 152
+    },
+    {
+      "path": "/field_153",
+      "op": "added",
+      "before": null,
+      "after": 153
+    },
+    {
+      "path": "/field_154",
+      "op": "added",
+      "before": null,
+      "after": 154
+    },
+    {
+      "path": "/field_155",
+      "op": "added",
+      "before": null,
+      "after": 155
+    },
+    {
+      "path": "/field_156",
+      "op": "added",
+      "before": null,
+      "after": 156
+    },
+    {
+      "path": "/field_157",
+      "op": "added",
+      "before": null,
+      "after": 157
+    },
+    {
+      "path": "/field_158",
+      "op": "added",
+      "before": null,
+      "after": 158
+    },
+    {
+      "path": "/field_159",
+      "op": "added",
+      "before": null,
+      "after": 159
+    },
+    {
+      "path": "/field_160",
+      "op": "added",
+      "before": null,
+      "after": 160
+    },
+    {
+      "path": "/field_161",
+      "op": "added",
+      "before": null,
+      "after": 161
+    },
+    {
+      "path": "/field_162",
+      "op": "added",
+      "before": null,
+      "after": 162
+    },
+    {
+      "path": "/field_163",
+      "op": "added",
+      "before": null,
+      "after": 163
+    },
+    {
+      "path": "/field_164",
+      "op": "added",
+      "before": null,
+      "after": 164
+    },
+    {
+      "path": "/field_165",
+      "op": "added",
+      "before": null,
+      "after": 165
+    },
+    {
+      "path": "/field_166",
+      "op": "added",
+      "before": null,
+      "after": 166
+    },
+    {
+      "path": "/field_167",
+      "op": "added",
+      "before": null,
+      "after": 167
+    },
+    {
+      "path": "/field_168",
+      "op": "added",
+      "before": null,
+      "after": 168
+    },
+    {
+      "path": "/field_169",
+      "op": "added",
+      "before": null,
+      "after": 169
+    },
+    {
+      "path": "/field_170",
+      "op": "added",
+      "before": null,
+      "after": 170
+    },
+    {
+      "path": "/field_171",
+      "op": "added",
+      "before": null,
+      "after": 171
+    },
+    {
+      "path": "/field_172",
+      "op": "added",
+      "before": null,
+      "after": 172
+    },
+    {
+      "path": "/field_173",
+      "op": "added",
+      "before": null,
+      "after": 173
+    },
+    {
+      "path": "/field_174",
+      "op": "added",
+      "before": null,
+      "after": 174
+    },
+    {
+      "path": "/field_175",
+      "op": "added",
+      "before": null,
+      "after": 175
+    },
+    {
+      "path": "/field_176",
+      "op": "added",
+      "before": null,
+      "after": 176
+    },
+    {
+      "path": "/field_177",
+      "op": "added",
+      "before": null,
+      "after": 177
+    },
+    {
+      "path": "/field_178",
+      "op": "added",
+      "before": null,
+      "after": 178
+    },
+    {
+      "path": "/field_179",
+      "op": "added",
+      "before": null,
+      "after": 179
+    },
+    {
+      "path": "/field_180",
+      "op": "added",
+      "before": null,
+      "after": 180
+    },
+    {
+      "path": "/field_181",
+      "op": "added",
+      "before": null,
+      "after": 181
+    },
+    {
+      "path": "/field_182",
+      "op": "added",
+      "before": null,
+      "after": 182
+    },
+    {
+      "path": "/field_183",
+      "op": "added",
+      "before": null,
+      "after": 183
+    },
+    {
+      "path": "/field_184",
+      "op": "added",
+      "before": null,
+      "after": 184
+    },
+    {
+      "path": "/field_185",
+      "op": "added",
+      "before": null,
+      "after": 185
+    },
+    {
+      "path": "/field_186",
+      "op": "added",
+      "before": null,
+      "after": 186
+    },
+    {
+      "path": "/field_187",
+      "op": "added",
+      "before": null,
+      "after": 187
+    },
+    {
+      "path": "/field_188",
+      "op": "added",
+      "before": null,
+      "after": 188
+    },
+    {
+      "path": "/field_189",
+      "op": "added",
+      "before": null,
+      "after": 189
+    },
+    {
+      "path": "/field_190",
+      "op": "added",
+      "before": null,
+      "after": 190
+    },
+    {
+      "path": "/field_191",
+      "op": "added",
+      "before": null,
+      "after": 191
+    },
+    {
+      "path": "/field_192",
+      "op": "added",
+      "before": null,
+      "after": 192
+    },
+    {
+      "path": "/field_193",
+      "op": "added",
+      "before": null,
+      "after": 193
+    },
+    {
+      "path": "/field_194",
+      "op": "added",
+      "before": null,
+      "after": 194
+    },
+    {
+      "path": "/field_195",
+      "op": "added",
+      "before": null,
+      "after": 195
+    },
+    {
+      "path": "/field_196",
+      "op": "added",
+      "before": null,
+      "after": 196
+    },
+    {
+      "path": "/field_197",
+      "op": "added",
+      "before": null,
+      "after": 197
+    },
+    {
+      "path": "/field_198",
+      "op": "added",
+      "before": null,
+      "after": 198
+    },
+    {
+      "path": "/field_199",
+      "op": "added",
+      "before": null,
+      "after": 199
+    },
+    {
+      "path": "/field_200",
+      "op": "added",
+      "before": null,
+      "after": 200
+    }
+  ],
+  "capability_changes": {
+    "added": [
+      "document.summarize"
+    ],
+    "removed": []
+  },
+  "tag_changes": {
+    "added": [
+      "invoice-processing"
+    ],
+    "removed": []
+  },
+  "truncated": false
+}

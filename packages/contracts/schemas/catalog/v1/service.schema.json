@@ -91,6 +91,13 @@
         }
       ],
       "default": null
+    },
+    "tags": {
+      "$ref": "common.schema.json#/$defs/tags",
+      "default": []
+    },
+    "environment": {
+      "$ref": "common.schema.json#/$defs/environment"
     }
   },
   "required": [

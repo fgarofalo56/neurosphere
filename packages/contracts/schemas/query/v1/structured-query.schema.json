@@ -177,6 +177,7 @@
       ]
     },
     "keyword_field": {
+      "description": "Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them.",
       "enum": [
         "cloud",
         "environment",
@@ -191,7 +192,12 @@
         "span_kind",
         "relation_status",
         "observation_source",
-        "currency"
+        "currency",
+        "tag",
+        "capability",
+        "sensitivity_category",
+        "residency_region",
+        "residency_geography"
       ]
     },
     "number_field": {
@@ -226,7 +232,7 @@
       ]
     },
     "boolean_field": {
-      "enum": ["advisory", "locked", "has_owner"]
+      "enum": ["advisory", "locked", "has_owner", "contains_personal_data"]
     },
     "any_field": {
       "anyOf": [

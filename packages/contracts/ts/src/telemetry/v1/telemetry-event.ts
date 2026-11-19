@@ -164,6 +164,18 @@ export interface TelemetryEvent {
    * Optional pointer to a separately stored, redacted prompt/response payload. Bodies are off by default (NS-01).
    */
   payload_ref?: PayloadRef | null;
+  /**
+   * Identity of the tool this span invoked or observed. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.
+   */
+  tool?: TelemetryToolIdentity | null;
+  /**
+   * Identity of the service this span called or ran in. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.
+   */
+  service?: TelemetryServiceIdentity | null;
+  /**
+   * MCP server this span went through: a canonical McpServer ID when resolved, otherwise the source-reported reference. Null when not reported. Added in schema_version 1.1.0; events without it stay valid.
+   */
+  mcp_server_ref?: string | null;
 }
 /**
  * Token counts for one model interaction. Each count is nullable and defaults to null: null means not reported, 0 means a measured zero. Also referenced by cost/v1/cost-record.schema.json.
@@ -236,4 +248,40 @@ export interface PayloadRef {
    * Redaction status of the stored payload.
    */
   redaction_state: "redacted" | "pending" | "redaction_failed" | "not_required" | "unknown";
+}
+/**
+ * Tool identity on a telemetry event. Identifiers and a name only; never an argument or result body.
+ *
+ * This interface was referenced by `TelemetryEvent`'s JSON-Schema
+ * via the `definition` "tool_identity".
+ */
+export interface TelemetryToolIdentity {
+  /**
+   * Tool identifier as reported by the source. Null when not reported.
+   */
+  external_tool_id?: Identifier | null;
+  /**
+   * Resolved canonical tool ID (cloud:customer:source:type:id). Null until resolution succeeds.
+   */
+  canonical_tool_id?: CanonicalId | null;
+  /**
+   * Tool name as reported. Null when not reported.
+   */
+  tool_name?: Label | null;
+}
+/**
+ * Service identity on a telemetry event. Identifiers only.
+ *
+ * This interface was referenced by `TelemetryEvent`'s JSON-Schema
+ * via the `definition` "service_identity".
+ */
+export interface TelemetryServiceIdentity {
+  /**
+   * Service identifier as reported by the source. Null when not reported.
+   */
+  external_service_id?: Identifier | null;
+  /**
+   * Resolved canonical service ID (cloud:customer:source:type:id). Null until resolution succeeds.
+   */
+  canonical_service_id?: CanonicalId | null;
 }

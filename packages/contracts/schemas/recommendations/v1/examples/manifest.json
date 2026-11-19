@@ -113,6 +113,75 @@
         "keyword": "const"
       },
       "reason": "deterministic findings are advisory only"
+    },
+    {
+      "file": "valid/agent-match-request.task-with-capabilities.json",
+      "schema": "agent-match-request.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/agent-match-response.cold-start.json",
+      "schema": "agent-match-response.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/agent-match-response.scored.json",
+      "schema": "agent-match-response.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/agent-match-feedback-request.rejected.json",
+      "schema": "agent-match-feedback-request.schema.json",
+      "valid": true
+    },
+    {
+      "file": "valid/agent-match-feedback.accepted.json",
+      "schema": "agent-match-feedback.schema.json",
+      "valid": true
+    },
+    {
+      "file": "invalid/agent-match-request.domain-id.json",
+      "schema": "agent-match-request.schema.json",
+      "valid": false,
+      "derived_from": "valid/agent-match-request.task-with-capabilities.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "match requests carry no scope field"
+    },
+    {
+      "file": "invalid/agent-match-response.signal-value-out-of-range.json",
+      "schema": "agent-match-response.schema.json",
+      "valid": false,
+      "derived_from": "valid/agent-match-response.scored.json",
+      "expected_error": {
+        "instance_path": "/candidates/0/signals/0/value",
+        "keyword": "maximum"
+      },
+      "reason": "signal value is in [0,1] or null"
+    },
+    {
+      "file": "invalid/agent-match-feedback-request.free-text-comment.json",
+      "schema": "agent-match-feedback-request.schema.json",
+      "valid": false,
+      "derived_from": "valid/agent-match-feedback-request.rejected.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "feedback is reason codes only, no free text"
+    },
+    {
+      "file": "invalid/agent-match-feedback.free-text-comment.json",
+      "schema": "agent-match-feedback.schema.json",
+      "valid": false,
+      "derived_from": "valid/agent-match-feedback.accepted.json",
+      "expected_error": {
+        "instance_path": "",
+        "keyword": "additionalProperties"
+      },
+      "reason": "stored feedback is reason codes only, no free text"
     }
   ]
 }

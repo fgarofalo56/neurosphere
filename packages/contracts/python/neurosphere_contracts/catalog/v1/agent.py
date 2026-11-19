@@ -91,3 +91,6 @@ class Agent(BaseModel):
     Source-native agent identifier; resolution to this ID is recorded by alias documents.
     """
     current_version_id: CurrentVersionId | None = None
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    capabilities: Annotated[common.Capabilities | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"

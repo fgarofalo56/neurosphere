@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/recommendations/v1/agent-match-feedback-request.schema.json",
+  "title": "AgentMatchFeedbackRequest",
+  "description": "A steward's accept or reject of one match candidate (PRP-70 item 3). Reason codes only: there is deliberately no free-text field, so no PII-bearing text is stored. reason_code is optional and defaults to null. Cloud, customer, domain and actor come from the server-derived IdentityScope, not the request.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "match_id", "entity_id", "decision"],
+  "properties": {
+    "schema_version": { "$ref": "../../catalog/v1/common.schema.json#/$defs/schema_version" },
+    "match_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$" },
+    "entity_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" },
+    "decision": { "type": "string", "enum": ["accepted", "rejected"] },
+    "reason_code": {
+      "default": null,
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "not_relevant",
+            "missing_capability",
+            "poor_quality",
+            "unavailable",
+            "policy",
+            "other"
+          ]
+        },
+        { "type": "null" }
+      ]
+    }
+  }
+}

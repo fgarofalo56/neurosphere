@@ -6,6 +6,15 @@
  */
 
 /**
+ * Free-form lowercase labels; at most 32, no duplicates.
+ *
+ * @maxItems 32
+ *
+ * Items: Lowercase label token used for grouping and filtering catalog entities.
+ */
+export type Tags = string[];
+
+/**
  * Service an agent or tool depends on (Azure service, SaaS, internal API, gateway). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).
  */
 export interface Service {
@@ -69,6 +78,11 @@ export interface Service {
    */
   source_id: string;
   azure_resource_type?: string | null;
+  tags?: Tags;
+  /**
+   * Deployment environment; the same vocabulary as TelemetryEvent.environment.
+   */
+  environment?: "production" | "staging" | "development" | "test" | "sandbox" | "unknown";
 }
 /**
  * Extension point: scalar values only (string, number, boolean, null); keys are lowercase snake_case. Nested objects and arrays are rejected.

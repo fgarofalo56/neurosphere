@@ -655,13 +655,50 @@ _CATALOG_FIELDS = _ALL_ID_FIELDS | {
     "locked",
     "has_owner",
 }
+# PRP-70 item 1: restored-scope fields apply only to the catalog entities that carry them.
+_RESTORED_TAGGED = ("agent", "agent_version", "tool", "service", "mcp_server", "model_deployment")
+_RESTORED_FIELDS: Mapping[str, frozenset[str]] = {
+    **{entity: frozenset({"tag"}) for entity in _RESTORED_TAGGED},
+    "agent": frozenset({"tag", "capability"}),
+    "agent_version": frozenset({"tag", "capability"}),
+    "tool": frozenset({"tag", "capability"}),
+    "grounding_source": frozenset(
+        {
+            "tag",
+            "sensitivity_category",
+            "residency_geography",
+            "contains_personal_data",
+        }
+    ),
+}
+# residency_region exists on every catalog entity except person.
+_RESIDENCY_REGION_ENTITIES = frozenset(
+    {
+        "agent",
+        "agent_version",
+        "model_deployment",
+        "grounding_source",
+        "tool",
+        "service",
+        "domain",
+        "owner",
+        "policy",
+        "run_reference",
+        "grant",
+        "mcp_server",
+    }
+)
 _RECOMMENDATION_EXTRA = frozenset({"score", "baseline_amount", "projected_amount", "advisory"})
 _TOKEN_FIELDS = frozenset(
     {"input_tokens", "output_tokens", "cached_tokens", "reasoning_tokens", "total_tokens"}
 )
 FIELD_APPLICABILITY: Mapping[str, frozenset[str]] = {
     **{
-        entity: frozenset(_CATALOG_FIELDS)
+        entity: frozenset(
+            _CATALOG_FIELDS
+            | _RESTORED_FIELDS.get(entity, frozenset())
+            | ({"residency_region"} if entity in _RESIDENCY_REGION_ENTITIES else set())
+        )
         for entity in (
             "person",
             "agent",
@@ -1269,6 +1306,23 @@ def check_review_policy_document(document: Doc) -> Problems:
     return problems
 
 
+def check_revision_version_order(doc: Doc) -> Problems:
+    """EntityRevision: previous_version < entity_version (when not null);
+    EntityRevisionDiff: from_version < to_version."""
+
+    def _int(value: object) -> int | None:
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    problems: Problems = []
+    previous, current = _int(doc.get("previous_version")), _int(doc.get("entity_version"))
+    if previous is not None and current is not None and previous >= current:
+        problems.append(f"previous_version {previous} is not below entity_version {current}")
+    start, end = _int(doc.get("from_version")), _int(doc.get("to_version"))
+    if start is not None and end is not None and start >= end:
+        problems.append(f"from_version {start} is not below to_version {end}")
+    return problems
+
+
 def single_document_validators(
     context: Mapping[str, Any],
 ) -> dict[str, tuple[SingleDocValidator, ...]]:
@@ -1307,6 +1361,8 @@ def single_document_validators(
                 validate_lock_expiry_after_decision,
             ),
             "catalog/v1/canonical_id.schema.json": (validate_canonical_id_fullmatch,),
+            "catalog/v1/entity_revision.schema.json": (check_revision_version_order,),
+            "catalog/v1/entity_revision_diff.schema.json": (check_revision_version_order,),
             "telemetry/v1/telemetry-event.schema.json": (
                 validate_span_not_self_parent,
                 validate_canonical_id_grammar,

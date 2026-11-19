@@ -495,6 +495,17 @@
               }
             ]
           },
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Capabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
+          },
           "classification": {
             "anyOf": [
               {
@@ -546,6 +557,17 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
           "etag": {
             "$ref": "#/components/schemas/Etag"
           },
@@ -586,6 +608,17 @@
           },
           "source_id": {
             "$ref": "#/components/schemas/Token"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "updated_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -632,6 +665,17 @@
                 "type": "null"
               }
             ]
+          },
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Capabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "classification": {
             "anyOf": [
@@ -705,6 +749,27 @@
           },
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "semver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Semver"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "updated_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -1899,7 +1964,8 @@
         "enum": [
           "advisory",
           "locked",
-          "has_owner"
+          "has_owner",
+          "contains_personal_data"
         ],
         "title": "BooleanField",
         "type": "string"
@@ -2249,6 +2315,22 @@
         "maxLength": 512,
         "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
         "title": "CanonicalId",
+        "type": "string"
+      },
+      "Capabilities": {
+        "default": [],
+        "description": "Declared capabilities; at most 64, no duplicates.",
+        "items": {
+          "$ref": "#/components/schemas/Capability"
+        },
+        "maxItems": 64,
+        "title": "Capabilities",
+        "type": "array"
+      },
+      "Capability": {
+        "maxLength": 128,
+        "pattern": "^[a-z][a-z0-9_]{0,31}(\\.[a-z][a-z0-9_]{0,31}){0,3}$",
+        "title": "Capability",
         "type": "string"
       },
       "CapabilityMatrixEntry": {
@@ -5568,6 +5650,19 @@
         "title": "EntityVersion",
         "type": "integer"
       },
+      "Environment": {
+        "default": "unknown",
+        "enum": [
+          "production",
+          "staging",
+          "development",
+          "test",
+          "sandbox",
+          "unknown"
+        ],
+        "title": "Environment",
+        "type": "string"
+      },
       "EstimatedCost": {
         "additionalProperties": false,
         "properties": {
@@ -6579,7 +6674,13 @@
           "nist_ai_rmf",
           "sr_11_7",
           "hipaa_technical_safeguards",
-          "omb_m_25_21"
+          "omb_m_25_21",
+          "soc2_tsc",
+          "iso_27001_annex_a",
+          "gdpr",
+          "nist_800_53_r5",
+          "eu_ai_act",
+          "iso_42001"
         ],
         "title": "FrameworkId",
         "type": "string"
@@ -7941,6 +8042,17 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
           "etag": {
             "$ref": "#/components/schemas/Etag"
           },
@@ -7952,6 +8064,16 @@
           },
           "lifecycle_status": {
             "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "residency_geography": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResidencyGeography"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "residency_region": {
             "anyOf": [
@@ -7976,8 +8098,30 @@
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
           },
+          "sensitivity_categories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SensitivityCategories"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
+          },
           "source_id": {
             "$ref": "#/components/schemas/Token"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "updated_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -8702,7 +8846,12 @@
           "span_kind",
           "relation_status",
           "observation_source",
-          "currency"
+          "currency",
+          "tag",
+          "capability",
+          "sensitivity_category",
+          "residency_region",
+          "residency_geography"
         ],
         "title": "KeywordField",
         "type": "string"
@@ -9375,6 +9524,17 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
           "etag": {
             "$ref": "#/components/schemas/Etag"
           },
@@ -9432,6 +9592,17 @@
           },
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "tools": {
             "anyOf": [
@@ -9923,6 +10094,17 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
           "etag": {
             "$ref": "#/components/schemas/Etag"
           },
@@ -10040,6 +10222,17 @@
               }
             ],
             "title": "Supports Tool Calling"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "updated_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -14076,6 +14269,21 @@
         "title": "ResetResult",
         "type": "object"
       },
+      "ResidencyGeography": {
+        "enum": [
+          "eu_eea",
+          "uk",
+          "switzerland",
+          "united_states",
+          "canada",
+          "asia_pacific",
+          "latin_america",
+          "middle_east_africa",
+          "other"
+        ],
+        "title": "ResidencyGeography",
+        "type": "string"
+      },
       "ResourceGrantChange": {
         "additionalProperties": false,
         "description": "Request to create or replace one custom resource-scoped grant for one pseudonymous principal (PRP-39 identity API). Maps onto PRP-06 PolicyGrant: one named resource, time-bound (expires_at always required) and reason-bearing. Removing a grant is a delete of grant_id on the route, not a body. Rules JSON Schema cannot express (expires_at is in the future) are enforced by the PRP-39 handler.",
@@ -15606,6 +15814,38 @@
         "title": "Score",
         "type": "object"
       },
+      "Semver": {
+        "maxLength": 128,
+        "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+        "title": "Semver",
+        "type": "string"
+      },
+      "SensitivityCategories": {
+        "default": [],
+        "description": "Sensitivity categories of a data asset; empty when none are declared or not yet assessed.",
+        "items": {
+          "$ref": "#/components/schemas/SensitivityCategory"
+        },
+        "maxItems": 10,
+        "title": "SensitivityCategories",
+        "type": "array"
+      },
+      "SensitivityCategory": {
+        "enum": [
+          "pii",
+          "phi",
+          "cui",
+          "pci",
+          "financial",
+          "biometric",
+          "credentials",
+          "export_controlled",
+          "legal_privileged",
+          "other"
+        ],
+        "title": "SensitivityCategory",
+        "type": "string"
+      },
       "Series": {
         "additionalProperties": false,
         "properties": {
@@ -15949,6 +16189,17 @@
             "title": "Entity Type",
             "type": "string"
           },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
+          },
           "etag": {
             "$ref": "#/components/schemas/Etag"
           },
@@ -15996,6 +16247,17 @@
           },
           "source_id": {
             "$ref": "#/components/schemas/Token"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "updated_at": {
             "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
@@ -17430,6 +17692,21 @@
         ],
         "title": "SystemStatus",
         "type": "object"
+      },
+      "Tag": {
+        "pattern": "^[a-z0-9][a-z0-9._-]{0,62}$",
+        "title": "Tag",
+        "type": "string"
+      },
+      "Tags": {
+        "default": [],
+        "description": "Free-form lowercase labels; at most 32, no duplicates.",
+        "items": {
+          "$ref": "#/components/schemas/Tag"
+        },
+        "maxItems": 32,
+        "title": "Tags",
+        "type": "array"
       },
       "Target": {
         "additionalProperties": false,
@@ -19434,6 +19711,17 @@
               }
             ]
           },
+          "capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Capabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
+          },
           "classification": {
             "anyOf": [
               {
@@ -19464,6 +19752,17 @@
             "const": "tool",
             "title": "Entity Type",
             "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "unknown"
           },
           "etag": {
             "$ref": "#/components/schemas/Etag"
@@ -19519,6 +19818,17 @@
           },
           "source_id": {
             "$ref": "#/components/schemas/Token"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tags"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": []
           },
           "tool_kind": {
             "anyOf": [

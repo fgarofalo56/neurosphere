@@ -80,3 +80,12 @@ class GroundingSource(BaseModel):
     """
     null when not assessed.
     """
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"
+    sensitivity_categories: Annotated[
+        common.SensitivityCategories | None, Field(validate_default=True)
+    ] = []
+    residency_geography: common.ResidencyGeography | None = None
+    """
+    Coarse geography of the authoritative copy; null when not declared (consumers derive it from residency_region).
+    """

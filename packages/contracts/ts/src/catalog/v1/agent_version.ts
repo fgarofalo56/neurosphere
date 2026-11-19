@@ -6,6 +6,23 @@
  */
 
 /**
+ * Free-form lowercase labels; at most 32, no duplicates.
+ *
+ * @maxItems 32
+ *
+ * Items: Lowercase label token used for grouping and filtering catalog entities.
+ */
+export type Tags = string[];
+/**
+ * Declared capabilities; at most 64, no duplicates.
+ *
+ * @maxItems 64
+ *
+ * Items: Dot-namespaced capability token such as document.summarize (one to four segments). Open-ended: readers must tolerate unknown values. There is no closed taxonomy.
+ */
+export type Capabilities = string[];
+
+/**
  * Immutable release of an Agent (instructions, tools and model bindings at a point in time). Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).
  */
 export interface AgentVersion {
@@ -69,6 +86,12 @@ export interface AgentVersion {
    * Hash of the version's declarative configuration.
    */
   config_hash?: string | null;
+  tags?: Tags;
+  capabilities?: Capabilities;
+  /**
+   * Declared Semantic Version of this release; null when not declared (version_label stays the free-form label).
+   */
+  semver?: string | null;
 }
 /**
  * Extension point: scalar values only (string, number, boolean, null); keys are lowercase snake_case. Nested objects and arrays are rejected.

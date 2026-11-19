@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "control_id": "gdpr.art-30",
+  "framework_id": "gdpr",
+  "title": "Record of personal data processing activities",
+  "source_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj",
+  "source_retrieved": "2026-11-19",
+  "framework_version": "2016/679"
+}

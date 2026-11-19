@@ -6,6 +6,34 @@
  */
 
 /**
+ * Free-form lowercase labels; at most 32, no duplicates.
+ *
+ * @maxItems 32
+ *
+ * Items: Lowercase label token used for grouping and filtering catalog entities.
+ */
+export type Tags = string[];
+/**
+ * Sensitivity categories of a data asset; empty when none are declared or not yet assessed.
+ *
+ * @maxItems 10
+ *
+ * Items: Kind of sensitive data a data asset holds; sits beside classification, not instead of it. Open-ended: readers must tolerate unknown values.
+ */
+export type SensitivityCategories = (
+  | "pii"
+  | "phi"
+  | "cui"
+  | "pci"
+  | "financial"
+  | "biometric"
+  | "credentials"
+  | "export_controlled"
+  | "legal_privileged"
+  | "other"
+)[];
+
+/**
  * GroundingSource/DataAsset: a data asset read, written or used for grounding (index, store, table, file share, knowledge base). One schema covers both names. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at).
  */
 export interface GroundingSource {
@@ -85,6 +113,28 @@ export interface GroundingSource {
    * null when not assessed.
    */
   contains_personal_data?: boolean | null;
+  tags?: Tags;
+  /**
+   * Deployment environment; the same vocabulary as TelemetryEvent.environment.
+   */
+  environment?: "production" | "staging" | "development" | "test" | "sandbox" | "unknown";
+  sensitivity_categories?: SensitivityCategories;
+  /**
+   * Coarse geography of the authoritative copy; null when not declared (consumers derive it from residency_region).
+   */
+  residency_geography?:
+    | (
+        | "eu_eea"
+        | "uk"
+        | "switzerland"
+        | "united_states"
+        | "canada"
+        | "asia_pacific"
+        | "latin_america"
+        | "middle_east_africa"
+        | "other"
+      )
+    | null;
 }
 /**
  * Extension point: scalar values only (string, number, boolean, null); keys are lowercase snake_case. Nested objects and arrays are rejected.

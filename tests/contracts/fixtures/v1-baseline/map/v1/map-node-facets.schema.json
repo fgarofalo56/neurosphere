@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/map/v1/map-node-facets.schema.json",
+  "title": "MapNodeFacets",
+  "description": "Filterable facets and health of one live-map node (PRP-70 item 4). A fragment schema without schema_version, like actions/v1/target-ref, so the API and the frontend share one shape. Every member is nullable or defaulted, so none is required. Unknown numeric values (error_rate, error_count, request_count) are null, never 0: a zero means a measured zero.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "entity_type": {
+      "description": "Catalog entity type of the node; null for cluster nodes.",
+      "default": null,
+      "oneOf": [{ "$ref": "../../catalog/v1/common.schema.json#/$defs/entity_type" }, { "type": "null" }]
+    },
+    "environment": { "$ref": "../../catalog/v1/common.schema.json#/$defs/environment" },
+    "cloud": {
+      "description": "Cloud boundary of the node; null when unknown.",
+      "default": null,
+      "oneOf": [{ "$ref": "../../catalog/v1/common.schema.json#/$defs/cloud" }, { "type": "null" }]
+    },
+    "tags": { "$ref": "../../catalog/v1/common.schema.json#/$defs/tags" },
+    "lifecycle_status": {
+      "description": "Lifecycle state of the node's entity; null when unknown.",
+      "default": null,
+      "oneOf": [
+        { "$ref": "../../catalog/v1/common.schema.json#/$defs/lifecycle_status" },
+        { "type": "null" }
+      ]
+    },
+    "discovery": {
+      "description": "How the node came to be known: declared in the catalog, seen in telemetry, imported, or unknown.",
+      "type": "string",
+      "enum": ["declared", "telemetry", "import", "unknown"],
+      "default": "unknown"
+    },
+    "health": {
+      "description": "Observed health of the node. unknown when there is no telemetry window to judge.",
+      "type": "string",
+      "enum": ["ok", "degraded", "failing", "unknown"],
+      "default": "unknown"
+    },
+    "error_rate": {
+      "description": "Share of failed requests in the window, 0 to 1; null when unknown (never 0 for unknown).",
+      "default": null,
+      "oneOf": [{ "type": "number", "minimum": 0, "maximum": 1 }, { "type": "null" }]
+    },
+    "error_count": {
+      "description": "Failed requests in the window; null when unknown (never 0 for unknown).",
+      "default": null,
+      "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }]
+    },
+    "request_count": {
+      "description": "Requests in the window; null when unknown (never 0 for unknown).",
+      "default": null,
+      "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }]
+    },
+    "last_error_at": {
+      "description": "Time of the most recent error; null when none is known.",
+      "default": null,
+      "oneOf": [
+        { "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "sensitivity_categories": {
+      "$ref": "../../catalog/v1/common.schema.json#/$defs/sensitivity_categories"
+    },
+    "residency_geography": {
+      "description": "Coarse geography of the node's data; null when not declared.",
+      "default": null,
+      "oneOf": [
+        { "$ref": "../../catalog/v1/common.schema.json#/$defs/residency_geography" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

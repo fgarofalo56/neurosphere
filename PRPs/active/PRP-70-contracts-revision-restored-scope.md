@@ -1,6 +1,7 @@
 ---
 name: PRP-70-contracts-revision-restored-scope
-status: backlog
+status: active
+started: 2026-11-19
 priority: P0
 order: 60
 review: required
@@ -255,18 +256,20 @@ Routes, stores, containers, seeds, UI, the matcher, the revision writer, the res
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 2 and 3 are ASSUMPTIONS for plan approval)
+- [x] All clarification questions are decided, not guessed (rows 2 and 3 confirmed by the owner at plan approval, 2026-11-19)
 
 ## Execution state
-| Item | Status | Branch/worktree | Notes |
-|---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+Plan approved 2026-11-19: one serial lane (1, 2, 3, 4, 7), consumer sweep (5), one review pass on the whole integration diff, close-out (6). Item 3's finding-kind part is already on main (PRP-61): verified, skipped; `strings.ts` is not edited.
+
+| Item | Status | Branch/worktree | Model | Evidence | Updated |
+|---|---|---|---|---|---|
+| 1 | merged | worktree-agent-aabdf031f856e5395 | sonnet | orchestrator re-run: generate --check OK (104 py, 74 ts), pytest tests/contracts + scripts 2724 passed, ruff, pyright 0 errors, ts 168 passed; dc344adb, merge 3dd87616. Deviation: duplicate-category invalid example is an inline JSON Schema test (Pydantic ignores uniqueItems) | 2026-11-19 |
+| 2 | merged | worktree-agent-aadd67d2f248f0069 | sonnet | orchestrator re-run: generate --check OK (106 py, 76 ts), pytest 2804 passed, ruff, pyright 0 errors, ts 171 passed; fd56a191, merge b0cd84d6. Deviations: wrong-body-type case is an inline JSON Schema test (if/then yields several errors, one per invalid file is required); diff before/after typed scalar, array or null, no object (nested changes are deeper paths); examples manifest is index.json | 2026-11-19 |
+| 3 | merged | worktree-agent-a88d8be4de11ea9f3 | sonnet | orchestrator re-run: generate --check OK (110 py, 80 ts), pytest 2901 passed, ruff, pyright 0 errors, ts 176 passed, frontend typecheck clean; 8b2421d2, merge c9c26ca4. Finding kinds verified on main (PRP-61), not re-shipped. Extra invalid example for stored feedback (suite needs one per schema) | 2026-11-19 |
+| 4 | merged | worktree-agent-a67575ab3efac9132 | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest contracts + scripts + compliance_lib 3028 passed, ruff, pyright 0 errors, ts 185 passed; d53b1942, merge ebd4dcc5. Claims scan (tests/marketing/claims_rules.py) covers valid compliance examples only; MapNodeFacets has no required member; entity_ids uniqueItems added | 2026-11-19 |
+| 7 | merged | worktree-agent-ad56ef17f9424d2ad | sonnet | orchestrator re-run: generate --check OK (114 py, 82 ts), pytest 2999 passed, ruff, pyright 0 errors, ts 186 passed; a4bd3f6c, merge e484a6fb. Deviation: empty tool/service object is rejected by JSON Schema only (Pydantic drops minProperties); inline test, no invalid example file. Minor bump = 1.1.0 note in descriptions + new example, cost-record precedent | 2026-11-19 |
+| 5 | merged | prp-70-contracts-restored-scope | orchestrator | gate run on 58d250a4: consumer pytest line 3821 passed, ruff format, pyright, generate --check, contracts TS 186 passed, frontend typecheck, frontend vitest 1233 passed, validate_planning all exit 0; only consumer failure was openapi drift, fixed by regenerating services/api/openapi.json (no product code changed). ruff check . is clean on the tracked tree; 41 findings are all in stale untracked .claude/worktrees | 2026-11-19 |
+| 6 | in-progress | prp-70-contracts-restored-scope | orchestrator | review (opus, whole diff): APPROVE, no blockers, follow-ups in #349; ADR-0004 amended, baseline refreshed, allowlist emptied, changelog fragment, Tier-3 regenerated | 2026-11-19 |
 
 ## Completion note (filled at ship)
 - Date and PR:

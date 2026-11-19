@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/map/v1/map-topology-change.schema.json",
+  "title": "MapTopologyChange",
+  "description": "Notice that the live map topology of a domain changed (PRP-70 item 4). A fragment schema without schema_version, like actions/v1/target-ref. It names what changed so a client can refetch; it carries no node or edge bodies. When truncated is true the entity_ids list is partial and the client must refetch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["domain_id", "changed_at", "change_kinds", "entity_ids", "refetch", "truncated"],
+  "properties": {
+    "domain_id": { "$ref": "../../catalog/v1/common.schema.json#/$defs/domain_id" },
+    "changed_at": { "$ref": "../../catalog/v1/common.schema.json#/$defs/timestamp" },
+    "change_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "node_added",
+          "node_removed",
+          "node_updated",
+          "edge_added",
+          "edge_removed",
+          "edge_updated"
+        ]
+      }
+    },
+    "entity_ids": {
+      "description": "Canonical ids of the entities touched; at most 50.",
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "$ref": "../../catalog/v1/common.schema.json#/$defs/canonical_id" }
+    },
+    "refetch": { "type": "boolean" },
+    "truncated": { "type": "boolean" }
+  }
+}

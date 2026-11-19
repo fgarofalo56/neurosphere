@@ -37,10 +37,10 @@
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]{1,64})?$"
     },
     "documentation_url": {
-      "description": "HTTPS documentation URL. No query string, fragment or userinfo.",
+      "description": "HTTPS documentation URL. No query string, fragment or userinfo. At most 512 characters and 128 characters per path segment (PRP-37: the single ADR-0004 v1 tightening, so a long opaque path cannot carry a secret).",
       "type": "string",
-      "maxLength": 2048,
-      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%/-]*)?$"
+      "maxLength": 512,
+      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._~%-]{0,128})*$"
     },
     "supported_clouds": {
       "description": "Azure clouds this connector registration may run in. A registration never moves data between clouds.",
@@ -75,7 +75,8 @@
       "maxItems": 64,
       "items": {
         "type": "string",
-        "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,255}$"
+        "description": "At most 128 characters (PRP-37 cap; ADR-0004 exception).",
+        "pattern": "^[A-Za-z][A-Za-z0-9._:/-]{0,127}$"
       }
     },
     "granularity": {

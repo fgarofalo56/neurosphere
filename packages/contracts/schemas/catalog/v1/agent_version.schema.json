@@ -95,6 +95,26 @@
       ],
       "default": null,
       "description": "Hash of the version's declarative configuration."
+    },
+    "tags": {
+      "$ref": "common.schema.json#/$defs/tags",
+      "default": []
+    },
+    "capabilities": {
+      "$ref": "common.schema.json#/$defs/capabilities",
+      "default": []
+    },
+    "semver": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Declared Semantic Version of this release; null when not declared (version_label stays the free-form label)."
     }
   },
   "required": [

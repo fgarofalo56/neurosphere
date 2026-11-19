@@ -62,6 +62,8 @@ export type IdField =
  */
 export type CanonicalId = string;
 /**
+ * Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them.
+ *
  * This interface was referenced by `StructuredQuery`'s JSON-Schema
  * via the `definition` "keyword_field".
  */
@@ -79,7 +81,12 @@ export type KeywordField =
   | "span_kind"
   | "relation_status"
   | "observation_source"
-  | "currency";
+  | "currency"
+  | "tag"
+  | "capability"
+  | "sensitivity_category"
+  | "residency_region"
+  | "residency_geography";
 /**
  * Enumerated-style value: no whitespace, quotes, brackets, operators or control characters, so it cannot carry query text.
  *
@@ -140,7 +147,7 @@ export type Timestamp = string;
  * This interface was referenced by `StructuredQuery`'s JSON-Schema
  * via the `definition` "boolean_field".
  */
-export type BooleanField = "advisory" | "locked" | "has_owner";
+export type BooleanField = "advisory" | "locked" | "has_owner" | "contains_personal_data";
 /**
  * This interface was referenced by `StructuredQuery`'s JSON-Schema
  * via the `definition` "any_field".

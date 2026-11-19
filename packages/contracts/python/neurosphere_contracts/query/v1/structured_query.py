@@ -163,6 +163,11 @@ class KeywordField(
             "relation_status",
             "observation_source",
             "currency",
+            "tag",
+            "capability",
+            "sensitivity_category",
+            "residency_region",
+            "residency_geography",
         ]
     ]
 ):
@@ -181,7 +186,15 @@ class KeywordField(
         "relation_status",
         "observation_source",
         "currency",
+        "tag",
+        "capability",
+        "sensitivity_category",
+        "residency_region",
+        "residency_geography",
     ]
+    """
+    Keyword fields. tag, capability and sensitivity_category are list-valued on the entity: eq means the list contains the value, in means it contains any of the values, ne and not_in mean it contains none of them.
+    """
 
 
 class NumberField(
@@ -248,8 +261,8 @@ class TimeField(
     ]
 
 
-class BooleanField(RootModel[Literal["advisory", "locked", "has_owner"]]):
-    root: Literal["advisory", "locked", "has_owner"]
+class BooleanField(RootModel[Literal["advisory", "locked", "has_owner", "contains_personal_data"]]):
+    root: Literal["advisory", "locked", "has_owner", "contains_personal_data"]
 
 
 class AnyField(

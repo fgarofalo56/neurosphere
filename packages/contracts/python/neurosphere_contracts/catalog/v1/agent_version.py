@@ -72,3 +72,9 @@ class AgentVersion(BaseModel):
     """
     Hash of the version's declarative configuration.
     """
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    capabilities: Annotated[common.Capabilities | None, Field(validate_default=True)] = []
+    semver: common.Semver | None = None
+    """
+    Declared Semantic Version of this release; null when not declared (version_label stays the free-form label).
+    """

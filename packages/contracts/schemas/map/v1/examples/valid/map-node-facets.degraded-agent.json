@@ -1,0 +1,15 @@
+{
+  "entity_type": "agent",
+  "environment": "production",
+  "cloud": "commercial",
+  "tags": ["contracts", "finance"],
+  "lifecycle_status": "active",
+  "discovery": "telemetry",
+  "health": "degraded",
+  "error_rate": 0.12,
+  "error_count": 6,
+  "request_count": 50,
+  "last_error_at": "2026-11-19T09:30:00Z",
+  "sensitivity_categories": ["financial"],
+  "residency_geography": "united_states"
+}

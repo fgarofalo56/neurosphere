@@ -777,6 +777,72 @@
       "instance_path": "/source_id",
       "reason": "GRANTS_ACCESS_TO starts at a Grant",
       "derived_from": "valid/grants_access_to.asserted.json"
+    },
+    {
+      "file": "valid/agent.tagged-capabilities-environment.json",
+      "schema": "agent.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/tool.capabilities.json",
+      "schema": "tool.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/grounding_source.sensitivity-residency.json",
+      "schema": "grounding_source.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/agent.uppercase-tag.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "pattern",
+      "instance_path": "/tags/0",
+      "reason": "tags are lowercase tokens without spaces",
+      "derived_from": "valid/agent.tagged-capabilities-environment.json"
+    },
+    {
+      "file": "invalid/agent.unknown-environment.json",
+      "schema": "agent.schema.json",
+      "expect": "invalid",
+      "keyword": "enum",
+      "instance_path": "/environment",
+      "reason": "environment is a closed vocabulary",
+      "derived_from": "valid/agent.tagged-capabilities-environment.json"
+    },
+    {
+      "file": "valid/entity_revision.agent-update.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/entity_revision.grounding-source-create.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "valid/entity_revision_diff.agent-capabilities.json",
+      "schema": "entity_revision_diff.schema.json",
+      "expect": "valid"
+    },
+    {
+      "file": "invalid/entity_revision.missing-body-sha256.json",
+      "schema": "entity_revision.schema.json",
+      "expect": "invalid",
+      "keyword": "required",
+      "instance_path": "",
+      "reason": "body_sha256 is required",
+      "derived_from": "valid/entity_revision.agent-update.json"
+    },
+    {
+      "file": "invalid/entity_revision_diff.too-many-changes.json",
+      "schema": "entity_revision_diff.schema.json",
+      "expect": "invalid",
+      "keyword": "maxItems",
+      "instance_path": "/changes",
+      "reason": "201 changes exceed the cap of 200",
+      "derived_from": "valid/entity_revision_diff.agent-capabilities.json"
     }
   ]
 }

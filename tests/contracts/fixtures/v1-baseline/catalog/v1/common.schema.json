@@ -375,6 +375,97 @@
         "reason"
       ],
       "additionalProperties": false
+    },
+    "tag": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,62}$",
+      "description": "Lowercase label token used for grouping and filtering catalog entities."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tag"
+      },
+      "uniqueItems": true,
+      "maxItems": 32,
+      "default": [],
+      "description": "Free-form lowercase labels; at most 32, no duplicates."
+    },
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,31}(\\.[a-z][a-z0-9_]{0,31}){0,3}$",
+      "maxLength": 128,
+      "description": "Dot-namespaced capability token such as document.summarize (one to four segments). Open-ended: readers must tolerate unknown values. There is no closed taxonomy."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability"
+      },
+      "uniqueItems": true,
+      "maxItems": 64,
+      "default": [],
+      "description": "Declared capabilities; at most 64, no duplicates."
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "production",
+        "staging",
+        "development",
+        "test",
+        "sandbox",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "Deployment environment; the same vocabulary as TelemetryEvent.environment."
+    },
+    "sensitivity_category": {
+      "type": "string",
+      "enum": [
+        "pii",
+        "phi",
+        "cui",
+        "pci",
+        "financial",
+        "biometric",
+        "credentials",
+        "export_controlled",
+        "legal_privileged",
+        "other"
+      ],
+      "description": "Kind of sensitive data a data asset holds; sits beside classification, not instead of it. Open-ended: readers must tolerate unknown values."
+    },
+    "sensitivity_categories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sensitivity_category"
+      },
+      "uniqueItems": true,
+      "maxItems": 10,
+      "default": [],
+      "description": "Sensitivity categories of a data asset; empty when none are declared or not yet assessed."
+    },
+    "residency_geography": {
+      "type": "string",
+      "enum": [
+        "eu_eea",
+        "uk",
+        "switzerland",
+        "united_states",
+        "canada",
+        "asia_pacific",
+        "latin_america",
+        "middle_east_africa",
+        "other"
+      ],
+      "description": "Coarse geography of the data's authoritative copy; complements residency_region. Open-ended: readers must tolerate unknown values."
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "maxLength": 128,
+      "description": "Semantic Version 2.0.0 string (semver.org reference expression)."
     }
   }
 }
