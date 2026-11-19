@@ -96,6 +96,9 @@ param foundryAccountIds array = []
 @description('PRP-58: ARM resource id of the existing storage account holding the Cost Management export container (billing_export). Gets Storage Blob Data Reader for the workers identity at that account scope only. Empty (default) assigns nothing.')
 param billingExportStorageAccountId string = ''
 
+@description('PRP-138: Entra claim to role mapping for the API (NS_AUTH_ROLE_MAPPINGS), an object {tenant_id, audience, entries: [{id, claim, value, role, domains, customer_control}]}. Not a secret. Empty (default) leaves the mapping off and the setting unset. tenant_id must equal entraTenantId and audience must equal entraClientId, or the API authz component fails closed at startup (role_mapping_binding_mismatch). See docs/runbooks/entra-role-mapping.md.')
+param entraRoleMappings object = {}
+
 @description('Catalog search provider (NS_SEARCH_PROVIDER). The demo deploys no AI Search, so it defaults to the in-process fixture; set azure with searchService when an existing service is referenced.')
 @allowed([
   'fixture'
@@ -278,7 +281,12 @@ var apiSettings = {
   NS_COPILOT_SKU: 'Global Standard'
 }
 
-var apiSettingsWithWriteTargets = union(apiSettings, writeTargetSettings)
+// PRP-138: API only. Omitted when the parameter is empty, so the rendered settings are unchanged.
+var roleMappingSettings = empty(entraRoleMappings)
+  ? {}
+  : { NS_AUTH_ROLE_MAPPINGS: string(entraRoleMappings) }
+
+var apiSettingsWithWriteTargets = union(apiSettings, writeTargetSettings, roleMappingSettings)
 
 
 // NS_WORKER_OBJECT_ID is the workers' own system-assigned principal id, which exists only after

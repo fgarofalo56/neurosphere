@@ -76,6 +76,7 @@ GENERATED_PARAMS: Final = (
     "recommendationsEnabled",
     "foundryAccountIds",
     "billingExportStorageAccountId",
+    "entraRoleMappings",
     "budgetAmount",
     "budgetStartDate",
     "budgetContactEmails",

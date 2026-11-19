@@ -761,3 +761,90 @@ def test_status_reports_drift_and_delete_after(env: Env) -> None:
     details = env.evidence("status")["details"]
     assert details["drift_count"] == 1
     assert details["delete_after"] == "2026-11-25"
+
+
+# --------------------------------------------------------------------------- PRP-138 item 9
+
+
+def role_mapping_doc(**overrides: Any) -> dict[str, Any]:
+    doc: dict[str, Any] = {
+        "tenant_id": TENANT,
+        "audience": APP_ID,
+        "entries": [
+            {
+                "id": "ns-admins",
+                "claim": "roles",
+                "value": "admin",
+                "role": "admin",
+                "domains": "all",
+                "customer_control": True,
+            }
+        ],
+    }
+    doc.update(overrides)
+    return doc
+
+
+def write_role_mapping(tmp: Path, doc: object) -> str:
+    path = tmp / "role-mappings.json"
+    path.write_text(doc if isinstance(doc, str) else json.dumps(doc), encoding="utf-8")
+    return str(path)
+
+
+def test_role_mapping_is_off_by_default(env: Env) -> None:
+    assert env.run("plan") == 0
+    assert env.fake.params_seen["parameters"]["entraRoleMappings"]["value"] == {}
+
+
+def test_role_mapping_file_reaches_the_params(env: Env) -> None:
+    path = write_role_mapping(env.tmp, role_mapping_doc())
+    assert env.run("plan", "--entra-role-mappings-file", path) == 0
+    assert env.fake.params_seen["parameters"]["entraRoleMappings"]["value"] == role_mapping_doc()
+
+
+def _bad_entry(**changes: Any) -> dict[str, Any]:
+    doc = role_mapping_doc()
+    doc["entries"][0].update(changes)
+    return doc
+
+
+@pytest.mark.parametrize(
+    "doc",
+    [
+        "{not json",
+        "",
+        _bad_entry(role="owner"),
+        _bad_entry(claim="groups", value="not-a-guid"),
+        role_mapping_doc(tenant_id="dddddddd-0000-0000-0000-000000000009"),
+        role_mapping_doc(audience="bbbbbbbb-0000-0000-0000-0000000000ff"),
+        role_mapping_doc(extra="x"),
+    ],
+    ids=["malformed", "empty", "role", "group-value", "tenant", "audience", "unknown-key"],
+)
+def test_defective_role_mapping_file_is_refused_with_zero_calls(env: Env, doc: object) -> None:
+    path = write_role_mapping(env.tmp, doc)
+    assert env.run("plan", "--entra-role-mappings-file", path) == 2
+    assert env.fake.calls == []
+
+
+def test_missing_role_mapping_file_is_refused_with_zero_calls(env: Env) -> None:
+    assert env.run("plan", "--entra-role-mappings-file", str(env.tmp / "absent.json")) == 2
+    assert env.fake.calls == []
+
+
+def test_role_mapping_file_inside_the_repo_outside_temp_is_refused(env: Env) -> None:
+    inside = Path(__file__).resolve().parents[3] / "docs" / "role-mappings.json"
+    assert env.run("plan", "--entra-role-mappings-file", str(inside)) == 2
+    assert env.fake.calls == []
+    assert not inside.exists()
+
+
+def test_role_mapping_refusal_names_no_identifier(
+    env: Env, capsys: pytest.CaptureFixture[str]
+) -> None:
+    other = "dddddddd-0000-0000-0000-000000000009"
+    path = write_role_mapping(env.tmp, role_mapping_doc(tenant_id=other))
+    assert env.run("plan", "--entra-role-mappings-file", path) == 2
+    out = capsys.readouterr()
+    assert other not in out.out + out.err
+    assert "role_mapping_binding_mismatch" in out.out + out.err

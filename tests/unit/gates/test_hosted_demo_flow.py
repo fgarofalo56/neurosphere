@@ -404,3 +404,27 @@ def test_seed_access_fails_loudly_on_a_blank_assignment_id(env: Any) -> None:
     )["rows"]
     assert all(r["resource_id"].startswith("/") for r in rows)
     assert not any(r["service"] == "seed-access" for r in rows)
+
+
+def test_deploy_passes_the_role_mapping_and_keeps_identifiers_out_of_evidence(env: Any) -> None:
+    """PRP-138 item 9: the mapping reaches the deployment parameters, what-if still runs first."""
+    path = F.write_role_mapping(env.tmp, F.role_mapping_doc())
+    assert env.run("plan", "--entra-role-mappings-file", path) == 0
+    digest = env.evidence("plan")["details"]["plan_sha256"]
+    env.fake.calls.clear()
+    code = env.run(
+        "deploy",
+        "--entra-role-mappings-file", path,
+        "--approve-plan", digest,
+        "--approve-shared", "hub-subnet,hub-pe,hub-dns,budget",
+    )  # fmt: skip
+    assert code == 0
+    assert env.fake.index("deployment", "group", "what-if") < env.fake.index(
+        "deployment", "group", "create"
+    )
+    mapping = env.fake.params_seen["parameters"]["entraRoleMappings"]["value"]
+    assert mapping["entries"][0]["id"] == "ns-admins"
+    assert mapping["tenant_id"] == F.TENANT and mapping["audience"] == F.APP_ID
+    for evidence in (env.tmp / "ev").glob("*.json"):
+        text = evidence.read_text(encoding="utf-8")
+        assert F.TENANT not in text and F.APP_ID not in text, evidence.name
