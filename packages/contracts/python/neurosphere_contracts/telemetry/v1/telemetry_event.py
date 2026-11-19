@@ -98,6 +98,46 @@ class DataSourceRef(BaseModel):
     """
 
 
+class TelemetryToolIdentity(BaseModel):
+    """
+    Tool identity on a telemetry event. Identifiers and a name only; never an argument or result body.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    external_tool_id: Identifier | None = None
+    """
+    Tool identifier as reported by the source. Null when not reported.
+    """
+    canonical_tool_id: CanonicalId | None = None
+    """
+    Resolved canonical tool ID (cloud:customer:source:type:id). Null until resolution succeeds.
+    """
+    tool_name: Label | None = None
+    """
+    Tool name as reported. Null when not reported.
+    """
+
+
+class TelemetryServiceIdentity(BaseModel):
+    """
+    Service identity on a telemetry event. Identifiers only.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    external_service_id: Identifier | None = None
+    """
+    Service identifier as reported by the source. Null when not reported.
+    """
+    canonical_service_id: CanonicalId | None = None
+    """
+    Resolved canonical service ID (cloud:customer:source:type:id). Null until resolution succeeds.
+    """
+
+
 class SamplingMetadata(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -271,4 +311,16 @@ class TelemetryEvent(BaseModel):
     payload_ref: PayloadRef | None = None
     """
     Optional pointer to a separately stored, redacted prompt/response payload. Bodies are off by default (NS-01).
+    """
+    tool: TelemetryToolIdentity | None = None
+    """
+    Identity of the tool this span invoked or observed. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.
+    """
+    service: TelemetryServiceIdentity | None = None
+    """
+    Identity of the service this span called or ran in. Null when not reported. At least one member is present when set. Added in schema_version 1.1.0; events without it stay valid.
+    """
+    mcp_server_ref: Annotated[StrictStr | None, Field(max_length=512, min_length=1)] = None
+    """
+    MCP server this span went through: a canonical McpServer ID when resolved, otherwise the source-reported reference. Null when not reported. Added in schema_version 1.1.0; events without it stay valid.
     """

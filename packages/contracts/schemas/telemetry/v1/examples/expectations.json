@@ -14,6 +14,9 @@
     },
     "telemetry-event.cancellation.json": {
       "schema": "telemetry-event.schema.json"
+    },
+    "telemetry-event.tool-service-mcp.json": {
+      "schema": "telemetry-event.schema.json"
     }
   },
   "invalid": {
