@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/entity_revision_diff.schema.json",
+  "title": "EntityRevisionDiff",
+  "x-ns-name": "EntityRevisionDiff",
+  "description": "Computed difference between two retained revisions of one catalog entity (PRP-70; computed on read by PRP-76, never stored). Answers 'what changed between version N and M' including the declared-capability and tag diff of the original 5b story. changes is capped at 200 entries; truncated is true when more differences existed than were returned. before and after hold the compared values at that path (a scalar or a list, null when absent on that side; changed members of nested objects are reported as deeper paths, so a value is never an object) and are the entity's own field values, so the diff inherits the entity's visibility rules. Python validators: check_revision_version_order (from_version < to_version).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "entity_id",
+    "entity_type",
+    "from_version",
+    "to_version",
+    "changes",
+    "capability_changes",
+    "tag_changes",
+    "truncated"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "entity_id": { "$ref": "common.schema.json#/$defs/canonical_id" },
+    "entity_type": { "$ref": "common.schema.json#/$defs/entity_type" },
+    "from_version": { "$ref": "common.schema.json#/$defs/entity_version" },
+    "to_version": { "$ref": "common.schema.json#/$defs/entity_version" },
+    "changes": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/change" }
+    },
+    "capability_changes": { "$ref": "#/$defs/capability_changes" },
+    "tag_changes": { "$ref": "#/$defs/tag_changes" },
+    "truncated": {
+      "description": "True when the changes list was cut at its cap.",
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "change": {
+      "title": "EntityRevisionChange",
+      "description": "One differing field. path is an RFC 6901 JSON Pointer into the entity document (one to six lowercase snake_case segments, no array indexes).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "op"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^(/[a-z0-9_]{1,64}){1,6}$" },
+        "op": { "type": "string", "enum": ["added", "removed", "changed"] },
+        "before": {
+          "description": "Value in from_version; null when op is added.",
+          "type": ["string", "number", "boolean", "array", "null"],
+          "default": null
+        },
+        "after": {
+          "description": "Value in to_version; null when op is removed.",
+          "type": ["string", "number", "boolean", "array", "null"],
+          "default": null
+        }
+      }
+    },
+    "capability_changes": {
+      "title": "EntityRevisionCapabilityChanges",
+      "description": "Declared capabilities added to and removed from the entity between the two versions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "removed"],
+      "properties": {
+        "added": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": { "$ref": "common.schema.json#/$defs/capability" }
+        },
+        "removed": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": { "$ref": "common.schema.json#/$defs/capability" }
+        }
+      }
+    },
+    "tag_changes": {
+      "title": "EntityRevisionTagChanges",
+      "description": "Tags added to and removed from the entity between the two versions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["added", "removed"],
+      "properties": {
+        "added": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": { "$ref": "common.schema.json#/$defs/tag" }
+        },
+        "removed": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": { "$ref": "common.schema.json#/$defs/tag" }
+        }
+      }
+    }
+  }
+}

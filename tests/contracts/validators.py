@@ -1306,6 +1306,23 @@ def check_review_policy_document(document: Doc) -> Problems:
     return problems
 
 
+def check_revision_version_order(doc: Doc) -> Problems:
+    """EntityRevision: previous_version < entity_version (when not null);
+    EntityRevisionDiff: from_version < to_version."""
+
+    def _int(value: object) -> int | None:
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    problems: Problems = []
+    previous, current = _int(doc.get("previous_version")), _int(doc.get("entity_version"))
+    if previous is not None and current is not None and previous >= current:
+        problems.append(f"previous_version {previous} is not below entity_version {current}")
+    start, end = _int(doc.get("from_version")), _int(doc.get("to_version"))
+    if start is not None and end is not None and start >= end:
+        problems.append(f"from_version {start} is not below to_version {end}")
+    return problems
+
+
 def single_document_validators(
     context: Mapping[str, Any],
 ) -> dict[str, tuple[SingleDocValidator, ...]]:
@@ -1344,6 +1361,8 @@ def single_document_validators(
                 validate_lock_expiry_after_decision,
             ),
             "catalog/v1/canonical_id.schema.json": (validate_canonical_id_fullmatch,),
+            "catalog/v1/entity_revision.schema.json": (check_revision_version_order,),
+            "catalog/v1/entity_revision_diff.schema.json": (check_revision_version_order,),
             "telemetry/v1/telemetry-event.schema.json": (
                 validate_span_not_self_parent,
                 validate_canonical_id_grammar,

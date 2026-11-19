@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neurosphere.invalid/schemas/catalog/v1/entity_revision.schema.json",
+  "title": "EntityRevision",
+  "x-ns-name": "EntityRevision",
+  "description": "One immutable, retained revision of a catalog entity (PRP-70; the revision store and writer are PRP-76). revision_id is '<entity canonical id>@<entity_version>'; JSON Schema checks only that it is a canonical id followed by '@' and a positive integer, and core must also check that the id and version equal entity_id and entity_version (documented for PRP-76). body holds the full entity document as it was at that version; JSON Schema pins it to the schema named by entity_type (allOf below, the AdminConfigDocument precedent) and the generated Pydantic model cannot express that pin (ADR-0004 shape projection), so core validates body again against the entity's own model. body_sha256 is a 'sha256:' digest of body; the canonical serialization the digest covers is defined by the revision writer (PRP-76), not by this contract, which fixes the shape only. Nullable members are optional and default to null, as on the catalog entities. Python validators: check_revision_version_order (previous_version < entity_version when previous_version is not null).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "entity_id",
+    "entity_type",
+    "entity_version",
+    "cloud",
+    "customer_id",
+    "domain_id",
+    "operation",
+    "recorded_at",
+    "changed_fields",
+    "body_sha256",
+    "body"
+  ],
+  "properties": {
+    "schema_version": { "$ref": "common.schema.json#/$defs/schema_version" },
+    "revision_id": {
+      "description": "'<entity canonical id>@<entity_version>', unique per entity and version.",
+      "type": "string",
+      "maxLength": 640,
+      "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+@[1-9][0-9]*$"
+    },
+    "entity_id": { "$ref": "common.schema.json#/$defs/canonical_id" },
+    "entity_type": { "$ref": "common.schema.json#/$defs/entity_type" },
+    "entity_version": {
+      "description": "The entity's own version recorded by this revision.",
+      "$ref": "common.schema.json#/$defs/entity_version"
+    },
+    "previous_version": {
+      "description": "Entity version this revision replaced; null for the first revision or when the history starts here.",
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/entity_version" }, { "type": "null" }],
+      "default": null
+    },
+    "cloud": { "$ref": "common.schema.json#/$defs/cloud" },
+    "customer_id": { "$ref": "common.schema.json#/$defs/customer_id" },
+    "domain_id": { "$ref": "common.schema.json#/$defs/domain_id" },
+    "operation": {
+      "type": "string",
+      "enum": ["create", "update", "deprecate", "recertify", "retire", "import", "projection"]
+    },
+    "recorded_at": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "recorded_by": {
+      "description": "Pseudonymous person id that made the change; null for workers and connectors.",
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/person_id" }, { "type": "null" }],
+      "default": null
+    },
+    "changed_fields": {
+      "description": "Top-level property names of the entity that differ from the previous revision.",
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" }
+    },
+    "change_reason": {
+      "anyOf": [
+        { "type": "string", "minLength": 1, "maxLength": 500 },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "audit_id": {
+      "description": "Audit record that logged the change (lowercase UUID); null when none exists, for example a projection.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "correlation_id": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+        { "type": "null" }
+      ],
+      "default": null
+    },
+    "body_sha256": {
+      "description": "Digest of body; shape only, the serialization it covers is defined by the revision writer (PRP-76).",
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "body": {
+      "description": "The full entity document at entity_version; allOf below pins which entity schema it must satisfy. Never a credential value.",
+      "anyOf": [
+        { "$ref": "person.schema.json" },
+        { "$ref": "agent.schema.json" },
+        { "$ref": "agent_version.schema.json" },
+        { "$ref": "model_deployment.schema.json" },
+        { "$ref": "grounding_source.schema.json" },
+        { "$ref": "tool.schema.json" },
+        { "$ref": "service.schema.json" },
+        { "$ref": "domain.schema.json" },
+        { "$ref": "owner.schema.json" },
+        { "$ref": "policy.schema.json" },
+        { "$ref": "recommendation_reference.schema.json" },
+        { "$ref": "run_reference.schema.json" },
+        { "$ref": "grant.schema.json" },
+        { "$ref": "mcp_server.schema.json" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "entity_type": { "const": "person" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "person.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "agent" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "agent.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "agent_version" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "agent_version.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "model_deployment" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "model_deployment.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "grounding_source" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "grounding_source.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "tool" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "tool.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "service" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "service.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "domain" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "domain.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "owner" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "owner.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "policy" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "policy.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "recommendation" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "recommendation_reference.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "run_reference" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "run_reference.schema.json" } } }
+    },
+    {
+      "if": { "properties": { "entity_type": { "const": "grant" } }, "required": ["entity_type"] },
+      "then": { "properties": { "body": { "$ref": "grant.schema.json" } } }
+    },
+    {
+      "if": {
+        "properties": { "entity_type": { "const": "mcp_server" } },
+        "required": ["entity_type"]
+      },
+      "then": { "properties": { "body": { "$ref": "mcp_server.schema.json" } } }
+    }
+  ]
+}
