@@ -1,6 +1,7 @@
 """Seed the local real stack with synthetic data through the real paths (PRP-29 item 10).
 
-    python scripts/sandbox/sbx_seed_stack.py [--profile small|demo] [--operator-object-id <oid>]
+    python scripts/sandbox/sbx_seed_stack.py [--profile small|demo|demo-world]
+        [--operator-object-id <oid>]
 
 Exit 0 and, on stdout and nothing else,
 ``{"seeded": {"<category>": n, ...}, "skipped_existing": n}``.
@@ -119,7 +120,7 @@ from neurosphere_core.auth.scope import (  # noqa: E402
 )
 from neurosphere_core.capabilities import load_matrix  # noqa: E402
 from neurosphere_core.catalog import CatalogRepository  # noqa: E402
-from neurosphere_core.catalog.repo.documents import ENTITY_MODELS  # noqa: E402
+from neurosphere_core.catalog.repo.documents import EDGE_MODELS, ENTITY_MODELS  # noqa: E402
 from neurosphere_core.charts import validate_chart_plan  # noqa: E402
 from neurosphere_core.cloud import CloudName, Settings, load_settings  # noqa: E402
 from neurosphere_core.errors import NeuroSphereError  # noqa: E402
@@ -149,6 +150,7 @@ from neurosphere_workers.evaluation.budget import BudgetLedger, BudgetLimits  # 
 from neurosphere_workers.evaluation.pipeline import OfflineStage  # noqa: E402
 from neurosphere_workers.evaluation.pipeline import run_pipeline as run_evaluation  # noqa: E402
 from neurosphere_workers.evaluation.service import OfflineRunConfig  # noqa: E402
+from neurosphere_workers.projections.catalog.mapping import edge_id  # noqa: E402
 from neurosphere_workers.recommendations.pipeline import (  # noqa: E402
     run_pipeline as run_recommendations,
 )
@@ -175,14 +177,17 @@ from sbx_wire import envelope, received_stamp  # noqa: E402
 from sandbox.config import (  # noqa: E402
     CACHED_INPUT_FACTOR,
     DEFAULT_EPOCH,
+    DEMO_WORLD,
     MODELS,
     PRICE_EFFECTIVE_DATE,
     PRICE_VERSION,
-    PROFILES,
     BadEventRates,
     GenerateConfig,
+    get_profile,
+    parse_epoch,
     with_overrides,
 )
+from sandbox.demo.build import build_demo_world  # noqa: E402
 from sandbox.evaluation.loader import (  # noqa: E402
     PILOT_DATASET_ID,
     PILOT_VERSION,
@@ -223,11 +228,24 @@ ENTITY_FILES: Final = (
     "owners.ndjson",
     "model_deployments.ndjson",
     "grounding_sources.ndjson",
+    "services.ndjson",  # demo-world only (the other profiles write none)
+    "mcp_servers.ndjson",  # demo-world only
     "tools.ndjson",
     "agents.ndjson",
     "agent_versions.ndjson",
     "persons.ndjson",
 )
+#: Fine-grained shift for the demo world (the other profiles keep the hour grid): the incident
+#: window then ends at most this long after the ``NEWEST_AGE`` anchor, so it is still "now".
+DEMO_SHIFT_GRID_SECONDS: Final = 300
+RELATIONS_FILE: Final = "relations.ndjson"
+#: Per-kind detail categories only the demo-world summary adds (``entities`` stays the total).
+DEMO_CATEGORIES: Final = ("services", "tools", "mcp_server_entities", "edges")
+_KIND_CATEGORY: Final = {
+    "service": "services",
+    "tool": "tools",
+    "mcp_server": "mcp_server_entities",
+}
 PRODUCER_ID: Final = "sbx-seed-stack"
 RUN_PREFIX: Final = "seed-offline-"
 #: States the seed is allowed to leave an intent in. ``executing`` is never reachable from here.
@@ -516,7 +534,7 @@ def load_profiles() -> dict[str, Doc]:
 
 def generate_config(config: SeedConfig) -> GenerateConfig:
     spec = load_profiles()[config.profile]
-    profile = with_overrides(PROFILES[spec["base"]], **spec["overrides"])
+    profile = with_overrides(get_profile(spec["base"]), **spec["overrides"])
     return GenerateConfig(
         seed=config.seed,
         profile=profile,
@@ -608,9 +626,14 @@ class Backends:
 
 
 class Tally:
-    def __init__(self) -> None:
-        self.seeded: dict[str, int] = dict.fromkeys(CATEGORIES, 0)
+    def __init__(self, extra: Sequence[str] = ()) -> None:
+        self.seeded: dict[str, int] = dict.fromkeys((*CATEGORIES, *extra), 0)
         self.skipped = 0
+
+    def detail(self, category: str, created: int) -> None:
+        """Count ``created`` under a breakdown category (no-op when the summary has none)."""
+        if category in self.seeded:
+            self.seeded[category] += created
 
     def record(self, category: str, *, created: int, existing: int) -> None:
         self.seeded[category] += created
@@ -704,14 +727,79 @@ def user_principal_id(config: SeedConfig, object_id: str, environ: Mapping[str, 
     )
 
 
-def world_domains(world: World) -> tuple[str, ...]:
+class _AgentLike(Protocol):
+    @property
+    def domain(self) -> int: ...
+
+
+class WorldView(Protocol):
+    """What the seed steps read of a world: the generator's ``World`` or the curated demo one."""
+
+    @property
+    def customer(self) -> str: ...
+
+    @property
+    def domains(self) -> Sequence[object]: ...
+
+    @property
+    def agents(self) -> Sequence[_AgentLike]: ...
+
+    def domain_id(self, i: int) -> str: ...
+
+    def agent_id(self, i: int) -> str: ...
+
+
+@dataclass(frozen=True)
+class _DemoAgent:
+    domain: int
+
+
+@dataclass(frozen=True)
+class DemoView:
+    """Index-based view of the curated demo world (the seed fixtures address agents by index)."""
+
+    customer: str
+    domain_ids: tuple[str, ...]
+    agent_ids: tuple[str, ...]
+    agent_domains: tuple[int, ...]
+
+    @property
+    def domains(self) -> Sequence[object]:
+        return self.domain_ids
+
+    @property
+    def agents(self) -> Sequence[_AgentLike]:
+        return tuple(_DemoAgent(d) for d in self.agent_domains)
+
+    def domain_id(self, i: int) -> str:
+        return self.domain_ids[i]
+
+    def agent_id(self, i: int) -> str:
+        return self.agent_ids[i]
+
+
+def world_view(gen: GenerateConfig) -> WorldView:
+    """The world ``gen`` describes: the demo world for ``demo-world``, else the generated one."""
+    if gen.profile.name != DEMO_WORLD:
+        return World(gen)
+    demo = build_demo_world(gen.cloud, gen.customer, gen.epoch, gen.profile.days)
+    domain_ids = tuple(doc["id"] for doc in demo.domains)
+    return DemoView(
+        customer=gen.customer,
+        domain_ids=domain_ids,
+        agent_ids=tuple(doc["id"] for doc in demo.agents),
+        agent_domains=tuple(domain_ids.index(doc["domain_id"]) for doc in demo.agents),
+    )
+
+
+def world_domains(world: WorldView) -> tuple[str, ...]:
     return tuple(world.domain_id(i) for i in range(len(world.domains)))
 
 
 async def seed_grants(
     backends: Backends,
     config: SeedConfig,
-    world: World,
+    world: WorldView,
     tally: Tally,
     environ: Mapping[str, str],
 ) -> dict[str, str]:
@@ -885,7 +973,7 @@ def recorded_programmatic_judge() -> tuple[RecordedFixtureJudge, Any]:
 
 
 async def seed_evaluations(
-    backends: Backends, scope: IdentityScope, world: World, subjects: int, tally: Tally
+    backends: Backends, scope: IdentityScope, world: WorldView, subjects: int, tally: Tally
 ) -> None:
     judge, registry = recorded_programmatic_judge()
     judge_config = registry.judge_configs.get("sbx-judge-programmatic", "1.0.0")
@@ -947,7 +1035,7 @@ def _idempotency(slug: str) -> str:
     return "seed-intent-" + slug
 
 
-def _draft_request(world: World, spec: Doc) -> DraftRequest:
+def _draft_request(world: WorldView, spec: Doc) -> DraftRequest:
     return DraftRequest.model_validate(
         {
             "action_kind": spec["action_kind"],
@@ -992,7 +1080,7 @@ async def _advance(
 
 
 async def seed_intents(
-    backends: Backends, world: World, principals: Mapping[str, str], tally: Tally
+    backends: Backends, world: WorldView, principals: Mapping[str, str], tally: Tally
 ) -> None:
     fixture = _fixture("intents.json")
     maker = principals[fixture["maker"]]
@@ -1017,7 +1105,7 @@ async def seed_intents(
 
 
 async def seed_reports(
-    backends: Backends, world: World, principals: Mapping[str, str], tally: Tally
+    backends: Backends, world: WorldView, principals: Mapping[str, str], tally: Tally
 ) -> None:
     fixture = _fixture("reports.json")
     owned: list[tuple[str, Doc]] = [(principals[fixture["owner"]], s) for s in fixture["reports"]]
@@ -1079,7 +1167,7 @@ SEED_GATEWAY_ARM_ID: Final = (
 async def seed_gateways(
     backends: Backends,
     config: SeedConfig,
-    world: World,
+    world: WorldView,
     principals: Mapping[str, str],
     tally: Tally,
 ) -> None:
@@ -1166,10 +1254,49 @@ async def seed_entities(
                 tally.record("entities", created=0, existing=1)
             else:
                 tally.record("entities", created=1, existing=0)
+                tally.detail(_KIND_CATEGORY.get(kind, ""), 1)
             continue
         entity = ENTITY_MODELS[kind].model_validate(doc)
         await backends.catalog.create_entity(scope, cast(Any, entity))
         tally.record("entities", created=1, existing=0)
+        tally.detail(_KIND_CATEGORY.get(kind, ""), 1)
+
+
+async def seed_edges(
+    backends: Backends, scope: IdentityScope, directory: Path, tally: Tally
+) -> None:
+    """Write the generated relations through ``CatalogRepository.put_edge``.
+
+    Ids are rewritten to the projection's deterministic id (same relation, source and target give
+    the same id), so the ingestion projection later merges into these edges. Out-of-scope
+    documents are skipped (fail closed). A re-run finds each edge and creates nothing.
+    """
+    path = directory / RELATIONS_FILE
+    if not path.exists():
+        return
+    allowed = frozenset(scope.allowed_domains)
+    for doc in read_ndjson(path):
+        model = EDGE_MODELS.get(str(doc.get("relation_type")))
+        if (
+            model is None
+            or doc.get("cloud") != scope.cloud
+            or doc.get("customer_id") != scope.customer_id
+            or doc.get("domain_id") not in allowed
+        ):
+            continue
+        stable = edge_id(
+            doc["cloud"],
+            doc["customer_id"],
+            doc["relation_type"],
+            doc["source_id"],
+            doc["target_id"],
+        )
+        if await backends.catalog.get_edge(scope, stable) is not None:
+            tally.record("edges", created=0, existing=1)
+            continue
+        edge = model.model_validate({**doc, "id": stable})
+        await backends.catalog.put_edge(scope, edge, None)  # type: ignore[arg-type]
+        tally.record("edges", created=1, existing=0)
 
 
 # -- time rebase -----------------------------------------------------------------------------
@@ -1211,8 +1338,9 @@ def rebase_seconds(
     earliest: datetime,
     newest: datetime,
     existing_earliest: datetime | None,
+    grid: int = SHIFT_GRID_SECONDS,
 ) -> int:
-    """Seconds (a whole number of hours) to move the generated world's epoch by.
+    """Seconds (a whole number of ``grid``, hours by default) to move the world's epoch by.
 
     First run (the ledger is empty): the newest usage lands between ``NEWEST_AGE`` and
     ``NEWEST_AGE`` + 1h before ``now``, so the whole world sits in the last few days. Re-run (the
@@ -1224,11 +1352,20 @@ def rebase_seconds(
     (``docker compose down -v``) and seed again.
     """
     if existing_earliest is not None:
-        return round((existing_earliest - earliest).total_seconds() / SHIFT_GRID_SECONDS) * (
-            SHIFT_GRID_SECONDS
-        )
+        return round((existing_earliest - earliest).total_seconds() / grid) * grid
     wanted = ((now - NEWEST_AGE) - newest).total_seconds()
-    return math.floor(wanted / SHIFT_GRID_SECONDS) * SHIFT_GRID_SECONDS
+    return math.floor(wanted / grid) * grid
+
+
+def demo_window_end(gen: GenerateConfig) -> datetime:
+    """End of the demo world's seeded window (``epoch + days``): the rebase anchor.
+
+    The incident is the last hour of this window, so anchoring here (not on the newest event,
+    which a long trace can push a few seconds past it) keeps the incident recent after rebasing.
+    """
+    return datetime.fromtimestamp(parse_epoch(gen.epoch) / 1000, UTC) + timedelta(
+        days=gen.profile.days
+    )
 
 
 # -- landing ---------------------------------------------------------------------------------
@@ -1311,24 +1448,28 @@ async def run_seed(
 ) -> Doc:
     """Seed every category and return the summary document."""
     env = dict(os.environ) if environ is None else environ
-    tally = Tally()
-    spec = load_profiles()[config.profile]
     gen = generate_config(config)
+    demo = gen.profile.name == DEMO_WORLD
+    tally = Tally(DEMO_CATEGORIES if demo else ())
+    spec = load_profiles()[config.profile]
     log(f"generating the {config.profile} world (seed {config.seed})")
     await asyncio.to_thread(generate, gen, workdir)
     before = await backends.landing.counts()
     publishing = before["ledger"] == 0
     earliest, newest = observed_bounds(workdir)
+    if demo:
+        newest = demo_window_end(gen)  # anchor on the window end, not on the newest event
     shift = rebase_seconds(
         now=now(),
         earliest=earliest,
         newest=newest,
         existing_earliest=None if publishing else await backends.landing.ledger_earliest(),
+        grid=DEMO_SHIFT_GRID_SECONDS if demo else SHIFT_GRID_SECONDS,
     )
     gen = replace(gen, epoch=shifted_epoch(DEFAULT_EPOCH, shift))
     log(f"rebasing the world to epoch {gen.epoch} (newest event {NEWEST_AGE} before now)")
     await asyncio.to_thread(generate, gen, workdir)
-    world = World(gen)
+    world = world_view(gen)
 
     principals = await seed_grants(backends, config, world, tally, env)
     await seed_prices(backends, tally)
@@ -1341,7 +1482,15 @@ async def run_seed(
         )
     # Entities that exist BEFORE the events are pushed are the only genuinely pre-existing ones;
     # any that show up later were written by the projection workers during this run (#211).
-    preexisting = await existing_entity_ids(backends, scope, workdir)
+    preexisting = None if demo else await existing_entity_ids(backends, scope, workdir)
+    if demo:
+        # The curated entities and edges go in BEFORE the events: the projection only creates
+        # what is absent and never updates, so seeding first keeps the names, tags and
+        # capabilities. The telemetry-only agents have no entity here; the projection discovers
+        # them from telemetry. Edges use the projection's ids, so it merges into them.
+        await seed_entities(backends, scope, workdir, tally)
+        await seed_edges(backends, scope, workdir, tally)
+        before = {**before, "catalog": (await backends.landing.counts())["catalog"]}
 
     if publishing:
         lines = await asyncio.to_thread(hub_lines, workdir, now() - NEWEST_AGE)
@@ -1367,7 +1516,8 @@ async def run_seed(
     )
     # After the wait: the entities would otherwise make the catalog look landed before the
     # projection's edges are there.
-    await seed_entities(backends, scope, workdir, tally, preexisting)
+    if not demo:
+        await seed_entities(backends, scope, workdir, tally, preexisting)
     # The aggregates role drains in event order, so the newest (today) buckets land last and are
     # the ones the 1-day cost window reads. Wait for them, but never fail on it.
     _, newest_rebased = observed_bounds(workdir)
@@ -1389,7 +1539,13 @@ async def run_seed(
         # workers may still be draining them); none of that is new seeding.
         created = max(after[name] - before[name], 0) if publishing else 0
         tally.record(name, created=created, existing=after[name] - created)
-    return tally.summary()
+    summary = tally.summary()
+    if demo:
+        # The rebased manifest: the incident window ends at the anchor, within the grid.
+        summary["incident"] = json.loads(
+            (workdir / "incident-manifest.json").read_text(encoding="utf-8")
+        )
+    return summary
 
 
 async def run_grants_only(
@@ -1410,7 +1566,7 @@ async def run_grants_only(
     tally = Tally()
     gen = generate_config(config)
     await asyncio.to_thread(generate, gen, workdir)
-    await seed_grants(backends, config, World(gen), tally, env)
+    await seed_grants(backends, config, world_view(gen), tally, env)
     # The price snapshot too: a worker loads its price table at start and then refreshes it only
     # every price_refresh_seconds, so events priced before it sees the snapshot are stored
     # unresolved and the cost forecast answers 409 price_version_unresolved (#209 item 2).
@@ -1753,6 +1909,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     args = _parser().parse_args(argv)
     environ = dict(os.environ) if env is None else dict(env)
     if args.hosted is not None:
+        if args.profile == DEMO_WORLD:
+            print(f"REFUSED: the {DEMO_WORLD} profile is local and CI only", file=sys.stderr)
+            return EXIT_REFUSED
         if args.grants_only:
             print("REFUSED: --grants-only is for the local stack only", file=sys.stderr)
             return EXIT_REFUSED

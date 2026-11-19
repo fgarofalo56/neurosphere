@@ -12,7 +12,7 @@ python -m sandbox.generate --seed 1 --profile tiny --cloud commercial --out temp
 | Flag | Meaning |
 |---|---|
 | `--seed N` | Required. Same seed + epoch => byte-identical files. |
-| `--profile tiny\|pilot\|custom` | `tiny`: 24 agents, 4 days (smoke). `pilot`: 1000 agents, 20 domains, 7 days (about 100k telemetry events, 14 s). `custom`: starts at 200 agents, override with `--agents --domains --days --traces-per-agent-day`. |
+| `--profile tiny\|pilot\|custom\|demo-world` | `tiny`: 24 agents, 4 days (smoke). `pilot`: 1000 agents, 20 domains, 7 days (about 100k telemetry events, 14 s). `custom`: starts at 200 agents, override with `--agents --domains --days --traces-per-agent-day`. `demo-world`: the curated demo estate (below); only `--days` is an accepted override. |
 | `--cloud commercial\|government` | Required. One cloud per output directory; labelled sets are never mixed. Government output is still synthetic and local. |
 | `--epoch` | Window start, RFC 3339 UTC (default `2026-10-01T00:00:00Z`). No wall clock is read. |
 | `--out DIR` | Default `temp/sandbox` (gitignored). Re-running overwrites every fixed-name file. |
@@ -21,6 +21,39 @@ python -m sandbox.generate --seed 1 --profile tiny --cloud commercial --out temp
 Generation streams: catalog files are written entity by entity and traces are produced one
 hour at a time, so memory does not grow with event volume. The 100k-agent enterprise profile
 is a PRP-21 target; `--profile custom --agents 100000` works in the same streaming mode.
+
+## The `demo-world` profile (PRP-71)
+
+```
+python -m sandbox.generate --seed 1 --profile demo-world --cloud commercial --out temp/demo-world
+```
+
+A hand-curated, named estate (32 agents in 4 domains, 7 services, 16 tools, 4 models, 15 data
+assets, 12 `delegates_to` hand-offs; ids and names in `sandbox/demo/README.md`) with telemetry and
+one scripted incident, built by `sandbox/demo/` through the same writers. The layout is the table
+below plus:
+
+| File | Content |
+|---|---|
+| `services.ndjson` | Service entities (`catalog/v1/service`); `mcp_servers.ndjson` carries the MCP server entity |
+| `incident-manifest.json` | The scripted outage: `service_id`, `service_name`, `downstream_agent_ids`, `unrelated_agent_ids`, `undeclared_agent_ids`, `window` (the last hour of the seeded window, `epoch + days`), `baseline_window`, `effects`, `expected_health_transitions` |
+
+`run-manifest.json` gains `demo_world` (`undeclared_agents`: the four telemetry-only agents, which
+have no catalog entity; `outage_service_id`; `downstream_agent_ids`; `delegations`) and
+`incident_manifest_file`. No bad events are injected (the incident is the only fault), so
+`bad-event-manifest.*` are written with zero counts and `anomaly-manifest.json` has no entries; the
+`--*-rate`, `--agents`, `--domains` and `--traces-per-agent-day` flags are refused. Same seed and
+epoch give byte-identical files; `tiny`, `pilot` and `custom` are unchanged (the profile is a
+dispatch at the top of `generate`).
+
+The seed (`scripts/sandbox/sbx_seed_stack.py --profile demo-world`, local and CI only; the hosted
+seed refuses it) loads the curated entities and every edge through the repository before it
+publishes telemetry, so the projection never replaces the curated metadata with a telemetry
+draft; the four telemetry-only agents are left for the projection to discover. It shifts the epoch
+on a 5-minute grid so the incident window ends 30 to 35 minutes before the run (anchored on the
+window end), and reports the rebased `incident` manifest next to the counts. Its summary adds
+`services`, `tools`, `mcp_server_entities` and `edges` to the usual categories (`entities` stays
+the total).
 
 ## Output layout (consumed by the seed-and-replay CLI)
 
