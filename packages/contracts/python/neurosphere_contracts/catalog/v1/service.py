@@ -59,3 +59,5 @@ class Service(BaseModel):
     ) = "unknown"
     source_id: common.Token
     azure_resource_type: AzureResourceType | None = None
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"

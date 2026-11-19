@@ -182,3 +182,5 @@ class McpServer(BaseModel):
     Accountable owner; null when not yet assigned.
     """
     provenance: common.Provenance
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"

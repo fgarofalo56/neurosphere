@@ -117,3 +117,5 @@ class ModelDeployment(BaseModel):
     """
     Price sheet reference used for estimates; null when unpriced.
     """
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"

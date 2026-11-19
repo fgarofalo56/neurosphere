@@ -6,6 +6,15 @@
  */
 
 /**
+ * Free-form lowercase labels; at most 32, no duplicates.
+ *
+ * @maxItems 32
+ *
+ * Items: Lowercase label token used for grouping and filtering catalog entities.
+ */
+export type Tags = string[];
+
+/**
  * Model Context Protocol server governed as a catalog entity: endpoint, transport, protocol versions, upstream authentication and the tools it exposes. Grants (grant.schema.json) target it with call limits only. Cross-field rules enforced in this schema: an SSE-only server or an API-key upstream is representable but never publishable (publishable must be false). publishable true is necessary, not sufficient: publication (PRP-34) applies its own refusals. The generated Pydantic model does not carry these conditionals (ADR-0004); JSON Schema is the source of truth. Python validators: validate_canonical_id_fullmatch (Python re.search lets '$' match before a trailing newline; the suite re-checks every canonical ID with re.fullmatch), validate_customer_segment_matches (customer segment of every canonical ID equals customer_id), validate_timestamp_order (created_at <= updated_at), validate_mcp_tool_names_unique (tool names are unique within one server).
  */
 export interface McpServer {
@@ -126,6 +135,11 @@ export interface McpServer {
    */
   owner_id?: string | null;
   provenance: Provenance;
+  tags?: Tags;
+  /**
+   * Deployment environment; the same vocabulary as TelemetryEvent.environment.
+   */
+  environment?: "production" | "staging" | "development" | "test" | "sandbox" | "unknown";
 }
 /**
  * Extension point: scalar values only (string, number, boolean, null); keys are lowercase snake_case. Nested objects and arrays are rejected.

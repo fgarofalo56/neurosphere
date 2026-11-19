@@ -69,3 +69,6 @@ class Tool(BaseModel):
     side_effects: Literal["read_only", "writes", "unknown"] | None = "unknown"
     source_id: common.Token
     mcp_server_ref: McpServerRef | None = None
+    tags: Annotated[common.Tags | None, Field(validate_default=True)] = []
+    capabilities: Annotated[common.Capabilities | None, Field(validate_default=True)] = []
+    environment: Annotated[common.Environment | None, Field(validate_default=True)] = "unknown"
