@@ -70,8 +70,12 @@ clean: ## Remove local build artefacts
 # compose workers, so both get STACK_WORKER_OID (its default equals docker-compose.yml's; a test
 # pins it).
 STACK_WORKER_OID ?= 7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6
+# Optional env file sourced into the shell of the two `docker compose` app/seed lines (empty for
+# a plain stack-up). `make demo-up` sets it to the PRP-71 demo profile.
+STACK_ENV_FILE ?=
+STACK_ENV_LOAD = $(if $(STACK_ENV_FILE),set -a && . $(STACK_ENV_FILE) && set +a && ,)
 
-.PHONY: stack-up stack-down
+.PHONY: stack-up stack-down demo-up demo-down demo-check
 
 stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + sandbox seed + stack seed
 	@test -n "$$NS_ENTRA_TENANT_ID" || { echo "stack-up: export NS_ENTRA_TENANT_ID first (docs/dev/local-setup.md, Real stack)" >&2; exit 1; }
@@ -80,9 +84,21 @@ stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + sa
 	docker compose up -d --wait
 	NS_SANDBOX_COSMOS_ENDPOINT=http://127.0.0.1:8081 NS_SANDBOX_EVENTHUBS_CONNECTION_STRING="$$(python -c "print('Endpoint=sb://127.0.0.1;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=' + 'SAS_KEY' + '_VALUE;UseDevelopmentEmulator=true;')")" $(SANDBOX_CLI) seed --data-dir $(SANDBOX_DIR) --no-events
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack SEED_ARGS=--grants-only
-	NS_SANDBOX_DIR="$(if $(or $(filter /% ./% ../%,$(SANDBOX_DIR)),$(findstring :,$(SANDBOX_DIR))),$(SANDBOX_DIR),./$(SANDBOX_DIR))" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
+	$(STACK_ENV_LOAD)NS_SANDBOX_DIR="$(if $(or $(filter /% ./% ../%,$(SANDBOX_DIR)),$(findstring :,$(SANDBOX_DIR))),$(SANDBOX_DIR),./$(SANDBOX_DIR))" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack
-	NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile seed run --rm --build seed
+	$(STACK_ENV_LOAD)NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile seed run --rm --build seed
 
 stack-down: ## Stop the real stack and the emulators (run dev-up to bring the emulators back)
 	docker compose --profile app down --remove-orphans
+
+# Demo profile (PRP-71 item 4): the exact stack-up ordering (grants-only seed, app profile, full
+# seed) with the demo-world seed profile and infra/dev/demo-profile.env applied. Same Entra
+# exports as stack-up.
+demo-up: ## Demo profile: stack-up with SEED_PROFILE=demo-world and infra/dev/demo-profile.env
+	$(MAKE) stack-up SEED_PROFILE=demo-world STACK_ENV_FILE=infra/dev/demo-profile.env
+
+demo-down: ## Stop the demo stack (same as stack-down)
+	$(MAKE) stack-down
+
+demo-check: ## Demo check: every page's backing API returns data or a documented empty
+	uv run python scripts/sandbox/sbx_demo_check.py
