@@ -265,3 +265,5 @@ class CatalogProjectionSettings(BaseSettings):
     #: Skipped candidates (out of scope or id collision) per process lifetime before the worker
     #: logs one WARNING with counts only. The records themselves go to ``catalog_quarantine``.
     quarantine_warn: int = Field(default=100, ge=1)
+    #: Kill switch for telemetry-inferred reads/writes edges (PRP-73); off = rule silent.
+    data_access_edges: bool = True
