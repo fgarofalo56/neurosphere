@@ -18,6 +18,7 @@ from neurosphere_core.recommendations.matching.feedback import (
     CandidateNotInMatchError,
     MatchNotFoundError,
 )
+from neurosphere_core.scope import IdentityScope
 
 from .match_helpers import (
     FakeSubjects,
@@ -388,6 +389,42 @@ async def test_feedback_from_three_principals_moves_score_by_a_bounded_visible_a
     # a different task does not inherit it
     other = await _principal_match(world, "p-observer", "route ticket queue")
     assert _prior(other, liked)[2] == "feedback_insufficient_evidence"
+
+
+async def test_feedback_prior_applies_to_a_cross_domain_candidate() -> None:
+    # the only candidate lives in domain b; every match goes through domain a
+    # (a stronger domain-b rival keeps the target's base score below 1.0, so the prior is not
+    # clipped away)
+    world = await World(
+        [
+            make_agent(
+                "summarizer",
+                "b",
+                description="summarize support ticket conversations",
+                tags=["support"],
+                capabilities=["text.summarize"],
+            ),
+            make_agent("ticketbot", "b", description="ticket backlog"),
+        ]
+    ).seed()
+    target = agent_id("ticketbot")
+
+    def scope_for(pseudonym: str) -> IdentityScope:
+        return make_scope(["a", "b"], pseudonym=pseudonym)
+
+    before = await world.matcher.match(scope_for("p-observer"), dom("a"), make_request(TASK))
+    assert target in {u(c.entity_id) for c in before.candidates}
+    for pseudonym in ("p-1", "p-2", "p-3"):
+        shown = await world.matcher.match(scope_for(pseudonym), dom("a"), make_request(TASK))
+        await world.matcher.record_feedback(
+            scope_for(pseudonym), dom("a"), make_feedback(u(shown.match_id), target, "accepted")
+        )
+    after = await world.matcher.match(scope_for("p-observer"), dom("a"), make_request(TASK))
+    value, contribution, detail = _prior(after, target)
+    assert detail == "feedback_positive"
+    assert value is not None and value > 0.5
+    assert 0.0 < contribution <= 0.15
+    assert _score(after, target) - _score(before, target) == pytest.approx(contribution)
 
 
 async def test_one_principal_cannot_move_a_ranking_and_decisions_replace() -> None:
