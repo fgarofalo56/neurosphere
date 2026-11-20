@@ -7,6 +7,12 @@ Rules (all produce ``status = inferred``, provenance method ``trace_observation`
 * ``delegation`` span + the child ``agent_run`` span (its parent_span_id is the delegation
   span_id) -> INVOKES delegating agent -> child agent
 
+* any span of an agent with ``data_source_refs`` entries of ``access`` read or write that
+  are canonical ``grounding_source`` ids of the event's cloud and customer -> READS /
+  WRITES agent -> asset (rule ``data_source_ref``; PRP-73). Skipped refs are counted by
+  reason, never raised. Only ``grounding_source`` ids count: ``data_asset`` is
+  ``wrong_type``, not aliased.
+
 Confidence is a RULE output, not a measurement: corroborated delegation 0.9, a successful span
 0.85, a failed or cancelled span 0.6. It is never presented without provenance and evidence IDs.
 
@@ -22,7 +28,9 @@ from dataclasses import dataclass
 from typing import Any, Final, Literal
 
 from neurosphere_contracts.catalog.v1.invokes import InvokesRelation
+from neurosphere_contracts.catalog.v1.reads import ReadsRelation
 from neurosphere_contracts.catalog.v1.uses_model import UsesModelRelation
+from neurosphere_contracts.catalog.v1.writes import WritesRelation
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.catalog.protocol import CatalogEdge
 from neurosphere_core.catalog.rules import format_timestamp
@@ -42,7 +50,13 @@ _CANONICAL: Final = re.compile(
 _TOKEN: Final = re.compile(r"[a-z0-9][a-z0-9._-]*")
 _UNSAFE: Final = re.compile(r"[^a-z0-9._-]+")
 
-RelationType = Literal["invokes", "uses_model"]
+RelationType = Literal["invokes", "uses_model", "reads", "writes"]
+
+DATA_SOURCE_RULE: Final = "data_source_ref"
+SKIP_UNKNOWN_ACCESS: Final = "unknown_access"
+SKIP_FOREIGN_OWNER: Final = "foreign_owner"
+SKIP_NOT_CANONICAL: Final = "not_canonical"
+SKIP_WRONG_TYPE: Final = "wrong_type"
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,6 +215,53 @@ def tool_call_candidates(loaded: LoadedEvent) -> list[EdgeCandidate]:
     ]
 
 
+def data_access_candidates(
+    loaded: LoadedEvent, skipped: dict[str, int] | None = None
+) -> list[EdgeCandidate]:
+    """READS / WRITES agent -> ``grounding_source`` for each observed data-source reference.
+
+    A ref is skipped (and counted into ``skipped`` by reason, when given) when its access is not
+    read or write, it is not a canonical id, it belongs to another cloud or customer, or it names
+    another entity type. A read and a write of the same asset yield two edges.
+    """
+    event = loaded.event
+    if not event.data_source_refs:
+        return []
+    agent, domain = _agent(event), _domain(event)
+    if agent is None or domain is None:
+        return []
+
+    def skip(reason: str) -> None:
+        if skipped is not None:
+            skipped[reason] = skipped.get(reason, 0) + 1
+
+    wanted: dict[tuple[RelationType, str], None] = {}
+    for ref in event.data_source_refs:
+        relation: RelationType
+        if ref.access == "read":
+            relation = "reads"
+        elif ref.access == "write":
+            relation = "writes"
+        else:
+            skip(SKIP_UNKNOWN_ACCESS)
+            continue
+        value = ref.ref
+        if len(value) > 512 or not _CANONICAL.fullmatch(value):
+            skip(SKIP_NOT_CANONICAL)
+            continue
+        cloud, customer, _source, kind, _ident = value.split(":", 4)
+        if cloud != event.cloud or customer != event.customer_id.root:
+            skip(SKIP_FOREIGN_OWNER)
+        elif kind != "grounding_source":
+            skip(SKIP_WRONG_TYPE)
+        else:
+            wanted.setdefault((relation, value))
+    return [
+        _candidate(relation, agent, asset, domain, _confidence(event), DATA_SOURCE_RULE, loaded)
+        for relation, asset in wanted
+    ]
+
+
 def delegation_candidate(delegation: LoadedEvent, child_run: LoadedEvent) -> EdgeCandidate | None:
     """INVOKES delegating agent -> child agent from a delegation span and its child run.
 
@@ -269,4 +330,8 @@ def build_edge(candidate: EdgeCandidate, now_text: str) -> CatalogEdge:
     }
     if candidate.relation_type == "invokes":
         return InvokesRelation.model_validate(doc)
+    if candidate.relation_type == "reads":
+        return ReadsRelation.model_validate(doc)
+    if candidate.relation_type == "writes":
+        return WritesRelation.model_validate(doc)
     return UsesModelRelation.model_validate(doc)

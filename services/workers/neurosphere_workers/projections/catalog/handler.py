@@ -52,6 +52,7 @@ from neurosphere_workers.projections.catalog.discovery import build_entity, refe
 from neurosphere_workers.projections.catalog.mapping import (
     EdgeCandidate,
     build_edge,
+    data_access_candidates,
     delegation_candidate,
     deterministic_model_id,
     model_alias_value,
@@ -69,10 +70,17 @@ from neurosphere_workers.projections.catalog.quarantine import (
 from neurosphere_workers.projections.catalog.scope import ScopeProvider
 from neurosphere_workers.projections.catalog.source import LoadedEvent, TraceEventSource
 from neurosphere_workers.projections.outbox import OutboxEntry
+from neurosphere_workers.runtime.settings import CatalogProjectionSettings
 
 _LOG = logging.getLogger(__name__)
 DEFAULT_QUARANTINE_WARN: Final = 100
 """Skipped candidates per process lifetime before one WARNING (counts only, never ids)."""
+
+REASON_ASSET_UNRESOLVED: Final = "asset_unresolved"
+"""Quarantine reason for a reads/writes candidate whose asset is not in the catalog.
+
+Assets are never created from telemetry (PRP-73): the candidate is parked instead.
+"""
 
 MAX_STALE_RETRIES: Final = 3
 """Attempts per edge when ``put_edge`` loses an ETag race (re-read and re-merge each time)."""
@@ -126,6 +134,10 @@ class ProjectionStats:
     review_items: int = 0
     skipped_out_of_scope: int = 0
     skipped_collision: int = 0
+    skipped_unresolved_asset: int = 0
+    #: Skipped ``data_source_refs`` by reason (unknown_access, foreign_owner,
+    #: not_canonical, wrong_type). Counts only; never a ref value.
+    data_access_skipped: dict[str, int] = field(default_factory=dict)
     entities_undiscoverable: int = 0
     entities_created: int = 0
     entities_existing: int = 0
@@ -152,6 +164,7 @@ class CatalogProjection:
         clock: Callable[[], datetime] = _utcnow,
         max_stale_retries: int = MAX_STALE_RETRIES,
         quarantine_warn: int = DEFAULT_QUARANTINE_WARN,
+        data_access_edges: bool | None = None,
     ) -> None:
         if max_stale_retries < 1:
             raise ValueError("max_stale_retries must be >= 1")
@@ -165,6 +178,12 @@ class CatalogProjection:
         self._max_attempts = max_stale_retries
         self._warn_at = quarantine_warn
         self._warned = False
+        # Kill switch NS_WORKER_CATALOG_DATA_ACCESS_EDGES (default on) unless set explicitly.
+        self._data_access = (
+            CatalogProjectionSettings().data_access_edges
+            if data_access_edges is None
+            else data_access_edges
+        )
         self.stats = ProjectionStats()
 
     async def handle(self, entry: OutboxEntry) -> None:
@@ -213,6 +232,13 @@ class CatalogProjection:
             )
             if parent is not None:
                 found.append(delegation_candidate(parent, loaded))
+        if self._data_access:
+            skipped: dict[str, int] = {}
+            found.extend(data_access_candidates(loaded, skipped))
+            for reason, count in skipped.items():
+                self.stats.data_access_skipped[reason] = (
+                    self.stats.data_access_skipped.get(reason, 0) + count
+                )
         return [c for c in found if c is not None]
 
     # ------------------------------------------------------------------ durable write
@@ -231,6 +257,14 @@ class CatalogProjection:
         if not await self._ensure_entities(scope, candidate, format_timestamp(now)):
             await self._quarantine(candidate, REASON_ENTITY_COLLISION, entry_id)
             self.stats.skipped_collision += 1
+            self._maybe_warn()
+            return
+        if candidate.relation_type in ("reads", "writes") and (
+            await self._repo.get_entity(scope, candidate.target_id) is None
+        ):
+            # Assets are never discovered from telemetry: park the candidate, do not invent one.
+            await self._quarantine(candidate, REASON_ASSET_UNRESOLVED, entry_id)
+            self.stats.skipped_unresolved_asset += 1
             self._maybe_warn()
             return
         outcome = await self._store_edge(scope, candidate, now)
