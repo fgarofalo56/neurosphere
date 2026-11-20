@@ -232,9 +232,9 @@ Plan deltas approved by the owner 2026-11-20: (a) item 4 also makes the Tier-2 r
 
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
-| 2 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
-| 3 | todo | | |
+| 1 | merged | worktree-agent-a64d4cddf1640f4ed | sonnet; ruff/format/pyright clean, 20 passed; commit cc9bcbaf, merge c1b9a43b; 2026-11-20 |
+| 2 | merged | worktree-agent-a9a6f931a1c4de93f | sonnet; ruff/format/pyright clean, 94 passed; commit 62e7929e, merge dceaab1e; also edited two pinned container-set tests (stores_registry, hosted_demo drift). OPEN: Cosmos emulator test 3 passed, 2 errors - local emulator refuses create/delete database (PostgresError E58P01), existing stores_cosmos suite fails the same way; CosmosFeedbackStore unverified against the emulator; 2026-11-20 |
+| 3 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
