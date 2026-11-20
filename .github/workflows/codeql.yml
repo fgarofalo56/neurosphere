@@ -12,6 +12,11 @@ permissions:
   contents: read
   security-events: write
 
+# Superseded pull-request runs are cancelled; main pushes and schedules never are.
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: analyze (${{ matrix.language }})

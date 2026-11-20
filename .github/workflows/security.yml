@@ -19,6 +19,11 @@ on:
 permissions:
   contents: read
 
+# Superseded pull-request runs are cancelled; main pushes, schedules and manual runs never are.
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   SYFT_VERSION: "1.54.1"
   SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
@@ -115,13 +120,8 @@ jobs:
         run: trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --exit-code 1 .
       - name: Grype scan of the source tree (High and Critical fail)
         run: grype dir:. --fail-on high
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .node-version
-          cache: pnpm
-      - name: pnpm audit (High and above)
-        run: pnpm audit --audit-level high
+      # `pnpm audit --audit-level high` runs once, in the required ci.yml frontend checks job
+      # (same level); Trivy and Grype above also read pnpm-lock.yaml on every run.
 
   images-all-scans:
     # Aggregator (PRP-52, #66): the image matrix is skipped when no Dockerfile exists, so

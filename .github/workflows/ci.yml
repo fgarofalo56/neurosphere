@@ -20,7 +20,7 @@ concurrency:
 jobs:
   # The single python job reached the 30 minute limit on PR #292 (about 12,300 tests, pytest
   # alone 19 to 27 minutes) and was cancelled twice with no test failure. The suite is now
-  # split by top-level test root across three jobs, and lint, types and the dependency audit
+  # split across four shards (services/api is two of them), and lint, types and the dependency audit
   # run beside them. `python` keeps the required-check name as a gate that fails unless the
   # static job and every test shard succeeded; a skipped or cancelled dependency fails it too.
   # The shard paths together must equal `testpaths` in pyproject.toml.
@@ -47,13 +47,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Each shard lists one pytest invocation per line. Suites that were separate
+        # invocations before (packages vs services) stay separate: same-named test
+        # directories with __init__.py shadow each other inside one pytest session.
+        # services/api is split in two: shard "services api 1" names 14 sub-directories
+        # explicitly (about 920 of the 1821 test functions); "services api 2" runs
+        # everything else under services/api by --ignore of exactly those directories, so
+        # a new sub-directory lands in the second shard and nothing runs twice.
+        # tests/test_ci_python_shards.py pins this against `testpaths`.
         shard:
           - name: tests
-            paths: tests
-          - name: packages and connectors
-            paths: packages connectors
-          - name: services
-            paths: services
+            invocations: |
+              tests
+          - name: services api 1
+            invocations: |
+              services/api/tests/mcp_api services/api/tests/copilot_api services/api/tests/deployment services/api/tests/ui_adapters_api services/api/tests/authz services/api/tests/runtime_api services/api/tests/catalog services/api/tests/authz_claim_mapping services/api/tests/runtime_planes services/api/tests/reports services/api/tests/actions_api services/api/tests/ingest services/api/tests/gateway_api services/api/tests/realtime
+          - name: services api 2
+            invocations: |
+              services/api --ignore=services/api/tests/mcp_api --ignore=services/api/tests/copilot_api --ignore=services/api/tests/deployment --ignore=services/api/tests/ui_adapters_api --ignore=services/api/tests/authz --ignore=services/api/tests/runtime_api --ignore=services/api/tests/catalog --ignore=services/api/tests/authz_claim_mapping --ignore=services/api/tests/runtime_planes --ignore=services/api/tests/reports --ignore=services/api/tests/actions_api --ignore=services/api/tests/ingest --ignore=services/api/tests/gateway_api --ignore=services/api/tests/realtime
+          - name: services workers, packages and connectors
+            invocations: |
+              services/workers services/docs-assistant
+              packages connectors
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -72,7 +87,18 @@ jobs:
           az bicep install
           az bicep version
       - name: Pytest
-        run: uv run pytest -q ${{ matrix.shard.paths }}
+        env:
+          INVOCATIONS: ${{ matrix.shard.invocations }}
+        run: |
+          rc=0
+          while IFS= read -r args; do
+            [ -n "$args" ] || continue
+            echo "::group::pytest $args"
+            # shellcheck disable=SC2086 # word splitting of the path list is intended
+            uv run pytest -q $args || rc=1
+            echo "::endgroup::"
+          done <<< "$INVOCATIONS"
+          exit $rc
 
   python-static:
     name: python checks (ruff, pyright, pip-audit)
@@ -98,7 +124,7 @@ jobs:
           uv run pip-audit --strict --progress-spinner off --no-deps --disable-pip -r requirements-audit.txt
 
   # PRP-30 clarification 15: the single frontend job reached 20m36s on PR #134 (e2e alone
-  # 955 s), so Playwright is sharded across two jobs. `frontend` keeps the required-check
+  # 955 s), so Playwright is sharded across three jobs. `frontend` keeps the required-check
   # name as a gate that fails unless the checks job and every e2e shard succeeded; a
   # skipped or cancelled dependency fails it too, so e2e still blocks merges.
   frontend:
@@ -118,13 +144,13 @@ jobs:
           test "$E2E" = "success"
 
   frontend-e2e:
-    name: frontend e2e (shard ${{ matrix.shard }}/2)
+    name: frontend e2e (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - name: Detect frontend workspace
@@ -153,7 +179,7 @@ jobs:
         if: steps.detect.outputs.present == 'true'
         # test:e2e is pinned to the chromium project; the pixel-comparison `visual` project is
         # excluded on the bare runner and runs in the pinned image in the checks job.
-        run: pnpm --filter @neurosphere/frontend test:e2e --shard=${{ matrix.shard }}/2
+        run: pnpm --filter @neurosphere/frontend test:e2e --shard=${{ matrix.shard }}/3
 
   frontend-checks:
     name: frontend checks (lint, typecheck, vitest, visual, audit)
