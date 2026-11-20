@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-71-realistic-seeded-world-and-demo-profile](active/PRP-71-realistic-seeded-world-and-demo-profile.md) | P0 | 6/7 (85%) | in-progress 1, merged 6 | sonnet / sonnet | required |
+| [PRP-71-realistic-seeded-world-and-demo-profile](active/PRP-71-realistic-seeded-world-and-demo-profile.md) | P0 | 7/7 (100%) | merged 7 | sonnet / sonnet | required |
 
 ## Backlog
 
