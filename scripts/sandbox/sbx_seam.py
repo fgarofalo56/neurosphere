@@ -9,13 +9,14 @@ import hashlib
 import json
 import threading
 import time
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
 from azure.cosmos import CosmosClient, PartitionKey
 from azure.cosmos import exceptions as cosmos_exc
 from azure.eventhub import EventData, EventHubConsumerClient, EventHubProducerClient
+from azure.eventhub.exceptions import EventHubError
 from sbx_guard import (
     cosmos_settings,
     eventhubs_connection_string,
@@ -24,6 +25,41 @@ from sbx_guard import (
 
 HUB = "telemetry"
 DATABASE = "sandbox-neurosphere"
+
+THROTTLE_WAIT_SECONDS = 10.0
+"""The wait the Event Hubs emulator asks for in its throttling reply (error code 50002)."""
+THROTTLE_ATTEMPTS = 8
+
+
+def is_throttled(error: BaseException) -> bool:
+    """The emulator's ``server-busy`` reply: the entity is throttled, try again shortly."""
+    text = str(error)
+    return "server-busy" in text or "50002" in text or "being throttled" in text
+
+
+def send_with_backoff(
+    send: Callable[[Any], None],
+    batch: Any,
+    *,
+    sleep: Callable[[float], None] = time.sleep,
+    attempts: int = THROTTLE_ATTEMPTS,
+    wait: float = THROTTLE_WAIT_SECONDS,
+) -> None:
+    """Send one batch, waiting out the emulator's throttle instead of failing the whole seed.
+
+    The emulator allows about 1000 messages per window per entity; a seed of several thousand
+    events on a busy machine crosses it. A send that fails for any other reason, or that is still
+    throttled after ``attempts`` tries, raises. A rejected batch was not stored, so sending it
+    again does not duplicate events.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            send(batch)
+            return
+        except EventHubError as error:
+            if not is_throttled(error) or attempt == attempts:
+                raise
+            sleep(wait)
 
 
 @dataclass
@@ -152,10 +188,10 @@ class HubSeam:
                         try:
                             batch.add(EventData(body))
                         except ValueError:
-                            producer.send_batch(batch)
+                            send_with_backoff(producer.send_batch, batch)
                             batch = producer.create_batch(partition_id=pid)
                             batch.add(EventData(body))
-                    producer.send_batch(batch)
+                    send_with_backoff(producer.send_batch, batch)
                     items.clear()
 
             for line in lines:

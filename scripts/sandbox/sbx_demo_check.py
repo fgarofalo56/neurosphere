@@ -629,20 +629,23 @@ def _outage_domain_errors(
         watermark = max((w for _, w in rates.values()), default="")
         # An unaffected domain that could not be read is not a calm one: without its series the
         # "others stay under it" half of the check was never made.
+        # A series that is not there yet is the normal state of a draining stack, so it is waited
+        # for like the incident hour, and only reported once the wait is spent.
         unread = sorted(_slug(d) for d in calm if rates[d][0] is None)
-        if unread:
-            return SanityResult(
-                name,
-                NOT_CHECKED,
-                f"no readable error series for unaffected domain(s): {', '.join(unread)}",
-            )
         noisy = sorted(_slug(d) for d in calm if (rates[d][0] or 0.0) >= DOMAIN_ERROR_RATE)
         if noisy:
             return SanityResult(
                 name, FAIL, f"unaffected domain(s) show an error hour: {', '.join(noisy)}"
             )
         quiet = sorted(_slug(d) for d in affected if (rates[d][0] or 0.0) < DOMAIN_ERROR_RATE)
-        if not quiet:
+        if unread and clock() >= deadline:
+            return SanityResult(
+                name,
+                NOT_CHECKED,
+                f"no readable error series for unaffected domain(s): {', '.join(unread)} "
+                f"after {wait_seconds:.0f}s",
+            )
+        if not quiet and not unread:
             return SanityResult(
                 name,
                 PASSED,
