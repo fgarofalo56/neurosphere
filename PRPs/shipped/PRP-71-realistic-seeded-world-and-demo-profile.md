@@ -1,6 +1,8 @@
 ---
 name: PRP-71-realistic-seeded-world-and-demo-profile
-status: active
+status: shipped
+shipped: 2026-11-20
+pr: 353
 started: 2026-11-19
 priority: P0
 order: 61
