@@ -138,6 +138,7 @@ nav:
       - runbooks/audit-siem.md
       - runbooks/compliance-evidence.md
       - runbooks/detections.md
+      - runbooks/agent-match.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md
