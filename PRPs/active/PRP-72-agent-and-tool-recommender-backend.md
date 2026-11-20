@@ -235,9 +235,9 @@ Plan deltas approved by the owner 2026-11-20: (a) item 4 also makes the Tier-2 r
 | 1 | merged | worktree-agent-a64d4cddf1640f4ed | sonnet; ruff/format/pyright clean, 20 passed; commit cc9bcbaf, merge c1b9a43b; 2026-11-20 |
 | 2 | merged | worktree-agent-a9a6f931a1c4de93f | sonnet; ruff/format/pyright clean, 94 passed; commit 62e7929e, merge dceaab1e; also edited two pinned container-set tests (stores_registry, hosted_demo drift). OPEN: Cosmos emulator test 3 passed, 2 errors - local emulator refuses create/delete database (PostgresError E58P01), existing stores_cosmos suite fails the same way; CosmosFeedbackStore unverified against the emulator; 2026-11-20 |
 | 3 | merged | worktree-agent-ac35667f5d6a86f04 | sonnet; ruff/format/pyright clean, 76 passed (3 emulator tests deselected); commit d6eae127. Deviations: feedback prior is a signed bounded adjustment outside combine (weights.feedback_prior ignored); tools without domain_id are absent with no flag (search never returns them); partial_reason limited by the contract to limit/timeout_ms; 2026-11-20 |
-| 4 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
-| 5 | todo | | |
-| 6 | todo | | |
+| 4 | merged | worktree-agent-ad2b15243ed2cefcb | sonnet; ruff/format/pyright (repo-wide) clean, 534 passed; commit f90567c9. Deviations: added match_composition.py (SyncedAgentMatcher refreshes the per-scope search index); capability_unavailable is a 409; /readyz shows agent_matcher disabled without a reason (registry only carries reasons on failed), reason is in the 409 body; no authz/routes.py or inventory edits needed (discovered through require); 2026-11-20 |
+| 5 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
+| 6 | in-progress | prp-72-agent-tool-recommender (orchestrator inline) | docs and Tier 3 started alongside item 5; 2026-11-20 |
 
 ## Completion note (filled at ship)
 - Date and PR:
