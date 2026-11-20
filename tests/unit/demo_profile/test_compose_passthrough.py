@@ -180,6 +180,7 @@ def test_default_render_is_unchanged_for_pre_existing_keys(compose: dict[str, An
         ).stdout
     except (OSError, subprocess.SubprocessError):
         pytest.skip("no main ref available to compare against")
+        return  # unreachable (skip raises); tells static analysis base is bound below
     before = _compose_text(base)
     for service, spec in before["services"].items():
         old_env = spec.get("environment")

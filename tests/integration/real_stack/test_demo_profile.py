@@ -61,6 +61,7 @@ def client(demo: ModuleType) -> Iterator[Any]:
         token = demo.resolve_token(None, environ)
     except demo.GuardError as exc:
         pytest.skip(str(exc))
+        return  # unreachable (skip raises); tells static analysis base/token are bound below
     http = demo.HttpClient(base, token)
     try:
         reply = http.get(demo.DOMAINS_PATH)
