@@ -249,7 +249,8 @@ services:
       # grants the worker principal viewer on every world domain, so dom-001 is in its scope.
       NS_WORKER_EVAL_JUDGE: fixture
       NS_WORKER_EVAL_PILOT_DATASET_IDS: sbx-groundedness-pilot
-      NS_WORKER_EVAL_PILOT_DOMAIN_ID: commercial:synthco:sandbox:domain:dom-001
+      # PRP-71: the demo profile points the evaluation pilot at a demo-world domain.
+      NS_WORKER_EVAL_PILOT_DOMAIN_ID: ${NS_WORKER_EVAL_PILOT_DOMAIN_ID:-commercial:synthco:sandbox:domain:dom-001}
       NS_WORKER_EVAL_PILOT_SUBJECT_ID: commercial:synthco:sandbox:agent:a-000000
       NS_WORKER_EVAL_OFFLINE_INTERVAL_SECONDS: "300"
       # Write targets (PRP-35): same names as the api; OFF by default (empty registry).

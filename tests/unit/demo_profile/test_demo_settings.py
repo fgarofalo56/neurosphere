@@ -104,6 +104,19 @@ def test_every_stored_payload_validates_through_the_put_routes_checks() -> None:
         check_runtime_settings(key, model, "commercial")
 
 
+def test_every_stored_payload_survives_the_cosmos_stores_null_dropping_write() -> None:
+    """The Cosmos store writes with ``exclude_none``; the in-memory store used above does not.
+
+    A required-but-nullable field left null is dropped on write, and the stored row then fails
+    validation on every later read (the first live ``make demo-up`` hit exactly this on
+    ``mcp_server``). So each payload must validate again after the dump the real store performs.
+    """
+    for key, body in settings.demo_settings():
+        model = validate_setting(key, body, customer_id=CUSTOMER, cloud="commercial")
+        stored = model.model_dump(mode="json", exclude_none=True)
+        validate_setting(key, stored, customer_id=CUSTOMER, cloud="commercial")
+
+
 def test_stored_values_are_non_secret_and_consistent_with_the_profile_env() -> None:
     by_key = {(k, b["setting_key"]): b for k, b in settings.demo_settings()}
     assert by_key[("mcp_server", "mcp_server")]["mcp_server"]["endpoint"] == (

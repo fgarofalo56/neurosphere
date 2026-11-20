@@ -39,6 +39,8 @@ EXPECTED_SERVICES = {
     "NS_SCAN_ENABLED": ("api",),
     "NS_LIFECYCLE_MODE": ("api", "workers"),
     "NS_DEMO_COPILOT_MODE": ("api",),
+    # Found by the first live demo-up: the default pilot domain does not exist in the demo world.
+    "NS_WORKER_EVAL_PILOT_DOMAIN_ID": ("workers",),
 }
 
 _DEFAULT = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^${}]*))?\}")
@@ -122,6 +124,8 @@ def test_copilot_stays_disabled_and_scan_lifecycle_values(env_values: dict[str, 
     assert env_values["NS_LIFECYCLE_MODE"] == "dry_run"
     assert env_values["NS_SCAN_ENABLED"] == "true"
     assert env_values["NS_WORKER_REC_SOURCE"] == "archive"
+    # the evaluation pilot must be a demo-world domain or the evaluation role refuses to start
+    assert env_values["NS_WORKER_EVAL_PILOT_DOMAIN_ID"].endswith(":domain:finance")
 
 
 def test_no_secret_shaped_names(env_values: dict[str, str]) -> None:

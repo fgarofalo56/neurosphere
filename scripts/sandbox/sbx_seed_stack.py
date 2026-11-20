@@ -826,6 +826,15 @@ async def seed_grants(
         # action-plane kill switch (403 customer_scope_required otherwise).
         control = grants.control_domain_id(config.cloud, config.customer)
         wanted.append(("operator", operator, "admin", (*domains, control)))
+        if isinstance(world, DemoView):
+            # Demo profile only (PRP-71): one sign-in has to open every page, and several are
+            # gated by holding a role (the persona workspaces, audit, the review queues). The
+            # operator gets each persona role as an explicit, scoped grant over the demo
+            # domains: five ordinary grants in the local policy store, no bypass. The first
+            # live demo-check answered 403 role_not_held / permission_missing without them.
+            for persona in _fixture("personas.json")["personas"]:
+                if persona["role"] != "admin":
+                    wanted.append(("operator", operator, persona["role"], domains))
     for slug, principal, role, granted in wanted:
         outcome = await grants.grant_operator(
             backends.policy,

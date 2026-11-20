@@ -118,8 +118,9 @@ def test_every_curated_category_and_edge_reaches_the_repository(tmp_path: Path) 
     # agents keep their curated metadata (the entities went in before the telemetry)
     agents = [e for e in _entities(stack) if str(e.entity_type) == "agent"]
     assert all(a.tags and a.capabilities and a.environment for a in agents)
-    # the personas hold grants over the demo world's domains
-    assert seeded["grants"] == 7
+    # the worker, the five personas and the operator (admin plus the four other persona roles,
+    # so one sign-in opens every role-gated page) hold grants over the demo world's domains
+    assert seeded["grants"] == 11
 
 
 def test_telemetry_only_agents_are_not_catalog_entities(tmp_path: Path) -> None:
