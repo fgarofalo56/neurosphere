@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `5241ce1b1d65fe9f4b1d238e5210b4c4d3989907`. Generated: 2026-11-18.
+> Source commit: `58d250a467cdd50457d290587d3b361de04d8627`. Generated: 2026-11-19.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 208 operations on 174 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 211 operations on 177 paths.
 
 ## Status and verification
 
@@ -209,6 +209,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | recommendations | GET | `/api/v1/recommendations/domains/{domain}` | List Recommendations |
 | recommendations | POST | `/api/v1/recommendations/domains/{domain}/executions` | Refuse Execution |
 | recommendations | GET | `/api/v1/recommendations/domains/{domain}/items/{recommendation_id}` | Get Recommendation |
+| recommendations | POST | `/api/v1/recommendations/domains/{domain}/match` | Match Agents |
+| recommendations | POST | `/api/v1/recommendations/domains/{domain}/match/feedback` | Record Match Feedback |
+| recommendations | GET | `/api/v1/recommendations/domains/{domain}/match/metrics` | Match Metrics |
 | recommendations | POST | `/api/v1/recommendations/domains/{domain}/review-requests` | Create Review Request |
 | reconciliation | GET | `/api/v1/reconciliation/domains/{domain}` | Reconcile |
 | replay | GET | `/api/v1/replay/domains/{domain_id}/traces` | List Traces |
@@ -1627,6 +1630,29 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Get Recommendation
 - Parameters: `domain` (path, required), `recommendation_id` (path, required)
 - Responses: `200` `RecommendationDetail`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/recommendations/domains/{domain}/match`
+
+- Operation id: `match_agents_api_v1_recommendations_domains__domain__match_post`
+- Summary: Match Agents
+- Parameters: `domain` (path, required)
+- Request body: application/json: `AgentMatchRequest` (required)
+- Responses: `200` `AgentMatchView`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/recommendations/domains/{domain}/match/feedback`
+
+- Operation id: `record_match_feedback_api_v1_recommendations_domains__domain__match_feedback_post`
+- Summary: Record Match Feedback
+- Parameters: `domain` (path, required)
+- Request body: application/json: `AgentMatchFeedbackRequest` (required)
+- Responses: `202` `FeedbackAccepted`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/recommendations/domains/{domain}/match/metrics`
+
+- Operation id: `match_metrics_api_v1_recommendations_domains__domain__match_metrics_get`
+- Summary: Match Metrics
+- Parameters: `domain` (path, required), `since` (query), `until` (query)
+- Responses: `200` `MatchMetricsView`; `422` `HTTPValidationError`
 
 #### POST `/api/v1/recommendations/domains/{domain}/review-requests`
 

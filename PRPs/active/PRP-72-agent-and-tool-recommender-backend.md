@@ -1,6 +1,7 @@
 ---
 name: PRP-72-agent-and-tool-recommender-backend
-status: backlog
+status: active
+started: 2026-11-20
 priority: P0
 order: 62
 review: required
@@ -113,7 +114,7 @@ owns:
   - services/api/neurosphere_api/recommendations/match_models.py
   - services/api/neurosphere_api/recommendations/match_dependencies.py
   - services/api/tests/agent_match_api/**
-  - tests/load/agent_match/**
+  - tests/load/agent_match_latency/**
   - tests/security/authz/test_agent_match*.py
   - docs/runbooks/agent-match.md
 tier1:
@@ -204,7 +205,7 @@ Parallelization: items 1 and 2 [P] (signals and feedback store share no file). I
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright
-uv run pytest -q packages/core/tests/agent_match packages/core/neurosphere_core/recommendations services/api/tests/agent_match_api services/api/tests/recommendations services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/authz tests/security/authz tests/load/agent_match services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py tests/docs/test_nav_allowlist.py
+uv run pytest -q packages/core/tests/agent_match packages/core/neurosphere_core/recommendations services/api/tests/agent_match_api services/api/neurosphere_api/recommendations/tests services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/authz tests/security/authz tests/load/agent_match_latency services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py tests/docs/test_nav_allowlist.py
 python scripts/prp_status.py --check
 python scripts/validate_planning.py
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
@@ -224,17 +225,19 @@ Trained or LLM-based ranking; embeddings or a vector index; automatic invocation
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 2, 4, 5 and 7 are ASSUMPTIONS for plan approval; PRP-70 names are taken from its "Interfaces provided")
+- [x] All clarification questions are decided, not guessed (rows 2, 4, 5 and 7 accepted by the owner at plan approval 2026-11-20; PRP-70 names are taken from its "Interfaces provided")
 
 ## Execution state
+Plan deltas approved by the owner 2026-11-20: (a) item 4 also makes the Tier-2 route-registration appends (`routers.py`, `authz/routes.py`, `runtime/status.py`, `tests/authz/test_route_inventory.py`, `test_startup_route_check.py`, `runtime_routes/manifest_calls.py`, `tests/integration/real_stack/test_manifest_routes.py`) because its routes cannot boot under `verify_route_permissions` without them; item 6 keeps `mkdocs.yml`, the runbook and Tier 3. (b) item 5 runs after item 4, not in parallel.
+
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | merged | worktree-agent-a64d4cddf1640f4ed | sonnet; ruff/format/pyright clean, 20 passed; commit cc9bcbaf, merge c1b9a43b; 2026-11-20 |
+| 2 | merged | worktree-agent-a9a6f931a1c4de93f | sonnet; ruff/format/pyright clean, 94 passed; commit 62e7929e, merge dceaab1e; also edited two pinned container-set tests (stores_registry, hosted_demo drift). OPEN: Cosmos emulator test 3 passed, 2 errors - local emulator refuses create/delete database (PostgresError E58P01), existing stores_cosmos suite fails the same way; CosmosFeedbackStore unverified against the emulator; 2026-11-20 |
+| 3 | merged | worktree-agent-ac35667f5d6a86f04 | sonnet; ruff/format/pyright clean, 76 passed (3 emulator tests deselected); commit d6eae127. Deviations: feedback prior is a signed bounded adjustment outside combine (weights.feedback_prior ignored); tools without domain_id are absent with no flag (search never returns them); partial_reason limited by the contract to limit/timeout_ms; 2026-11-20 |
+| 4 | merged | worktree-agent-ad2b15243ed2cefcb | sonnet; ruff/format/pyright (repo-wide) clean, 534 passed; commit f90567c9. Deviations: added match_composition.py (SyncedAgentMatcher refreshes the per-scope search index); capability_unavailable is a 409; /readyz shows agent_matcher disabled without a reason (registry only carries reasons on failed), reason is in the 409 body; no authz/routes.py or inventory edits needed (discovered through require); 2026-11-20 |
+| 5 | merged | worktree-agent-a5a249bca25ede1fc | sonnet; ruff/format/pyright clean, 28 passed (new authz files, coverage, load test); commit 27460a34, merge ea1bf3d8. 3 routes x 6 deny dimensions, leak test, no production defect. 10k-agent in-memory p95 2012 ms at cap 200 (NOT MET), 539 ms at cap 50; about 98 percent of the time is the in-memory repository's O(n) get_entity on candidate re-fetch; 2026-11-20 |
+| 6 | verifying | prp-72-agent-tool-recommender (orchestrator inline) | runbook, nav, changelog, system-settings row, Tier 3 regenerated; load suite renamed to tests/load/agent_match_latency (name clash with packages/core/tests/agent_match); review APPROVE, one finding fixed (feedback read from the match domain, merge 11a451b6); Snyk 0 issues; targeted gate 1992 passed, ruff/format/pyright/prp_status/validate_planning pass; verify-gates full not run locally (CI runs the full suite); PR pending CI; 2026-11-20 |
 
 ## Completion note (filled at ship)
 - Date and PR:

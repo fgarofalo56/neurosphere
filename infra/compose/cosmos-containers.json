@@ -316,6 +316,18 @@
       }
     },
     {
+      "default_ttl": -1,
+      "name": "recommendation_feedback",
+      "owner": "neurosphere_core.recommendations.matching.cosmos_store",
+      "partition_key": {
+        "kind": "MultiHash",
+        "paths": [
+          "/customer_id",
+          "/domain_id"
+        ]
+      }
+    },
+    {
       "default_ttl": null,
       "name": "recommendations",
       "owner": "neurosphere_core.recommendations.cosmos_store",

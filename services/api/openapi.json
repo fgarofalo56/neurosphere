@@ -69,7 +69,7 @@
           },
           "domain_ids": {
             "items": {
-              "$ref": "#/components/schemas/CanonicalId"
+              "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__CanonicalId"
             },
             "maxItems": 1024,
             "minItems": 1,
@@ -132,7 +132,7 @@
             "$ref": "#/components/schemas/StoredReason"
           },
           "resource_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__CanonicalId"
           }
         },
         "required": [
@@ -644,6 +644,442 @@
           "source_id"
         ],
         "title": "Agent",
+        "type": "object"
+      },
+      "AgentMatchCandidate": {
+        "additionalProperties": false,
+        "description": "One ranked candidate. score is a relative weighted score in [0,1], not a probability. signals is required so every ranking is explainable.",
+        "properties": {
+          "display_name": {
+            "$ref": "#/components/schemas/DisplayName-Output"
+          },
+          "entity_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+          },
+          "entity_type": {
+            "enum": [
+              "agent",
+              "tool"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__EvidenceId"
+            },
+            "maxItems": 50,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "lifecycle_status": {
+            "$ref": "#/components/schemas/LifecycleStatus"
+          },
+          "matched_capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "maxItems": 16,
+            "title": "Matched Capabilities",
+            "type": "array"
+          },
+          "matched_tags": {
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "maxItems": 16,
+            "title": "Matched Tags",
+            "type": "array"
+          },
+          "rank": {
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "maxItems": 20,
+            "title": "Relations",
+            "type": "array"
+          },
+          "score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMatchSignal"
+            },
+            "maxItems": 8,
+            "title": "Signals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rank",
+          "entity_id",
+          "entity_type",
+          "display_name",
+          "lifecycle_status",
+          "score",
+          "signals",
+          "matched_capabilities",
+          "matched_tags",
+          "relations",
+          "evidence_ids"
+        ],
+        "title": "AgentMatchCandidate",
+        "type": "object"
+      },
+      "AgentMatchFeedbackRequest": {
+        "additionalProperties": false,
+        "description": "A steward's accept or reject of one match candidate (PRP-70 item 3). Reason codes only: there is deliberately no free-text field, so no PII-bearing text is stored. reason_code is optional and defaults to null. Cloud, customer, domain and actor come from the server-derived IdentityScope, not the request.",
+        "properties": {
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "entity_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+          },
+          "match_id": {
+            "pattern": "^[a-z0-9][a-z0-9._:/=-]{0,255}$",
+            "title": "Match Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_relevant",
+                  "missing_capability",
+                  "poor_quality",
+                  "unavailable",
+                  "policy",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          }
+        },
+        "required": [
+          "schema_version",
+          "match_id",
+          "entity_id",
+          "decision"
+        ],
+        "title": "AgentMatchFeedbackRequest",
+        "type": "object"
+      },
+      "AgentMatchRequest": {
+        "additionalProperties": false,
+        "description": "Task-to-agent match request (PRP-70 item 3). task_text is tokenized for ranking only: it is never executed, never sent to an LLM for explanation and never stored (feedback keeps only a digest). The request carries no scope field: cloud, customer and domain scope come from the server-derived IdentityScope, so domain_id and customer_id are rejected as unknown keys. Nullable fields are optional and default to null.",
+        "properties": {
+          "candidate_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "agent",
+                    "tool"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [
+              "agent"
+            ],
+            "title": "Candidate Types"
+          },
+          "context_entity_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Context Entity Ids"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Environment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 10,
+            "title": "Limit"
+          },
+          "max_graph_depth": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 2,
+            "title": "Max Graph Depth"
+          },
+          "preferred_tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Tag"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Preferred Tags"
+          },
+          "required_capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Capability"
+                },
+                "maxItems": 16,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Required Capabilities"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "task_text": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]+$",
+            "title": "Task Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "task_text"
+        ],
+        "title": "AgentMatchRequest",
+        "type": "object"
+      },
+      "AgentMatchResponse": {
+        "additionalProperties": false,
+        "description": "Ranked task-to-agent candidates (PRP-70 item 3). The explanation is a structured per-signal breakdown plus related entity ids; no model-written free text. score is a relative weighted score, not a probability. Unknown signal values are null, never 0. cold_start is true when history-based signals are unavailable; those signals are named in signals_unavailable.",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMatchCandidate"
+            },
+            "maxItems": 50,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "cold_start": {
+            "title": "Cold Start",
+            "type": "boolean"
+          },
+          "domain_id": {
+            "$ref": "#/components/schemas/DomainId"
+          },
+          "generated_at": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__Timestamp"
+          },
+          "match_id": {
+            "$ref": "#/components/schemas/OpaqueId"
+          },
+          "partial_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "limit",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Reason"
+          },
+          "ranker": {
+            "$ref": "#/components/schemas/Ranker"
+          },
+          "schema_version": {
+            "$ref": "#/components/schemas/SchemaVersion"
+          },
+          "signals_unavailable": {
+            "items": {
+              "$ref": "#/components/schemas/SignalName"
+            },
+            "maxItems": 8,
+            "title": "Signals Unavailable",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "match_id",
+          "domain_id",
+          "generated_at",
+          "ranker",
+          "cold_start",
+          "signals_unavailable",
+          "candidates",
+          "truncated"
+        ],
+        "title": "AgentMatchResponse",
+        "type": "object"
+      },
+      "AgentMatchSignal": {
+        "additionalProperties": false,
+        "description": "One ranking signal. value null means unknown (never 0); weight is the signal's weight in the ranker; contribution is its signed share of the score.",
+        "properties": {
+          "contribution": {
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Contribution",
+            "type": "number"
+          },
+          "detail_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Token"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__EvidenceId"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "title": "Evidence Ids"
+          },
+          "signal": {
+            "$ref": "#/components/schemas/SignalName"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Value"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weight": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "signal",
+          "weight",
+          "contribution"
+        ],
+        "title": "AgentMatchSignal",
+        "type": "object"
+      },
+      "AgentMatchView": {
+        "additionalProperties": false,
+        "properties": {
+          "assessments": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateAssessment"
+            },
+            "title": "Assessments",
+            "type": "array"
+          },
+          "confidence_note": {
+            "default": "confidence is a relative 0-1 value derived from the score, the share of weight that was observed and the margin to the next candidate; it is not a probability",
+            "title": "Confidence Note",
+            "type": "string"
+          },
+          "match": {
+            "$ref": "#/components/schemas/AgentMatchResponse"
+          }
+        },
+        "required": [
+          "match",
+          "assessments"
+        ],
+        "title": "AgentMatchView",
         "type": "object"
       },
       "AgentVersion": {
@@ -2311,11 +2747,31 @@
         "title": "CalibrationSampleOut",
         "type": "object"
       },
-      "CanonicalId": {
-        "maxLength": 512,
-        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
-        "title": "CanonicalId",
-        "type": "string"
+      "CandidateAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "cold_start": {
+            "title": "Cold Start",
+            "type": "boolean"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "confidence",
+          "cold_start"
+        ],
+        "title": "CandidateAssessment",
+        "type": "object"
       },
       "Capabilities": {
         "default": [],
@@ -5801,7 +6257,7 @@
             "$ref": "#/components/schemas/Dataset"
           },
           "domain_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__CanonicalId"
           },
           "evaluation_id": {
             "$ref": "#/components/schemas/OpaqueId"
@@ -5873,7 +6329,7 @@
             "type": "string"
           },
           "subject_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__CanonicalId"
           }
         },
         "required": [
@@ -6412,6 +6868,40 @@
           "feature"
         ],
         "title": "FeatureRequest",
+        "type": "object"
+      },
+      "FeedbackAccepted": {
+        "additionalProperties": false,
+        "properties": {
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "accepted",
+              "rejected"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "match_id",
+          "entity_id",
+          "decision",
+          "decided_at"
+        ],
+        "title": "FeedbackAccepted",
         "type": "object"
       },
       "Filter": {
@@ -8384,7 +8874,7 @@
           "value": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CanonicalId"
+                "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__CanonicalId"
               },
               {
                 "type": "null"
@@ -8395,7 +8885,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/CanonicalId"
+                  "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__CanonicalId"
                 },
                 "maxItems": 100,
                 "minItems": 1,
@@ -8714,7 +9204,7 @@
           "judge_model_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CanonicalId"
+                "$ref": "#/components/schemas/neurosphere_contracts__evaluation__v1__evaluation_result__CanonicalId"
               },
               {
                 "type": "null"
@@ -9235,6 +9725,69 @@
           "evidence_sources"
         ],
         "title": "MappedControlView",
+        "type": "object"
+      },
+      "MatchMetricsView": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptance_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acceptance Rate"
+          },
+          "accepts": {
+            "minimum": 0.0,
+            "title": "Accepts",
+            "type": "integer"
+          },
+          "domain_id": {
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "matches": {
+            "minimum": 0.0,
+            "title": "Matches",
+            "type": "integer"
+          },
+          "matches_with_feedback": {
+            "minimum": 0.0,
+            "title": "Matches With Feedback",
+            "type": "integer"
+          },
+          "rejects": {
+            "minimum": 0.0,
+            "title": "Rejects",
+            "type": "integer"
+          },
+          "window_end": {
+            "format": "date-time",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date-time",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain_id",
+          "window_start",
+          "window_end",
+          "matches",
+          "matches_with_feedback",
+          "accepts",
+          "rejects"
+        ],
+        "title": "MatchMetricsView",
         "type": "object"
       },
       "MaxOutputTokens": {
@@ -12548,7 +13101,7 @@
           },
           "memberships": {
             "items": {
-              "$ref": "#/components/schemas/CanonicalId"
+              "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__CanonicalId"
             },
             "maxItems": 1024,
             "title": "Memberships",
@@ -13208,6 +13761,25 @@
         "title": "QualityResponse",
         "type": "object"
       },
+      "Ranker": {
+        "additionalProperties": false,
+        "properties": {
+          "ranker_id": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "ranker_version": {
+            "pattern": "^[A-Za-z0-9._+-]{1,64}$",
+            "title": "Ranker Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ranker_id",
+          "ranker_version"
+        ],
+        "title": "Ranker",
+        "type": "object"
+      },
       "ReadyzResponse": {
         "additionalProperties": false,
         "properties": {
@@ -13409,7 +13981,7 @@
             "type": "string"
           },
           "domain_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__CanonicalId"
           },
           "evidence_ids": {
             "items": {
@@ -13495,7 +14067,7 @@
             ]
           },
           "recommendation_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__CanonicalId"
           },
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
@@ -13515,7 +14087,7 @@
           },
           "subject_ids": {
             "items": {
-              "$ref": "#/components/schemas/CanonicalId"
+              "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__CanonicalId"
             },
             "maxItems": 50,
             "minItems": 1,
@@ -13920,6 +14492,32 @@
         "title": "RejectedItem",
         "type": "object"
       },
+      "Relation": {
+        "additionalProperties": false,
+        "properties": {
+          "direction": {
+            "enum": [
+              "outgoing",
+              "incoming"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity_id": {
+            "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__common__CanonicalId"
+          },
+          "relation_type": {
+            "$ref": "#/components/schemas/RelationType"
+          }
+        },
+        "required": [
+          "relation_type",
+          "entity_id",
+          "direction"
+        ],
+        "title": "Relation",
+        "type": "object"
+      },
       "RelationType": {
         "enum": [
           "invokes",
@@ -14310,7 +14908,7 @@
             "$ref": "#/components/schemas/ReasonCode-Input"
           },
           "resource_id": {
-            "$ref": "#/components/schemas/CanonicalId"
+            "$ref": "#/components/schemas/neurosphere_contracts__admin__v1__common__CanonicalId"
           },
           "schema_version": {
             "$ref": "#/components/schemas/SchemaVersion"
@@ -16639,6 +17237,20 @@
         "title": "ShareBody",
         "type": "object"
       },
+      "SignalName": {
+        "enum": [
+          "capability_match",
+          "tag_match",
+          "text_match",
+          "graph_proximity",
+          "historical_success",
+          "latency",
+          "usage",
+          "feedback_prior"
+        ],
+        "title": "SignalName",
+        "type": "string"
+      },
       "Sku": {
         "maxLength": 128,
         "minLength": 1,
@@ -18309,7 +18921,7 @@
           },
           "start_ids": {
             "items": {
-              "$ref": "#/components/schemas/CanonicalId"
+              "$ref": "#/components/schemas/neurosphere_contracts__query__v1__structured_query__CanonicalId"
             },
             "maxItems": 50,
             "minItems": 1,
@@ -18814,6 +19426,12 @@
         ],
         "title": "Validity",
         "type": "object"
+      },
+      "Value": {
+        "maximum": 1.0,
+        "minimum": 0.0,
+        "title": "Value",
+        "type": "number"
       },
       "Version": {
         "pattern": "^[A-Za-z0-9._+-]{1,64}$",
@@ -19468,6 +20086,12 @@
         "title": "TargetRef",
         "type": "object"
       },
+      "neurosphere_contracts__admin__v1__common__CanonicalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
       "neurosphere_contracts__admin__v1__common__CustomerId": {
         "pattern": "^[a-z0-9._-]{1,128}$",
         "title": "CustomerId",
@@ -19493,6 +20117,17 @@
         "minLength": 1,
         "title": "Description",
         "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__canonical_id__CanonicalId": {
+        "maxLength": 512,
+        "minLength": 9,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
+      "neurosphere_contracts__catalog__v1__common__CanonicalId": {
+        "$ref": "#/components/schemas/neurosphere_contracts__catalog__v1__canonical_id__CanonicalId",
+        "title": "CanonicalId"
       },
       "neurosphere_contracts__catalog__v1__common__CustomerId": {
         "maxLength": 128,
@@ -19886,6 +20521,12 @@
         "title": "UtcTimestamp",
         "type": "string"
       },
+      "neurosphere_contracts__evaluation__v1__evaluation_result__CanonicalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
       "neurosphere_contracts__evaluation__v1__evaluation_result__Sampling": {
         "additionalProperties": false,
         "description": "Sampling coverage. coverage_fraction null means unknown.",
@@ -20041,6 +20682,12 @@
         "title": "Window",
         "type": "object"
       },
+      "neurosphere_contracts__query__v1__structured_query__CanonicalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
       "neurosphere_contracts__query__v1__structured_query__TimeRange": {
         "additionalProperties": false,
         "description": "Half-open interval [start, end). start < end is checked by tests/contracts/validators.py::check_time_range_order.",
@@ -20064,6 +20711,12 @@
         "title": "Timestamp",
         "type": "string"
       },
+      "neurosphere_contracts__recommendations__v1__recommendation__CanonicalId": {
+        "maxLength": 512,
+        "pattern": "^(commercial|government):[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._-]+:[a-z0-9._/=-]+$",
+        "title": "CanonicalId",
+        "type": "string"
+      },
       "neurosphere_contracts__recommendations__v1__recommendation__Coverage": {
         "additionalProperties": false,
         "description": "How much of the relevant population the evidence observed. observed_fraction null means unknown, never 0.",
@@ -20082,7 +20735,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/CanonicalId"
+                  "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__CanonicalId"
                 },
                 "maxItems": 100,
                 "type": "array"
@@ -20133,7 +20786,7 @@
           "owner_id": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/CanonicalId"
+                "$ref": "#/components/schemas/neurosphere_contracts__recommendations__v1__recommendation__CanonicalId"
               },
               {
                 "type": "null"
@@ -29108,6 +29761,192 @@
           }
         },
         "summary": "Get Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/match": {
+      "post": {
+        "operationId": "match_agents_api_v1_recommendations_domains__domain__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentMatchView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Agents",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/match/feedback": {
+      "post": {
+        "operationId": "record_match_feedback_api_v1_recommendations_domains__domain__match_feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMatchFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Match Feedback",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/v1/recommendations/domains/{domain}/match/metrics": {
+      "get": {
+        "operationId": "match_metrics_api_v1_recommendations_domains__domain__match_metrics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchMetricsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match Metrics",
         "tags": [
           "recommendations"
         ]
