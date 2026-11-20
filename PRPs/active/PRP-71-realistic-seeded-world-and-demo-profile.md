@@ -242,8 +242,8 @@ New contract fields or vocabularies (PRP-70); map, recommender or graph-question
 | 3 | merged | prp-71-item-3-generator-seed-wiring | sonnet; verify PASS 2026-11-19 (ruff, format, repo-wide pyright, 221 passed, generator double run byte-identical) at 9c7c0b7e; five personas granted (fixture has five, not four); review APPROVED; merged fc2b09da |
 | 4 | merged | prp-71-item-4-demo-profile | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, 133 passed across demo_profile, compose, hosted_data_path, sandbox_stack, write_targets_profiles) at a4f58c79; NS_WORKER_ROLES not in profile (compose pins all); review APPROVED; merged 877d8fee |
 | 5 | merged | prp-71-item-5-demo-settings | sonnet; verify PASS 2026-11-19 (ruff, format, repo-wide pyright, 231 passed) at 082d2e8f; clarification 5: no fake, ARM host not overridable, write-target apply OPEN; item 5b waits on PRP-78; review APPROVED; merged 5d3d196d |
-| 6 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-19 |
-| 7 | todo | | |
+| 6 | merged | prp-71-item-6c-live-fixes | sonnet; three rounds (bbae19df check, 3715346c az token in memory, live fixes b47c11b8 and 0541ef2d by the orchestrator); unit gates PASS 2026-11-20 (ruff, pyright, demo_profile 100 passed); review APPROVED on b47c11b8, the later banner and domain-grain incident row (0541ef2d) were not re-reviewed; live demo-check 55 of 56 routes with data, incident rows not yet verified; merged ef16475f |
+| 7 | in-progress | prp-71-demo-world-and-profile | orchestrator; docs section and changelog fragment committed (1ff031f6); full gates, PR and the recorded compose run still open |
 
 ## Completion note (filled at ship)
 - Date and PR:
