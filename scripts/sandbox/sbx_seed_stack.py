@@ -1293,7 +1293,15 @@ async def seed_entities(
                 tally.detail(_KIND_CATEGORY.get(kind, ""), 1)
             continue
         entity = ENTITY_MODELS[kind].model_validate(doc)
-        await backends.catalog.create_entity(scope, cast(Any, entity))
+        try:
+            await backends.catalog.create_entity(scope, cast(Any, entity))
+        except NeuroSphereError:
+            # The projection workers consume the same telemetry while this loop runs and can
+            # create the entity between the read above and this write ("an entity with this ID
+            # already exists", seen on CI). If it is there now, the run seeded it; anything
+            # else is a real failure.
+            if await backends.catalog.get_entity(scope, doc["id"]) is None:
+                raise
         tally.record("entities", created=1, existing=0)
         tally.detail(_KIND_CATEGORY.get(kind, ""), 1)
 
