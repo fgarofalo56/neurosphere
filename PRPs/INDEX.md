@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-73-graph-access-and-sensitivity-questions](active/PRP-73-graph-access-and-sensitivity-questions.md) | P0 | 1/7 (14%) | todo 5, review 1, merged 1 | sonnet / sonnet | required |
+| [PRP-73-graph-access-and-sensitivity-questions](active/PRP-73-graph-access-and-sensitivity-questions.md) | P0 | 2/7 (28%) | todo 4, in-progress 1, merged 2 | sonnet / sonnet | required |
 
 ## Backlog
 

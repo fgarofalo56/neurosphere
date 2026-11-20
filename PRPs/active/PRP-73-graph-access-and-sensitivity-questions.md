@@ -256,9 +256,9 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | review | prp-73-item-1-access-engine | sonnet; 9d121429; ruff+format clean, 184 passed (catalog_access + catalog); in review 2026-11-20 |
+| 1 | merged | prp-73-item-1-access-engine | sonnet; 9d121429, merge b1efd7e5; review APPROVE; post-merge 225 passed (core catalog + workers projections), pyright 0 errors; 2026-11-20. Follow-ups: dependents truncation reason codes, ScanBound.max_assets null for dependents, unknown_region only rejects malformed tokens (AC3 partial), union of group+regions documented, mid-path scope test |
 | 2 | merged | prp-73-item-2-data-access-edges | sonnet; 5d3c4c0b, merge 15e53c5e; review APPROVE; post-merge 41 passed, pyright 0 errors; 2026-11-20. Follow-ups: unresolved-asset warn threshold, stats not exported as metric, data_asset vs grounding_source ingest mapping, 2 extra handler tests |
-| 3 | todo | | |
+| 3 | in-progress | prp-73-item-3-access-routes | sonnet; dispatched 2026-11-20 |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
