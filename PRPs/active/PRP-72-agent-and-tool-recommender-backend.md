@@ -1,6 +1,7 @@
 ---
 name: PRP-72-agent-and-tool-recommender-backend
-status: backlog
+status: active
+started: 2026-11-20
 priority: P0
 order: 62
 review: required
@@ -224,13 +225,15 @@ Trained or LLM-based ranking; embeddings or a vector index; automatic invocation
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 2, 4, 5 and 7 are ASSUMPTIONS for plan approval; PRP-70 names are taken from its "Interfaces provided")
+- [x] All clarification questions are decided, not guessed (rows 2, 4, 5 and 7 accepted by the owner at plan approval 2026-11-20; PRP-70 names are taken from its "Interfaces provided")
 
 ## Execution state
+Plan deltas approved by the owner 2026-11-20: (a) item 4 also makes the Tier-2 route-registration appends (`routers.py`, `authz/routes.py`, `runtime/status.py`, `tests/authz/test_route_inventory.py`, `test_startup_route_check.py`, `runtime_routes/manifest_calls.py`, `tests/integration/real_stack/test_manifest_routes.py`) because its routes cannot boot under `verify_route_permissions` without them; item 6 keeps `mkdocs.yml`, the runbook and Tier 3. (b) item 5 runs after item 4, not in parallel.
+
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
+| 2 | in-progress | worktree, merges to prp-72-agent-tool-recommender | sonnet; dispatched 2026-11-20 |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
