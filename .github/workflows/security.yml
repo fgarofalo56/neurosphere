@@ -120,8 +120,19 @@ jobs:
         run: trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --exit-code 1 .
       - name: Grype scan of the source tree (High and Critical fail)
         run: grype dir:. --fail-on high
-      # `pnpm audit --audit-level high` runs once, in the required ci.yml frontend checks job
-      # (same level); Trivy and Grype above also read pnpm-lock.yaml on every run.
+      # On a pull request `pnpm audit --audit-level high` already runs in the required ci.yml
+      # frontend checks job (same level), so it is skipped here. It still runs on main, on the
+      # weekly schedule and on manual runs: a new advisory must be caught without a push.
+      - uses: pnpm/action-setup@v6
+        if: github.event_name != 'pull_request'
+      - uses: actions/setup-node@v7
+        if: github.event_name != 'pull_request'
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: pnpm audit (High and above)
+        if: github.event_name != 'pull_request'
+        run: pnpm audit --audit-level high
 
   images-all-scans:
     # Aggregator (PRP-52, #66): the image matrix is skipped when no Dockerfile exists, so
