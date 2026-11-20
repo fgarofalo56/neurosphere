@@ -317,6 +317,8 @@ def _errors_reply(path: str, rates: dict[str, float] | None = None, watermark: s
     downstream = set(WORLD.downstream_agent_ids)
     affected = {a["domain_id"] for a in WORLD.agents if a["id"] in downstream}
     rate = (rates or {}).get(domain.rsplit(":", 1)[-1], 0.4 if domain in affected else 0.0)
+    if rate < 0:  # a negative rate stands for "the dashboard call failed"
+        return check.Reply(500, {"reason": "dependency_transient"})
     points = [{"t": "2026-01-01T00:00:00Z", "value": {"value": rate, "status": "known"}}]
     return check.Reply(
         200,
@@ -389,6 +391,16 @@ def test_unknown_health_is_reported_not_checked() -> None:
 def test_the_incident_shows_in_the_affected_domains_error_rate_only() -> None:
     results = _world(_world_answers(_downstream_health("failing")))
     assert results["outage_domain_error_rate"].state == check.PASSED
+
+
+def test_an_unreadable_unaffected_domain_is_not_counted_as_calm() -> None:
+    """The incident shows in the affected domains, but one unaffected domain's call fails: the
+    "others stay under it" half was never checked, so the row must not pass."""
+    parts = _world_answers(_downstream_health("failing"))
+    parts["error_rates"] = {"security-operations": -1.0}
+    result = _world(parts)["outage_domain_error_rate"]
+    assert result.state == check.NOT_CHECKED
+    assert "security-operations" in result.detail
 
 
 def test_an_error_hour_in_an_unaffected_domain_fails() -> None:

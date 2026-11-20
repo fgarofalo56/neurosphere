@@ -627,6 +627,15 @@ def _outage_domain_errors(
     while True:  # bounded: the aggregates role drains in event order, the incident hour last
         rates = {d: _worst_hourly_error_rate(client, d) for d in (*affected, *calm)}
         watermark = max((w for _, w in rates.values()), default="")
+        # An unaffected domain that could not be read is not a calm one: without its series the
+        # "others stay under it" half of the check was never made.
+        unread = sorted(_slug(d) for d in calm if rates[d][0] is None)
+        if unread:
+            return SanityResult(
+                name,
+                NOT_CHECKED,
+                f"no readable error series for unaffected domain(s): {', '.join(unread)}",
+            )
         noisy = sorted(_slug(d) for d in calm if (rates[d][0] or 0.0) >= DOMAIN_ERROR_RATE)
         if noisy:
             return SanityResult(
