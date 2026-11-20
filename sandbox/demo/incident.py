@@ -14,9 +14,13 @@ rebases the epoch)::
 
 The incident hour is the last hour. In it every trace of an agent that depends on the outage
 service reaches that service, and spans bound to the service fail (``error``/``timeout``) with
-sharply raised latency; the agent's run and request then fail too, so its hourly error rate
-crosses the aggregate health thresholds (degraded at 0.05, failing at 0.25). Agents that do
-not depend on the service only keep the low background error rate.
+sharply raised latency. The model call that was waiting on the failed result is abandoned and
+recorded with the same outcome, and the agent's run and request then fail too. The abandoned
+``model_call`` is what the product measures: the aggregates worker counts ``model_call`` spans
+only (``neurosphere_workers.aggregates.mapping``), so without it the incident is invisible in
+the hourly error rate. With it the agent's rate crosses the aggregate health thresholds
+(degraded at 0.05, failing at 0.25). Agents that do not depend on the service keep a
+``model_call`` error rate of zero; their rare background failure is a single tool span.
 
 Public API: :func:`build_demo_telemetry`, :func:`write_demo_telemetry`,
 :func:`incident_manifest`, :func:`write_incident_manifest`.
@@ -59,6 +63,10 @@ DEFAULT_INCIDENT_TRACES = 6
 P_BACKGROUND_TOOL_ERROR = 0.01
 """Background failure rate: a single tool span, never the run (stays far below health 0.05)."""
 P_INCIDENT_FAIL = 0.9
+INCIDENT_MAX_ATTEMPTS = 3
+"""Calls an agent makes to the failing service before it gives up (the first and two retries).
+Each failed attempt abandons one model call, which is what lifts the measured error rate far
+enough to show at domain grain as well (a domain holds one downstream agent among many)."""
 INCIDENT_LATENCY_FACTOR = 8
 HEALTH_DEGRADED_ERROR_RATE = 0.05  # mirrors neurosphere_core.aggregates.subject
 HEALTH_FAILING_ERROR_RATE = 0.25
@@ -341,6 +349,45 @@ class _Builder:
             self._costs(actor, spec, call["event_id"], cur, cur + d, tin, tout)
             cur += d
 
+        # Own RNG stream: the abandoned calls never shift the draws of the spans around them.
+        arng = rng_for(self.seed, "demo-abandoned-call", actor.agent_id, n, lineage)
+
+        def abandoned_call(t: int, failure: str) -> int:
+            """The model call left waiting on a failed service result; returns its duration."""
+            tin = int(arng.lognormvariate(6.6, 0.6)) + 20
+            d = int(arng.uniform(8_000, 20_000) if failure == "timeout" else arng.uniform(150, 900))
+            call = span(
+                "model_call",
+                run_id,
+                t,
+                d,
+                failure,
+                provider=spec.provider,
+                model=spec.model_name,
+                model_version=spec.model_version,
+                token_breakdown={"input": tin, "output": 0},
+            )
+            self._costs(actor, spec, call["event_id"], t, t + d, tin, 0)
+            return d
+
+        def ride_out(t: int, failure: str, **identity: Any) -> tuple[int, str]:
+            """After a failed outage call: abandon the model call, then retry the service call.
+
+            Returns (time after the last span, final outcome). The agent gives up after
+            ``INCIDENT_MAX_ATTEMPTS`` calls; a retry that gets through ends the loop.
+            """
+            attempts = 1
+            while True:
+                t += abandoned_call(t, failure)
+                if attempts >= INCIDENT_MAX_ATTEMPTS:
+                    return t, failure
+                attempts += 1
+                d, failure = self._outage_effect(arng, int(arng.uniform(20, 400)))
+                span("tool_call", run_id, t, d, failure, **identity)
+                t += d
+                if failure == "success":
+                    return t, failure
+
         bound_services: set[str] = set()
         for tid in actor.tool_ids:
             services = self.tool_services[tid]
@@ -363,11 +410,13 @@ class _Builder:
             outcome = "success"
             if hits_outage:
                 d, outcome = self._outage_effect(rng, d)
-                failed = failed or outcome != "success"
             elif rng.random() < P_BACKGROUND_TOOL_ERROR:
                 outcome = "error"
             span("tool_call", run_id, cur, d, outcome, **extra)
             cur += d
+            if hits_outage and outcome != "success":
+                cur, outcome = ride_out(cur, outcome, **extra)
+                failed = failed or outcome != "success"
 
         for sid in actor.service_ids:
             if sid in bound_services:
@@ -379,11 +428,13 @@ class _Builder:
             outcome = "success"
             if hits_outage:
                 d, outcome = self._outage_effect(rng, d)
-                failed = failed or outcome != "success"
             elif rng.random() < P_BACKGROUND_TOOL_ERROR:
                 outcome = "error"
             span("tool_call", run_id, cur, d, outcome, service=_service_identity(sid))
             cur += d
+            if hits_outage and outcome != "success":
+                cur, outcome = ride_out(cur, outcome, service=_service_identity(sid))
+                failed = failed or outcome != "success"
 
         if depth < MAX_DELEGATION_DEPTH:
             # Own RNG stream: delegation never shifts the draws above. A child's failure does not

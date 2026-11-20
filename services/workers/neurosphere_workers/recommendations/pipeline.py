@@ -222,10 +222,15 @@ def summarize_usage_docs(
         version = doc.get("model_version")
         key = (agent_id, provider, model, version if isinstance(version, str) else None)
         tokens = doc["token_breakdown"]
+        if not isinstance(tokens, dict):
+            continue
         acc = totals.setdefault(key, [0, 0, 0])
-        acc[0] += int(tokens.get("input", 0))
-        acc[1] += int(tokens.get("output", 0))
-        acc[2] += int(tokens.get("cached", 0))
+        # An archived document carries an unreported count as an explicit null (the archive is
+        # written with nulls kept), not as a missing key, so ``.get(name, 0)`` is not enough.
+        # A count nobody reported adds nothing to the usage total.
+        acc[0] += int(tokens.get("input") or 0)
+        acc[1] += int(tokens.get("output") or 0)
+        acc[2] += int(tokens.get("cached") or 0)
         ids = evidence.setdefault(key, [])
         cost_id = doc.get("cost_id")
         if isinstance(cost_id, str) and len(ids) < _MAX_EVIDENCE_IDS:

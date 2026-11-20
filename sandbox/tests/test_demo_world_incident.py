@@ -91,6 +91,45 @@ def test_downstream_set_matches_manifest_and_world(world: DemoWorld, tele: DemoT
     )
 
 
+def test_incident_shows_in_model_call_spans_which_is_what_the_aggregates_count(
+    world: DemoWorld, tele: DemoTelemetry
+) -> None:
+    """The aggregates worker counts ``model_call`` spans only (``aggregates/mapping.py``).
+
+    A rate over every span kind (``_rates``) passed while the seeded stack showed a flat 0.0:
+    the incident failed tool, run and request spans but no model call. This measures the
+    incident the way the product does.
+    """
+    start, end = _window(tele.manifest)
+    calls = [e for e in tele.events if e["span_kind"] == "model_call"]
+    failed = [e for e in calls if e["outcome"] in ERRORS]
+    assert failed
+    down = set(world.downstream_agent_ids)
+    for e in failed:  # nothing outside the incident fails a model call
+        assert start <= e["event_time"] < end
+        assert e["canonical_agent_id"] in down
+        assert e["token_breakdown"]["output"] == 0
+    rates = _rates(calls, start, end)
+    for agent_id in world.downstream_agent_ids:
+        assert rates[agent_id] >= FAILING, agent_id
+    by_domain: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for e in calls:
+        if start <= e["event_time"] < end:
+            by_domain[e["domain_id"]][0] += e["outcome"] in ERRORS
+            by_domain[e["domain_id"]][1] += 1
+    agents = {a["id"]: a["domain_id"] for a in world.agents}
+    affected = {agents[a] for a in down}
+    assert affected and affected != set(by_domain)
+    for domain, (errors, total) in by_domain.items():
+        # Domain grain is what the dashboards API serves and `make demo-check` reads.
+        if domain in affected:
+            assert errors / total >= DEGRADED, domain
+        else:
+            assert errors == 0, domain
+    billed = {i for c in tele.costs for i in c["event_ids"]}
+    assert {e["event_id"] for e in failed} <= billed
+
+
 def test_delegation_spans_cover_every_pair_with_correct_linkage(
     world: DemoWorld, tele: DemoTelemetry
 ) -> None:
