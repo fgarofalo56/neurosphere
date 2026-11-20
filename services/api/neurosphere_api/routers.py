@@ -277,6 +277,12 @@ def _register_agent_match(registry: RouterRegistry) -> None:
     register(registry)
 
 
+def _register_catalog_access(registry: RouterRegistry) -> None:
+    from neurosphere_api.catalog.access import register
+
+    register(registry)
+
+
 REGISTERED: tuple[RegisterHook, ...] = (
     _register_health,
     _register_audit,
@@ -315,6 +321,7 @@ REGISTERED: tuple[RegisterHook, ...] = (
     _register_admin_system,
     _register_compliance,
     _register_agent_match,
+    _register_catalog_access,
 )
 
 
