@@ -1,0 +1,17 @@
+{
+  "outage_service": "payments-gateway",
+  "delegations": [
+    {"parent": "payment-run-coordinator", "child": "card-settlement-reconciler"},
+    {"parent": "payment-approval-assistant", "child": "journal-entry-agent"},
+    {"parent": "billing-dispute-resolver", "child": "payment-approval-assistant"},
+    {"parent": "billing-dispute-resolver", "child": "customer-reply-drafter"},
+    {"parent": "expense-reimbursement-assistant", "child": "expense-policy-advisor"},
+    {"parent": "month-end-close-assistant", "child": "journal-entry-agent"},
+    {"parent": "treasury-cash-forecaster", "child": "budget-variance-analyst"},
+    {"parent": "support-triage-assistant", "child": "ticket-summarizer"},
+    {"parent": "support-triage-assistant", "child": "escalation-router"},
+    {"parent": "customer-reply-drafter", "child": "knowledge-answer-assistant"},
+    {"parent": "alert-triage-assistant", "child": "incident-case-builder"},
+    {"parent": "alert-triage-assistant", "child": "threat-intel-enricher"}
+  ]
+}

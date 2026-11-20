@@ -37,19 +37,15 @@ for _path in (HERE, REPO):
         sys.path.insert(0, str(_path))
 
 import sbx_seed_stack as seed  # noqa: E402
-from neurosphere_core.catalog.repo.documents import EDGE_MODELS  # noqa: E402
 from neurosphere_core.errors import NeuroSphereError  # noqa: E402
 from neurosphere_core.scope import IdentityScope  # noqa: E402
-from neurosphere_workers.projections.catalog.mapping import edge_id  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 from sbx_guard import GuardError  # noqa: E402
-
-from sandbox.world import World  # noqa: E402
 
 EXIT_OK: Final = 0
 EXIT_REFUSED: Final = seed.EXIT_REFUSED
 EXIT_FAILED: Final = seed.EXIT_FAILED
-RELATIONS_FILE: Final = "relations.ndjson"
+RELATIONS_FILE: Final = seed.RELATIONS_FILE
 REPORTED: Final = ("entities", "edges", "grants")
 
 
@@ -70,14 +66,14 @@ def require_local_profile(environ: Mapping[str, str]) -> None:
 
 
 class CatalogTally(seed.Tally):
-    """The stack seed's tally plus an ``edges`` category."""
+    """The stack seed's tally plus ``edges`` (and, for the demo world, its per-kind breakdown)."""
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.seeded["edges"] = 0
+    def __init__(self, extra: Sequence[str] = ()) -> None:
+        super().__init__(tuple(dict.fromkeys(("edges", *extra))))
+        self._reported = tuple(dict.fromkeys((*REPORTED, *extra)))
 
     def summary(self) -> seed.Doc:
-        counts = {name: self.seeded[name] for name in REPORTED}
+        counts = {name: self.seeded[name] for name in self._reported}
         return {"seeded": counts, "skipped_existing": self.skipped}
 
 
@@ -86,36 +82,9 @@ async def seed_edges(
 ) -> None:
     """Write the generated relations through ``CatalogRepository.put_edge``.
 
-    Ids are rewritten to the projection's deterministic id (same relation, source and target give
-    the same id), so the ingestion projection later merges into these edges. Out-of-scope
-    documents are skipped (fail closed). A re-run finds each edge and creates nothing.
+    The implementation is ``seed.seed_edges`` (the full seed shares it for the demo world).
     """
-    path = directory / RELATIONS_FILE
-    if not path.exists():
-        return
-    allowed = frozenset(scope.allowed_domains)
-    for doc in seed.read_ndjson(path):
-        model = EDGE_MODELS.get(str(doc.get("relation_type")))
-        if (
-            model is None
-            or doc.get("cloud") != scope.cloud
-            or doc.get("customer_id") != scope.customer_id
-            or doc.get("domain_id") not in allowed
-        ):
-            continue
-        stable = edge_id(
-            doc["cloud"],
-            doc["customer_id"],
-            doc["relation_type"],
-            doc["source_id"],
-            doc["target_id"],
-        )
-        if await backends.catalog.get_edge(scope, stable) is not None:
-            tally.record("edges", created=0, existing=1)
-            continue
-        edge = model.model_validate({**doc, "id": stable})
-        await backends.catalog.put_edge(scope, edge, None)  # type: ignore[arg-type]
-        tally.record("edges", created=1, existing=0)
+    await seed.seed_edges(backends, scope, directory, tally)
 
 
 async def seed_catalog(
@@ -127,11 +96,11 @@ async def seed_catalog(
 ) -> seed.Doc:
     """Generate the world, grant the workers' scope, then seed entities and edges."""
     require_local_profile(environ)
-    tally = CatalogTally()
     gen = seed.generate_config(config)
+    tally = CatalogTally(seed.DEMO_CATEGORIES if gen.profile.name == seed.DEMO_WORLD else ())
     seed.log(f"generating the {config.profile} world (seed {config.seed})")
     await asyncio.to_thread(seed.generate, gen, workdir)
-    world = World(gen)
+    world = seed.world_view(gen)
     await seed.seed_grants(backends, config, world, tally, environ)
     scope = await seed.worker_scope(backends, config)
     missing = sorted(set(seed.world_domains(world)) - set(scope.allowed_domains))

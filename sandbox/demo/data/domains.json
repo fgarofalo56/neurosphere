@@ -1,0 +1,6 @@
+[
+  {"slug": "finance", "name": "Finance"},
+  {"slug": "support", "name": "Customer Support"},
+  {"slug": "human-resources", "name": "Human Resources"},
+  {"slug": "security-operations", "name": "Security Operations"}
+]

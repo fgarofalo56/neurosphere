@@ -10,6 +10,7 @@ the emulators.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import gzip
 import json
 import uuid
@@ -87,7 +88,12 @@ def throwaway(monkeypatch: pytest.MonkeyPatch, emulator_env: None) -> Iterator[t
         async def cleanup() -> None:
             async with ClientLifetime() as lifetime:
                 client = create_cosmos_client(Settings(env="local"), lifetime=lifetime)
-                await client.delete_database(database)
+                # Best-effort, like the sibling suites: the floating vnext-latest Cosmos
+                # emulator image began answering 500 (PostgresError E58P01) to every database
+                # DELETE on 2026-11-20, which failed this teardown on main as well. The
+                # database is a throwaway in a throwaway emulator.
+                with contextlib.suppress(Exception):
+                    await client.delete_database(database)
             async with ContainerClient.from_connection_string(
                 azurite_connection_string(), container
             ) as blobs:

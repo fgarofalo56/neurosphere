@@ -146,6 +146,37 @@ Good to know:
 - Checks: `uv run pytest -q services/api/tests/runtime_routes` (no emulators), and with the stack up and seeded `NS_PROBE_COSMOS_URL=http://127.0.0.1:8081/ MSYS_NO_PATHCONV=1 uv run pytest -q -m integration tests/integration/compose tests/integration/real_stack`. The browser run is a manual gate: `NS_REAL_STACK_PORT=8080 pnpm --filter @neurosphere/frontend exec playwright test -c playwright.real-stack.config.ts --headed` (a window opens; complete the Entra sign-in).
 - Headless browser run without Entra (PRP-38 item 6, the CI job `real-stack-browser`): with only the emulators up (`docker compose up -d --wait`), `NS_REAL_STACK_MODE=ci NS_E2E_APP_PORT=5300 NS_STAND_IN_API_PORT=8765 pnpm --filter @neurosphere/frontend exec playwright test -c playwright.real-stack.config.ts`. It starts `tests/integration/real_stack/serve_stand_in_api.py` (the composed API and workers over the emulators, trusting an in-memory dev issuer; test-only, database `ns_browser_flows`) and `vite`, seeds the stack, builds the MSAL cache with msal's `loadExternalTokens`, then runs the route walk and the catalog, quality, actions and copilot flow specs. The copilot flow asserts the typed `copilot_unconfigured` 503 because no model is configured.
 
+## Demo profile
+
+The real stack with a curated, believable world and the features that are merely off by default turned on against local backends. Synthetic data only, local and CI only: the `demo-world` profile is never loaded into a hosted environment, and the seed refuses `--hosted` with it.
+
+1. Export the two Entra ids as in "Real stack" and sign in to the Azure CLI (`az login`).
+2. Start it with your own object id so your sign-in is granted: `make demo-up OPERATOR_OID=$(az ad signed-in-user show --query id -o tsv)`. This is `make stack-up` with `SEED_PROFILE=demo-world` and `infra/dev/demo-profile.env` applied; the ordering is the same. Start from empty emulators (`docker compose down -v` first): a stack seeded earlier by another profile or by a test suite makes this seed a no-op.
+3. Check it: `make demo-check`. It calls the backing API of every route in `frontend/src/app/route-manifest.json` as you (the token comes from `az account get-access-token`, is held in memory and is never printed or written), and fails on an empty page that is not in the `demo_expected_empty` allow-list in `scripts/sandbox/sbx_demo_check.py`. It also reads `/api/v1/admin/system/status` and the demo-world expectations. `--json` prints the same report as JSON; `--wait-seconds` bounds how long it waits for agent health.
+4. Stop it: `make demo-down`.
+
+What the world contains (ids and names are stable and listed in `sandbox/demo/README.md`): 32 named agents in four domains (finance, support, human resources, security operations) with descriptions, tags, capabilities, owners and versions; 7 services, 16 tools, 4 model deployments, one MCP server and 15 data assets with classification, sensitivity categories and EU or US residency; `owned_by`, `uses_model`, `invokes`, `reads`, `writes`, `depends_on`, `grounded_by` and `delegates_to` edges; four agents that exist only in telemetry and show up as discovered drafts; and one scripted incident in which `payments-gateway` fails during the last hour of the seeded window and its five downstream agents degrade while the other 27 do not.
+
+What is real and what is fake:
+
+- Producer store (`NS_INGEST_PRODUCER_STORE=true`): real. Producers are read from the admin store in the Cosmos emulator instead of the mounted file.
+- MCP server: real and mounted on the API at `https://127.0.0.1:8000/mcp` as its resource URL; it validates real Entra tokens. No MCP client is started for you.
+- Deployment scan (`NS_SCAN_ENABLED=true`): the feature is on and reports enabled, but its scope is a synthetic all-zero subscription and the API container has no Azure sign-in, so no real resource is scanned.
+- Lifecycle (`NS_LIFECYCLE_MODE=dry_run`): real evaluation of the rules, dry-run only. Nothing is executed.
+- Detector recommendations (`NS_WORKER_REC_SOURCE=archive`): real detectors over the archived demo telemetry.
+- Worker roles: all roles run. The connector roles (billing export, gateway poll, Foundry discovery) are configured but idle because they have no source to read.
+- Stored feature settings (`scan`, `mcp_server`, `search`, `copilot`, `write_targets`): real rows written through the same validation and audit as the settings PUT route. `search`, `copilot` and both write targets are stored disabled with placeholder names; nothing calls those hosts.
+- Write targets: advisory only. The Azure management host cannot be pointed at a loopback fake (the cloud profile and the client factory refuse a non-cloud host), so there is no local fake and apply stays OPEN.
+- Copilot: off. `NS_DEMO_COPILOT_MODE=disabled`, the routes answer 503 `copilot_unconfigured`, and `make demo-check` reports `pending_prp_78`. PRP-78 adds the recorded mode and flips this switch. For a real endpoint, set `NS_COPILOT_MODE` and the `NS_COPILOT_*` values as in `docs/runbooks/copilot.md`; an exported `NS_COPILOT_MODE` wins over the demo switch.
+- Evaluation: the pilot domain is the demo finance domain (`NS_WORKER_EVAL_PILOT_DOMAIN_ID`), because the default pilot domain does not exist in the demo world.
+- Sign-in: real Entra. In the demo world your object id is granted `admin` and, as four more explicit grants over the demo domains, each of the other persona roles, so one sign-in opens the role-gated pages (workspaces, audit, review queues). `make stack-up` with the `small` profile still grants `admin` only.
+
+Good to know:
+
+- The data arrives over time. The seed pushes about 8,500 telemetry and cost events through the Event Hubs emulator; ingestion and then the aggregates role drain them in event order, oldest first, so the most recent hours (the incident included) land last. The seed waits five minutes and then warns; `uv run python scripts/sandbox/sbx_demo_check.py --wait-seconds <n>` or a later `make demo-check` picks up the rest.
+- The overview's "today" tile uses the current UTC day. The newest seeded event is 30 minutes older than the seed run, so after the next UTC midnight that tile is empty until you reset and seed again, as with any seeded stack.
+- Reset: `make demo-down`, `docker compose down -v`, then `make demo-up`. `make seed-reset` and `make dev-reset` also drop the data. Stored settings live only in the local `admin_config` container.
+
 ## Emulator limits
 
 Document and respect these. They are the known gaps between the emulators and the real services; the parity gate is [G12 in RESEARCH-AND-GATES.md](../RESEARCH-AND-GATES.md).

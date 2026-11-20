@@ -145,7 +145,7 @@ services:
       NS_ARCHIVE_CONTAINER: ns-archive
       NS_CORS_ALLOWED_ORIGINS: ""
       # Copilot is off by default. A containerized API has no az login: see docs/runbooks/copilot.md.
-      NS_COPILOT_MODE: ${NS_COPILOT_MODE:-disabled}
+      NS_COPILOT_MODE: ${NS_COPILOT_MODE:-${NS_DEMO_COPILOT_MODE:-disabled}}
       NS_COPILOT_ENDPOINT: ${NS_COPILOT_ENDPOINT:-}
       NS_COPILOT_DEPLOYMENT: ${NS_COPILOT_DEPLOYMENT:-}
       NS_COPILOT_API_VERSION: ${NS_COPILOT_API_VERSION:-}
@@ -180,6 +180,14 @@ services:
       NS_APIM_DOMAIN_ID: ${NS_APIM_DOMAIN_ID:-}
       # PRP-54: stored write_targets entries define the targets only when set to true.
       NS_WRITE_TARGETS_FROM_STORE: ${NS_WRITE_TARGETS_FROM_STORE:-false}
+      # PRP-71 demo profile (infra/dev/demo-profile.env, `make demo-up`). Names without a value
+      # are forwarded only when exported in the host shell, so a plain `up` is unchanged (an empty
+      # string would fail the bool/JSON parsers).
+      NS_SCAN_ENABLED:
+      NS_LIFECYCLE_MODE:
+      NS_MCP_RESOURCE_SERVER_URL:
+      NS_MCP_AUDIENCES:
+      NS_MCP_ALLOWED_HOSTS:
     volumes:
       - ./infra/dev/ingest-producers.dev.json:/etc/neurosphere/ingest-producers.json:ro
       - ./infra/dev/admission-quotas.dev.json:/etc/neurosphere/admission-quotas.json:ro
@@ -241,7 +249,8 @@ services:
       # grants the worker principal viewer on every world domain, so dom-001 is in its scope.
       NS_WORKER_EVAL_JUDGE: fixture
       NS_WORKER_EVAL_PILOT_DATASET_IDS: sbx-groundedness-pilot
-      NS_WORKER_EVAL_PILOT_DOMAIN_ID: commercial:synthco:sandbox:domain:dom-001
+      # PRP-71: the demo profile points the evaluation pilot at a demo-world domain.
+      NS_WORKER_EVAL_PILOT_DOMAIN_ID: ${NS_WORKER_EVAL_PILOT_DOMAIN_ID:-commercial:synthco:sandbox:domain:dom-001}
       NS_WORKER_EVAL_PILOT_SUBJECT_ID: commercial:synthco:sandbox:agent:a-000000
       NS_WORKER_EVAL_OFFLINE_INTERVAL_SECONDS: "300"
       # Write targets (PRP-35): same names as the api; OFF by default (empty registry).
@@ -255,6 +264,8 @@ services:
       NS_APIM_DOMAIN_ID: ${NS_APIM_DOMAIN_ID:-}
       # PRP-54: stored write_targets entries define the targets only when set to true.
       NS_WRITE_TARGETS_FROM_STORE: ${NS_WRITE_TARGETS_FROM_STORE:-false}
+      # PRP-71 demo profile: forwarded only when exported in the host shell (see the api service).
+      NS_LIFECYCLE_MODE:
       # Ingestion role (PRP-07): names match infra/compose/eventhubs.config.json. Emulator
       # clients come from the bootstrap-built NS_EVENTHUBS_/NS_BLOB_ connection strings.
       NS_INGESTION_EVENTHUB_NAME: telemetry

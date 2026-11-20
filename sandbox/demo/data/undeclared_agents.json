@@ -1,0 +1,6 @@
+[
+  {"slug": "adhoc-invoice-reconciler", "name": "Ad Hoc Invoice Reconciler", "domain": "finance", "model": "general-reasoning-model", "tools": ["ledger-lookup"], "services": ["ledger-api"]},
+  {"slug": "unregistered-ticket-bot", "name": "Unregistered Ticket Bot", "domain": "support", "model": "fast-chat-model", "tools": ["ticket-search"], "services": ["ticketing-api"]},
+  {"slug": "experimental-hr-chatbot", "name": "Experimental HR Chatbot", "domain": "human-resources", "model": "small-private-model", "tools": ["employee-directory-lookup"], "services": ["hris-api"]},
+  {"slug": "personal-log-analyzer", "name": "Personal Log Analyzer", "domain": "security-operations", "model": "general-reasoning-model", "tools": ["alert-triage-query"], "services": ["siem-api"]}
+]

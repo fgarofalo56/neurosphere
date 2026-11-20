@@ -1,0 +1,9 @@
+[
+  {"slug": "payments-gateway", "name": "Payments Gateway", "domain": "finance", "kind": "internal_api", "classification": "restricted", "tags": ["payments", "tier-1"], "environment": "production"},
+  {"slug": "ledger-api", "name": "General Ledger API", "domain": "finance", "kind": "internal_api", "classification": "restricted", "tags": ["ledger", "tier-1"], "environment": "production"},
+  {"slug": "crm-platform", "name": "Customer Relationship Platform", "domain": "support", "kind": "saas", "classification": "confidential", "tags": ["crm", "customer-data"], "environment": "production"},
+  {"slug": "ticketing-api", "name": "Ticketing API", "domain": "support", "kind": "internal_api", "classification": "internal", "tags": ["ticketing", "tier-2"], "environment": "production"},
+  {"slug": "hris-api", "name": "HR Information System API", "domain": "human-resources", "kind": "internal_api", "classification": "restricted", "tags": ["hris", "employee-data"], "environment": "production"},
+  {"slug": "siem-api", "name": "Security Analytics API", "domain": "security-operations", "kind": "azure_service", "azure_resource_type": "Microsoft.SecurityInsights/workspaces", "classification": "confidential", "tags": ["siem", "tier-1"], "environment": "production"},
+  {"slug": "identity-directory", "name": "Identity Directory", "domain": "security-operations", "kind": "azure_service", "azure_resource_type": "Microsoft.Entra/directories", "classification": "restricted", "tags": ["identity", "tier-1"], "environment": "production"}
+]
