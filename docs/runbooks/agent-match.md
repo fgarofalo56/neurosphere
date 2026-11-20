@@ -107,7 +107,7 @@ the reason code appears in the route's 409 body, not in `/readyz`.
   response does not say that any were skipped.
 - Matching is lexical. There are no embeddings and no semantic ranking.
 - Latency has been measured only on the in-memory repository with the fixture search provider
-  (`tests/load/agent_match`, result in `temp/agent_match/p95.json`). No latency is claimed for
+  (`tests/load/agent_match_latency`, result in `temp/agent_match/p95.json`). No latency is claimed for
   Azure AI Search or Cosmos.
 - The acceptance rate is instrumented here. Whether it reaches the 60 percent target is an
   adoption outcome that this feature cannot claim.

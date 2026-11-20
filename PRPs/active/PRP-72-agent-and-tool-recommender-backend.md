@@ -114,7 +114,7 @@ owns:
   - services/api/neurosphere_api/recommendations/match_models.py
   - services/api/neurosphere_api/recommendations/match_dependencies.py
   - services/api/tests/agent_match_api/**
-  - tests/load/agent_match/**
+  - tests/load/agent_match_latency/**
   - tests/security/authz/test_agent_match*.py
   - docs/runbooks/agent-match.md
 tier1:
@@ -205,7 +205,7 @@ Parallelization: items 1 and 2 [P] (signals and feedback store share no file). I
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright
-uv run pytest -q packages/core/tests/agent_match packages/core/neurosphere_core/recommendations services/api/tests/agent_match_api services/api/tests/recommendations services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/authz tests/security/authz tests/load/agent_match services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py tests/docs/test_nav_allowlist.py
+uv run pytest -q packages/core/tests/agent_match packages/core/neurosphere_core/recommendations services/api/tests/agent_match_api services/api/neurosphere_api/recommendations/tests services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/runtime_data services/api/tests/runtime_gateway_builder services/api/tests/authz tests/security/authz tests/load/agent_match_latency services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py tests/docs/test_nav_allowlist.py
 python scripts/prp_status.py --check
 python scripts/validate_planning.py
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full

@@ -16,7 +16,7 @@
 - Settings `NS_MATCH_WEIGHTS`, `NS_MATCH_CANDIDATE_CAP`, `NS_MATCH_FEEDBACK_BOUND`,
   `NS_MATCH_MIN_PRINCIPALS` and `NS_MATCH_FEEDBACK_TTL_DAYS`, the optional `agent_matcher`
   readiness component, and the runbook `docs/runbooks/agent-match.md`.
-- A 10,000-agent in-memory latency profile under `tests/load/agent_match`. It measures and
+- A 10,000-agent in-memory latency profile under `tests/load/agent_match_latency`. It measures and
   records; it is not a claim about Azure AI Search or Cosmos.
 
 ### Changed
