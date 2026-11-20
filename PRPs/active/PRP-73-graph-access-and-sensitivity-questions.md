@@ -256,7 +256,7 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | prp-73-item-1-access-engine | sonnet; dispatched 2026-11-20 |
+| 1 | review | prp-73-item-1-access-engine | sonnet; 9d121429; ruff+format clean, 184 passed (catalog_access + catalog); in review 2026-11-20 |
 | 2 | merged | prp-73-item-2-data-access-edges | sonnet; 5d3c4c0b, merge 15e53c5e; review APPROVE; post-merge 41 passed, pyright 0 errors; 2026-11-20. Follow-ups: unresolved-asset warn threshold, stats not exported as metric, data_asset vs grounding_source ingest mapping, 2 extra handler tests |
 | 3 | todo | | |
 | 4 | todo | | |
