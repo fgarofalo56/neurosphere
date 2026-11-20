@@ -56,6 +56,7 @@ WIRE_CONTRACT: dict[str, tuple[str, ...]] = {
     "deploy_register": ("/deployment_id",),
     "deploy_plan_approvals": ("/customer_id",),
     "recommendations": ("/customer_id", "/domain_id"),
+    "recommendation_feedback": ("/customer_id", "/domain_id"),
     "evaluation_runs": ("/customer_id", "/domain_id"),
     "evaluation_results": ("/customer_id", "/domain_id"),
     "price_snapshots": ("/snapshot_id",),
@@ -84,7 +85,7 @@ def test_kinds_and_ttls() -> None:
     for spec in CONTAINERS:
         assert spec.kind == ("MultiHash" if len(spec.partition_key_paths) > 1 else "Hash")
     ttl = {s.name for s in CONTAINERS if s.default_ttl is not None}
-    assert ttl == {"revocations", "copilot_conversations"}
+    assert ttl == {"revocations", "copilot_conversations", "recommendation_feedback"}
     assert container_spec("revocations").default_ttl == TTL_PER_ITEM
 
 

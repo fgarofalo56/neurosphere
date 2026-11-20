@@ -147,6 +147,13 @@ CONTAINERS: Final[tuple[ContainerSpec, ...]] = (
     ContainerSpec(
         "recommendations", _CUSTOMER_DOMAIN, "neurosphere_core.recommendations.cosmos_store"
     ),
+    ContainerSpec(
+        "recommendation_feedback",
+        _CUSTOMER_DOMAIN,
+        "neurosphere_core.recommendations.matching.cosmos_store",
+        default_ttl=TTL_PER_ITEM,
+        notes="agent/tool match and feedback documents (PRP-72); per-item ttl, tokens only",
+    ),
     ContainerSpec("evaluation_runs", _CUSTOMER_DOMAIN, "neurosphere_core.evaluation.cosmos_store"),
     ContainerSpec(
         "evaluation_results", _CUSTOMER_DOMAIN, "neurosphere_core.evaluation.cosmos_store"
