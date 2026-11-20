@@ -80,6 +80,22 @@ FOUNDRY_RESOURCE_ID: Final = (
     f"/subscriptions/{SUBSCRIPTION}/resourceGroups/{RESOURCE_GROUP}"
     "/providers/Microsoft.CognitiveServices/accounts/ai-synthetic-sandbox"
 )
+#: Synthetic ids for the search, copilot and MCP entries. The contract makes ``resource_id`` and
+#: ``credential`` required-but-nullable, and the Cosmos store drops nulls on write
+#: (``cosmos_store.py``, ``exclude_none``), so a null here is stored as a row that no longer
+#: validates on read and every later settings read fails. Found by the first live demo-up.
+SEARCH_RESOURCE_ID: Final = (
+    f"/subscriptions/{SUBSCRIPTION}/resourceGroups/{RESOURCE_GROUP}"
+    "/providers/Microsoft.Search/searchServices/ns-demo-search"
+)
+COPILOT_RESOURCE_ID: Final = (
+    f"/subscriptions/{SUBSCRIPTION}/resourceGroups/{RESOURCE_GROUP}"
+    "/providers/Microsoft.CognitiveServices/accounts/ns-demo-placeholder"
+)
+MCP_RESOURCE_ID: Final = (
+    f"/subscriptions/{SUBSCRIPTION}/resourceGroups/{RESOURCE_GROUP}"
+    "/providers/Microsoft.App/containerApps/ns-demo-api"
+)
 #: Same value as ``NS_MCP_RESOURCE_SERVER_URL`` in the demo profile.
 MCP_ENDPOINT: Final = "https://127.0.0.1:8000/mcp"
 
@@ -121,7 +137,11 @@ def demo_settings() -> tuple[tuple[SettingKey, Doc], ...]:
             body(
                 "mcp_server",
                 True,
-                {"endpoint": MCP_ENDPOINT, "resource_id": None, "credential": None},
+                {
+                    "endpoint": MCP_ENDPOINT,
+                    "resource_id": MCP_RESOURCE_ID,
+                    "credential": _identity(),
+                },
             ),
         ),
         (
@@ -132,7 +152,7 @@ def demo_settings() -> tuple[tuple[SettingKey, Doc], ...]:
                 {
                     "endpoint": "https://ns-demo-search.search.windows.net",
                     "index_name": "ns-demo-catalog",
-                    "resource_id": None,
+                    "resource_id": SEARCH_RESOURCE_ID,
                     "credential": _identity(),
                 },
             ),
@@ -146,7 +166,7 @@ def demo_settings() -> tuple[tuple[SettingKey, Doc], ...]:
                     "endpoint": "https://ns-demo-placeholder.openai.azure.com",
                     "deployment": "demo-placeholder",
                     "api_version": "2024-10-21",
-                    "resource_id": None,
+                    "resource_id": COPILOT_RESOURCE_ID,
                     "credential": _identity(),
                 },
             ),
