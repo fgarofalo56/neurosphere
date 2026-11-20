@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-72-agent-and-tool-recommender-backend](active/PRP-72-agent-and-tool-recommender-backend.md) | P0 | 2/6 (33%) | todo 3, in-progress 1, merged 2 | sonnet / sonnet | required |
+| [PRP-72-agent-and-tool-recommender-backend](active/PRP-72-agent-and-tool-recommender-backend.md) | P0 | 3/6 (50%) | todo 2, in-progress 1, merged 3 | sonnet / sonnet | required |
 
 ## Backlog
 
