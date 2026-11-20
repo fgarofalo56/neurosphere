@@ -292,6 +292,11 @@ def test_no_route_mutates_catalog_or_recommendation_state(s: Slice) -> None:
         f"{PREFIX}/domains/{{domain}}": ["get"],
         f"{PREFIX}/domains/{{domain}}/executions": ["post"],
         f"{PREFIX}/domains/{{domain}}/items/{{recommendation_id}}": ["get"],
+        # PRP-72 match routes: they write only to the recommendation_feedback container (match
+        # and feedback documents), never to the catalog or to stored recommendations.
+        f"{PREFIX}/domains/{{domain}}/match": ["post"],
+        f"{PREFIX}/domains/{{domain}}/match/feedback": ["post"],
+        f"{PREFIX}/domains/{{domain}}/match/metrics": ["get"],
         f"{PREFIX}/domains/{{domain}}/review-requests": ["post"],
     }
     for method in ("put", "patch", "delete"):
