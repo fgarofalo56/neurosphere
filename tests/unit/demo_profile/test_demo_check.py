@@ -307,6 +307,26 @@ def _world_answers(health: dict[str, str] | None = None, drop: str | None = None
     }
 
 
+def _errors_reply(path: str, rates: dict[str, float] | None = None, watermark: str = "") -> Any:
+    """The errors dashboard (hour grain) for the domain in ``path``.
+
+    Default: a domain holding a downstream agent of the failing service has one bad hour, the
+    others none. ``rates`` overrides by domain slug.
+    """
+    domain = path.split("/domains/", 1)[1].rsplit("/", 1)[0]
+    downstream = set(WORLD.downstream_agent_ids)
+    affected = {a["domain_id"] for a in WORLD.agents if a["id"] in downstream}
+    rate = (rates or {}).get(domain.rsplit(":", 1)[-1], 0.4 if domain in affected else 0.0)
+    points = [{"t": "2026-01-01T00:00:00Z", "value": {"value": rate, "status": "known"}}]
+    return check.Reply(
+        200,
+        {
+            "freshness": {"watermark": watermark},
+            "series": [{"key": "error_rate", "points": points}],
+        },
+    )
+
+
 class WorldClient(FakeClient):
     def __init__(self, parts: dict[str, Any]) -> None:
         super().__init__()
@@ -315,6 +335,8 @@ class WorldClient(FakeClient):
     def get(
         self, path: str, query: Sequence[tuple[str, str]] = (), persona: str | None = None
     ) -> Any:
+        if path.endswith("/errors"):
+            return _errors_reply(path, self.parts.get("error_rates"), "2026-01-01T00:00:00Z")
         if path == check.ENTITIES_PATH:
             draft = ("lifecycle", "draft") in query
             return check.Reply(200, {"items": self.parts["drafts" if draft else "agents"]})
@@ -362,6 +384,27 @@ def test_unknown_health_is_reported_not_checked() -> None:
     health = {a["id"].rsplit(":", 1)[-1]: "unknown" for a in WORLD.agents}
     results = _world(_world_answers(health))
     assert results["outage_downstream_health"].state == check.NOT_CHECKED
+
+
+def test_the_incident_shows_in_the_affected_domains_error_rate_only() -> None:
+    results = _world(_world_answers(_downstream_health("failing")))
+    assert results["outage_domain_error_rate"].state == check.PASSED
+
+
+def test_an_error_hour_in_an_unaffected_domain_fails() -> None:
+    parts = _world_answers(_downstream_health("failing"))
+    parts["error_rates"] = {"security-operations": 0.3}
+    result = _world(parts)["outage_domain_error_rate"]
+    assert result.state == check.FAIL
+    assert "security-operations" in result.detail
+
+
+def test_an_incident_hour_not_aggregated_yet_is_not_checked_with_the_watermark() -> None:
+    parts = _world_answers(_downstream_health("failing"))
+    parts["error_rates"] = {"finance": 0.0}
+    result = _world(parts)["outage_domain_error_rate"]
+    assert result.state == check.NOT_CHECKED
+    assert "finance" in result.detail and "watermark 2026-01-01" in result.detail
 
 
 def test_missing_undeclared_drafts_fail() -> None:
@@ -433,6 +476,8 @@ class _PassingClient(FakeClient):
     ) -> Any:
         if path == check.DOMAINS_PATH:
             return check.Reply(200, {"items": [{"domain_id": DOMAIN}]})
+        if path.endswith("/errors"):
+            return _errors_reply(path)
         if path == check.STATUS_PATH:
             return check.Reply(200, _status())
         if path == check.LIFECYCLE_PATH:
@@ -491,6 +536,8 @@ def test_a_whole_passing_run_exits_0_and_never_prints_the_token(
     assert TOKEN not in out.out + out.err
     assert "pending_prp_78" in out.out
     assert "PASS" in out.out
+    # rows that are pending or could not be checked are counted in the banner, never hidden
+    assert "not verified" in out.out
 
 
 def test_json_output_is_parseable_and_token_free(

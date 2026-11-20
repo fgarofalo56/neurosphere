@@ -571,8 +571,83 @@ def check_world(
             else f"{len(undeclared)} telemetry-only agents are draft catalog agents",
         )
     )
-    results.append(_outage_health(client, domains, world, wait_seconds, poll_seconds, sleep, clock))
+    results.append(_outage_domain_errors(client, world, wait_seconds, poll_seconds, sleep, clock))
+    # The bounded wait was spent above. Per-agent health is only on the map once its topology
+    # backend carries metrics (PRP-74); until then the viewport answers "unknown" and this row
+    # stays not_checked.
+    results.append(_outage_health(client, domains, world, 0.0, poll_seconds, sleep, clock))
     return results
+
+
+ERRORS_PATH: Final = "/api/v1/dashboards/domains/{domain}/errors"
+#: The API's "degraded" threshold (``health_degraded_error_rate``): an affected domain's worst
+#: hour must reach it, an unaffected domain's worst hour must stay under it.
+DOMAIN_ERROR_RATE: Final = 0.05
+
+
+def _worst_hourly_error_rate(client: Client, domain: str) -> tuple[float | None, str]:
+    """Highest hourly error rate over the last two days, and the aggregates watermark."""
+    reply = client.get(ERRORS_PATH.replace("{domain}", domain), (("days", "2"), ("grain", "hour")))
+    if reply.status != 200 or not isinstance(reply.body, dict):
+        return None, ""
+    freshness = reply.body.get("freshness")
+    watermark = str(freshness.get("watermark") or "") if isinstance(freshness, dict) else ""
+    worst: float | None = None
+    for series in reply.body.get("series", []):
+        if not isinstance(series, dict) or series.get("key") != "error_rate":
+            continue
+        for point in series.get("points", []):
+            value = _pluck(point, ("value", "value"))
+            if isinstance(value, int | float):
+                worst = max(worst or 0.0, float(value))
+    return worst, watermark
+
+
+def _outage_domain_errors(
+    client: Client,
+    world: DemoWorld,
+    wait_seconds: float,
+    poll_seconds: float,
+    sleep: Callable[[float], None],
+    clock: Callable[[], float],
+) -> SanityResult:
+    """The incident as the aggregates show it, at domain grain (the grain the API serves).
+
+    Domains holding a downstream agent of the failing service must show an hour at or above the
+    degraded error rate; a domain with no downstream agent must not. Per-agent health is the
+    map's job (``outage_downstream_health``).
+    """
+    name = "outage_domain_error_rate"
+    downstream = set(world.downstream_agent_ids)
+    affected = sorted({str(a["domain_id"]) for a in world.agents if a["id"] in downstream})
+    calm = sorted({str(a["domain_id"]) for a in world.agents} - set(affected))
+    if not affected or not calm:
+        return SanityResult(name, NOT_CHECKED, "the world has no affected/unaffected domain split")
+    deadline = clock() + wait_seconds
+    while True:  # bounded: the aggregates role drains in event order, the incident hour last
+        rates = {d: _worst_hourly_error_rate(client, d) for d in (*affected, *calm)}
+        watermark = max((w for _, w in rates.values()), default="")
+        noisy = sorted(_slug(d) for d in calm if (rates[d][0] or 0.0) >= DOMAIN_ERROR_RATE)
+        if noisy:
+            return SanityResult(
+                name, FAIL, f"unaffected domain(s) show an error hour: {', '.join(noisy)}"
+            )
+        quiet = sorted(_slug(d) for d in affected if (rates[d][0] or 0.0) < DOMAIN_ERROR_RATE)
+        if not quiet:
+            return SanityResult(
+                name,
+                PASSED,
+                f"{len(affected)} affected domain(s) reach {DOMAIN_ERROR_RATE:.2f}; "
+                f"{len(calm)} unaffected stay under it",
+            )
+        if clock() >= deadline:
+            return SanityResult(
+                name,
+                NOT_CHECKED,
+                f"no error hour yet in: {', '.join(quiet)} after {wait_seconds:.0f}s "
+                f"(aggregates watermark {watermark or 'unknown'}; the incident hour drains last)",
+            )
+        sleep(poll_seconds)
 
 
 def _outage_health(
@@ -823,7 +898,12 @@ def render(report: Report) -> str:
     table("Features", [(f.name, f.state, f.detail, f.ok) for f in report.features])
     table("Demo world", [(s.name, s.state, s.detail, s.ok) for s in report.sanity])
     failed = sum(not r.ok for r in (*report.routes, *report.features, *report.sanity))
-    lines.append(f"\n{'PASS' if report.ok else 'FAIL'}: {failed} failing row(s)")
+    # A row that could not be checked or is pending is not a failure, but it is not a pass either:
+    # the banner counts it so a clean exit never reads as "everything was verified".
+    open_states = (NOT_CHECKED, NOT_REPORTED, PENDING_PRP_78)
+    unverified = sum(r.state in open_states for r in (*report.features, *report.sanity))
+    suffix = f", {unverified} not verified (see the rows above)" if unverified else ""
+    lines.append(f"\n{'PASS' if report.ok else 'FAIL'}: {failed} failing row(s){suffix}")
     return "\n".join(lines)
 
 
