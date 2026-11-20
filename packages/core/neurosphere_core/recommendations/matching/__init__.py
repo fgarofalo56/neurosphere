@@ -1,4 +1,4 @@
-"""Agent and tool matching: signals, combiner and settings (PRP-72)."""
+"""Agent and tool matching: signals, combiner, feedback and the matcher service (PRP-72)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,10 @@ from .combine import (
     confidence_for,
     rank_candidates,
 )
+from .cosmos_store import CosmosFeedbackStore
+from .feedback import FeedbackStore, InMemoryFeedbackStore, feedback_signal
 from .models import CombinedResult, ProximityPath, SignalValue
+from .service import AgentMatcher, AgentMatchReader, MatchResult
 from .settings import DEFAULT_WEIGHTS, SIGNAL_NAMES, MatchSettings
 from .signals import (
     USAGE_SATURATION,
@@ -31,12 +34,19 @@ __all__ = [
     "TELEMETRY_SIGNALS",
     "TOKEN_LIMIT",
     "USAGE_SATURATION",
+    "AgentMatchReader",
+    "AgentMatcher",
     "CombinedResult",
+    "CosmosFeedbackStore",
+    "FeedbackStore",
+    "InMemoryFeedbackStore",
+    "MatchResult",
     "MatchSettings",
     "ProximityPath",
     "SignalValue",
     "combine",
     "confidence_for",
+    "feedback_signal",
     "latency_pool_median",
     "lexical_signal",
     "normalize_tokens",
