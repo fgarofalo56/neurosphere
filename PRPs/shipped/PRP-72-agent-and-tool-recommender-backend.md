@@ -1,6 +1,8 @@
 ---
 name: PRP-72-agent-and-tool-recommender-backend
-status: active
+status: shipped
+shipped: 2026-11-20
+pr: 358
 started: 2026-11-20
 priority: P0
 order: 62
@@ -237,13 +239,27 @@ Plan deltas approved by the owner 2026-11-20: (a) item 4 also makes the Tier-2 r
 | 3 | merged | worktree-agent-ac35667f5d6a86f04 | sonnet; ruff/format/pyright clean, 76 passed (3 emulator tests deselected); commit d6eae127. Deviations: feedback prior is a signed bounded adjustment outside combine (weights.feedback_prior ignored); tools without domain_id are absent with no flag (search never returns them); partial_reason limited by the contract to limit/timeout_ms; 2026-11-20 |
 | 4 | merged | worktree-agent-ad2b15243ed2cefcb | sonnet; ruff/format/pyright (repo-wide) clean, 534 passed; commit f90567c9. Deviations: added match_composition.py (SyncedAgentMatcher refreshes the per-scope search index); capability_unavailable is a 409; /readyz shows agent_matcher disabled without a reason (registry only carries reasons on failed), reason is in the 409 body; no authz/routes.py or inventory edits needed (discovered through require); 2026-11-20 |
 | 5 | merged | worktree-agent-a5a249bca25ede1fc | sonnet; ruff/format/pyright clean, 28 passed (new authz files, coverage, load test); commit 27460a34, merge ea1bf3d8. 3 routes x 6 deny dimensions, leak test, no production defect. 10k-agent in-memory p95 2012 ms at cap 200 (NOT MET), 539 ms at cap 50; about 98 percent of the time is the in-memory repository's O(n) get_entity on candidate re-fetch; 2026-11-20 |
-| 6 | verifying | prp-72-agent-tool-recommender (orchestrator inline) | runbook, nav, changelog, system-settings row, Tier 3 regenerated; load suite renamed to tests/load/agent_match_latency (name clash with packages/core/tests/agent_match); review APPROVE, one finding fixed (feedback read from the match domain, merge 11a451b6); Snyk 0 issues; targeted gate 1992 passed, ruff/format/pyright/prp_status/validate_planning pass; verify-gates full not run locally (CI runs the full suite); PR pending CI; 2026-11-20 |
+| 6 | merged | prp-72-agent-tool-recommender (orchestrator inline) | runbook, nav, changelog, system-settings row, Tier 3 regenerated; load suite renamed to tests/load/agent_match_latency (name clash with packages/core/tests/agent_match); review APPROVE, one finding fixed (feedback read from the match domain, merge 11a451b6); Snyk 0 issues; targeted gate 1992 passed, ruff/format/pyright/prp_status/validate_planning pass; verify-gates full not run locally (CI runs the full suite); one CI failure fixed (pinned route surface in tests/integration/recommendations, f99e650b); PR 358 CI 33 pass, squash-merged as 4a44c688; follow-ups in issue 359; 2026-11-20 |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-20, PR 358, squash-merged to main as 4a44c688. CI: 33 pass, 1 skipped (Pages deploy). One independent review: APPROVE; its one behavioural finding (feedback read by candidate domain but stored under the match domain) was fixed before the PR with a regression test. Snyk Code: 0 issues in both new source directories.
 - Deviations:
-- Descoped items:
+  - Route registration moved from item 6 to item 4 and item 5 ran after item 4 (both approved at plan approval). No `authz/routes.py`, route-inventory or manifest edits were needed: the routes are discovered through `require`, and the manifest files list only GETs a frontend page issues.
+  - The feedback prior is a signed bounded adjustment on top of the combined score, not a weighted signal inside `combine`; the `feedback_prior` entry in `NS_MATCH_WEIGHTS` has no effect.
+  - Tools without a `domain_id` are never candidates and the response does not flag it (search never returns them).
+  - `partial_reason` is limited by the PRP-70 contract to `limit` or `timeout_ms`.
+  - `/readyz` shows `agent_matcher` as `disabled` without a reason; the reason code is in the route's 409 `capability_unavailable` body.
+  - Extra module `match_composition.py` (`SyncedAgentMatcher` refreshes the per-scope search index before matching).
+  - The load suite is `tests/load/agent_match_latency`, not `tests/load/agent_match` (test package name clash with `packages/core/tests/agent_match`). The result file is still `temp/agent_match/p95.json`.
+  - Edited outside declared ownership, all pinned sets that had to follow: `packages/core/tests/stores_registry/test_registry.py`, `tests/unit/hosted_demo/test_cosmos_container_drift.py`, `services/api/tests/runtime_data/test_data_builder.py`, `docs/runbooks/system-settings.md` (checklist row), `tests/integration/recommendations/test_vertical_slice.py` (pinned route surface; found by CI, not by the local gate).
+  - `infra/demo/modules/cosmos-data.bicep` needed no edit: it loads the regenerated `cosmos-containers.json`.
+- Descoped items: none.
 - OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can a person use it): type a task on the local stack and read the ranked explanation; the measured 10k-agent p95:
+  - `CosmosFeedbackStore` has never run against an emulator: locally 3 passed, 2 errors because the emulator refused every create and delete of a database (`PostgresError E58P01`). Read in review, not executed.
+  - 10k-agent p95 against the 1 s target: NOT MET at the default candidate cap. In-memory repository + fixture BM25, 20 tasks: cap 200 p50 1772 ms, p95 2012 ms, max 2124 ms; cap 50 p50 467 ms, p95 539 ms, max 582 ms. Change tried: lowering `NS_MATCH_CANDIDATE_CAP` to 50, which meets the target on this backend. A profile put about 98 percent of the time in the in-memory repository's linear `get_entity` on each candidate re-fetch, so the figure says little about a real backend. No production change was made for it.
+  - `verify-gates.ps1 -Mode full` was not run locally; the full suite ran in CI.
+  - The Bicep compile test for the new container was skipped locally (no `az` in the agent shell); `bicep build` passed in CI.
+  - Latency on Azure AI Search (PRP-64), the 60 percent acceptance-rate outcome (instrumented, not claimable), any embedding signal.
+- Env vars for the operator: `NS_MATCH_WEIGHTS`, `NS_MATCH_CANDIDATE_CAP` (200), `NS_MATCH_FEEDBACK_BOUND` (0.15), `NS_MATCH_MIN_PRINCIPALS` (3), `NS_MATCH_FEEDBACK_TTL_DAYS` (180). All optional; `.env.example` was not edited.
+- Follow-up issues: 359 (three non-blocking review findings, the Cosmos emulator run, the latency options, and the behaviours that differ from the PRP text).
+- Product check (can a person use it): NOT DONE. Nobody typed a task against the running local stack; the behaviour is covered by HTTP-level tests only. There is no page yet (PRP-75), so today it is reachable only by calling the API. The measured 10k-agent p95: 2012 ms at the default cap (NOT MET), 539 ms at cap 50.
