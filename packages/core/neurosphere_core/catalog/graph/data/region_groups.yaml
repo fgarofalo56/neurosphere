@@ -1,0 +1,47 @@
+# Region groups used by the data access questions (PRP-73).
+#
+# Region-to-location comes from the source page below. The `eu` group is NeuroSphere's
+# classification of those locations as physically in EU member states (northeurope is Ireland,
+# westeurope is the Netherlands; the UK, Norway and Switzerland are excluded). It is a
+# convenience filter, not a legal determination.
+source_url: https://learn.microsoft.com/en-us/azure/reliability/regions-list
+source_retrieved: "2026-11-20"
+clouds:
+  commercial:
+    europe:
+      - austriaeast
+      - belgiumcentral
+      - denmarkeast
+      - francecentral
+      - francesouth
+      - germanynorth
+      - germanywestcentral
+      - italynorth
+      - northeurope
+      - norwayeast
+      - norwaywest
+      - polandcentral
+      - spaincentral
+      - swedencentral
+      - switzerlandnorth
+      - switzerlandwest
+      - uksouth
+      - ukwest
+      - westeurope
+    eu:
+      - austriaeast
+      - belgiumcentral
+      - denmarkeast
+      - francecentral
+      - francesouth
+      - germanynorth
+      - germanywestcentral
+      - italynorth
+      - northeurope
+      - polandcentral
+      - spaincentral
+      - swedencentral
+      - westeurope
+  government:
+    europe: []
+    eu: []
