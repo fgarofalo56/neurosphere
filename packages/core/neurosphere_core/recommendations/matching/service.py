@@ -292,7 +292,7 @@ class AgentMatcher:
         max_depth = min(2, request.max_graph_depth if request.max_graph_depth is not None else 2)
         reach = await self._proximity(scope, anchors, max_depth, deadline, reasons)
 
-        records = await self._list_feedback(scope, candidates)
+        records = await self._list_feedback(scope, domain, candidates)
         by_entity: dict[str, list[FeedbackRecord]] = defaultdict(list)
         for record in records:
             by_entity[record.entity_id].append(record)
@@ -594,14 +594,15 @@ class AgentMatcher:
         return out
 
     async def _list_feedback(
-        self, scope: IdentityScope, candidates: Sequence[_Candidate]
+        self, scope: IdentityScope, domain: str, candidates: Sequence[_Candidate]
     ) -> tuple[FeedbackRecord, ...]:
+        """Feedback is stored under the domain the match was made through (``domain``), not the
+        candidate's own domain, so that is where it is read back."""
         if not candidates:
             return ()
-        domains = sorted({c.domain_id for c in candidates})[:50]
         entity_ids = [c.entity_id for c in candidates][:1000]
         return await self._feedback.list_feedback(
-            customer_id=scope.customer_id, domain_ids=domains, entity_ids=entity_ids
+            customer_id=scope.customer_id, domain_ids=[domain], entity_ids=entity_ids
         )
 
     # ------------------------------------------------------------------ scoring
