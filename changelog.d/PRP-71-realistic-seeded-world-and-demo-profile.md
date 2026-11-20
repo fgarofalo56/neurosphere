@@ -24,3 +24,14 @@
 - Not part of the demo profile: the copilot stays off until PRP-78 ships the recorded mode,
   write-target apply stays advisory locally (the management host cannot be pointed at a
   loopback fake), and the demo world is never loaded into a hosted environment.
+
+### Fixed
+- The scripted demo incident now shows in the dashboards: a failed call to the outage service
+  abandons the model call that was waiting on it, which is the span kind the aggregates count.
+  Before, every domain showed an hourly error rate of zero.
+- The recommendations worker role no longer restarts on every tick when an archived cost
+  record carries an unreported token count.
+- `make demo-up` no longer leaves the workers unhealthy a few minutes after it finishes: the
+  closing catalog seed container seeds the same profile as the rest of the stack.
+- The seed publish waits and retries when the Event Hubs emulator throttles it, and
+  `make demo-check --wait-seconds` waits for a domain whose error series is still draining.

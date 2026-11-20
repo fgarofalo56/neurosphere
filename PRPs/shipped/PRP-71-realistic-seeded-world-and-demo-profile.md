@@ -1,6 +1,8 @@
 ---
 name: PRP-71-realistic-seeded-world-and-demo-profile
-status: active
+status: shipped
+shipped: 2026-11-20
+pr: 353
 started: 2026-11-19
 priority: P0
 order: 61
@@ -243,13 +245,21 @@ New contract fields or vocabularies (PRP-70); map, recommender or graph-question
 | 4 | merged | prp-71-item-4-demo-profile | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, 133 passed across demo_profile, compose, hosted_data_path, sandbox_stack, write_targets_profiles) at a4f58c79; NS_WORKER_ROLES not in profile (compose pins all); review APPROVED; merged 877d8fee |
 | 5 | merged | prp-71-item-5-demo-settings | sonnet; verify PASS 2026-11-19 (ruff, format, repo-wide pyright, 231 passed) at 082d2e8f; clarification 5: no fake, ARM host not overridable, write-target apply OPEN; item 5b waits on PRP-78; review APPROVED; merged 5d3d196d |
 | 6 | merged | prp-71-item-6c-live-fixes | sonnet; three rounds (bbae19df check, 3715346c az token in memory, live fixes b47c11b8 and 0541ef2d by the orchestrator); unit gates PASS 2026-11-20 (ruff, pyright, demo_profile 100 passed); review APPROVED on b47c11b8, the later banner and domain-grain incident row (0541ef2d) were not re-reviewed; live demo-check 55 of 56 routes with data, incident rows not yet verified; merged ef16475f |
-| 7 | in-progress | prp-71-demo-world-and-profile | orchestrator; docs section and changelog fragment committed (1ff031f6); full gates, PR and the recorded compose run still open |
+| 7 | merged | prp-71-demo-world-and-profile, then prp-71-incident-model-call-errors | orchestrator; docs section and changelog fragment (1ff031f6) merged with PR #353 (4c2869a2); the recorded compose run found four more live-only defects, fixed in PR #355 (bbed2b98 incident and null tokens, 62e836cd check wait, 8168eab8 seed profile, 2bda8d16 publish throttle); review APPROVED on the PR #355 diff; clean `make demo-up` and `make demo-check` PASS 2026-11-20 |
 
 ## Completion note (filled at ship)
-- Date and PR:
+- Date and PR: 2026-11-20. PR #353 (squash `4c2869a2`) shipped items 1 to 7. PR #355 shipped the fixes the recorded compose run found. Review: one independent pass per item (APPROVED), and one on the whole PR #355 diff (APPROVED, no blocking findings).
+- Recorded compose run (2026-11-20, emulators, synthetic data only, empty volumes): `make demo-up OPERATOR_OID=<own object id>` exit 0 in 18 minutes, 8,773 telemetry and cost events pushed, the closing catalog seed container reported every grant unchanged and nothing created. The aggregates reached the end of the incident hour about 70 minutes after the seed. `make demo-check` then exit 0: 56 of 56 routes with data; producer store, MCP server, scan, lifecycle (dry_run) and stored settings enabled; copilot `pending_prp_78`; 32 of 32 curated agents; 4 telemetry-only agents discovered as drafts; `outage_domain_error_rate` pass (3 affected domains reach 0.05, the unaffected one stays under it; an earlier run of the same generator measured finance 0.36, human-resources 0.22, support 0.10, security-operations 0.0 in the incident hour); `outage_downstream_health` not_checked. Workers healthy for over an hour with 0 role crashes. A re-run of `make seed-stack SEED_PROFILE=demo-world` created nothing (`skipped_existing` 20460 on the earlier stack).
 - Deviations:
-- Descoped items:
+  - The incident as first shipped (PR #353) did not show in the product: it failed tool, run and request spans, and the aggregates count `model_call` spans only. PR #355 adds an abandoned `model_call` per failed call to the outage service and two retries of the service call (`INCIDENT_MAX_ATTEMPTS`). The manifest is unchanged. PRP-100 and PRP-74 authors: agent error rate and health come from `model_call` spans; the failing `tool_call` spans with service identity are there for PRP-100's tool and service points.
+  - Five personas are granted, not four (the fixture has five). `NS_WORKER_ROLES` is not in the profile (compose pins all roles).
+  - Fixes outside the declared ownership, each found by the live run and each with a test: `packages/core/neurosphere_core/admin/cosmos_store.py` (PR #353, stored settings with a null became unreadable), `services/workers/neurosphere_workers/recommendations/pipeline.py` (null token counts crashed the recommendations role on every tick), `scripts/sandbox/sbx_seam.py` (the publish now waits out the Event Hubs emulator throttle), `Makefile` (the closing catalog seed container takes `SEED_PROFILE`; at its default it re-granted the worker over the small world and the evaluation role failed five minutes after `demo-up`).
+- Descoped items: item 5b (copilot recorded mode in the profile) waits on PRP-78.
 - OPEN gates:
-- Env vars for the operator:
-- Follow-up issue numbers:
-- Product check (can an operator use it without editing files):
+  - Copilot answering in the profile: OPEN until PRP-78. A real copilot turn: OPEN until an operator supplies a model endpoint (PRP-64).
+  - Write-target apply against a local fake: OPEN. The management host cannot be pointed at a loopback fake, so write targets stay advisory with dry-run intents seeded.
+  - Per-agent health of the five downstream agents on a REST route: NOT CHECKED. Health is computed only in the realtime WebSocket source and the map viewport answers `unknown` until PRP-74; the check verifies the incident at domain grain.
+  - The window bound of the incident traces is measured, not structural: seeds 1 to 8 stay inside the seeded window (latest event 21 seconds before its end); the stack seed always uses seed 1.
+- Env vars for the operator: `NS_ENTRA_TENANT_ID` and `NS_ENTRA_CLIENT_ID` exported (ids, not secrets) and `az login`; `OPERATOR_OID` on the `make demo-up` line. Optional: `NS_DEMO_COPILOT_MODE` (stays `disabled` until PRP-78), `NS_SEED_WAIT_SECONDS`, `NS_DEMO_CHECK_API_URL`, `NS_DEMO_CHECK_TOKEN_FILE`. Everything else is in `infra/dev/demo-profile.env` (names and non-secret values).
+- Follow-up issue numbers: #356 (the overview's "today" tile is the current UTC day, so `/` goes empty after UTC midnight and `make demo-check` then fails that row until a reseed).
+- Product check (can an operator use it without editing files): yes for the day of the seed. One command (`make demo-up OPERATOR_OID=...`) with two exported ids gives a signed-in operator data on every one of the 56 routes, including the role-gated pages, and the incident is visible in the error dashboards about 70 minutes later (the seeded data drains oldest first). Not yet: the overview page is empty from the next UTC midnight (#356), the copilot is off (PRP-78), and the map does not show which agents are failing (PRP-74).
