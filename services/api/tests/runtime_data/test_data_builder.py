@@ -58,6 +58,8 @@ def _not_ok(composed: Composed) -> dict[str, str]:
         if composed.registry.get(name).state != "ok"
         # PRP-40: the optional SIEM sink is ``disabled`` by default (NS_AUDIT_SIEM_SINK=none).
         and not (name == "audit_siem" and composed.registry.get(name).state == "disabled")
+        # PRP-72: the optional matcher is ``disabled`` while no search provider is composed.
+        and not (name == "agent_matcher" and composed.registry.get(name).state == "disabled")
     }
 
 

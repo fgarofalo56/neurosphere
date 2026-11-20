@@ -12,6 +12,9 @@ Component                 ``app.state`` keys
 ``federation``            ``federation`` (this deployment's cell, served in-process)
 ``evaluation``            ``evaluation_store``, ``evaluation_pilot_dataset_ids``
 ``recommendations``       ``recommendation_store``
+``agent_matcher``         ``agent_matcher``, ``recommendation_feedback_store`` (optional,
+                          PRP-72): ``disabled`` with ``agent_matcher_unavailable`` set to a reason
+                          code when search or the catalog is not composed
 ``audit``                 ``audit_repository`` (with the ``NS_AUDIT_SIEM_*`` export sink when
                           ``audit_siem`` is ok; never blocked by the sink) and
                           ``audit_search_store`` (PRP-40)
@@ -57,6 +60,7 @@ from neurosphere_core.actions.recheck import PolicyPermissionRechecker
 from neurosphere_core.admin.platform import LoadableReviewPolicyRegistry
 from neurosphere_core.aggregates import AggregateReader
 from neurosphere_core.aggregates.cosmos import CosmosAggregateStore
+from neurosphere_core.aggregates.subject import SubjectMetricsReader
 from neurosphere_core.audit import AuditRepository
 from neurosphere_core.audit.cosmos_store import CosmosAuditStore
 from neurosphere_core.audit.siem import JsonLinesFileSink, SiemExporter, SiemSink, StdoutSink
@@ -85,6 +89,12 @@ from neurosphere_core.ledger import LedgerStore
 from neurosphere_core.ledger.cosmos import CosmosLedgerStore
 from neurosphere_core.recommendations import RecommendationStore
 from neurosphere_core.recommendations.cosmos_store import CosmosRecommendationStore
+from neurosphere_core.recommendations.matching import (
+    CosmosFeedbackStore,
+    InMemoryFeedbackStore,
+    MatchSettings,
+)
+from neurosphere_core.search.protocol import AuthorizedSearch
 from neurosphere_workers.federation import CellRef, CellRegistry, load_peers
 from neurosphere_workers.ingestion.wiring import LedgerSettings
 from neurosphere_workers.projections.outbox.reader import SINK_AGGREGATES, SINK_CATALOG
@@ -104,6 +114,7 @@ from neurosphere_api.federation.service import FederationState, Federator
 from neurosphere_api.hitl.ports import RecheckerReviewerAuthorizer
 from neurosphere_api.map.dependencies import ViewportLimits
 from neurosphere_api.realtime import configure_realtime
+from neurosphere_api.recommendations.match_composition import SyncedAgentMatcher, search_and_sync
 from neurosphere_api.recommendations.review import ReviewRouter
 from neurosphere_api.recommendations.review_hitl import HitlReviewRouter
 from neurosphere_api.replay.dependencies import PayloadPolicy
@@ -157,6 +168,7 @@ COMPONENTS: Final = (
     "audit",
     "realtime",
     "audit_siem",
+    "agent_matcher",
 )
 
 AUDIT_CHAIN_CONTAINER: Final = "audit"
@@ -365,6 +377,62 @@ def _recommendations(ctx: BuildContext) -> None:
         )
     ctx.app.state.recommendation_store = store  # request-time dependencies read app.state
     ctx.publish(RECOMMENDATION_STORE, store)
+
+
+def _agent_matcher(ctx: BuildContext) -> None:
+    """PRP-72: the agent and tool matcher over the composed search, graph and aggregates.
+
+    Optional: with no search or no catalog the component is ``disabled`` and
+    ``app.state.agent_matcher_unavailable`` carries the reason code the route answers with.
+    Telemetry is optional too: without a subject reader the telemetry signals are unobserved.
+    """
+    state = ctx.app.state
+    state.agent_matcher = None
+    state.agent_matcher_unavailable = None
+    graph = getattr(state, "catalog_graph", None)
+    if graph is None:
+        state.agent_matcher_unavailable = "catalog_unavailable"
+        ctx.disabled("agent_matcher")
+        return
+    sync = None
+    search = ctx.overrides.backend("agent_match_search")
+    if search is not None:
+        if not isinstance(search, AuthorizedSearch):
+            ctx.failed("agent_matcher", "agent_match_search_override_invalid")
+            return
+    else:
+        composed = search_and_sync(graph)
+        if composed is None:
+            state.agent_matcher_unavailable = "search_unavailable"
+            ctx.disabled("agent_matcher")
+            return
+        search, sync = composed
+    try:
+        settings = MatchSettings()
+        store = _backend(ctx, "recommendation_feedback_store", InMemoryFeedbackStore)
+        if store is None:
+            store = CosmosFeedbackStore.from_client(
+                ctx.cosmos_client(),
+                database=ctx.store_settings().database,
+                ttl_days=settings.feedback_ttl_days,
+            )
+    except ValidationError:
+        ctx.failed("agent_matcher", "match_settings_invalid")
+        return
+    except ComponentUnavailableError as exc:
+        ctx.failed("agent_matcher", exc.reason)
+        return
+    reader = getattr(state, "aggregate_reader", None)
+    state.recommendation_feedback_store = store
+    state.agent_matcher = SyncedAgentMatcher(
+        search,
+        graph,
+        store,
+        subjects=reader if isinstance(reader, SubjectMetricsReader) else None,
+        settings=settings,
+        sync=sync,
+    )
+    ctx.ok("agent_matcher")
 
 
 # -- audit, HITL review router --------------------------------------------------------------
@@ -643,6 +711,7 @@ def build(ctx: BuildContext) -> None:
     ctx.attempt("ledger", lambda: _ledger(ctx))
     ctx.attempt("evaluation", lambda: _evaluation(ctx))
     ctx.attempt("recommendations", lambda: _recommendations(ctx))
+    _agent_matcher(ctx)
     exporter = _siem_exporter(ctx)
     ctx.attempt("audit", lambda: _audit(ctx, exporter))
     ctx.attempt("replay", lambda: _replay(ctx))
