@@ -19,6 +19,11 @@ on:
 permissions:
   contents: read
 
+# Superseded pull-request runs are cancelled; main pushes, schedules and manual runs never are.
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   SYFT_VERSION: "1.54.1"
   SYFT_SHA256: "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
@@ -115,12 +120,18 @@ jobs:
         run: trivy fs --scanners vuln --include-dev-deps --severity HIGH,CRITICAL --exit-code 1 .
       - name: Grype scan of the source tree (High and Critical fail)
         run: grype dir:. --fail-on high
+      # On a pull request `pnpm audit --audit-level high` already runs in the required ci.yml
+      # frontend checks job (same level), so it is skipped here. It still runs on main, on the
+      # weekly schedule and on manual runs: a new advisory must be caught without a push.
       - uses: pnpm/action-setup@v6
+        if: github.event_name != 'pull_request'
       - uses: actions/setup-node@v7
+        if: github.event_name != 'pull_request'
         with:
           node-version-file: .node-version
           cache: pnpm
       - name: pnpm audit (High and above)
+        if: github.event_name != 'pull_request'
         run: pnpm audit --audit-level high
 
   images-all-scans:
