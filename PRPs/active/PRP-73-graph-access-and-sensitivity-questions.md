@@ -1,6 +1,7 @@
 ---
 name: PRP-73-graph-access-and-sensitivity-questions
-status: backlog
+status: active
+started: 2026-11-20
 priority: P0
 order: 63
 review: required
@@ -255,8 +256,8 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
+| 1 | in-progress | prp-73-item-1-access-engine | sonnet; dispatched 2026-11-20 |
+| 2 | in-progress | prp-73-item-2-data-access-edges | sonnet; dispatched 2026-11-20 |
 | 3 | todo | | |
 | 4 | todo | | |
 | 5 | todo | | |
