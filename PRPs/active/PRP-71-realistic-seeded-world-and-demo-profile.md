@@ -1,6 +1,7 @@
 ---
 name: PRP-71-realistic-seeded-world-and-demo-profile
-status: backlog
+status: active
+started: 2026-11-19
 priority: P0
 order: 61
 review: required
@@ -52,8 +53,8 @@ Out of scope: the contract fields and vocabularies themselves (PRP-70); the reco
 | 1 | Hand-curated or generated names | Curated JSON; name tables fed to the random generator | Curated data files under `sandbox/demo/` for entities and edges (readable, reviewable), generator code only for telemetry volume around them; the curated world is deterministic by construction. |
 | 2 | New fields and vocabularies | Define here; consume PRP-70 | Consume PRP-70 (tags, capabilities, environment on agent, tool and service; `sensitivity_categories` on data assets; revision record). If a field is missing at start, stop and report; do not define contract fields in this PRP. |
 | 3 | Load path | Raw document writes; real seed path | Real path: `sbx_seed_stack.py` (Event Hubs and workers for telemetry; `create_entity` for catalog). |
-| 4 | Copilot in the local profile | Edit the copilot builder here; wait for PRP-78 | ASSUMPTION: the `fixture` recorded adapter exists in core (`packages/core/neurosphere_core/copilot/models/gating.py:153,179`) but `CopilotMode` has no `fixture` value and `runtime/builders/copilot.py` is PRP-78's Tier-1 file in W23. This PRP ships the switch and check; PRP-78 (item 8, decided by the owner 2026-11-16) turns it on. |
-| 5 | Write targets against fakes | Build a fake ARM server; keep advisory | ASSUMPTION: decided at item 5 after reading `runtime/builders/write_targets.py` and the cloud profile: a loopback fake is built only if the ARM host can be overridden under `NS_ENV=local`; otherwise write targets stay advisory with dry-run intents seeded, and the gap is reported OPEN. |
+| 4 | Copilot in the local profile | Edit the copilot builder here; wait for PRP-78 | Confirmed by the owner 2026-11-19: the `fixture` recorded adapter exists in core (`packages/core/neurosphere_core/copilot/models/gating.py:153,179`) but `CopilotMode` has no `fixture` value and `runtime/builders/copilot.py` is PRP-78's Tier-1 file in W23. This PRP ships the switch and check; PRP-78 (item 8, decided by the owner 2026-11-16) turns it on. |
+| 5 | Write targets against fakes | Build a fake ARM server; keep advisory | Confirmed by the owner 2026-11-19: decided at item 5 after reading `runtime/builders/write_targets.py` and the cloud profile: a loopback fake is built only if the ARM host can be overridden under `NS_ENV=local`; otherwise write targets stay advisory with dry-run intents seeded, and the gap is reported OPEN. |
 | 6 | Lifecycle | Execute; dry-run | Dry-run only (`NS_LIFECYCLE_MODE=dry_run`); local data is synthetic but execute mode has no UI yet (PRP-83). |
 | 7 | New compose profile or env passthrough | Second compose file; existing file plus env file | Existing `docker-compose.yml` with `${VAR:-default}` passthrough for names PRP-58 did not already add, plus `infra/dev/demo-profile.env` (names and non-secret values). Defaults for non-demo runs unchanged. |
 | 8 | Entra requirement | Keep; add a no-Entra demo | Keep (real sign-in is the product behaviour). The CI no-Entra path (`serve_stand_in_api.py`) is untouched. |
@@ -231,18 +232,18 @@ New contract fields or vocabularies (PRP-70); map, recommender or graph-question
 - [x] Every item has owned files declared
 - [x] Every item has acceptance criteria and pattern references
 - [x] Gates are executable commands, not intentions
-- [ ] All clarification questions are decided, not guessed (rows 4 and 5 are ASSUMPTIONS for plan approval)
+- [x] All clarification questions are decided, not guessed (rows 4 and 5 confirmed by the owner 2026-11-19)
 
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
-| 7 | todo | | |
+| 1 | merged | prp-71-item-1-demo-world-data | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, sandbox/tests 55 passed) at 417ebe38; review APPROVED; merged 0c90a172 |
+| 2 | merged | prp-71-item-2b-delegation | sonnet; two rounds (d7ab3cb7 telemetry and incident, 0e1fec4e delegation pairs and spans); verify PASS 2026-11-19 (ruff, format, pyright, sandbox/tests 72 passed); review APPROVED; merged edc4e015 |
+| 3 | merged | prp-71-item-3-generator-seed-wiring | sonnet; verify PASS 2026-11-19 (ruff, format, repo-wide pyright, 221 passed, generator double run byte-identical) at 9c7c0b7e; five personas granted (fixture has five, not four); review APPROVED; merged fc2b09da |
+| 4 | merged | prp-71-item-4-demo-profile | sonnet; verify PASS 2026-11-19 (ruff, format, pyright, 133 passed across demo_profile, compose, hosted_data_path, sandbox_stack, write_targets_profiles) at a4f58c79; NS_WORKER_ROLES not in profile (compose pins all); review APPROVED; merged 877d8fee |
+| 5 | merged | prp-71-item-5-demo-settings | sonnet; verify PASS 2026-11-19 (ruff, format, repo-wide pyright, 231 passed) at 082d2e8f; clarification 5: no fake, ARM host not overridable, write-target apply OPEN; item 5b waits on PRP-78; review APPROVED; merged 5d3d196d |
+| 6 | merged | prp-71-item-6c-live-fixes | sonnet; three rounds (bbae19df check, 3715346c az token in memory, live fixes b47c11b8 and 0541ef2d by the orchestrator); unit gates PASS 2026-11-20 (ruff, pyright, demo_profile 100 passed); review APPROVED on b47c11b8, the later banner and domain-grain incident row (0541ef2d) were not re-reviewed; live demo-check 55 of 56 routes with data, incident rows not yet verified; merged ef16475f |
+| 7 | in-progress | prp-71-demo-world-and-profile | orchestrator; docs section and changelog fragment committed (1ff031f6); full gates, PR and the recorded compose run still open |
 
 ## Completion note (filled at ship)
 - Date and PR:

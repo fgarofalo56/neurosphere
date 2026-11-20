@@ -18,9 +18,11 @@ from sandbox.bad_events import BadEventInjector
 from sandbox.config import (
     CLOUDS,
     DEFAULT_EPOCH,
-    PROFILES,
+    DEMO_WORLD,
     BadEventRates,
     GenerateConfig,
+    get_profile,
+    profile_names,
     with_overrides,
 )
 from sandbox.ids import fmt_ts_s
@@ -77,6 +79,8 @@ def _anomaly_manifest(world: World) -> Doc:
 def generate(cfg: GenerateConfig, out: Path) -> Doc:
     """Write the full data set for ``cfg`` into ``out`` and return the run manifest."""
     out.mkdir(parents=True, exist_ok=True)
+    if cfg.profile.name == DEMO_WORLD:
+        return _generate_demo_world(cfg, out)
     world = World(cfg)
     counts: dict[str, int] = {}
 
@@ -186,6 +190,88 @@ def generate(cfg: GenerateConfig, out: Path) -> Doc:
     return run
 
 
+def _generate_demo_world(cfg: GenerateConfig, out: Path) -> Doc:
+    """The curated ``demo-world`` profile (PRP-71): the same layout, built by ``sandbox.demo``.
+
+    Adds ``services.ndjson`` (and ``mcp_servers.ndjson``) and ``incident-manifest.json``; the
+    telemetry-only agents are listed in the run manifest. Bad events are never injected (the
+    incident must be the only fault), so the bad-event and anomaly manifests are written empty to
+    keep the layout identical to the other profiles.
+    """
+    from sandbox.demo.build import build_demo_world, demo_manifest, write_demo_world
+    from sandbox.demo.incident import (
+        build_demo_telemetry,
+        write_demo_telemetry,
+        write_incident_manifest,
+    )
+
+    world = build_demo_world(cfg.cloud, cfg.customer, cfg.epoch, cfg.profile.days)
+    counts = write_demo_world(world, out)
+    telemetry = build_demo_telemetry(world, cfg.seed)
+    counts.update(write_demo_telemetry(telemetry, out))
+    write_incident_manifest(telemetry.manifest, out / "incident-manifest.json")
+    with NdjsonWriter(out / "bad-event-manifest.ndjson") as entries:
+        pass
+    counts["bad-event-manifest.ndjson"] = entries.count
+    total = counts["telemetry.ndjson"]
+    write_json(
+        out / "bad-event-manifest.json",
+        {
+            "manifest_version": MANIFEST_VERSION,
+            "kind": "sandbox-bad-event-manifest",
+            "seed": cfg.seed,
+            "cloud": cfg.cloud,
+            "telemetry_file": "telemetry.ndjson",
+            "entries_file": "bad-event-manifest.ndjson",
+            "rates": {
+                "duplicate": 0.0,
+                "out_of_order": 0.0,
+                "malformed": 0.0,
+                "missing_optional": 0.0,
+                "late_min_seconds": cfg.rates.late_min_seconds,
+                "late_max_seconds": cfg.rates.late_max_seconds,
+            },
+            "counts": {"duplicate": 0, "out_of_order": 0, "malformed": 0, "missing_optional": 0},
+            "expected": {
+                "total_lines": total,
+                "duplicate_lines": 0,
+                "malformed_lines": 0,
+                "valid_distinct_events": total,
+            },
+        },
+    )
+    write_json(
+        out / "anomaly-manifest.json",
+        {
+            "manifest_version": MANIFEST_VERSION,
+            "kind": "sandbox-anomaly-manifest",
+            "generator_version": __version__,
+            "seed": cfg.seed,
+            "profile": cfg.profile.name,
+            "cloud": cfg.cloud,
+            "epoch": cfg.epoch,
+            "anomalies": [],
+        },
+    )
+    run: Doc = {
+        "manifest_version": MANIFEST_VERSION,
+        "kind": "sandbox-run-manifest",
+        "generator_version": __version__,
+        "seed": cfg.seed,
+        "profile": cfg.profile.name,
+        "cloud": cfg.cloud,
+        "epoch": cfg.epoch,
+        "customer_id": cfg.customer,
+        "environment": "sandbox",
+        "days": cfg.profile.days,
+        "files": {name: {"records": n} for name, n in sorted(counts.items())},
+        "demo_world": demo_manifest(world),
+        "incident_manifest_file": "incident-manifest.json",
+    }
+    write_json(out / "run-manifest.json", run)
+    return run
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m sandbox.generate",
@@ -194,7 +280,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--seed", type=int, required=True, help="integer seed; same seed+epoch => identical bytes"
     )
-    p.add_argument("--profile", choices=sorted(PROFILES), default="tiny")
+    p.add_argument("--profile", choices=profile_names(), default="tiny")
     p.add_argument(
         "--cloud", choices=CLOUDS, required=True, help="one cloud per output; never mixed"
     )
@@ -216,9 +302,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.profile == DEMO_WORLD:
+        fixed = ("agents", "domains", "traces_per_agent_day")
+        rate_flags = (
+            "duplicate_rate",
+            "out_of_order_rate",
+            "malformed_rate",
+            "missing_optional_rate",
+        )
+        bad = [
+            f"--{n.replace('_', '-')}"
+            for n in (*fixed, *rate_flags)
+            if getattr(args, n) is not None
+        ]
+        if bad:
+            parser.error(f"{', '.join(bad)} cannot be combined with --profile {DEMO_WORLD}")
     profile = with_overrides(
-        PROFILES[args.profile],
+        get_profile(args.profile),
         agents=args.agents,
         domains=args.domains,
         days=args.days,
