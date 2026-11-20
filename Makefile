@@ -68,7 +68,9 @@ clean: ## Remove local build artefacts
 # docs/dev/local-setup.md "Real stack"). The seed runs from the host against 127.0.0.1 because
 # sbx_guard accepts loopback hosts only; it must use the same tenant and worker object id as the
 # compose workers, so both get STACK_WORKER_OID (its default equals docker-compose.yml's; a test
-# pins it).
+# pins it). The closing catalog seed container gets SEED_PROFILE as well: left at its own default
+# (small) it re-granted the worker and the personas over the small world after a demo-world seed,
+# so the evaluation role lost its pilot domain and the workers went unhealthy minutes later.
 STACK_WORKER_OID ?= 7d2e3f40-5b6c-4d7e-9f80-a1b2c3d4e5f6
 # Optional env file sourced into the shell of the two `docker compose` app/seed lines (empty for
 # a plain stack-up). `make demo-up` sets it to the PRP-71 demo profile.
@@ -86,7 +88,7 @@ stack-up: ## Real stack: compose app profile (api, workers, frontend :8080) + sa
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack SEED_ARGS=--grants-only
 	$(STACK_ENV_LOAD)NS_SANDBOX_DIR="$(if $(or $(filter /% ./% ../%,$(SANDBOX_DIR)),$(findstring :,$(SANDBOX_DIR))),$(SANDBOX_DIR),./$(SANDBOX_DIR))" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile app up -d --wait --build
 	NS_ENV=local NS_AUTH_TENANT_ID="$$NS_ENTRA_TENANT_ID" NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" NS_COSMOS_ENDPOINT=http://127.0.0.1:8081 $(MAKE) seed-stack
-	$(STACK_ENV_LOAD)NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile seed run --rm --build seed
+	$(STACK_ENV_LOAD)NS_WORKER_OBJECT_ID="$(STACK_WORKER_OID)" docker compose --profile seed run --rm --build seed python scripts/sandbox/sbx_seed_catalog.py --profile $(SEED_PROFILE)
 
 stack-down: ## Stop the real stack and the emulators (run dev-up to bring the emulators back)
 	docker compose --profile app down --remove-orphans

@@ -230,6 +230,9 @@ def test_stack_up_order_grants_only_then_app_then_full_seed() -> None:
     full = recipe.index("$(MAKE) seed-stack\n")
     assert grants < app_up < full
     assert recipe.index("--profile seed run") > full
+    # The catalog seed container seeds the SAME profile: at its default (small) it replaced the
+    # demo-world grants and the evaluation role lost its pilot domain.
+    assert "seed python scripts/sandbox/sbx_seed_catalog.py --profile $(SEED_PROFILE)" in recipe
     # Env file applies to the compose app and seed lines only; a plain stack-up has none.
     assert recipe.count("$(STACK_ENV_LOAD)") == 2
     assert re.search(r"^STACK_ENV_FILE \?=\s*$", MAKEFILE.read_text(encoding="utf-8"), re.MULTILINE)
