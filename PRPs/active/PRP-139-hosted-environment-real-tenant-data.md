@@ -378,7 +378,7 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21; PRP-138 item 9 follows this in a second PR |
-| 2 | review | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS 2026-11-21 (ruff, format, pyright clean; 494 passed), commit e5a1d8ad; review queued behind lane cap |
+| 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward: refuse when the registration has no customer_id |
 | 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 4 | todo | | |
 | 5 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
