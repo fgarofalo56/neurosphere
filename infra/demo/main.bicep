@@ -99,6 +99,22 @@ param billingExportStorageAccountId string = ''
 @description('PRP-138: Entra claim to role mapping for the API (NS_AUTH_ROLE_MAPPINGS), an object {tenant_id, audience, entries: [{id, claim, value, role, domains, customer_control}]}. Not a secret. Empty (default) leaves the mapping off and the setting unset. tenant_id must equal entraTenantId and audience must equal entraClientId, or the API authz component fails closed at startup (role_mapping_binding_mismatch). See docs/runbooks/entra-role-mapping.md.')
 param entraRoleMappings object = {}
 
+@description('PRP-139: demo (default) keeps the synthetic hosted demo. real-tenant shows only the tenant this deployment runs in: it switches on the connector roles foundry_discovery, gateway_poll and billing_export whatever connectorRoles says, points the workers at the API (NS_API_BASE_URL) and needs a customerId other than synthco. Sets NS_HOSTED_DATA_MODE on the API and workers in both modes. Commercial cloud only; the deploy script refuses it elsewhere.')
+@allowed([
+  'demo'
+  'real-tenant'
+])
+param dataMode string = 'demo'
+
+@description('PRP-139: customer id (NS_AUTH_CUSTOMER_ID), the partition value of the stored data. Default synthco is the synthetic demo estate; real-tenant needs a lowercase slug of the organisation, never synthco. Not a secret.')
+param customerId string = 'synthco'
+
+@description('PRP-139: ARM resource ids of existing Log Analytics workspaces the gateway_poll role queries, /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<name>. Each gets Log Analytics Data Reader for the workers identity at that workspace scope only. Empty (default) assigns nothing.')
+param logAnalyticsWorkspaceIds array = []
+
+@description('PRP-139: ARM resource ids of existing API Management services the API reads through ARM at gateway registration, /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<name>. Each gets API Management Service Reader Role for the API identity at that service scope only. Empty (default) assigns nothing.')
+param apimServiceIds array = []
+
 @description('Catalog search provider (NS_SEARCH_PROVIDER). The demo deploys no AI Search, so it defaults to the in-process fixture; set azure with searchService when an existing service is referenced.')
 @allowed([
   'fixture'
@@ -142,7 +158,6 @@ var storageName = take('${prefix}${unique}', 24)
 var keyVaultNameValue = take('${prefix}kv${unique}', 24)
 var logAnalyticsName = '${prefix}-law'
 var databaseName = 'neurosphere'
-var customerId = 'synthco'
 var pseudonymSecret = 'ns-auth-pseudonym-key'
 var eventHubName = 'telemetry'
 var consumerGroupName = 'normalizer'
@@ -256,13 +271,18 @@ var commonSettings = union(
 
 // PRP-58: the hosted data path. IaC only starts roles and points them at the API; what each
 // connector polls lives in stored connector configuration (PRP-42), never in app settings.
+// PRP-139: real-tenant always runs the three connector roles; demo runs what connectorRoles names.
+// NS_HOSTED_DATA_MODE is set on the API and workers by the appservice module (dataMode parameter).
+var effectiveConnectorRoles = dataMode == 'real-tenant'
+  ? union(connectorRoles, ['foundry_discovery', 'gateway_poll', 'billing_export'])
+  : connectorRoles
 var workerRoles = concat(
   ['ingestion', 'projections', 'aggregates', 'actions', 'hitl_timers', 'lifecycle', 'evaluation'],
   recommendationsEnabled ? ['recommendations'] : [],
-  connectorRoles
+  effectiveConnectorRoles
 )
 var recommendationsSettings = recommendationsEnabled ? { NS_WORKER_REC_SOURCE: 'archive' } : {}
-var connectorSettings = empty(connectorRoles) ? {} : { NS_API_BASE_URL: apiUpstream }
+var connectorSettings = empty(effectiveConnectorRoles) ? {} : { NS_API_BASE_URL: apiUpstream }
 
 var writeTargetSettings = writeTargetsFromStore ? { NS_WRITE_TARGETS_FROM_STORE: 'true' } : {}
 
@@ -369,6 +389,7 @@ module appServiceBootstrap '../appservice/main.bicep' = {
     searchProvider: searchProvider
     searchService: searchService
     searchRegion: location
+    dataMode: dataMode
     workersAppSettings: workersBaseSettings
     frontendAppSettings: frontendSettings
     virtualNetworkSubnetId: integrationSubnetId
@@ -399,6 +420,7 @@ module appService '../appservice/main.bicep' = {
     searchProvider: searchProvider
     searchService: searchService
     searchRegion: location
+    dataMode: dataMode
     workersAppSettings: union(workersBaseSettings, {
       NS_WORKER_OBJECT_ID: appServiceBootstrap.outputs.workersPrincipalId
     })
@@ -490,6 +512,32 @@ module foundryRbac 'modules/connector-rbac.bicep' = [
     params: {
       workersPrincipalId: appServiceBootstrap.outputs.workersPrincipalId
       foundryAccountName: last(split(accountId, '/'))
+    }
+  }
+]
+
+// PRP-139: Log Analytics Data Reader for the workers identity on each named workspace and API
+// Management Service Reader for the API identity on each named service, each at that one
+// resource's scope (it may be in another subscription), never the group or the subscription.
+module workspaceRbac 'modules/connector-rbac.bicep' = [
+  for workspaceId in logAnalyticsWorkspaceIds: {
+    name: '${prefix}-workspace-rbac-${take(uniqueString(workspaceId), 8)}'
+    scope: resourceGroup(split(workspaceId, '/')[2], split(workspaceId, '/')[4])
+    params: {
+      workersPrincipalId: appServiceBootstrap.outputs.workersPrincipalId
+      logAnalyticsWorkspaceName: last(split(workspaceId, '/'))
+    }
+  }
+]
+
+module apimRbac 'modules/connector-rbac.bicep' = [
+  for serviceId in apimServiceIds: {
+    name: '${prefix}-apim-rbac-${take(uniqueString(serviceId), 8)}'
+    scope: resourceGroup(split(serviceId, '/')[2], split(serviceId, '/')[4])
+    params: {
+      workersPrincipalId: appServiceBootstrap.outputs.workersPrincipalId
+      apiPrincipalId: appServiceBootstrap.outputs.apiPrincipalId
+      apimServiceName: last(split(serviceId, '/'))
     }
   }
 ]

@@ -84,6 +84,10 @@ _ARM_ID_ARGS = (
     "billing_export_storage_account_id",
 )
 CONNECTOR_ROLES = ("gateway_poll", "foundry_discovery", "billing_export")
+DATA_MODES = ("demo", "real-tenant")
+SYNTHETIC_CUSTOMER_ID = "synthco"
+#: One canonical id segment (the rule of ``neurosphere_core.auth.scope.pseudonym``).
+_CUSTOMER_ID_RE = re.compile(r"[a-z0-9._-]{1,128}")
 _NOT_FOUND = ("notfound", "not found", "could not be found", "does not exist", "was not found")
 _ARM_API = "https://management.azure.com"
 _BUDGET_API = "2023-05-01"
@@ -297,6 +301,32 @@ def build_parser() -> argparse.ArgumentParser:
             help="JSON file with the NS_AUTH_ROLE_MAPPINGS object (keep it under temp/); "
             "validated before any az call and bound to --entra-tenant-id / --entra-client-id",
         )
+        # PRP-139: real-tenant mode. --data-mode is required for plan and deploy (validate_static).
+        p.add_argument(
+            "--data-mode",
+            dest="data_mode",
+            choices=DATA_MODES,
+            default="",
+            help="dataMode: demo (synthetic estate) or real-tenant (this tenant only); required "
+            "for plan and deploy",
+        )
+        p.add_argument(
+            "--customer-id",
+            dest="customer_id",
+            default="synthco",
+            help="customerId for the parameter file and the registration; real-tenant needs a "
+            "lowercase slug of the organisation, never synthco",
+        )
+        p.add_argument(
+            "--log-analytics-workspace-ids",
+            default="",
+            help="comma list of Log Analytics workspace ARM ids gateway_poll may query",
+        )
+        p.add_argument(
+            "--apim-service-ids",
+            default="",
+            help="comma list of API Management service ARM ids the API may read",
+        )
         p.add_argument("--evaluation-pilot-domain-id", default="", help="evaluationPilotDomainId")
         p.add_argument("--evaluation-pilot-subject-id", default="", help="evaluationPilotSubjectId")
         p.add_argument(
@@ -320,7 +350,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="recover from a failed deploy: register what the prior plan created as ours",
     )
     p.add_argument("--keep", action="store_true", help="accepted; keeping is the default")
-    p.add_argument("--customer-id", default="synthco")
     p = sub.add_parser("grant-model-access", parents=[common])
     p.add_argument("--foundry-account-id", required=True)
     p.add_argument("--approve-shared", default="")
@@ -437,8 +466,43 @@ def validate_static(args: argparse.Namespace) -> None:
                 f"--{attr.replace('_', '-')} must be a /subscriptions/... resource id. "
                 "No changes made."
             )
+    for attr in ("log_analytics_workspace_ids", "apim_service_ids"):
+        for value in _csv(str(getattr(args, attr, "") or "")):
+            if not cm.is_arm_id(value):
+                raise RefusedError(
+                    f"--{attr.replace('_', '-')} entries must be /subscriptions/... resource ids. "
+                    "No changes made."
+                )
+    _validate_data_mode(args)
     # PRP-138: a defective mapping file is refused here, before any az call.
     role_mappings_value(args)
+
+
+def _validate_data_mode(args: argparse.Namespace) -> None:
+    """PRP-139: the data mode is explicit for plan and deploy; real-tenant needs a real customer."""
+    mode = str(getattr(args, "data_mode", "") or "")
+    if args.command in ("plan", "deploy") and not mode:
+        raise RefusedError(
+            "--data-mode is required for plan and deploy (demo or real-tenant). No changes made."
+        )
+    customer = str(getattr(args, "customer_id", SYNTHETIC_CUSTOMER_ID) or "")
+    if getattr(args, "customer_id", None) is not None and not _CUSTOMER_ID_RE.fullmatch(customer):
+        raise RefusedError(
+            "--customer-id must be one canonical id segment (lowercase letters, digits, '.', "
+            "'_' or '-'). No changes made."
+        )
+    if mode != "real-tenant":
+        return
+    if customer == SYNTHETIC_CUSTOMER_ID:
+        raise RefusedError(
+            "--data-mode real-tenant needs --customer-id other than synthco (the synthetic "
+            "estate). No changes made."
+        )
+    if _is_gov(str(args.location)):
+        raise RefusedError(
+            "--data-mode real-tenant is Commercial (AzureCloud) only; Government data is never "
+            "bridged. No changes made."
+        )
 
 
 def guard_cloud(ctx: Ctx) -> None:
@@ -526,6 +590,14 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
     bad = [i for i in foundry_ids if not cm.is_arm_id(i)]
     if bad:
         raise RefusedError("--foundry-account-ids entries must be /subscriptions/... resource ids")
+    workspace_ids = _csv(a.log_analytics_workspace_ids)
+    apim_ids = _csv(a.apim_service_ids)
+    for flag, ids in (
+        ("--log-analytics-workspace-ids", workspace_ids),
+        ("--apim-service-ids", apim_ids),
+    ):
+        if any(not cm.is_arm_id(i) for i in ids):
+            raise RefusedError(f"{flag} entries must be /subscriptions/... resource ids")
     return {
         "prefix": a.prefix,
         "location": a.location.strip().lower(),
@@ -553,6 +625,10 @@ def infra_values(ctx: Ctx) -> dict[str, Any]:
         "foundryAccountIds": foundry_ids,
         "billingExportStorageAccountId": a.billing_export_storage_account_id,
         "entraRoleMappings": role_mappings_value(a),
+        "dataMode": a.data_mode or "demo",
+        "customerId": a.customer_id,
+        "logAnalyticsWorkspaceIds": workspace_ids,
+        "apimServiceIds": apim_ids,
         "budgetAmount": amount,
         "budgetStartDate": a.budget_start_date or cm.default_budget_start(),
         "budgetContactEmails": emails,
@@ -1180,7 +1256,24 @@ def _host(value: Any) -> str:
     return (urlsplit(text if "//" in text else f"//{text}").hostname or "") if text else ""
 
 
+def _read_registration_field(path: Path, key: str) -> str:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    return str(data.get(key) or "") if isinstance(data, dict) else ""  # pyright: ignore[reportUnknownMemberType]
+
+
+def _existing_customer_id(path: Path) -> str:
+    return _read_registration_field(path, "customer_id")
+
+
+def _existing_previous_customer_id(path: Path) -> str:
+    return _read_registration_field(path, "previous_customer_id")
+
+
 def write_registration(ctx: Ctx, out: dict[str, Any]) -> Path:
+    customer = str(getattr(ctx.args, "customer_id", SYNTHETIC_CUSTOMER_ID))
     vault = str(out.get("keyVaultName") or "")
     vault_host = f"{vault}.vault.azure.net" if vault else ""
     secret = str(out.get("pseudonymSecretName") or "")
@@ -1199,10 +1292,18 @@ def write_registration(ctx: Ctx, out: dict[str, Any]) -> Path:
         if vault_host and secret
         else "",
         "workers_object_id": str(out.get("workersPrincipalId") or ""),
-        "customer_id": str(getattr(ctx.args, "customer_id", "synthco")),
+        "api_principal_id": str(out.get("apiPrincipalId") or ""),
+        "customer_id": customer,
+        "data_mode": str(getattr(ctx.args, "data_mode", "") or "demo"),
     }
     ctx.state_dir.mkdir(parents=True, exist_ok=True)
     path = ctx.state_dir / "registration.json"
+    # PRP-139: when the customer id changes, keep the one it replaces (the synthetic purge scope).
+    previous = _existing_customer_id(path)
+    if previous and previous != customer:
+        reg["previous_customer_id"] = previous
+    elif previous_kept := _existing_previous_customer_id(path):
+        reg["previous_customer_id"] = previous_kept
     path.write_text(json.dumps(reg, indent=2) + "\n", encoding="utf-8")
     return path
 

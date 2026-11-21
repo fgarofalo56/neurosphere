@@ -18,6 +18,14 @@ param budgetAmount = 200
 //   claim: 'roles', value: 'admin', role: 'admin', domains: 'all', customer_control: true } ] }
 param entraRoleMappings = {}
 
+// PRP-139: the data mode and customer id. The deploy script writes both from --data-mode and
+// --customer-id and fills the two id lists from --log-analytics-workspace-ids and
+// --apim-service-ids; the defaults here are the synthetic hosted demo and assign nothing.
+param dataMode = 'demo'
+param customerId = 'synthco'
+param logAnalyticsWorkspaceIds = []
+param apimServiceIds = []
+
 param integrationSubnetId = 'REPLACED-AT-DEPLOY'
 param privateEndpointSubnetId = 'REPLACED-AT-DEPLOY'
 param cosmosDnsZoneId = 'REPLACED-AT-DEPLOY'
