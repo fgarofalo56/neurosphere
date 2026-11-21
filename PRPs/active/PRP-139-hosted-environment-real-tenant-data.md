@@ -390,10 +390,10 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 | 1 | merged | worktree-agent-ad803c20d47ee4848 | sonnet; commits bc59a6a0 + rework 3ad6b510; review APPROVE; merge e431c66b 2026-11-21; 821 passed after merge, ruff clean, validate_planning PASS; PRP-138 item 9 follows this in a second PR |
 | 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward merged 5830df4b (no customer_id refused; delete failure writes counts-only evidence) |
 | 3 | merged | worktree-agent-a470d8a5dac59dee8 | sonnet; review APPROVE; merge 67d30ce2 2026-11-21; test_readiness component list updated; 664 passed after merge, ruff and pyright clean; follow-ups: billing read_failed reads as access denied, status write timeout, observer outside try |
-| 4 | review | worktree-agent-addea16bafbf68e19 | sonnet; verify 2026-11-21: lint, typecheck clean; 149 passed, 1 failed (mock registry pinned list, fixed at merge); commit 64da8a20; combined review with item 5 running; admin-connectors visual baseline will move |
-| 5 | review | worktree-agent-a2b7f4c41d263947b | sonnet; verify PASS 2026-11-21 (lint, typecheck clean; 296 passed in touched features; demo-audit e2e 2 passed per implementer), commit d49044a4; full unit run had 14 load timeouts in untouched files; combined review with item 4 |
+| 4 | merged | worktree-agent-addea16bafbf68e19 | sonnet; commit 64da8a20; review APPROVE (combined with item 5); merged 2026-11-21; mock registry list updated; full frontend unit run 1343 passed, 11 failed in two untouched files (render-config.test.ts 5 s shell timeouts on Windows; admin-audit passes alone); lint, typecheck clean |
+| 5 | merged | worktree-agent-a2b7f4c41d263947b | sonnet; commit d49044a4; review APPROVE (combined with item 4); merge 9419ea87 2026-11-21; 389 passed in touched features after merge |
 | 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; fix-forward merged 5830df4b (truncated scan reports OPEN; 552 passed) |
-| 7 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 7 | verifying | worktree-agent-ada3d1f4bae24870e | sonnet; commit 8b08154b; 321 passed, 1 failed (nav allowlist, fixed by the mkdocs line at merge) |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
