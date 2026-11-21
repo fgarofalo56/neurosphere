@@ -257,10 +257,46 @@ function handleDependents(ctx: FeatureMockContext, body: Record<string, unknown>
   send(ctx, 200, dependentsResponse(nodeId, depth));
 }
 
+const ASSET_LIST_PATH = `/api/v1/catalog/domains/${DOMAIN}/entities`;
+
+/** The picker's list: catalog.ts seeds no grounding_source entities, so this module serves them. */
+function assetList(ctx: FeatureMockContext): void {
+  const entity = (id: string, name: string) => ({
+    id,
+    entity_type: "grounding_source",
+    domain_id: DOMAIN,
+    display_name: name,
+    lifecycle_status: "active",
+    version: 1,
+    etag: `etag-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-1`,
+    updated_at: NOW,
+  });
+  send(ctx, 200, {
+    items: [
+      entity(ACCESS_ASSET_LEDGER, "Ledger store"),
+      entity(ACCESS_ASSET_EMPTY, "Empty store"),
+      entity(ACCESS_ASSET_TRUNCATED, "Huge store"),
+      entity(ACCESS_ASSET_FORBIDDEN, "Restricted store"),
+    ],
+    next_cursor: null,
+  });
+}
+
 export const handle: FeatureMockHandler = (ctx) => {
   // The registry test calls every handler with an empty object: nothing to answer then.
   const url = (ctx as { url?: URL }).url;
   if (url === undefined) return false;
+  // Claims only the grounding_source list of the one e2e domain, for an authorized GET; every
+  // other catalog request falls through to catalog.ts unchanged.
+  if (
+    decodeURIComponent(url.pathname) === ASSET_LIST_PATH &&
+    (ctx.req.method ?? "GET") === "GET" &&
+    ctx.authorized &&
+    url.searchParams.getAll("entity_type").join(",") === "grounding_source"
+  ) {
+    assetList(ctx);
+    return true;
+  }
   const route = /^\/api\/v1\/catalog\/access\/(query|dependents|region-groups)$/.exec(
     url.pathname,
   )?.[1];

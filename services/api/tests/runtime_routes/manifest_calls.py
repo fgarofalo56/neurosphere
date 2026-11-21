@@ -304,6 +304,13 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
         *_SHELL,
         ApiCall("/api/v1/catalog/domains/{domain}/entities", q(page_size=50)),
     ),
+    # PRP-73: the data access page loads the asset picker and the region groups on render; the
+    # query and dependents routes are POSTs issued on submit (covered by catalog_access_api).
+    "/catalog/access": (
+        *_SHELL,
+        ApiCall("/api/v1/catalog/domains/{domain}/entities", q(entity_type="grounding_source")),
+        ApiCall("/api/v1/catalog/access/region-groups"),
+    ),
     "/catalog/edge": _SHELL,
     "/catalog/entity": (
         *_SHELL,

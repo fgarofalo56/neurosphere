@@ -194,6 +194,12 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     ready: "main h1",
   },
   {
+    pattern: "/catalog/access",
+    name: "data access",
+    url: `/catalog/access?${q()}`,
+    ready: "main h1",
+  },
+  {
     pattern: "/catalog/stale-agents",
     name: "stale agents",
     url: `/catalog/stale-agents?${q()}`,
