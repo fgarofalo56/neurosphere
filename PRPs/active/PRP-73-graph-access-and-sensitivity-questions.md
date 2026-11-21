@@ -66,6 +66,9 @@ Evidence from the current tree (re-verified in this worktree):
 | 8 | EU region list | Hard-code; data file | Data file with a source URL and retrieval date. Subagents have no Microsoft Learn tool: the orchestrator reads the Azure geographies page and pastes the Europe region names into the brief; the list is never written from memory |
 | 9 | "Downstream" semantics | Edges out of the node; things that depend on the node | Dependents: entities whose edges lead to the failing node, that is `impact_paths(direction="upstream")`. The route is named `dependents` so the direction cannot be misread |
 | 10 | Label precedence and "who could" | decide now; leave open | Precedence the engine and the filters must honour once customer labels arrive (PRP-120): a steward-curated value is locked and wins, then a customer label mapped to a sensitivity category, then inference from telemetry or declared fields. Today only the curated and inferred layers exist; the engine reads an effective value through one function so a label layer slots in without a route change. Responses are phrased as "who did" (observed edges); PRP-119 adds "who could" beside them under `catalog/access/could/**`, which this PRP does not create |
+| 11 | Unknown region (decided 2026-11-20 in execution) | reject against Azure list; lenient; lenient plus warning | Reject: `region_groups.yaml` also carries the full known-region list per cloud from Microsoft Learn (Commercial regions list; Azure Government list of regions) and a `residency_regions` value not on the caller's cloud list is a 422 `unknown_region`. The data file also gains a `europe` group (the Azure Europe tab) beside `eu` (member-state locations only) |
+| 12 | Body-supplied scope fields (decided 2026-11-20 in execution) | 200 and ignore; 422 reject | Reject: request models forbid extra fields like the lineage requests, so a body carrying customer, cloud or domain scope is refused with 422; criterion 7's "ignores" is read as "never honours" |
+| 13 | Inventory files outside ownership (decided 2026-11-20 in execution) | append; hold | Append-only edits to `services/api/tests/catalog/test_catalog_api.py` and `services/api/tests/path_aliases/alias_support.py`, added to `tier2_appends` |
 
 ## Context manifest
 
@@ -138,6 +141,8 @@ tier2_appends:
   - frontend/tests/e2e/a11y/route-samples.ts
   - frontend/tests/real-stack/routes.spec.ts
   - services/api/tests/authz/test_route_inventory.py
+  - services/api/tests/catalog/test_catalog_api.py
+  - services/api/tests/path_aliases/alias_support.py
   - services/api/tests/authz/test_startup_route_check.py
   - services/api/tests/runtime_routes/manifest_calls.py
   - tests/integration/real_stack/test_manifest_routes.py
@@ -258,7 +263,7 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 |---|---|---|---|
 | 1 | merged | prp-73-item-1-access-engine | sonnet; 9d121429, merge b1efd7e5; review APPROVE; post-merge 225 passed (core catalog + workers projections), pyright 0 errors; 2026-11-20. Follow-ups: dependents truncation reason codes, ScanBound.max_assets null for dependents, unknown_region only rejects malformed tokens (AC3 partial), union of group+regions documented, mid-path scope test |
 | 2 | merged | prp-73-item-2-data-access-edges | sonnet; 5d3c4c0b, merge 15e53c5e; review APPROVE; post-merge 41 passed, pyright 0 errors; 2026-11-20. Follow-ups: unresolved-asset warn threshold, stats not exported as metric, data_asset vs grounding_source ingest mapping, 2 extra handler tests |
-| 3 | in-progress | prp-73-item-3-access-routes | sonnet; dispatched 2026-11-20 |
+| 3 | in-progress | prp-73-item-3-access-routes | sonnet; 558e23ef; own 51 tests pass, 3 inventory tests red (non-owned files) plus region allowlist decision; fix-forward 3b dispatched on prp-73-item-3b-region-allowlist 2026-11-20 |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
