@@ -54,8 +54,13 @@ export function useMatchFeedback() {
 
 /** 404 or capability_unavailable means PRP-76 is not there: absent. Other errors stay errors. */
 export function isCompletenessAbsent(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  // The shared client maps every 5xx to dependency_transient, so a 503 problem body that says
+  // capability_unavailable is only visible on `error.problem`.
   return (
-    error instanceof ApiError && (error.status === 404 || error.code === "capability_unavailable")
+    error.status === 404 ||
+    error.code === "capability_unavailable" ||
+    error.problem?.code === "capability_unavailable"
   );
 }
 

@@ -147,6 +147,20 @@ describe("useMatchCompleteness", () => {
     await waitFor(() => expect(result.current.data).toEqual({ state: "absent" }));
   });
 
+  it("is absent on a 503 whose problem body says capability_unavailable", async () => {
+    const { wrapper } = setup(() =>
+      json({ code: "capability_unavailable", reason: "capability_unavailable", status: 503 }, 503),
+    );
+    const { result } = renderHook(() => useMatchCompleteness({}), { wrapper });
+    await waitFor(() => expect(result.current.data).toEqual({ state: "absent" }));
+  });
+
+  it("stays an error on a plain 503", async () => {
+    const { wrapper } = setup(() => json({ status: 503 }, 503));
+    const { result } = renderHook(() => useMatchCompleteness({}), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
   it("is present on 200", async () => {
     const { wrapper } = setup(() => json({ ratio: 0.5 }));
     const { result } = renderHook(() => useMatchCompleteness({}), { wrapper });

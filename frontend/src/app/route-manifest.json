@@ -45,6 +45,7 @@
     "/quality",
     "/recommendations",
     "/recommendations/detail",
+    "/recommendations/find",
     "/reconciliation",
     "/replay/traces",
     "/reports",
