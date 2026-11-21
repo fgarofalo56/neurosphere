@@ -148,6 +148,21 @@ def test_purge_customer_equal_to_active_customer_is_refused(tmp_path: Path) -> N
     assert h.apply() == 2 and h.factory_calls == 0
 
 
+@pytest.mark.parametrize("value", ["missing", None, "", 7])
+def test_registration_without_a_customer_id_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], value: Any
+) -> None:
+    h = Harness(tmp_path, customer_id=value)
+    if value == "missing":
+        doc = json.loads(h.registration.read_text("utf-8"))
+        del doc["customer_id"]
+        h.registration.write_text(json.dumps(doc), encoding="utf-8")
+    assert h.run("plan") == 2
+    assert "records no customer_id" in capsys.readouterr().err
+    assert h.apply() == 2
+    assert h.factory_calls == 0 and h.deleted() == 0
+
+
 def test_previous_customer_id_changes_the_purge_customer(tmp_path: Path) -> None:
     h = Harness(tmp_path, previous_customer_id="legacyco")
     assert h.run("plan") == 0

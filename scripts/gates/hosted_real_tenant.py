@@ -714,7 +714,8 @@ class VerifyContext:
         return self.http(url, self.bearer)
 
 
-def _fetch_catalog(ctx: VerifyContext) -> tuple[list[dict[str, Any]], int]:
+def _fetch_catalog(ctx: VerifyContext) -> tuple[list[dict[str, Any]], int, bool]:
+    """Entities, last status, and whether the scan stopped with a continuation cursor pending."""
     items: list[dict[str, Any]] = []
     cursor: str | None = None
     status = 200
@@ -725,12 +726,12 @@ def _fetch_catalog(ctx: VerifyContext) -> tuple[list[dict[str, Any]], int]:
         resp = ctx.get("/api/v1/catalog/entities", query)
         status = resp.status
         if resp.status != 200:
-            return items, resp.status
+            return items, resp.status, False
         items.extend(i for i in _items(resp.body) if isinstance(i, dict))
         cursor = resp.body.get("next_cursor") if isinstance(resp.body, dict) else None
         if not cursor:
             break
-    return items, status
+    return items, status, bool(cursor)
 
 
 def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, Any]:
@@ -751,7 +752,7 @@ def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, 
             ]
     domains = domains[:_MAX_DOMAINS]
 
-    entities, catalog_status = _fetch_catalog(ctx)
+    entities, catalog_status, truncated = _fetch_catalog(ctx)
     api["catalog"] = catalog_status
     foundry_n = sum(
         1
@@ -787,6 +788,8 @@ def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, 
         sources["foundry"] = _decide(
             states.get("foundry"), foundry_n, "catalog", foundry_entities=foundry_n
         )
+        if truncated and foundry_n == 0 and sources["foundry"]["result"] != "PASS":
+            sources["foundry"] = _outcome("OPEN", "catalog_scan_truncated", foundry_entities=0)
     else:
         sources["foundry"] = _outcome("OPEN", "catalog_unreadable", foundry_entities=0)
     gw_counts = {"gateways": gateways, **{f"poll_{k}": v for k, v in sorted(poll.items())}}
@@ -801,7 +804,14 @@ def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, 
         states.get("billing"), billing_lines, "billing", billing_lines=billing_lines
     )
     sources["azure_monitor"] = _outcome("OPEN", "follow_up_prp")
-    if catalog_status == 200:
+    if catalog_status == 200 and truncated and synthetic_n == 0:
+        synthetic = _outcome(
+            "OPEN",
+            "catalog_scan_truncated",
+            synthetic_records=0,
+            catalog_entities=len(entities),
+        )
+    elif catalog_status == 200:
         synthetic = _outcome(
             "PASS" if synthetic_n == 0 else "FAIL",
             "no_synthetic_records" if synthetic_n == 0 else "synthetic_records_present",
@@ -810,7 +820,12 @@ def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, 
         )
     else:
         synthetic = _outcome("OPEN", "catalog_unreadable", synthetic_records=0)
-    return {"sources": sources, "synthetic": synthetic, "api_status": api}
+    return {
+        "sources": sources,
+        "synthetic": synthetic,
+        "api_status": api,
+        "catalog_truncated": truncated,
+    }
 
 
 def _overall(report: Mapping[str, Any]) -> str:
@@ -898,6 +913,7 @@ def cmd_verify(
         "sources": report["sources"],
         "synthetic": report["synthetic"],
         "api_status": report["api_status"],
+        "catalog_truncated": report["catalog_truncated"],
     }
     path = _write_evidence(args.evidence_dir, f"{today}-verify.json", doc)
     for name, entry in report["sources"].items():

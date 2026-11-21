@@ -341,16 +341,24 @@ def read_plan(
 
 
 def write_evidence(
-    evidence_dir: Path, *, kind: str, counts: Mapping[str, Mapping[str, int]], now: datetime
+    evidence_dir: Path,
+    *,
+    kind: str,
+    counts: Mapping[str, Mapping[str, int]],
+    now: datetime,
+    failure: str | None = None,
 ) -> Path:
     """``<date>-purge-plan.json`` or ``<date>-purge.json``: container names and counts only."""
     evidence_dir.mkdir(parents=True, exist_ok=True)
-    doc = {
+    doc: dict[str, Any] = {
         "gate": "hosted_purge_synthetic",
         "kind": kind,
         "recorded": now.astimezone(UTC).strftime("%Y-%m-%d"),
         "counts": {name: dict(sorted(c.items())) for name, c in sorted(counts.items())},
     }
+    if failure is not None:
+        doc["reason"] = "delete_failed"
+        doc["error_class"] = failure
     suffix = "purge-plan" if kind == "plan" else "purge"
     path = evidence_dir / f"{doc['recorded']}-{suffix}.json"
     path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -364,6 +372,7 @@ def write_evidence(
 class ApplyResult:
     counts: Counts
     stopped: bool = False
+    failure: str | None = None  # exception class name of a failed delete; never its message
 
 
 def apply_purge(
@@ -390,7 +399,12 @@ def apply_purge(
                     result.counts[container]["kept"] += 1
                     result.stopped = True
                     return result
-                _delete(stores, container, current)
+                try:
+                    _delete(stores, container, current)
+                except Exception as exc:
+                    result.failure = type(exc).__name__
+                    result.stopped = True
+                    return result
                 result.counts[container]["deleted"] += 1
     return result
 
@@ -468,8 +482,11 @@ def _checks(
             "app is never blank with nothing behind it.",
             "",
         )
+    active_customer = doc.get("customer_id")  # pyright: ignore[reportUnknownMemberType]
+    if not isinstance(active_customer, str) or not active_customer:
+        return None, "the registration records no customer_id.", ""
     purge_customer = str(doc.get("previous_customer_id") or DEFAULT_PURGE_CUSTOMER)  # pyright: ignore[reportUnknownMemberType]
-    if purge_customer == doc.get("customer_id"):  # pyright: ignore[reportUnknownMemberType]
+    if purge_customer == active_customer:
         return None, "the purge customer is the deployment's active customer id.", ""
     return doc, None, purge_customer  # pyright: ignore[reportUnknownVariableType]
 
@@ -648,9 +665,21 @@ def main(
             kept={name: c["kept"] for name, c in counts.items()},
             batch_size=args.batch_size,
         )
-        path = write_evidence(args.evidence_dir, kind="apply", counts=result.counts, now=moment)
+        path = write_evidence(
+            args.evidence_dir,
+            kind="apply",
+            counts=result.counts,
+            now=moment,
+            failure=result.failure,
+        )
     finally:
         stores.close()
+    if result.failure is not None:
+        print(
+            f"FAILED: delete_failed ({result.failure}); the purge stopped; evidence {path}",
+            file=sys.stderr,
+        )
+        return EXIT_FAILED
     if result.stopped:
         print(f"FAILED: an unexpected document stopped the purge; evidence {path}", file=sys.stderr)
         return EXIT_FAILED
