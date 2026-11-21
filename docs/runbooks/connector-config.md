@@ -10,6 +10,8 @@ a managed identity. The roles that post to ingest (`gateway_poll`, `billing_expo
 producer secret from Key Vault at startup with the workload identity. Nothing secret is stored,
 logged or returned.
 
+For a hosted deployment that shows the tenant it runs in, follow `docs/deploy/hosted-real-tenant.md`.
+
 ## 1. Routes
 
 All routes are under `/api/v1/admin/sources/connectors` and need **customer-level**
@@ -86,8 +88,9 @@ Rollback: set `NS_WORKER_CONNECTOR_CONFIG_SOURCE=env` and restart. Stored docume
 
 ## 5. Known limits
 
-- Hosted and Helm profiles do not run the connector roles yet (PRP-58); local proof uses emulators
-  and in-memory twins. A real Key Vault read with stored config is an OPEN live gate.
+- Real-tenant mode of the hosted deployment turns the three connector roles on (PRP-139; see
+  `docs/deploy/hosted-real-tenant.md`). The Helm profiles still do not run them; local proof uses
+  emulators and in-memory twins. A real Key Vault read with stored config is an OPEN live gate.
 - `foundry_discovery` authenticates with `DefaultAzureCredential`; its token provider takes no
   client id, so a `managed_identity` credential is recorded but not applied.
 - The stored credential must be non-null: the shipped Cosmos twin of the store cannot read back a
