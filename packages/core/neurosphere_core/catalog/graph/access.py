@@ -416,10 +416,10 @@ class AccessEngine:
 
     def _predicates(self, scope: IdentityScope, query: AccessQuery) -> _Predicates:
         regions: frozenset[str] | None = None
+        groups = self._groups or load_region_groups()
         if query.residency_regions is not None:
-            regions = normalise_regions(query.residency_regions)
+            regions = normalise_regions(query.residency_regions, scope.cloud, groups)
         if query.region_group is not None:
-            groups = self._groups or load_region_groups()
             members = groups.regions_in(scope.cloud, query.region_group)
             regions = members if regions is None else regions | members
         return _Predicates(
