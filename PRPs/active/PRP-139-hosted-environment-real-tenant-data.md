@@ -1,10 +1,11 @@
 ---
 name: PRP-139-hosted-environment-real-tenant-data
-status: backlog
+status: active
 priority: P0
 order: 58
 review: required
 created: 2026-11-17
+started: 2026-11-21
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -377,11 +378,11 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | todo | | PRP-138 item 9 follows this in a second PR |
-| 2 | todo | | |
-| 3 | todo | | |
+| 2 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 5 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 6 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 7 | todo | | |
 | 8 | todo | | |
 

@@ -4,19 +4,20 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-139-hosted-environment-real-tenant-data](active/PRP-139-hosted-environment-real-tenant-data.md) | P0 | 0/8 (0%) | todo 4, in-progress 4 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-139-hosted-environment-real-tenant-data](backlog/PRP-139-hosted-environment-real-tenant-data.md) | P0 | 58 | - | - | sonnet / sonnet | required |
 | [PRP-137-telemetry-agent-identity-resolution](backlog/PRP-137-telemetry-agent-identity-resolution.md) | P0 | 59 | - | - | sonnet / sonnet | required |
-| [PRP-141-azure-monitor-ai-call-telemetry-reader](backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 60 | PRP-139-hosted-environment-real-tenant-data, PRP-137-telemetry-agent-identity-resolution | PRP-139-hosted-environment-real-tenant-data (backlog); PRP-137-telemetry-agent-identity-resolution (backlog) | sonnet / sonnet | required |
+| [PRP-141-azure-monitor-ai-call-telemetry-reader](backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 60 | PRP-139-hosted-environment-real-tenant-data, PRP-137-telemetry-agent-identity-resolution | PRP-139-hosted-environment-real-tenant-data (active); PRP-137-telemetry-agent-identity-resolution (backlog) | sonnet / sonnet | required |
 | [PRP-74-live-map-topology-backend](backlog/PRP-74-live-map-topology-backend.md) | P0 | 65 | PRP-70-contracts-revision-restored-scope, PRP-71-realistic-seeded-world-and-demo-profile, PRP-73-graph-access-and-sensitivity-questions, PRP-100-telemetry-tool-service-identity-and-aggregates, PRP-137-telemetry-agent-identity-resolution | PRP-100-telemetry-tool-service-identity-and-aggregates (backlog); PRP-137-telemetry-agent-identity-resolution (backlog) | sonnet / sonnet | required |
 | [PRP-77-live-map-filters-search-and-incident-view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 68 | PRP-74-live-map-topology-backend | PRP-74-live-map-topology-backend (backlog) | sonnet / sonnet | required |
 | [PRP-78-copilot-graph-timeline-and-recommender-tools](backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | P0 | 69 | PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions, PRP-72-agent-and-tool-recommender-backend, PRP-71-realistic-seeded-world-and-demo-profile | - | opus / sonnet | required |
-| [PRP-82-hosted-profile-everything-on](backlog/PRP-82-hosted-profile-everything-on.md) | P0 | 72 | PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-60-search-indexing-hardening, PRP-139-hosted-environment-real-tenant-data | PRP-67-hosted-environment-hardening (backlog); PRP-139-hosted-environment-real-tenant-data (backlog) | sonnet / sonnet | required |
+| [PRP-82-hosted-profile-everything-on](backlog/PRP-82-hosted-profile-everything-on.md) | P0 | 72 | PRP-58-hosted-data-path-and-environment-hardening, PRP-63-delivery-pipeline-to-hosted, PRP-67-hosted-environment-hardening, PRP-60-search-indexing-hardening, PRP-139-hosted-environment-real-tenant-data | PRP-67-hosted-environment-hardening (backlog); PRP-139-hosted-environment-real-tenant-data (active) | sonnet / sonnet | required |
 | [PRP-99-governance-contracts-a](backlog/PRP-99-governance-contracts-a.md) | P0 | 99 | PRP-70-contracts-revision-restored-scope | - | opus / sonnet | required |
 | [PRP-100-telemetry-tool-service-identity-and-aggregates](backlog/PRP-100-telemetry-tool-service-identity-and-aggregates.md) | P0 | 100 | PRP-70-contracts-revision-restored-scope, PRP-71-realistic-seeded-world-and-demo-profile | - | sonnet / sonnet | required |
 | [PRP-101-sensitive-information-detectors-and-redaction](backlog/PRP-101-sensitive-information-detectors-and-redaction.md) | P0 | 101 | PRP-70-contracts-revision-restored-scope, PRP-99-governance-contracts-a | PRP-99-governance-contracts-a (backlog) | opus / opus | required |
