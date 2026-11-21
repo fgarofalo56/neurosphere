@@ -24,7 +24,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 LOG_ANALYTICS_DATA_READER = "3b03c2da-16b3-4a49-8834-0f8130efdd3b"
-APIM_SERVICE_READER = "71522526-b88f-4d52-b57f-d31fc3546d0d"
+GATEWAY_SERVICE_READER_ROLE = "71522526-b88f-4d52-b57f-d31fc3546d0d"
 FOUNDRY_USER = "53ca6127-db72-4b80-b1b0-d745d6d5456d"
 STORAGE_BLOB_DATA_READER = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1"
 CONNECTOR_ROLES = ("foundry_discovery", "gateway_poll", "billing_export")
@@ -142,7 +142,7 @@ def test_data_mode_reaches_both_site_passes_and_the_twin_sets_the_setting(
 def test_role_ids_are_written_not_names(rbac_arm: dict[str, Any]) -> None:
     variables = rbac_arm["variables"]
     assert variables["logAnalyticsDataReader"] == LOG_ANALYTICS_DATA_READER
-    assert variables["apimServiceReader"] == APIM_SERVICE_READER
+    assert variables["gatewayServiceReaderRole"] == GATEWAY_SERVICE_READER_ROLE
     assert variables["foundryUser"] == FOUNDRY_USER
     assert variables["storageBlobDataReader"] == STORAGE_BLOB_DATA_READER
 
@@ -180,7 +180,7 @@ def test_new_assignments_use_the_right_identity(rbac_arm: dict[str, Any]) -> Non
     assert workspace["properties"]["principalId"] == "[parameters('workersPrincipalId')]"
     assert apim["properties"]["principalId"] == "[parameters('apiPrincipalId')]"
     assert "variables('logAnalyticsDataReader')" in workspace["properties"]["roleDefinitionId"]
-    assert "variables('apimServiceReader')" in apim["properties"]["roleDefinitionId"]
+    assert "variables('gatewayServiceReaderRole')" in apim["properties"]["roleDefinitionId"]
 
 
 def test_main_declares_one_module_per_id_at_that_resources_scope(main_arm: dict[str, Any]) -> None:

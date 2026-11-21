@@ -38,7 +38,7 @@ var storageBlobDataReader = '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
 // PRP-139, verified against Microsoft Learn 2026-11-21: Log Analytics Data Reader.
 var logAnalyticsDataReader = '3b03c2da-16b3-4a49-8834-0f8130efdd3b'
 // PRP-139, verified against Microsoft Learn 2026-11-21: API Management Service Reader Role.
-var apimServiceReader = '71522526-b88f-4d52-b57f-d31fc3546d0d'
+var gatewayServiceReaderRole = '71522526-b88f-4d52-b57f-d31fc3546d0d'
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = if (!empty(logAnalyticsWorkspaceName)) {
   name: empty(logAnalyticsWorkspaceName) ? 'unused' : logAnalyticsWorkspaceName
@@ -60,11 +60,11 @@ resource workspaceReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
 
 resource apimReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(apimServiceName)) {
   scope: apimService
-  name: guid(apimService.id, apiPrincipalId, apimServiceReader)
+  name: guid(apimService.id, apiPrincipalId, gatewayServiceReaderRole)
   properties: {
     principalId: apiPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', apimServiceReader)
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', gatewayServiceReaderRole)
   }
 }
 
