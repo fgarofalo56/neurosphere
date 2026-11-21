@@ -269,6 +269,17 @@ const ENTRIES: readonly Entry[] = [
   },
   { route: "/quality" },
   { route: "/recommendations", rows: "recommendation-row" },
+  // PRP-75: the page renders without data; the match itself is exercised by the test below.
+  {
+    route: "/recommendations/find",
+    expected: [
+      {
+        status: 404,
+        pathPrefix: "/api/v1/catalog/completeness",
+        why: "the completeness tile is optional; the page then shows 'Not available' (PRP-75)",
+      },
+    ],
+  },
   {
     route: "/recommendations/detail",
     via: { list: "/recommendations", link: "a[href^='/recommendations/detail']" },
@@ -419,3 +430,50 @@ for (const entry of ENTRIES) {
     }
   });
 }
+
+// PRP-75 item 5: Find an agent against the composed stack. A tagged seed (the PRP-71 demo seed)
+// must yield at least one candidate; none is a FAILURE, never a silent skip.
+test("route /recommendations/find ranks a task, records an accept and counts it after reload", async ({
+  visit,
+}) => {
+  const { page } = visit;
+  const domains = await readableDomains(page);
+  expect(domains.length).toBeGreaterThan(0);
+  const acceptsOf = async (): Promise<number> => {
+    const card = page
+      .getByTestId("match-metrics")
+      .getByText("Accepts", { exact: true })
+      .locator("..");
+    const text = ((await card.textContent()) ?? "").replace("Accepts", "").trim();
+    return Number(/(\d+)\s*$/.exec(text)?.[1] ?? Number.NaN);
+  };
+
+  await page.goto(withDomain("/recommendations/find", domains[0] ?? ""));
+  await expect(page.getByTestId("match-task-input")).toBeVisible();
+  await expect(page.getByTestId("match-acceptance-rate")).toBeVisible();
+  const before = await acceptsOf();
+  expect(Number.isFinite(before)).toBe(true);
+
+  await page
+    .getByTestId("match-task-input")
+    .fill("Summarize invoices and answer finance questions");
+  await page.getByTestId("match-submit").click();
+  await page
+    .locator(
+      "[data-testid='match-candidate'], [data-testid='match-empty'], [data-testid='error-state']",
+    )
+    .first()
+    .waitFor();
+  const candidates = page.getByTestId("match-candidate");
+  if ((await candidates.count()) === 0) {
+    throw new Error(
+      "no candidate returned: no tagged seed, run the PRP-71 demo seed (make stack-up)",
+    );
+  }
+  await candidates.first().getByTestId("match-accept").click();
+  await expect(candidates.first().getByTestId("match-decision")).toHaveText("Accepted");
+
+  await page.reload();
+  await expect(page.getByTestId("match-acceptance-rate")).toBeVisible();
+  await expect.poll(acceptsOf).toBeGreaterThanOrEqual(Math.max(1, before));
+});
