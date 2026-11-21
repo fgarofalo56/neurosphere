@@ -122,10 +122,9 @@ Gate before the next wave: An investigator can explore and export with reads aud
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-75: "Find an agent" page and recommendation metrics](active/PRP-75-find-an-agent-ui-and-recommendation-metrics.md) | sonnet | required | none | - | - | `prp-75-find-an-agent-ui` |
-| 2 | [PRP-76: Catalog registration completeness](backlog/PRP-76-catalog-registration-completeness.md) | sonnet | required | PRP-108, PRP-105 | - | - | `prp-76-catalog-registration-completeness` |
-| 3 | [PRP-77: Live map filters, search and incident view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | sonnet | required | PRP-74 | - | - | `prp-77-live-map-filters-search-incident` |
-| 4 | [PRP-109: North-star scenario acceptance (the governance definition of done)](backlog/PRP-109-north-star-scenario-acceptance.md) | opus | required | PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82 | - | - | `prp-109-north-star-acceptance` |
+| 1 | [PRP-76: Catalog registration completeness](backlog/PRP-76-catalog-registration-completeness.md) | sonnet | required | PRP-108, PRP-105 | - | - | `prp-76-catalog-registration-completeness` |
+| 2 | [PRP-77: Live map filters, search and incident view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | sonnet | required | PRP-74 | - | - | `prp-77-live-map-filters-search-incident` |
+| 3 | [PRP-109: North-star scenario acceptance (the governance definition of done)](backlog/PRP-109-north-star-scenario-acceptance.md) | opus | required | PRP-100, PRP-101, PRP-102, PRP-103, PRP-104, PRP-105, PRP-106, PRP-107, PRP-108, PRP-82 | - | - | `prp-109-north-star-acceptance` |
 
 Gate before the next wave: The north-star scenario passes on the local stack (PRP-109); the hosted run is evidenced or recorded OPEN. Find an agent, catalog history and the map incident view work.
 
@@ -211,7 +210,7 @@ Gate before the next wave: The CI check fails an unregistered agent in a sample 
 | 1 | [PRP-83: Data-subject requests, legal holds and residency](backlog/PRP-83-data-subject-requests-and-residency.md) | sonnet | required | PRP-81, PRP-102 | - | - | `prp-83-dsr-and-residency` |
 | 2 | [PRP-84: Ingest throughput, back-pressure, autoscaling and end-to-end latency measurement](backlog/PRP-84-ingest-throughput-and-autoscaling.md) | sonnet | required | PRP-67, PRP-79, PRP-103 | PRP-82 | - | `prp-84-ingest-throughput` |
 | 3 | [PRP-131: Model and agent cards, and safety-evaluation records](backlog/PRP-131-model-and-agent-cards-and-safety-evaluation-records.md) | sonnet | required | PRP-110, PRP-127, PRP-105, PRP-108 | - | - | `prp-131-cards-safety-records` |
-| 4 | [PRP-134: Chargeback, showback and product success metrics](backlog/PRP-134-chargeback-showback-and-success-metrics.md) | sonnet | required | PRP-75, PRP-76, PRP-78, PRP-115, PRP-100, PRP-137 | PRP-131, PRP-78 | - | `prp-134-chargeback-success-metrics` |
+| 4 | [PRP-134: Chargeback, showback and product success metrics](backlog/PRP-134-chargeback-showback-and-success-metrics.md) | sonnet | required | PRP-76, PRP-78, PRP-115, PRP-100, PRP-137 | PRP-131, PRP-78 | - | `prp-134-chargeback-success-metrics` |
 
 Gate before the next wave: Cards export from recorded facts; the chargeback view works; data-subject requests cover captured interactions; ingest autoscaling renders in the chart.
 
@@ -318,7 +317,6 @@ flowchart LR
     P108["PRP-108"]
   end
   subgraph W24
-    P75["PRP-75"]
     P76["PRP-76"]
     P77["PRP-77"]
     P109["PRP-109"]
@@ -579,7 +577,6 @@ flowchart LR
   P132 --> P133
   P117 --> P133
   P101 --> P133
-  P75 --> P134
   P76 --> P134
   P78 --> P134
   P115 --> P134
@@ -788,14 +785,6 @@ Context for this run: wave W23 of PRPs/EXECUTION-PLAN.md, branch prp-106-policy-
 /prp:prp-execute PRPs/backlog/PRP-108-agent-approval-gate-and-platform-control-actions.md
 
 Context for this run: wave W23 of PRPs/EXECUTION-PLAN.md, branch prp-108-platform-control cut from origin/main, implementer model opus, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-99, PRP-105, PRP-103 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
-```
-
-### PRP-75 (W24)
-
-```text
-/prp:prp-execute PRPs/active/PRP-75-find-an-agent-ui-and-recommendation-metrics.md
-
-Context for this run: wave W24 of PRPs/EXECUTION-PLAN.md, branch prp-75-find-an-agent-ui cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-76 (W24)
@@ -1059,7 +1048,7 @@ Context for this run: wave W32 of PRPs/EXECUTION-PLAN.md, branch prp-131-cards-s
 ```text
 /prp:prp-execute PRPs/backlog/PRP-134-chargeback-showback-and-success-metrics.md
 
-Context for this run: wave W32 of PRPs/EXECUTION-PLAN.md, branch prp-134-chargeback-success-metrics cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-75, PRP-76, PRP-78, PRP-115, PRP-100, PRP-137 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
+Context for this run: wave W32 of PRPs/EXECUTION-PLAN.md, branch prp-134-chargeback-success-metrics cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. Before anything else confirm that PRP-76, PRP-78, PRP-115, PRP-100, PRP-137 are in PRPs/shipped/ on origin/main; if not, stop and say so. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
 
 ### PRP-64 (W33)
