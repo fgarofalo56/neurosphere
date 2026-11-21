@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import { useSelectedDomain } from "../../app/domain";
 import { EmptyState, LoadingState, PageTemplate } from "../../design-system";
 import { QueryErrorState } from "./components";
+import { NoDataEmptyState } from "../source-status";
 import { RecommendationCard } from "./RecommendationCard";
 import { useRecommendations } from "./hooks";
 import { KIND_LABELS, STRINGS } from "./strings";
@@ -67,7 +68,7 @@ function ListBody({
     <>
       {items.length === 0 ? (
         <div data-testid="empty-state">
-          <EmptyState title={STRINGS.empty} />
+          <NoDataEmptyState what={STRINGS.empty} sources={["foundry", "apim_gateway", "billing"]} />
         </div>
       ) : (
         <ul aria-label={STRINGS.listTitle} className={styles.grid}>

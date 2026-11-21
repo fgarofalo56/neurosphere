@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Link } from "react-router";
 import { ForbiddenError, createQueryHook } from "../../api/index.js";
 import {
   ErrorState,
@@ -10,7 +11,59 @@ import {
 } from "../../design-system";
 import { AdminConsoleHome } from "../admin/shared/AdminConsoleHome";
 import { ForbiddenState } from "./ForbiddenState";
-import { probePath, type WorkspaceDef } from "./personas";
+import { NoDataEmptyState, useSourceStatus, type NoDataLink } from "../source-status";
+import { probePath, type Persona, type WorkspaceDef } from "./personas";
+
+/** The pages each role works in, linked from the empty state. Navigation only; the API decides access. */
+const ROLE_PAGES: Readonly<Record<Persona, readonly NoDataLink[]>> = {
+  Viewer: [
+    { label: "Cost dashboard", href: "/dashboards/cost" },
+    { label: "Map", href: "/map" },
+    { label: "Catalog", href: "/catalog" },
+  ],
+  Analyst: [
+    { label: "Recommendations", href: "/recommendations" },
+    { label: "Evaluations", href: "/evaluations" },
+    { label: "Quality", href: "/quality" },
+  ],
+  Steward: [
+    { label: "Catalog", href: "/catalog" },
+    { label: "Stale agents", href: "/catalog/stale-agents" },
+  ],
+  Admin: [],
+  Auditor: [{ label: "Audit log", href: "/audit" }],
+};
+
+/**
+ * The role's pages are always listed. When a source behind them is missing or has delivered
+ * nothing yet, the shared source-aware empty state says so; when every available source has data
+ * (or the status cannot be read) there is nothing to report and only the pages are shown.
+ */
+function WorkspaceBody({ def }: { readonly def: WorkspaceDef }): ReactElement {
+  const { sources } = useSourceStatus();
+  const links = ROLE_PAGES[def.persona];
+  const needsAttention =
+    sources !== undefined && sources.some((s) => s.available && s.state !== "connected");
+  if (needsAttention) {
+    return (
+      <NoDataEmptyState
+        what={`The ${def.label} workspace has no data to show yet.`}
+        sources={["foundry", "apim_gateway", "billing", "azure_monitor_telemetry"]}
+        extraLinks={links}
+        testId="workspace-empty"
+      />
+    );
+  }
+  return (
+    <ul data-testid="workspace-pages">
+      {links.map((l) => (
+        <li key={l.href}>
+          <Link to={l.href}>{l.label}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const useWorkspaceProbe = createQueryHook<{ path: string }, unknown>({
   key: "workspace-probe",
@@ -71,7 +124,7 @@ export function WorkspacePage({ def }: { readonly def: WorkspaceDef }): ReactEle
         <div>
           <HealthIndicator state="ok" label="Service answered" />
         </div>
-        <p>Placeholder: this workspace is built out in later work.</p>
+        <WorkspaceBody def={def} />
       </Panel>
     </PageTemplate>
   );

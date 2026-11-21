@@ -1,16 +1,10 @@
 import { Button, Field, Input, makeStyles, tokens } from "@fluentui/react-components";
 import { useRef, useState, type ReactElement } from "react";
 import { ForbiddenError, StaleVersionError, type ApiError } from "../../api/index.js";
-import {
-  DataTable,
-  EmptyState,
-  PageTemplate,
-  Panel,
-  StatusPill,
-  Timestamp,
-} from "../../design-system";
+import { DataTable, PageTemplate, Panel, StatusPill, Timestamp } from "../../design-system";
 import { ChangeConfirmDialog, type ChangeDiffRow } from "../governed-change";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
+import { NoDataEmptyState } from "../source-status";
 import { useStaleConfirm, useStaleDryRun } from "./explorerHooks";
 import { EntityLink } from "./explorerParts";
 import { EXPLORER_STRINGS } from "./explorerStrings";
@@ -164,7 +158,11 @@ export function StaleAgentsPage(): ReactElement {
             <PlanEcho plan={plan} />
             {plan.truncated ? <p data-testid="plan-truncated">{S.truncated}</p> : null}
             {plan.candidates.length === 0 ? (
-              <EmptyState title={S.noCandidates} testId="no-candidates" />
+              <NoDataEmptyState
+                what={S.noCandidates}
+                sources={["foundry"]}
+                testId="no-candidates"
+              />
             ) : (
               <CandidatesTable plan={plan} />
             )}

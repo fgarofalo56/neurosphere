@@ -2,7 +2,6 @@ import { Badge, makeStyles, mergeClasses, tokens } from "@fluentui/react-compone
 import type { ReactElement } from "react";
 import {
   DataTable,
-  EmptyState,
   formatAbsoluteTime,
   HealthIndicator,
   Panel,
@@ -12,6 +11,7 @@ import {
   type HealthState,
   useUiStyle,
 } from "../../design-system";
+import { NoDataEmptyState } from "../source-status";
 import { STRINGS, lagText, priceVersionText } from "./strings";
 import type {
   AnalyticsState,
@@ -24,6 +24,9 @@ import type {
   SeriesKind,
   SeriesPoint,
 } from "./types";
+
+/** The sources the cost, latency and coverage dashboards are built from. */
+export const DASHBOARD_SOURCES = ["apim_gateway", "billing"] as const;
 
 const fmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 });
 
@@ -299,7 +302,11 @@ export function SeriesBlock({
         className={styles.scroll}
       >
         {series.points.length === 0 ? (
-          <EmptyState title={STRINGS.emptyTitle} description={STRINGS.emptyBody} />
+          <NoDataEmptyState
+            what={STRINGS.emptyTitle}
+            description={STRINGS.emptyBody}
+            sources={DASHBOARD_SOURCES}
+          />
         ) : (
           <DataTable
             label={series.label}

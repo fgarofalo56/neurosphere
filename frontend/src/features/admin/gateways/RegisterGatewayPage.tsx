@@ -1,12 +1,13 @@
 import { Button, Field, Input, Select } from "@fluentui/react-components";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
-import { ErrorState, LoadingState, PageTemplate } from "../../../design-system";
+import { LoadingState, PageTemplate } from "../../../design-system";
 import { ForbiddenError, StaleVersionError, type ApiError } from "../../../api/index.js";
 import { QueryErrorState } from "../shared/AdminStates";
 import { AdminTabs } from "../shared/AdminTabs";
 import { useEtagMutation } from "../shared/transport";
 import { gatewayDetailHref } from "../../gateways/paths";
+import { NoDataEmptyState } from "../../source-status";
 import { existingPaths } from "../sources/apiPaths";
 import { useReadableDomains } from "../sources/hooks";
 
@@ -75,7 +76,15 @@ function RegisterBody(): ReactElement {
   }
   const items = domains.data.data.items;
   if (items.length === 0) {
-    return <ErrorState tone="warning" title={GATEWAY_STRINGS.noDomains} testId="empty-state" />;
+    return (
+      <NoDataEmptyState
+        what={GATEWAY_STRINGS.noDomains}
+        sources={[]}
+        adminHref="/admin/domains"
+        adminLabel="Create a domain in Admin Domains"
+        testId="empty-state"
+      />
+    );
   }
   const chosen = domain === "" ? (items[0]?.domain_id ?? "") : domain;
   const armTrim = arm.trim();

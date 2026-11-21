@@ -13,6 +13,7 @@ import {
   type DataTableColumn,
   type StatusTone,
 } from "../../design-system";
+import { AdminActionLink } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useAuditDomains, useAuditRecords, useVerifyChain } from "./data";
 import { AUDIT_DOMAIN_PARAM } from "./paths";
@@ -56,6 +57,12 @@ function ProblemState({
         title={STRINGS.storeUnconfiguredTitle}
         message={STRINGS.storeUnconfiguredBody}
         testId="audit-unconfigured"
+        action={
+          <AdminActionLink
+            href="/admin/system"
+            label="Open Admin System to configure the audit store"
+          />
+        }
       />
     );
   }

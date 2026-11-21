@@ -53,9 +53,9 @@ describe("workspace routes", () => {
     if (def.persona === "Admin") {
       // PRP-53: the Admin persona gets the console landing, not the placeholder.
       await screen.findByTestId("admin-areas");
-      expect(screen.queryByText(/Placeholder/)).toBeNull();
+      expect(screen.queryByTestId("workspace-pages")).toBeNull();
     } else {
-      await screen.findByText(/Placeholder/);
+      await screen.findByTestId("workspace-pages");
     }
     expect(screen.getByRole("heading", { name: `${def.label} workspace` })).toBeTruthy();
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain(probePath(def.persona));
@@ -63,7 +63,7 @@ describe("workspace routes", () => {
 
   it("nav shows only entries suggested by roles", async () => {
     setup("/workspaces/viewer", 200, ["Viewer", "Auditor"]);
-    await screen.findByText(/Placeholder/);
+    await screen.findByTestId("workspace-pages");
     const nav = screen.getByRole("navigation", { name: "Primary" });
     const links = Array.from(nav.querySelectorAll("a")).map((a) => a.textContent);
     expect(links).toEqual(["Viewer", "Auditor"]);
@@ -80,7 +80,7 @@ describe("workspace routes", () => {
     expect(String(fetchImpl.mock.calls[0]?.[0])).toContain("/api/v1/workspaces/admin");
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(nav.textContent).not.toContain("Admin");
-    expect(screen.queryByText(/Placeholder/)).toBeNull();
+    expect(screen.queryByTestId("workspace-pages")).toBeNull();
   });
 
   it("admin landing shows unknown, not zero, when the summaries cannot be read", async () => {
@@ -110,12 +110,12 @@ describe("workspace routes", () => {
       </QueryProvider>,
     );
     expect(screen.getByLabelText("Loading the Viewer workspace")).toBeTruthy();
-    expect(screen.queryByText(/Placeholder/)).toBeNull();
+    expect(screen.queryByTestId("workspace-pages")).toBeNull();
   });
 
   it("renders the persona page as cards with a status indicator", async () => {
     setup("/workspaces/steward", 200, NS_ROLES);
-    await screen.findByText(/Placeholder/);
+    await screen.findByTestId("workspace-pages");
     expect(document.querySelectorAll('[data-slot="panel"]').length).toBe(2);
     expect(document.querySelector('[data-slot="health-indicator"]')?.textContent).toBe(
       "Service answered",
@@ -126,6 +126,6 @@ describe("workspace routes", () => {
     setup("/workspaces/steward", 503, NS_ROLES);
     await waitFor(() => expect(screen.getByTestId("error-state")).toBeTruthy());
     expect(screen.queryByTestId("forbidden-state")).toBeNull();
-    expect(screen.queryByText(/Placeholder/)).toBeNull();
+    expect(screen.queryByTestId("workspace-pages")).toBeNull();
   });
 });

@@ -19,7 +19,8 @@ import {
 } from "../../design-system";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { groupSeries, groupTitle, toChartSeries, type ChartGroup } from "./chartData";
-import { AnalyticsChip, LagIndicator, SeriesBlock } from "./components";
+import { NoDataEmptyState } from "../source-status";
+import { AnalyticsChip, DASHBOARD_SOURCES, LagIndicator, SeriesBlock } from "./components";
 import { useDashboard } from "./hooks";
 import { STRINGS } from "./strings";
 import type { DashboardMetric, Grain, Series } from "./types";
@@ -95,7 +96,7 @@ function ChartPanel({
       {hasPoints ? (
         <TimeSeriesChart series={chartSeries} grain={grain} variant="line" height={260} />
       ) : (
-        <EmptyState title={STRINGS.chartEmpty} />
+        <NoDataEmptyState what={STRINGS.chartEmpty} sources={DASHBOARD_SOURCES} />
       )}
     </Panel>
   );
@@ -178,7 +179,11 @@ function MetricSection({
         </div>
       ) : null}
       {data.series.length === 0 ? (
-        <EmptyState title={STRINGS.emptyTitle} description={STRINGS.emptyBody} />
+        <NoDataEmptyState
+          what={STRINGS.emptyTitle}
+          description={STRINGS.emptyBody}
+          sources={DASHBOARD_SOURCES}
+        />
       ) : (
         <>
           <div className={styles.charts}>
