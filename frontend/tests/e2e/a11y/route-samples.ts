@@ -100,6 +100,14 @@ export const ROUTE_SAMPLES: readonly RouteSample[] = [
     url: `/recommendations?${q()}`,
     ready: "main h1",
   },
+  // PRP-75: the pre-search state; the results state is scanned by agent-match.spec.ts because a
+  // sample is a URL and cannot drive the form.
+  {
+    pattern: "/recommendations/find",
+    name: "find an agent",
+    url: `/recommendations/find?${q()}`,
+    ready: "[data-testid='match-task-input']",
+  },
   {
     pattern: "/recommendations/detail",
     name: "recommendation detail",
