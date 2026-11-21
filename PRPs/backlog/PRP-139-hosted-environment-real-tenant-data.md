@@ -2,7 +2,7 @@
 name: PRP-139-hosted-environment-real-tenant-data
 status: backlog
 priority: P0
-order: 139
+order: 58
 review: required
 created: 2026-11-17
 model: sonnet

@@ -2,7 +2,7 @@
 name: PRP-141-azure-monitor-ai-call-telemetry-reader
 status: backlog
 priority: P0
-order: 141
+order: 60
 review: required
 created: 2026-11-17
 model: sonnet

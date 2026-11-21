@@ -2,7 +2,7 @@
 name: PRP-137-telemetry-agent-identity-resolution
 status: backlog
 priority: P0
-order: 137
+order: 59
 review: required
 created: 2026-11-16
 model: sonnet
