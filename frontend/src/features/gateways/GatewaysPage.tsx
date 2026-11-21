@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useSelectedDomain } from "../../app/domain";
 import { EmptyState, LoadingState, PageTemplate } from "../../design-system";
 import { EmergencyBanner, QueryErrorState } from "../actions/components";
+import { NoDataEmptyState } from "../source-status";
 import { GatewayModePanel } from "./GatewayModePanel";
 import { useGateways } from "./hooks";
 import { STRINGS } from "./strings";
@@ -28,7 +29,12 @@ function Body({ domainId }: { readonly domainId: string }): ReactElement {
   if (query.data.items.length === 0) {
     return (
       <div data-testid="empty-state">
-        <EmptyState title={STRINGS.empty} />
+        <NoDataEmptyState
+          what={STRINGS.empty}
+          sources={["apim_gateway"]}
+          adminHref="/admin/gateways"
+          adminLabel="Register a gateway in Admin Gateways"
+        />
       </div>
     );
   }

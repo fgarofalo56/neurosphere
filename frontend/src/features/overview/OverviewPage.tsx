@@ -19,6 +19,7 @@ import {
   useUiStyle,
 } from "../../design-system";
 import { MetricText } from "../dashboards/components";
+import { NoDataEmptyState } from "../source-status";
 import type { Series } from "../dashboards/types";
 import {
   AWAITING_STATES,
@@ -36,6 +37,8 @@ import {
   type TileId,
 } from "./data";
 import { STRINGS } from "./strings";
+
+const ALL_SOURCES = ["foundry", "apim_gateway", "billing", "azure_monitor_telemetry"] as const;
 
 const useStyles = makeStyles({
   tile: {
@@ -327,7 +330,11 @@ function RecentReports({ domainId }: { readonly domainId: string }): ReactElemen
     <Panel title={STRINGS.reports.recent} level={2} testId="recent-reports">
       {q.isError || q.isPending ? <Problem label={STRINGS.reports.recent} q={q} /> : null}
       {q.data !== undefined && q.data.items.length === 0 ? (
-        <EmptyState title={STRINGS.reports.emptyTitle} description={STRINGS.reports.emptyBody} />
+        <NoDataEmptyState
+          what={STRINGS.reports.emptyTitle}
+          description={STRINGS.reports.emptyBody}
+          sources={ALL_SOURCES}
+        />
       ) : null}
       {q.data !== undefined && q.data.items.length > 0 ? (
         <ul className={styles.reports}>
@@ -367,7 +374,7 @@ export function OverviewPage(): ReactElement {
       status === "loading" ? (
         <LoadingState label={STRINGS.loadingDomains} rows={2} />
       ) : status === "forbidden" || status === "ready" ? (
-        <EmptyState title={NO_DOMAINS_MESSAGE} />
+        <NoDataEmptyState what={NO_DOMAINS_MESSAGE} sources={ALL_SOURCES} />
       ) : (
         <EmptyState title={STRINGS.pickDomain} />
       );

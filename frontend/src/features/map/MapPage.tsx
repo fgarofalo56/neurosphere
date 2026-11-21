@@ -21,7 +21,6 @@ import { Link } from "react-router";
 import { ForbiddenError, useApiClient, type ApiError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
 import {
-  EmptyState,
   ErrorState as StyledErrorState,
   LoadingState,
   PageTemplate,
@@ -29,6 +28,7 @@ import {
   useUiStyle,
   type StatusTone,
 } from "../../design-system";
+import { NoDataEmptyState } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { MAP_TABLE_PATH } from "../map-table/paths";
 import { fetchViewport, useLiveUpdates, useViewport } from "./hooks";
@@ -425,7 +425,7 @@ export function MapView({ domainId, scheduler }: MapViewProps): ReactElement {
 
         {initial.data.nodes.length === 0 && mapGraph.nodeCount === 0 && !revoked ? (
           <div data-testid="empty-state">
-            <EmptyState title={STRINGS.empty} />
+            <NoDataEmptyState what={STRINGS.empty} sources={["foundry", "apim_gateway"]} />
           </div>
         ) : null}
 

@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { useSearchParams } from "react-router";
 import { ApiError, ForbiddenError } from "../../api/index.js";
 import { useSelectedDomain } from "../../app/domain";
+import { NoDataEmptyState } from "../source-status";
 import {
   DataTable,
   EmptyState,
@@ -352,9 +353,11 @@ function ForecastBody({
           ? STRINGS.priceVersionUnresolvedHint
           : STRINGS.genericUnavailableHint;
       return (
-        <EmptyState
+        <NoDataEmptyState
           testId="forecast-unavailable"
-          title={STRINGS.unavailableTitle}
+          what={STRINGS.unavailableTitle}
+          sources={["billing"]}
+          extraLinks={[{ label: "Set prices in Admin Pricing", href: "/admin/pricing" }]}
           description={
             <>
               <span data-testid="forecast-unavailable-reason">{`${STRINGS.unavailableReasonPrefix} ${unavailableReason}`}</span>

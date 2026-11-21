@@ -28,6 +28,10 @@ import {
   useUiStyle,
 } from "../../design-system";
 import { FreshTime } from "../dashboards/components";
+import { NoDataEmptyState } from "../source-status";
+
+/** Reconciliation compares the billing export with the gateway telemetry. */
+const RECON_SOURCES = ["billing", "apim_gateway"] as const;
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useReconciliation } from "./hooks";
 import { STRINGS, lagText } from "./strings";
@@ -173,9 +177,10 @@ function CoverageChart({
   if (Number.isNaN(Date.parse(windowEnd)) || !anyKnown) {
     return (
       <div data-testid="coverage-empty">
-        <EmptyState
-          title={STRINGS.coverageUnknownTitle}
+        <NoDataEmptyState
+          what={STRINGS.coverageUnknownTitle}
           description={STRINGS.coverageUnknownBody}
+          sources={RECON_SOURCES}
         />
       </div>
     );
@@ -311,7 +316,7 @@ export function ReconciliationView({
       </div>
       {data.references.length === 0 ? (
         <div data-testid="no-data">
-          <EmptyState title={STRINGS.noData} />
+          <NoDataEmptyState what={STRINGS.noData} sources={RECON_SOURCES} />
         </div>
       ) : null}
       <div className={styles.cards}>

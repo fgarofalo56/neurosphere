@@ -20,6 +20,7 @@ import {
   intervalText,
   judgeText,
 } from "./components";
+import { NoDataEmptyState } from "../source-status";
 import { useQuality } from "./hooks";
 import { STRINGS, fractionText, numberText, orUnknown } from "./strings";
 import type { QualityResponse, Trend } from "./types";
@@ -51,7 +52,7 @@ function Trends({ data }: { readonly data: QualityResponse }): ReactElement {
     <Panel landmark="region" title={STRINGS.sections.trends}>
       {data.trends.length === 0 ? (
         <div data-testid="trends-empty">
-          <EmptyState title={STRINGS.noTrends} />
+          <NoDataEmptyState what={STRINGS.noTrends} sources={["foundry", "apim_gateway"]} />
         </div>
       ) : null}
       {data.trends.map((trend) => (
@@ -153,7 +154,7 @@ function Body({ data }: { readonly data: QualityResponse }): ReactElement {
       <Trends data={data} />
       <Panel landmark="region" title={STRINGS.sections.coverage}>
         {data.coverage.length === 0 ? (
-          <EmptyState title={STRINGS.noCoverage} />
+          <NoDataEmptyState what={STRINGS.noCoverage} sources={["foundry", "apim_gateway"]} />
         ) : (
           <div className={t.wrap}>
             <table className={t.table} aria-label={STRINGS.sections.coverage}>
