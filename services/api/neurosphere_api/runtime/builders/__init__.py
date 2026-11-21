@@ -394,6 +394,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         lifecycle,
         mcp,
         planes,
+        sources_status,
     )
 
     return (
@@ -411,4 +412,5 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         admin_system.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
+        sources_status.BUILDER,
     )

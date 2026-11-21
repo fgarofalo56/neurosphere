@@ -241,6 +241,15 @@ from neurosphere_workers.runtime.settings import (
     WorkerSettings,
 )
 from neurosphere_workers.runtime.supervisor import RoleFactory, RoleRunnable
+from neurosphere_workers.sources_status import (
+    ObservedGatewayStore,
+    StatusRecordingTick,
+    cosmos_repository,
+    idle_recording,
+    observe_billing,
+    observe_foundry,
+    observe_gateway,
+)
 
 __all__ = [
     "BUILDERS",
@@ -1280,6 +1289,7 @@ class _ClosableHttp:
 
 async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     poll = await resolve_gateway_poll_settings(cfg, lifetime)
+    status_repo = cosmos_repository(lambda: _cosmos(cfg, lifetime), database=cfg.store.database)
     if isinstance(poll, ConnectorIdle) or poll.unconfigured:
         # Part of ``all``: with no gateway polling configured (or its stored config disabled),
         # idle gracefully (one info line).
@@ -1287,11 +1297,8 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
             "gateway_poll not configured; role idles",
             extra={"event": "worker.gateway_poll_unconfigured"},
         )
-
-        async def _noop() -> None:
-            return None
-
-        return _tick_role("gateway_poll", _noop, cfg)
+        idle = idle_recording("gateway_poll", poll, status_repo, customer_id=cfg.customer_id)
+        return _tick_role("gateway_poll", idle, cfg)
     assert not isinstance(poll, ConnectorIdle)
     if not poll.domains:
         raise RoleConfigError("gateway_poll_domain_ids_missing")
@@ -1312,9 +1319,12 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
             extra={"event": "worker.gateway_poll_metrics_government_skipped"},
         )
         metrics_app_id = None
+    observed = ObservedGatewayStore(
+        CosmosGatewayStore.from_client(cosmos, database=cfg.store.database)
+    )
     poller = GatewayPoller(
         metrics_app_id=metrics_app_id,
-        store=CosmosGatewayStore.from_client(cosmos, database=cfg.store.database),
+        store=observed,
         ingest=IngestClient(
             http.client,
             base_url=poll.api_base_url,
@@ -1327,7 +1337,15 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
         cloud=cfg.cloud,
         connector_factory=default_connector_factory(poll.allow_unverified_government),
     )
-    return _tick_role("gateway_poll", PeriodicTick(poller.tick, poll.interval_seconds), cfg)
+    recorded = StatusRecordingTick(
+        "gateway_poll",
+        poller.tick,
+        lambda: observe_gateway(observed.drain()),
+        status_repo,
+        customer_id=customer,
+        before=observed.drain,
+    )
+    return _tick_role("gateway_poll", PeriodicTick(recorded, poll.interval_seconds), cfg)
 
 
 # --------------------------------------------------------------------------------------------
@@ -1336,16 +1354,14 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
 
 async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     disc = await resolve_foundry_discovery_settings(cfg, lifetime)
+    status_repo = cosmos_repository(lambda: _cosmos(cfg, lifetime), database=cfg.store.database)
     if isinstance(disc, ConnectorIdle) or disc.unconfigured:
         logger.info(
             "foundry_discovery not configured; role idles",
             extra={"event": "worker.foundry_discovery_unconfigured"},
         )
-
-        async def _noop() -> None:
-            return None
-
-        return _tick_role("foundry_discovery", _noop, cfg)
+        idle = idle_recording("foundry_discovery", disc, status_repo, customer_id=cfg.customer_id)
+        return _tick_role("foundry_discovery", idle, cfg)
     assert not isinstance(disc, ConnectorIdle)
     if not disc.project_pairs_raw:
         raise RoleConfigError("foundry_discovery_projects_missing")
@@ -1396,7 +1412,14 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
         domain_id=disc.domain_id,
         cloud=cloud.value,
     )
-    return _tick_role("foundry_discovery", PeriodicTick(poller.tick, disc.interval_seconds), cfg)
+    recorded = StatusRecordingTick(
+        "foundry_discovery",
+        poller.tick,
+        lambda: observe_foundry(poller.last_status),
+        status_repo,
+        customer_id=customer,
+    )
+    return _tick_role("foundry_discovery", PeriodicTick(recorded, disc.interval_seconds), cfg)
 
 
 # --------------------------------------------------------------------------------------------
@@ -1405,16 +1428,14 @@ async def build_foundry_discovery(cfg: RuntimeConfig, lifetime: ClientLifetime) 
 
 async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
     export = await resolve_billing_export_settings(cfg, lifetime)
+    status_repo = cosmos_repository(lambda: _cosmos(cfg, lifetime), database=cfg.store.database)
     if isinstance(export, ConnectorIdle) or export.unconfigured:
         logger.info(
             "billing_export not configured; role idles",
             extra={"event": "worker.billing_export_unconfigured"},
         )
-
-        async def _noop() -> None:
-            return None
-
-        return _tick_role("billing_export", _noop, cfg)
+        idle = idle_recording("billing_export", export, status_repo, customer_id=cfg.customer_id)
+        return _tick_role("billing_export", idle, cfg)
     assert not isinstance(export, ConnectorIdle)
     if export.storage_account_url is None:
         raise RoleConfigError("billing_export_storage_account_url_missing")
@@ -1466,7 +1487,14 @@ async def build_billing_export(cfg: RuntimeConfig, lifetime: ClientLifetime) -> 
         domain_id=export.domain_id,
         batch_size=export.batch_size,
     )
-    return _tick_role("billing_export", PeriodicTick(poller.tick, export.interval_seconds), cfg)
+    recorded = StatusRecordingTick(
+        "billing_export",
+        poller.tick,
+        lambda: observe_billing(poller.last_status),
+        status_repo,
+        customer_id=cfg.customer_id,
+    )
+    return _tick_role("billing_export", PeriodicTick(recorded, export.interval_seconds), cfg)
 
 
 # --------------------------------------------------------------------------------------------
