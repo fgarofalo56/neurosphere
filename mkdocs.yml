@@ -140,6 +140,7 @@ nav:
       - runbooks/compliance-evidence.md
       - runbooks/detections.md
       - runbooks/agent-match.md
+      - runbooks/agent-match-ui.md
       - runbooks/copilot.md
       - runbooks/docs-assistant.md
       - runbooks/action-plane-kill-switch.md
