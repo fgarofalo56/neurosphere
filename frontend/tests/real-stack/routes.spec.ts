@@ -214,6 +214,7 @@ const ENTRIES: readonly Entry[] = [
     route: "/catalog/entity",
     via: { list: "/catalog", link: "a[href^='/catalog/entity']" },
   },
+  { route: "/catalog/access" },
   { route: "/catalog/publication" },
   { route: "/catalog/recertifications" },
   { route: "/catalog/review-queue" },

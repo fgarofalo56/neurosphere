@@ -3,6 +3,7 @@ import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
+import { handle as catalogAccess } from "./catalog-access.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
 import { handle as curation } from "./curation.ts";
 import { handle as deploy } from "./deploy.ts";
@@ -21,6 +22,7 @@ describe("feature mock registry", () => {
   it("lists every feature once, curation before catalog", () => {
     expect(FEATURE_HANDLERS).toEqual([
       curation,
+      catalogAccess,
       catalog,
       audit,
       finops,

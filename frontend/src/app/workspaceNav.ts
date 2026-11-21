@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { actionsNavItems } from "../features/actions/routes";
 import { adminCoreNavItems } from "../features/admin/routes";
 import { auditNavItems } from "../features/audit/routes";
+import { ACCESS_STRINGS } from "../features/catalog/access/strings";
+import { CATALOG_ACCESS_ROUTE } from "../features/catalog/paths";
 import {
   catalogExplorerNavItems,
   catalogGovernanceNavItems,
@@ -62,6 +64,7 @@ export function buildAppNavItems(): readonly NavItem[] {
       { to: MAP_TABLE_PATH, label: "Map table" },
       ...replayNavItems(),
       ...catalogExplorerNavItems(),
+      { to: `/${CATALOG_ACCESS_ROUTE}`, label: ACCESS_STRINGS.navLabel, permission: "data.read" },
     ]),
     ...inGroup("Quality", [
       ...qualityNavItems(),
