@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
+import { handle as agentMatch } from "./agent-match.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
 import { handle as catalogAccess } from "./catalog-access.ts";
@@ -21,6 +22,7 @@ const ctx = {} as unknown as FeatureMockContext;
 describe("feature mock registry", () => {
   it("lists every feature once, curation before catalog", () => {
     expect(FEATURE_HANDLERS).toEqual([
+      agentMatch,
       curation,
       catalogAccess,
       catalog,
