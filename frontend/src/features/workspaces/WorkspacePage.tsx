@@ -58,7 +58,9 @@ function WorkspaceBody({ def }: { readonly def: WorkspaceDef }): ReactElement {
     <ul data-testid="workspace-pages">
       {links.map((l) => (
         <li key={l.href}>
-          <Link to={l.href}>{l.label}</Link>
+          <Link to={l.href} style={{ display: "inline-block", minHeight: 24, padding: "4px 0" }}>
+            {l.label}
+          </Link>
         </li>
       ))}
     </ul>

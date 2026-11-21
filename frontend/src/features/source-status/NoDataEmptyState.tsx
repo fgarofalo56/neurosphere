@@ -32,13 +32,19 @@ function formatWhen(iso: string): string {
   return `${d.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
+/** Keeps each link at least 24px tall so adjacent links meet the target-size rule. */
+const LINK_TARGET = { display: "inline-block", minHeight: 24, padding: "4px 0" } as const;
+const LINK_ROW = { display: "inline-flex", flexWrap: "wrap", columnGap: 16, rowGap: 4 } as const;
+
 function PageLink({ href, children }: { readonly href: string; readonly children: ReactNode }) {
   const inRouter = useInRouterContext();
   if (inRouter) {
+    // A plain router link: wrapping it in a Fluent link rendered as a span would add a second,
+    // button-role control around the anchor.
     return (
-      <FluentLink as="span">
-        <Link to={href}>{children}</Link>
-      </FluentLink>
+      <Link to={href} style={LINK_TARGET}>
+        {children}
+      </Link>
     );
   }
   return <FluentLink href={href}>{children}</FluentLink>;
@@ -114,14 +120,14 @@ export function NoDataEmptyState({
   const relevant = available.length > 0 ? available : inScope;
   const detail = relevant.length > 0 ? describe(relevant) : undefined;
   const action = (
-    <>
+    <span style={LINK_ROW}>
       {extraLinks.map((l) => (
         <PageLink key={l.href} href={l.href}>
           {l.label}
         </PageLink>
       ))}
       <AdminActionLink href={adminHref} label={adminLabel ?? STRINGS.connectLink} />
-    </>
+    </span>
   );
   return (
     <EmptyState
