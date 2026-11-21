@@ -210,9 +210,9 @@ Chat entry point; automatic invocation or deployment of the chosen agent; editin
 |---|---|---|---|
 | 1 | merged | worktree-agent-a948ce11391fd9979 | sonnet; 03b65e28, merge 5944ae3b; vitest recommendations+mock-api 87 passed, typecheck+lint clean; 2026-11-21 |
 | 2 | merged | worktree-agent-a6e9aeaedbba3f785 | sonnet; 816023f2, merge e62fe667; vitest tests/mock-api 44 passed; 2026-11-21 |
-| 3 | in-progress | | sonnet; wave 2 (with item 4) |
-| 4 | in-progress | | sonnet; wave 2 (with item 3) |
-| 5 | todo | | wave 3 |
+| 3 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; vitest 203 passed, typecheck+lint clean; 2026-11-21 |
+| 4 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; pytest runtime_routes+docs+marketing 257 passed; shell.test.tsx nav list also updated; 2026-11-21 |
+| 5 | in-progress | | sonnet; wave 3 |
 | 6 | todo | | orchestrator |
 
 Plan deltas approved 2026-11-21: (a) the real match response is PRP-72 `AgentMatchView` `{match, assessments[], confidence_note}`, and confidence and cold_start join from `assessments` by `entity_id`; (b) "persists across reload" is checked through the metrics strip's accept count, because no route reads a stored decision back; (c) ownership extension: `frontend/tests/mock-api/features/registry.test.ts` (item 2), `services/api/tests/runtime_routes/manifest_calls.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, `tests/integration/real_stack/test_manifest_routes.py` (count 57 to 58, item 4), `frontend/tests/e2e/shell.spec.ts`, `frontend/tests/e2e/visual/visual.spec.ts` plus 4 Docker-generated baselines under `__screenshots__` (item 5).
