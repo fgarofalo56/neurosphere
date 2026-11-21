@@ -1,7 +1,9 @@
 ---
 name: PRP-73-graph-access-and-sensitivity-questions
-status: active
+status: shipped
 started: 2026-11-20
+shipped: 2026-11-20
+pr: 361
 priority: P0
 order: 63
 review: required
@@ -269,13 +271,22 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 | 4 | merged | prp-73-item-4-authz-negative | sonnet; e689c382, merge 7765c113; no review (tests only); 96 passed in the two new files (orchestrator re-run), implementer full tests/security/authz 1398 passed; no skips; no defects found; 2026-11-20 |
 | 5 | merged | prp-73-item-5-access-page | sonnet; be0a0827, merge 592fa9d4; review APPROVE; lint, typecheck, prettier clean; post-merge catalog feature + route-manifest + mock tests 79 passed (route-manifest.json line added by orchestrator); 2026-11-20. Not seen in a browser yet (item 6). Deviations: evidence ids as text (no link target), dependents node is a text input. Follow-ups: banner role, results caption per question, picker search, mock ignores most filters, unused ACCESS_REASONS |
 | 6 | merged | prp-73-item-6-registration-e2e | sonnet; 47778fbc, merge 6bfa7652; no review (registration, tests, runbook); orchestrator re-run: catalog-access e2e 13 passed incl. axe light, dark, high-contrast; runtime_routes + authz + path_aliases + tests/docs 492 passed; implementer: vitest 1264 passed, e2e 693 passed; screenshot viewed, page renders styled; 2026-11-20. Two count bumps outside the Tier-2 list (registry.test.ts, test_manifest_routes_serve.py), see clarification 13. Follow-ups: asset column shows the raw id, Select controlled warning |
-| 7 | in-progress | prp-73-graph-access-questions | orchestrator; changelog fragment, status table, execution plan, PR; 2026-11-20 |
+| 7 | merged | prp-73-graph-access-questions | orchestrator; PR 361 squash-merged as 0cd5926d; CI all checks passed on head 0c63bff5; changelog fragment, execution plan, status table done; follow-ups 362, 363, 364; 2026-11-20 |
 
 ## Completion note (filled at ship)
-- Date, PR, merge commit:
+- Date, PR, merge commit: 2026-11-20, PR 361, squash merge 0cd5926d (CI all checks passed on head 0c63bff5).
 - Deviations from the blueprint and why:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issue numbers:
-- Product check (can an operator use it without editing files or calling raw APIs?):
+  - Clarification 7 resolved: `data_source_refs` and its `access` value reach the projection unchanged (ingest `NormalizedEvent.contract` is the full `TelemetryEvent`, written by `archive/serialize.py` with `model_dump`, read back by `runtime/archive_reader.py` with `model_validate` into `LoadedEvent`). Checked by reading the code and through the in-memory source, not a real archive round trip. Nothing was descoped.
+  - Unknown regions are rejected against a known-region list per cloud (clarification 11); the data file also carries a `europe` group beside `eu`. The Azure Government list on Microsoft Learn has three regions, so DoD regions are not accepted.
+  - Body-supplied scope fields are refused with 422, not silently ignored (clarification 12).
+  - Four test files outside the original ownership list received append-only inventory or count edits (clarification 13). One field was added to the worker settings file for the kill switch.
+  - An asset ref that is not in the catalog is quarantined with a new reason `asset_unresolved`, because the existing path would have written an edge to a missing node.
+  - An empty `sensitivity_categories` list is treated as not assessed, because the contract uses `[]` for both "none declared" and "not yet assessed".
+  - Evidence ids render as text, not links (criterion 8): the frontend has no evidence link target. The dependents panel takes a typed canonical id, not a picker.
+  - `region-groups` is not read-audited (static reference data); query and dependents are.
+  - The frontend no-claim check is an assertion in `access.test.tsx`; the repo's no-claim scan covers docs only.
+- Descoped items: none.
+- OPEN gates: visual baselines for `/catalog/access` not captured (Docker-only); Cosmos request-unit cost of the bounded asset scan unmeasured (handed to PRP-64, needs `NS_LIVE_APPROVED=1`); no live Azure run; Government and Commercial region separation not exercised through an HTTP Government caller.
+- Env vars for the operator: `NS_WORKER_CATALOG_DATA_ACCESS_EDGES` (default true; false stops new inferred `reads` and `writes` edges).
+- Follow-up issue numbers: 362 (data_asset refs and projection counters), 363 (API budget limits, bound reporting, audit precision, test gaps), 364 (page evidence links, pickers, result table, visual baselines).
+- Product check (can an operator use it without editing files or calling raw APIs?): Partial. A compliance officer can open Data access from the nav and run "who writes to this data asset", the sensitivity question and the region-group question from pickers, and sees writers with status, confidence and evidence ids; the questions were exercised under Playwright against the mock API only; CI's real-stack browser job loads the route but does not run the questions, and nothing was run against a hosted environment. The SRE question works but needs the failing node's canonical id typed in. Inferred edges only appear for telemetry that names `grounding_source` ids (issue 362).
