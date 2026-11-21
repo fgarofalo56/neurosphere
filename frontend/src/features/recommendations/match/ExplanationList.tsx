@@ -2,6 +2,7 @@ import { makeStyles, tokens } from "@fluentui/react-components";
 import type { ReactElement } from "react";
 import { MATCH_STRINGS, SIGNAL_LABELS } from "./strings";
 import type { AgentMatchSignal } from "./types";
+import { formatRatio } from "./types";
 
 const useStyles = makeStyles({
   table: { borderCollapse: "collapse", width: "100%", fontSize: tokens.fontSizeBase200 },
@@ -17,7 +18,7 @@ const useStyles = makeStyles({
 export function observedText(signal: AgentMatchSignal): string {
   return signal.value == null
     ? MATCH_STRINGS.noTelemetry
-    : `${MATCH_STRINGS.explanation.observedValue} (${String(signal.value)})`;
+    : `${MATCH_STRINGS.explanation.observedValue} (${formatRatio(signal.value)})`;
 }
 
 /** One row per ranking signal; unobserved signals are stated in words, not by color. */
@@ -54,9 +55,9 @@ export function ExplanationList({
               {SIGNAL_LABELS[s.signal]}
             </th>
             <td className={styles.cell}>{observedText(s)}</td>
-            <td className={styles.cell}>{String(s.weight)}</td>
+            <td className={styles.cell}>{formatRatio(s.weight)}</td>
             <td className={styles.cell}>
-              {s.value == null ? L.notCounted : String(s.contribution)}
+              {s.value == null ? L.notCounted : formatRatio(s.contribution)}
             </td>
           </tr>
         ))}

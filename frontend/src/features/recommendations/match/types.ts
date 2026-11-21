@@ -94,3 +94,8 @@ export function joinAssessments(view: AgentMatchView): JoinedCandidate[] {
     assessment: byEntity.get(candidate.entity_id),
   }));
 }
+
+/** Display form of a 0-1 score, weight or contribution: at most two decimals, no padding. */
+export function formatRatio(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}

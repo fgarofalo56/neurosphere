@@ -8,6 +8,7 @@ import { ExplanationList } from "./ExplanationList";
 import { useMatchFeedback } from "./hooks";
 import { MATCH_STRINGS } from "./strings";
 import type { FeedbackDecision, JoinedCandidate } from "./types";
+import { formatRatio } from "./types";
 
 const useStyles = makeStyles({
   card: {
@@ -145,11 +146,11 @@ export function MatchCandidateCard({
       <dl className={styles.facts}>
         <dt className={styles.term}>{S.score}</dt>
         <dd className={styles.def} data-testid="match-score">
-          {String(candidate.score)}
+          {formatRatio(candidate.score)}
         </dd>
         <dt className={styles.term}>{S.confidenceLabel}</dt>
         <dd className={styles.def} data-testid="match-confidence">
-          {assessment === undefined ? S.notAvailable : String(assessment.confidence)}
+          {assessment === undefined ? S.notAvailable : formatRatio(assessment.confidence)}
         </dd>
         <dt className={styles.term}>{S.matchedCapabilities}</dt>
         <dd className={styles.def}>{listText(candidate.matched_capabilities)}</dd>
