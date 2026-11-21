@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-139-hosted-environment-real-tenant-data](active/PRP-139-hosted-environment-real-tenant-data.md) | P0 | 2/8 (25%) | todo 3, in-progress 2, review 1, merged 2 | sonnet / sonnet | required |
+| [PRP-139-hosted-environment-real-tenant-data](active/PRP-139-hosted-environment-real-tenant-data.md) | P0 | 2/8 (25%) | todo 3, in-progress 1, review 2, merged 2 | sonnet / sonnet | required |
 
 ## Backlog
 

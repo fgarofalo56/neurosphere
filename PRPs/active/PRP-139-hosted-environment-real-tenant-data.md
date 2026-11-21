@@ -217,13 +217,22 @@ owns:
   - scripts/gates/hosted_demo.py
   - scripts/gates/_hosted_demo_common.py
   - tests/unit/hosted_demo/**
+  - tests/unit/gates/test_hosted_demo_refuses.py
+  - tests/unit/gates/test_hosted_demo_flow.py
+  - tests/unit/gates/test_hosted_demo_resume.py
+  - tests/unit/gates/test_hosted_demo_teardown.py
+  - tests/unit/gates/test_hosted_demo_live_fixes.py
+  - tests/unit/hosted_data_path/test_demo_data_path.py
+  - tests/unit/delivery_pipeline/test_deploy_hosted_workflow.py
   - docs/deploy/hosted-real-tenant.md
   - docs/evidence/PRP-139/**
 tier1:
   - infra/demo/main.bicep
   - infra/appservice/main.bicep
   - services/workers/neurosphere_workers/runtime/factories.py
+  - .github/workflows/deploy-hosted.yml
 tier2_appends:
+  - services/api/tests/runtime_api/test_readiness.py
   - services/api/neurosphere_api/routers.py
   - services/api/neurosphere_api/runtime/builders/__init__.py
   - services/api/neurosphere_api/runtime/status.py
@@ -258,6 +267,7 @@ must_not_touch:
   - infra/bicep/modules/**
   - .github/workflows/**
 ```
+Plan delta approved by the owner on 2026-11-21 (during execution): making `--data-mode` required breaks every caller that does not pass it, so item 1 also owns the five `tests/unit/gates/test_hosted_demo_*.py` files, `tests/unit/hosted_data_path/test_demo_data_path.py` and `tests/unit/delivery_pipeline/test_deploy_hosted_workflow.py` (argv and assertion updates only), and edits `.github/workflows/deploy-hosted.yml` to pass `--data-mode` and `--customer-id` from two repository variables, failing loudly when the mode variable is unset. Every other workflow file stays must-not-touch. `services/api/tests/runtime_api/test_readiness.py` pins the builder and component lists and gets the one new component name (item 3).
 `infra/demo/main.bicep` and `infra/appservice/main.bicep` are Tier-1 files and this PRP is their single owner in W18b. PRP-138 needs one mapping parameter in `infra/demo/main.bicep`, `infra/demo/main.bicepparam` and `scripts/gates/hosted_demo.py`; it lists those three under `deferred_after_prp_139` and adds its lines in a second small pull request after this PRP has merged (PRP-138 clarification 16 and item 9), so no item here needs a `[serial-after]` tag and none is written. PRP-138 is the Tier-1 owner of `services/api/neurosphere_api/authz/routes.py` in this wave and merges first; this PRP only adds allowlist lines there after rebasing (PRP-138's ownership note says those additions rebase cleanly). PRP-138 also owns `services/api/neurosphere_api/me/**` and `frontend/src/features/admin/shared/AdminStates.tsx`: both are read here as patterns and not edited. `services/workers/neurosphere_workers/runtime/factories.py` is a Tier-1 file with no other owner in W18b; item 3 edits three wrapping lines in the connector builders and nothing else (PRP-137 owns the file in W19 and rebases). `docs/runbooks/connector-config.md` and `docs/deploy/hosted-demo.md` get added lines only (a pointer to the new runbook and the removal of the stale "hosted does not run connector roles" limit is a one-line replacement recorded in the completion note). No file owned by PRP-140 is touched: the empty states live in page files and a new feature folder, and no navigation entry or route is added.
 
 ## Implementation blueprint
@@ -377,9 +387,9 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21; PRP-138 item 9 follows this in a second PR |
+| 1 | in-progress | worktree-agent-aee30b158ea5b881d | sonnet; commit bc59a6a0 (own suites 211 passed); rework round running: --data-mode callers (6 test files + deploy-hosted.yml), delta approved 2026-11-21; PRP-138 item 9 follows this in a second PR |
 | 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward merged 5830df4b (no customer_id refused; delete failure writes counts-only evidence) |
-| 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 3 | review | worktree-agent-a470d8a5dac59dee8 | sonnet; verify 2026-11-21: pyright clean, 559 passed, 2 failed (test_readiness pinned component list, fixed at merge); commit 8609f986 |
 | 4 | todo | | |
 | 5 | review | worktree-agent-a2b7f4c41d263947b | sonnet; verify PASS 2026-11-21 (lint, typecheck clean; 296 passed in touched features; demo-audit e2e 2 passed per implementer), commit d49044a4; full unit run had 14 load timeouts in untouched files; combined review with item 4 |
 | 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; fix-forward merged 5830df4b (truncated scan reports OPEN; 552 passed) |
