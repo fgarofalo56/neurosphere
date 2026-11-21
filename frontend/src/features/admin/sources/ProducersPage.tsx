@@ -12,6 +12,7 @@ import {
   Textarea,
 } from "@fluentui/react-components";
 import { useEffect, useState, type ReactElement } from "react";
+import { Link } from "react-router";
 import {
   DataTable,
   EmptyState,
@@ -31,7 +32,8 @@ import {
   useRotateProducer,
   useSetProducerStatus,
 } from "./hooks";
-import { PRODUCER_STRINGS as S } from "./strings";
+import { PRODUCER_STRINGS as S, SOURCE_STRINGS as SS } from "./strings";
+import { ADMIN_CONNECTORS_ROUTE } from "./apiPaths";
 import { OBSERVATION_KINDS, type ProducerView } from "./types";
 
 const PRODUCER_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -207,7 +209,18 @@ function ProducersBody(): ReactElement {
       ) : null}
       {items.length === 0 ? (
         <div data-testid="empty-state">
-          <EmptyState title={S.empty} />
+          <EmptyState
+            title={S.empty}
+            description={S.emptyHint}
+            action={
+              <Link
+                data-testid="empty-connectors-link"
+                to={`/${ADMIN_CONNECTORS_ROUTE}#first-sources`}
+              >
+                {SS.producersEmptyLink}
+              </Link>
+            }
+          />
         </div>
       ) : (
         <DataTable

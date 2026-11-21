@@ -2,10 +2,10 @@ import { Button, Checkbox, Field, Input, Select, Textarea } from "@fluentui/reac
 import { useState, type ReactElement } from "react";
 import {
   DataTable,
-  EmptyState,
   LoadingState,
   PageTemplate,
   StatusPill,
+  type StatusTone,
 } from "../../../design-system";
 import { ChangeConfirmDialog } from "../../governed-change";
 import { QueryErrorState, changeErrorText } from "../shared/AdminStates";
@@ -28,16 +28,163 @@ import {
   useReadConnector,
   useReadableDomains,
   useReplaceConnector,
+  useSourcesAdminStatus,
   type ConnectorAction,
 } from "./hooks";
-import { CONNECTOR_STRINGS as S } from "./strings";
+import { CONNECTOR_STRINGS as S, SOURCE_STRINGS as SS } from "./strings";
 import {
   CONNECTOR_KINDS,
   type ConnectorConfigBody,
   type ConnectorKind,
+  type ConnectorRunRow,
   type ConnectorView,
+  type RunState,
   type SettingScalar,
+  type SourceName,
+  type SourceState,
+  type SourceStatusRow,
+  type SourcesAdminStatus,
 } from "./types";
+
+const SOURCE_ORDER: readonly SourceName[] = [
+  "foundry",
+  "apim_gateway",
+  "billing",
+  "azure_monitor_telemetry",
+];
+const SOURCE_KIND: Readonly<Record<string, ConnectorKind>> = SS.connectKind;
+const STATE_TONE: Readonly<Record<SourceState, StatusTone>> = {
+  not_connected: "neutral",
+  connected_no_data: "info",
+  connected: "success",
+  failing: "danger",
+};
+const RUN_TONE: Readonly<Record<RunState, StatusTone>> = {
+  ok: "success",
+  partial: "warning",
+  failed: "danger",
+  idle: "info",
+  not_configured: "neutral",
+};
+
+/** Time and the words of one status, never colour alone. */
+function SuccessTime({ at }: { readonly at: string | null }): ReactElement {
+  return at === null ? <span>{SS.noSuccess}</span> : <time dateTime={at}>{at}</time>;
+}
+
+/** The "First sources" panel: the four sources, their state, and a Connect action per kind. */
+function FirstSourcesPanel({
+  status,
+  statusFailed,
+  onConnect,
+}: {
+  readonly status: SourcesAdminStatus | undefined;
+  readonly statusFailed: boolean;
+  readonly onConnect: (kind: ConnectorKind) => void;
+}): ReactElement {
+  const byName = new Map<SourceName, SourceStatusRow>(
+    (status?.sources ?? []).map((r) => [r.source, r]),
+  );
+  return (
+    <section
+      aria-labelledby="first-sources-title"
+      id="first-sources"
+      data-testid="first-sources-panel"
+    >
+      <h2 id="first-sources-title">{SS.panelTitle}</h2>
+      <p>{SS.panelIntro}</p>
+      {statusFailed ? <p data-testid="status-unavailable-note">{SS.statusNote}</p> : null}
+      <DataTable
+        label={SS.panelTitle}
+        rows={SOURCE_ORDER.map((name) => name)}
+        getRowId={(name) => name}
+        getRowProps={(name) => ({ "data-testid": `source-row-${name}` })}
+        columns={[
+          { key: "source", header: SS.headers.source, render: (n) => SS.sources[n] },
+          {
+            key: "state",
+            header: SS.headers.state,
+            render: (n) => {
+              const row = byName.get(n);
+              if (n === "azure_monitor_telemetry") {
+                return (
+                  <>
+                    <StatusPill label={SS.state.not_connected} tone="neutral" />
+                    <div>{SS.access.azure_monitor_telemetry}</div>
+                  </>
+                );
+              }
+              if (row === undefined) return <span>{SS.statusUnavailable}</span>;
+              const reason = SS.reasonText(row.reason ?? null, SOURCE_KIND[n] ?? null);
+              return (
+                <>
+                  <StatusPill label={SS.state[row.state]} tone={STATE_TONE[row.state]} />
+                  {reason === null ? null : <div>{reason}</div>}
+                </>
+              );
+            },
+          },
+          {
+            key: "success",
+            header: SS.headers.lastSuccess,
+            render: (n) => {
+              const row = byName.get(n);
+              return row === undefined ? "-" : <SuccessTime at={row.last_success_at} />;
+            },
+          },
+          {
+            key: "access",
+            header: SS.headers.access,
+            render: (n) => (n === "azure_monitor_telemetry" ? "-" : <span>{SS.access[n]}</span>),
+          },
+          {
+            key: "action",
+            header: SS.headers.action,
+            render: (n) => {
+              const kind = SOURCE_KIND[n];
+              return kind === undefined ? (
+                <span>{SS.notAvailableAction}</span>
+              ) : (
+                <Button
+                  size="small"
+                  appearance="primary"
+                  aria-label={SS.connectLabel(SS.sources[n])}
+                  onClick={() => onConnect(kind)}
+                >
+                  {SS.connect}
+                </Button>
+              );
+            },
+          },
+        ]}
+      />
+    </section>
+  );
+}
+
+/** Run status of one connector kind, in words. */
+function RunStatusCell({
+  run,
+  kind,
+  statusFailed,
+}: {
+  readonly run: ConnectorRunRow | undefined;
+  readonly kind: string;
+  readonly statusFailed: boolean;
+}): ReactElement {
+  if (statusFailed) return <span>{SS.statusColumnUnavailable}</span>;
+  if (run === undefined) return <span>{SS.noRunStatus}</span>;
+  const reason = SS.reasonText(run.reason, kind);
+  return (
+    <div data-testid="run-status">
+      <StatusPill label={SS.runState[run.state]} tone={RUN_TONE[run.state]} />
+      <div>
+        <SuccessTime at={run.last_success_at} />
+      </div>
+      {reason === null ? null : <div data-testid="run-reason">{reason}</div>}
+    </div>
+  );
+}
 
 const SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const SETTING_NAME = /^[a-z][a-z0-9_]{0,63}$/;
@@ -103,6 +250,7 @@ function ConnectorsBody(): ReactElement {
   const replace = useReplaceConnector();
   const act = useConnectorAction();
   const read = useReadConnector();
+  const sourceStatus = useSourcesAdminStatus();
   const invalidate = useInvalidate(CONNECTORS_KEY);
   const [dialog, setDialog] = useState<Dialogs | null>(null);
   const [form, setForm] = useState<Form>(EMPTY_FORM);
@@ -268,11 +416,17 @@ function ConnectorsBody(): ReactElement {
           {S.dialog.readFailed} {changeErrorText(read.error)}
         </div>
       ) : null}
-      {items.length === 0 ? (
-        <div data-testid="empty-state">
-          <EmptyState title={S.empty} />
-        </div>
-      ) : (
+      <FirstSourcesPanel
+        status={sourceStatus.data?.data}
+        statusFailed={sourceStatus.isError}
+        onConnect={(kind) => {
+          closeDialog();
+          setDone(null);
+          setForm({ ...EMPTY_FORM, kind });
+          setDialog({ kind: "create" });
+        }}
+      />
+      {items.length === 0 ? null : (
         <DataTable
           label={S.title}
           rows={items}
@@ -294,6 +448,17 @@ function ConnectorsBody(): ReactElement {
                 <StatusPill
                   label={r.status}
                   tone={r.status === "retired" ? "neutral" : r.enabled ? "success" : "warning"}
+                />
+              ),
+            },
+            {
+              key: "run-status",
+              header: S.headers.runStatus,
+              render: (r) => (
+                <RunStatusCell
+                  run={sourceStatus.data?.data.connectors.find((c) => c.kind === r.connector_kind)}
+                  kind={r.connector_kind}
+                  statusFailed={sourceStatus.isError}
                 />
               ),
             },
