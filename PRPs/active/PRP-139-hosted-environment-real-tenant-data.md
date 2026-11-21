@@ -378,11 +378,11 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21; PRP-138 item 9 follows this in a second PR |
-| 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward: refuse when the registration has no customer_id |
+| 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward merged 5830df4b (no customer_id refused; delete failure writes counts-only evidence) |
 | 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 4 | todo | | |
-| 5 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
-| 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; follow-up: verify must report OPEN when the catalog scan is truncated |
+| 5 | review | worktree-agent-a2b7f4c41d263947b | sonnet; verify PASS 2026-11-21 (lint, typecheck clean; 296 passed in touched features; demo-audit e2e 2 passed per implementer), commit d49044a4; full unit run had 14 load timeouts in untouched files; combined review with item 4 |
+| 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; fix-forward merged 5830df4b (truncated scan reports OPEN; 552 passed) |
 | 7 | todo | | |
 | 8 | todo | | |
 
