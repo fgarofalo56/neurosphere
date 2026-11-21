@@ -1,6 +1,8 @@
 ---
 name: PRP-75-find-an-agent-ui-and-recommendation-metrics
-status: active
+status: shipped
+shipped: 2026-11-21
+pr: 366
 started: 2026-11-21
 priority: P0
 order: 66
@@ -213,15 +215,15 @@ Chat entry point; automatic invocation or deployment of the chosen agent; editin
 | 3 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; vitest 203 passed, typecheck+lint clean; 2026-11-21 |
 | 4 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; pytest runtime_routes+docs+marketing 257 passed; shell.test.tsx nav list also updated; 2026-11-21 |
 | 5 | merged | worktree-agent-ae17bd52611bf486b | sonnet; ac3e3ec8, merge d0476e9f; playwright agent-match+recommendations+shell+full a11y 445 passed; real-stack browser (CI mode) 64 passed after orchestrator fix (domain loop, task text, stand-in NS_SEARCH_PROVIDER=fixture); 4 Docker baselines 8fcd326d; 2026-11-21 |
-| 6 | verifying | prp-75-find-an-agent-ui | runbook+changelog+mkdocs 7a3575cf; review APPROVE (no blockers), rounding follow-up c99c7ca1; PR and CI pending; 2026-11-21 |
+| 6 | merged | prp-75-find-an-agent-ui | runbook+changelog+mkdocs 7a3575cf; review APPROVE (no blockers), rounding follow-up c99c7ca1; PR 366 CI 33 pass, squash-merged 5814e719; 2026-11-21 |
 
 Plan deltas approved 2026-11-21: (a) the real match response is PRP-72 `AgentMatchView` `{match, assessments[], confidence_note}`, and confidence and cold_start join from `assessments` by `entity_id`; (b) "persists across reload" is checked through the metrics strip's accept count, because no route reads a stored decision back; (c) ownership extension: `frontend/tests/mock-api/features/registry.test.ts` (item 2), `services/api/tests/runtime_routes/manifest_calls.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, `tests/integration/real_stack/test_manifest_routes.py` (count 57 to 58, item 4), `frontend/tests/e2e/shell.spec.ts`, `frontend/tests/e2e/visual/visual.spec.ts` plus 4 Docker-generated baselines under `__screenshots__` (item 5).
 
 ## Completion note (filled at ship)
-- Date and PR:
-- Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can a person use it): type a task on the local stack, read the explanation, accept a candidate, reload:
+- Date and PR: 2026-11-21, PR 366, squash-merged as 5814e719 (CI: 33 checks passed).
+- Deviations: (1) the page reads PRP-72's real response `{match, assessments, confidence_note}`; (2) "accept persists across reload" is shown and tested through the metrics strip's accept count, because no route reads a decision back; (3) items 3 and 4 were built by one implementer in one commit; (4) ownership extension approved at plan time (see the plan deltas above) plus `frontend/src/app/shell.test.tsx`; (5) found by running the real-stack browser suite: the stand-in API had no search provider, so `tests/integration/real_stack/serve_stand_in_api.py` now sets `NS_SEARCH_PROVIDER=fixture` like `docker-compose.yml`, and the real-stack test loops over readable domains with a task text that also matches the untagged plain seed; (6) the map link opens the domain map, because the map route takes no per-entity parameter; (7) the same PR carries two changes outside this PRP, both decided by the owner on 2026-11-21: backlog order (PRP-139, PRP-137, PRP-141 run next) and a Grype exception until 2026-12-02 for five new OpenSSL CVEs in the Alpine base images (`.grype.yaml`, marker `openssl-alpine`).
+- Descoped items: none. The completion-note screenshots of the page on the mock and the real stack were not produced as separate files; the Docker visual baselines `*-find-agent.png` are the only images.
+- OPEN gates: hosted deployment and the signed-in hosted smoke (PRP-82); the acceptance-rate outcome (observed, never claimed); accessibility sign-off by a person (project-wide); the headed real-stack run with a real Entra sign-in and the PRP-71 demo seed (`make demo-up`) was not run, only the headless CI-mode run against the emulators (64 passed).
+- Env vars for the operator: none new. The page needs the matcher composed, which needs a search provider (`NS_SEARCH_PROVIDER`; `fixture` locally).
+- Follow-up issues: 367 (mock parity for `match_id` and refusal codes, focus on submit error, results-state visual baseline, headed real-stack run).
+- Product check (can a person use it): type a task on the local stack, read the explanation, accept a candidate, reload: done by automation, not by a person. The real-stack browser test types "Summarize this customer support ticket" against the composed API over the emulators, gets at least one candidate, accepts it, reloads and sees the accept count go up by one. The mock e2e covers the explanation table, cold start, partial, empty, forbidden and keyboard-only paths. The visual baseline shows the page under the Viewer persona, where match outcomes are unavailable by design.
