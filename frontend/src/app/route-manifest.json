@@ -19,6 +19,7 @@
     "/admin/system",
     "/audit",
     "/catalog",
+    "/catalog/access",
     "/catalog/edge",
     "/catalog/entity",
     "/catalog/publication",

@@ -265,7 +265,7 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 | 2 | merged | prp-73-item-2-data-access-edges | sonnet; 5d3c4c0b, merge 15e53c5e; review APPROVE; post-merge 41 passed, pyright 0 errors; 2026-11-20. Follow-ups: unresolved-asset warn threshold, stats not exported as metric, data_asset vs grounding_source ingest mapping, 2 extra handler tests |
 | 3 | merged | prp-73-item-3-access-routes, prp-73-item-3b-region-allowlist | sonnet; 558e23ef + fix-forward 15a57b2d, merge f4f6fb97 (tree identical to verified branch); review APPROVE; 732 passed (core catalog + API catalog, read_audit, path_aliases, runtime_routes, authz, openapi drift, docs reference), pyright 0 errors; 2026-11-20. Follow-ups: Government caller route-level test, max_accessors model limit vs clamp (1000 vs 500), dependents ignores budget.max_assets, audited domain precision with asset_ids, alias test for dependents and region-groups |
 | 4 | in-progress | prp-73-item-4-authz-negative | sonnet; dispatched 2026-11-20 |
-| 5 | in-progress | prp-73-item-5-access-page | sonnet; dispatched 2026-11-20 |
+| 5 | merged | prp-73-item-5-access-page | sonnet; be0a0827, merge 592fa9d4; review APPROVE; lint, typecheck, prettier clean; post-merge catalog feature + route-manifest + mock tests 79 passed (route-manifest.json line added by orchestrator); 2026-11-20. Not seen in a browser yet (item 6). Deviations: evidence ids as text (no link target), dependents node is a text input. Follow-ups: banner role, results caption per question, picker search, mock ignores most filters, unused ACCESS_REASONS |
 | 6 | todo | | |
 | 7 | todo | | |
 
