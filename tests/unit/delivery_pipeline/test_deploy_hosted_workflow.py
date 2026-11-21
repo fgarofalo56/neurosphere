@@ -147,6 +147,33 @@ def test_role_mapping_is_opt_in_and_built_from_existing_ids(jobs: dict[str, Any]
         assert values == {"${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}"}, name
 
 
+def test_data_mode_is_passed_from_a_variable_and_never_defaulted(jobs: dict[str, Any]) -> None:
+    """PRP-139 item 1: --data-mode comes from NS_HOSTED_DATA_MODE; unset fails loudly."""
+    expected = {
+        "DATA_MODE": "NS_HOSTED_DATA_MODE",
+        "CUSTOMER_ID": "NS_HOSTED_CUSTOMER_ID",
+        "LOG_ANALYTICS_WORKSPACE_IDS": "NS_HOSTED_LOG_ANALYTICS_WORKSPACE_IDS",
+        "APIM_SERVICE_IDS": "NS_HOSTED_APIM_SERVICE_IDS",
+    }
+    flags = {
+        "DATA_MODE": "--data-mode",
+        "CUSTOMER_ID": "--customer-id",
+        "LOG_ANALYTICS_WORKSPACE_IDS": "--log-analytics-workspace-ids",
+        "APIM_SERVICE_IDS": "--apim-service-ids",
+    }
+    for name in ("plan", "apply"):
+        step = next(s for s in jobs[name]["steps"] if s.get("name") == "Write infra arguments")
+        run = str(step["run"])
+        for env_name, var in expected.items():
+            assert step["env"][env_name] == "${{ vars." + var + " }}", (name, env_name)
+            assert f'add {flags[env_name]} "${env_name}"' in run, (name, env_name)
+        assert "${{" not in run, name  # no expression inside the script (injection)
+        assert 'if [ -z "$DATA_MODE" ]; then' in run, name
+        assert "::error::Repository variable NS_HOSTED_DATA_MODE is not set" in run, name
+        assert "exit 1" in run, name
+        assert "|| true" not in run, name
+
+
 def test_live_approval_only_on_hosted_demo_steps(jobs: dict[str, Any]) -> None:
     for name, job in jobs.items():
         assert "NS_LIVE_APPROVED" not in job.get("env", {}), name
