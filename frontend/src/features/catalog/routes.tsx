@@ -5,7 +5,9 @@ import { CatalogEntityPage } from "./CatalogEntityPage";
 import { CatalogExplorerPage } from "./CatalogExplorerPage";
 import { RecertificationsPage } from "./RecertificationsPage";
 import { StaleAgentsPage } from "./StaleAgentsPage";
+import { AccessPage } from "./access/AccessPage";
 import {
+  CATALOG_ACCESS_ROUTE,
   CATALOG_ENTITY_ROUTE,
   CATALOG_EXPLORER_ROUTE,
   CATALOG_PUBLICATION_ROUTE,
@@ -19,6 +21,7 @@ export const catalogExplorerRoutes: RouteObject[] = [
   { path: CATALOG_ENTITY_ROUTE, element: <CatalogEntityPage /> },
   { path: CATALOG_RECERTIFICATIONS_ROUTE, element: <RecertificationsPage /> },
   { path: CATALOG_STALE_AGENTS_ROUTE, element: <StaleAgentsPage /> },
+  { path: CATALOG_ACCESS_ROUTE, element: <AccessPage /> },
 ];
 
 export const catalogRoutes: RouteObject[] = [
