@@ -90,6 +90,9 @@ def apply_environment() -> None:
         "NS_SEED_POLL_SECONDS": "3",
         "NS_SEED_WAIT_SECONDS": "420",
         "NS_SEED_DRAIN_SECONDS": "45",
+        # Same in-process catalog search as the compose stack (docker-compose.yml); without it the
+        # agent matcher (PRP-72) is not composed and the find-an-agent page (PRP-75) answers 409.
+        "NS_SEARCH_PROVIDER": "fixture",
     }
     for name, value in values.items():
         os.environ.setdefault(name, value)

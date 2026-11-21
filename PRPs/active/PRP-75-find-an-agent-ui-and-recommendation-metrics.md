@@ -1,6 +1,7 @@
 ---
 name: PRP-75-find-an-agent-ui-and-recommendation-metrics
-status: backlog
+status: active
+started: 2026-11-21
 priority: P0
 order: 66
 review: required
@@ -207,12 +208,14 @@ Chat entry point; automatic invocation or deployment of the chosen agent; editin
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | merged | worktree-agent-a948ce11391fd9979 | sonnet; 03b65e28, merge 5944ae3b; vitest recommendations+mock-api 87 passed, typecheck+lint clean; 2026-11-21 |
+| 2 | merged | worktree-agent-a6e9aeaedbba3f785 | sonnet; 816023f2, merge e62fe667; vitest tests/mock-api 44 passed; 2026-11-21 |
+| 3 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; vitest 203 passed, typecheck+lint clean; 2026-11-21 |
+| 4 | merged | worktree-agent-acc66c8d695642f74 | sonnet; fbf8a506, merge cabf7263; pytest runtime_routes+docs+marketing 257 passed; shell.test.tsx nav list also updated; 2026-11-21 |
+| 5 | merged | worktree-agent-ae17bd52611bf486b | sonnet; ac3e3ec8, merge d0476e9f; playwright agent-match+recommendations+shell+full a11y 445 passed; real-stack browser (CI mode) 64 passed after orchestrator fix (domain loop, task text, stand-in NS_SEARCH_PROVIDER=fixture); 4 Docker baselines 8fcd326d; 2026-11-21 |
+| 6 | verifying | prp-75-find-an-agent-ui | runbook+changelog+mkdocs 7a3575cf; review APPROVE (no blockers), rounding follow-up c99c7ca1; PR and CI pending; 2026-11-21 |
+
+Plan deltas approved 2026-11-21: (a) the real match response is PRP-72 `AgentMatchView` `{match, assessments[], confidence_note}`, and confidence and cold_start join from `assessments` by `entity_id`; (b) "persists across reload" is checked through the metrics strip's accept count, because no route reads a stored decision back; (c) ownership extension: `frontend/tests/mock-api/features/registry.test.ts` (item 2), `services/api/tests/runtime_routes/manifest_calls.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, `tests/integration/real_stack/test_manifest_routes.py` (count 57 to 58, item 4), `frontend/tests/e2e/shell.spec.ts`, `frontend/tests/e2e/visual/visual.spec.ts` plus 4 Docker-generated baselines under `__screenshots__` (item 5).
 
 ## Completion note (filled at ship)
 - Date and PR:

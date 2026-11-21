@@ -1,5 +1,6 @@
 import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
+import { handle as agentMatch } from "./agent-match.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
 import { handle as catalogAccess } from "./catalog-access.ts";
@@ -21,6 +22,8 @@ export type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
  * Lanes edit their own module, never this list.
  */
 export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
+  // First: owns `/recommendations/domains/{d}/match*` and `/catalog/completeness` (404 until PRP-76).
+  agentMatch,
   curation,
   // Before catalog: serves the grounding_source entity list the catalog mock does not seed.
   catalogAccess,
