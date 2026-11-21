@@ -72,7 +72,9 @@ _QUERY_DESCRIPTION: Final = (
     "edges (who did), not entitlements (who could). An empty sensitivity_categories list or a "
     "null value on an asset means not assessed, never no; such assets are listed under "
     "unassessed_assets only when include_unassessed is true. When region_group and "
-    "residency_regions are both given, their regions are unioned. The eu group is a NeuroSphere "
+    "residency_regions are both given, their regions are unioned. residency_regions values "
+    "are validated against the known-region list for the caller's cloud; an unknown region "
+    "answers 422 with reason unknown_region. The eu group is a NeuroSphere "
     "classification of Azure region locations and implies nothing about compliance. A truncated "
     "result is partial: truncated_reason says which bound stopped the scan and assets_scanned "
     "how many assets were examined. Scope comes only from the caller's identity; domain_ids "
@@ -120,7 +122,7 @@ def build_router() -> APIRouter:
     async def access_query(
         body: AccessQueryRequest, audit: QueryAudit, engine: Engine
     ) -> AccessQueryResponse:
-        validate_regions(body.filters.residency_regions)
+        validate_regions(body.filters.residency_regions, str(audit.scope.cloud))
         query = AccessQuery(
             asset_ids=body.asset_ids,
             classifications=body.filters.classifications,

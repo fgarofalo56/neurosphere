@@ -157,6 +157,8 @@ def _reason(response: Any) -> str | None:
     [
         ({"filters": {"region_group": "mars"}}, "unknown_region_group"),
         ({"filters": {"residency_regions": ["not a region!"]}}, "unknown_region"),
+        ({"filters": {"residency_regions": ["atlantis"]}}, "unknown_region"),
+        ({"filters": {"residency_regions": ["usgovvirginia"]}}, "unknown_region"),
         ({"asset_ids": [f"x:{i}" for i in range(51)]}, "too_many_assets"),
     ],
 )

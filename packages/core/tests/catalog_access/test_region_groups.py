@@ -60,8 +60,48 @@ def test_group_names_are_case_insensitive() -> None:
 
 
 def test_normalise_regions() -> None:
-    assert normalise_regions(["WestEurope", " eastus "]) == frozenset({"westeurope", "eastus"})
-    for bad in ("", "has space", "semi;colon"):
+    got = normalise_regions(["WestEurope", " eastus "], "commercial")
+    assert got == frozenset({"westeurope", "eastus"})
+    for bad in ("", "has space", "semi;colon", "atlantis", "mars-central"):
         with pytest.raises(AccessQueryError) as caught:
-            normalise_regions([bad])
+            normalise_regions([bad], "commercial")
         assert caught.value.reason == "unknown_region"
+        assert caught.value.http_status == 422
+
+
+def test_every_group_member_is_a_known_region_of_its_cloud() -> None:
+    groups = load_region_groups()
+    for cloud, by_group in groups.clouds.items():
+        for name, members in by_group.items():
+            assert members <= groups.known_regions[cloud], (cloud, name)
+
+
+def test_known_regions_are_per_cloud_with_provenance() -> None:
+    groups = load_region_groups()
+    assert len(groups.known_regions["commercial"]) == 60
+    assert groups.known_regions["government"] == frozenset(
+        {"usgovarizona", "usgovtexas", "usgovvirginia"}
+    )
+    assert not groups.known_regions["commercial"] & groups.known_regions["government"]
+    assert set(groups.known_regions_source_urls) == {"commercial", "government"}
+    assert all(
+        u.startswith("https://learn.microsoft.com/")
+        for u in groups.known_regions_source_urls.values()
+    )
+    assert groups.known_regions_retrieved == "2026-11-20"
+
+
+def test_cross_cloud_region_is_unknown() -> None:
+    with pytest.raises(AccessQueryError) as caught:
+        normalise_regions(["usgovvirginia"], "commercial")
+    assert caught.value.reason == "unknown_region"
+    with pytest.raises(AccessQueryError):
+        normalise_regions(["eastus"], "government")
+    assert normalise_regions(["USGovVirginia"], "government") == frozenset({"usgovvirginia"})
+
+
+def test_error_text_echoes_only_the_sent_token() -> None:
+    with pytest.raises(AccessQueryError) as caught:
+        normalise_regions(["atlantis"], "commercial")
+    assert str(caught.value).count("atlantis") >= 1
+    assert "westeurope" not in str(caught.value)

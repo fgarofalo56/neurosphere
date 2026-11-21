@@ -73,9 +73,16 @@ def test_to_access_budget_reuses_the_shared_clamp() -> None:
     assert (lowered.timeout_ms, lowered.max_accessors, lowered.max_assets) == (100, 5, 9)
 
 
-def test_region_validation_is_one_function_that_rejects_malformed_tokens() -> None:
-    validate_regions(None)
-    validate_regions(["westeurope", "NorthEurope"])
-    with pytest.raises(AccessQueryError) as raised:
-        validate_regions(["bad region!"])
-    assert raised.value.reason == "unknown_region"
+def test_region_validation_is_one_function_that_rejects_unknown_regions() -> None:
+    validate_regions(None, "commercial")
+    validate_regions(["westeurope", "NorthEurope"], "commercial")
+    validate_regions(["usgovvirginia"], "government")
+    for regions, cloud in (
+        (["bad region!"], "commercial"),
+        (["atlantis"], "commercial"),
+        (["usgovvirginia"], "commercial"),
+        (["eastus"], "government"),
+    ):
+        with pytest.raises(AccessQueryError) as raised:
+            validate_regions(regions, cloud)
+        assert raised.value.reason == "unknown_region"

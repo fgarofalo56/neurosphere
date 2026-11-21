@@ -1,6 +1,508 @@
 {
   "components": {
     "schemas": {
+      "AccessAssetView": {
+        "additionalProperties": false,
+        "description": "An in-scope asset and the values the question looked at; null means not assessed.",
+        "properties": {
+          "classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "contains_personal_data": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains Personal Data"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "residency_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residency Region"
+          },
+          "sensitivity_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sensitivity Categories"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "domain_id",
+          "classification",
+          "residency_region",
+          "contains_personal_data",
+          "sensitivity_categories"
+        ],
+        "title": "AccessAssetView",
+        "type": "object"
+      },
+      "AccessBoundView": {
+        "additionalProperties": false,
+        "description": "The bounds this answer ran under (after any lowering by the request).",
+        "properties": {
+          "max_accessors": {
+            "title": "Max Accessors",
+            "type": "integer"
+          },
+          "max_assets": {
+            "title": "Max Assets",
+            "type": "integer"
+          },
+          "max_depth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Depth"
+          },
+          "timeout_ms": {
+            "title": "Timeout Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_assets",
+          "max_accessors",
+          "timeout_ms"
+        ],
+        "title": "AccessBoundView",
+        "type": "object"
+      },
+      "AccessBudgetIn": {
+        "additionalProperties": false,
+        "description": "Optional budget. Every value can only LOWER the fixed server ceiling, never raise it.",
+        "properties": {
+          "max_accessors": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Accessors"
+          },
+          "max_assets": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Assets"
+          },
+          "timeout_ms": {
+            "anyOf": [
+              {
+                "maximum": 30000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Ms"
+          }
+        },
+        "title": "AccessBudgetIn",
+        "type": "object"
+      },
+      "AccessDependentsRequest": {
+        "additionalProperties": false,
+        "description": "Entities that depend on a failing node, to ``max_depth`` (1 to 5; others answer 422).",
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccessBudgetIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_depth": {
+            "default": 3,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "node_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
+        "title": "AccessDependentsRequest",
+        "type": "object"
+      },
+      "AccessDependentsResponse": {
+        "additionalProperties": false,
+        "description": "Dependents grouped by depth, shallowest first. A truncated answer is partial.",
+        "properties": {
+          "assets_scanned": {
+            "title": "Assets Scanned",
+            "type": "integer"
+          },
+          "bound": {
+            "$ref": "#/components/schemas/AccessBoundView"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AccessDepthGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncated_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "max_assets",
+                  "max_accessors",
+                  "max_depth",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncated Reason"
+          }
+        },
+        "required": [
+          "groups",
+          "total",
+          "truncated",
+          "truncated_reason",
+          "assets_scanned",
+          "bound"
+        ],
+        "title": "AccessDependentsResponse",
+        "type": "object"
+      },
+      "AccessDepthGroup": {
+        "additionalProperties": false,
+        "description": "Dependents at one distance from the failing node.",
+        "properties": {
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AccessRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "depth",
+          "rows"
+        ],
+        "title": "AccessDepthGroup",
+        "type": "object"
+      },
+      "AccessFiltersIn": {
+        "additionalProperties": false,
+        "description": "Asset predicates, combined with AND. ``domain_ids`` narrows inside the caller's scope.",
+        "properties": {
+          "classifications": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classifications"
+          },
+          "contains_personal_data": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains Personal Data"
+          },
+          "domain_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Ids"
+          },
+          "region_group": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Group"
+          },
+          "residency_regions": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residency Regions"
+          },
+          "sensitivity_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sensitivity Categories"
+          }
+        },
+        "title": "AccessFiltersIn",
+        "type": "object"
+      },
+      "AccessQueryRequest": {
+        "additionalProperties": false,
+        "description": "Who read or wrote the selected in-scope data assets (observed edges).",
+        "properties": {
+          "asset_ids": {
+            "items": {
+              "maxLength": 512,
+              "type": "string"
+            },
+            "maxItems": 500,
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccessBudgetIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filters": {
+            "$ref": "#/components/schemas/AccessFiltersIn"
+          },
+          "include_unassessed": {
+            "default": false,
+            "title": "Include Unassessed",
+            "type": "boolean"
+          },
+          "modes": {
+            "items": {
+              "enum": [
+                "read",
+                "write"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Modes",
+            "type": "array"
+          }
+        },
+        "title": "AccessQueryRequest",
+        "type": "object"
+      },
+      "AccessQueryResponse": {
+        "additionalProperties": false,
+        "description": "A bounded answer. ``truncated`` true means partial: a bound stopped the scan.",
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AccessAssetView"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "assets_scanned": {
+            "title": "Assets Scanned",
+            "type": "integer"
+          },
+          "bound": {
+            "$ref": "#/components/schemas/AccessBoundView"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AccessRowView"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "truncated_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "max_assets",
+                  "max_accessors",
+                  "max_depth",
+                  "timeout_ms"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncated Reason"
+          },
+          "unassessed_assets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AccessAssetView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unassessed Assets"
+          },
+          "unassessed_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unassessed Count"
+          }
+        },
+        "required": [
+          "rows",
+          "assets",
+          "unassessed_assets",
+          "unassessed_count",
+          "truncated",
+          "truncated_reason",
+          "assets_scanned",
+          "bound"
+        ],
+        "title": "AccessQueryResponse",
+        "type": "object"
+      },
       "AccessRoleView": {
         "additionalProperties": false,
         "description": "One role assignment of the caller's own derived scope. Counts and flags only: never a\ndomain id, a claim value or a group object id.",
@@ -58,6 +560,133 @@
           "expires_at"
         ],
         "title": "AccessRoleView",
+        "type": "object"
+      },
+      "AccessRowView": {
+        "additionalProperties": false,
+        "description": "One accessor (query) or one dependent (dependents), with its edge evidence.\n\n``mode`` is null for dependents. ``relation_path`` and ``path_node_ids`` run from the\ndependent toward the node (``path_node_ids`` ends at ``asset_id``).",
+        "properties": {
+          "accessor_domain_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessor Domain Id"
+          },
+          "accessor_id": {
+            "title": "Accessor Id",
+            "type": "string"
+          },
+          "accessor_name": {
+            "title": "Accessor Name",
+            "type": "string"
+          },
+          "accessor_type": {
+            "title": "Accessor Type",
+            "type": "string"
+          },
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "edge_id": {
+            "title": "Edge Id",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "last_observed": {
+            "title": "Last Observed",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "write"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "path_node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Path Node Ids",
+            "type": "array"
+          },
+          "provenance_method": {
+            "title": "Provenance Method",
+            "type": "string"
+          },
+          "provenance_source_id": {
+            "title": "Provenance Source Id",
+            "type": "string"
+          },
+          "relation": {
+            "title": "Relation",
+            "type": "string"
+          },
+          "relation_path": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Relation Path",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "asserted",
+              "inferred",
+              "curated"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "accessor_id",
+          "accessor_type",
+          "accessor_name",
+          "accessor_domain_id",
+          "mode",
+          "relation",
+          "edge_id",
+          "status",
+          "confidence",
+          "provenance_method",
+          "provenance_source_id",
+          "evidence_ids",
+          "last_observed",
+          "depth",
+          "relation_path",
+          "path_node_ids"
+        ],
+        "title": "AccessRowView",
         "type": "object"
       },
       "AccessSummaryAssignment": {
@@ -14423,6 +15052,47 @@
         "title": "Region",
         "type": "string"
       },
+      "RegionGroupView": {
+        "additionalProperties": false,
+        "description": "A named region group and its member region names.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "regions"
+        ],
+        "title": "RegionGroupView",
+        "type": "object"
+      },
+      "RegionGroupsResponse": {
+        "additionalProperties": false,
+        "description": "Groups available for the caller's cloud (empty member lists for Government).",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/RegionGroupView"
+            },
+            "title": "Groups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "groups"
+        ],
+        "title": "RegionGroupsResponse",
+        "type": "object"
+      },
       "RegisterGatewayBody": {
         "additionalProperties": false,
         "description": "Register by ARM resource id. ``customer_id``/``domain_id``/identity are never in the body.",
@@ -24492,6 +25162,112 @@
         ]
       }
     },
+    "/api/v1/catalog/access/dependents": {
+      "post": {
+        "description": "Entities that depend on a failing service or tool (blast radius), grouped by distance (max_depth 1 to 5; any other value answers 422 with a reason code), each with the relation path. Results are observed or curated edges, not entitlements. A truncated result is partial: truncated_reason says which bound stopped the walk. Only in-scope entities appear. Each call appends one allowed-read audit record holding the domains read and the result count only.",
+        "operationId": "dependents_api_v1_catalog_access_dependents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessDependentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDependentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entities affected when a node fails",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/access/query": {
+      "post": {
+        "description": "Which in-scope agents and tools read or wrote the selected data assets. Results are observed edges (who did), not entitlements (who could). An empty sensitivity_categories list or a null value on an asset means not assessed, never no; such assets are listed under unassessed_assets only when include_unassessed is true. When region_group and residency_regions are both given, their regions are unioned. residency_regions values are validated against the known-region list for the caller's cloud; an unknown region answers 422 with reason unknown_region. The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance. A truncated result is partial: truncated_reason says which bound stopped the scan and assets_scanned how many assets were examined. Scope comes only from the caller's identity; domain_ids narrows within it. Each call appends one allowed-read audit record holding the domains read and the result count only.",
+        "operationId": "access_query_api_v1_catalog_access_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Who reads or writes these data assets",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/api/v1/catalog/access/region-groups": {
+      "get": {
+        "description": "Region group names and their member regions for the caller's cloud (the Government cloud has none). The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance.",
+        "operationId": "region_groups_api_v1_catalog_access_region_groups_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionGroupsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Region groups available to the access query",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/curation/edges/{edge_id}": {
       "get": {
         "operationId": "presented_api_v1_catalog_curation_edges__edge_id__get",
@@ -31447,6 +32223,115 @@
         "summary": "Verify Audit Chain",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/catalog/access/dependents": {
+      "post": {
+        "deprecated": true,
+        "description": "Entities that depend on a failing service or tool (blast radius), grouped by distance (max_depth 1 to 5; any other value answers 422 with a reason code), each with the relation path. Results are observed or curated edges, not entitlements. A truncated result is partial: truncated_reason says which bound stopped the walk. Only in-scope entities appear. Each call appends one allowed-read audit record holding the domains read and the result count only.",
+        "operationId": "dependents_catalog_access_dependents_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessDependentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDependentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entities affected when a node fails",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/access/query": {
+      "post": {
+        "deprecated": true,
+        "description": "Which in-scope agents and tools read or wrote the selected data assets. Results are observed edges (who did), not entitlements (who could). An empty sensitivity_categories list or a null value on an asset means not assessed, never no; such assets are listed under unassessed_assets only when include_unassessed is true. When region_group and residency_regions are both given, their regions are unioned. residency_regions values are validated against the known-region list for the caller's cloud; an unknown region answers 422 with reason unknown_region. The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance. A truncated result is partial: truncated_reason says which bound stopped the scan and assets_scanned how many assets were examined. Scope comes only from the caller's identity; domain_ids narrows within it. Each call appends one allowed-read audit record holding the domains read and the result count only.",
+        "operationId": "access_query_catalog_access_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessQueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Who reads or writes these data assets",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/access/region-groups": {
+      "get": {
+        "deprecated": true,
+        "description": "Region group names and their member regions for the caller's cloud (the Government cloud has none). The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance.",
+        "operationId": "region_groups_catalog_access_region_groups_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionGroupsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Region groups available to the access query",
+        "tags": [
+          "catalog"
         ]
       }
     },

@@ -60,7 +60,7 @@ MODULE_MOVES: Final = (
 #: 1 scan, 1 plan, plus the 2 PRP-43 review-queue routes; 34 over 32 distinct paths
 #: (``/entities`` and ``/entities/{id}`` carry two
 #: methods each).
-EXPECTED_OPERATION_COUNT: Final = 34
+EXPECTED_OPERATION_COUNT: Final = 37
 
 #: Sample values for path parameters, so both forms hit the same concrete resource.
 _PARAMS: Final = {

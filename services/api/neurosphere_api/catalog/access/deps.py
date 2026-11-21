@@ -26,15 +26,14 @@ def get_access_engine(
     return AccessEngine(repository, graph)
 
 
-def validate_regions(regions: list[str] | None) -> None:
-    """The ONE place the API checks explicit residency regions.
+def validate_regions(regions: list[str] | None, cloud: str) -> None:
+    """The ONE place the API checks explicit residency regions: a thin call into the core.
 
-    Today this defers to the core, which rejects only malformed region tokens
-    (``AccessQueryError`` with reason ``unknown_region``). A stricter rule (for example a known
-    region list) is a pending decision: change this function only, no route changes.
+    The core decides whether each region is a known region of ``cloud`` (``AccessQueryError``,
+    reason ``unknown_region``). Applies to the request filter only.
     """
     if regions:
-        normalise_regions(list(regions))
+        normalise_regions(list(regions), cloud)
 
 
 def to_access_budget(budget: AccessBudgetIn | None) -> AccessBudget | None:

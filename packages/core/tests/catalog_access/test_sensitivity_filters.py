@@ -110,6 +110,44 @@ async def test_unknown_group_and_region_are_typed_errors() -> None:
     with pytest.raises(AccessQueryError) as region:
         await engine.who_accesses(SCOPE_AB, AccessQuery(residency_regions=["not a region!"]))
     assert region.value.reason == "unknown_region"
+    with pytest.raises(AccessQueryError) as unlisted:
+        await engine.who_accesses(SCOPE_AB, AccessQuery(residency_regions=["atlantis"]))
+    assert unlisted.value.reason == "unknown_region"
+
+
+async def test_cross_cloud_region_is_unknown_for_the_callers_cloud() -> None:
+    world = await build_world()
+    engine = make_engine(world.repo)
+    with pytest.raises(AccessQueryError) as commercial:
+        await engine.who_accesses(SCOPE_AB, AccessQuery(residency_regions=["usgovvirginia"]))
+    assert commercial.value.reason == "unknown_region"
+    gov = make_scope(NS, [f"commercial:{NS}:neurosphere:domain:a"], cloud="government")
+    with pytest.raises(AccessQueryError) as government:
+        await engine.who_accesses(gov, AccessQuery(residency_regions=["eastus"]))
+    assert government.value.reason == "unknown_region"
+
+
+async def test_stored_asset_with_unlisted_region_never_matches_and_never_raises() -> None:
+    world = await build_world()
+    engine = make_engine(world.repo)
+    await world.repo.create_entity(
+        SCOPE_AB,
+        asset(
+            "offlist",
+            "a",
+            contains_personal_data=True,
+            sensitivity_categories=["pii"],
+            residency_region="atlantis-1",
+            classification="restricted",
+        ),
+    )
+    # a stored region off the list is only compared, never validated
+    listed = await engine.who_accesses(SCOPE_AB, AccessQuery(residency_regions=["japanwest"]))
+    assert listed.assets == []
+    unfiltered = await engine.who_accesses(SCOPE_AB, AccessQuery())
+    assert asset_id("offlist") in _ids(unfiltered.assets)
+    eu = await engine.who_accesses(SCOPE_AB, AccessQuery(region_group="eu"))
+    assert asset_id("offlist") not in _ids(eu.assets)
 
 
 async def test_government_eu_group_is_empty() -> None:
