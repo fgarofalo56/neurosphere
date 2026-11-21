@@ -377,12 +377,12 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | PRP-138 item 9 follows this in a second PR |
-| 2 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 1 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21; PRP-138 item 9 follows this in a second PR |
+| 2 | review | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS 2026-11-21 (ruff, format, pyright clean; 494 passed), commit e5a1d8ad; review queued behind lane cap |
 | 3 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 4 | todo | | |
 | 5 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
-| 6 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
+| 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; follow-up: verify must report OPEN when the catalog scan is truncated |
 | 7 | todo | | |
 | 8 | todo | | |
 
