@@ -1,6 +1,7 @@
 ---
 name: PRP-75-find-an-agent-ui-and-recommendation-metrics
-status: backlog
+status: active
+started: 2026-11-21
 priority: P0
 order: 66
 review: required
@@ -207,12 +208,14 @@ Chat entry point; automatic invocation or deployment of the chosen agent; editin
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
-| 4 | todo | | |
-| 5 | todo | | |
-| 6 | todo | | |
+| 1 | in-progress | prp-75-item-1 | sonnet; wave 1 |
+| 2 | in-progress | prp-75-item-2 | sonnet; wave 1 |
+| 3 | todo | | wave 2 (with item 4) |
+| 4 | todo | | wave 2 (with item 3) |
+| 5 | todo | | wave 3 |
+| 6 | todo | | orchestrator |
+
+Plan deltas approved 2026-11-21: (a) the real match response is PRP-72 `AgentMatchView` `{match, assessments[], confidence_note}`, and confidence and cold_start join from `assessments` by `entity_id`; (b) "persists across reload" is checked through the metrics strip's accept count, because no route reads a stored decision back; (c) ownership extension: `frontend/tests/mock-api/features/registry.test.ts` (item 2), `services/api/tests/runtime_routes/manifest_calls.py`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, `tests/integration/real_stack/test_manifest_routes.py` (count 57 to 58, item 4), `frontend/tests/e2e/shell.spec.ts`, `frontend/tests/e2e/visual/visual.spec.ts` plus 4 Docker-generated baselines under `__screenshots__` (item 5).
 
 ## Completion note (filled at ship)
 - Date and PR:
