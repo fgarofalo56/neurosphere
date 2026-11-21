@@ -263,9 +263,9 @@ The "who could" (entitlement) question and `catalog/access/could/**` (reserved f
 |---|---|---|---|
 | 1 | merged | prp-73-item-1-access-engine | sonnet; 9d121429, merge b1efd7e5; review APPROVE; post-merge 225 passed (core catalog + workers projections), pyright 0 errors; 2026-11-20. Follow-ups: dependents truncation reason codes, ScanBound.max_assets null for dependents, unknown_region only rejects malformed tokens (AC3 partial), union of group+regions documented, mid-path scope test |
 | 2 | merged | prp-73-item-2-data-access-edges | sonnet; 5d3c4c0b, merge 15e53c5e; review APPROVE; post-merge 41 passed, pyright 0 errors; 2026-11-20. Follow-ups: unresolved-asset warn threshold, stats not exported as metric, data_asset vs grounding_source ingest mapping, 2 extra handler tests |
-| 3 | in-progress | prp-73-item-3-access-routes | sonnet; 558e23ef; own 51 tests pass, 3 inventory tests red (non-owned files) plus region allowlist decision; fix-forward 3b dispatched on prp-73-item-3b-region-allowlist 2026-11-20 |
-| 4 | todo | | |
-| 5 | todo | | |
+| 3 | merged | prp-73-item-3-access-routes, prp-73-item-3b-region-allowlist | sonnet; 558e23ef + fix-forward 15a57b2d, merge f4f6fb97 (tree identical to verified branch); review APPROVE; 732 passed (core catalog + API catalog, read_audit, path_aliases, runtime_routes, authz, openapi drift, docs reference), pyright 0 errors; 2026-11-20. Follow-ups: Government caller route-level test, max_accessors model limit vs clamp (1000 vs 500), dependents ignores budget.max_assets, audited domain precision with asset_ids, alias test for dependents and region-groups |
+| 4 | in-progress | prp-73-item-4-authz-negative | sonnet; dispatched 2026-11-20 |
+| 5 | in-progress | prp-73-item-5-access-page | sonnet; dispatched 2026-11-20 |
 | 6 | todo | | |
 | 7 | todo | | |
 
