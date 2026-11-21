@@ -433,6 +433,10 @@ for (const entry of ENTRIES) {
 
 // PRP-75 item 5: Find an agent against the composed stack. A tagged seed (the PRP-71 demo seed)
 // must yield at least one candidate; none is a FAILURE, never a silent skip.
+// The original PRD story (5c). The plain stack seed has no tags, so it matches on agent names
+// ("Customer Support <role> nnnn"); the PRP-71 demo seed matches on tags and capabilities too.
+const MATCH_TASK = "Summarize this customer support ticket";
+
 test("route /recommendations/find ranks a task, records an accept and counts it after reload", async ({
   visit,
 }) => {
@@ -448,26 +452,33 @@ test("route /recommendations/find ranks a task, records an accept and counts it 
     return Number(/(\d+)\s*$/.exec(text)?.[1] ?? Number.NaN);
   };
 
-  await page.goto(withDomain("/recommendations/find", domains[0] ?? ""));
-  await expect(page.getByTestId("match-task-input")).toBeVisible();
-  await expect(page.getByTestId("match-acceptance-rate")).toBeVisible();
-  const before = await acceptsOf();
-  expect(Number.isFinite(before)).toBe(true);
-
-  await page
-    .getByTestId("match-task-input")
-    .fill("Summarize invoices and answer finance questions");
-  await page.getByTestId("match-submit").click();
-  await page
-    .locator(
-      "[data-testid='match-candidate'], [data-testid='match-empty'], [data-testid='error-state']",
-    )
-    .first()
-    .waitFor();
+  // The first readable domain can be the customer control domain, which holds no agents: try each
+  // readable domain until one returns a candidate.
   const candidates = page.getByTestId("match-candidate");
-  if ((await candidates.count()) === 0) {
+  let before = Number.NaN;
+  let found = false;
+  for (const domain of domains) {
+    await page.goto(withDomain("/recommendations/find", domain));
+    await expect(page.getByTestId("match-task-input")).toBeVisible();
+    await expect(page.getByTestId("match-acceptance-rate")).toBeVisible();
+    before = await acceptsOf();
+    expect(Number.isFinite(before)).toBe(true);
+    await page.getByTestId("match-task-input").fill(MATCH_TASK);
+    await page.getByTestId("match-submit").click();
+    await page
+      .locator(
+        "[data-testid='match-candidate'], [data-testid='match-empty'], [data-testid='error-state']",
+      )
+      .first()
+      .waitFor();
+    if ((await candidates.count()) > 0) {
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
     throw new Error(
-      "no candidate returned: no tagged seed, run the PRP-71 demo seed (make stack-up)",
+      `no candidate returned in any of ${String(domains.length)} readable domain(s): no tagged seed, run the PRP-71 demo seed (make demo-up)`,
     );
   }
   await candidates.first().getByTestId("match-accept").click();
@@ -475,5 +486,5 @@ test("route /recommendations/find ranks a task, records an accept and counts it 
 
   await page.reload();
   await expect(page.getByTestId("match-acceptance-rate")).toBeVisible();
-  await expect.poll(acceptsOf).toBeGreaterThanOrEqual(Math.max(1, before));
+  await expect.poll(acceptsOf).toBeGreaterThanOrEqual(before + 1);
 });
