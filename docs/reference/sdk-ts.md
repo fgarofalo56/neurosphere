@@ -1,7 +1,7 @@
 # Connector SDK reference (TypeScript)
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `4a44c688577070d1bdb1d8f62596d44a6c315810`. Generated: 2026-11-20.
+> Source commit: `0cd5926d4a911a54fa9aa00add5b0beeb5d4ad35`. Generated: 2026-11-20.
 > Sources: `connectors/sdk-ts/src/`.
 
 Package `@neurosphere/connector-sdk`. Read side only: there is no write surface in the TypeScript SDK; the `WriteConnector` interface lives in the Python SDK. Symbols are the exports of `src/index.ts`, with declaration headers and the first doc-comment paragraph extracted from source.

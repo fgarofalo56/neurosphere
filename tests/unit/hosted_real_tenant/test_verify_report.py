@@ -256,13 +256,14 @@ def test_retry_stops_at_the_bound_and_reports_fail(tmp_path: Path) -> None:
 
 def test_verify_refuses_without_approval_government_and_local_host(tmp_path: Path) -> None:
     api = FakeApi(status=lambda: states())
-    for env, reg in (
+    cases: tuple[tuple[dict[str, str], dict[str, Any]], ...] = (
         ({k: v for k, v in ENV.items() if k != "NS_LIVE_APPROVED"}, {}),
         ({**ENV, "NS_CLOUD": "government"}, {}),
         (ENV, {"cloud": "AzureUSGovernment"}),
         (ENV, {"api_host": "localhost"}),
         (ENV, {"api_host": "127.0.0.1"}),
-    ):
+    )
+    for env, reg in cases:
         code, _doc = verify(tmp_path, api, env=env, **reg)
         assert code == 2
     assert api.urls == []
