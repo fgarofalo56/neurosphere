@@ -23,11 +23,11 @@
 # findings, so .trivyignore cannot enforce the date: tests/unit/infra/test_scan_exception_expiry.py
 # reads the marker below and fails the python job after it. Re-check when Alpine publishes a
 # fixed openssl package (rebuild, then delete these eight rules and the marker), or on expiry.
-# CVE-2026-107494, CVE-2026-121482, CVE-2026-124709 and CVE-2026-84786 (same two packages, now at
-# 3.5.9-r1, still no fixed version) were added 2026-11-21 under the same marker, accepted by the
-# owner that day until the same date; Grype began reporting them as High on 2026-11-21 (PR 366).
-# Their exploitability in these images has not been assessed either. Delete these eight rules
-# with the first eight.
+# CVE-2026-107493, CVE-2026-107494, CVE-2026-121482, CVE-2026-124709 and CVE-2026-84786 (same two
+# packages, now at 3.5.9-r1, still no fixed version) were added 2026-11-21 under the same marker,
+# accepted by the owner that day until the same date; Grype began reporting them as High on
+# 2026-11-21 (PR 366). Their exploitability in these images has not been assessed either. Delete
+# these ten rules with the first eight.
 # expires: 2026-12-02 openssl-alpine
 #
 # nginx 1.30.6-r1 in the frontend image: CVE-2026-113425, CVE-2026-121810, CVE-2026-123007,
@@ -68,6 +68,12 @@ ignore:
     package:
       name: libcrypto3
   - vulnerability: CVE-2026-88823
+    package:
+      name: libssl3
+  - vulnerability: CVE-2026-107493
+    package:
+      name: libcrypto3
+  - vulnerability: CVE-2026-107493
     package:
       name: libssl3
   - vulnerability: CVE-2026-107494
