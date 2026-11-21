@@ -208,10 +208,10 @@ Chat entry point; automatic invocation or deployment of the chosen agent; editin
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | prp-75-item-1 | sonnet; wave 1 |
-| 2 | in-progress | prp-75-item-2 | sonnet; wave 1 |
-| 3 | todo | | wave 2 (with item 4) |
-| 4 | todo | | wave 2 (with item 3) |
+| 1 | merged | worktree-agent-a948ce11391fd9979 | sonnet; 03b65e28, merge 5944ae3b; vitest recommendations+mock-api 87 passed, typecheck+lint clean; 2026-11-21 |
+| 2 | merged | worktree-agent-a6e9aeaedbba3f785 | sonnet; 816023f2, merge e62fe667; vitest tests/mock-api 44 passed; 2026-11-21 |
+| 3 | in-progress | | sonnet; wave 2 (with item 4) |
+| 4 | in-progress | | sonnet; wave 2 (with item 3) |
 | 5 | todo | | wave 3 |
 | 6 | todo | | orchestrator |
 

@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-75-find-an-agent-ui-and-recommendation-metrics](active/PRP-75-find-an-agent-ui-and-recommendation-metrics.md) | P0 | 0/6 (0%) | todo 4, in-progress 2 | sonnet / sonnet | required |
+| [PRP-75-find-an-agent-ui-and-recommendation-metrics](active/PRP-75-find-an-agent-ui-and-recommendation-metrics.md) | P0 | 2/6 (33%) | todo 2, in-progress 2, merged 2 | sonnet / sonnet | required |
 
 ## Backlog
 
