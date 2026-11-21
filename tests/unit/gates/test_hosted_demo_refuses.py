@@ -372,6 +372,7 @@ class Env:
 
     def _infra_base(self) -> list[str]:
         return [
+            "--data-mode", "demo",
             "--image-tag", "0.1.0-rc.2",
             "--integration-subnet-id", INTEG_SUBNET,
             "--private-endpoint-subnet-id", PE_SUBNET,

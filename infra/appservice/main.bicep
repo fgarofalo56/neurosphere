@@ -122,6 +122,16 @@ param workerApiBaseUrl string = ''
 @description('PRP-58: NS_WORKER_REC_SOURCE on the workers site (archive reads the lakehouse archive). Empty (default) leaves it unset. Same meaning as workers.recommendations.source.')
 param recommendationsSource string = ''
 
+@description('PRP-139: data mode (NS_HOSTED_DATA_MODE on the API and workers sites). demo (default) is the synthetic hosted demo; real-tenant shows only the tenant the deployment runs in and adds the connector roles gateway_poll, foundry_discovery and billing_export to workerRoles when that list is not empty. Do not also set the key in apiAppSettings or workersAppSettings.')
+@allowed([
+  'demo'
+  'real-tenant'
+])
+param dataMode string = 'demo'
+
+@description('PRP-139: customer id (NS_AUTH_CUSTOMER_ID on the API and workers sites). Empty (default) leaves the key to commonAppSettings, which is where infra/demo/main.bicep sets it; do not set both.')
+param customerId string = ''
+
 @description('Resource tags.')
 param tags object = {}
 
@@ -165,8 +175,14 @@ var searchSettings = concat(
   empty(searchRegion) ? [] : [{ name: 'NS_SEARCH_REGION', value: searchRegion }]
 )
 var ingestStoreSettings = ingestProducerStore ? [{ name: 'NS_INGEST_PRODUCER_STORE', value: 'true' }] : []
+var connectorWorkerRoles = ['gateway_poll', 'foundry_discovery', 'billing_export']
+var effectiveWorkerRoles = dataMode == 'real-tenant' ? union(workerRoles, connectorWorkerRoles) : workerRoles
+var dataModeSettings = concat(
+  [{ name: 'NS_HOSTED_DATA_MODE', value: dataMode }],
+  empty(customerId) ? [] : [{ name: 'NS_AUTH_CUSTOMER_ID', value: customerId }]
+)
 var workerDataPathSettings = concat(
-  empty(workerRoles) ? [] : [{ name: 'NS_WORKER_ROLES', value: join(workerRoles, ',') }],
+  empty(workerRoles) ? [] : [{ name: 'NS_WORKER_ROLES', value: join(effectiveWorkerRoles, ',') }],
   empty(workerConnectorConfigSource)
     ? []
     : [{ name: 'NS_WORKER_CONNECTOR_CONFIG_SOURCE', value: workerConnectorConfigSource }],
@@ -223,6 +239,7 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
         deployApplySettings,
         searchSettings,
         ingestStoreSettings,
+        dataModeSettings,
         apiExtraSettings
       )
     }
@@ -259,6 +276,7 @@ resource workers 'Microsoft.Web/sites@2023-12-01' = {
         plainSettings,
         kvSettings,
         deployApplySettings,
+        dataModeSettings,
         workerDataPathSettings,
         workersExtraSettings
       )

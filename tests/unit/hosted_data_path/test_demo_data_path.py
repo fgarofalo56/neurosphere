@@ -93,10 +93,10 @@ def test_store_switches_and_opt_in_settings(main_arm: dict[str, Any]) -> None:
     assert "NS_WORKER_REC_SOURCE" in str(variables["recommendationsSettings"])
     assert "archive" in str(variables["recommendationsSettings"])
     connector = str(variables["connectorSettings"])
-    assert "empty(parameters('connectorRoles'))" in connector
+    assert "empty(variables('effectiveConnectorRoles'))" in connector
     assert "NS_API_BASE_URL" in connector and "apiUpstream" in connector
     roles = str(variables["workerRoles"])
-    assert "parameters('connectorRoles')" in roles
+    assert "variables('effectiveConnectorRoles')" in roles
     assert "'recommendations'" in roles
 
 
@@ -112,8 +112,10 @@ def test_connector_rbac_assigns_only_at_resource_scope(rbac_arm: dict[str, Any])
     assignments = [
         r for r in _resources(rbac_arm) if r["type"] == "Microsoft.Authorization/roleAssignments"
     ]
-    assert len(assignments) == 2
+    assert len(assignments) == 4
     scopes = {r["scope"] for r in assignments}
+    assert any("Microsoft.OperationalInsights/workspaces" in s for s in scopes)
+    assert any("Microsoft.ApiManagement/service" in s for s in scopes)
     assert any("Microsoft.CognitiveServices/accounts" in s for s in scopes)
     assert any("Microsoft.Storage/storageAccounts" in s for s in scopes)
     for res in assignments:
@@ -129,6 +131,9 @@ def test_connector_rbac_assigns_only_at_resource_scope(rbac_arm: dict[str, Any])
         "workersPrincipalId",
         "foundryAccountName",
         "exportStorageAccountName",
+        "apiPrincipalId",
+        "logAnalyticsWorkspaceName",
+        "apimServiceName",
     }
 
 

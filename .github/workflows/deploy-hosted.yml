@@ -168,8 +168,18 @@ jobs:
           EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
           EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
           ENTRA_ADMIN_APP_ROLE: ${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}
+          DATA_MODE: ${{ vars.NS_HOSTED_DATA_MODE }}
+          CUSTOMER_ID: ${{ vars.NS_HOSTED_CUSTOMER_ID }}
+          LOG_ANALYTICS_WORKSPACE_IDS: ${{ vars.NS_HOSTED_LOG_ANALYTICS_WORKSPACE_IDS }}
+          APIM_SERVICE_IDS: ${{ vars.NS_HOSTED_APIM_SERVICE_IDS }}
         run: |
           set -euo pipefail
+          # PRP-139: the data mode is explicit. An unset variable must never deploy demo over a
+          # real-tenant environment, so there is no default.
+          if [ -z "$DATA_MODE" ]; then
+            echo "::error::Repository variable NS_HOSTED_DATA_MODE is not set; set it to demo or real-tenant."
+            exit 1
+          fi
           args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
           add() {
             if [ -n "$2" ]; then
@@ -198,6 +208,10 @@ jobs:
           add --tag-delete-after "$TAG_DELETE_AFTER"
           add --connector-roles "$CONNECTOR_ROLES"
           add --foundry-account-ids "$FOUNDRY_ACCOUNT_IDS"
+          add --data-mode "$DATA_MODE"
+          add --customer-id "$CUSTOMER_ID"
+          add --log-analytics-workspace-ids "$LOG_ANALYTICS_WORKSPACE_IDS"
+          add --apim-service-ids "$APIM_SERVICE_IDS"
           add --billing-export-storage-account-id "$BILLING_EXPORT_STORAGE_ID"
           add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
           add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
@@ -331,8 +345,18 @@ jobs:
           EVAL_SUBJECT_ID: ${{ vars.NS_HOSTED_EVAL_SUBJECT_ID }}
           EVAL_DATASET_IDS: ${{ vars.NS_HOSTED_EVAL_DATASET_IDS }}
           ENTRA_ADMIN_APP_ROLE: ${{ vars.NS_HOSTED_ENTRA_ADMIN_APP_ROLE }}
+          DATA_MODE: ${{ vars.NS_HOSTED_DATA_MODE }}
+          CUSTOMER_ID: ${{ vars.NS_HOSTED_CUSTOMER_ID }}
+          LOG_ANALYTICS_WORKSPACE_IDS: ${{ vars.NS_HOSTED_LOG_ANALYTICS_WORKSPACE_IDS }}
+          APIM_SERVICE_IDS: ${{ vars.NS_HOSTED_APIM_SERVICE_IDS }}
         run: |
           set -euo pipefail
+          # PRP-139: the data mode is explicit. An unset variable must never deploy demo over a
+          # real-tenant environment, so there is no default.
+          if [ -z "$DATA_MODE" ]; then
+            echo "::error::Repository variable NS_HOSTED_DATA_MODE is not set; set it to demo or real-tenant."
+            exit 1
+          fi
           args=(--subscription "$AZ_SUBSCRIPTION" --image-tag "$IMAGE_TAG" --operator "$OPERATOR")
           add() {
             if [ -n "$2" ]; then
@@ -361,6 +385,10 @@ jobs:
           add --tag-delete-after "$TAG_DELETE_AFTER"
           add --connector-roles "$CONNECTOR_ROLES"
           add --foundry-account-ids "$FOUNDRY_ACCOUNT_IDS"
+          add --data-mode "$DATA_MODE"
+          add --customer-id "$CUSTOMER_ID"
+          add --log-analytics-workspace-ids "$LOG_ANALYTICS_WORKSPACE_IDS"
+          add --apim-service-ids "$APIM_SERVICE_IDS"
           add --billing-export-storage-account-id "$BILLING_EXPORT_STORAGE_ID"
           add --evaluation-pilot-domain-id "$EVAL_DOMAIN_ID"
           add --evaluation-pilot-subject-id "$EVAL_SUBJECT_ID"
