@@ -35,6 +35,7 @@ export const CATALOG_EXPLORER_ROUTE = "catalog";
 export const CATALOG_ENTITY_ROUTE = "catalog/entity";
 export const CATALOG_RECERTIFICATIONS_ROUTE = "catalog/recertifications";
 export const CATALOG_STALE_AGENTS_ROUTE = "catalog/stale-agents";
+export const CATALOG_ACCESS_ROUTE = "catalog/access";
 
 export function domainEntitiesPath(domain: string): string {
   return `${CATALOG_API_PREFIX}/domains/${encodeURIComponent(domain)}/entities`;

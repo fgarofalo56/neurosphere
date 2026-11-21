@@ -1,0 +1,122 @@
+# Region groups used by the data access questions (PRP-73).
+#
+# Region-to-location comes from the source page below. The `eu` group is NeuroSphere's
+# classification of those locations as physically in EU member states (northeurope is Ireland,
+# westeurope is the Netherlands; the UK, Norway and Switzerland are excluded). It is a
+# convenience filter, not a legal determination.
+source_url: https://learn.microsoft.com/en-us/azure/reliability/regions-list
+source_retrieved: "2026-11-20"
+clouds:
+  commercial:
+    europe:
+      - austriaeast
+      - belgiumcentral
+      - denmarkeast
+      - francecentral
+      - francesouth
+      - germanynorth
+      - germanywestcentral
+      - italynorth
+      - northeurope
+      - norwayeast
+      - norwaywest
+      - polandcentral
+      - spaincentral
+      - swedencentral
+      - switzerlandnorth
+      - switzerlandwest
+      - uksouth
+      - ukwest
+      - westeurope
+    eu:
+      - austriaeast
+      - belgiumcentral
+      - denmarkeast
+      - francecentral
+      - francesouth
+      - germanynorth
+      - germanywestcentral
+      - italynorth
+      - northeurope
+      - polandcentral
+      - spaincentral
+      - swedencentral
+      - westeurope
+  government:
+    europe: []
+    eu: []
+
+# Regions a caller may name in `residency_regions`, per cloud. A region of the other cloud is
+# unknown. These are point-in-time copies of the Microsoft Learn lists: refresh them when Azure
+# adds regions. Stored assets may carry any region token; this list gates request filters only.
+known_regions_retrieved: "2026-11-20"
+known_regions:
+  commercial:
+    source_url: https://learn.microsoft.com/en-us/azure/reliability/regions-list
+    regions:
+      - australiacentral
+      - australiacentral2
+      - australiaeast
+      - australiasoutheast
+      - austriaeast
+      - belgiumcentral
+      - brazilsouth
+      - brazilsoutheast
+      - canadacentral
+      - canadaeast
+      - centralindia
+      - centralus
+      - chilecentral
+      - denmarkeast
+      - eastasia
+      - eastus
+      - eastus2
+      - francecentral
+      - francesouth
+      - germanynorth
+      - germanywestcentral
+      - indiasouthcentral
+      - indonesiacentral
+      - israelcentral
+      - italynorth
+      - japaneast
+      - japanwest
+      - koreacentral
+      - koreasouth
+      - malaysiawest
+      - mexicocentral
+      - newzealandnorth
+      - northcentralus
+      - northeurope
+      - norwayeast
+      - norwaywest
+      - polandcentral
+      - qatarcentral
+      - saudiarabiaeast
+      - southafricanorth
+      - southafricawest
+      - southcentralus
+      - southindia
+      - southeastasia
+      - southeastasia3
+      - spaincentral
+      - swedencentral
+      - switzerlandnorth
+      - switzerlandwest
+      - taiwannorth
+      - uaecentral
+      - uaenorth
+      - uksouth
+      - ukwest
+      - westcentralus
+      - westeurope
+      - westindia
+      - westus
+      - westus2
+      - westus3
+  government:
+    source_url: https://learn.microsoft.com/en-us/azure/azure-government/documentation-government-welcome
+    regions:
+      - usgovarizona
+      - usgovtexas
+      - usgovvirginia

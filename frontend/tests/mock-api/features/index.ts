@@ -2,6 +2,7 @@ import { handle as adminCore } from "./admin-core.ts";
 import { handle as adminSources } from "./admin-sources.ts";
 import { handle as audit } from "./audit.ts";
 import { handle as catalog } from "./catalog.ts";
+import { handle as catalogAccess } from "./catalog-access.ts";
 import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
 import { handle as curation } from "./curation.ts";
 import { handle as deploy } from "./deploy.ts";
@@ -21,6 +22,8 @@ export type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
  */
 export const FEATURE_HANDLERS: readonly FeatureMockHandler[] = [
   curation,
+  // Before catalog: serves the grounding_source entity list the catalog mock does not seed.
+  catalogAccess,
   catalog,
   audit,
   finops,

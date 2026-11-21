@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `58d250a467cdd50457d290587d3b361de04d8627`. Generated: 2026-11-19.
+> Source commit: `4a44c688577070d1bdb1d8f62596d44a6c315810`. Generated: 2026-11-20.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 211 operations on 177 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 217 operations on 183 paths.
 
 ## Status and verification
 
@@ -96,6 +96,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | audit | GET | `/api/v1/audit/siem/status` | Audit Siem Status |
 | audit | GET | `/audit/chains/{chain_id}/records` | List Audit Records |
 | audit | GET | `/audit/chains/{chain_id}/verify` | Verify Audit Chain |
+| catalog | POST | `/api/v1/catalog/access/dependents` | Entities affected when a node fails |
+| catalog | POST | `/api/v1/catalog/access/query` | Who reads or writes these data assets |
+| catalog | GET | `/api/v1/catalog/access/region-groups` | Region groups available to the access query |
 | catalog | GET | `/api/v1/catalog/entities` | List Entities |
 | catalog | POST | `/api/v1/catalog/entities` | Create Entity |
 | catalog | GET | `/api/v1/catalog/entities/{entity_id}` | Get Entity |
@@ -117,6 +120,9 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | catalog | POST | `/api/v1/catalog/reconcile/stale-agents/confirm` | Stale Confirm |
 | catalog | POST | `/api/v1/catalog/reconcile/stale-agents/dry-run` | Stale Dry Run |
 | catalog | POST | `/api/v1/catalog/search` | Search |
+| catalog | POST | `/catalog/access/dependents` | Entities affected when a node fails |
+| catalog | POST | `/catalog/access/query` | Who reads or writes these data assets |
+| catalog | GET | `/catalog/access/region-groups` | Region groups available to the access query |
 | catalog | GET | `/catalog/entities` | List Entities |
 | catalog | POST | `/catalog/entities` | Create Entity |
 | catalog | GET | `/catalog/entities/{entity_id}` | Get Entity |
@@ -714,6 +720,29 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 
 ### Tag: catalog
 
+#### POST `/api/v1/catalog/access/dependents`
+
+- Operation id: `dependents_api_v1_catalog_access_dependents_post`
+- Summary: Entities affected when a node fails
+- Description: Entities that depend on a failing service or tool (blast radius), grouped by distance (max_depth 1 to 5; any other value answers 422 with a reason code), each with the relation path. Results are observed or curated edges, not entitlements. A truncated result is partial: truncated_reason says which bound stopped the walk. Only in-scope entities appear. Each call appends one allowed-read audit record holding the domains read and the result count only.
+- Request body: application/json: `AccessDependentsRequest` (required)
+- Responses: `200` `AccessDependentsResponse`; `422` `HTTPValidationError`
+
+#### POST `/api/v1/catalog/access/query`
+
+- Operation id: `access_query_api_v1_catalog_access_query_post`
+- Summary: Who reads or writes these data assets
+- Description: Which in-scope agents and tools read or wrote the selected data assets. Results are observed edges (who did), not entitlements (who could). An empty sensitivity_categories list or a null value on an asset means not assessed, never no; such assets are listed under unassessed_assets only when include_unassessed is true. When region_group and residency_regions are both given, their regions are unioned. residency_regions values are validated against the known-region list for the caller's cloud; an unknown region answers 422 with reason unknown_region. The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance. A truncated result is partial: truncated_reason says which bound stopped the scan and assets_scanned how many assets were examined. Scope comes only from the caller's identity; domain_ids narrows within it. Each call appends one allowed-read audit record holding the domains read and the result count only.
+- Request body: application/json: `AccessQueryRequest` (required)
+- Responses: `200` `AccessQueryResponse`; `422` `HTTPValidationError`
+
+#### GET `/api/v1/catalog/access/region-groups`
+
+- Operation id: `region_groups_api_v1_catalog_access_region_groups_get`
+- Summary: Region groups available to the access query
+- Description: Region group names and their member regions for the caller's cloud (the Government cloud has none). The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance.
+- Responses: `200` `RegionGroupsResponse`
+
 #### GET `/api/v1/catalog/entities`
 
 - Operation id: `list_entities_api_v1_catalog_entities_get`
@@ -873,6 +902,35 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Summary: Search
 - Request body: application/json: `GraphSearchRequest` (required)
 - Responses: `200` `GraphResult`; `422` `HTTPValidationError`
+
+#### POST `/catalog/access/dependents`
+
+**Deprecated**
+
+- Operation id: `dependents_catalog_access_dependents_post`
+- Summary: Entities affected when a node fails
+- Description: Entities that depend on a failing service or tool (blast radius), grouped by distance (max_depth 1 to 5; any other value answers 422 with a reason code), each with the relation path. Results are observed or curated edges, not entitlements. A truncated result is partial: truncated_reason says which bound stopped the walk. Only in-scope entities appear. Each call appends one allowed-read audit record holding the domains read and the result count only.
+- Request body: application/json: `AccessDependentsRequest` (required)
+- Responses: `200` `AccessDependentsResponse`; `422` `HTTPValidationError`
+
+#### POST `/catalog/access/query`
+
+**Deprecated**
+
+- Operation id: `access_query_catalog_access_query_post`
+- Summary: Who reads or writes these data assets
+- Description: Which in-scope agents and tools read or wrote the selected data assets. Results are observed edges (who did), not entitlements (who could). An empty sensitivity_categories list or a null value on an asset means not assessed, never no; such assets are listed under unassessed_assets only when include_unassessed is true. When region_group and residency_regions are both given, their regions are unioned. residency_regions values are validated against the known-region list for the caller's cloud; an unknown region answers 422 with reason unknown_region. The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance. A truncated result is partial: truncated_reason says which bound stopped the scan and assets_scanned how many assets were examined. Scope comes only from the caller's identity; domain_ids narrows within it. Each call appends one allowed-read audit record holding the domains read and the result count only.
+- Request body: application/json: `AccessQueryRequest` (required)
+- Responses: `200` `AccessQueryResponse`; `422` `HTTPValidationError`
+
+#### GET `/catalog/access/region-groups`
+
+**Deprecated**
+
+- Operation id: `region_groups_catalog_access_region_groups_get`
+- Summary: Region groups available to the access query
+- Description: Region group names and their member regions for the caller's cloud (the Government cloud has none). The eu group is a NeuroSphere classification of Azure region locations and implies nothing about compliance.
+- Responses: `200` `RegionGroupsResponse`
 
 #### GET `/catalog/entities`
 
