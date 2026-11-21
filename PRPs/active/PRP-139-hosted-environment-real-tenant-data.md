@@ -387,13 +387,13 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | worktree-agent-aee30b158ea5b881d | sonnet; commit bc59a6a0 (own suites 211 passed); rework round running: --data-mode callers (6 test files + deploy-hosted.yml), delta approved 2026-11-21; PRP-138 item 9 follows this in a second PR |
+| 1 | merged | worktree-agent-ad803c20d47ee4848 | sonnet; commits bc59a6a0 + rework 3ad6b510; review APPROVE; merge e431c66b 2026-11-21; 821 passed after merge, ruff clean, validate_planning PASS; PRP-138 item 9 follows this in a second PR |
 | 2 | merged | worktree-agent-ac77cef87f7e57b4c | sonnet; verify PASS (ruff, format, pyright clean; 494 passed); review APPROVE; merge bbd7548d 2026-11-21 (603 passed after merge); fix-forward merged 5830df4b (no customer_id refused; delete failure writes counts-only evidence) |
 | 3 | merged | worktree-agent-a470d8a5dac59dee8 | sonnet; review APPROVE; merge 67d30ce2 2026-11-21; test_readiness component list updated; 664 passed after merge, ruff and pyright clean; follow-ups: billing read_failed reads as access denied, status write timeout, observer outside try |
 | 4 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 5 | review | worktree-agent-a2b7f4c41d263947b | sonnet; verify PASS 2026-11-21 (lint, typecheck clean; 296 passed in touched features; demo-audit e2e 2 passed per implementer), commit d49044a4; full unit run had 14 load timeouts in untouched files; combined review with item 4 |
 | 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; fix-forward merged 5830df4b (truncated scan reports OPEN; 552 passed) |
-| 7 | todo | | |
+| 7 | in-progress | worktree (agent) | sonnet; dispatched 2026-11-21 |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
