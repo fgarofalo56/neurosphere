@@ -167,6 +167,10 @@ MANIFEST_CALLS: Final[dict[str, tuple[ApiCall, ...]]] = {
             non_empty="recommendation",
         ),
     ),
+    "/recommendations/find": (
+        *_SHELL,
+        ApiCall("/api/v1/recommendations/domains/{domain}/match/metrics"),
+    ),
     "/reconciliation": (
         *_SHELL,
         ApiCall("/api/v1/reconciliation/domains/{domain}", q(days=30)),
@@ -363,4 +367,6 @@ COPILOT_ROUTES_503: Final = ("/api/v1/copilot/conversations",)
 NOT_COVERED_OVER_HTTP: Final[dict[str, str]] = {
     "/api/v1/realtime/ws": "WebSocket (map live deltas); covered by the realtime suites",
     "POST /api/v1/copilot/conversations": "a user action, not a render-time call",
+    "POST /api/v1/recommendations/domains/{domain}/match": "a user action (the task is typed)",
+    "GET /api/v1/catalog/completeness": "PRP-76 endpoint, 404 until built",
 }

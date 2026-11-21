@@ -79,7 +79,7 @@ describe("app shell", () => {
       "Reconciliation",
     ]);
     expect(names("Agents")).toEqual(["Map", "Map table", "Trace replay"]);
-    expect(names("Quality")).toEqual(["Quality", "Recommendations"]);
+    expect(names("Quality")).toEqual(["Quality", "Recommendations", "Find an agent"]);
     expect(names("Governance")).toEqual(["Review", "Actions", "Gateways", "Publication"]);
     expect(names("Reports")).toEqual(["Reports"]);
   });
