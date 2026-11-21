@@ -30,8 +30,8 @@ def _load() -> ModuleType:
 gate = _load()
 
 
-def _registration(tmp_path: Path) -> Path:
-    doc = {
+def _registration(tmp_path: Path, **extra: Any) -> Path:
+    doc: dict[str, Any] = {
         "schema": 1,
         "deployment_id": DEPLOYMENT,
         "cloud": "AzureCloud",
@@ -46,6 +46,7 @@ def _registration(tmp_path: Path) -> Path:
         "workers_object_id": "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
         "customer_id": "synthco",
     }
+    doc.update(extra)
     path = tmp_path / "registration.json"
     path.write_text(json.dumps(doc), encoding="utf-8")
     return path
@@ -83,12 +84,14 @@ def no_clients(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(seed.grants, "hosted_pseudonym_env", boom)
 
 
-def _args(tmp_path: Path) -> list[str]:
+def _args(tmp_path: Path, *, registration: Path | None = None) -> list[str]:
     return [
+        "--demo-environment",
+        DEPLOYMENT,
         "--operator-object-id",
         OPERATOR_OID,
         "--registration",
-        str(_registration(tmp_path)),
+        str(registration or _registration(tmp_path)),
         "--input-dir",
         str(tmp_path / "input"),
         "--evidence-dir",
@@ -135,6 +138,53 @@ def test_id_mismatch_and_missing_registration_are_refused(tmp_path: Path, no_cli
     args = _args(tmp_path)
     args[args.index("--registration") + 1] = str(tmp_path / "absent.json")
     assert gate.main(args, env=_env()) == 2
+
+
+def _assert_refused_untouched(tmp_path: Path, args: list[str]) -> None:
+    assert gate.main(args, env=_env()) == 2
+    assert not (tmp_path / "input").exists()
+    assert not (tmp_path / "evidence").exists()
+
+
+def test_missing_demo_environment_flag_is_refused(
+    tmp_path: Path, no_clients: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    args = _args(tmp_path)
+    del args[:2]
+    _assert_refused_untouched(tmp_path, args)
+    assert "--demo-environment" in capsys.readouterr().err
+
+
+def test_demo_environment_naming_another_deployment_is_refused(
+    tmp_path: Path, no_clients: None
+) -> None:
+    args = _args(tmp_path)
+    args[1] = "some-other-deployment"
+    _assert_refused_untouched(tmp_path, args)
+
+
+@pytest.mark.parametrize("mode", ["real-tenant", "anything-else"])
+def test_registration_that_is_not_demo_mode_is_refused(
+    tmp_path: Path, no_clients: None, mode: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    registration = _registration(tmp_path, data_mode=mode)
+    _assert_refused_untouched(tmp_path, _args(tmp_path, registration=registration))
+    assert "data_mode" in capsys.readouterr().err
+
+
+def test_refusal_happens_before_any_client_module_is_imported(tmp_path: Path) -> None:
+    before = {n for n in ("azure.cosmos", "azure.eventhub", "azure.identity") if n in sys.modules}
+    registration = _registration(tmp_path, data_mode="real-tenant")
+    assert gate.main(_args(tmp_path, registration=registration), env=_env()) == 2
+    after = {n for n in ("azure.cosmos", "azure.eventhub", "azure.identity") if n in sys.modules}
+    assert after == before
+
+
+def test_registration_without_data_mode_counts_as_demo(tmp_path: Path) -> None:
+    refusal = gate._demo_environment_refusal  # pyright: ignore[reportPrivateUsage]
+    assert refusal(_registration(tmp_path), DEPLOYMENT) is None
+    assert refusal(_registration(tmp_path, data_mode="demo"), DEPLOYMENT) is None
+    assert refusal(_registration(tmp_path), None) is not None
 
 
 def test_the_parser_accepts_no_key_or_connection_string_option() -> None:
