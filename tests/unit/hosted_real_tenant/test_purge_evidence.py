@@ -7,6 +7,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from test_purge_refusals import NOW, Harness
 from test_purge_selection import ACTIVE, DEPLOYMENT, PURGE, gate
 
@@ -86,3 +87,33 @@ def test_a_stopped_purge_still_writes_counts_only_evidence(tmp_path: Path) -> No
     assert h.apply() == 1
     text = next((tmp_path / "evidence").glob("*-purge.json")).read_text("utf-8")
     _assert_clean(text)
+
+
+class _FakeStoreError(Exception):
+    """Stands in for an SDK error whose message names the endpoint and a document id."""
+
+
+def test_a_failing_delete_stops_with_class_name_only(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    h = Harness(tmp_path)
+    assert h.run("plan") == 0
+    secret = "https://fake.example.invalid/dbs/00000000-0000-0000-0000-000000000000"
+
+    def boom(container: str, document: object) -> None:
+        raise _FakeStoreError(secret)
+
+    h.stores.documents.delete = boom  # type: ignore[method-assign]
+    capsys.readouterr()
+    assert h.apply() == 1
+    out = capsys.readouterr()
+    text = next((tmp_path / "evidence").glob("*-purge.json")).read_text("utf-8")
+    doc = json.loads(text)
+    assert doc["reason"] == "delete_failed"
+    assert doc["error_class"] == "_FakeStoreError"
+    for seen in (text, out.out, out.err):
+        assert "example.invalid" not in seen
+        assert "00000000-0000" not in seen
+        assert "Traceback" not in seen
+    for counts in doc["counts"].values():
+        assert all(isinstance(v, int) for v in counts.values())

@@ -284,3 +284,60 @@ def test_evidence_holds_no_host_id_or_token(tmp_path: Path, forbidden: str) -> N
     verify(tmp_path, api)
     text = (tmp_path / "ev" / "2026-11-21-verify.json").read_text(encoding="utf-8")
     assert forbidden not in text
+
+
+class PagedApi(FakeApi):
+    """Catalog that always answers with a continuation cursor (never ends)."""
+
+    def __init__(self, *, pages: list[list[dict[str, Any]]], **kw: Any) -> None:
+        super().__init__(**kw)
+        self.pages = pages
+        self.catalog_calls = 0
+
+    def __call__(self, url: str, bearer: str) -> object:
+        if urlsplit(url).path == "/api/v1/catalog/entities":
+            mod = load()
+            self.urls.append(url)
+            page = self.pages[min(self.catalog_calls, len(self.pages) - 1)]
+            self.catalog_calls += 1
+            return mod.HttpResponse(200, {"items": page, "next_cursor": "more"})
+        return super().__call__(url, bearer)
+
+
+def test_truncated_scan_with_nothing_found_is_open_not_pass(tmp_path: Path) -> None:
+    api = PagedApi(
+        pages=[[{"id": "commercial:fakecust:agent:x"}]],
+        status=lambda: states(foundry="connected"),
+    )
+    code, doc = verify(tmp_path, api)
+    assert api.catalog_calls == 5
+    assert doc["catalog_truncated"] is True
+    assert doc["synthetic"]["result"] == "OPEN"
+    assert doc["synthetic"]["reason"] == "catalog_scan_truncated"
+    assert doc["sources"]["foundry"]["result"] == "OPEN"
+    assert doc["sources"]["foundry"]["reason"] == "catalog_scan_truncated"
+    assert code == 0
+
+
+def test_truncated_scan_with_a_synthetic_record_still_fails(tmp_path: Path) -> None:
+    api = PagedApi(
+        pages=[[{"id": "commercial:synthco:sandbox:agent:x"}]],
+        status=lambda: states(foundry="connected"),
+    )
+    code, doc = verify(tmp_path, api)
+    assert doc["synthetic"]["result"] == "FAIL"
+    assert code == 1
+
+
+def test_truncated_scan_with_a_foundry_entity_may_pass(tmp_path: Path) -> None:
+    api = PagedApi(pages=[[foundry_entity(1)]], status=lambda: states(foundry="connected"))
+    _code, doc = verify(tmp_path, api)
+    assert doc["sources"]["foundry"]["result"] == "PASS"
+    assert doc["synthetic"]["reason"] == "catalog_scan_truncated"
+
+
+def test_complete_scan_is_not_flagged_truncated(tmp_path: Path) -> None:
+    api = FakeApi(status=lambda: states(foundry="connected"), entities=[foundry_entity(1)])
+    _code, doc = verify(tmp_path, api)
+    assert doc["catalog_truncated"] is False
+    assert doc["synthetic"]["reason"] == "no_synthetic_records"
