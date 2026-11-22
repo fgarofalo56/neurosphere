@@ -100,7 +100,7 @@ Out of scope: tool and service identity (PRP-100); the map (PRP-74 reads the ser
 - `put_alias` cannot repoint (`engine.py:368-379`): repoint is retire plus add, and the retire must be a status change to `retired` on the same canonical id.
 - `AliasModelResolver` has no cache; this resolver does, so tests must inject a clock and assert the TTL edges.
 - `ArchiveRecordSource` yields dicts whose contract is under `record["contract"]` (`evaluation/online.py:83-85`); the wrapper copies the dict and never mutates the archive record.
-- Test packages: use unique directory names (`packages/core/tests/agent_identity`, `services/workers/tests/agent_identity`, `services/api/tests/agent_identity_api`); same-named test dirs shadow each other.
+- Test packages: use unique directory names (`packages/core/tests/agent_identity`, `services/workers/tests/agent_identity_worker`, `services/api/tests/agent_identity_api`); same-named test dirs shadow each other.
 Shared rules and traps: `PRPs/reference/parallel-build-reference.md`.
 
 ## Ownership
@@ -109,7 +109,7 @@ owns:
   - packages/core/neurosphere_core/agent_identity/**
   - packages/core/tests/agent_identity/**
   - services/workers/neurosphere_workers/agent_identity/**
-  - services/workers/tests/agent_identity/**
+  - services/workers/tests/agent_identity_worker/**
   - services/workers/neurosphere_workers/projections/catalog/source.py
   - services/workers/neurosphere_workers/projections/catalog/handler.py
   - services/workers/neurosphere_workers/projections/catalog/discovery.py
@@ -167,29 +167,29 @@ Parallelization: items 1 and 5 touch no common file; item 2 needs 1; item 3 need
 
 ### Item 2 - Resolving event sources
 - Deliverable: `neurosphere_workers/agent_identity/sources.py` with `ResolvingTraceEventSource` (wraps `get_event`, `find_span`, `find_child_spans`, stamps `canonical_agent_id`, sets `LoadedEvent.agent_resolution`) and `ResolvingRecordSource` (copy of each archive record dict with `canonical_agent_id` set in the inner contract); `LoadedEvent` gains `agent_resolution` in `projections/catalog/source.py`.
-- Owned files: `services/workers/neurosphere_workers/agent_identity/**`, `projections/catalog/source.py`, `services/workers/tests/agent_identity/test_sources.py`.
+- Owned files: `services/workers/neurosphere_workers/agent_identity/**`, `projections/catalog/source.py`, `services/workers/tests/agent_identity_worker/test_sources.py`.
 - Must NOT touch: `aggregates/**`, `runtime/archive_reader.py`.
 - Depends on: item 1.
 - Acceptance criteria: the wrapped source returns the same events with only the agent field and `agent_resolution` changed; the inner source is never mutated; child-span lookups stamp both parent and child; existing `InMemoryTraceEventSource` tests pass unchanged.
-- Tests: `services/workers/tests/agent_identity/test_sources.py`; existing `services/workers/tests/projections` and `neurosphere_workers/aggregates/tests`.
+- Tests: `services/workers/tests/agent_identity_worker/test_sources.py`; existing `services/workers/tests/projections` and `neurosphere_workers/aggregates/tests`.
 - Pattern references: `runtime/archive_reader.py:107-175`.
 
 ### Item 3 - Surface unresolved agents as drafts
 - Deliverable: `CatalogProjection.handle` creates, for every event whose `agent_resolution == "derived"` and whose domain is in scope, a draft `Agent` through a new `agent_discovery_entity(event)` in `discovery.py` (display name from the external id capped at 256, `platform` and `source_id` from the event source, `external_agent_id`, attributes `discovered_from=telemetry`, `agent_identity=derived_from_external_id`); create-if-absent, a create conflict is success; an event without a domain counts `agent_undiscoverable_no_domain`.
-- Owned files: `projections/catalog/handler.py`, `projections/catalog/discovery.py`, `services/workers/tests/agent_identity/test_discovery.py`.
+- Owned files: `projections/catalog/handler.py`, `projections/catalog/discovery.py`, `services/workers/tests/agent_identity_worker/test_discovery.py`.
 - Must NOT touch: `projections/catalog/mapping.py`, `catalog/**` in core or API.
 - Depends on: item 2.
 - Acceptance criteria: a replay creates no second draft and never updates an existing declared or curated agent; the draft validates as `Agent`; an out-of-scope domain quarantines nothing and is counted; existing `services/workers/tests/projections` suite passes unchanged.
-- Tests: `services/workers/tests/agent_identity/test_discovery.py`; existing projections suite.
+- Tests: `services/workers/tests/agent_identity_worker/test_discovery.py`; existing projections suite.
 - Pattern references: `discovery.py:47-75`, `handler.py:275-302`.
 
 ### Item 4 - Re-resolution job
 - Deliverable: `reresolve.py` and `__main__.py`: given customer, source id, external id and an optional since, list archive names through `ArchiveReader`, read matching records (bounded by `NS_AGENT_IDENTITY_RESCAN_MAX_EVENTS`), and for each matching telemetry event call the aggregates and catalog handlers with a synthetic `OutboxEntry` (kind `event`, `ref_id` the doc id), so the contribution with the same id is replaced and the rollups rebuild; the report lists examined, matched, moved, skipped-out-of-window and a `truncated` flag.
-- Owned files: `services/workers/neurosphere_workers/agent_identity/{reresolve,__main__}.py`, `services/workers/tests/agent_identity/test_reresolve.py`.
+- Owned files: `services/workers/neurosphere_workers/agent_identity/{reresolve,__main__}.py`, `services/workers/tests/agent_identity_worker/test_reresolve.py`.
 - Must NOT touch: `aggregates/**`, `outbox/**`.
 - Depends on: items 2 and 3.
 - Acceptance criteria: the alias-added-later criterion, including a second run with identical store contents; a truncated scan says so; the job refuses to run with no customer or an event from another customer.
-- Tests: `services/workers/tests/agent_identity/test_reresolve.py` (in-memory aggregate and catalog stores).
+- Tests: `services/workers/tests/agent_identity_worker/test_reresolve.py` (in-memory aggregate and catalog stores).
 - Pattern references: `aggregates/handler.py:104-168`, `ingestion/__main__.py`.
 
 ### Item 5 - Alias declaration API
@@ -203,16 +203,16 @@ Parallelization: items 1 and 5 touch no common file; item 2 needs 1; item 3 need
 
 ### Item 6 - Worker wiring and Foundry alias
 - Deliverable: `build_projections`, `build_aggregates` and `build_evaluation` in `runtime/factories.py` wrap their sources with the resolving decorators and a `CatalogAliasLookup` over the worker's `CosmosCatalogRepository` and scope provider (three small edits, one import block); the Foundry poller writes an `external_id` alias for each discovered agent that has an external id (collision counted, never raised); settings classes for the three env vars.
-- Owned files: `runtime/factories.py` (wiring lines only; Tier-1 of this PRP in W19), `ingestion/foundry_discovery/poller.py`, `services/workers/tests/agent_identity/test_factory_wiring.py`, `services/workers/tests/foundry_discovery_role` additions.
+- Owned files: `runtime/factories.py` (wiring lines only; Tier-1 of this PRP in W19), `ingestion/foundry_discovery/poller.py`, `services/workers/tests/agent_identity_worker/test_factory_wiring.py`, `services/workers/tests/foundry_discovery_role` additions.
 - Must NOT touch: anything in `factories.py` outside the three wiring edits.
 - Depends on: items 2 to 4.
 - Acceptance criteria: with the switch settings at default the roles resolve; a lookup outage makes the outbox entry retry (no checkpoint advance), not a split series; existing `services/workers/tests/{worker_roles,foundry_discovery_role,projections,evaluation_worker}` pass unchanged.
-- Tests: `services/workers/tests/agent_identity/test_factory_wiring.py`.
+- Tests: `services/workers/tests/agent_identity_worker/test_factory_wiring.py`.
 - Pattern references: `factories.py:450-495` (`build_projections`, `build_aggregates`).
 
 ### Item 7 - Tests through the real pipeline
 - Deliverable: an in-process end-to-end test and an emulator variant. The in-process test feeds real OTLP trace JSON through `map_span`, wraps each result as a hub message, runs `process_batch` with the ingestion fakes, then runs the outbox entries through `AggregateProjection` and `CatalogProjection` built with resolving sources and in-memory stores. Cases: alias present; no alias (derived plus draft); alias added later plus re-resolution; two external ids that slug alike; an alias for another customer; a lookup outage.
-- Owned files: `services/workers/tests/agent_identity/test_pipeline_end_to_end.py`, `tests/integration/ingestion/test_agent_identity_resolution.py` (marker `integration`, emulators).
+- Owned files: `services/workers/tests/agent_identity_worker/test_pipeline_end_to_end.py`, `tests/integration/ingestion/test_agent_identity_resolution.py` (marker `integration`, emulators).
 - Must NOT touch: `tests/integration/ingestion/support.py` (read-only reuse of `otlp_attr`, `Pipeline`).
 - Depends on: items 2 to 4.
 - Acceptance criteria: every acceptance criterion above that concerns data has one assertion here; the test fails if resolution is removed (checked once by disabling the wrapper locally).
@@ -230,7 +230,7 @@ Parallelization: items 1 and 5 touch no common file; item 2 needs 1; item 3 need
 uv run ruff check .
 uv run ruff format --check .
 uv run pyright
-uv run pytest -q packages/core/tests/agent_identity services/workers/tests/agent_identity services/workers/tests/projections services/workers/tests/worker_roles services/workers/tests/foundry_discovery_role services/workers/tests/evaluation_worker services/workers/neurosphere_workers/aggregates/tests services/api/tests/agent_identity_api services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/authz tests/security/authz services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py
+uv run pytest -q packages/core/tests/agent_identity services/workers/tests/agent_identity_worker services/workers/tests/projections services/workers/tests/worker_roles services/workers/tests/foundry_discovery_role services/workers/tests/evaluation_worker services/workers/neurosphere_workers/aggregates/tests services/api/tests/agent_identity_api services/api/tests/runtime_api services/api/tests/runtime_routes services/api/tests/authz tests/security/authz services/api/tests/test_openapi_drift.py tests/docs/test_reference_coverage.py
 python scripts/prp_status.py --check
 python scripts/validate_planning.py
 powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates.ps1 -Mode full
@@ -254,12 +254,14 @@ An alias for derived drafts; automatic merging of a draft into a registered agen
 
 Plan approval 2026-11-22: item 5 runs after item 1 (it calls `declare_agent_alias`); item 5 keeps its own builder and also owns the builder-pinned files PRP-139 found: `services/api/tests/admin_identity_api/test_builder.py`, `services/api/tests/analytics_runtime/test_analytics_builder.py`, `docs/runbooks/system-settings.md`, `services/api/tests/runtime_routes/test_manifest_routes_serve.py`, plus the `services/api/openapi.json` and `docs/reference/**` regen. One reviewer pass covers the whole PRP diff before item 8.
 
+Deviation (item 2, 2026-11-22): the worker test directory is `services/workers/tests/agent_identity_worker`, not `agent_identity`, because two top-level `agent_identity` test packages shadow each other in one pytest session (collection error). Ownership paths above are updated to match.
+
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | prp-137-item1 | sonnet; 80bb2748 merged de870c2f; ruff+pyright clean, 176 passed (agent_identity+catalog) 2026-11-22 |
-| 2 | in-progress | prp-137-item2 | sonnet, dispatched 2026-11-22 |
-| 3 | todo | | |
+| 2 | merged | prp-137-item2 | sonnet; 08065343 merged 3afa5669; test dir renamed agent_identity_worker; ruff+pyright clean, 179 passed (core+worker agent_identity, projections, aggregates, evaluation) 2026-11-22 |
+| 3 | in-progress | prp-137-item3 | sonnet, dispatched 2026-11-22 |
 | 4 | todo | | |
 | 5 | in-progress | prp-137-item5 | sonnet, dispatched 2026-11-22 |
 | 6 | todo | | |
