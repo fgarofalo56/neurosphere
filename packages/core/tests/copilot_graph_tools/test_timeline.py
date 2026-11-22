@@ -359,9 +359,50 @@ async def test_scope_shaped_key_refused_via_registry() -> None:
         )
 
 
-async def test_no_data_read_is_denied() -> None:
+async def test_audit_read_without_data_read_is_partial_not_denied() -> None:
     auditor = make_scope([("security_auditor", [FINANCE])], [FINANCE])
+    result = await registry(changes=FakeChanges([change(1, FINANCE, 5)])).invoke(
+        "get_timeline", {"window_minutes": WINDOW}, auditor
+    )
+    assert [r["kind"] for r in entries(result)] == ["change"]
+    info = meta(result)
+    assert info["sections_included"] == ["changes"]
+    assert info["sections_omitted"] == [
+        {"section": "metric_shifts", "reason": "data_read_not_held"},
+        {"section": "recommendations", "reason": "data_read_not_held"},
+    ]
+    assert result.domain_ids == (FINANCE,)
+
+
+async def test_neither_data_read_nor_audit_read_is_denied() -> None:
+    nobody = make_scope([], [FINANCE])
     with pytest.raises(ToolPermissionError):
         await registry(changes=FakeChanges([])).invoke(
-            "get_timeline", {"window_minutes": WINDOW}, auditor
+            "get_timeline", {"window_minutes": WINDOW}, nobody
         )
+
+
+async def test_recommendation_entry_does_not_name_a_subject() -> None:
+    recs = FakeRecs([recommendation(1, FINANCE, NOW - timedelta(minutes=10))])
+    result = await registry(changes=None, recs=recs).invoke(
+        "get_timeline", {"window_minutes": WINDOW, "sections": ["recommendations"]}, viewer_only()
+    )
+    (row,) = entries(result)
+    # The recommendation's subjects may sit in a domain the caller cannot read, so only its own
+    # id and (readable) domain are shown.
+    assert "subject_id" not in row
+    assert row["domain_id"] == FINANCE
+    assert row["recommendation_id"].endswith("rec-0001")
+
+
+async def test_metric_shift_citation_is_the_real_aggregate_point_id() -> None:
+    metrics = FakeMetrics({(FINANCE, "errors", True): 9, (FINANCE, "errors", False): 3})
+    result = await registry(changes=None, metrics=metrics).invoke(
+        "get_timeline", {"window_minutes": WINDOW, "sections": ["metric_shifts"]}, viewer_only()
+    )
+    (citation,) = result.citations
+    assert citation.record_id == "agg-finance-errors-cur"
+    assert citation.source == "aggregates"
+    assert [r.record_id for r in result.records if r.kind == "metric_shift"] == [
+        "agg-finance-errors-cur"
+    ]
