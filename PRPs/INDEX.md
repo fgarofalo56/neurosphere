@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-141-azure-monitor-ai-call-telemetry-reader](active/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 6/8 (75%) | todo 1, in-progress 1, merged 6 | sonnet / sonnet | required |
+| [PRP-141-azure-monitor-ai-call-telemetry-reader](active/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 7/8 (87%) | verifying 1, merged 7 | sonnet / sonnet | required |
 
 ## Backlog
 

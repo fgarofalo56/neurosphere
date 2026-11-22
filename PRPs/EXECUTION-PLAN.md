@@ -79,7 +79,7 @@ Gate before the next wave: Hosted hardening and the restored-scope contracts are
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-99: Governance contracts A (interaction audit, policy, notifications, approval)](backlog/PRP-99-governance-contracts-a.md) | opus | required | none | - | - | `prp-99-governance-contracts-a` |
-| 2 | [PRP-141: Azure Monitor AI call telemetry reader (Log Analytics and workspace-based Application Insights)](backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | sonnet | required | none | PRP-99 | yes | `prp-141-azure-monitor-ai-telemetry` |
+| 2 | [PRP-141: Azure Monitor AI call telemetry reader (Log Analytics and workspace-based Application Insights)](active/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | sonnet | required | none | PRP-99 | yes | `prp-141-azure-monitor-ai-telemetry` |
 
 Gate before the next wave: `make demo-up` brings up a seeded world where every nav entry shows data; a task returns ranked agents with an explanation; a sensitivity question returns the agents that touch that data; governance contracts A reviewed (Opus).
 
@@ -651,7 +651,7 @@ Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-67-hosted-h
 ### PRP-141 (W20)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md
+/prp:prp-execute PRPs/active/PRP-141-azure-monitor-ai-call-telemetry-reader.md
 
 Context for this run: wave W20 of PRPs/EXECUTION-PLAN.md, branch prp-141-azure-monitor-ai-telemetry cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. You hold the compose stack for this wave. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
