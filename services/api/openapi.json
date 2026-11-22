@@ -1950,6 +1950,136 @@
         "title": "Alias",
         "type": "string"
       },
+      "AliasDeclareRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "external_agent_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "External Agent Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "target_agent_id": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Target Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "external_agent_id",
+          "target_agent_id"
+        ],
+        "title": "AliasDeclareRequest",
+        "type": "object"
+      },
+      "AliasDeclareView": {
+        "additionalProperties": false,
+        "properties": {
+          "alias_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alias Id"
+          },
+          "outcome": {
+            "enum": [
+              "created",
+              "repointed",
+              "unchanged"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reresolve_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReresolveJob"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reresolve_needed": {
+            "title": "Reresolve Needed",
+            "type": "boolean"
+          },
+          "retired_alias_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired Alias Id"
+          },
+          "target_agent_id": {
+            "title": "Target Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome",
+          "alias_id",
+          "retired_alias_id",
+          "target_agent_id",
+          "reresolve_needed",
+          "reresolve_job"
+        ],
+        "title": "AliasDeclareView",
+        "type": "object"
+      },
+      "AliasView": {
+        "additionalProperties": false,
+        "properties": {
+          "external_agent_id": {
+            "title": "External Agent Id",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "target_agent_id": {
+            "title": "Target Agent Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "external_agent_id",
+          "target_agent_id"
+        ],
+        "title": "AliasView",
+        "type": "object"
+      },
       "Amount": {
         "additionalProperties": false,
         "properties": {
@@ -15508,6 +15638,29 @@
         "title": "RequestsPerMinute",
         "type": "integer"
       },
+      "ReresolveJob": {
+        "additionalProperties": false,
+        "description": "The exact operator command; arguments are separate so they can be passed without a shell.",
+        "properties": {
+          "arguments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Arguments",
+            "type": "array"
+          },
+          "command": {
+            "title": "Command",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "arguments"
+        ],
+        "title": "ReresolveJob",
+        "type": "object"
+      },
       "ResetResult": {
         "additionalProperties": false,
         "properties": {
@@ -24613,6 +24766,125 @@
         "summary": "System Status",
         "tags": [
           "admin-system"
+        ]
+      }
+    },
+    "/api/v1/agent-identity/domains/{domain}/aliases": {
+      "get": {
+        "operationId": "read_alias_api_v1_agent_identity_domains__domain__aliases_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "external_agent_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "External Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Alias",
+        "tags": [
+          "agent-identity"
+        ]
+      },
+      "put": {
+        "description": "Declare (or repoint) the alias from an external agent id seen in telemetry to a catalog agent of this domain. A previous active alias for the same key is retired first. `reresolve_needed` is true when events already processed must be re-resolved with the returned operator job (`python -m neurosphere_workers.agent_identity reresolve`).",
+        "operationId": "declare_alias_api_v1_agent_identity_domains__domain__aliases_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Domain",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasDeclareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasDeclareView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Declare Alias",
+        "tags": [
+          "agent-identity"
         ]
       }
     },

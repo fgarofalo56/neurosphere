@@ -535,3 +535,16 @@ def test_source_status_routes_declare_their_permissions() -> None:
         ("/api/v1/sources/status", "GET"): ("data.read",),
         ("/api/v1/admin/sources/status", "GET"): ("config.manage",),
     }
+
+
+def test_agent_identity_routes_declare_their_permissions() -> None:
+    """PRP-137 item 5: writing an alias needs catalog.curate, reading needs data.read."""
+    app = create_app(Settings(env="local"))
+    path = "/api/v1/agent-identity/domains/{domain}/aliases"
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path == path
+        for m in e.methods
+    }
+    assert found == {(path, "PUT"): ("catalog.curate",), (path, "GET"): ("data.read",)}
