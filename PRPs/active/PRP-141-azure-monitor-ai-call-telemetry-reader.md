@@ -359,9 +359,9 @@ Content capture of any kind; classic Application Insights or the app-id query AP
 | 2 | merged | worktree-agent-a142641c6bf3e2981 @ 140e4d3e (sonnet) | verify PASS 2026-11-22: 196 passed (azure_monitor_ai_role, worker_roles, gateway_poll, sources_status_worker), pyright 0; checkpoint key per workspace AND kind; queries counted by PollResult.requests_made; review APPROVED (decisions 1-8 accepted; 4 follow-ups: connector factory outside try, edge-rejected count not surfaced, ValidationError may echo workspace id, managed_identity_client_id unused); merged fbfe7022, post-merge 304 passed |
 | 3 | merged | worktree-agent-a111675f335423934 @ 62754371 (sonnet) | verify PASS 2026-11-22: post-merge 361 passed (hosted_demo, hosted_data_path, hosted_real_tenant, gates flow, connector; az bicep build ran); merged 1dced353; batch review (3,4,5,7) before PR. Stale "three roles" text in docs/deploy/hosted-real-tenant.md:153 (item 7), hosted-demo.md:562, helm values.yaml:204, infra/dev/demo-profile.env:9 (follow-up) |
 | 4 | merged | worktree-agent-ac2806cc58b4b9575 @ b908a9dc (sonnet) | verify PASS 2026-11-22: 69 + 162 passed, ruff/pyright clean; merged db596613 + openapi.json and docs/reference regenerated (drift + tests/docs 130 passed). No Python reason-text registry: UI needs text for the 7 new codes (item 6). Batch review before PR |
-| 5 | in-progress | implementer worktree (sonnet) | dispatched 2026-11-22 on top of item 2 branch |
-| 6 | in-progress | implementer worktree (sonnet) | enum added here (amended); dispatched 2026-11-22 on top of item 2 branch |
-| 7 | todo | | |
+| 5 | merged | worktree-agent-a02a8833cbd6e1dbd @ 69de1543 (sonnet) | verify PASS 2026-11-22: tests/unit/azure_monitor_ai 20 passed (+ agent_identity_worker together: 74), integration variant collects 7 with -m integration (not run: emulator); cases a-f pass, no product defect; merged 33fb238d; batch review before PR |
+| 6 | review | worktree-agent-aed1bff65be9df1d9 @ e7b47818 (sonnet) | enum added here (amended); verify PASS 2026-11-22: generate --check OK, 3246 passed (contracts, connector_config_worker, azure_monitor_ai_role, admin_connectors core+api, authz), agent-reported frontend lint/typecheck clean + vitest 25 passed; ConnectorIdle moved to connector_config/idle.py (cycle); openapi regen pending; reviewer running |
+| 7 | in-progress | implementer worktree (sonnet) | dispatched 2026-11-22 on top of item 6 branch |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
