@@ -270,10 +270,10 @@ Deviation (item 2, 2026-11-22): the worker test directory is `services/workers/t
 | 2 | merged | prp-137-item2 | sonnet; 08065343 merged 3afa5669; test dir renamed agent_identity_worker; ruff+pyright clean, 179 passed (core+worker agent_identity, projections, aggregates, evaluation) 2026-11-22 |
 | 3 | merged | prp-137-item3 | sonnet; 82f3f154 merged 7f70ee92; ruff+pyright clean, 254 passed (agent_identity core+worker, projections, worker_roles, aggregates, evaluation) 2026-11-22 |
 | 4 | merged | prp-137-item4 | sonnet; 2f9f5e99 merged 7a2c66eb; ruff+pyright clean, 265 passed; CLI dependency seam left for item 6 2026-11-22 |
-| 5 | verifying | prp-137-item5 | sonnet; e89901d2 + f3e21ff5 (test rename committed after a PC restart); orchestrator re-running gates 2026-11-22 |
+| 5 | review | prp-137-item5 | sonnet; e89901d2 + f3e21ff5 merged 717d906e; ruff+format+pyright clean in worktree; API suites re-running on integration 2026-11-22 |
 | 6 | merged | prp-137-item6 | sonnet; 3d0135d3 merged 8965f003; agent cut off by a PC restart, gates re-run by orchestrator: ruff+pyright clean, 289 passed; post-merge 382 passed 2026-11-22 |
 | 7 | merged | prp-137-item7 | sonnet; cef95b00 merged f05a5189; 188 passed, integration file collects 3; found the OTLP domain gap (clarification 10); emulator run pending 2026-11-22 |
-| 6b | in-progress | prp-137-item6b | sonnet, dispatched 2026-11-22 (owner decision, clarification 10) |
+| 6b | review | prp-137-item6b | sonnet; 6cd83db8 merged 10d4b906; ruff+pyright clean, 405 passed post-merge; cross-domain re-resolution proven clean 2026-11-22 |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
