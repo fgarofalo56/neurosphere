@@ -1,11 +1,13 @@
 ---
 name: PRP-137-telemetry-agent-identity-resolution
-status: active
+status: shipped
 priority: P0
 order: 59
 review: required
 created: 2026-11-16
 started: 2026-11-22
+shipped: 2026-11-22
+pr: 375
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -274,12 +276,22 @@ Deviation (item 2, 2026-11-22): the worker test directory is `services/workers/t
 | 6 | merged | prp-137-item6 | sonnet; 3d0135d3 merged 8965f003; agent cut off by a PC restart, gates re-run by orchestrator: ruff+pyright clean, 289 passed; post-merge 382 passed 2026-11-22 |
 | 7 | merged | prp-137-item7 | sonnet; cef95b00 merged f05a5189; 188 passed, integration file collects 3; found the OTLP domain gap (clarification 10); emulator run pending 2026-11-22 |
 | 6b | merged | prp-137-item6b | sonnet; 6cd83db8 merged 10d4b906; ruff+pyright clean, 405 passed post-merge; cross-domain re-resolution proven clean 2026-11-22; review APPROVE |
-| 8 | in-progress | prp-137-item8 | sonnet docs b2c4855d merged 899f4972 (tests/docs 127 passed, mkdocs --strict clean); orchestrator 4a807b20 counters in /readyz (owner OK, supervisor.py outside ownership), 153 passed; emulator integration 3 passed; review APPROVE (8 non-blocking -> follow-ups) 2026-11-22; full workers 1120 passed; full api 2596 passed + 2 mcp_api load timeouts (66 passed alone); emulator ingestion commercial file times out on known EH throttle (untouched path) |
+| 8 | merged | prp-137-item8 | sonnet docs b2c4855d merged 899f4972 (tests/docs 127 passed, mkdocs --strict clean); orchestrator 4a807b20 counters in /readyz (owner OK, supervisor.py outside ownership), 153 passed; emulator integration 3 passed; review APPROVE (8 non-blocking -> follow-ups) 2026-11-22; full workers 1120 passed; full api 2596 passed + 2 mcp_api load timeouts (66 passed alone); emulator ingestion commercial file times out on known EH throttle (untouched path); PR #375 CI green, squash-merged 261da0d2 2026-11-22 |
 
 ## Completion note (filled at ship)
-- Date, PR:
+- Date, PR: 2026-11-22, PR #375 squash-merged as `261da0d2` (CI green). Item merges on the integration branch: de870c2f (1), 3afa5669 (2), 7f70ee92 (3), 7a2c66eb (4), 717d906e (5), 8965f003 (6), f05a5189 (7), 10d4b906 (6b), 899f4972 + 4a807b20 (8). Independent review: APPROVE, no blockers.
 - Deviations:
-- Descoped items:
+  - The worker test directory is `services/workers/tests/agent_identity_worker`: two top-level `agent_identity` test packages failed collection in one pytest session.
+  - Item 6b was added (clarification 10, owner decision 2026-11-22). OTLP events carry no `domain_id`, so edges and drafts never fired for real OTLP traffic. The resolving sources now stamp a domain at read time: the agent's catalog domain for `alias`/`declared`, `NS_AGENT_IDENTITY_DISCOVERY_DOMAIN` for `derived`, and never over an event's own domain.
+  - `services/workers/neurosphere_workers/runtime/supervisor.py` (outside the declared ownership, with owner approval) reports a role's `counters()` under `counters` in `/readyz` (criterion 8). `CountersRole` forwards `idle_reason`.
+  - Item 5 owned the builder-pinned files PRP-139 found (plan approval). Its route test was renamed `test_alias_routes.py` to avoid a basename clash with `admin_producers_api`.
+  - The re-resolution CLI dependencies are built in `agent_identity/wiring.py` and `factories.py` (item 6), not in item 4.
+  - Rollback text corrected: the aggregate window is 90 days (`WINDOW_DAYS`), not 7.
+- Descoped items: none.
+- Product check: an OTLP span through `map_span`, `process_batch`, the archive, the outbox and the aggregates and catalog projections gives a per-agent series, a `USES_MODEL` edge in the agent's domain and, without an alias, a draft agent. In-process tests and the local emulator variant (3 passed) both confirm it. The tests fail when resolution is removed. Map health for an OTLP agent then follows from PRP-74, which reads these series.
+- Consumers: PRP-74 (map health for OTLP agents), PRP-100 (agent series beside tool and service series), PRP-134 (per-agent cost series), PRP-76 (undeclared-agent list reads the drafts).
 - OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
+  - Hosted check that an OTLP agent from a real producer gets a series and map health (PRP-82 signed-in smoke, PRP-136); nothing was run against Azure.
+  - Local emulator file `tests/integration/ingestion/test_pipeline_commercial.py` (not touched by this PRP) timed out at 420 of 1143 events on the known Event Hubs emulator throttle and backlog. It was not re-run on wiped volumes.
+- Env vars for the operator: `NS_AGENT_IDENTITY_POSITIVE_TTL_SECONDS` (60), `NS_AGENT_IDENTITY_NEGATIVE_TTL_SECONDS` (15), `NS_AGENT_IDENTITY_RESCAN_MAX_EVENTS` (50000), and `NS_AGENT_IDENTITY_DISCOVERY_DOMAIN` (unset: derived agents get no domain, so no draft and no edge). Runbook: `docs/runbooks/agent-identity-resolution.md`.
+- Follow-up issues: #376 (alias repoint atomicity and retire-audit ordering), #377 (resolver single-flight, declared-id existence, Foundry alias counters in `/readyz`), #378 (automatic re-resolution trigger, indexed archive scan).
