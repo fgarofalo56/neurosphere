@@ -20,10 +20,12 @@ from neurosphere_core.actions import DraftRequest
 from neurosphere_core.aggregates import AggregateWindow, Grain, Metric, QueryResult
 from neurosphere_core.catalog import CatalogEntity, EntityFilter
 from neurosphere_core.paging import Page, PageRequest
+from neurosphere_core.recommendations.matching.service import AgentMatchReader
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
     "ActionDrafter",
+    "AgentMatchReader",
     "CatalogReader",
     "EvidenceReader",
     "EvidenceRecord",
