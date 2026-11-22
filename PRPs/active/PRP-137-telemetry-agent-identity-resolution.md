@@ -56,6 +56,7 @@ Out of scope: tool and service identity (PRP-100); the map (PRP-74 reads the ser
 | 7 | Conflict with a registered agent with the same external id | Merge; leave both | Leave both. The draft stays until a steward deprecates it; nothing merges agents automatically |
 | 8 | Trigger for re-resolution | Automatic on alias write; operator job | Decided by the owner 2026-11-16 (GD-38): re-resolution after an alias change is an operator job (`python -m neurosphere_workers.agent_identity reresolve`); an automatic trigger is a follow-up. Here: plus the `reresolve_needed` hint, because the API process cannot enqueue worker work without a new store |
 | 9 | Scope of re-resolution | All history; the aggregate window | The aggregates window (`window_start`, `aggregates/handler.py:59`) and the archive names the reader indexes, capped by `NS_AGENT_IDENTITY_RESCAN_MAX_EVENTS` (default 50 000); older events stay under the derived id and the report says so |
+| 10 | Domain for OTLP events (they arrive with no `domain_id`, so edges and drafts never fire) | Stamp at read time; ship and follow up; attribute at the ingest edge | Decided by the owner 2026-11-22 during execution: stamp at read time in the resolving sources, never overwriting an event's own domain. `alias`/`declared` take the resolved agent's catalog domain (cached `get_entity` in the worker scope); `derived` takes the operator setting `NS_AGENT_IDENTITY_DISCOVERY_DOMAIN` (unset or foreign: counted `domain_unattributed`, behaviour as before). Item 6b |
 
 ## Context manifest
 
@@ -219,6 +220,12 @@ Parallelization: items 1 and 5 touch no common file; item 2 needs 1; item 3 need
 - Tests: the two files.
 - Pattern references: `tests/integration/ingestion/support.py:252-310` (`push_otlp_traces`, `otlp_model_call_spans`), `services/workers/tests/ingestion`.
 
+### Item 6b - Domain attribution for OTLP events (added 2026-11-22, clarification 10)
+- Deliverable: the resolver also returns a domain for events with none (the resolved agent's catalog domain for `alias`/`declared`, the discovery-domain setting for `derived`); the resolving sources stamp it; settings and wiring carry `NS_AGENT_IDENTITY_DISCOVERY_DOMAIN`; counters `domain_from_agent`, `domain_from_setting`, `domain_unattributed`; the item 7 tests drop their hand-stamped domain.
+- Owned files: `packages/core/neurosphere_core/agent_identity/**`, `packages/core/tests/agent_identity/**`, `services/workers/neurosphere_workers/agent_identity/**`, `services/workers/tests/agent_identity_worker/**`, `tests/integration/ingestion/test_agent_identity_resolution.py`.
+- Depends on: items 6 and 7.
+- Acceptance criteria: a real OTLP span (no domain) with an alias gets the `USES_MODEL` edge in the agent's domain; with no alias and the setting set it gets a draft in that domain; an event's own domain is never overwritten; a re-resolution that moves a contribution between domains leaves no stale points in the old domain.
+
 ### Item 8 - Integration and close-out
 - Deliverable: Tier-2 appends, `docs/runbooks/agent-identity-resolution.md` (what an alias is, derived ids, declaring and repointing, running re-resolution and reading its report, limits), mkdocs nav, regenerate Tier-3 (`openapi.json`, `docs/reference/**`, PRP index and status table), changelog fragment `changelog.d/PRP-137-telemetry-agent-identity-resolution.md`, completion note stating which PRPs consume the fix (74, 100, 134) and the product check: an OTLP agent shows an aggregate series and a map health value after the pipeline runs.
 - Owned files: Tier-2 lines, the runbook, this PRP file, Tier-3 files per reference section 6.
@@ -263,9 +270,10 @@ Deviation (item 2, 2026-11-22): the worker test directory is `services/workers/t
 | 2 | merged | prp-137-item2 | sonnet; 08065343 merged 3afa5669; test dir renamed agent_identity_worker; ruff+pyright clean, 179 passed (core+worker agent_identity, projections, aggregates, evaluation) 2026-11-22 |
 | 3 | merged | prp-137-item3 | sonnet; 82f3f154 merged 7f70ee92; ruff+pyright clean, 254 passed (agent_identity core+worker, projections, worker_roles, aggregates, evaluation) 2026-11-22 |
 | 4 | merged | prp-137-item4 | sonnet; 2f9f5e99 merged 7a2c66eb; ruff+pyright clean, 265 passed; CLI dependency seam left for item 6 2026-11-22 |
-| 5 | in-progress | prp-137-item5 | sonnet, dispatched 2026-11-22 |
-| 6 | in-progress | prp-137-item6 | sonnet, dispatched 2026-11-22 (also completes the reresolve CLI seam) |
-| 7 | in-progress | prp-137-item7 | sonnet, dispatched 2026-11-22 |
+| 5 | verifying | prp-137-item5 | sonnet; e89901d2 + f3e21ff5 (test rename committed after a PC restart); orchestrator re-running gates 2026-11-22 |
+| 6 | merged | prp-137-item6 | sonnet; 3d0135d3 merged 8965f003; agent cut off by a PC restart, gates re-run by orchestrator: ruff+pyright clean, 289 passed; post-merge 382 passed 2026-11-22 |
+| 7 | merged | prp-137-item7 | sonnet; cef95b00 merged f05a5189; 188 passed, integration file collects 3; found the OTLP domain gap (clarification 10); emulator run pending 2026-11-22 |
+| 6b | in-progress | prp-137-item6b | sonnet, dispatched 2026-11-22 (owner decision, clarification 10) |
 | 8 | todo | | |
 
 ## Completion note (filled at ship)
