@@ -1,7 +1,9 @@
 ---
 name: PRP-141-azure-monitor-ai-call-telemetry-reader
-status: active
+status: shipped
 started: 2026-11-22
+shipped: 2026-11-22
+pr: 380
 priority: P0
 order: 60
 review: required
@@ -362,14 +364,19 @@ Content capture of any kind; classic Application Insights or the app-id query AP
 | 5 | merged | worktree-agent-a02a8833cbd6e1dbd @ 69de1543 (sonnet) | verify PASS 2026-11-22: tests/unit/azure_monitor_ai 20 passed (+ agent_identity_worker together: 74), integration variant collects 7 with -m integration (not run: emulator); cases a-f pass, no product defect; merged 33fb238d; batch review before PR |
 | 6 | merged | worktree-agent-aed1bff65be9df1d9 @ e7b47818 (sonnet) | enum added here (amended); verify PASS 2026-11-22: generate --check OK, 3246 passed (contracts, connector_config_worker, azure_monitor_ai_role, admin_connectors core+api, authz), agent-reported frontend lint/typecheck clean + vitest 25 passed; ConnectorIdle moved to connector_config/idle.py (cycle); review APPROVED (follow-ups: empty api_base_url= in Connect template, cloud_mismatch via domain prefix, managed_identity_client_id unused); merged 97867e17 + openapi/docs reference regen (130 passed); frontend typecheck+lint clean, vitest 90 passed (admin/sources, source-status, overview, workspaces) |
 | 7 | merged | worktree-agent-ab8caba42ad50ddb2 @ a8c4531f (sonnet) | verify PASS 2026-11-22: hosted_real_tenant + tests/docs 280 passed, ruff/pyright clean, validate_planning PASS; verify row 4 = admin status events_posted + domain latency point (no route filters by source); posted-not-visible = OPEN; merged f831397e; batch review running |
-| 8 | verifying | orchestrator | changelog fragment, G04 note, openapi/docs reference, EXECUTION-PLAN and INDEX regenerated; batch review 3/4/5/7 APPROVED; gates 2026-11-22: ruff + format clean, pyright 0 after fix 302699d3, contracts check OK, prp_status + validate_planning PASS, frontend lint/typecheck clean + 1356 tests passed, PRP pytest list 5958 passed + 1 order-dependent flake (test_admin_platform_secrecy policy write; passes alone and in the 1639-test authz run); Snyk: 0 issues in new Python, 3 Low pre-existing synthetic frontend test fixtures; PR + CI pending |
+| 8 | merged | orchestrator | changelog fragment, G04 note, openapi/docs reference, EXECUTION-PLAN and INDEX regenerated; batch review 3/4/5/7 APPROVED; gates 2026-11-22: ruff + format clean, pyright 0 after fix 302699d3, contracts check OK, prp_status + validate_planning PASS, frontend lint/typecheck clean + 1356 tests passed, PRP pytest list 5958 passed + 1 order-dependent flake (test_admin_platform_secrecy policy write; passes alone and in the 1639-test authz run); Snyk: 0 issues in new Python, 3 Low pre-existing synthetic frontend test fixtures; PR #380 CI 33/33 green (Pages deploy skipped), squash-merged f77c0597 2026-11-22 at head d85d6b2c (incl. CodeQL cyclic-import fix a11b3ef1) |
 
 ## Completion note (filled at ship)
-- Date, PR:
+- Date, PR: 2026-11-22, PR #380 squash-merged as `f77c0597` (CI 33/33 green, Pages deploy skipped). Item merges on the integration branch: 570e75df (1), fbfe7022 (2), 1dced353 (3), db596613 (4), 33fb238d (5), 97867e17 (6), f831397e (7); item 8 close-out 276368d7, pyright fix 302699d3, CodeQL cyclic-import fix a11b3ef1 (merged d85d6b2c). Independent review: items 1, 2 and 6 APPROVED individually, items 3/4/5/7 APPROVED as a batch; no blockers.
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- UNVERIFIED items still open:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can the owner connect the workspace and see their own AI calls without editing files):
+  - Item 6 added the `azure_monitor_ai` value to the `connector_kind` enum itself rather than waiting for PRP-99 (owner sign-off at plan approval, 2026-11-22); item 6 also owned `services/api/neurosphere_api/sources_status/models.py` for the connector-kind `Literal`.
+  - `ConnectorIdle` moved to `connector_config/idle.py` to break an import cycle (item 6).
+  - The `azure_monitor_ai` builder moved into the runtime factories to clear a CodeQL cyclic-import alert (a11b3ef1).
+  - The poll checkpoint is keyed per workspace and per source kind; queries are counted by `PollResult.requests_made` (item 2).
+  - Verify row 4 reads the admin status `events_posted` plus a domain latency point, because no API route filters events by source (item 7).
+- Descoped items: none.
+- OPEN gates: the operator live gate "Azure Monitor AI call telemetry" (all 5 rows) was not run. Nothing was queried against a real workspace, so PRP-139 gate row 4 stays OPEN ("posted but not visible" cannot be distinguished without it). Government is untested. G04 stays OPEN. The integration variant (7 tests, `-m integration`, emulator) was collected but not run.
+- UNVERIFIED items still open: query cost on the Analytics plan (research 9); the Government token audience and Foundry tracing in Government (11; the role refuses Government unless `allow_unverified_government` is set); whether `gen_ai.agent.id` equals the Foundry agent id (12); the hand-built fixture is not yet replaced by a scrubbed real response (gate row 5).
+- Env vars for the operator (prefix `NS_AZURE_MONITOR_AI_`): `WORKSPACE_IDS`, `DOMAIN_ID`, `PRODUCER_SECRET` (vault reference), `API_BASE_URL` (falls back to `NS_API_BASE_URL`), plus tunables `INTERVAL_SECONDS` (300), `WINDOW_SECONDS` (3600), `LOOKBACK_SECONDS` (86400), `OVERLAP_SECONDS` (600), `MAX_QUERIES_PER_TICK` (24), `MAX_EVENTS_PER_TICK` (20000), `APP_ROLE_NAMES`, `ALLOW_UNVERIFIED_GOVERNMENT` (false). Least-privilege role: Log Analytics Reader on the workspace (plus Privileged Monitoring Data Reader for protected tables). Runbook: `docs/runbooks/azure-monitor-ai-telemetry.md`.
+- Follow-up issues: #381 (review follow-ups from items 1, 2 and 6; stale "three roles" text; Copilot Studio GUID trace ids; `OTelSpans` table).
+- Product check (can the owner connect the workspace and see their own AI calls without editing files): in code, yes. The source is configured in the admin Connectors page (`azure_monitor_ai` kind) and its run status shows in the PRP-139 status rows. Recorded-fixture tests take rows through the mapper, the edge, the workers and the aggregates. Against the owner's real tenant: UNPROVEN until the operator live gate runs.

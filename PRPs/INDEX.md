@@ -4,9 +4,7 @@
 
 ## Active
 
-| PRP | Priority | Progress | Items | Models | Review |
-|---|---|---|---|---|---|
-| [PRP-141-azure-monitor-ai-call-telemetry-reader](active/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 7/8 (87%) | verifying 1, merged 7 | sonnet / sonnet | required |
+_none_
 
 ## Backlog
 
@@ -89,6 +87,7 @@ _none_
 | PRP | Shipped | PR |
 |---|---|---|
 | [PRP-137-telemetry-agent-identity-resolution](shipped/PRP-137-telemetry-agent-identity-resolution.md) | 2026-11-22 | #375 |
+| [PRP-141-azure-monitor-ai-call-telemetry-reader](shipped/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | 2026-11-22 | #380 |
 | [PRP-139-hosted-environment-real-tenant-data](shipped/PRP-139-hosted-environment-real-tenant-data.md) | 2026-11-21 | #369 |
 | [PRP-75-find-an-agent-ui-and-recommendation-metrics](shipped/PRP-75-find-an-agent-ui-and-recommendation-metrics.md) | 2026-11-21 | #366 |
 | [PRP-71-realistic-seeded-world-and-demo-profile](shipped/PRP-71-realistic-seeded-world-and-demo-profile.md) | 2026-11-20 | #353 |
