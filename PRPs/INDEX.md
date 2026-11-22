@@ -4,13 +4,14 @@
 
 ## Active
 
-_none_
+| PRP | Priority | Progress | Items | Models | Review |
+|---|---|---|---|---|---|
+| [PRP-141-azure-monitor-ai-call-telemetry-reader](active/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 0/8 (0%) | todo 8 | sonnet / sonnet | required |
 
 ## Backlog
 
 | PRP | Priority | Order | Depends on | Blockers | Models | Review |
 |---|---|---|---|---|---|---|
-| [PRP-141-azure-monitor-ai-call-telemetry-reader](backlog/PRP-141-azure-monitor-ai-call-telemetry-reader.md) | P0 | 60 | PRP-139-hosted-environment-real-tenant-data, PRP-137-telemetry-agent-identity-resolution | - | sonnet / sonnet | required |
 | [PRP-74-live-map-topology-backend](backlog/PRP-74-live-map-topology-backend.md) | P0 | 65 | PRP-70-contracts-revision-restored-scope, PRP-71-realistic-seeded-world-and-demo-profile, PRP-73-graph-access-and-sensitivity-questions, PRP-100-telemetry-tool-service-identity-and-aggregates, PRP-137-telemetry-agent-identity-resolution | PRP-100-telemetry-tool-service-identity-and-aggregates (backlog) | sonnet / sonnet | required |
 | [PRP-77-live-map-filters-search-and-incident-view](backlog/PRP-77-live-map-filters-search-and-incident-view.md) | P0 | 68 | PRP-74-live-map-topology-backend | PRP-74-live-map-topology-backend (backlog) | sonnet / sonnet | required |
 | [PRP-78-copilot-graph-timeline-and-recommender-tools](backlog/PRP-78-copilot-graph-timeline-and-recommender-tools.md) | P0 | 69 | PRP-70-contracts-revision-restored-scope, PRP-73-graph-access-and-sensitivity-questions, PRP-72-agent-and-tool-recommender-backend, PRP-71-realistic-seeded-world-and-demo-profile | - | opus / sonnet | required |
