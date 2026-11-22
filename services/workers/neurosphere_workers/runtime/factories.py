@@ -164,6 +164,7 @@ from neurosphere_workers.aggregates.sources import StoreLedgerSource
 from neurosphere_workers.archive.settings import ArchiveSettings
 from neurosphere_workers.connector_config import (
     ConnectorIdle,
+    resolve_azure_monitor_ai_settings,
     resolve_billing_export_settings,
     resolve_foundry_discovery_settings,
     resolve_gateway_poll_settings,
@@ -190,7 +191,7 @@ from neurosphere_workers.evaluation.service import (
     OnlineRunConfig,
 )
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
-from neurosphere_workers.ingestion.azure_monitor_ai.build import build_azure_monitor_ai
+from neurosphere_workers.ingestion.azure_monitor_ai import AzureMonitorAiPoller
 from neurosphere_workers.ingestion.billing_export import (
     BillingExportPoller,
 )
@@ -1449,6 +1450,58 @@ async def build_gateway_poll(cfg: RuntimeConfig, lifetime: ClientLifetime) -> Ro
         before=observed.drain,
     )
     return _tick_role("gateway_poll", PeriodicTick(recorded, poll.interval_seconds), cfg)
+
+
+# --------------------------------------------------------------------------------------------
+# azure_monitor_ai (part of ``all``; idles until configured; stored config wins, else env)
+
+
+async def build_azure_monitor_ai(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    settings = await resolve_azure_monitor_ai_settings(cfg, lifetime)
+    status_repo = cosmos_repository(lambda: _cosmos(cfg, lifetime), database=cfg.store.database)
+    if isinstance(settings, ConnectorIdle) or settings.unconfigured:
+        logger.info(
+            "azure_monitor_ai not configured; role idles",
+            extra={"event": "worker.azure_monitor_ai_unconfigured"},
+        )
+        idle = idle_recording(
+            "azure_monitor_ai", settings, status_repo, customer_id=cfg.customer_id
+        )
+        return _tick_role("azure_monitor_ai", idle, cfg)
+    if settings.domain_id is None:
+        raise RoleConfigError("azure_monitor_ai_domain_id_missing")
+    if settings.api_base_url is None:
+        raise RoleConfigError("azure_monitor_ai_api_base_url_missing")
+    if settings.producer_secret is None:
+        raise RoleConfigError("azure_monitor_ai_producer_secret_missing")
+    if not settings.workspaces:
+        raise RoleConfigError("azure_monitor_ai_workspace_ids_missing")
+    customer = cfg.customer_id
+    cosmos = await _cosmos(cfg, lifetime)
+    http = lifetime.register(_ClosableHttp(httpx.AsyncClient(timeout=httpx.Timeout(30.0))))
+    poller = AzureMonitorAiPoller(
+        ingest=IngestClient(
+            http.client,
+            base_url=settings.api_base_url,
+            producer_id=settings.producer_id,
+            secret=settings.producer_secret.get_secret_value(),
+        ),
+        checkpoints=_runtime_checkpoints(cfg, cosmos),
+        settings=settings,
+        customer_id=customer,
+        domain_id=settings.domain_id,
+        cloud="government" if cfg.cloud == "government" else "commercial",
+        # The factory takes no managed identity client id yet: the default credential is used.
+        connector_factory=default_connector_factory(settings.allow_unverified_government),
+    )
+    recorded = StatusRecordingTick(
+        "azure_monitor_ai",
+        poller.tick,
+        lambda: poller.last_status,
+        status_repo,
+        customer_id=customer,
+    )
+    return _tick_role("azure_monitor_ai", PeriodicTick(recorded, settings.interval_seconds), cfg)
 
 
 # --------------------------------------------------------------------------------------------

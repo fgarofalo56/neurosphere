@@ -144,7 +144,7 @@ UNVERIFIED, to confirm before any query text is written:
 
 ### Interfaces provided
 - Connector: `SourceKind.APP_GENAI_DEPENDENCIES`, `SourceKind.APP_GENAI_REQUESTS`; `GENAI_COLUMNS`, `GENAI_ATTRIBUTE_KEYS`, `CONTENT_DENYLIST`; `map_genai_row(row, *, cloud, customer_id, source_id, domain_id, app_role_names=None) -> TelemetryEvent`.
-- Worker package `neurosphere_workers.ingestion.azure_monitor_ai`: `AzureMonitorAiSettings` (`NS_AZURE_MONITOR_AI_*`), `AzureMonitorAiPoller` (`tick`, `last_status`), `build_azure_monitor_ai`; role name `azure_monitor_ai`; default producer id and source id `azure-monitor-ai`.
+- Worker package `neurosphere_workers.ingestion.azure_monitor_ai`: `AzureMonitorAiSettings` (`NS_AZURE_MONITOR_AI_*`), `AzureMonitorAiPoller` (`tick`, `last_status`); the `build_azure_monitor_ai` role builder lives in `neurosphere_workers.runtime.factories` (moved there from the package to avoid an import cycle); role name `azure_monitor_ai`; default producer id and source id `azure-monitor-ai`.
 - Stored kind `azure_monitor_ai` with settings `workspace_ids`, `interval_seconds`, `window_seconds`, `lookback_seconds`, `overlap_seconds`, `max_queries_per_tick`, `max_events_per_tick`, `app_role_names`, `allow_unverified_government`, `producer_id`, `source_id`, `batch_size`, `api_base_url`, `managed_identity_client_id`.
 - Reason codes `query_budget_exhausted`, `event_budget_exhausted`, `rate_limited`, `stalled`, `ingest_failed`, `cloud_mismatch`, `refused_government_unverified`.
 - Consumers: PRP-82 (turns the role on in the everything-on profile), PRP-117 (may wrap the role as a descriptor), PRP-74, PRP-100 and PRP-134 (read the series the events create), PRP-109 (the deployed scenario).
