@@ -34,6 +34,27 @@ class CatalogAliasLookup:
         return await self._repo.resolve_alias(self._scope_getter(), key)
 
 
+@runtime_checkable
+class AgentDomainLookup(Protocol):
+    async def domain_of(self, agent_id: str) -> str | None:
+        """Catalog domain id of the agent, or None (missing, out of scope, or no domain)."""
+        raise NotImplementedError
+
+
+class CatalogAgentDomainLookup:
+    """``AgentDomainLookup`` over ``CatalogRepository.get_entity`` in the caller's scope."""
+
+    def __init__(self, repo: CatalogRepository, scope_getter: Callable[[], IdentityScope]) -> None:
+        self._repo = repo
+        self._scope_getter = scope_getter
+
+    async def domain_of(self, agent_id: str) -> str | None:
+        entity = await self._repo.get_entity(self._scope_getter(), agent_id)
+        domain = getattr(entity, "domain_id", None)
+        value = getattr(domain, "root", domain)
+        return value if isinstance(value, str) and value else None
+
+
 @dataclass(frozen=True, slots=True)
 class DeclaredAlias:
     outcome: Literal["created", "repointed", "unchanged"]
