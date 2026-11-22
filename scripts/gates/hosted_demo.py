@@ -83,7 +83,7 @@ _ARM_ID_ARGS = (
     "foundry_account_id",
     "billing_export_storage_account_id",
 )
-CONNECTOR_ROLES = ("gateway_poll", "foundry_discovery", "billing_export")
+CONNECTOR_ROLES = ("gateway_poll", "foundry_discovery", "billing_export", "azure_monitor_ai")
 DATA_MODES = ("demo", "real-tenant")
 SYNTHETIC_CUSTOMER_ID = "synthco"
 #: One canonical id segment (the rule of ``neurosphere_core.auth.scope.pseudonym``).

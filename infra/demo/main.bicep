@@ -84,7 +84,7 @@ param evaluationPilotSubjectId string = ''
 @description('Registered synthetic dataset ids for the evaluation pilot, comma separated (NS_EVALUATION_PILOT_DATASET_IDS on the API, NS_WORKER_EVAL_PILOT_DATASET_IDS on the workers).')
 param evaluationPilotDatasetIds string = 'sbx-groundedness-pilot'
 
-@description('PRP-58: connector worker roles to switch on in the workers site, a subset of gateway_poll, foundry_discovery and billing_export. Empty (default) runs none. Stored connector config (PRP-42) says what each role polls; this parameter only starts the role. Needs the workers identity roles of connector-rbac.bicep and a producer secret in Key Vault; see docs/deploy/hosted-demo.md.')
+@description('PRP-58: connector worker roles to switch on in the workers site, a subset of gateway_poll, foundry_discovery, billing_export and azure_monitor_ai. Empty (default) runs none. Stored connector config (PRP-42) says what each role polls; this parameter only starts the role. Needs the workers identity roles of connector-rbac.bicep and a producer secret in Key Vault; see docs/deploy/hosted-demo.md.')
 param connectorRoles array = []
 
 @description('PRP-58: switch the recommendations worker role on, reading the lakehouse archive (NS_WORKER_REC_SOURCE=archive) instead of sandbox files. Default false.')
@@ -99,7 +99,7 @@ param billingExportStorageAccountId string = ''
 @description('PRP-138: Entra claim to role mapping for the API (NS_AUTH_ROLE_MAPPINGS), an object {tenant_id, audience, entries: [{id, claim, value, role, domains, customer_control}]}. Not a secret. Empty (default) leaves the mapping off and the setting unset. tenant_id must equal entraTenantId and audience must equal entraClientId, or the API authz component fails closed at startup (role_mapping_binding_mismatch). See docs/runbooks/entra-role-mapping.md.')
 param entraRoleMappings object = {}
 
-@description('PRP-139: demo (default) keeps the synthetic hosted demo. real-tenant shows only the tenant this deployment runs in: it switches on the connector roles foundry_discovery, gateway_poll and billing_export whatever connectorRoles says, points the workers at the API (NS_API_BASE_URL) and needs a customerId other than synthco. Sets NS_HOSTED_DATA_MODE on the API and workers in both modes. Commercial cloud only; the deploy script refuses it elsewhere.')
+@description('PRP-139: demo (default) keeps the synthetic hosted demo. real-tenant shows only the tenant this deployment runs in: it switches on the connector roles foundry_discovery, gateway_poll, billing_export and azure_monitor_ai whatever connectorRoles says, points the workers at the API (NS_API_BASE_URL) and needs a customerId other than synthco. Sets NS_HOSTED_DATA_MODE on the API and workers in both modes. Commercial cloud only; the deploy script refuses it elsewhere.')
 @allowed([
   'demo'
   'real-tenant'
@@ -109,7 +109,7 @@ param dataMode string = 'demo'
 @description('PRP-139: customer id (NS_AUTH_CUSTOMER_ID), the partition value of the stored data. Default synthco is the synthetic demo estate; real-tenant needs a lowercase slug of the organisation, never synthco. Not a secret.')
 param customerId string = 'synthco'
 
-@description('PRP-139: ARM resource ids of existing Log Analytics workspaces the gateway_poll role queries, /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<name>. Each gets Log Analytics Data Reader for the workers identity at that workspace scope only. Empty (default) assigns nothing.')
+@description('PRP-139: ARM resource ids of existing Log Analytics workspaces the gateway_poll and azure_monitor_ai roles query (the workspace behind a workspace-based Application Insights resource goes in this same list), /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<name>. Each gets Log Analytics Data Reader for the workers identity at that workspace scope only. Empty (default) assigns nothing.')
 param logAnalyticsWorkspaceIds array = []
 
 @description('PRP-139: ARM resource ids of existing API Management services the API reads through ARM at gateway registration, /subscriptions/<id>/resourceGroups/<rg>/providers/Microsoft.ApiManagement/service/<name>. Each gets API Management Service Reader Role for the API identity at that service scope only. Empty (default) assigns nothing.')
@@ -271,10 +271,10 @@ var commonSettings = union(
 
 // PRP-58: the hosted data path. IaC only starts roles and points them at the API; what each
 // connector polls lives in stored connector configuration (PRP-42), never in app settings.
-// PRP-139: real-tenant always runs the three connector roles; demo runs what connectorRoles names.
+// PRP-139: real-tenant always runs the four connector roles; demo runs what connectorRoles names.
 // NS_HOSTED_DATA_MODE is set on the API and workers by the appservice module (dataMode parameter).
 var effectiveConnectorRoles = dataMode == 'real-tenant'
-  ? union(connectorRoles, ['foundry_discovery', 'gateway_poll', 'billing_export'])
+  ? union(connectorRoles, ['foundry_discovery', 'gateway_poll', 'billing_export', 'azure_monitor_ai'])
   : connectorRoles
 var workerRoles = concat(
   ['ingestion', 'projections', 'aggregates', 'actions', 'hitl_timers', 'lifecycle', 'evaluation'],

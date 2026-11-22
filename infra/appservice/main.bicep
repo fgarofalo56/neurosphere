@@ -110,7 +110,7 @@ param searchRegion string = ''
 @description('PRP-58: read ingest producers from the admin store (NS_INGEST_PRODUCER_STORE on the API site). Off by default. Same meaning as ingest.producerStore in the Helm chart. Do not also set the key in apiAppSettings.')
 param ingestProducerStore bool = false
 
-@description('PRP-58: worker roles (NS_WORKER_ROLES on the workers site). Empty (default) leaves the key to workersAppSettings. Connector roles gateway_poll, foundry_discovery and billing_export are never on by default. Same meaning as workers.roles in the Helm chart. Do not also set the key in workersAppSettings.')
+@description('PRP-58: worker roles (NS_WORKER_ROLES on the workers site). Empty (default) leaves the key to workersAppSettings. Connector roles gateway_poll, foundry_discovery, billing_export and azure_monitor_ai are never on by default. Same meaning as workers.roles in the Helm chart. Do not also set the key in workersAppSettings.')
 param workerRoles array = []
 
 @description('PRP-58: NS_WORKER_CONNECTOR_CONFIG_SOURCE on the workers site (auto reads stored connector config). Empty (default) leaves it unset. Same meaning as workers.connectorConfigSource.')
@@ -122,7 +122,7 @@ param workerApiBaseUrl string = ''
 @description('PRP-58: NS_WORKER_REC_SOURCE on the workers site (archive reads the lakehouse archive). Empty (default) leaves it unset. Same meaning as workers.recommendations.source.')
 param recommendationsSource string = ''
 
-@description('PRP-139: data mode (NS_HOSTED_DATA_MODE on the API and workers sites). demo (default) is the synthetic hosted demo; real-tenant shows only the tenant the deployment runs in and adds the connector roles gateway_poll, foundry_discovery and billing_export to workerRoles when that list is not empty. Do not also set the key in apiAppSettings or workersAppSettings.')
+@description('PRP-139: data mode (NS_HOSTED_DATA_MODE on the API and workers sites). demo (default) is the synthetic hosted demo; real-tenant shows only the tenant the deployment runs in and adds the connector roles gateway_poll, foundry_discovery, billing_export and azure_monitor_ai to workerRoles when that list is not empty. Do not also set the key in apiAppSettings or workersAppSettings.')
 @allowed([
   'demo'
   'real-tenant'
@@ -175,7 +175,7 @@ var searchSettings = concat(
   empty(searchRegion) ? [] : [{ name: 'NS_SEARCH_REGION', value: searchRegion }]
 )
 var ingestStoreSettings = ingestProducerStore ? [{ name: 'NS_INGEST_PRODUCER_STORE', value: 'true' }] : []
-var connectorWorkerRoles = ['gateway_poll', 'foundry_discovery', 'billing_export']
+var connectorWorkerRoles = ['gateway_poll', 'foundry_discovery', 'billing_export', 'azure_monitor_ai']
 var effectiveWorkerRoles = dataMode == 'real-tenant' ? union(workerRoles, connectorWorkerRoles) : workerRoles
 var dataModeSettings = concat(
   [{ name: 'NS_HOSTED_DATA_MODE', value: dataMode }],
