@@ -257,11 +257,11 @@ Plan approval 2026-11-22: item 5 runs after item 1 (it calls `declare_agent_alia
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | in-progress | prp-137-item1 | sonnet, dispatched 2026-11-22 |
-| 2 | todo | | |
+| 1 | merged | prp-137-item1 | sonnet; 80bb2748 merged de870c2f; ruff+pyright clean, 176 passed (agent_identity+catalog) 2026-11-22 |
+| 2 | in-progress | prp-137-item2 | sonnet, dispatched 2026-11-22 |
 | 3 | todo | | |
 | 4 | todo | | |
-| 5 | todo | | |
+| 5 | in-progress | prp-137-item5 | sonnet, dispatched 2026-11-22 |
 | 6 | todo | | |
 | 7 | todo | | |
 | 8 | todo | | |

@@ -6,7 +6,7 @@
 
 | PRP | Priority | Progress | Items | Models | Review |
 |---|---|---|---|---|---|
-| [PRP-137-telemetry-agent-identity-resolution](active/PRP-137-telemetry-agent-identity-resolution.md) | P0 | 0/8 (0%) | todo 7, in-progress 1 | sonnet / sonnet | required |
+| [PRP-137-telemetry-agent-identity-resolution](active/PRP-137-telemetry-agent-identity-resolution.md) | P0 | 1/8 (12%) | todo 5, in-progress 2, merged 1 | sonnet / sonnet | required |
 
 ## Backlog
 
