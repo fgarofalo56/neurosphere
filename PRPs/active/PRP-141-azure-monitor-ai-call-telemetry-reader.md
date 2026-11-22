@@ -187,6 +187,9 @@ owns:
   - packages/core/tests/admin_connectors/**
   - packages/core/neurosphere_core/sources_status/**
   - packages/core/tests/sources_status_core/**
+  - services/api/neurosphere_api/sources_status/models.py
+  - services/api/tests/sources_status_api/test_source_status_routes.py
+  - tests/security/authz/test_sources_status.py
   - services/api/neurosphere_api/admin/sources/connectors/router.py
   - services/api/tests/admin_connectors_api/**
   - tests/security/authz/test_admin_connectors.py
@@ -227,7 +230,8 @@ must_not_touch:
   - services/workers/neurosphere_workers/ingestion/gateway_poll/**
   - services/workers/neurosphere_workers/sources_status/**
   - services/api/neurosphere_api/ingest/**
-  - services/api/neurosphere_api/sources_status/**
+  - services/api/neurosphere_api/sources_status/router.py
+  - services/api/neurosphere_api/sources_status/service.py
   - infra/demo/modules/**
   - infra/helm/**
   - docker-compose.yml
@@ -271,8 +275,8 @@ Parallelization: start items 1, 3 and 4 together (three lanes, no common file). 
 
 ### Item 4 - Source status for Azure Monitor  [P]
 - Deliverable: in `neurosphere_core.sources_status`, the Azure Monitor source is computed from the run status and configuration of kind `azure_monitor_ai` like the other three sources (the fixed `not_connected` with `not_available_in_release` is removed), the new reason codes are registered with plain-language text, and the admin view carries the counts.
-- Owned files: `packages/core/neurosphere_core/sources_status/**`, `packages/core/tests/sources_status_core/**`.
-- Must NOT touch: `services/api/neurosphere_api/sources_status/**` (the routes return what `summarize` gives; if a response model pins the old reason, report it and add the change to item 6), the worker `sources_status` package.
+- Owned files: `packages/core/neurosphere_core/sources_status/**`, `packages/core/tests/sources_status_core/**`; AMENDED 2026-11-22 (owner sign-off): also `services/api/neurosphere_api/sources_status/models.py` (the connector-kind `Literal` gains `azure_monitor_ai`, nothing else), `services/api/tests/sources_status_api/test_source_status_routes.py` and `tests/security/authz/test_sources_status.py` (the assertions on the old reason), so the item merges green. `openapi.json` is regenerated in item 8.
+- Must NOT touch: the rest of `services/api/neurosphere_api/sources_status/**` (routes return what `summarize` gives), the worker `sources_status` package.
 - Depends on: PRP-139 merged.
 - Acceptance criteria: the four states are reachable for the source in tests; a status of another customer is never read; no id, host or token in the summary.
 - Tests: `packages/core/tests/sources_status_core/test_azure_monitor_source.py`; existing suite passes.
@@ -351,9 +355,9 @@ Content capture of any kind; classic Application Insights or the app-id query AP
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | needs the Learn-verified names |
+| 1 | in-progress | implementer worktree (sonnet) | Learn names pasted into brief; dispatched 2026-11-22 |
 | 2 | todo | | |
-| 3 | todo | | |
+| 3 | in-progress | implementer worktree (sonnet) | dispatched 2026-11-22 |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | enum added here (amended) |
