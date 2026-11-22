@@ -71,7 +71,7 @@ Gate before the next wave: The owner signs in to the hosted environment with Ent
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
 | 1 | [PRP-67: Hosted environment hardening](backlog/PRP-67-hosted-environment-hardening.md) | sonnet | required | none | - | - | `prp-67-hosted-hardening` |
-| 2 | [PRP-137: Telemetry agent identity resolution (external id to canonical agent id)](backlog/PRP-137-telemetry-agent-identity-resolution.md) | sonnet | required | none | - | - | `prp-137-agent-identity-resolution` |
+| 2 | [PRP-137: Telemetry agent identity resolution (external id to canonical agent id)](active/PRP-137-telemetry-agent-identity-resolution.md) | sonnet | required | none | - | - | `prp-137-agent-identity-resolution` |
 
 Gate before the next wave: Hosted hardening and the restored-scope contracts are merged (contracts reviewed, Opus), including tool and service identity on the telemetry event; observed agents resolve to catalog entries.
 
@@ -657,7 +657,7 @@ Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-67-hosted-h
 ### PRP-137 (W19)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-137-telemetry-agent-identity-resolution.md
+/prp:prp-execute PRPs/active/PRP-137-telemetry-agent-identity-resolution.md
 
 Context for this run: wave W19 of PRPs/EXECUTION-PLAN.md, branch prp-137-agent-identity-resolution cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```
