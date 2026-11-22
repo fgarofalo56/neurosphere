@@ -10,6 +10,7 @@ intent and nothing else (no confirm, no execute).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Literal, Protocol
 
 from neurosphere_contracts.actions.v1.action_intent import ActionIntent
@@ -28,6 +29,8 @@ __all__ = [
     "AccessReader",
     "ActionDrafter",
     "CatalogReader",
+    "ChangeLogReader",
+    "ChangeRecord",
     "EvidenceReader",
     "EvidenceRecord",
     "GraphReader",
@@ -120,3 +123,34 @@ class AccessReader(Protocol):
     """PRP-73 ``AccessEngine.who_accesses``: who reads or writes the matching data assets."""
 
     async def who_accesses(self, scope: IdentityScope, query: AccessQuery) -> AccessResult: ...
+
+
+class ChangeRecord(BaseModel):
+    """One audited change, reduced to what the timeline may show.
+
+    Deliberately no actor (name, id or pseudonym) and no before/after body: the timeline says
+    what changed and when, never who or the content.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    record_id: str = Field(min_length=1, max_length=512)
+    operation: str = Field(min_length=1, max_length=128)
+    subject_id: str = Field(min_length=1, max_length=512)
+    outcome: str = Field(min_length=1, max_length=64)
+    occurred_at: datetime
+    domain_id: str = Field(min_length=1, max_length=512)
+
+
+class ChangeLogReader(Protocol):
+    async def changes(
+        self,
+        scope: IdentityScope,
+        domain_ids: Sequence[str],
+        since: datetime,
+        until: datetime,
+        *,
+        limit: int,
+    ) -> Sequence[ChangeRecord]:
+        """Changes in ``[since, until]`` for ``domain_ids`` (server-derived ``audit.read``)."""
+        ...
