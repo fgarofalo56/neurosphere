@@ -116,7 +116,7 @@ def test_an_empty_estate_is_four_not_connected_sources_in_order() -> None:
         "azure_monitor_telemetry",
     ]
     assert {s["state"] for s in body["sources"]} == {"not_connected"}
-    assert [s["available"] for s in body["sources"]] == [True, True, True, False]
+    assert [s["available"] for s in body["sources"]] == [True, True, True, True]
     assert all(s["last_success_at"] is None for s in body["sources"])
 
 
@@ -150,7 +150,8 @@ def test_the_admin_route_adds_reasons_and_connector_counts() -> None:
     body = world.get(ADMIN, CUSTOMER_ADMIN).json()
     gateway = body["sources"][1]
     assert (gateway["state"], gateway["reason"]) == ("failing", "source_access_denied")
-    assert body["sources"][3]["reason"] == "not_available_in_release"
+    assert body["sources"][3]["state"] == "not_connected"
+    assert body["sources"][3]["reason"] is None
     assert body["connectors"][1] == {
         "kind": "gateway_poll",
         "state": "failed",

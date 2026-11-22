@@ -24,18 +24,25 @@ __all__ = [
     "is_code",
 ]
 
-ConnectorKind = Literal["foundry_discovery", "gateway_poll", "billing_export"]
+ConnectorKind = Literal["foundry_discovery", "gateway_poll", "billing_export", "azure_monitor_ai"]
 RunState = Literal["ok", "partial", "failed", "idle", "not_configured"]
 
 CONNECTOR_KINDS: Final[tuple[ConnectorKind, ...]] = (
     "foundry_discovery",
     "gateway_poll",
     "billing_export",
+    "azure_monitor_ai",
 )
+
+# Reason codes are free codes validated only by ``is_code`` (there is no registry here). The
+# ``azure_monitor_ai`` worker role (PRP-141) writes: query_budget_exhausted,
+# event_budget_exhausted, rate_limited, stalled, ingest_failed, cloud_mismatch,
+# refused_government_unverified, plus source_access_denied; the UI owns the plain-language text.
 
 #: The provider answered 401 or 403: the Azure role the connector needs is missing.
 SOURCE_ACCESS_DENIED: Final = "source_access_denied"
-#: The source has no connector in this release (Application Insights call telemetry).
+#: Retired: Application Insights call telemetry now has a connector (``azure_monitor_ai``); the
+#: summary no longer produces this code. Kept exported for compatibility.
 NOT_AVAILABLE_IN_RELEASE: Final = "not_available_in_release"
 
 _CODE: Final = re.compile(r"[a-z][a-z0-9_]{0,63}")
