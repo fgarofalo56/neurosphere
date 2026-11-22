@@ -261,8 +261,8 @@ Deviation (item 2, 2026-11-22): the worker test directory is `services/workers/t
 |---|---|---|---|
 | 1 | merged | prp-137-item1 | sonnet; 80bb2748 merged de870c2f; ruff+pyright clean, 176 passed (agent_identity+catalog) 2026-11-22 |
 | 2 | merged | prp-137-item2 | sonnet; 08065343 merged 3afa5669; test dir renamed agent_identity_worker; ruff+pyright clean, 179 passed (core+worker agent_identity, projections, aggregates, evaluation) 2026-11-22 |
-| 3 | in-progress | prp-137-item3 | sonnet, dispatched 2026-11-22 |
-| 4 | todo | | |
+| 3 | merged | prp-137-item3 | sonnet; 82f3f154 merged 7f70ee92; ruff+pyright clean, 254 passed (agent_identity core+worker, projections, worker_roles, aggregates, evaluation) 2026-11-22 |
+| 4 | in-progress | prp-137-item4 | sonnet, dispatched 2026-11-22 |
 | 5 | in-progress | prp-137-item5 | sonnet, dispatched 2026-11-22 |
 | 6 | todo | | |
 | 7 | todo | | |
