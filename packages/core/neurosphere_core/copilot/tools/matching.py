@@ -134,6 +134,7 @@ def _handler(
             records=tuple(records),
             citations=tuple(citations),
             truncated=truncated,
+            domain_ids=tuple(sorted(domains)),
         )
 
     return run

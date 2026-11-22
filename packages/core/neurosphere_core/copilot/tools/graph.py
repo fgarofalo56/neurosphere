@@ -187,7 +187,11 @@ def _require_no_clauses(query: StructuredQuery, names: Sequence[str]) -> None:
 
 
 def _rows_to_result(
-    rows: Sequence[Row], clock: Callable[[], datetime], policy: FreshnessPolicy, truncated: bool
+    rows: Sequence[Row],
+    clock: Callable[[], datetime],
+    policy: FreshnessPolicy,
+    truncated: bool,
+    domain_ids: tuple[str, ...] = (),
 ) -> ToolResult:
     """Records and citations built together from the same rows."""
     now = clock()
@@ -205,7 +209,11 @@ def _rows_to_result(
             )
         )
     return ToolResult(
-        tool=TOOL_NAME, records=tuple(records), citations=tuple(citations), truncated=truncated
+        tool=TOOL_NAME,
+        records=tuple(records),
+        citations=tuple(citations),
+        truncated=truncated,
+        domain_ids=domain_ids,
     )
 
 
@@ -574,7 +582,7 @@ def _graph_query(
                 *(_node_row(n, merged.paths.get(i)) for i, n in merged.nodes.items()),
                 *(_edge_row(e) for e in merged.edges.values()),
             ]
-            return _rows_to_result(rows, clock, policy, merged.truncated)
+            return _rows_to_result(rows, clock, policy, merged.truncated, readable)
         if query.operation != "list":
             raise _refuse("operation is not supported by this tool", "unsupported_operation")
         if _entity_name(query) != "grounding_source":
@@ -585,7 +593,7 @@ def _graph_query(
             raise _refuse("max_depth must be 0 for list queries", "depth_denied")
         _require_no_clauses(query, _LIST_UNSUPPORTED)
         list_rows, truncated = await _access_list(deps, scope, args, readable)
-        return _rows_to_result(list_rows, clock, policy, truncated)
+        return _rows_to_result(list_rows, clock, policy, truncated, readable)
 
     return run
 

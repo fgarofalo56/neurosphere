@@ -5,7 +5,10 @@ Three sections, each read through a narrow port and each scoped by the server-de
 
 * ``changes``: audited changes, only in domains where the caller holds ``audit.read``. A caller
   with ``data.read`` but without ``audit.read`` still gets the other sections; the missing one is
-  reported in ``sections_omitted`` (partial, not denied).
+  reported in ``sections_omitted`` (partial, not denied). The reverse holds too: a caller with
+  ``audit.read`` but no ``data.read`` gets ``changes`` while ``metric_shifts`` and
+  ``recommendations`` are omitted with reason ``data_read_not_held``. Only a caller holding
+  neither is denied.
 * ``metric_shifts``: per ``data.read`` domain, hour-grain ``errors`` and ``latency`` aggregates of
   the window compared with the previous window of equal length (rule on ``_errors_value`` and
   ``_latency_value``).
@@ -91,7 +94,9 @@ class TimelineEntry(BaseModel):
     kind: Literal["change", "metric_shift", "recommendation"]
     occurred_at: str
     domain_id: str
-    subject_id: str
+    subject_id: str | None = None
+    """Absent on recommendation entries: a recommendation's subjects can sit in a domain the
+    caller cannot read, so the entry names only the recommendation (its own id and domain)."""
     operation: str | None = None
     outcome: str | None = None
     metric: Literal["errors", "latency"] | None = None
@@ -155,9 +160,10 @@ def get_timeline_spec(
     async def run(scope: IdentityScope, args: TimelineArgs) -> ToolResult:
         now = clock()
         readable = tuple(sorted(domains_with_permission(scope, Permission.DATA_READ, now=now)))
-        if not readable:
-            raise ToolPermissionError(Permission.DATA_READ.value)
         audited = tuple(sorted(domains_with_permission(scope, Permission.AUDIT_READ, now=now)))
+        if not readable and not audited:
+            raise ToolPermissionError(Permission.DATA_READ.value)
+        consulted: set[str] = set()
         wanted = set(args.sections) if args.sections is not None else set(_ALL_SECTIONS)
         start = now - timedelta(minutes=args.window_minutes)
         items: list[_Item] = []
@@ -170,6 +176,7 @@ def get_timeline_spec(
             elif not audited:
                 omitted_pairs.append(("changes", "audit_read_not_held"))
             else:
+                consulted.update(audited)
                 records = await changes.changes(
                     scope, audited, start, now, limit=MAX_TIMELINE_ENTRIES + 1
                 )
@@ -189,10 +196,17 @@ def get_timeline_spec(
                     )
 
         if "metric_shifts" in wanted:
-            shifts = await _metric_shifts(metrics, scope, readable, start, now)
-            items.extend(shifts)
+            if not readable:
+                omitted_pairs.append(("metric_shifts", "data_read_not_held"))
+            else:
+                consulted.update(readable)
+                shifts = await _metric_shifts(metrics, scope, readable, start, now)
+                items.extend(shifts)
 
-        if "recommendations" in wanted:
+        if "recommendations" in wanted and not readable:
+            omitted_pairs.append(("recommendations", "data_read_not_held"))
+        elif "recommendations" in wanted:
+            consulted.update(readable)
             for domain in readable:
                 page = await recommendations.list(scope, domain, limit=MAX_TIMELINE_ENTRIES + 1)
                 truncated = truncated or page.next_cursor is not None
@@ -208,7 +222,6 @@ def get_timeline_spec(
                         kind="recommendation",
                         occurred_at=_iso(created),
                         domain_id=domain,
-                        subject_id=rec.subject_ids[0].root,
                         recommendation_id=rec.recommendation_id.root,
                         recommendation_kind=rec.kind,
                     )
@@ -268,6 +281,7 @@ def get_timeline_spec(
             records=tuple(records_out),
             citations=tuple(citations),
             truncated=truncated,
+            domain_ids=tuple(sorted(consulted)),
         )
 
     return ToolSpec(
