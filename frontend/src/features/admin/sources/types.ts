@@ -39,6 +39,7 @@ export const CONNECTOR_KINDS = [
   "foundry_discovery",
   "billing_export",
   "otel",
+  "azure_monitor_ai",
 ] as const;
 export type ConnectorKind = (typeof CONNECTOR_KINDS)[number];
 
@@ -94,7 +95,8 @@ export interface MeDomains {
 export type SourceName = "foundry" | "apim_gateway" | "billing" | "azure_monitor_telemetry";
 export type SourceState = "not_connected" | "connected_no_data" | "connected" | "failing";
 export type RunState = "ok" | "partial" | "failed" | "idle" | "not_configured";
-export type StatusConnectorKind = "foundry_discovery" | "gateway_poll" | "billing_export";
+export type StatusConnectorKind =
+  "foundry_discovery" | "gateway_poll" | "billing_export" | "azure_monitor_ai";
 
 export interface SourceStatusRow {
   readonly source: SourceName;

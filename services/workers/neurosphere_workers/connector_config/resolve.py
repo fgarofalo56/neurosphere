@@ -20,7 +20,6 @@ reason code the API gave at creation time.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from neurosphere_contracts.admin.v1.connector_config import ConnectorConfig
@@ -31,6 +30,7 @@ from neurosphere_core.errors import InvalidSchemaError
 from pydantic import SecretStr
 
 from neurosphere_workers.connector_config import loader, stored
+from neurosphere_workers.connector_config.idle import ConnectorIdle
 from neurosphere_workers.connector_config.keyvault import (
     ConnectorCredentialUnavailableError,
     KeyVaultSecretReader,
@@ -38,6 +38,7 @@ from neurosphere_workers.connector_config.keyvault import (
     default_vault_token_provider,
 )
 from neurosphere_workers.connector_config.settings import ConnectorConfigSettings
+from neurosphere_workers.ingestion.azure_monitor_ai.settings import AzureMonitorAiSettings
 from neurosphere_workers.ingestion.billing_export import BillingExportSettings
 from neurosphere_workers.ingestion.foundry_discovery import FoundryDiscoverySettings
 from neurosphere_workers.ingestion.gateway_poll import GatewayPollSettings
@@ -50,6 +51,7 @@ __all__ = [
     "CREDENTIAL_UNAVAILABLE",
     "ConnectorIdle",
     "build_reader",
+    "resolve_azure_monitor_ai_settings",
     "resolve_billing_export_settings",
     "resolve_foundry_discovery_settings",
     "resolve_gateway_poll_settings",
@@ -57,14 +59,6 @@ __all__ = [
 
 CREDENTIAL_UNAVAILABLE: Final = "connector_credential_unavailable"
 _log = logging.getLogger("neurosphere_workers.connector_config")
-
-
-@dataclass(frozen=True, slots=True)
-class ConnectorIdle:
-    """The role must idle: its stored config is disabled (or source ``store`` has none)."""
-
-    connector_kind: str
-    reason: str
 
 
 def build_reader(cloud: CloudName, *, client_id: str | None, timeout: float) -> SecretReader:
@@ -188,5 +182,29 @@ async def resolve_billing_export_settings(
             cfg, found, probe.managed_identity_client_id, options.timeout_seconds
         )
         return stored.build_billing_export(found, secret=secret)
+    except InvalidSchemaError as exc:
+        raise _invalid(exc) from None
+
+
+async def resolve_azure_monitor_ai_settings(
+    cfg: RuntimeConfig,
+    lifetime: ClientLifetime,
+    *,
+    repository: AdminConfigRepository | None = None,
+) -> AzureMonitorAiSettings | ConnectorIdle:
+    found, options = await _stored(cfg, lifetime, "azure_monitor_ai", repository)
+    if found is None:
+        return AzureMonitorAiSettings()
+    if isinstance(found, ConnectorIdle):
+        return found
+    try:
+        probe = stored.build_azure_monitor_ai(found)
+        problem = stored.azure_monitor_ai_problem(probe, CloudName(cfg.cloud))
+        if problem is not None:
+            raise RoleConfigError(problem[1])
+        secret = await _secret(
+            cfg, found, probe.managed_identity_client_id, options.timeout_seconds
+        )
+        return stored.build_azure_monitor_ai(found, secret=secret)
     except InvalidSchemaError as exc:
         raise _invalid(exc) from None

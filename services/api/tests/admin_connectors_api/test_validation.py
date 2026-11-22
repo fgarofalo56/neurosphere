@@ -151,3 +151,56 @@ def test_producer_with_wrong_source_kind_is_422(world: ConnectorsWorld) -> None:
         settings={"api_base_url": "https://x.test", "producer_id": "apim-gateway-poll"}
     )
     assert _post(world, body).status_code == 422
+
+
+def _monitor(**settings: Any) -> dict[str, Any]:
+    merged = {
+        "workspace_ids": "11111111-2222-4333-8444-555555555555",
+        "api_base_url": "https://api.example.test",
+        **settings,
+    }
+    return gateway_body(
+        connector_id="azure-monitor-ai", connector_kind="azure_monitor_ai", settings=merged
+    )
+
+
+def test_azure_monitor_ai_is_accepted_and_listed_by_kind(world: ConnectorsWorld) -> None:
+    response = _post(world, _monitor())
+    assert response.status_code == 201, response.text
+    listed = world.composed.client().get(
+        BASE, params={"connector_kind": "azure_monitor_ai"}, headers=world.auth(CUSTOMER_ADMIN)
+    )
+    assert [i["connector_id"] for i in listed.json()["items"]] == ["azure-monitor-ai"]
+
+
+FIVE = ",".join(f"{i}1111111-2222-4333-8444-555555555555" for i in range(5))
+
+
+@pytest.mark.parametrize(
+    ("settings", "pointer"),
+    [
+        ({"workspace_ids": "not-a-guid"}, "/settings/workspace_ids"),
+        ({"workspace_ids": FIVE}, "/settings/workspace_ids"),
+        ({"interval_seconds": 30}, "/settings/interval_seconds"),
+        ({"bogus": 1}, "/settings/bogus"),
+    ],
+)
+def test_azure_monitor_ai_bad_settings_are_422_with_a_pointer(
+    world: ConnectorsWorld, settings: dict[str, Any], pointer: str
+) -> None:
+    response = _post(world, _monitor(**settings))
+    assert response.status_code == 422, response.text
+    assert pointer in [e["pointer"] for e in response.json().get("errors", [])]
+
+
+def test_azure_monitor_ai_managed_identity_credential_is_422_with_a_pointer(
+    world: ConnectorsWorld,
+) -> None:
+    body = _monitor()
+    body["credential"] = {
+        "kind": "managed_identity",
+        "managed_identity_client_id": "6c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
+    }
+    response = _post(world, body)
+    assert response.status_code == 422, response.text
+    assert "/credential" in [e["pointer"] for e in response.json().get("errors", [])]

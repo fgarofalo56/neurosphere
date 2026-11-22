@@ -54,6 +54,7 @@ OBSERVATION_KINDS: Final[Mapping[str, str]] = {
     "gateway_poll": "gateway",
     "billing_export": "billing",
     "otel": "application",
+    "azure_monitor_ai": "application",
 }
 PRODUCER_NOT_IN_STORE: Final = "producer_not_in_store"
 

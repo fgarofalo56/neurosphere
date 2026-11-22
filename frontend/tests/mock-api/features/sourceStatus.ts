@@ -7,7 +7,7 @@ import type { FeatureMockContext, FeatureMockHandler } from "./context.ts";
  * - `GET /api/v1/admin/sources/status` adds `reason` and the per-kind run status (admin persona
  *   only, others get 403).
  *
- * The default world HAS data: the three connectable sources are `connected` with a recent
+ * The default world HAS data: the four connectable sources are `connected` with a recent
  * `last_success_at`, so other pages keep their usual look. A spec that wants another world
  * calls `setSourceStatusWorld`. Every value is SYNTHETIC; no id, host or token appears.
  */
@@ -20,7 +20,7 @@ export type SourceStatusWorld = "has_data" | "none_connected" | "access_denied";
 const RECENT = "2026-11-20T09:00:00Z";
 
 type SourceName = "foundry" | "apim_gateway" | "billing" | "azure_monitor_telemetry";
-type ConnectorKind = "foundry_discovery" | "gateway_poll" | "billing_export";
+type ConnectorKind = "foundry_discovery" | "gateway_poll" | "billing_export" | "azure_monitor_ai";
 
 interface SourceRow {
   source: SourceName;
@@ -49,14 +49,7 @@ export function resetSourceStatus(): void {
 }
 
 function sources(): SourceRow[] {
-  const monitor: SourceRow = {
-    source: "azure_monitor_telemetry",
-    state: "not_connected",
-    last_success_at: null,
-    available: false,
-    reason: "not_available_in_release",
-  };
-  const names: SourceName[] = ["foundry", "apim_gateway", "billing"];
+  const names: SourceName[] = ["foundry", "apim_gateway", "billing", "azure_monitor_telemetry"];
   if (world === "none_connected") {
     return [
       ...names.map((source) => ({
@@ -66,7 +59,6 @@ function sources(): SourceRow[] {
         available: true,
         reason: null,
       })),
-      monitor,
     ];
   }
   return [
@@ -80,13 +72,17 @@ function sources(): SourceRow[] {
         reason: denied ? "source_access_denied" : null,
       };
     }),
-    monitor,
   ];
 }
 
 function connectors(): ConnectorRow[] {
   if (world === "none_connected") return [];
-  const kinds: ConnectorKind[] = ["foundry_discovery", "gateway_poll", "billing_export"];
+  const kinds: ConnectorKind[] = [
+    "foundry_discovery",
+    "gateway_poll",
+    "billing_export",
+    "azure_monitor_ai",
+  ];
   return kinds.map((kind) => {
     const denied = world === "access_denied" && kind === "foundry_discovery";
     return {

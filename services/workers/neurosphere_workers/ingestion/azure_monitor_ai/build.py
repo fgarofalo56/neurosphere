@@ -2,8 +2,8 @@
 
 ``runtime.factories`` imports this module, so the factories-side helpers (Cosmos client,
 checkpoint store, tick wrapper) are imported lazily inside the builder to avoid an import cycle.
-Settings resolution lives in ONE function, :func:`_resolve_settings`, which reads the environment
-only for now (a later item switches it to the stored configuration).
+Settings come from ``resolve_azure_monitor_ai_settings``: the stored configuration wins, a
+disabled one idles the role, and with no stored record the environment is used (as gateway_poll).
 """
 
 from __future__ import annotations
@@ -14,9 +14,7 @@ from typing import TYPE_CHECKING
 import httpx
 from neurosphere_core.clients import ClientLifetime
 
-from neurosphere_workers.connector_config import ConnectorIdle
 from neurosphere_workers.ingestion.azure_monitor_ai.poller import AzureMonitorAiPoller
-from neurosphere_workers.ingestion.azure_monitor_ai.settings import AzureMonitorAiSettings
 from neurosphere_workers.ingestion.gateway_poll import IngestClient, default_connector_factory
 from neurosphere_workers.runtime.adapters import PeriodicTick
 from neurosphere_workers.runtime.roles import RoleConfigError
@@ -35,15 +33,13 @@ __all__ = ["build_azure_monitor_ai"]
 logger = logging.getLogger("neurosphere.workers.runtime")
 
 
-async def _resolve_settings(
-    cfg: RuntimeConfig, lifetime: ClientLifetime
-) -> AzureMonitorAiSettings | ConnectorIdle:
-    """Environment only for now; item 6 replaces the body with a stored-config resolver."""
-    del cfg, lifetime
-    return AzureMonitorAiSettings()
-
-
 async def build_azure_monitor_ai(cfg: RuntimeConfig, lifetime: ClientLifetime) -> RoleRunnable:
+    # Lazy: connector_config.stored imports this package's settings (import cycle).
+    from neurosphere_workers.connector_config import (
+        ConnectorIdle,
+        resolve_azure_monitor_ai_settings,
+    )
+
     # Lazy: factories imports this module at load time.
     from neurosphere_workers.runtime import factories
 
@@ -53,7 +49,7 @@ async def build_azure_monitor_ai(cfg: RuntimeConfig, lifetime: ClientLifetime) -
     checkpoint_store = factories._runtime_checkpoints  # pyright: ignore[reportPrivateUsage]
     closable_http = factories._ClosableHttp  # pyright: ignore[reportPrivateUsage]
 
-    settings = await _resolve_settings(cfg, lifetime)
+    settings = await resolve_azure_monitor_ai_settings(cfg, lifetime)
     status_repo = cosmos_repository(
         lambda: cosmos_client(cfg, lifetime), database=cfg.store.database
     )

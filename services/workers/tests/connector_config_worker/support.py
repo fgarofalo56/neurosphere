@@ -33,6 +33,10 @@ ENV_NAMES = (
     "NS_BILLING_EXPORT_DOMAIN_ID",
     "NS_BILLING_EXPORT_PRODUCER_SECRET",
     "NS_BILLING_EXPORT_API_BASE_URL",
+    "NS_AZURE_MONITOR_AI_WORKSPACE_IDS",
+    "NS_AZURE_MONITOR_AI_DOMAIN_ID",
+    "NS_AZURE_MONITOR_AI_PRODUCER_SECRET",
+    "NS_AZURE_MONITOR_AI_API_BASE_URL",
     "NS_WORKER_CONNECTOR_CONFIG_SOURCE",
     "NS_WORKER_CONNECTOR_CONFIG_TIMEOUT_SECONDS",
 )
@@ -74,6 +78,14 @@ def billing(**settings: Any) -> dict[str, Any]:
         **settings,
     }
     return config("billing_export", settings=merged)
+
+
+WORKSPACE = "11111111-2222-4333-8444-555555555555"
+
+
+def monitor(**settings: Any) -> dict[str, Any]:
+    merged = {"workspace_ids": WORKSPACE, "api_base_url": "http://api.invalid", **settings}
+    return config("azure_monitor_ai", settings=merged)
 
 
 def foundry(**settings: Any) -> dict[str, Any]:
