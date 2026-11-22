@@ -19,14 +19,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from neurosphere_core.actions import DraftRequest
 from neurosphere_core.aggregates import AggregateWindow, Grain, Metric, QueryResult
 from neurosphere_core.catalog import CatalogEntity, EntityFilter
+from neurosphere_core.catalog.graph.access import AccessQuery, AccessResult
+from neurosphere_core.catalog.protocol import GraphResult, ImpactRequest, NeighborsRequest
 from neurosphere_core.paging import Page, PageRequest
 from neurosphere_core.scope import IdentityScope
 
 __all__ = [
+    "AccessReader",
     "ActionDrafter",
     "CatalogReader",
     "EvidenceReader",
     "EvidenceRecord",
+    "GraphReader",
     "MetricsReader",
     "RecommendationReader",
 ]
@@ -102,3 +106,17 @@ class ActionDrafter(Protocol):
     async def draft(
         self, scope: IdentityScope, request: DraftRequest, *, domain_id: str
     ) -> ActionIntent: ...
+
+
+class GraphReader(Protocol):
+    """The bounded ``neighbors`` and ``impact_paths`` reads of ``catalog.protocol.GraphQuery``."""
+
+    async def neighbors(self, scope: IdentityScope, request: NeighborsRequest) -> GraphResult: ...
+
+    async def impact_paths(self, scope: IdentityScope, request: ImpactRequest) -> GraphResult: ...
+
+
+class AccessReader(Protocol):
+    """PRP-73 ``AccessEngine.who_accesses``: who reads or writes the matching data assets."""
+
+    async def who_accesses(self, scope: IdentityScope, query: AccessQuery) -> AccessResult: ...
