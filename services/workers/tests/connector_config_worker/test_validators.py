@@ -9,7 +9,7 @@ from neurosphere_contracts.admin.v1.connector_config import ConnectorConfig
 from neurosphere_core.errors import InvalidSchemaError
 from neurosphere_workers.connector_config import VALIDATORS
 
-from .support import IDENTITY, billing, config, foundry, gateway
+from .support import IDENTITY, WORKSPACE, billing, config, foundry, gateway, monitor
 
 
 def _check(body: dict[str, Any], cloud: str = "commercial"):
@@ -82,3 +82,39 @@ def test_managed_identity_setting_must_be_a_guid() -> None:
         _refused(gateway(managed_identity_client_id="not-a-guid")).reason
         == "connector_setting_invalid"
     )
+
+
+def test_azure_monitor_ai_valid_config_reports_producer_identity() -> None:
+    check = _check(monitor())
+    assert (check.producer_id, check.source_id) == ("azure-monitor-ai", "azure-monitor-ai")
+
+
+def _pointer(error: InvalidSchemaError) -> str:
+    assert error.errors is not None
+    return error.errors[0].pointer
+
+
+def test_azure_monitor_ai_refuses_bad_settings_with_pointers() -> None:
+    unknown = _refused(monitor(bogus=1))
+    assert unknown.reason == "connector_setting_unknown" and _pointer(unknown) == "/settings/bogus"
+    assert _pointer(_refused(monitor(workspace_ids="not-a-guid"))) == "/settings/workspace_ids"
+    five = ",".join(f"{i}1111111-2222-4333-8444-555555555555" for i in range(5))
+    assert _pointer(_refused(monitor(workspace_ids=five))) == "/settings/workspace_ids"
+    assert _pointer(_refused(monitor(interval_seconds=30))) == "/settings/interval_seconds"
+    assert _check(monitor(workspace_ids=f"{WORKSPACE},{WORKSPACE}")).producer_id is not None
+
+
+def test_azure_monitor_ai_needs_a_secret_reference_not_an_identity() -> None:
+    body = monitor()
+    body["credential"] = IDENTITY
+    error = _refused(body)
+    assert error.reason == "azure_monitor_ai_credential_invalid"
+    assert _pointer(error) == "/credential"
+
+
+def test_azure_monitor_ai_needs_one_domain_and_the_runtime_cloud() -> None:
+    two = monitor()
+    two["domain_ids"].append("commercial:synthco:neurosphere:domain:d2")
+    assert _refused(two).reason == "azure_monitor_ai_single_domain_required"
+    error = _refused(monitor(), "government")
+    assert error.reason == "cloud_mismatch" and _pointer(error) == "/domain_ids"
