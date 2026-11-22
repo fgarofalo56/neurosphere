@@ -1,11 +1,13 @@
 ---
 name: PRP-139-hosted-environment-real-tenant-data
-status: active
+status: shipped
 priority: P0
 order: 58
 review: required
 created: 2026-11-17
 started: 2026-11-21
+shipped: 2026-11-21
+pr: 369
 model: sonnet
 orchestrator_model: sonnet
 implementer_model: sonnet
@@ -394,13 +396,23 @@ A demo world in a hosted environment; a copy of grants or stored configuration f
 | 5 | merged | worktree-agent-a2b7f4c41d263947b | sonnet; commit d49044a4; review APPROVE (combined with item 4); merge 9419ea87 2026-11-21; 389 passed in touched features after merge |
 | 6 | merged | worktree-agent-a1b622567415a0fac | sonnet; verify PASS (ruff, pyright clean; 492 passed); review APPROVE; merge 20e0bb5a 2026-11-21; fix-forward merged 5830df4b (truncated scan reports OPEN; 552 passed) |
 | 7 | merged | worktree-agent-ada3d1f4bae24870e | sonnet; commit 8b08154b; merged 2026-11-21; mkdocs nav line added; docs review not required (parser test covers every runbook command) |
-| 8 | in-progress | prp-139-hosted-real-tenant-data | orchestrator; Tier-3 regenerated, changelog fragment, G04 note, 4 admin-connectors baselines regenerated (owner-approved), Snyk scan: 3 new packages clean, 2 low findings justified |
+| 8 | merged | prp-139-hosted-real-tenant-data | orchestrator; Tier-3 regenerated, changelog fragment, G04 note, 4 admin-connectors baselines regenerated (owner-approved), Snyk scan (3 new packages clean, 2 low findings justified); PR 369 CI 33 passed, squash merge dc6fbdac 2026-11-21 |
 
 ## Completion note (filled at ship)
-- Date, PR:
+- Date, PR: 2026-11-21, PR #369, squash merge `dc6fbdac`. CI on the merged head: 33 checks passed, 1 skipped (Pages deploy does not run on a pull request). Item merges on the integration branch: 6 `20e0bb5a`, 2 `bbd7548d`, fix-forward `5830df4b`, 3 (merge before `0d17b6b3`), 1 `e431c66b`, 5 `9419ea87`, 4 and 7 (before `787ba239`).
 - Deviations:
-- Descoped items:
-- OPEN gates:
-- Env vars for the operator:
-- Follow-up issues:
-- Product check (can the owner connect a source and see their own tenant without editing files):
+  - Ran before PRP-140 (the order was moved up on 2026-11-21); no file is shared with it. The four `admin-connectors` visual baselines moved by item 4 were regenerated here with owner approval; no other baseline moved.
+  - `--data-mode` being required broke every caller that did not pass it. With owner approval item 1 also edited six test files and `.github/workflows/deploy-hosted.yml`, which now fails when the repository variable `NS_HOSTED_DATA_MODE` is unset.
+  - Additive lines outside the original ownership block: `services/api/tests/runtime_api/test_readiness.py`, `frontend/tests/mock-api/features/registry.test.ts` (pinned lists), `docs/runbooks/system-settings.md` (checklist item `optional.sources_status`), `docs/security/snyk-justifications.md`, `.gitleaksignore`.
+  - Item 1: the twin's `customerId` defaults to an empty string, not `synthco`, so the setting is not duplicated; the demo template still defaults to `synthco`. The registration also gains `api_principal_id`.
+  - Item 2: the seed's recommendations, evaluation runs and intents are selected by observed fields (fixed `created_at` stamp, `seed-offline-` run id prefix, seed intent keys) under the purge customer, not by ids recomputed from the seed's functions; MCP servers by the three fixture host names. `plan` refuses on the same registration checks as `apply`.
+  - Item 3: the gateway poller has no `last_status`, so its store is wrapped to observe each tick; status rows are written with `doc_type: connector_run_status` into the admin config container without going through `AdminConfigRepository`; the builder is registered before `admin` (two existing tests pin `admin` and `analytics` as the last two); `authz/routes.py` needed no line.
+  - Item 5: role workspace pages show the shared empty state only when an available source is not connected, otherwise the role's page links; page assertions live in one file `source-status/pages.test.tsx`; the Quality "no drift alerts" text is unchanged.
+  - Item 7: the runbook holds no GUID (an existing docs test rejects them under `docs/deploy/`); the role definition ids are in `docs/evidence/PRP-139/README.md`. The test file is `test_real_tenant_runbook_commands.py`.
+  - Review: one reviewer each for items 1, 2, 3 and 6, one combined pass for items 4 and 5, none for item 7 (owner's choice). All approved with no blocker. Three review findings were fixed forward (truncated catalog scan reports OPEN; purge refuses a registration without `customer_id`; a failed delete writes counts-only evidence). Two defects found by the local Playwright run after the merges were fixed before the PR went green (a button-role link in the empty state; link target size on workspace pages).
+  - The orchestrator ran on Fable, not Sonnet as the frontmatter says; implementers ran on Sonnet.
+- Descoped items: none.
+- OPEN gates: "hosted real tenant", all six rows OPEN; nothing was run against Azure by this PRP (`docs/evidence/PRP-139/README.md`). G04 stays OPEN. Also unverified: whether API Management Service Reader alone can read the service's diagnostic settings (the Monitoring Reader row cannot be applied); the role for the optional `customMetrics` query; Foundry User at account scope listing every project's agents in practice; the purge's real Cosmos and Blob adapters (in-memory twins only); the `bootstrap-worker` grant path (type-checked only).
+- Env vars for the operator: app setting `NS_HOSTED_DATA_MODE` (`demo` or `real-tenant`, set by the template). Repository variables for `deploy-hosted.yml`: `NS_HOSTED_DATA_MODE` (required), `NS_HOSTED_CUSTOMER_ID`, `NS_HOSTED_LOG_ANALYTICS_WORKSPACE_IDS`, `NS_HOSTED_APIM_SERVICE_IDS`. Operator runs need `NS_LIVE_APPROVED=1`, and `bootstrap-worker` and `verify` need `NS_SANDBOX_HOSTED_DEPLOYMENT_ID`.
+- Follow-up issues: #370 (gate script hardening), #371 (connector run status robustness), #372 (source status UI polish), #373 (settle the gateway read roles in a live run). Existing #329 (flaky G01 scrubber test) failed twice on this PR and passed on the third run. Application Insights AI call telemetry is PRP-141.
+- Product check (can the owner connect a source and see their own tenant without editing files): built, not proven. The path exists end to end in code: redeploy in real-tenant mode, approve the access plan, create a domain, then use Connect on the Connectors page for Foundry, and the page shows the run state and the reason when access is missing. It has not been run against a real tenant, so the answer stays "unverified" until the operator gate has evidence.
