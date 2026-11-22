@@ -13,7 +13,7 @@ id, tenant id, host, resource id, object id or token.
 | 1 | Foundry | At least one real agent or model deployment from an owner-named project is visible in the catalog UI | `hosted_real_tenant.py verify` (writes `<date>-verify.json`); the console connection at `/admin/sources/connectors` | OPEN |
 | 2 | API Management gateway | At least one registered real gateway with `poll_status` ok and gateway traffic on a dashboard (needs a gateway with LLM logs sent to a workspace) | `hosted_real_tenant.py verify` | OPEN |
 | 3 | Cost and billing | Invoiced spend of a closed month from the owner's export in the reconciliation view (needs an existing export and a closed month) | `hosted_real_tenant.py verify` | OPEN |
-| 4 | Azure Monitor and Application Insights AI call telemetry | Owned by the follow-up PRP; not available in this release | none here | OPEN |
+| 4 | Azure Monitor and Application Insights AI call telemetry | Owned by PRP-141: see `docs/evidence/PRP-141/` for what PASS needs | `hosted_real_tenant.py verify` (row 4) | OPEN |
 | 5 | Synthetic records | Purge evidence with deleted counts, and `verify` showing zero records of the synthetic customer and source | `hosted_purge_synthetic.py plan` and `apply` (`<date>-purge-plan.json`, `<date>-purge.json`), then `hosted_real_tenant.py verify` | OPEN |
 | 6 | Access | The access evidence lists exactly the approved assignments, each at single-resource scope | `hosted_real_tenant.py access-plan` and `access-apply` (`<date>-access.json`) | OPEN |
 

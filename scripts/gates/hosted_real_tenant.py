@@ -137,6 +137,7 @@ ROLE_TABLE: Final[tuple[RoleSpec, ...]] = (
         "apim_service_ids",
     ),
 )
+_LA_READER_ID: Final = "3b03c2da-16b3-4a49-8834-0f8130efdd3b"
 VERIFIED_ROLE_IDS: Final = frozenset(r.role_definition_id for r in ROLE_TABLE if r.verified)
 
 
@@ -351,6 +352,16 @@ def render_plan(rows: Sequence[Mapping[str, Any]], digest: str) -> str:
             lines.append("az " + " ".join(f'"{a}"' if "/" in a else a for a in az_create_args(row)))
         else:
             lines.append(f"# row {row['row']}: role id UNVERIFIED; no command is offered")
+    if any(r["role_definition_id"] == _LA_READER_ID for r in rows):
+        lines += [
+            "",
+            "Azure Monitor AI call telemetry (PRP-141): pass the workspace behind the "
+            "workspace-based Application Insights resource in --log-analytics-workspace-ids "
+            "(a member of the logAnalyticsWorkspaceIds list). Role: Log Analytics Data Reader "
+            f"({_LA_READER_ID}), scope that workspace only. Privileged Monitoring Data Reader "
+            "is needed only if the tables are protected; it is not in the verified table, so "
+            "the owner adds it by hand.",
+        ]
     return "\n".join(lines)
 
 
@@ -734,6 +745,68 @@ def _fetch_catalog(ctx: VerifyContext) -> tuple[list[dict[str, Any]], int, bool]
     return items, status, bool(cursor)
 
 
+_CODE_RE: Final = re.compile(r"^[a-z_]{1,48}$")
+
+
+def _azure_monitor_outcome(
+    ctx: VerifyContext, domains: Sequence[str], api: dict[str, int]
+) -> dict[str, Any]:
+    """Row 4 (PRP-141 item 7): the Azure Monitor AI source ran and its events are readable.
+
+    No route returns telemetry events filtered by source, so two reads stand in: the admin source
+    status (run state of connector ``azure_monitor_ai`` and its ``events_posted`` count) and the
+    latency dashboard of each domain (known points, with the operator's token). PASS needs an
+    ``ok`` or ``partial`` run, events posted and a known point; a run that never started is OPEN.
+    """
+    resp = ctx.get("/api/v1/admin/sources/status")
+    api["admin_sources_status"] = resp.status
+    if resp.status != 200 or not isinstance(resp.body, dict):
+        return _outcome("OPEN", "status_unavailable", events_posted=0)
+    row: dict[str, Any] | None = None
+    for item in resp.body.get("connectors", []):
+        if isinstance(item, dict) and item.get("kind") == "azure_monitor_ai":
+            row = item
+    if row is None or row.get("state") == "not_configured":
+        return _outcome("OPEN", "not_configured", events_posted=0)
+    raw_counts = row.get("counts")
+    counts: dict[str, Any] = raw_counts if isinstance(raw_counts, dict) else {}
+    posted = int(counts.get("events_posted", 0) or 0)
+    state = str(row.get("state"))
+    code = str(row.get("reason") or "")
+    suffix = f":{code}" if _CODE_RE.fullmatch(code) else ""
+    if state == "failed":
+        return _outcome("FAIL", f"run_failed{suffix}", events_posted=posted)
+    if state == "idle":
+        return _outcome("FAIL", f"run_idle{suffix}", events_posted=posted)
+    if state not in ("ok", "partial"):
+        return _outcome("OPEN", "status_unknown", events_posted=posted)
+    if posted <= 0:
+        return _outcome("FAIL", "no_events", events_posted=0)
+    series = points = 0
+    for domain in domains:
+        dash = ctx.get(
+            f"/api/v1/dashboards/domains/{quote(domain, safe='')}/latency",
+            {"days": 1, "grain": "hour"},
+        )
+        api["dashboards"] = max(api.get("dashboards", 0), dash.status)
+        body = dash.body if dash.status == 200 and isinstance(dash.body, dict) else {}
+        for s in body.get("series", []):
+            known = [
+                p
+                for p in (s.get("points", []) if isinstance(s, dict) else [])
+                if isinstance(p, dict)
+                and isinstance(p.get("value"), dict)
+                and p["value"].get("status") == "known"
+            ]
+            if known:
+                series += 1
+                points += len(known)
+    visible = {"events_posted": posted, "visible_series": series, "visible_points": points}
+    if points == 0:
+        return _outcome("OPEN", "events_not_visible_yet", **visible)
+    return _outcome("PASS", "events_visible", **visible)
+
+
 def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, Any]:
     api: dict[str, int] = {}
     status_resp = ctx.get("/api/v1/sources/status")
@@ -803,7 +876,7 @@ def evaluate(ctx: VerifyContext, domain_ids: Sequence[str] | None) -> dict[str, 
     sources["billing"] = _decide(
         states.get("billing"), billing_lines, "billing", billing_lines=billing_lines
     )
-    sources["azure_monitor"] = _outcome("OPEN", "follow_up_prp")
+    sources["azure_monitor"] = _azure_monitor_outcome(ctx, domains, api)
     if catalog_status == 200 and truncated and synthetic_n == 0:
         synthetic = _outcome(
             "OPEN",
