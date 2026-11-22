@@ -242,9 +242,9 @@ The first real-model turn with the new tools (`NS_LIVE_APPROVED=1`, an operator-
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | todo | | |
-| 2 | todo | | |
-| 3 | todo | | |
+| 1 | review | prp-78-item-1 | sonnet; 33d2bdbf verify PASS (pytest 273); merged a57c3d84 2026-11-22; `grants_access_to` excluded from copilot relations |
+| 2 | review | prp-78-item-2 | sonnet; 4e4f2463 verify PASS (pytest 248); merged bd73ba9d 2026-11-22 (ports.py tail conflict resolved, both kept); audit.read-only caller is denied, not partial (item 4 fixes) |
+| 3 | review | prp-78-item-3 | sonnet; 215f638b verify PASS (pytest 242); merged 3ebfe791 2026-11-22; post-merge wave A: ruff, pyright 0, pytest 311 passed |
 | 4 | todo | | |
 | 5 | todo | | |
 | 6 | todo | | |
