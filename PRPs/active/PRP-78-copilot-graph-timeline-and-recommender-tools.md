@@ -242,10 +242,10 @@ The first real-model turn with the new tools (`NS_LIVE_APPROVED=1`, an operator-
 ## Execution state
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
-| 1 | review | prp-78-item-1 | sonnet; 33d2bdbf verify PASS (pytest 273); merged a57c3d84 2026-11-22; `grants_access_to` excluded from copilot relations |
-| 2 | review | prp-78-item-2 | sonnet; 4e4f2463 verify PASS (pytest 248); merged bd73ba9d 2026-11-22 (ports.py tail conflict resolved, both kept); audit.read-only caller is denied, not partial (item 4 fixes) |
-| 3 | review | prp-78-item-3 | sonnet; 215f638b verify PASS (pytest 242); merged 3ebfe791 2026-11-22; post-merge wave A: ruff, pyright 0, pytest 311 passed |
-| 4 | todo | | |
+| 1 | merged | prp-78-item-1 | review pass 1 (items 1-3) APPROVED 2026-11-22, no blockers; follow-up: explicit node field allowlist in `_node_row`; | sonnet; 33d2bdbf verify PASS (pytest 273); merged a57c3d84 2026-11-22; `grants_access_to` excluded from copilot relations |
+| 2 | merged | prp-78-item-2 | review pass 1 APPROVED; | sonnet; 4e4f2463 verify PASS (pytest 248); merged bd73ba9d 2026-11-22 (ports.py tail conflict resolved, both kept); audit.read-only caller is denied, not partial (item 4 fixes) |
+| 3 | merged | prp-78-item-3 | review pass 1 APPROVED; | sonnet; 215f638b verify PASS (pytest 242); merged 3ebfe791 2026-11-22; post-merge wave A: ruff, pyright 0, pytest 311 passed |
+| 4 | in-progress | prp-78-item-4 | sonnet; dispatched 2026-11-22; also carries timeline partial fix + review follow-ups 2, 4 |
 | 5 | todo | | |
 | 6 | todo | | |
 | 7 | todo | | |
