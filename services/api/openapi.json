@@ -18346,7 +18346,8 @@
             "enum": [
               "foundry_discovery",
               "gateway_poll",
-              "billing_export"
+              "billing_export",
+              "azure_monitor_ai"
             ],
             "title": "Kind",
             "type": "string"
