@@ -385,6 +385,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         admin_platform,
         admin_system,
         admission,
+        agent_identity,
         analytics,
         authz,
         copilot,
@@ -411,6 +412,7 @@ def default_builders() -> tuple[BuilderSpec, ...]:
         admin_platform.BUILDER,
         admin_system.BUILDER,
         sources_status.BUILDER,
+        agent_identity.BUILDER,
         admin.BUILDER,
         analytics.BUILDER,
     )
