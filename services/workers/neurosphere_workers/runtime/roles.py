@@ -28,6 +28,7 @@ ROLE_NAMES: Final[tuple[str, ...]] = (
     "foundry_discovery",
     "billing_export",
     "detections",
+    "azure_monitor_ai",
 )
 
 

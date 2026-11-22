@@ -20,6 +20,7 @@ Role -> class:
 * ``recommendations`` periodic ``run_pipeline``
 * ``evaluation``      periodic online ``EvaluationService`` run
 * ``gateway_poll``    ``GatewayPoller`` (APIM gateway logs -> ingest API; idles if unconfigured)
+* ``azure_monitor_ai`` ``AzureMonitorAiPoller`` (GenAI spans -> ingest API; idles if unconfigured)
 * ``foundry_discovery`` Foundry agents/deployments -> draft catalog (idles if unconfigured)
 """
 
@@ -189,6 +190,7 @@ from neurosphere_workers.evaluation.service import (
     OnlineRunConfig,
 )
 from neurosphere_workers.hitl_timers.worker import HitlTimerWorker
+from neurosphere_workers.ingestion.azure_monitor_ai.build import build_azure_monitor_ai
 from neurosphere_workers.ingestion.billing_export import (
     BillingExportPoller,
 )
@@ -2073,6 +2075,7 @@ BUILDERS: Final[Mapping[str, RoleBuilder]] = {
     "foundry_discovery": build_foundry_discovery,
     "billing_export": build_billing_export,
     "detections": build_detections,
+    "azure_monitor_ai": build_azure_monitor_ai,
 }
 
 
