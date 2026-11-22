@@ -356,11 +356,11 @@ Content capture of any kind; classic Application Insights or the app-id query AP
 | Item | Status | Branch/worktree | Notes |
 |---|---|---|---|
 | 1 | merged | worktree-agent-a23bae3d0bac6c545 @ 426c2b92 (sonnet) | verify PASS 2026-11-22: pytest 108 passed, ruff clean, pyright 0 errors; review APPROVED (3 non-blocking follow-ups); merged 570e75df |
-| 2 | todo | | |
+| 2 | review | worktree-agent-a142641c6bf3e2981 @ 140e4d3e (sonnet) | verify PASS 2026-11-22: 196 passed (azure_monitor_ai_role, worker_roles, gateway_poll, sources_status_worker), pyright 0; checkpoint key per workspace AND kind; queries counted by PollResult.requests_made; reviewer running |
 | 3 | merged | worktree-agent-a111675f335423934 @ 62754371 (sonnet) | verify PASS 2026-11-22: post-merge 361 passed (hosted_demo, hosted_data_path, hosted_real_tenant, gates flow, connector; az bicep build ran); merged 1dced353; batch review (3,4,5,7) before PR. Stale "three roles" text in docs/deploy/hosted-real-tenant.md:153 (item 7), hosted-demo.md:562, helm values.yaml:204, infra/dev/demo-profile.env:9 (follow-up) |
 | 4 | merged | worktree-agent-ac2806cc58b4b9575 @ b908a9dc (sonnet) | verify PASS 2026-11-22: 69 + 162 passed, ruff/pyright clean; merged db596613 + openapi.json and docs/reference regenerated (drift + tests/docs 130 passed). No Python reason-text registry: UI needs text for the 7 new codes (item 6). Batch review before PR |
-| 5 | todo | | |
-| 6 | todo | | enum added here (amended) |
+| 5 | in-progress | implementer worktree (sonnet) | dispatched 2026-11-22 on top of item 2 branch |
+| 6 | in-progress | implementer worktree (sonnet) | enum added here (amended); dispatched 2026-11-22 on top of item 2 branch |
 | 7 | todo | | |
 | 8 | todo | | |
 
