@@ -18,6 +18,9 @@ __all__ = [
     "APIM_MCP_COLUMNS",
     "APIM_USAGE_METRICS_COLUMNS",
     "APP_INSIGHTS_KINDS",
+    "CONTENT_DENYLIST",
+    "GENAI_ATTRIBUTE_KEYS",
+    "GENAI_COLUMNS",
     "MAX_ROWS",
     "TEMPLATES",
     "MonitorSource",
@@ -36,6 +39,10 @@ class SourceKind(StrEnum):
     APIM_MCP = "apim_mcp"
     # Application Insights ``customMetrics`` written by the ``llm-emit-token-metric`` policy.
     APIM_USAGE_METRICS = "apim_usage_metrics"
+    # GenAI spans in workspace-based Application Insights tables; workspace query API (not in
+    # APP_INSIGHTS_KINDS). Dependencies = client/internal spans, requests = server spans.
+    APP_GENAI_DEPENDENCIES = "app_genai_dependencies"
+    APP_GENAI_REQUESTS = "app_genai_requests"
 
 
 #: Kinds queried through the Application Insights query API (source id = App Insights app id).
@@ -101,12 +108,130 @@ _APIM_USAGE_METRICS_QUERY: Final = (
     f" | order by timestamp asc | take {MAX_ROWS}"
 )
 
+# GenAI spans (PRP-141). Metadata only: columns and attribute keys are allowlists, the
+# ``Properties`` bag is never projected whole, and content is never selected. Attribute names
+# mirror the OTLP edge tables (services/api ingest/otlp_mapping.py); a parity test in
+# tests/unit/azure_monitor_ai asserts they stay equal.
+OPERATION_ATTR: Final = "gen_ai.operation.name"
+AGENT_ID_ATTRS: Final = ("gen_ai.agent.id",)
+PROVIDER_ATTRS: Final = ("gen_ai.provider.name", "gen_ai.system", "llm.provider")
+MODEL_ATTRS: Final = (
+    "gen_ai.response.model",
+    "gen_ai.request.model",
+    "llm.model_name",
+    "llm.request.model",
+)
+INPUT_TOKEN_ATTRS: Final = (
+    "gen_ai.usage.input_tokens",
+    "gen_ai.usage.prompt_tokens",
+    "llm.usage.prompt_tokens",
+)
+OUTPUT_TOKEN_ATTRS: Final = (
+    "gen_ai.usage.output_tokens",
+    "gen_ai.usage.completion_tokens",
+    "llm.usage.completion_tokens",
+)
+CACHED_TOKEN_ATTRS: Final = (
+    "gen_ai.usage.cache_read.input_tokens",
+    "gen_ai.usage.cached_tokens",
+    "llm.usage.cache_read_input_tokens",
+)
+REASONING_TOKEN_ATTRS: Final = (
+    "gen_ai.usage.reasoning.output_tokens",
+    "gen_ai.usage.reasoning_tokens",
+)
+GENAI_COLUMNS: Final = (
+    "TimeGenerated",
+    "Id",
+    "OperationId",
+    "ParentId",
+    "Success",
+    "DurationMs",
+    "ItemCount",
+    "AppRoleName",
+)
+GENAI_ATTRIBUTE_KEYS: Final = (
+    OPERATION_ATTR,
+    *AGENT_ID_ATTRS,
+    *PROVIDER_ATTRS,
+    *MODEL_ATTRS,
+    *INPUT_TOKEN_ATTRS,
+    *OUTPUT_TOKEN_ATTRS,
+    *CACHED_TOKEN_ATTRS,
+    *REASONING_TOKEN_ATTRS,
+)
+# Names that must never appear in a GenAI template: content and personal-data attributes, columns
+# that can carry command text, targets, URLs, identities or the whole attribute bag, and the
+# trace, exception and event tables.
+CONTENT_DENYLIST: Final = frozenset(
+    {
+        "gen_ai.input.messages",
+        "gen_ai.output.messages",
+        "gen_ai.system_instructions",
+        "gen_ai.tool.definitions",
+        "gen_ai.tool.call.arguments",
+        "gen_ai.tool.call.result",
+        "gen_ai.evaluation.explanation",
+        "gen_ai.prompt",
+        "gen_ai.completion",
+        "gen_ai.conversation.id",
+        "user.id",
+        "user.email",
+        "user.name",
+        "enduser.id",
+        "enduser.pseudo.id",
+        "client.address",
+        "Status.message",
+        "db.statement",
+        "db.query.text",
+        "url.full",
+        "http.url",
+        "Properties",
+        "Measurements",
+        "Data",
+        "Target",
+        "Url",
+        "Name",
+        "ClientIP",
+        "UserId",
+        "UserAuthenticatedId",
+        "UserAccountId",
+        "SessionId",
+        "OperationName",
+        "AppTraces",
+        "AppExceptions",
+        "AppEvents",
+    }
+)
+
+
+def _genai_query(table: str) -> str:
+    # Each allowlisted attribute is extracted to its own bracket-quoted string column; the
+    # ``Properties`` bag is read per key and never projected.
+    extends = ", ".join(
+        f"['{key}']=tostring(Properties[\"{key}\"])" for key in GENAI_ATTRIBUTE_KEYS
+    )
+    projected = ", ".join((*GENAI_COLUMNS, *(f"['{key}']" for key in GENAI_ATTRIBUTE_KEYS)))
+    return (
+        f"{table}"
+        f' | where isnotempty(tostring(Properties["{OPERATION_ATTR}"]))'
+        f" | extend {extends}"
+        f" | project {projected}"
+        f" | order by TimeGenerated asc | take {MAX_ROWS}"
+    )
+
+
+_APP_GENAI_DEPENDENCIES_QUERY: Final = _genai_query("AppDependencies")
+_APP_GENAI_REQUESTS_QUERY: Final = _genai_query("AppRequests")
+
 TEMPLATES: Final = {
     SourceKind.LOG_ANALYTICS: _LOG_ANALYTICS_QUERY,
     SourceKind.APP_INSIGHTS: _APP_INSIGHTS_QUERY,
     SourceKind.APIM_GATEWAY: _APIM_GATEWAY_QUERY,
     SourceKind.APIM_MCP: _APIM_MCP_QUERY,
     SourceKind.APIM_USAGE_METRICS: _APIM_USAGE_METRICS_QUERY,
+    SourceKind.APP_GENAI_DEPENDENCIES: _APP_GENAI_DEPENDENCIES_QUERY,
+    SourceKind.APP_GENAI_REQUESTS: _APP_GENAI_REQUESTS_QUERY,
 }
 
 

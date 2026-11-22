@@ -65,3 +65,40 @@ Gateway rows carry token counts but no price, so the cost side has `amount = nul
 - Counts are a lower bound when sampling is enabled on the diagnostic.
 - Government remains unverified, as above. Not live-tested against a real workspace.
 - Sources (retrieved 2026-10-29): https://learn.microsoft.com/azure/azure-monitor/reference/tables/apimanagementgatewaylogs#columns , https://learn.microsoft.com/azure/azure-monitor/reference/tables/apimanagementgatewayllmlog#columns , https://learn.microsoft.com/azure/azure-monitor/reference/tables/apimanagementgatewaymcplog#columns , https://learn.microsoft.com/azure/api-management/monitor-api-management-reference#resource-logs
+
+## GenAI span kinds (PRP-141 item 1)
+
+Two more `SourceKind`s read GenAI spans (model calls, tool calls, agent runs) from a Log Analytics workspace behind workspace-based Application Insights. They use the workspace query API (not the app-id API), the `timespan` window, freshness, 429 handling and the Government opt-in unchanged.
+
+- `SourceKind.APP_GENAI_DEPENDENCIES`: `AppDependencies` rows (client, internal and other span kinds) that carry `gen_ai.operation.name`.
+- `SourceKind.APP_GENAI_REQUESTS`: `AppRequests` rows (server spans, for example agent runs) that carry it.
+- `map_genai_row(row, *, cloud, customer_id, source_id, domain_id, app_role_names=None)` maps one row to one `TelemetryEvent` (`event_id = "<OperationId>:<Id>"`, the edge's rule). An unusable row raises `GenAiRowSkipped` with a `reason` (`bad_ids`, `no_operation`, `bad_time`, `role_filtered`, `invalid_event`) so the caller can count by reason. `canonical_agent_id` is never set; `gen_ai.agent.id` goes to `external_agent_id` and the resolver (PRP-137) does the rest. When `ItemCount` is above 1 the event records `sampling.rate = 1/ItemCount`, method `unknown`; counts are never multiplied up.
+
+### Read and never read
+
+Read (`GENAI_COLUMNS`): `TimeGenerated, Id, OperationId, ParentId, Success, DurationMs, ItemCount, AppRoleName`. Read from `Properties`, one key at a time (`GENAI_ATTRIBUTE_KEYS`): `gen_ai.operation.name`, `gen_ai.agent.id`, the provider, model, and input, output, cached and reasoning token attributes of the OTLP edge (the tuples are copied into `queries.py`; the connector never imports the API package).
+
+Never read (`CONTENT_DENYLIST`, tested against both templates): prompt, completion, input and output messages, system instructions, tool definitions, tool call arguments and results, evaluation explanations, conversation id, user and client identity attributes, `Status.message`, command text and URLs; the columns `Properties` (as a whole bag), `Measurements`, `Data`, `Target`, `Url`, `Name`, `ClientIP`, `UserId`, `UserAuthenticatedId`, `UserAccountId`, `SessionId`, `OperationName`, `_ResourceId`; and the tables `AppTraces`, `AppExceptions`, `AppEvents`. Content is never selected; `drop_body_fields` and the edge are second nets.
+
+### Learn verification (2026-11-22)
+
+| # | Result | Source |
+|---|---|---|
+| 1 | CONFIRMED. `AppDependencies` and `AppRequests` carry `TimeGenerated` datetime, `Id` string, `OperationId` string, `ParentId` string, `Success` bool, `DurationMs` real, `Properties` dynamic, `AppRoleName` string, `ItemCount` int, `_ResourceId` string. Analytics plan only | https://learn.microsoft.com/azure/azure-monitor/reference/tables/appdependencies , https://learn.microsoft.com/azure/azure-monitor/reference/tables/apprequests |
+| 2 | CONFIRMED. Server spans land in requests; client, internal and other kinds land in dependencies | https://learn.microsoft.com/azure/azure-monitor/app/migrate-to-opentelemetry , https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-add-modify |
+| 3 | CONFIRMED. Span attributes are custom properties (`Properties` in workspace tables); dotted keys are kept; non-string values are serialized to strings | https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-add-modify |
+| 4 | CONFIRMED (semantic conventions are in Development status). `gen_ai.operation.name` values `chat`, `text_completion`, `invoke_agent`, `execute_tool`; `gen_ai.provider.name`; `gen_ai.request.model`; `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`; `gen_ai.agent.id` | https://learn.microsoft.com/azure/foundry/how-to/develop/langchain-traces , https://learn.microsoft.com/azure/foundry/observability/concepts/trace-agent-concept |
+| 5 | CONFIRMED. Content attributes: `gen_ai.input.messages`, `gen_ai.output.messages`, `gen_ai.system_instructions`, `gen_ai.tool.definitions`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `gen_ai.evaluation.explanation`; content recording is off by default. Personal data seen in attributes: `user.id`, `user.email`, `user.name`, `client.address`, `enduser.id`, `enduser.pseudo.id`, `gen_ai.conversation.id`, `Status.message` | https://learn.microsoft.com/azure/foundry/observability/how-to/trace-agent-client-side |
+| 6 | PARTLY CONFIRMED. OpenTelemetry trace id is Operation ID and span id is ID (32 and 16 hex). GAP: Copilot Studio environment telemetry writes GUID-form ids, which are skipped as `bad_ids` | https://learn.microsoft.com/azure/azure-monitor/app/migrate-to-opentelemetry |
+| 7 | CONFIRMED. `ItemCount` is the number of telemetry items represented by one sample item | https://learn.microsoft.com/azure/azure-monitor/reference/tables/appdependencies |
+| 8 | CONFIRMED. Log Analytics Reader at the workspace; Privileged Monitoring Data Reader when tables are protected; table-level access exists | https://learn.microsoft.com/azure/azure-monitor/logs/api/register-app-for-token |
+| 9 | CONFIRMED. 500,000 records, about 104 MB, 10 minutes, 200 requests per 30 s; 5 concurrent queries per user. Query charges on the Analytics plan UNVERIFIED | https://learn.microsoft.com/azure/azure-monitor/fundamentals/service-limits |
+| 10 | CONFIRMED. Typically under 5 minutes latency | https://learn.microsoft.com/azure/azure-monitor/app/application-insights-faq |
+
+### Gaps (GenAI kinds)
+
+- Copilot Studio GUID-form ids are skipped and counted (`bad_ids`); they are not mapped.
+- The newer `OTelSpans` table (attributes in `Attributes`) is not read.
+- Government is unverified: the `api.loganalytics.us` token audience and Foundry tracing to Application Insights in Government are not confirmed.
+- Whether the Foundry agent id equals the `gen_ai.agent.id` attribute is UNVERIFIED (Foundry documents the attribute as `agent-name:version`).
+- The fixtures (`tests/fixtures/genai_*_response.json`) are HAND-BUILT from the documented schema, not a real response; the live gate replaces them with a scrubbed real one.
