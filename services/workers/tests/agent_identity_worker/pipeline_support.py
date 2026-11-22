@@ -6,8 +6,8 @@ over the archive, with in-memory aggregate and catalog stores and a ``CatalogAli
 
 No event is built by hand with a canonical id: the only agent field a span can carry is
 ``gen_ai.agent.id``, which ``map_span`` writes to ``external_agent_id``. ``map_span`` leaves the
-domain empty (the OTLP edge has no domain mapping today), so the rig stamps ``domain_id`` on the
-mapped event, standing in for the producer registration's domain.
+domain empty (the OTLP edge has no domain mapping today): the resolving source attributes one at
+read time (the aliased agent's domain, or the discovery-domain setting), as in production.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from neurosphere_contracts.catalog.v1.agent import Agent
 from neurosphere_contracts.telemetry.v1.telemetry_event import TelemetryEvent
 from neurosphere_core.agent_identity import (
     AgentIdentityResolver,
+    CatalogAgentDomainLookup,
     CatalogAliasLookup,
     declare_agent_alias,
 )
@@ -59,6 +60,7 @@ CLOUD = "commercial"
 CUSTOMER = "synthco"
 SOURCE = "otel-prod"
 DOMAIN = f"{CLOUD}:{CUSTOMER}:sandbox:domain:dom-001"
+DOMAIN_B = f"{CLOUD}:{CUSTOMER}:sandbox:domain:dom-002"
 NOW = datetime(2026, 11, 1, 12, 0, 0, tzinfo=UTC)
 RECEIVED_AT = "2026-11-01T11:30:00.000Z"
 TRACE = "c1f91e05fc394d5f81060f328b0307b7"
@@ -114,16 +116,13 @@ def otlp_document(spans: Sequence[dict[str, Any]]) -> dict[str, Any]:
 
 
 def map_document(document: dict[str, Any]) -> list[TelemetryEvent]:
-    """Exactly what ``ingest_otlp_traces`` does per span, plus the domain stand-in."""
-    events: list[TelemetryEvent] = []
-    for resource in document["resourceSpans"]:
-        for scope_spans in resource["scopeSpans"]:
-            for span in scope_spans["spans"]:
-                event = map_span(span, SCOPE, RECEIVED_AT)
-                body = event.model_dump(mode="json")
-                body["domain_id"] = DOMAIN
-                events.append(TelemetryEvent.model_validate(body))
-    return events
+    """Exactly what ``ingest_otlp_traces`` does per span (no domain, no canonical id)."""
+    return [
+        map_span(span, SCOPE, RECEIVED_AT)
+        for resource in document["resourceSpans"]
+        for scope_spans in resource["scopeSpans"]
+        for span in scope_spans["spans"]
+    ]
 
 
 class _Blob:
@@ -188,12 +187,12 @@ class Clock:
         return self.now
 
 
-def agent_doc(name: str) -> Agent:
+def agent_doc(name: str, domain: str = DOMAIN) -> Agent:
     raw = json.loads(_AGENT_EXAMPLE.read_text(encoding="utf-8"))
     raw.update(
         id=f"{CLOUD}:{CUSTOMER}:foundry:agent:{name}",
         customer_id=CUSTOMER,
-        domain_id=DOMAIN,
+        domain_id=domain,
         current_version_id=None,
         external_agent_id=None,
         version=1,
@@ -281,12 +280,20 @@ class World:
                 total += int(getattr(stored, "event_count", 0))
         return total
 
+    def doc_domains(self) -> set[str]:
+        """Domains of every aggregate document that belongs to an ``agent:`` series."""
+        return {
+            d.domain_id
+            for d in self.store.documents(CUSTOMER).values()
+            if d.series_key.startswith("agent:")
+        }
+
     def series_keys(self) -> set[str]:
         return {d.series_key for d in self.store.documents(CUSTOMER).values()}
 
-    async def edges(self, flt: EdgeFilter | None = None) -> list[Any]:
+    async def edges(self, flt: EdgeFilter | None = None, domain: str = DOMAIN) -> list[Any]:
         page = await self.rig.inner.list_edges_by_domain(
-            self.scope, DOMAIN, flt or EdgeFilter(), PageRequest(page_size=200)
+            self.scope, domain, flt or EdgeFilter(), PageRequest(page_size=200)
         )
         return list(page.items)
 
@@ -300,19 +307,30 @@ class World:
 
 
 async def make_world(
-    *, aliases: Sequence[tuple[str, str]] = (), target_names: Sequence[str] = ("support-bot",)
+    *,
+    aliases: Sequence[tuple[str, str]] = (),
+    target_names: Sequence[str] = ("support-bot",),
+    agent_domains: dict[str, str] | None = None,
+    discovery_domain: str | None = None,
 ) -> World:
     """A fresh world; ``aliases`` are ``(external id, target agent name)`` declared up front."""
     harness = Harness()
     container = ArchiveContainer()
     reader = ArchiveReader(container)
-    rig = Rig([], [DOMAIN])
+    rig = Rig([], [DOMAIN, DOMAIN_B])
     scope = await rig.worker_scope()
     for name in target_names:
-        await rig.inner.create_entity(scope, agent_doc(name))
+        await rig.inner.create_entity(
+            scope, agent_doc(name, (agent_domains or {}).get(name, DOMAIN))
+        )
     lookup = SwitchLookup(CatalogAliasLookup(rig.inner, lambda: scope))
     clock = Clock()
-    resolver = AgentIdentityResolver(lookup, clock=clock)
+    resolver = AgentIdentityResolver(
+        lookup,
+        clock=clock,
+        domain_lookup=CatalogAgentDomainLookup(rig.inner, lambda: scope),
+        discovery_domain_id=discovery_domain,
+    )
     inner: TraceEventSource = ArchiveTraceEventSource(reader)
     resolving = ResolvingTraceEventSource(inner, resolver)
     store = InMemoryAggregateStore()

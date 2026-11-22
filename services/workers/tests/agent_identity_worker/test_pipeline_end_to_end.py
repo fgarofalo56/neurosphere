@@ -16,6 +16,8 @@ from neurosphere_workers.agent_identity import reresolve_external_id
 from .pipeline_support import (
     CLOUD,
     CUSTOMER,
+    DOMAIN,
+    DOMAIN_B,
     NOW,
     SOURCE,
     World,
@@ -57,13 +59,15 @@ async def test_alias_present_counts_for_the_aliased_agent() -> None:
 
     assert world.agent_events(REAL) == 2
     assert world.agent_events(DERIVED) == 0
-    assert REAL in await uses_model_sources(world)
+    assert REAL in await uses_model_sources(world)  # edge in the aliased agent's domain
+    assert world.doc_domains() == {DOMAIN}
     assert world.resolver.stats.resolved_alias == 2 * SINKS
+    assert world.resolver.stats.domain_from_agent == 2 * SINKS
     assert world.catalog.stats.agent_drafts_created == 0
 
 
 async def test_no_alias_uses_derived_id_and_creates_a_draft() -> None:
-    world = await make_world()
+    world = await make_world(discovery_domain=DOMAIN)
     await run(world, EXTERNAL, EXTERNAL)
 
     assert world.agent_events(DERIVED) == 2
@@ -80,6 +84,9 @@ async def test_no_alias_uses_derived_id_and_creates_a_draft() -> None:
     assert drafts[0].external_agent_id.root == EXTERNAL
     assert DERIVED in await uses_model_sources(world)
     assert world.resolver.stats.derived == 2 * SINKS
+    assert world.resolver.stats.domain_from_setting == 2 * SINKS
+    assert drafts[0].domain_id.root == DOMAIN
+    assert world.catalog.stats.agent_undiscoverable_no_domain == 0
 
 
 async def test_alias_added_later_reresolve_moves_contributions() -> None:
@@ -123,7 +130,7 @@ async def test_alias_added_later_reresolve_moves_contributions() -> None:
 
 
 async def test_external_ids_that_slug_alike_stay_distinct() -> None:
-    world = await make_world()
+    world = await make_world(discovery_domain=DOMAIN)
     await run(world, "Bot One", "bot-one", "bot-one")
     first = derive_agent_id(CLOUD, CUSTOMER, SOURCE, "Bot One")
     second = derive_agent_id(CLOUD, CUSTOMER, SOURCE, "bot-one")
@@ -191,3 +198,73 @@ async def test_event_with_owned_canonical_id_is_declared_and_unchanged() -> None
     assert world.resolver.stats.declared == SINKS
     assert world.agent_events(agent_id("other")) == 1
     assert world.agent_events(DERIVED) == 0
+
+
+async def test_no_alias_and_no_setting_keeps_series_but_creates_no_draft() -> None:
+    world = await make_world()
+    await run(world, EXTERNAL, EXTERNAL)
+
+    assert world.agent_events(DERIVED) == 2  # the series exists (unassigned domain)
+    assert world.catalog.stats.agent_undiscoverable_no_domain >= 1
+    assert world.catalog.stats.agent_drafts_created == 0
+    assert DERIVED not in {a.id for a in await world.agents()}
+    assert DERIVED not in await uses_model_sources(world)
+    assert world.resolver.stats.domain_unattributed == 2 * SINKS
+
+
+async def test_event_with_its_own_domain_is_never_overwritten() -> None:
+    world = await make_world(
+        aliases=[(EXTERNAL, "support-bot")],
+        agent_domains={"support-bot": DOMAIN_B},
+        discovery_domain=DOMAIN,
+    )
+    events = [
+        TelemetryEvent.model_validate({**e.model_dump(mode="json"), "domain_id": DOMAIN})
+        for e in events_for(EXTERNAL)
+    ]
+    await world.ingest(events)
+    await world.drain()
+
+    assert world.doc_domains() == {DOMAIN}  # not the agent's domain B
+    assert world.resolver.stats.domain_from_agent == 0
+    assert world.resolver.stats.domain_unattributed == 0
+
+
+async def test_foreign_discovery_domain_is_ignored_and_counted() -> None:
+    foreign = "commercial:other:sandbox:domain:dom-001"
+    world = await make_world(discovery_domain=foreign)
+    await run(world, EXTERNAL)
+
+    assert world.resolver.stats.domain_from_setting == 0
+    assert world.resolver.stats.domain_unattributed == SINKS
+    assert world.catalog.stats.agent_drafts_created == 0
+    assert foreign not in world.doc_domains()
+
+
+async def test_alias_in_another_domain_moves_points_leaving_none_in_the_old_domain() -> None:
+    world = await make_world(agent_domains={"support-bot": DOMAIN_B}, discovery_domain=DOMAIN)
+    await run(world, EXTERNAL, EXTERNAL, EXTERNAL)
+    assert world.agent_events(DERIVED) == 3
+    assert world.doc_domains() == {DOMAIN}  # filed under the discovery domain
+
+    await world.declare(EXTERNAL, "support-bot")
+    world.clock.now += 1000  # past the negative cache TTL
+    report = await reresolve_external_id(
+        customer_id=CUSTOMER,
+        source_id=SOURCE,
+        external_agent_id=EXTERNAL,
+        reader=world.reader,
+        aggregates=world.aggregates,
+        store=world.store,
+        catalog=world.catalog,
+        max_events=100,
+        resolver_stats=world.resolver.stats,
+        clock=lambda: NOW,
+    )
+    assert report.moved == 3
+
+    assert world.agent_events(REAL) == 3
+    assert world.agent_events(DERIVED) == 0
+    assert world.doc_domains() == {DOMAIN_B}  # no stale point left in domain A
+    assert {c.domain_id for c in world.store.contributions(CUSTOMER).values()} == {DOMAIN_B}
+    assert REAL in {e.source_id for e in await world.edges(domain=DOMAIN_B)}
