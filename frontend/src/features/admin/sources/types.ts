@@ -89,3 +89,31 @@ export interface MeDomain {
 export interface MeDomains {
   readonly items: readonly MeDomain[];
 }
+
+/** The four sources of GET /api/v1/admin/sources/status (PRP-139 item 3). */
+export type SourceName = "foundry" | "apim_gateway" | "billing" | "azure_monitor_telemetry";
+export type SourceState = "not_connected" | "connected_no_data" | "connected" | "failing";
+export type RunState = "ok" | "partial" | "failed" | "idle" | "not_configured";
+export type StatusConnectorKind = "foundry_discovery" | "gateway_poll" | "billing_export";
+
+export interface SourceStatusRow {
+  readonly source: SourceName;
+  readonly state: SourceState;
+  readonly last_success_at: string | null;
+  readonly available: boolean;
+  readonly reason?: string | null;
+}
+
+export interface ConnectorRunRow {
+  readonly kind: StatusConnectorKind;
+  readonly state: RunState;
+  readonly reason: string | null;
+  readonly last_success_at: string | null;
+  readonly last_attempt_at: string | null;
+  readonly counts: Readonly<Record<string, number>>;
+}
+
+export interface SourcesAdminStatus {
+  readonly sources: readonly SourceStatusRow[];
+  readonly connectors: readonly ConnectorRunRow[];
+}

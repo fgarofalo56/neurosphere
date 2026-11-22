@@ -9,6 +9,9 @@ This runbook stands up one persistent, right-sized demo in the Limitlessdata ten
 only. The repo is public, so every id below is a placeholder. You pass real values as arguments
 and never commit them.
 
+To make a hosted environment show the tenant it runs in (real sources on, synthetic data removed),
+use `docs/deploy/hosted-real-tenant.md` instead of the seed step below.
+
 ## 1. Architecture
 
 The frontend is the only public site. It serves the SPA over HTTPS (Entra sign-in in the browser)
@@ -160,6 +163,7 @@ normalized change list. Approval: the resource group creation (you are choosing 
 MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py plan \
   --subscription <subscription-id> \
   --operator <handle> \
+  --data-mode demo \
   --integration-subnet-id <hub-snet-functions-id> \
   --private-endpoint-subnet-id <hub-snet-private-endpoints-id> \
   --cosmos-zone-id <cosmos-zone-id> \
@@ -194,6 +198,7 @@ token for each shared touch:
 MSYS_NO_PATHCONV=1 NS_LIVE_APPROVED=1 uv run python scripts/gates/hosted_demo.py deploy \
   --subscription <subscription-id> \
   --operator <handle> \
+  --data-mode demo \
   --integration-subnet-id <hub-snet-functions-id> \
   --private-endpoint-subnet-id <hub-snet-private-endpoints-id> \
   --cosmos-zone-id <cosmos-zone-id> \
@@ -322,7 +327,9 @@ in S7. Evidence: `<date>-seed-access`.
 
 ### S7 Seed, then revoke
 
-Synthetic data only. The seeder verifies the registration, runs every endpoint through the hosted
+Demo environments only. Synthetic data only. The seeder refuses a registration whose data mode is
+`real-tenant` and any run without `--demo-environment <deployment-id>` matching the registered
+deployment. The seeder verifies the registration, runs every endpoint through the hosted
 guard (it allows exactly the registered hosts, only with `NS_LIVE_APPROVED=1` and a matching
 deployment id, and refuses any key or connection string), generates the deterministic synthetic
 world, then writes it with Entra auth. It creates no database or container; Bicep owns those.
@@ -331,6 +338,7 @@ world, then writes it with Entra auth. It creates no database or container; Bice
 NS_LIVE_APPROVED=1 NS_ENV=prod NS_SANDBOX_HOSTED_DEPLOYMENT_ID=<deployment-id> NS_AUTH_TENANT_ID=<tenant-id> \
   uv run python scripts/gates/hosted_demo_seed.py \
   --operator-object-id <operator-object-id> \
+  --demo-environment <deployment-id> \
   --registration temp/hosted-demo/registration.json \
   --profile small
 ```

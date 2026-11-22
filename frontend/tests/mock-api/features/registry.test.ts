@@ -14,6 +14,7 @@ import { handle as federation } from "./federation.ts";
 import { handle as finops } from "./finops.ts";
 import { handle as compliance } from "./compliance.ts";
 import { handle as roleMapping } from "./role-mapping.ts";
+import { handle as sourceStatus } from "./sourceStatus.ts";
 import { FEATURE_HANDLERS, dispatchFeatureMocks } from "./index.ts";
 
 // Placeholders never touch the context, so an empty object stands in for a request.
@@ -35,6 +36,7 @@ describe("feature mock registry", () => {
       compliance,
       roleMapping,
       adminSources,
+      sourceStatus,
       adminCore,
     ]);
     expect(new Set(FEATURE_HANDLERS).size).toBe(FEATURE_HANDLERS.length);

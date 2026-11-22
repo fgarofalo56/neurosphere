@@ -46,6 +46,9 @@ export const connectorPaths = {
   disable: (id: string): string => `${SOURCES_API}/connectors/${enc(id)}/disable`,
 };
 
+/** PRP-139 item 3: the four sources and the run status of each connector kind (admin view). */
+export const SOURCES_STATUS_PATH = `${SOURCES_API}/status`;
+
 /** PRP-44 pricing, budgets and review policy. */
 export const pricingPaths = {
   priceSheets: (): string => `${PLATFORM_API}/price-sheets`,

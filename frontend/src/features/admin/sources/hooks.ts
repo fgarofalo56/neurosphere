@@ -8,7 +8,7 @@ import {
   useEtagMutation,
   type AdminResponse,
 } from "../shared/transport";
-import { connectorPaths, existingPaths, producerPaths } from "./apiPaths";
+import { SOURCES_STATUS_PATH, connectorPaths, existingPaths, producerPaths } from "./apiPaths";
 import type {
   ConnectorConfigBody,
   ConnectorPage,
@@ -17,11 +17,21 @@ import type {
   ProducerPage,
   ProducerSecretIssued,
   ProducerView,
+  SourcesAdminStatus,
 } from "./types";
 
 export const PRODUCERS_KEY = "admin-producers";
 export const CONNECTORS_KEY = "admin-connectors";
 export const ME_DOMAINS_KEY = "admin-me-domains";
+export const SOURCES_STATUS_KEY = "admin-sources-status";
+
+/**
+ * The admin source status. A failure (403 or anything else) is shown as "status unavailable"
+ * beside the rest of the page, which keeps working.
+ */
+export function useSourcesAdminStatus() {
+  return useAdminGet<SourcesAdminStatus>(SOURCES_STATUS_KEY, { path: SOURCES_STATUS_PATH });
+}
 
 export function useProducers() {
   return useAdminGet<ProducerPage>(PRODUCERS_KEY, {

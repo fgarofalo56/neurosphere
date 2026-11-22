@@ -1,10 +1,10 @@
 # API reference
 
 > Generated file. Do not edit; run `uv run python docs/reference/generate.py`.
-> Source commit: `4a44c688577070d1bdb1d8f62596d44a6c315810`. Generated: 2026-11-20.
+> Source commit: `0cd5926d4a911a54fa9aa00add5b0beeb5d4ad35`. Generated: 2026-11-20.
 > Sources: `services/api/openapi.json`, `packages/contracts/schemas/errors/v1/error-codes.json`.
 
-NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 217 operations on 183 paths.
+NeuroSphere API version 0.1.0, OpenAPI 3.1.0. 219 operations on 185 paths.
 
 ## Status and verification
 
@@ -239,6 +239,8 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 | sandbox | GET | `/api/v1/sandbox/entities` | Entities |
 | sandbox | POST | `/api/v1/sandbox/reset` | Reset |
 | sandbox | GET | `/api/v1/sandbox/status` | Status |
+| sources-status | GET | `/api/v1/admin/sources/status` | Admin Source Status |
+| sources-status | GET | `/api/v1/sources/status` | Source Status |
 | ui-adapters | GET | `/api/v1/audit/domains` | Audit Domains |
 | ui-adapters | GET | `/api/v1/audit/domains/{domain}/records` | Audit Domain Records |
 | ui-adapters | GET | `/api/v1/audit/domains/{domain}/verify` | Audit Domain Verify |
@@ -1873,6 +1875,22 @@ Framework-level validation failures on some routes surface as the OpenAPI `HTTPV
 - Operation id: `status_api_v1_sandbox_status_get`
 - Summary: Status
 - Responses: `200` `SandboxSummary`
+
+### Tag: sources-status
+
+#### GET `/api/v1/admin/sources/status`
+
+- Operation id: `admin_source_status_api_v1_admin_sources_status_get`
+- Summary: Admin Source Status
+- Description: The source summary plus a reason code per source and the run status, last attempt time and counts per connector kind. Customer-level `config.manage` only.
+- Responses: `200` `SourcesAdminListView`
+
+#### GET `/api/v1/sources/status`
+
+- Operation id: `source_status_api_v1_sources_status_get`
+- Summary: Source Status
+- Description: The four data sources (Foundry, API Management gateway, billing, Application Insights telemetry) with a state (`not_connected`, `connected_no_data`, `connected`, `failing`) and the last success time. Any caller who can read at least one domain; no reason, count, id, name or host. Application Insights telemetry is always `not_connected` with `available: false`.
+- Responses: `200` `SourceStatusListView`
 
 ### Tag: ui-adapters
 

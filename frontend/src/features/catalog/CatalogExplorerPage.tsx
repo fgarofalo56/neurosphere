@@ -19,6 +19,7 @@ import {
   Panel,
   Timestamp,
 } from "../../design-system";
+import { NoDataEmptyState } from "../source-status";
 import { EntityFormPanel } from "./EntityForm";
 import { fetchExportPage, useEntityList, useEntitySearch } from "./explorerHooks";
 import { EntityLink, LifecyclePill, QueryProblem, downloadJson } from "./explorerParts";
@@ -210,7 +211,9 @@ function ListBody(props: {
   }
   const rows = list.data.pages.flatMap((p) => p.items);
   const more = list.hasNextPage;
-  if (rows.length === 0 && !more) return <EmptyState title={S.empty} testId="empty-state" />;
+  if (rows.length === 0 && !more) {
+    return <NoDataEmptyState what={S.empty} sources={["foundry"]} testId="empty-state" />;
+  }
   return (
     <>
       <p data-testid="entity-count">{S.count(rows.length, more)}</p>
@@ -255,7 +258,7 @@ function SearchBody(props: {
     (n) => props.lifecycle === "" || n.lifecycle_status === props.lifecycle,
   );
   if (rows.length === 0 && !search.data.truncated) {
-    return <EmptyState title={S.empty} testId="empty-state" />;
+    return <NoDataEmptyState what={S.empty} sources={["foundry"]} testId="empty-state" />;
   }
   return (
     <>

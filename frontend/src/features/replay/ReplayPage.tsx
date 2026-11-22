@@ -14,6 +14,7 @@ import {
 } from "../../design-system";
 import { ForbiddenError, type ApiError } from "../../api/index.js";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
+import { NoDataEmptyState } from "../source-status";
 import { useTrace, useTraceList } from "./hooks";
 import { STRINGS, traceSamplingText } from "./strings";
 import { TraceTree } from "./TraceTree";
@@ -145,7 +146,7 @@ function TraceList({ domainId }: { readonly domainId: string }): ReactElement {
   if (items.length === 0) {
     return (
       <div data-testid="empty-state">
-        <EmptyState title={STRINGS.noTraces} />
+        <NoDataEmptyState what={STRINGS.noTraces} sources={["apim_gateway"]} />
       </div>
     );
   }

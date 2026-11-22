@@ -22,6 +22,7 @@ import {
   type DataTableColumn,
   type StatusTone,
 } from "../../design-system";
+import { NoDataEmptyState } from "../source-status";
 import { ForbiddenState } from "../workspaces/ForbiddenState";
 import { useEvaluationResults, type EvaluationFilters } from "./data";
 import { STRINGS } from "./strings";
@@ -155,9 +156,10 @@ function Results({
   const rows = toRows(results);
   if (rows.length === 0) {
     return (
-      <EmptyState
-        title={STRINGS.emptyTitle}
+      <NoDataEmptyState
+        what={STRINGS.emptyTitle}
         description={STRINGS.emptyBody}
+        sources={["foundry"]}
         testId="evaluations-empty"
       />
     );

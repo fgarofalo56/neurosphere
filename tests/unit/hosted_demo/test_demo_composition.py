@@ -47,6 +47,10 @@ PARAMETERS = [
     "foundryAccountIds",
     "billingExportStorageAccountId",
     "entraRoleMappings",
+    "dataMode",
+    "customerId",
+    "logAnalyticsWorkspaceIds",
+    "apimServiceIds",
     "searchProvider",
     "searchService",
     "budgetAmount",
@@ -329,8 +333,11 @@ def test_app_settings_follow_the_wire_contract(arm: dict[str, Any]) -> None:
     common = variables["commonSettings"]
     assert "'NS_ENV', 'prod'" in common
     assert "'NS_STORE_COSMOS_ACCOUNT'" in common
-    assert "variables('customerId')" in common
-    assert variables["customerId"] == "synthco"
+    # PRP-139: the customer id is a parameter now; the default is still the synthetic estate.
+    assert "parameters('customerId')" in common
+    assert "customerId" not in variables
+    assert arm["parameters"]["customerId"]["defaultValue"] == "synthco"
+    assert arm["parameters"]["dataMode"]["defaultValue"] == "demo"
     assert variables["keyVaultPlainSettings"].count("NS_AUTH_PSEUDONYM_KEY_REFERENCE") == 1
     assert set(re.findall(r"NS_[A-Z_]+", variables["keyVaultReferences"])) == {
         "NS_AUTH_PSEUDONYM_KEY",

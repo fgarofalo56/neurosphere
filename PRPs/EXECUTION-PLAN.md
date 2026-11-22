@@ -62,7 +62,7 @@ on a red `main`.
 
 | Merge | PRP | Model | Review | Blocked by | Serial-after items | Holds stack | Branch |
 |---|---|---|---|---|---|---|---|
-| 1 | [PRP-139: Hosted environment shows the tenant it is deployed to (real sources on, synthetic data out)](backlog/PRP-139-hosted-environment-real-tenant-data.md) | sonnet | required | none | - | - | `prp-139-hosted-real-tenant-data` |
+| 1 | [PRP-139: Hosted environment shows the tenant it is deployed to (real sources on, synthetic data out)](active/PRP-139-hosted-environment-real-tenant-data.md) | sonnet | required | none | - | - | `prp-139-hosted-real-tenant-data` |
 | 2 | [PRP-140: Navigation grouping (reviewed groups, a separate Admin group, collapsible sections)](backlog/PRP-140-navigation-grouping.md) | sonnet | none | none | PRP-140 | - | `prp-140-navigation-grouping` |
 
 Gate before the next wave: The owner signs in to the hosted environment with Entra and opens every Admin page with no script-made grant; the hosted environment shows records from the tenant for the connected sources and no synthetic data (live gate, operator-run); the navigation shows collapsible groups with an Admin group.
@@ -610,7 +610,7 @@ A Tier-1 file has one owner per wave. Any other PRP touches it only in a `[seria
 
 | Wave | PRP | Tier-1 files it owns |
 |---|---|---|
-| W18b | PRP-139 | `infra/demo/main.bicep`<br>`infra/appservice/main.bicep`<br>`services/workers/neurosphere_workers/runtime/factories.py` |
+| W18b | PRP-139 | `infra/demo/main.bicep`<br>`infra/appservice/main.bicep`<br>`services/workers/neurosphere_workers/runtime/factories.py`<br>`.github/workflows/deploy-hosted.yml` |
 | W18b | PRP-140 | `frontend/src/app/Shell.tsx` |
 | W19 | PRP-67 | `infra/demo/**`<br>`infra/appservice/main.bicep`<br>`infra/helm/**` |
 | W19 | PRP-137 | `services/workers/neurosphere_workers/runtime/factories.py` |
@@ -646,7 +646,7 @@ Paste one into a fresh Claude Code session started at the repo root.
 ### PRP-139 (W18b)
 
 ```text
-/prp:prp-execute PRPs/backlog/PRP-139-hosted-environment-real-tenant-data.md
+/prp:prp-execute PRPs/active/PRP-139-hosted-environment-real-tenant-data.md
 
 Context for this run: wave W18b of PRPs/EXECUTION-PLAN.md, branch prp-139-hosted-real-tenant-data cut from origin/main, implementer model sonnet, review required. Read PRPs/reference/parallel-build-reference.md first, then the PRP. No PRP in this wave is assigned the compose stack: do not run docker compose or make stack-up unless I confirm no other session is using it. Edit only the files in the PRP's Ownership block; add lines only to Tier-2 registries; leave Tier-3 generated files for the final close-out commit after rebasing on main. Do any [serial-after] item only after the named PRP has merged. No live or paid call without NS_LIVE_APPROVED=1 and my approval in this session; record what did not run as OPEN. Finish with the PRP's Validation gates, show their output, open the PR and report what works, what is partial and what is open.
 ```

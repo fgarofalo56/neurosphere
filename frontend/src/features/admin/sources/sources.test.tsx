@@ -1,5 +1,12 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import {
+  FluentProvider,
+  teamsHighContrastTheme,
+  webDarkTheme,
+  webLightTheme,
+} from "@fluentui/react-components";
+import { axe } from "vitest-axe";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   fakeFetch,
@@ -8,11 +15,12 @@ import {
   stubResizeObserver,
   type FakeRequest,
 } from "../shared/test-support";
-import { connectorPaths, producerPaths } from "./apiPaths";
+import { SOURCES_STATUS_PATH, connectorPaths, producerPaths } from "./apiPaths";
 import { ConnectorsPage, parseSettings } from "./ConnectorsPage";
 import { credentialProblem } from "./credentialReference";
 import { ProducersPage, parseSources } from "./ProducersPage";
-import type { ConnectorView, ProducerView } from "./types";
+import { SOURCE_STRINGS } from "./strings";
+import type { ConnectorRunRow, ConnectorView, ProducerView, SourcesAdminStatus } from "./types";
 
 beforeAll(stubResizeObserver);
 afterEach(cleanup);
@@ -139,6 +147,32 @@ describe("ProducersPage", () => {
   });
 });
 
+const STAMP = "2026-11-20T09:00:00Z";
+const STATUS: SourcesAdminStatus = {
+  sources: [
+    { source: "foundry", state: "connected", last_success_at: STAMP, available: true },
+    { source: "apim_gateway", state: "connected", last_success_at: STAMP, available: true },
+    { source: "billing", state: "connected", last_success_at: STAMP, available: true },
+    {
+      source: "azure_monitor_telemetry",
+      state: "not_connected",
+      last_success_at: null,
+      available: false,
+      reason: "not_available_in_release",
+    },
+  ],
+  connectors: [
+    {
+      kind: "gateway_poll",
+      state: "ok",
+      reason: null,
+      last_success_at: STAMP,
+      last_attempt_at: STAMP,
+      counts: { gateways_polled: 1 },
+    },
+  ],
+};
+
 const CONNECTOR: ConnectorView = {
   connector_id: "gw-poll-main",
   connector_kind: "gateway_poll",
@@ -204,6 +238,7 @@ describe("ConnectorsPage", () => {
       const custom = extra?.(req);
       if (custom !== undefined) return custom;
       if (req.url.pathname === "/api/v1/me/domains") return { body: readable };
+      if (req.url.pathname === SOURCES_STATUS_PATH) return { body: STATUS };
       if (req.url.pathname === connectorPaths.one("gw-poll-main")) {
         return { body: CONNECTOR, headers: { ETag: '"connector-1"' } };
       }
@@ -285,5 +320,193 @@ describe("ConnectorsPage", () => {
     await userEvent.click(submit());
     await screen.findByTestId("change-done");
     expect(calls.find((c) => c.method === "DELETE")?.headers.get("If-Match")).toBe('"connector-1"');
+  });
+});
+
+describe("ConnectorsPage first sources and run status", () => {
+  const readable = {
+    items: [
+      {
+        domain_id: FINANCE,
+        display_name: "Finance",
+        display_name_source: "catalog",
+        cloud: "commercial",
+        permissions: ["data.read"],
+      },
+    ],
+  };
+  function world(opts: {
+    status?: SourcesAdminStatus | "denied" | "broken";
+    items?: ConnectorView[];
+  }) {
+    return fakeFetch((req) => {
+      if (req.url.pathname === "/api/v1/me/domains") return { body: readable };
+      if (req.url.pathname === SOURCES_STATUS_PATH) {
+        if (opts.status === "denied") return problem(403, "forbidden", "permission_missing");
+        if (opts.status === "broken") return { status: 500, body: { detail: "boom" } };
+        return { body: opts.status ?? STATUS };
+      }
+      return { body: { items: opts.items ?? [CONNECTOR] } };
+    });
+  }
+  const failedRun = (kind: ConnectorRunRow["kind"], reason: string | null): ConnectorRunRow => ({
+    kind,
+    state: "failed",
+    reason,
+    last_success_at: null,
+    last_attempt_at: STAMP,
+    counts: {},
+  });
+
+  it("lists the four sources, Connect for three, and no Connect for Azure Monitor", async () => {
+    const { impl } = world({});
+    renderAdmin(<ConnectorsPage />, impl);
+    const panel = await screen.findByTestId("first-sources-panel");
+    expect(within(panel).getByText("Azure AI Foundry")).toBeTruthy();
+    expect(within(panel).getByText("API Management AI gateways")).toBeTruthy();
+    expect(within(panel).getByText("Cost and billing")).toBeTruthy();
+    const monitor = within(panel).getByTestId("source-row-azure_monitor_telemetry");
+    expect(monitor.textContent).toContain(
+      "not available in this release; use the gateway or OpenTelemetry path",
+    );
+    expect(within(monitor).queryByRole("button")).toBeNull();
+    expect(within(panel).getAllByText("Connected").length).toBe(3);
+    expect(within(panel).getAllByText(STAMP).length).toBe(3);
+    for (const name of ["Azure AI Foundry", "API Management AI gateways", "Cost and billing"]) {
+      expect(within(panel).getByRole("button", { name: `Connect ${name}` })).toBeTruthy();
+    }
+    expect(panel.textContent).toContain("no key or connection string");
+  });
+
+  it("shows all four with Connect when nothing is configured, and pre-sets the kind", async () => {
+    const none: SourcesAdminStatus = {
+      sources: STATUS.sources.map((r) => ({ ...r, state: "not_connected", last_success_at: null })),
+      connectors: [],
+    };
+    const { impl } = world({ status: none, items: [] });
+    renderAdmin(<ConnectorsPage />, impl);
+    const panel = await screen.findByTestId("first-sources-panel");
+    expect(screen.queryAllByTestId("connector-row")).toHaveLength(0);
+    expect(within(panel).getAllByText("Not connected").length).toBe(4);
+    expect(within(panel).getAllByRole("button", { name: /^Connect / })).toHaveLength(3);
+    await userEvent.click(within(panel).getByRole("button", { name: "Connect Cost and billing" }));
+    await screen.findByTestId("change-confirm-dialog");
+    const kind = dialog().getByLabelText(/Connector kind/) as HTMLSelectElement;
+    expect(kind.value).toBe("billing_export");
+  });
+
+  it("pre-sets foundry_discovery from the Foundry Connect action", async () => {
+    const { impl } = world({ items: [] });
+    renderAdmin(<ConnectorsPage />, impl);
+    await userEvent.click(await screen.findByRole("button", { name: "Connect Azure AI Foundry" }));
+    await screen.findByTestId("change-confirm-dialog");
+    expect((dialog().getByLabelText(/Connector kind/) as HTMLSelectElement).value).toBe(
+      "foundry_discovery",
+    );
+  });
+
+  it("renders the missing role and resource kind for source_access_denied", async () => {
+    const rows = [
+      failedRun("foundry_discovery", "source_access_denied"),
+      failedRun("gateway_poll", "source_access_denied"),
+      failedRun("billing_export", "source_access_denied"),
+    ];
+    const items: ConnectorView[] = [
+      { ...CONNECTOR, connector_id: "f1", connector_kind: "foundry_discovery" },
+      { ...CONNECTOR, connector_id: "g1" },
+      { ...CONNECTOR, connector_id: "b1", connector_kind: "billing_export" },
+    ];
+    const { impl } = world({ status: { sources: STATUS.sources, connectors: rows }, items });
+    renderAdmin(<ConnectorsPage />, impl);
+    const reasons = await screen.findAllByTestId("run-reason");
+    const text = reasons.map((r) => r.textContent ?? "");
+    expect(text[0]).toContain("Foundry User is missing on the Foundry account");
+    expect(text[1]).toContain("Log Analytics Data Reader");
+    expect(text[1]).toContain("Log Analytics workspace");
+    expect(text[1]).toContain("API Management Service Reader on the API Management service");
+    expect(text[2]).toContain("Storage Blob Data Reader");
+    expect(text[2]).toContain("export storage account");
+    for (const t of text) expect(t).toContain("approve the access");
+  });
+
+  it("gives an unknown reason code a generic sentence, never the raw code", async () => {
+    const { impl } = world({
+      status: { sources: STATUS.sources, connectors: [failedRun("gateway_poll", "zz_new_code")] },
+    });
+    renderAdmin(<ConnectorsPage />, impl);
+    const reason = await screen.findByTestId("run-reason");
+    expect(reason.textContent).not.toContain("zz_new_code");
+    expect(reason.textContent).toContain("does not describe");
+  });
+
+  it("gives every known reason code a sentence", () => {
+    const codes = [
+      "source_unreachable",
+      "partial_results",
+      "ingest_failed",
+      "cloud_not_supported",
+      "incomplete_export",
+      "unchanged",
+      "tick_error",
+      "awaiting_first_run",
+      "not_available_in_release",
+    ];
+    for (const code of codes) {
+      const sentence = SOURCE_STRINGS.reasonText(code, "gateway_poll");
+      expect(sentence).not.toBeNull();
+      expect(sentence).not.toContain("_");
+    }
+  });
+
+  it("keeps the page working when the admin status is denied or broken", async () => {
+    for (const status of ["denied", "broken"] as const) {
+      const { impl } = world({ status });
+      renderAdmin(<ConnectorsPage />, impl);
+      expect(await screen.findAllByTestId("connector-row")).toHaveLength(1);
+      expect(await screen.findByText("Status unavailable")).toBeTruthy();
+      expect(screen.getByTestId("status-unavailable-note")).toBeTruthy();
+      expect(screen.getAllByRole("button", { name: /^Connect / })).toHaveLength(3);
+      expect(screen.queryByTestId("forbidden-state")).toBeNull();
+      expect(screen.queryByTestId("unavailable-state")).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("passes axe in three themes with state in words", async () => {
+    for (const theme of [webLightTheme, webDarkTheme, teamsHighContrastTheme]) {
+      const { impl } = world({
+        status: {
+          sources: STATUS.sources,
+          connectors: [failedRun("gateway_poll", "source_access_denied")],
+        },
+      });
+      const { container } = renderAdmin(
+        <FluentProvider theme={theme}>
+          <ConnectorsPage />
+        </FluentProvider>,
+        impl,
+      );
+      await screen.findByTestId("run-status");
+      expect(screen.getByText("Failed")).toBeTruthy();
+      const violations = (await axe(container)).violations.map((v) => `${v.id}: ${v.help}`);
+      expect(violations).toEqual([]);
+      cleanup();
+    }
+  });
+
+  it("adds no secret field to the page", async () => {
+    const { impl } = world({});
+    const { container } = renderAdmin(<ConnectorsPage />, impl);
+    await screen.findByTestId("first-sources-panel");
+    expect(container.querySelectorAll("input[type=password]")).toHaveLength(0);
+  });
+});
+
+describe("ProducersPage empty state", () => {
+  it("links to the Connectors panel", async () => {
+    const { impl } = fakeFetch(() => ({ body: { items: [], truncated: false } }));
+    renderAdmin(<ProducersPage />, impl);
+    const link = await screen.findByTestId("empty-connectors-link");
+    expect(link.getAttribute("href")).toBe("/admin/sources/connectors#first-sources");
   });
 });

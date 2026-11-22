@@ -1,7 +1,8 @@
 """Seed the registered hosted demo with synthetic data (PRP-32 item 5). Operator-approved only.
 
     NS_LIVE_APPROVED=1 NS_ENV=prod NS_SANDBOX_HOSTED_DEPLOYMENT_ID=<id> NS_AUTH_TENANT_ID=<guid> \
-      uv run python scripts/gates/hosted_demo_seed.py --operator-object-id <oid> \
+      uv run python scripts/gates/hosted_demo_seed.py --demo-environment <id> \
+      --operator-object-id <oid> \
       [--registration temp/hosted-demo/registration.json] [--profile small|demo]
 
 Order: the approval check first (exit 2, nothing imported, no network), then the
@@ -58,11 +59,40 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--operator-object-id", required=True, help="your Entra object id (grant principal)"
     )
+    parser.add_argument(
+        "--demo-environment",
+        default=None,
+        help="the registered deployment id; required (PRP-139): this script seeds synthetic data",
+    )
     parser.add_argument("--registration", type=Path, default=DEFAULT_REGISTRATION)
     parser.add_argument("--profile", default="small", choices=("small", "demo"))
     parser.add_argument("--input-dir", type=Path, default=GENERATOR_OUTPUT_DIR)
     parser.add_argument("--evidence-dir", type=Path, default=EVIDENCE_DIR)
     return parser
+
+
+def _demo_environment_refusal(registration_path: Path, demo_environment: str | None) -> str | None:
+    """PRP-139: the seed writes synthetic data, so it is for a demo environment only.
+
+    Reads the registration as plain JSON (no sandbox module, no network client). Returns the
+    refusal message, or ``None`` when the registration is a demo one the operator named.
+    """
+    if not demo_environment:
+        return (
+            "this script seeds SYNTHETIC data; pass --demo-environment <deployment id> to say "
+            "the target is a demo environment. Nothing was contacted."
+        )
+    try:
+        doc = json.loads(Path(registration_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "the registration file is missing or not valid JSON. Nothing was contacted."
+    if not isinstance(doc, dict):
+        return "the registration is not a JSON object. Nothing was contacted."
+    if doc.get("data_mode", "demo") != "demo":
+        return "the registration's data_mode is not demo; real-tenant data is never seeded."
+    if doc.get("deployment_id") != demo_environment:
+        return "--demo-environment does not match the registered deployment. Nothing was contacted."
+    return None
 
 
 def _load_modules() -> tuple[Any, Any]:
@@ -113,6 +143,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
         return EXIT_REFUSED
 
     args = build_parser().parse_args(argv)
+    refusal = _demo_environment_refusal(args.registration, args.demo_environment)
+    if refusal is not None:
+        return _refuse(refusal)
     # Prove the interpreter has the workspace before any client exists (cf. g01_deploy_smoke).
     try:
         importlib.import_module("neurosphere_core.cloud")

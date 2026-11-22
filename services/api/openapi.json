@@ -18027,6 +18027,232 @@
         "title": "SourceLine",
         "type": "object"
       },
+      "SourceStatusListView": {
+        "additionalProperties": false,
+        "description": "The four sources in a fixed order, readable by anyone who can read a domain.",
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatusRowView"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources"
+        ],
+        "title": "SourceStatusListView",
+        "type": "object"
+      },
+      "SourceStatusRowView": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "source": {
+            "enum": [
+              "foundry",
+              "apim_gateway",
+              "billing",
+              "azure_monitor_telemetry"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "not_connected",
+              "connected_no_data",
+              "connected",
+              "failing"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "state",
+          "last_success_at",
+          "available"
+        ],
+        "title": "SourceStatusRowView",
+        "type": "object"
+      },
+      "SourcesAdminListView": {
+        "additionalProperties": false,
+        "description": "The four sources with reason codes, and the run status of each connector kind.",
+        "properties": {
+          "connectors": {
+            "items": {
+              "$ref": "#/components/schemas/SourcesConnectorRowView"
+            },
+            "title": "Connectors",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourcesAdminRowView"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sources",
+          "connectors"
+        ],
+        "title": "SourcesAdminListView",
+        "type": "object"
+      },
+      "SourcesAdminRowView": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source": {
+            "enum": [
+              "foundry",
+              "apim_gateway",
+              "billing",
+              "azure_monitor_telemetry"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "not_connected",
+              "connected_no_data",
+              "connected",
+              "failing"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "state",
+          "last_success_at",
+          "available",
+          "reason"
+        ],
+        "title": "SourcesAdminRowView",
+        "type": "object"
+      },
+      "SourcesConnectorRowView": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "foundry_discovery",
+              "gateway_poll",
+              "billing_export"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "partial",
+              "failed",
+              "idle",
+              "not_configured"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "state",
+          "reason",
+          "last_success_at",
+          "last_attempt_at"
+        ],
+        "title": "SourcesConnectorRowView",
+        "type": "object"
+      },
       "Span": {
         "additionalProperties": false,
         "properties": {
@@ -24190,6 +24416,28 @@
         "summary": "Rotate Producer",
         "tags": [
           "admin-producers"
+        ]
+      }
+    },
+    "/api/v1/admin/sources/status": {
+      "get": {
+        "description": "The source summary plus a reason code per source and the run status, last attempt time and counts per connector kind. Customer-level `config.manage` only.",
+        "operationId": "admin_source_status_api_v1_admin_sources_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcesAdminListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Admin Source Status",
+        "tags": [
+          "sources-status"
         ]
       }
     },
@@ -32062,6 +32310,28 @@
         "summary": "Status",
         "tags": [
           "sandbox"
+        ]
+      }
+    },
+    "/api/v1/sources/status": {
+      "get": {
+        "description": "The four data sources (Foundry, API Management gateway, billing, Application Insights telemetry) with a state (`not_connected`, `connected_no_data`, `connected`, `failing`) and the last success time. Any caller who can read at least one domain; no reason, count, id, name or host. Application Insights telemetry is always `not_connected` with `available: false`.",
+        "operationId": "source_status_api_v1_sources_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceStatusListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Source Status",
+        "tags": [
+          "sources-status"
         ]
       }
     },

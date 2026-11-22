@@ -37,6 +37,7 @@ import {
   type GridContextValue,
   type SectionData,
 } from "./MapGrid";
+import { NoDataEmptyState } from "../source-status";
 import { useViewport } from "./hooks";
 import {
   coverageText,
@@ -127,7 +128,7 @@ function ConnectionsTable({
   if (edges.length === 0) {
     return (
       <div data-testid="no-connections">
-        <EmptyState title={STRINGS.noConnections} />
+        <NoDataEmptyState what={STRINGS.noConnections} sources={["foundry", "apim_gateway"]} />
       </div>
     );
   }
@@ -271,7 +272,7 @@ function MapTable({ domainId }: { readonly domainId: string }): ReactElement {
   if (last === undefined || !hasNodes) {
     return (
       <div data-testid="empty-state">
-        <EmptyState title={STRINGS.empty} />
+        <NoDataEmptyState what={STRINGS.empty} sources={["foundry", "apim_gateway"]} />
       </div>
     );
   }

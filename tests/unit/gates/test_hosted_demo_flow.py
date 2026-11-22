@@ -84,7 +84,7 @@ def test_deploy_writes_both_register_copies_and_registration(env: Any) -> None:
     assert set(registration) == {
         "schema", "deployment_id", "cloud", "cosmos_host", "eventhubs_host", "blob_host",
         "key_vault_host", "database", "event_hub", "archive_container",
-        "pseudonym_secret_uri", "workers_object_id", "customer_id",
+        "pseudonym_secret_uri", "workers_object_id", "api_principal_id", "customer_id", "data_mode",
     }  # fmt: skip
     assert registration["cosmos_host"] == "nsdemocosmos.documents.azure.com"
     assert registration["eventhubs_host"] == "nsdemo-ehns.servicebus.windows.net"

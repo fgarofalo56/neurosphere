@@ -520,3 +520,18 @@ def test_authenticated_self_routes_are_exactly_the_declared_set() -> None:
     assert found == {("/api/v1/me/access", ("GET",), ())}
     assert AUTHENTICATED_SELF_PATHS == {"/api/v1/me/access"}
     assert all(e.compliant for e in route_inventory(app) if e.authenticated_self)
+
+
+def test_source_status_routes_declare_their_permissions() -> None:
+    """PRP-139 item 3: reading needs data.read anywhere; the admin view needs config.manage."""
+    app = create_app(Settings(env="local"))
+    found = {
+        (e.path, m): e.permissions
+        for e in route_inventory(app)
+        if e.path in ("/api/v1/sources/status", "/api/v1/admin/sources/status")
+        for m in e.methods
+    }
+    assert found == {
+        ("/api/v1/sources/status", "GET"): ("data.read",),
+        ("/api/v1/admin/sources/status", "GET"): ("config.manage",),
+    }
