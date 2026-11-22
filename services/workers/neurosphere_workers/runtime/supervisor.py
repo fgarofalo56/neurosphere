@@ -7,6 +7,8 @@ builds the role again from scratch; it never touches another role. A ``RoleConfi
 terminal for that role only (``failed``). A runnable exposing ``idle_reason`` is reported ``idle``
 with that code and stays ready. A role that stayed up for ``stable_seconds`` resets its
 failure streak. ``crash_looping`` is reported once the streak reaches ``crash_loop_threshold``.
+A running role whose runnable exposes ``counters()`` (counter names to integers, no ids or
+content) also reports them under ``counters`` in its snapshot entry.
 """
 
 from __future__ import annotations
@@ -97,18 +99,28 @@ class RoleSupervisor:
         return all(self._role_ready(r) for r in self._roles.values())
 
     def snapshot(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "name": r.name,
-                "state": r.state,
-                "live": r.state != "failed",
-                "ready": self._role_ready(r),
-                "restarts": r.restarts,
-                "crash_looping": r.streak >= self._threshold,
-                "reason": r.reason,
-            }
-            for r in self._roles.values()
-        ]
+        return [self._entry(r) for r in self._roles.values()]
+
+    def _entry(self, r: _Role) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "name": r.name,
+            "state": r.state,
+            "live": r.state != "failed",
+            "ready": self._role_ready(r),
+            "restarts": r.restarts,
+            "crash_looping": r.streak >= self._threshold,
+            "reason": r.reason,
+        }
+        counters: Callable[[], Mapping[str, int]] | None = getattr(r.runnable, "counters", None)
+        if callable(counters):
+            try:
+                entry["counters"] = {str(k): int(v) for k, v in counters().items()}
+            except Exception:  # a status read must never fail readiness
+                logger.warning(
+                    "role counters unavailable",
+                    extra={"event": "worker.role_counters_failed", "role": r.name},
+                )
+        return entry
 
     def request_shutdown(self) -> None:
         if self._stop.is_set():

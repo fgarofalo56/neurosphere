@@ -104,6 +104,11 @@ class CountersRole:
         self._inner = inner
         self._counters = counters
 
+    @property
+    def idle_reason(self) -> str | None:
+        """Forwarded so the supervisor still reports a wrapped idle-by-config role as ``idle``."""
+        return getattr(self._inner, "idle_reason", None)
+
     def counters(self) -> dict[str, int]:
         return self._counters()
 

@@ -173,8 +173,9 @@ The `projections`, `aggregates` and `evaluation` worker roles expose the resolve
 their role `counters()` hook. The projections role adds the catalog projection counters. The
 Foundry poller reports its counters in its tick stats.
 
-Open: the role counters are not yet in the supervisor snapshot or `/readyz` output. Read them in
-process until a status surface carries them.
+The worker's `/readyz` response lists each role; a running role that has counters carries them
+under `counters` in its entry (for example `roles[].counters.derived`). A role whose counter read
+fails is still reported, without `counters`. The Foundry poller counters stay in its tick stats.
 
 ## Settings
 

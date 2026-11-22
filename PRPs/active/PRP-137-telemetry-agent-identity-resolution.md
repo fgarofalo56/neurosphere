@@ -245,7 +245,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ~/.claude/hooks/verify-gates
 Emulator check (local, not CI): `docker compose up -d --wait`, then `uv run pytest -q -m integration tests/integration/ingestion/test_agent_identity_resolution.py` (use 127.0.0.1 endpoints; do not run two compose sessions at once).
 
 ## Migration and rollback
-No schema change and no data migration. Events already archived keep their raw fields; the next worker read resolves them. Existing series keyed by a canonical id from a producer are untouched (`declared`). Rollback: remove the three wrappers (or set the TTL settings to zero, which makes every lookup go to the repository) or revert the PR; derived-id series created meanwhile become orphans that the 7-day aggregate window and prune job age out, and the draft agents stay as ordinary drafts a steward can deprecate.
+No schema change and no data migration. Events already archived keep their raw fields; the next worker read resolves them. Existing series keyed by a canonical id from a producer are untouched (`declared`). Rollback: remove the three wrappers (or set the TTL settings to zero, which makes every lookup go to the repository) or revert the PR; derived-id series created meanwhile become orphans that the 90-day aggregate window (`WINDOW_DAYS`) and prune job age out, and the draft agents stay as ordinary drafts a steward can deprecate.
 
 ## Live and open gates
 None run here: in-memory twins and, locally, the emulators. A hosted check that an OTLP agent from a real producer gets a series is part of PRP-82's signed-in smoke and PRP-136's hosted runs; recorded OPEN until evidenced.
